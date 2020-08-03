@@ -1197,7 +1197,11 @@ class SchedulerReportClient(object):
         url = '/resource_providers/%s/allocations' % rp_uuid
         resp = self.get(url)
         if not resp:
-            return {}
+            # NOTE(gibi): The request failed with an error response. Rather
+            # than return an empty dict, which is possible if there are no
+            # allocations against the given provider, return None to indicate
+            # a failure - like in the @safe_connect decorator.
+            return None
         else:
             return resp.json()['allocations']
 

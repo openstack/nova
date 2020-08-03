@@ -851,6 +851,76 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_instance_save.assert_called_once_with()
         self.assertEqual(vm_states.ERROR, interrupted_instance.vm_state)
 
+    @mock.patch.object(manager.LOG, 'error')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.InstanceList, 'get_by_filters')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_resource_provider')
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    def test_init_host_with_interrupted_instance_build_empty_compute(
+            self, mock_get_nodes, mock_get_by_host_and_node,
+            mock_get_allocations, mock_get_instances, mock_instance_save,
+            mock_log):
+
+        mock_get_nodes.return_value = ['fake-node']
+        mock_get_by_host_and_node.return_value = objects.ComputeNode(
+            host=self.compute.host, uuid=uuids.cn_uuid)
+
+        # no instances on the host so no allocations in placement
+        allocations = {}
+        mock_get_allocations.return_value = allocations
+        mock_get_instances.return_value = objects.InstanceList(
+            self.context, objects=[])
+
+        self.compute._error_out_instances_whose_build_was_interrupted(
+            self.context, set())
+
+        mock_get_by_host_and_node.assert_called_once_with(
+            self.context, self.compute.host, 'fake-node')
+        mock_get_allocations.assert_called_once_with(uuids.cn_uuid)
+
+        mock_get_instances.assert_not_called()
+        mock_instance_save.assert_not_called()
+        mock_log.assert_not_called()
+
+    @mock.patch.object(manager.LOG, 'error')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.InstanceList, 'get_by_filters')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_resource_provider')
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    def test_init_host_with_interrupted_instance_build_placement_error(
+            self, mock_get_nodes, mock_get_by_host_and_node,
+            mock_get_allocations, mock_get_instances, mock_instance_save,
+            mock_log):
+
+        mock_get_nodes.return_value = ['fake-node']
+        mock_get_by_host_and_node.return_value = objects.ComputeNode(
+            host=self.compute.host, uuid=uuids.cn_uuid)
+
+        # get_allocations_for_resource_provider returns None if placement
+        # returns an error
+        allocations = None
+        mock_get_allocations.return_value = allocations
+        mock_get_instances.return_value = objects.InstanceList(
+            self.context, objects=[])
+
+        self.compute._error_out_instances_whose_build_was_interrupted(
+            self.context, set())
+
+        mock_get_by_host_and_node.assert_called_once_with(
+            self.context, self.compute.host, 'fake-node')
+        mock_get_allocations.assert_called_once_with(uuids.cn_uuid)
+
+        mock_get_instances.assert_not_called()
+        mock_instance_save.assert_not_called()
+        mock_log.assert_called_once_with(
+            'Could not retrieve compute node resource provider %s and '
+            'therefore unable to error out any instances stuck in '
+            'BUILDING state.', uuids.cn_uuid)
+
     @mock.patch.object(manager.LOG, 'warning')
     @mock.patch.object(
         fake_driver.FakeDriver, 'get_available_nodes', return_value=[])
