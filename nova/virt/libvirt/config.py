@@ -1686,6 +1686,20 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.device_addr = None
         self.mtu = None
 
+    def __eq__(self, other):
+        if not isinstance(other, LibvirtConfigGuestInterface):
+            return False
+
+        # NOTE(arches) Skip checking target_dev for vhostuser
+        # vif type; target_dev is not a valid value for vhostuser.
+        return (
+            self.mac_addr == other.mac_addr and
+            self.net_type == other.net_type and
+            self.source_dev == other.source_dev and
+            (self.net_type == 'vhostuser' or
+                self.target_dev == other.target_dev) and
+            self.vhostuser_path == other.vhostuser_path)
+
     @property
     def uses_virtio(self):
         return 'virtio' == self.model
