@@ -158,68 +158,6 @@ Compute filters
 
 The following sections describe the available compute filters.
 
-.. _AggregateCoreFilter:
-
-AggregateCoreFilter
--------------------
-
-.. deprecated:: 20.0.0
-
-  ``AggregateCoreFilter`` is deprecated since the 20.0.0 Train release.
-  As of the introduction of the placement service in Ocata, the behavior
-  of this filter :ref:`has changed <bug-1804125>` and no longer should be used.
-  In the 18.0.0 Rocky release nova `automatically mirrors`_ host aggregates
-  to placement aggregates.
-  In the 19.0.0 Stein release initial allocation ratios support was added
-  which allows management of the allocation ratios via the placement API in
-  addition to the existing capability to manage allocation ratios via the nova
-  config. See `Allocation ratios`_ for details.
-
-.. _`automatically mirrors`: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/placement-mirror-host-aggregates.html
-
-Filters host by CPU core count with a per-aggregate ``cpu_allocation_ratio``
-value. If the per-aggregate value is not found, the value falls back to the
-global setting.  If the host is in more than one aggregate and more than one
-value is found, the minimum value will be used.
-
-Refer to :doc:`/admin/aggregates` for more information.
-
-.. important::
-
-     Note the ``cpu_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>`
-     restriction.
-
-
-.. _AggregateDiskFilter:
-
-AggregateDiskFilter
--------------------
-
-.. deprecated:: 20.0.0
-
-  ``AggregateDiskFilter`` is deprecated since the 20.0.0 Train release.
-  As of the introduction of the placement service in Ocata, the behavior
-  of this filter :ref:`has changed <bug-1804125>` and no longer should be used.
-  In the 18.0.0 Rocky release nova `automatically mirrors`_ host aggregates
-  to placement aggregates.
-  In the 19.0.0 Stein release initial allocation ratios support was added
-  which allows management of the allocation ratios via the placement API in
-  addition to the existing capability to manage allocation ratios via the nova
-  config. See `Allocation ratios`_ for details.
-
-Filters host by disk allocation with a per-aggregate ``disk_allocation_ratio``
-value. If the per-aggregate value is not found, the value falls back to the
-global setting.  If the host is in more than one aggregate and more than one
-value is found, the minimum value will be used.
-
-Refer to :doc:`/admin/aggregates` for more information.
-
-.. important::
-
-    Note the ``disk_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>`
-    restriction.
-
-
 .. _AggregateImagePropertiesIsolation:
 
 AggregateImagePropertiesIsolation
@@ -368,37 +306,6 @@ used.
 
 Refer to :doc:`/admin/aggregates` and :ref:`NumInstancesFilter` for more
 information.
-
-
-.. _AggregateRamFilter:
-
-AggregateRamFilter
-------------------
-
-.. deprecated:: 20.0.0
-
-  ``AggregateRamFilter`` is deprecated since the 20.0.0 Train release.
-  As of the introduction of the placement service in Ocata, the behavior
-  of this filter :ref:`has changed <bug-1804125>` and no longer should be used.
-  In the 18.0.0 Rocky release nova `automatically mirrors`_ host aggregates
-  to placement aggregates.
-  In the 19.0.0 Stein release initial allocation ratios support was added
-  which allows management of the allocation ratios via the placement API in
-  addition to the existing capability to manage allocation ratios via the nova
-  config. See `Allocation ratios`_ for details.
-
-Filters host by RAM allocation of instances with a per-aggregate
-``ram_allocation_ratio`` value. If the per-aggregate value is not found, the
-value falls back to the global setting.  If the host is in more than one
-aggregate and thus more than one value is found, the minimum value will be
-used.
-
-Refer to :doc:`/admin/aggregates` for more information.
-
-.. important::
-
-    Note the ``ram_allocation_ratio`` :ref:`bug 1804125 <bug-1804125>`
-    restriction.
 
 
 .. _AggregateTypeAffinityFilter:
@@ -688,26 +595,6 @@ PciPassthroughFilter
 
 The filter schedules instances on a host if the host has devices that meet the
 device requests in the ``extra_specs`` attribute for the flavor.
-
-RetryFilter
------------
-
-.. deprecated:: 20.0.0
-
-   Since the 17.0.0 (Queens) release, the scheduler has provided alternate
-   hosts for rescheduling so the scheduler does not need to be called during
-   a reschedule which makes the ``RetryFilter`` useless. See the
-   `Return Alternate Hosts`_ spec for details.
-
-Filters out hosts that have already been attempted for scheduling purposes.  If
-the scheduler selects a host to respond to a service request, and the host
-fails to respond to the request, this filter prevents the scheduler from
-retrying that host for the service request.
-
-This filter is only useful if the :oslo.config:option:`scheduler.max_attempts`
-configuration option is set to a value greater than one.
-
-.. _Return Alternate Hosts: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/return-alternate-hosts.html
 
 SameHostFilter
 --------------
@@ -1012,23 +899,6 @@ The allocation ratio configuration is used both during reporting of compute
 node `resource provider inventory`_ to the placement service and during
 scheduling.
 
-.. _bug-1804125:
-
-.. note:: Regarding the `AggregateCoreFilter`_, `AggregateDiskFilter`_ and
-   `AggregateRamFilter`_, starting in 15.0.0 (Ocata) there is a behavior
-   change where aggregate-based overcommit ratios will no longer be honored
-   during scheduling for the FilterScheduler. Instead, overcommit values must
-   be set on a per-compute-node basis in the Nova configuration files.
-
-   If you have been relying on per-aggregate overcommit, during your upgrade,
-   you must change to using per-compute-node overcommit ratios in order for
-   your scheduling behavior to stay consistent. Otherwise, you may notice
-   increased NoValidHost scheduling failures as the aggregate-based overcommit
-   is no longer being considered.
-
-   See `bug 1804125 <https://bugs.launchpad.net/nova/+bug/1804125>`_ for more
-   details.
-
 .. _resource provider inventory: https://docs.openstack.org/api-ref/placement/?expanded=#resource-provider-inventories
 
 Usage scenarios
@@ -1059,8 +929,6 @@ here.
    .. code-block:: console
 
      $ openstack resource provider inventory set --resource VCPU:allocation_ratio=1.0 815a5634-86fb-4e1e-8824-8a631fee3e06
-
-   Note the :ref:`bug 1804125 <bug-1804125>` restriction.
 
 3. When the deployer wants to **always** use the placement API to set
    allocation ratios, then the deployer should ensure that
