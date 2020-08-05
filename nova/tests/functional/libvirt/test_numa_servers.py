@@ -709,8 +709,7 @@ class NUMAServersTest(NUMAServersTestBase):
                     self.ctxt, dst_host,
                 ).numa_topology,
             )
-            # FIXME(stephenfin): There should still be two pinned cores here
-            self.assertEqual(0, len(src_numa_topology.cells[0].pinned_cpus))
+            self.assertEqual(2, len(src_numa_topology.cells[0].pinned_cpus))
             self.assertEqual(2, len(dst_numa_topology.cells[0].pinned_cpus))
 
             # before continuing with the actualy confirm process
@@ -751,14 +750,10 @@ class NUMAServersTest(NUMAServersTestBase):
 
         # Now confirm the resize
 
-        # FIXME(stephenfin): This should be successful, but it's failing with a
-        # HTTP 500 due to bug #1879878
         post = {'confirmResize': None}
-        exc = self.assertRaises(
-            client.OpenStackApiException,
-            self.api.post_server_action, server['id'], post)
-        self.assertEqual(500, exc.response.status_code)
-        self.assertIn('CPUUnpinningInvalid', str(exc))
+        self.api.post_server_action(server['id'], post)
+
+        server = self._wait_for_state_change(server, 'ACTIVE')
 
 
 class NUMAServerTestWithCountingQuotaFromPlacement(NUMAServersTest):
