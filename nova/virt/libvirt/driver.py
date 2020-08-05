@@ -328,6 +328,11 @@ MIN_LIBVIRT_BETTER_SIGKILL_HANDLING = (4, 7, 0)
 
 VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
 
+# libvirt >= v1.3.4 introduced VIR_MIGRATE_PARAM_PERSIST_XML that needs to be
+# provided when the VIR_MIGRATE_PERSIST_DEST flag is used to ensure the updated
+# domain XML is persisted on the destination.
+MIN_LIBVIRT_MIGRATE_PARAM_PERSIST_XML = (1, 3, 4)
+
 
 class LibvirtDriver(driver.ComputeDriver):
     capabilities = {
@@ -7137,6 +7142,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 if (migration_flags &
                     libvirt.VIR_MIGRATE_TUNNELLED != 0):
                     params.pop('migrate_disks')
+
+                # NOTE(lyarwood): Only available from v1.3.4
+                if self._host.has_min_version(
+                    MIN_LIBVIRT_MIGRATE_PARAM_PERSIST_XML
+                ):
+                    params['persistent_xml'] = new_xml_str
 
             # TODO(sahid): This should be in
             # post_live_migration_at_source but no way to retrieve
