@@ -702,6 +702,7 @@ class GuestTestCase(test.NoDBTestCase):
                 'an-uri', flags=1, params={'migrate_uri': 'dest-uri',
                                            'migrate_disks': 'disk1',
                                            'destination_xml': '</xml>',
+                                           'persistent_xml': '</xml>',
                                            'bandwidth': 2})
 
     def test_abort_job(self):
