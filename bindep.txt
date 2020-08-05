@@ -49,3 +49,8 @@ texlive-latex-recommended [pdf-docs]
 texlive-xetex [pdf-docs]
 libpcre3-dev [platform:dpkg test]
 pcre-devel [platform:rpm test]
+# Nova uses lsscsi via os-brick. Due to bindep usage in devstack and
+# elsewhere, we add it here to make sure it is picked up and available at
+# runtime and in unit tests. Net result is the same that lsscsi will be
+# installed for any nova installation.
+lsscsi
