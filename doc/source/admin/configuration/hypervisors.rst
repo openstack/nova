@@ -71,6 +71,34 @@ The following hypervisors are supported:
 * `Ironic`_ - OpenStack project which provisions bare metal (as opposed to virtual)
   machines.
 
+
+Nova supports hypervisors via virt drivers. Nova has the following in tree
+virt drivers:
+
+* :oslo.config:option:`compute_driver` = ``libvirt.LibvirtDriver``
+
+  This driver runs on Linux and supports multiple hypervisor backends, which
+  can be configured via the :oslo.config:option:`libvirt.virt_type` config
+  option.
+
+* :oslo.config:option:`compute_driver` = ``xenapi.XenAPIDriver``
+
+* :oslo.config:option:`compute_driver` = ``ironic.IronicDriver``
+
+* :oslo.config:option:`compute_driver` = ``vmwareapi.VMwareVCDriver``
+
+* :oslo.config:option:`compute_driver` = ``hyperv.HyperVDriver``
+
+* :oslo.config:option:`compute_driver` = ``powervm.PowerVMDriver``
+
+* :oslo.config:option:`compute_driver` = ``zvm.ZVMDriver``
+
+* :oslo.config:option:`compute_driver` = ``fake.FakeDriver``
+
+  This driver does not spawn any virtual machines and therefore should only be
+  used during testing.
+
+
 .. _KVM: https://www.linux-kvm.org/page/Main_Page
 .. _LXC: https://linuxcontainers.org
 .. _QEMU: https://wiki.qemu.org/Manual
