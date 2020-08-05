@@ -301,6 +301,11 @@ MIN_LIBVIRT_BETTER_SIGKILL_HANDLING = (4, 7, 0)
 
 VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
 
+# libvirt >= v1.3.4 introduced VIR_MIGRATE_PARAM_PERSIST_XML that needs to be
+# provided when the VIR_MIGRATE_PERSIST_DEST flag is used to ensure the updated
+# domain XML is persisted on the destination.
+MIN_LIBVIRT_MIGRATE_PARAM_PERSIST_XML = (1, 3, 4)
+
 
 class LibvirtDriver(driver.ComputeDriver):
     capabilities = {
@@ -7279,13 +7284,18 @@ class LibvirtDriver(driver.ComputeDriver):
             if CONF.serial_console.enabled:
                 serial_ports = list(self._get_serial_ports_from_guest(guest))
 
+            # NOTE(lyarwood): Only available from v1.3.4
+            persistent_xml_param = self._host.has_min_version(
+                MIN_LIBVIRT_MIGRATE_PARAM_PERSIST_XML)
+
             LOG.debug("About to invoke the migrate API", instance=instance)
             guest.migrate(self._live_migration_uri(dest),
                           migrate_uri=migrate_uri,
                           flags=migration_flags,
                           migrate_disks=device_names,
                           destination_xml=new_xml_str,
-                          bandwidth=CONF.libvirt.live_migration_bandwidth)
+                          bandwidth=CONF.libvirt.live_migration_bandwidth,
+                          persistent_xml_param=persistent_xml_param)
             LOG.debug("Migrate API has completed", instance=instance)
 
             for hostname, port in serial_ports:
