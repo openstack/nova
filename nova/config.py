@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
+
 from oslo_log import log
 from oslo_utils import importutils
 
@@ -30,6 +32,24 @@ profiler = importutils.try_import('osprofiler.opts')
 CONF = nova.conf.CONF
 
 
+class HeartbeatFilter(logging.Filter):
+
+    def filter(self, record):
+        # Note the type in the log message was fixed in
+        # change Id11db4113c9b1c3add602192c1e915218704ef27
+        # but we handle both form to allow this to be backported
+        # without consideration of the version of oslo.messaging used.
+        # TODO(sean-k-mooney): remove support for typo in follow up
+        # to allow this to be easily backported without modification.
+        messages = [
+            "Unexpected error during heartbeart thread processing",
+            "Unexpected error during heartbeat thread processing"]
+        return not any(msg in record.msg for msg in messages)
+
+
+rabbit_heartbeat_filter = HeartbeatFilter()
+
+
 def parse_args(argv, default_config_files=None, configure_db=True,
                init_rpc=True):
     log.register_options(CONF)
@@ -39,6 +59,12 @@ def parse_args(argv, default_config_files=None, configure_db=True,
         extra_default_log_levels = ['glanceclient=DEBUG']
     else:
         extra_default_log_levels = ['glanceclient=WARN']
+
+    # NOTE(sean-k-mooney): this filter addresses bug #1825584
+    # https://bugs.launchpad.net/nova/+bug/1825584
+    # eventlet monkey-patching breaks AMQP heartbeat on uWSGI
+    rabbit_logger = logging.getLogger('oslo.messaging._drivers.impl_rabbit')
+    rabbit_logger.addFilter(rabbit_heartbeat_filter)
 
     # NOTE(danms): DEBUG logging in privsep will result in some large
     # and potentially sensitive things being logged.
