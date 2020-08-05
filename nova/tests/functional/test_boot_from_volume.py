@@ -53,7 +53,6 @@ class BootFromVolumeTest(integrated_helpers._IntegratedTestBase):
         self.flags(allow_resize_to_same_host=True)
         super(BootFromVolumeTest, self).setUp()
         self.admin_api = self.api_fixture.admin_api
-        self.useFixture(nova_fixtures.CinderFixture(self))
 
     def test_boot_from_volume_larger_than_local_gb(self):
         # Verify no local disk is being used currently

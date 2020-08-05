@@ -767,8 +767,6 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual(403, ex.response.status_code)
 
     def test_attach_vol_maximum_disk_devices_exceeded(self):
-        self.useFixture(nova_fixtures.CinderFixture(self))
-
         server = self._build_server()
         created_server = self.api.post_server({"server": server})
         server_id = created_server['id']
@@ -1493,7 +1491,6 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
         different image than what is in the root disk of the root volume
         will result in a 400 BadRequest error.
         """
-        self.useFixture(nova_fixtures.CinderFixture(self))
         # First create our server as normal.
         server_req_body = {
             # There is no imageRef because this is boot from volume.

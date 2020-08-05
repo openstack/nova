@@ -30,11 +30,6 @@ class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase):
     api_major_version = 'v2.1'
     microversion = 'latest'
 
-    def setUp(self):
-        super(RebuildVolumeBackedSameImage, self).setUp()
-        # We are creating a volume-backed server so we need the CinderFixture.
-        self.useFixture(nova_fixtures.CinderFixture(self))
-
     def _setup_scheduler_service(self):
         # Add the IsolatedHostsFilter to the list of enabled filters since it
         # is not enabled by default.
