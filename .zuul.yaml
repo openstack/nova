@@ -56,21 +56,8 @@
       bindep_profile: test py38
     timeout: 3600
 
-# TODO(lyarwood): Remove once the new zuulv3 nova-multinode jobs are voting
 - job:
     name: nova-live-migration
-    parent: nova-dsvm-multinode-base
-    description: |
-      Run tempest live migration tests against both local storage and shared
-      storage using ceph (the environment is reconfigured for ceph after the
-      local storage tests are run). Also runs simple evacuate tests.
-      Config drive is forced on all instances. Runs with python 3.
-    run: playbooks/legacy/nova-live-migration/run.yaml
-    post-run: playbooks/legacy/nova-live-migration/post.yaml
-    irrelevant-files: *dsvm-irrelevant-files
-
-- job:
-    name: nova-multinode-live-migration
     parent: tempest-multinode-full-py3
     description: |
       Run tempest live migration tests against local qcow2 ephemeral storage
@@ -86,6 +73,7 @@
               volume_backed_live_migration: true
               block_migration_for_live_migration: true
               block_migrate_cinder_iscsi: true
+    post-run: playbooks/nova-live-migration/post-run.yaml
 
 # TODO(lyarwood): The following jobs need to be written as part of the
 # migration to zuulv3 before nova-live-migration can be removed:
@@ -95,13 +83,6 @@
 #    description: |
 #      Run tempest live migration tests against ceph ephemeral storage and
 #      cinder volumes.
-#
-#- job:
-#    name: nova-multinode-evacuate
-#    description: |
-#       Verifiy the evacuation of instances with local qcow2 ephemeral disks
-#       from down compute hosts.
-#
 #- job:
 #    name: nova-multinode-evacuate-ceph
 #    description: |
@@ -439,8 +420,6 @@
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
         - nova-grenade-multinode
         - nova-live-migration
-        - nova-multinode-live-migration:
-            voting: false
         - nova-lvm
         - nova-multi-cell
         - nova-next
