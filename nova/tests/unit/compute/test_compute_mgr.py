@@ -624,7 +624,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         instance = fake_instance.fake_instance_obj(
                        self.context, expected_attrs=['system_metadata'])
 
-        is_vpn = 'fake-is-vpn'
         req_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id='fake')])
         sec_groups = 'fake-sec-groups'
@@ -640,7 +639,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             res = self.compute._allocate_network_async(self.context, instance,
                                                        req_networks,
                                                        sec_groups,
-                                                       is_vpn,
                                                        rp_mapping)
 
         self.assertEqual(7, mock_sleep.call_count)
@@ -655,7 +653,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.flags(network_allocate_retries=0)
 
         instance = {}
-        is_vpn = 'fake-is-vpn'
         req_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id='fake')])
         sec_groups = 'fake-sec-groups'
@@ -667,10 +664,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.assertRaises(test.TestingException,
                               self.compute._allocate_network_async,
                               self.context, instance, req_networks,
-                              sec_groups, is_vpn, rp_mapping)
+                              sec_groups, rp_mapping)
 
         mock_allocate.assert_called_once_with(
-            self.context, instance, vpn=is_vpn,
+            self.context, instance,
             requested_networks=req_networks,
             security_groups=sec_groups,
             bind_host_id=instance.get('host'),
@@ -684,7 +681,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         instance = fake_instance.fake_instance_obj(
             self.context, expected_attrs=['system_metadata'])
-        is_vpn = 'fake-is-vpn'
         req_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(network_id='fake')])
         sec_groups = 'fake-sec-groups'
@@ -698,7 +694,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             res = self.compute._allocate_network_async(self.context, instance,
                                                        req_networks,
                                                        sec_groups,
-                                                       is_vpn,
                                                        rp_mapping)
         self.assertEqual(final_result, res)
         self.assertEqual(1, sleep.call_count)
@@ -710,8 +705,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             objects=[objects.NetworkRequest(network_id='none')])
         nwinfo = self.compute._allocate_network_async(
             self.context, mock.sentinel.instance, req_networks,
-            security_groups=['default'], is_vpn=False,
-            resource_provider_mapping={})
+            security_groups=['default'], resource_provider_mapping={})
         self.assertEqual(0, len(nwinfo))
 
     @mock.patch('nova.compute.manager.ComputeManager.'

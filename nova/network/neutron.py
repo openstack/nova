@@ -1006,7 +1006,7 @@ class API(base.Base):
 
         return requests_and_created_ports
 
-    def allocate_for_instance(self, context, instance, vpn,
+    def allocate_for_instance(self, context, instance,
                               requested_networks,
                               security_groups=None, bind_host_id=None,
                               attach=False, resource_provider_mapping=None):
@@ -1014,7 +1014,6 @@ class API(base.Base):
 
         :param context: The request context.
         :param instance: nova.objects.instance.Instance object.
-        :param vpn: A boolean, ignored by this driver.
         :param requested_networks: objects.NetworkRequestList object.
         :param security_groups: None or security groups to allocate for
             instance.
@@ -1708,7 +1707,7 @@ class API(base.Base):
                                             port_id=port_id,
                                             pci_request_id=None,
                                             tag=tag)])
-        return self.allocate_for_instance(context, instance, vpn=False,
+        return self.allocate_for_instance(context, instance,
                 requested_networks=requested_networks,
                 bind_host_id=bind_host_id, attach=True)
 

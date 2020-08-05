@@ -639,7 +639,7 @@ class TestSecurityGroupsV21(test.TestCase):
         neutron = neutron_api.API()
         with mock.patch.object(nova.db.api, 'instance_get_by_uuid',
                                return_value=db_inst):
-            neutron.allocate_for_instance(_context, instance, False, None,
+            neutron.allocate_for_instance(_context, instance, None,
                                           security_groups=[sg['id']])
 
         req = fakes.HTTPRequest.blank(
