@@ -8612,7 +8612,12 @@ class ComputeManager(manager.Manager):
         for bdm in bdms:
             try:
                 original_bdm = original_bdms_by_volid[bdm.volume_id]
-                if bdm.attachment_id and original_bdm.attachment_id:
+                # NOTE(lyarwood): Only delete the referenced attachment if it
+                # is different to the original in order to avoid accidentally
+                # removing the source host volume attachment after it has
+                # already been rolled back by a failure in pre_live_migration.
+                if (bdm.attachment_id and original_bdm.attachment_id and
+                    bdm.attachment_id != original_bdm.attachment_id):
                     # NOTE(lyarwood): 3.44 cinder api flow. Delete the
                     # attachment used by the bdm and reset it to that of
                     # the original bdm.
