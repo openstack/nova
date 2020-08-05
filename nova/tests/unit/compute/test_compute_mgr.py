@@ -8237,9 +8237,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                         self.migration)
             mock_delete.assert_called_once_with(self.context, self.instance,
                                                 self.migration)
-            mock_save.assert_called_with(expected_task_state=
-                                         [None, task_states.DELETING,
-                                         task_states.SOFT_DELETING])
+            mock_save.assert_has_calls([
+                mock.call(
+                    expected_task_state=[
+                        None, task_states.DELETING, task_states.SOFT_DELETING,
+                    ],
+                ),
+                mock.call(),
+            ])
             mock_delete_scheduler_info.assert_called_once_with(
                 self.context, self.instance.uuid)
 

@@ -4246,14 +4246,17 @@ class ComputeManager(manager.Manager):
                             instance=instance)
                 finally:
                     # Whether an error occurred or not, at this point the
-                    # instance is on the dest host so to avoid leaking
-                    # allocations in placement, delete them here.
+                    # instance is on the dest host. Avoid leaking allocations
+                    # in placement by deleting them here...
                     self._delete_allocation_after_move(
                         context, instance, migration)
-                    # Also as the instance is not any more on this host, update
-                    # the scheduler about the move
+                    # ...inform the scheduler about the move...
                     self._delete_scheduler_instance_info(
                         context, instance.uuid)
+                    # ...and unset the cached flavor information (this is done
+                    # last since the resource tracker relies on it for its
+                    # periodic tasks)
+                    self._delete_stashed_flavor_info(instance)
 
         do_confirm_resize(context, instance, migration.id)
 
@@ -4292,13 +4295,6 @@ class ComputeManager(manager.Manager):
             self.host, action=fields.NotificationAction.RESIZE_CONFIRM,
             phase=fields.NotificationPhase.START)
 
-        # NOTE(danms): delete stashed migration information
-        old_instance_type = instance.old_flavor
-        instance.old_flavor = None
-        instance.new_flavor = None
-        instance.system_metadata.pop('old_vm_state', None)
-        instance.save()
-
         # NOTE(tr3buchet): tear down networks on source host
         self.network_api.setup_networks_on_host(context, instance,
                            migration.source_compute, teardown=True)
@@ -4323,8 +4319,9 @@ class ComputeManager(manager.Manager):
         # instance.migration_context so make sure to not call
         # instance.drop_migration_context() until after drop_move_claim
         # is called.
-        self.rt.drop_move_claim(context, instance, migration.source_node,
-                                old_instance_type, prefix='old_')
+        self.rt.drop_move_claim(
+            context, instance, migration.source_node, instance.old_flavor,
+            prefix='old_')
         instance.drop_migration_context()
 
         # NOTE(mriedem): The old_vm_state could be STOPPED but the user
@@ -4374,6 +4371,13 @@ class ComputeManager(manager.Manager):
                       {'instance_uuid': instance.uuid,
                        'migration_uuid': migration.uuid})
             raise
+
+    def _delete_stashed_flavor_info(self, instance):
+        """Remove information about the flavor change after a resize."""
+        instance.old_flavor = None
+        instance.new_flavor = None
+        instance.system_metadata.pop('old_vm_state', None)
+        instance.save()
 
     @wrap_exception()
     @reverts_task_state
@@ -4492,6 +4496,16 @@ class ComputeManager(manager.Manager):
         revert the resized attributes in the database.
 
         """
+        try:
+            self._finish_revert_resize(
+                context, instance, migration, request_spec)
+        finally:
+            self._delete_stashed_flavor_info(instance)
+
+    def _finish_revert_resize(
+        self, context, instance, migration, request_spec=None,
+    ):
+        """Inner version of finish_revert_resize."""
         with self._error_out_instance_on_exception(context, instance):
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
@@ -4501,18 +4515,16 @@ class ComputeManager(manager.Manager):
                 self.host, action=fields.NotificationAction.RESIZE_REVERT,
                     phase=fields.NotificationPhase.START, bdms=bdms)
 
-            # NOTE(mriedem): delete stashed old_vm_state information; we
-            # default to ACTIVE for backwards compatibility if old_vm_state
-            # is not set
-            old_vm_state = instance.system_metadata.pop('old_vm_state',
-                                                        vm_states.ACTIVE)
+            # Get stashed old_vm_state information to determine if guest should
+            # be powered on after spawn; we default to ACTIVE for backwards
+            # compatibility if old_vm_state is not set
+            old_vm_state = instance.system_metadata.get(
+                'old_vm_state', vm_states.ACTIVE)
 
             self._set_instance_info(instance, instance.old_flavor)
-            instance.old_flavor = None
-            instance.new_flavor = None
             instance.host = migration.source_compute
             instance.node = migration.source_node
-            instance.save()
+            instance.save(expected_task_state=[task_states.RESIZE_REVERTING])
 
             try:
                 source_allocations = self._revert_allocation(
