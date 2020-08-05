@@ -20,6 +20,7 @@ import testtools
 from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova
 from nova.conf import neutron as neutron_conf
 from nova import context as nova_context
 from nova import objects
@@ -597,6 +598,88 @@ class NUMAServersTest(NUMAServersTestBase):
                 '/resource_providers/%s/usages' % compute_rp_uuid).body[
                     'usages']
             self.assertEqual(expected_usage, compute_usage)
+
+    def test_resize_bug_1879878(self):
+        """Resize a instance with a NUMA topology when confirm takes time.
+
+        Bug 1879878 describes a race between the periodic tasks of the resource
+        tracker and the libvirt virt driver. The virt driver expects to be the
+        one doing the unpinning of instances, however, the resource tracker is
+        stepping on the virt driver's toes.
+        """
+        self.flags(
+            cpu_dedicated_set='0-3', cpu_shared_set='4-7', group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        orig_confirm = nova.virt.libvirt.driver.LibvirtDriver.confirm_migration
+
+        def fake_confirm_migration(*args, **kwargs):
+            # run periodics before finally running the confirm_resize routine,
+            # simulating a race between the resource tracker and the virt
+            # driver
+            self._run_periodics()
+
+            # then inspect the ComputeNode objects for our two hosts
+            src_numa_topology = objects.NUMATopology.obj_from_db_obj(
+                objects.ComputeNode.get_by_nodename(
+                    self.ctxt, src_host,
+                ).numa_topology,
+            )
+            dst_numa_topology = objects.NUMATopology.obj_from_db_obj(
+                objects.ComputeNode.get_by_nodename(
+                    self.ctxt, dst_host,
+                ).numa_topology,
+            )
+            # FIXME(stephenfin): There should still be two pinned cores here
+            self.assertEqual(0, len(src_numa_topology.cells[0].pinned_cpus))
+            self.assertEqual(2, len(dst_numa_topology.cells[0].pinned_cpus))
+
+            # before continuing with the actualy confirm process
+            return orig_confirm(*args, **kwargs)
+
+        self.stub_out(
+            'nova.virt.libvirt.driver.LibvirtDriver.confirm_migration',
+            fake_confirm_migration,
+        )
+
+        # start services
+        self.start_computes(save_rp_uuids=True)
+
+        # create server
+        flavor_a_id = self._create_flavor(
+            vcpu=2, extra_spec={'hw:cpu_policy': 'dedicated'})
+        server = self._create_server(flavor_id=flavor_a_id)
+
+        src_host = server['OS-EXT-SRV-ATTR:host']
+
+        # we don't really care what the new flavor is, so long as the old
+        # flavor is using pinning. We use a similar flavor for simplicity.
+        flavor_b_id = self._create_flavor(
+            vcpu=2, extra_spec={'hw:cpu_policy': 'dedicated'})
+
+        # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
+        # probably be less...dumb
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            # TODO(stephenfin): Replace with a helper
+            post = {'resize': {'flavorRef': flavor_b_id}}
+            self.api.post_server_action(server['id'], post)
+            server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+
+        dst_host = server['OS-EXT-SRV-ATTR:host']
+
+        # Now confirm the resize
+
+        # FIXME(stephenfin): This should be successful, but it's failing with a
+        # HTTP 500 due to bug #1879878
+        post = {'confirmResize': None}
+        exc = self.assertRaises(
+            client.OpenStackApiException,
+            self.api.post_server_action, server['id'], post)
+        self.assertEqual(500, exc.response.status_code)
+        self.assertIn('CPUUnpinningInvalid', str(exc))
 
 
 class NUMAServerTestWithCountingQuotaFromPlacement(NUMAServersTest):
