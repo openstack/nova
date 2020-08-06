@@ -31,8 +31,10 @@ from collections import defaultdict
 import inspect
 import operator
 import os
+import queue
 import socket
 import threading
+import typing as ty
 
 from eventlet import greenio
 from eventlet import greenthread
@@ -59,7 +61,10 @@ from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import migration as libvirt_migrate
 from nova.virt.libvirt import utils as libvirt_utils
 
-libvirt = None
+if ty.TYPE_CHECKING:
+    import libvirt
+else:
+    libvirt = None
 
 LOG = logging.getLogger(__name__)
 
@@ -92,7 +97,8 @@ class Host(object):
         self._read_only = read_only
         self._initial_connection = True
         self._conn_event_handler = conn_event_handler
-        self._conn_event_handler_queue = six.moves.queue.Queue()
+        self._conn_event_handler_queue: queue.Queue[ty.Callable] = (
+          queue.Queue())
         self._lifecycle_event_handler = lifecycle_event_handler
         self._caps = None
         self._domain_caps = None
@@ -100,7 +106,7 @@ class Host(object):
 
         self._wrapped_conn = None
         self._wrapped_conn_lock = threading.Lock()
-        self._event_queue = None
+        self._event_queue: ty.Optional[queue.Queue[ty.Callable]] = None
 
         self._events_delayed = {}
         # Note(toabctl): During a reboot of a domain, STOPPED and
@@ -320,9 +326,14 @@ class Host(object):
         # Process as many events as possible without
         # blocking
         last_close_event = None
+        # required for mypy
+        if self._event_queue is None:
+            return
         while not self._event_queue.empty():
             try:
-                event = self._event_queue.get(block=False)
+                event_type = ty.Union[
+                    virtevent.LifecycleEvent, ty.Mapping[str, ty.Any]]
+                event: event_type = self._event_queue.get(block=False)
                 if isinstance(event, virtevent.LifecycleEvent):
                     # call possibly with delay
                     self._event_emit_delayed(event)
@@ -809,7 +820,7 @@ class Host(object):
         if self._domain_caps:
             return self._domain_caps
 
-        domain_caps = defaultdict(dict)
+        domain_caps: ty.Dict = defaultdict(dict)
         caps = self.get_capabilities()
         virt_type = CONF.libvirt.virt_type
 
@@ -1182,6 +1193,19 @@ class Host(object):
                 return []
             else:
                 raise
+
+    def list_all_devices(
+            self, flags: int = 0) -> ty.List['libvirt.virNodeDevice']:
+        """Lookup devices.
+
+        :param flags: a bitmask of flags to filter the returned devices.
+        :returns: a list of virNodeDevice xml strings.
+        """
+        try:
+            return self.get_connection().listAllDevices(flags) or []
+        except libvirt.libvirtError as ex:
+            LOG.warning(ex)
+            return []
 
     def compare_cpu(self, xmlDesc, flags=0):
         """Compares the given CPU description with the host CPU."""

@@ -1136,6 +1136,74 @@ Active:          8381604 kB
             self.host.list_mediated_devices(8)
         mock_listDevices.assert_called_once_with('mdev', flags=8)
 
+    def test_list_all_devices(self):
+        with mock.patch.object(
+                self.host.get_connection(),
+                "listAllDevices") as mock_list_all_devices:
+            xml_str = """
+        <device>
+        <name>pci_0000_04_00_3</name>
+        <parent>pci_0000_00_01_1</parent>
+        <driver>
+            <name>igb</name>
+        </driver>
+        <capability type='pci'>
+            <domain>0</domain>
+            <bus>4</bus>
+            <slot>0</slot>
+            <function>3</function>
+            <product id='0x1521'>I350 Gigabit Network Connection</product>
+            <vendor id='0x8086'>Intel Corporation</vendor>
+            <capability type='virt_functions'>
+              <address domain='0x0000' bus='0x04' slot='0x10' function='0x3'/>
+              <address domain='0x0000' bus='0x04' slot='0x10' function='0x7'/>
+              <address domain='0x0000' bus='0x04' slot='0x11' function='0x3'/>
+              <address domain='0x0000' bus='0x04' slot='0x11' function='0x7'/>
+            </capability>
+        </capability>
+      </device>"""
+            pci_dev = fakelibvirt.NodeDevice(None, xml=xml_str)
+            node_devs = [pci_dev]
+            mock_list_all_devices.return_value = node_devs
+            ret = self.host.list_all_devices(flags=42)
+            self.assertEqual(node_devs, ret)
+        mock_list_all_devices.assert_called_once_with(42)
+
+    def test_list_all_devices_raises(self):
+        with mock.patch.object(
+                self.host.get_connection(),
+                "listAllDevices") as mock_list_all_devices:
+            xml_str = """
+        <device>
+        <name>pci_0000_04_00_3</name>
+        <parent>pci_0000_00_01_1</parent>
+        <driver>
+            <name>igb</name>
+        </driver>
+        <capability type='pci'>
+            <domain>0</domain>
+            <bus>4</bus>
+            <slot>0</slot>
+            <function>3</function>
+            <product id='0x1521'>I350 Gigabit Network Connection</product>
+            <vendor id='0x8086'>Intel Corporation</vendor>
+            <capability type='virt_functions'>
+              <address domain='0x0000' bus='0x04' slot='0x10' function='0x3'/>
+              <address domain='0x0000' bus='0x04' slot='0x10' function='0x7'/>
+              <address domain='0x0000' bus='0x04' slot='0x11' function='0x3'/>
+              <address domain='0x0000' bus='0x04' slot='0x11' function='0x7'/>
+            </capability>
+        </capability>
+      </device>"""
+            pci_dev = fakelibvirt.NodeDevice(None, xml=xml_str)
+            node_devs = [pci_dev]
+            mock_list_all_devices.return_value = node_devs
+            mock_list_all_devices.side_effect = fakelibvirt.libvirtError(
+                "message")
+            ret = self.host.list_all_devices(flags=42)
+            self.assertEqual([], ret)
+        mock_list_all_devices.assert_called_once_with(42)
+
     @mock.patch.object(fakelibvirt.virConnect, "listDevices")
     def test_list_devices(self, mock_listDevices):
         self.host._list_devices('mdev', 8)

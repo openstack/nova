@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    Since the 16.0.0 (Pike) release, nova has collected NIC feature
+    flags via libvirt. To look up the NIC feature flags for a whitelisted
+    PCI device the nova libvirt driver computed the libvirt nodedev name
+    by rendering a format string using the netdev name associated with
+    the interface and its current MAC address. In some environments the
+    libvirt nodedev list can become out of sync with the current MAC address
+    assigned to a netdev and as a result the nodedev look up can fail.
+    Nova now uses PCI addresses, rather than MAC addresses, to look up these
+    PCI network devices.

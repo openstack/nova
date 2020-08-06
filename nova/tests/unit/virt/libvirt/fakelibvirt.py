@@ -15,6 +15,7 @@
 import sys
 import textwrap
 import time
+import typing as ty
 
 import fixtures
 from lxml import etree
@@ -167,6 +168,10 @@ VIR_DOMAIN_BLOCK_COMMIT_RELATIVE = 4
 VIR_CONNECT_LIST_DOMAINS_ACTIVE = 1
 VIR_CONNECT_LIST_DOMAINS_INACTIVE = 2
 
+# virConnectListAllNodeDevices flags
+VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV = 2
+VIR_CONNECT_LIST_NODE_DEVICES_CAP_NET = 16
+
 # secret type
 VIR_SECRET_USAGE_TYPE_NONE = 0
 VIR_SECRET_USAGE_TYPE_VOLUME = 1
@@ -220,11 +225,12 @@ class FakePCIDevice(object):
     - X540 Ethernet Controller Virtual Function (8086:1515)
     """
 
+    pci_default_parent = "pci_0000_80_01_0"
     pci_device_template = textwrap.dedent("""
         <device>
           <name>pci_0000_81_%(slot)02x_%(function)d</name>
           <path>/sys/devices/pci0000:80/0000:80:01.0/0000:81:%(slot)02x.%(function)d</path>
-          <parent>pci_0000_80_01_0</parent>
+          <parent>%(parent)s</parent>
           <driver>
             <name>%(driver)s</name>
           </driver>
@@ -257,7 +263,7 @@ class FakePCIDevice(object):
     is_capable_of_mdevs = False
 
     def __init__(self, dev_type, slot, function, iommu_group, numa_node,
-                 vf_ratio=None, multiple_gpu_types=False):
+                 vf_ratio=None, multiple_gpu_types=False, parent=None):
         """Populate pci devices
 
         :param dev_type: (string) Indicates the type of the device (PCI, PF,
@@ -347,6 +353,7 @@ class FakePCIDevice(object):
             'capability': capability,
             'iommu_group': iommu_group,
             'numa_node': numa_node,
+            'parent': parent or self.pci_default_parent
         }
         # -1 is the sentinel set in /sys/bus/pci/devices/*/numa_node
         # for no NUMA affinity. When the numa_node is set to -1 on a device
@@ -449,7 +456,7 @@ class HostPCIDevicesInfo(object):
                 iommu_group=iommu_group,
                 numa_node=numa_node_pf,
                 vf_ratio=vf_ratio)
-
+            pf_dev_name = pci_dev_name
             # Generate VFs
             for _ in range(vf_ratio):
                 function += 1
@@ -471,7 +478,8 @@ class HostPCIDevicesInfo(object):
                     function=function,
                     iommu_group=iommu_group,
                     numa_node=numa_node_pf,
-                    vf_ratio=vf_ratio)
+                    vf_ratio=vf_ratio,
+                    parent=pf_dev_name)
 
             slot += 1
 
@@ -799,7 +807,8 @@ class NodeDevice(object):
     def _parse_xml(self, xml):
         tree = etree.fromstring(xml)
         root = tree.find('.')
-        self._name = root.get('name')
+        self._name = root.find('name').text
+        self._parent = root.find('parent').text
 
     def attach(self):
         pass
@@ -809,6 +818,18 @@ class NodeDevice(object):
 
     def reset(self):
         pass
+
+    def XMLDesc(self, flags: int) -> str:
+        return self._xml
+
+    def parent(self) -> str:
+        return self._parent
+
+    def name(self) -> str:
+        return self._name
+
+    def listCaps(self) -> ty.List[str]:
+        return [self.name().split('_')[0]]
 
 
 class Domain(object):
@@ -1710,6 +1731,13 @@ class Connection(object):
 
     def secretDefineXML(self, xml):
         pass
+
+    def listAllDevices(self, flags):
+        # Note this is incomplete as we do not filter
+        # based on the flags however it is enough for our
+        # current testing.
+        return [NodeDevice(self, xml=dev.XMLDesc(0))
+                for dev in self.pci_info.devices.values()]
 
 
 def openAuth(uri, auth, flags=0):
