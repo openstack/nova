@@ -35,25 +35,6 @@ class LibvirtNetVolumeDriverTestCase(
         iscsi_name = '%s/%s' % (self.iqn, self.vol['id'])
         self.assertEqual(iscsi_name, tree.find('./source').get('name'))
 
-    def sheepdog_connection(self, volume):
-        return {
-            'driver_volume_type': 'sheepdog',
-            'data': {
-                'name': volume['name']
-            }
-        }
-
-    def test_libvirt_sheepdog_driver(self):
-        libvirt_driver = net.LibvirtNetVolumeDriver(self.fake_host)
-        connection_info = self.sheepdog_connection(self.vol)
-        conf = libvirt_driver.get_config(connection_info, self.disk_info)
-        tree = conf.format_dom()
-        self.assertEqual('network', tree.get('type'))
-        self.assertEqual('sheepdog', tree.find('./source').get('protocol'))
-        self.assertEqual(self.name, tree.find('./source').get('name'))
-        libvirt_driver.disconnect_volume(connection_info,
-                                         mock.sentinel.instance)
-
     def rbd_connection(self, volume):
         return {
             'driver_volume_type': 'rbd',

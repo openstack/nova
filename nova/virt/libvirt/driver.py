@@ -173,26 +173,18 @@ libvirt_volume_drivers = [
     'iscsi=nova.virt.libvirt.volume.iscsi.LibvirtISCSIVolumeDriver',
     'iser=nova.virt.libvirt.volume.iser.LibvirtISERVolumeDriver',
     'local=nova.virt.libvirt.volume.volume.LibvirtVolumeDriver',
-    'drbd=nova.virt.libvirt.volume.drbd.LibvirtDRBDVolumeDriver',
     'fake=nova.virt.libvirt.volume.volume.LibvirtFakeVolumeDriver',
     'rbd=nova.virt.libvirt.volume.net.LibvirtNetVolumeDriver',
-    'sheepdog=nova.virt.libvirt.volume.net.LibvirtNetVolumeDriver',
     'nfs=nova.virt.libvirt.volume.nfs.LibvirtNFSVolumeDriver',
     'smbfs=nova.virt.libvirt.volume.smbfs.LibvirtSMBFSVolumeDriver',
-    'aoe=nova.virt.libvirt.volume.aoe.LibvirtAOEVolumeDriver',
     'fibre_channel='
         'nova.virt.libvirt.volume.fibrechannel.'
         'LibvirtFibreChannelVolumeDriver',
     'gpfs=nova.virt.libvirt.volume.gpfs.LibvirtGPFSVolumeDriver',
     'quobyte=nova.virt.libvirt.volume.quobyte.LibvirtQuobyteVolumeDriver',
-    'hgst=nova.virt.libvirt.volume.hgst.LibvirtHGSTVolumeDriver',
     'scaleio=nova.virt.libvirt.volume.scaleio.LibvirtScaleIOVolumeDriver',
-    'disco=nova.virt.libvirt.volume.disco.LibvirtDISCOVolumeDriver',
     'vzstorage='
         'nova.virt.libvirt.volume.vzstorage.LibvirtVZStorageVolumeDriver',
-    'veritas_hyperscale='
-        'nova.virt.libvirt.volume.vrtshyperscale.'
-        'LibvirtHyperScaleVolumeDriver',
     'storpool=nova.virt.libvirt.volume.storpool.LibvirtStorPoolVolumeDriver',
     'nvmeof=nova.virt.libvirt.volume.nvme.LibvirtNVMEVolumeDriver',
 ]
