@@ -71,7 +71,8 @@ class HostController(wsgi.Controller):
 
         """
         context = req.environ['nova.context']
-        context.can(hosts_policies.BASE_POLICY_NAME)
+        context.can(hosts_policies.POLICY_NAME % 'list',
+                    target={})
         filters = {'disabled': False}
         zone = req.GET.get('zone', None)
         if zone:
@@ -108,7 +109,8 @@ class HostController(wsgi.Controller):
             return val == "enable"
 
         context = req.environ['nova.context']
-        context.can(hosts_policies.BASE_POLICY_NAME)
+        context.can(hosts_policies.POLICY_NAME % 'update',
+                    target={})
         # See what the user wants to 'update'
         status = body.get('status')
         maint_mode = body.get('maintenance_mode')
@@ -168,7 +170,6 @@ class HostController(wsgi.Controller):
     def _host_power_action(self, req, host_name, action):
         """Reboots, shuts down or powers up the host."""
         context = req.environ['nova.context']
-        context.can(hosts_policies.BASE_POLICY_NAME)
         try:
             result = self.api.host_power_action(context, host_name, action)
         except NotImplementedError:
@@ -182,16 +183,25 @@ class HostController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
     def startup(self, req, id):
+        context = req.environ['nova.context']
+        context.can(hosts_policies.POLICY_NAME % 'start',
+                    target={})
         return self._host_power_action(req, host_name=id, action="startup")
 
     @wsgi.Controller.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
     def shutdown(self, req, id):
+        context = req.environ['nova.context']
+        context.can(hosts_policies.POLICY_NAME % 'shutdown',
+                    target={})
         return self._host_power_action(req, host_name=id, action="shutdown")
 
     @wsgi.Controller.api_version("2.1", "2.42")
     @wsgi.expected_errors((400, 404, 501))
     def reboot(self, req, id):
+        context = req.environ['nova.context']
+        context.can(hosts_policies.POLICY_NAME % 'reboot',
+                    target={})
         return self._host_power_action(req, host_name=id, action="reboot")
 
     @staticmethod
@@ -257,7 +267,8 @@ class HostController(wsgi.Controller):
                     'cpu': 1, 'memory_mb': 2048, 'disk_gb': 30}
         """
         context = req.environ['nova.context']
-        context.can(hosts_policies.BASE_POLICY_NAME)
+        context.can(hosts_policies.POLICY_NAME % 'show',
+                    target={})
         host_name = id
         try:
             mapping = objects.HostMapping.get_by_host(context, host_name)
