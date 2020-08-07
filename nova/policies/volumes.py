@@ -23,15 +23,15 @@ BASE_POLICY_NAME = 'os_compute_api:os-volumes'
 
 volumes_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        """Manage volumes for use with the Compute API.
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="""Manage volumes for use with the Compute API.
 
 Lists, shows details, creates, and deletes volumes and
 snapshots. These APIs are proxy calls to the Volume service.
 These are all deprecated.
 """,
-       [
+       operations=[
            {
                'method': 'GET',
                'path': '/os-volumes'
@@ -72,7 +72,8 @@ These are all deprecated.
                'method': 'DELETE',
                'path': '/os-snapshots/{snapshot_id}'
            }
-      ]),
+      ],
+      scope_types=['system', 'project']),
 ]
 
 
