@@ -23,12 +23,12 @@ BASE_POLICY_NAME = 'os_compute_api:os-hosts'
 
 hosts_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_API,
-        """List, show and manage physical hosts.
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_API,
+        description="""List, show and manage physical hosts.
 
 These APIs are all deprecated in favor of os-hypervisors and os-services.""",
-        [
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-hosts'
@@ -53,7 +53,8 @@ These APIs are all deprecated in favor of os-hypervisors and os-services.""",
                 'method': 'GET',
                 'path': '/os-hosts/{host_name}/startup'
             }
-        ]),
+        ],
+        scope_types=['system']),
 ]
 
 
