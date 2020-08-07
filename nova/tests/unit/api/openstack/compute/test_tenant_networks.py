@@ -125,36 +125,6 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         self._test_network_index(default_net=False)
 
 
-class TenantNetworksEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(TenantNetworksEnforcementV21, self).setUp()
-        self.controller = networks_v21.TenantNetworkController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    def test_index_policy_failed(self):
-        rule_name = 'os_compute_api:os-tenant-networks'
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.index,
-            self.req)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_show_policy_failed(self):
-        rule_name = 'os_compute_api:os-tenant-networks'
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.show,
-            self.req, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-
 class TenantNetworksDeprecationTest(test.NoDBTestCase):
 
     def setUp(self):
