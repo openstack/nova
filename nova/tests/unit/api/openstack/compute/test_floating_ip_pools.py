@@ -62,24 +62,6 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
         self.assertEqual(response, res_dict)
 
 
-class FloatingIPPoolsPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(FloatingIPPoolsPolicyEnforcementV21, self).setUp()
-        self.controller = fipp_v21.FloatingIPPoolsController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    def test_change_password_policy_failed(self):
-        rule_name = "os_compute_api:os-floating-ip-pools"
-        rule = {rule_name: "project:non_fake"}
-        self.policy.set_rules(rule)
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized, self.controller.index, self.req)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." %
-            rule_name, exc.format_message())
-
-
 class FloatingIpPoolDeprecationTest(test.NoDBTestCase):
 
     def setUp(self):
