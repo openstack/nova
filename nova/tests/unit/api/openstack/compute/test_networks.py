@@ -146,34 +146,6 @@ class NetworksTestV21(test.NoDBTestCase):
                           self.controller.show, self.req, uuids.invalid)
 
 
-class NetworksEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(NetworksEnforcementV21, self).setUp()
-        self.controller = networks_v21.NetworkController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    def test_show_policy_failed(self):
-        rule_name = 'os_compute_api:os-networks:view'
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.show, self.req, fakes.FAKE_UUID)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_index_policy_failed(self):
-        rule_name = 'os_compute_api:os-networks:view'
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.index, self.req)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-
 class NetworksDeprecationTest(test.NoDBTestCase):
 
     def setUp(self):
