@@ -23,15 +23,16 @@ BASE_POLICY_NAME = 'os_compute_api:os-floating-ip-pools'
 
 floating_ip_pools_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        "List floating IP pools. This API is deprecated.",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="List floating IP pools. This API is deprecated.",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-floating-ip-pools'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
