@@ -132,7 +132,6 @@ class HostTestCaseV21(test.TestCase):
     """Test Case for hosts."""
     validation_ex = exception.ValidationError
     Controller = os_hosts_v21.HostController
-    policy_ex = exception.PolicyNotAuthorized
 
     def _setup_stubs(self):
         # Pretend we have fake_hosts.HOST_LIST in the DB
@@ -426,34 +425,6 @@ class HostTestCaseV21(test.TestCase):
         self.assertIn('hosts', result)
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)
-
-
-class HostsPolicyEnforcementV21(test.NoDBTestCase):
-
-    def setUp(self):
-        super(HostsPolicyEnforcementV21, self).setUp()
-        self.controller = os_hosts_v21.HostController()
-        self.req = fakes.HTTPRequest.blank('')
-
-    def test_index_policy_failed(self):
-        rule_name = "os_compute_api:os-hosts"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.index, self.req)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
-    def test_show_policy_failed(self):
-        rule_name = "os_compute_api:os-hosts"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.show, self.req, 1)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
 
 
 class HostControllerDeprecationTest(test.NoDBTestCase):
