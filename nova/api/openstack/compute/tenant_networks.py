@@ -71,7 +71,8 @@ class TenantNetworkController(wsgi.Controller):
     @wsgi.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        context.can(tn_policies.POLICY_NAME % 'list')
+        context.can(tn_policies.POLICY_NAME % 'list',
+                    target={'project_id': context.project_id})
         networks = list(self.network_api.get_all(context))
         if not self._default_networks:
             self._refresh_default_networks()
@@ -82,7 +83,8 @@ class TenantNetworkController(wsgi.Controller):
     @wsgi.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
-        context.can(tn_policies.POLICY_NAME % 'show')
+        context.can(tn_policies.POLICY_NAME % 'show',
+                    target={'project_id': context.project_id})
         try:
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
