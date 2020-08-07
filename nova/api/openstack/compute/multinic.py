@@ -41,9 +41,10 @@ class MultinicController(wsgi.Controller):
     def _add_fixed_ip(self, req, id, body):
         """Adds an IP on a given network to an instance."""
         context = req.environ['nova.context']
-        context.can(multinic_policies.BASE_POLICY_NAME)
-
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(multinic_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
+
         network_id = body['addFixedIp']['networkId']
         try:
             self.compute_api.add_fixed_ip(context, instance, network_id)
@@ -58,9 +59,10 @@ class MultinicController(wsgi.Controller):
     def _remove_fixed_ip(self, req, id, body):
         """Removes an IP from an instance."""
         context = req.environ['nova.context']
-        context.can(multinic_policies.BASE_POLICY_NAME)
-
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(multinic_policies.BASE_POLICY_NAME,
+                    target={'project_id': instance.project_id})
+
         address = body['removeFixedIp']['address']
 
         try:

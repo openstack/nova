@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 import webob
 
@@ -22,6 +23,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 
 
 UUID = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
@@ -66,6 +68,11 @@ class FixedIpTestV21(test.NoDBTestCase):
         self.stub_out('nova.compute.api.API.get', compute_api_get)
         self.controller = self.controller_class.MultinicController()
         self.fake_req = fakes.HTTPRequest.blank('')
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
+        self.mock_get.return_value = fake_instance.fake_instance_obj(
+            self.fake_req.environ['nova.context'], uuid=UUID,
+            project_id=self.fake_req.environ['nova.context'].project_id)
 
     def test_add_fixed_ip(self):
         global last_add_fixed_ip
@@ -151,6 +158,11 @@ class MultinicPolicyEnforcementV21(test.NoDBTestCase):
         super(MultinicPolicyEnforcementV21, self).setUp()
         self.controller = multinic_v21.MultinicController()
         self.req = fakes.HTTPRequest.blank('')
+        self.mock_get = self.useFixture(
+            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
+        self.mock_get.return_value = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
 
     def test_add_fixed_ip_policy_failed(self):
         rule_name = "os_compute_api:os-multinic"
