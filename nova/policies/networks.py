@@ -23,13 +23,13 @@ POLICY_ROOT = 'os_compute_api:os-networks:%s'
 
 networks_policies = [
     policy.DocumentedRuleDefault(
-        POLICY_ROOT % 'view',
-        base.RULE_ADMIN_OR_OWNER,
-        """List networks for the project and show details for a network.
+        name=POLICY_ROOT % 'view',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description="""List networks for the project and show network details.
 
 These APIs are proxy calls to the Network service. These are all
 deprecated.""",
-        [
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-networks'
@@ -38,7 +38,8 @@ deprecated.""",
                 'method': 'GET',
                 'path': '/os-networks/{network_id}'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 
