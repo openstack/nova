@@ -64,7 +64,8 @@ APIs are deprecated.""",
                 'method': 'DELETE',
                 'path': '/os-security-groups/{security_group_id}'
             },
-        ]),
+        ],
+        scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'list',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
