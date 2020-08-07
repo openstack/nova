@@ -24,8 +24,8 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.policies import base
 
 
-class SecurityGroupsPolicyTest(base.BasePolicyTest):
-    """Test Security Groups APIs policies with all possible context.
+class ServerSecurityGroupsPolicyTest(base.BasePolicyTest):
+    """Test Server Security Groups APIs policies with all possible context.
     This class defines the set of context with different roles
     which are allowed and not allowed to pass the policy checks.
     With those set of context, it will call the API operation and
@@ -33,7 +33,7 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
     """
 
     def setUp(self):
-        super(SecurityGroupsPolicyTest, self).setUp()
+        super(ServerSecurityGroupsPolicyTest, self).setUp()
         self.controller = security_groups.ServerSecurityGroupController()
         self.action_ctr = security_groups.SecurityGroupActionController()
         self.req = fakes.HTTPRequest.blank('')
@@ -106,6 +106,118 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
                                        {'name': 'fake'}})
 
 
+class SecurityGroupsPolicyTest(base.BasePolicyTest):
+    """Test Security Groups APIs policies with all possible context.
+    This class defines the set of context with different roles
+    which are allowed and not allowed to pass the policy checks.
+    With those set of context, it will call the API operation and
+    verify the expected behaviour.
+    """
+
+    def setUp(self):
+        super(SecurityGroupsPolicyTest, self).setUp()
+        self.controller = security_groups.SecurityGroupController()
+        self.rule_ctr = security_groups.SecurityGroupRulesController()
+        self.req = fakes.HTTPRequest.blank('')
+
+        # Check that everyone is able to perform crud operation on.
+        # security groups.
+        # NOTE(gmann): Nova cannot verify the security groups owner during
+        # nova policy enforcement so will be passing context's project_id
+        # as target to policy and always pass. If requester is not admin
+        # or owner of security groups then neutron will be returning the
+        # appropriate error.
+        self.everyone_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_reader_context,
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context,
+            self.other_project_member_context
+        ]
+        self.everyone_unauthorized_contexts = []
+
+    @mock.patch('nova.network.security_group_api.list')
+    def test_list_security_groups_policy(self, mock_get):
+        rule_name = policies.BASE_POLICY_NAME
+        self.common_policy_check(self.everyone_authorized_contexts,
+                                 self.everyone_unauthorized_contexts,
+                                 rule_name,
+                                 self.controller.index,
+                                 self.req)
+
+    @mock.patch('nova.network.security_group_api.get')
+    def test_show_security_groups_policy(self, mock_get):
+        rule_name = policies.BASE_POLICY_NAME
+        self.common_policy_check(self.everyone_authorized_contexts,
+                                 self.everyone_unauthorized_contexts,
+                                 rule_name,
+                                 self.controller.show,
+                                 self.req, uuids.fake_id)
+
+    @mock.patch('nova.network.security_group_api.get')
+    @mock.patch('nova.network.security_group_api.update_security_group')
+    def test_update_security_groups_policy(self, mock_update, mock_get):
+        rule_name = policies.BASE_POLICY_NAME
+        body = {'security_group': {
+            'name': 'test',
+            'description': 'test-desc'}}
+        self.common_policy_check(self.everyone_authorized_contexts,
+                                 self.everyone_unauthorized_contexts,
+                                 rule_name,
+                                 self.controller.update,
+                                 self.req, uuids.fake_id, body=body)
+
+    @mock.patch('nova.network.security_group_api.create_security_group')
+    def test_create_security_groups_policy(self, mock_create):
+        rule_name = policies.BASE_POLICY_NAME
+        body = {'security_group': {
+            'name': 'test',
+            'description': 'test-desc'}}
+        self.common_policy_check(self.everyone_authorized_contexts,
+                                 self.everyone_unauthorized_contexts,
+                                 rule_name,
+                                 self.controller.create,
+                                 self.req, body=body)
+
+    @mock.patch('nova.network.security_group_api.get')
+    @mock.patch('nova.network.security_group_api.destroy')
+    def test_delete_security_groups_policy(self, mock_destroy, mock_get):
+        rule_name = policies.BASE_POLICY_NAME
+        self.common_policy_check(self.everyone_authorized_contexts,
+                                 self.everyone_unauthorized_contexts,
+                                 rule_name,
+                                 self.controller.delete,
+                                 self.req, uuids.fake_id)
+
+    @mock.patch('nova.network.security_group_api.get')
+    @mock.patch('nova.network.security_group_api.create_security_group_rule')
+    def test_create_security_group_rules_policy(self, mock_create, mock_get):
+        rule_name = policies.BASE_POLICY_NAME
+        body = {'security_group_rule': {
+            'ip_protocol': 'test', 'group_id': uuids.fake_id,
+            'parent_group_id': uuids.fake_id,
+            'from_port': 22, 'from_port': 22}}
+        self.common_policy_check(self.everyone_authorized_contexts,
+                                 self.everyone_unauthorized_contexts,
+                                 rule_name,
+                                 self.rule_ctr.create,
+                                 self.req, body=body)
+
+    @mock.patch('nova.network.security_group_api.get_rule')
+    @mock.patch('nova.network.security_group_api.get')
+    @mock.patch('nova.network.security_group_api.remove_rules')
+    def test_delete_security_group_rules_policy(self, mock_remove, mock_get,
+            mock_rules):
+        rule_name = policies.BASE_POLICY_NAME
+        self.common_policy_check(self.everyone_authorized_contexts,
+                                 self.everyone_unauthorized_contexts,
+                                 rule_name,
+                                 self.rule_ctr.delete,
+                                 self.req, uuids.fake_id)
+
+
 class SecurityGroupsScopeTypePolicyTest(SecurityGroupsPolicyTest):
     """Test Security Groups APIs policies with system scope enabled.
     This class set the nova.conf [oslo_policy] enforce_scope to True
@@ -121,7 +233,24 @@ class SecurityGroupsScopeTypePolicyTest(SecurityGroupsPolicyTest):
         self.flags(enforce_scope=True, group="oslo_policy")
 
 
-class SecurityGroupsNoLegacyPolicyTest(SecurityGroupsScopeTypePolicyTest):
+class ServerSecurityGroupsScopeTypePolicyTest(ServerSecurityGroupsPolicyTest):
+    """Test Server Security Groups APIs policies with system scope enabled.
+
+    This class set the nova.conf [oslo_policy] enforce_scope to True
+    so that we can switch on the scope checking on oslo policy side.
+    It defines the set of context with scoped token
+    which are allowed and not allowed to pass the policy checks.
+    With those set of context, it will run the API operation and
+    verify the expected behaviour.
+    """
+
+    def setUp(self):
+        super(ServerSecurityGroupsScopeTypePolicyTest, self).setUp()
+        self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class ServerSecurityGroupsNoLegacyPolicyTest(
+    ServerSecurityGroupsScopeTypePolicyTest):
     """Test Security Groups APIs policies with system scope enabled,
     and no more deprecated rules that allow the legacy admin API to
     access system_admin_or_owner APIs.
@@ -136,7 +265,7 @@ class SecurityGroupsNoLegacyPolicyTest(SecurityGroupsScopeTypePolicyTest):
             base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
 
     def setUp(self):
-        super(SecurityGroupsNoLegacyPolicyTest, self).setUp()
+        super(ServerSecurityGroupsNoLegacyPolicyTest, self).setUp()
 
         # Check that system or projct admin or owner is able to operate
         # server security groups.
