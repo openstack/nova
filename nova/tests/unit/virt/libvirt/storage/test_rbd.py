@@ -417,6 +417,8 @@ class RbdTestCase(test.NoDBTestCase):
         client.__enter__.assert_called_once_with()
         client.__exit__.assert_called_once_with(None, None, None)
 
+    @mock.patch('oslo_service.loopingcall.LoopingCallBase._sleep',
+                new=mock.Mock())
     @mock.patch.object(rbd_utils, 'RADOSClient')
     def _test_cleanup_exception(self, exception_name, mock_client):
         instance = objects.Instance(id=1, uuid=uuids.instance,
@@ -431,8 +433,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.mock_rbd.Image.return_value.list_snaps.return_value = [{}]
 
         client = mock_client.return_value
-        with mock.patch('eventlet.greenthread.sleep'):
-            self.driver.cleanup_volumes(filter_fn)
+        self.driver.cleanup_volumes(filter_fn)
         rbd.remove.assert_any_call(client.__enter__.return_value.ioctx,
                                    '%s_test' % uuids.instance)
         # NOTE(sandonov): 12 retries + 1 final attempt to propagate = 13
