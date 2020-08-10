@@ -370,6 +370,7 @@ def _import_image(session, read_handle, vm_import_spec, vm_name, vm_folder_ref,
     # retry in order to handle conflicts in case of parallel execution
     # (multiple agents or previously failed import of the same image
     max_attempts = 3
+    imported_vm_ref = None
     for i in range(max_attempts):
         try:
             write_handle = rw_handles.VmdkWriteHandle(session,
