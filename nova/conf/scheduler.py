@@ -150,7 +150,18 @@ Related options:
 - ``[scheduler] placement_aggregate_required_for_tenants``
 """),
     cfg.BoolOpt("query_placement_for_availability_zone",
-        default=False,
+        default=True,
+        deprecated_for_removal=True,
+        deprecated_since='24.0.0',
+        deprecated_reason="""
+Since the introduction of placement pre-filters in 18.0.0 (Rocky), we have
+supported tracking Availability Zones either natively in placement or using the
+legacy ``AvailabilityZoneFilter`` scheduler filter. In 24.0.0 (Xena), the
+filter-based approach has been deprecated for removal in favor of the
+placement-based approach. As a result, this config option has also been
+deprecated and will be removed when the ``AvailabilityZoneFilter`` filter is
+removed.
+""",
         help="""
 Use placement to determine availability zones.
 
@@ -164,8 +175,9 @@ operation. If no host aggregate with the `availability_zone` key is
 found, or that aggregate does not match one in placement, the result will
 be the same as not finding any suitable hosts.
 
-Note that if you enable this flag, you can disable the (less efficient)
-AvailabilityZoneFilter in the scheduler.
+Note that if you disable this flag, you **must** enable the (less efficient)
+``AvailabilityZoneFilter`` in the scheduler in order to availability zones to
+work correctly.
 
 Possible values:
 
@@ -355,7 +367,6 @@ Related options:
         # Tempest's scheduler_enabled_filters to keep the default values in
         # sync.
         default=[
-            "AvailabilityZoneFilter",
             "ComputeFilter",
             "ComputeCapabilitiesFilter",
             "ImagePropertiesFilter",

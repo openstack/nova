@@ -18,7 +18,7 @@ Compute is configured with the following default scheduler options in the
 
    [filter_scheduler]
    available_filters = nova.scheduler.filters.all_filters
-   enabled_filters = AvailabilityZoneFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
+   enabled_filters = ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
 
 By default, the scheduler ``driver`` is configured as a filter scheduler, as
 described in the next section. In the default configuration, this scheduler
@@ -341,8 +341,12 @@ This is a no-op filter. It does not eliminate any of the available hosts.
 AvailabilityZoneFilter
 ----------------------
 
-Filters hosts by availability zone. You must enable this filter for the
-scheduler to respect availability zones in requests.
+.. deprecated:: 24.0.0 (Xena)
+
+   The functionality of this filter has been replaced by
+   :ref:`availability-zones-with-placement`.
+
+Filters hosts by availability zone.
 
 Refer to :doc:`/admin/availability-zones` for more information.
 
