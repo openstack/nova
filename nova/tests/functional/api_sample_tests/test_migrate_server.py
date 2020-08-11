@@ -37,6 +37,8 @@ def fake_get_compute(context, host):
 
 
 class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
+    # The various 'os_compute_api:os-migrate-server:*' policies are admin-only
+    ADMIN_API = True
     sample_dir = "os-migrate-server"
 
     def setUp(self):
@@ -149,6 +151,8 @@ class MigrateServerSamplesJsonTestV230(MigrateServerSamplesJsonTest):
 
 
 class MigrateServerSamplesJsonTestV256(test_servers.ServersSampleBase):
+    # The various 'os_compute_api:os-migrate-server:*' policies are admin-only
+    ADMIN_API = True
     sample_dir = "os-migrate-server"
     microversion = '2.56'
     scenarios = [('v2_56', {'api_major_version': 'v2.1'})]
@@ -188,6 +192,8 @@ class MigrateServerSamplesJsonTestV256(test_servers.ServersSampleBase):
 
 
 class MigrateServerSamplesJsonTestV268(test_servers.ServersSampleBase):
+    # The various 'os_compute_api:os-migrate-server:*' policies are admin-only
+    ADMIN_API = True
     sample_dir = "os-migrate-server"
     microversion = '2.68'
     scenarios = [('v2_68', {'api_major_version': 'v2.1'})]

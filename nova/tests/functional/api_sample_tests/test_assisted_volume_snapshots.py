@@ -17,6 +17,9 @@ from nova.tests.unit.api.openstack import fakes
 
 
 class AssistedVolumeSnapshotsJsonTests(test_servers.ServersSampleBase):
+    # The various 'os_compute_api:os-assisted-volume-snapshots:*' policies are
+    # admin-only
+    ADMIN_API = True
     sample_dir = "os-assisted-volume-snapshots"
 
     def test_create(self):

@@ -24,8 +24,8 @@
         },
         "status": "UNKNOWN",
         "server_groups": ["%(uuid)s"],
-        "tenant_id": "project",
-        "user_id": "fake",
+        "tenant_id": "6f70656e737461636b20342065766572",
+        "user_id": "admin",
         "links": [
             {
                 "href": "%(versioned_compute_endpoint)s/servers/%(uuid)s",

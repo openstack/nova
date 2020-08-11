@@ -65,13 +65,13 @@ from nova import service
 from nova.tests.functional.api import client
 from nova.tests.unit import fake_requests
 
-_TRUE_VALUES = ('True', 'true', '1', 'yes')
-
 CONF = cfg.CONF
+LOG = logging.getLogger(__name__)
+
 DB_SCHEMA = collections.defaultdict(str)
 SESSION_CONFIGURED = False
 
-LOG = logging.getLogger(__name__)
+PROJECT_ID = '6f70656e737461636b20342065766572'
 
 
 class ServiceFixture(fixtures.Fixture):
@@ -153,7 +153,7 @@ class StandardLogging(fixtures.Fixture):
         root.setLevel(std_logging.DEBUG)
 
         # supports collecting debug level for local runs
-        if os.environ.get('OS_DEBUG') in _TRUE_VALUES:
+        if os.environ.get('OS_DEBUG') in ('True', 'true', '1', 'yes'):
             level = std_logging.DEBUG
         else:
             level = std_logging.INFO
@@ -247,8 +247,11 @@ class SingleCellSimple(fixtures.Fixture):
     instances_created=False to init.
     """
 
-    def __init__(self, instances_created=True):
+    def __init__(
+        self, instances_created=True, project_id=PROJECT_ID,
+    ):
         self.instances_created = instances_created
+        self.project_id = project_id
 
     def setUp(self):
         super(SingleCellSimple, self).setUp()
@@ -294,7 +297,7 @@ class SingleCellSimple(fixtures.Fixture):
             'created_at': None,
             'instance_uuid': instance_uuid,
             'cell_id': (self.instances_created and 1 or None),
-            'project_id': 'project',
+            'project_id': self.project_id,
             'cell_mapping': (
                 self.instances_created and self._fake_cell_get() or None),
         }
@@ -839,9 +842,10 @@ class OSAPIFixture(fixtures.Fixture):
 
     """
 
-    def __init__(self, api_version='v2',
-                 project_id='6f70656e737461636b20342065766572',
-                 use_project_id_in_urls=False, stub_keystone=True):
+    def __init__(
+        self, api_version='v2', project_id=PROJECT_ID,
+        use_project_id_in_urls=False, stub_keystone=True,
+    ):
         """Constructor
 
         :param api_version: the API version that we're interested in
@@ -1162,7 +1166,7 @@ class NeutronFixture(fixtures.Fixture):
     """A fixture to boot instances with neutron ports"""
 
     # the default project_id in OsaAPIFixtures
-    tenant_id = '6f70656e737461636b20342065766572'
+    tenant_id = PROJECT_ID
 
     network_1 = {
         'id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
@@ -2046,7 +2050,7 @@ class CinderFixture(fixtures.Fixture):
     """A fixture to volume operations with the new Cinder attach/detach API"""
 
     # the default project_id in OSAPIFixtures
-    tenant_id = '6f70656e737461636b20342065766572'
+    tenant_id = PROJECT_ID
 
     SWAP_OLD_VOL = 'a07f71dc-8151-4e7d-a0cc-cd24a3f11113'
     SWAP_NEW_VOL = '227cc671-f30b-4488-96fd-7d0bf13648d8'

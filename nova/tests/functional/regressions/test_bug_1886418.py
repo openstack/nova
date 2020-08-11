@@ -32,11 +32,11 @@ class TestServices(integrated_helpers._IntegratedTestBase):
         ).body['traits']
 
     def _disable_compute(self):
-        self.api.put_service(
+        self.admin_api.put_service(
             self.compute_service_id, {'status': 'disabled'})
 
     def _enable_compute(self):
-        self.api.put_service(
+        self.admin_api.put_service(
             self.compute_service_id, {'status': 'enabled'})
 
     def _has_disabled_trait(self):

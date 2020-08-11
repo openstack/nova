@@ -21,6 +21,8 @@ CONF = nova.conf.CONF
 
 
 class ShelveJsonTest(test_servers.ServersSampleBase):
+    # The 'os_compute_api:os-shelve:shelve_offload' policy is admin-only
+    ADMIN_API = True
     sample_dir = "os-shelve"
 
     def setUp(self):

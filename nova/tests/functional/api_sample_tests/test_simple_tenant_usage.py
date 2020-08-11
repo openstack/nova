@@ -23,6 +23,8 @@ import nova.tests.functional.api_samples_test_base as astb
 
 
 class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
+    # The 'os_compute_api:os-simple-tenant-usage:list' policy is admin-only
+    ADMIN_API = True
     sample_dir = "os-simple-tenant-usage"
 
     def setUp(self):
@@ -71,6 +73,8 @@ class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
 
 
 class SimpleTenantUsageV240Test(test_servers.ServersSampleBase):
+    # The 'os_compute_api:os-simple-tenant-usage:list' policy is admin-only
+    ADMIN_API = True
     USE_PROJECT_ID = False
 
     sample_dir = 'os-simple-tenant-usage'

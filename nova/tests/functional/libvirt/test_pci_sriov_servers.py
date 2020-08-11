@@ -250,7 +250,9 @@ class SRIOVServersTest(_PCIServersTestBase):
 
         # now check the server diagnostics to ensure the VF-type PCI device is
         # attached
-        diagnostics = self.api.get_server_diagnostics(server['id'])
+        diagnostics = self.admin_api.get_server_diagnostics(
+            server['id']
+        )
 
         self.assertEqual(
             base.LibvirtNeutronFixture.network_1_port_2['mac_address'],

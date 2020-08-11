@@ -82,7 +82,7 @@
         "status": "ACTIVE",
         "tenant_id": "6f70656e737461636b20342065766572",
         "updated": "%(isotime)s",
-        "user_id": "fake",
+        "user_id": "admin",
         "trusted_image_certificates": [
             "0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8",
             "674736e3-f25c-405c-8362-bbf991e0ce0a"

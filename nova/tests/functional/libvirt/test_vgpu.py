@@ -25,7 +25,6 @@ import nova.conf
 from nova import context
 from nova import objects
 from nova.tests.functional.libvirt import base
-from nova.tests.unit import policy_fixture
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import utils as libvirt_utils
@@ -142,9 +141,8 @@ class VGPUTests(VGPUTestBase):
              return_value=[]))
         self.useFixture(fixtures.MockPatch('os.rename'))
 
-        policy = self.useFixture(policy_fixture.RealPolicyFixture())
         # Allow non-admins to see instance action events.
-        policy.set_rules({
+        self.policy.set_rules({
             'os_compute_api:os-instance-actions:events': 'rule:admin_or_owner'
         }, overwrite=False)
 

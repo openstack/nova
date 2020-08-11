@@ -33,6 +33,8 @@ class TestSameCell(integrated_helpers._IntegratedTestBase):
     destination host, respectively.
     """
 
+    # cold migration is an admin-only operation by default
+    ADMIN_API = True
     compute_driver = 'fake.MediumFakeDriver'
     microversion = 'latest'
 
@@ -179,6 +181,9 @@ class TestCrossCell(integrated_helpers.ProviderUsageBaseTestCase):
     reverted and dropping the claim for that migration on the source or
     destination host, respectively.
     """
+
+    # cold migration is an admin-only operation by default
+    ADMIN_API = True
     NUMBER_OF_CELLS = 2
     compute_driver = 'fake.MediumFakeDriver'
 

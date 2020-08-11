@@ -90,7 +90,7 @@
             "tags": ["tag1", "tag2"],
             "tenant_id": "6f70656e737461636b20342065766572",
             "updated": "2017-02-14T19:24:43Z",
-            "user_id": "fake"
+            "user_id": "admin"
         }
     ],
     "servers_links": [

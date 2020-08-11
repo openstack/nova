@@ -87,7 +87,7 @@
                 "674736e3-f25c-405c-8362-bbf991e0ce0a"
             ],
             "updated": "%(isotime)s",
-            "user_id": "fake"
+            "user_id": "admin"
         }
     ],
     "servers_links": [
