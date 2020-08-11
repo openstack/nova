@@ -67,7 +67,7 @@ class NUMAServersTest(NUMAServersTestBase):
         # 'start_service' to make sure there isn't a mismatch
         self.compute = self.start_service('compute', host='compute1')
 
-        compute_rp_uuid = self.placement_api.get(
+        compute_rp_uuid = self.placement.get(
             '/resource_providers?name=compute1').body[
             'resource_providers'][0]['uuid']
 
@@ -93,7 +93,7 @@ class NUMAServersTest(NUMAServersTestBase):
             self.assertFalse(self.mock_filter.called)
 
         if expected_usage:
-            compute_usage = self.placement_api.get(
+            compute_usage = self.placement.get(
                 '/resource_providers/%s/usages' % compute_rp_uuid).body[
                     'usages']
             self.assertEqual(expected_usage, compute_usage)
@@ -523,7 +523,7 @@ class NUMAServersTest(NUMAServersTestBase):
                 expected_usage = {'VCPU': 0, 'PCPU': 0, 'DISK_GB': 0,
                                   'MEMORY_MB': 0}
 
-            compute_usage = self.placement_api.get(
+            compute_usage = self.placement.get(
                 '/resource_providers/%s/usages' % compute_rp_uuid).body[
                     'usages']
             self.assertEqual(expected_usage, compute_usage)
@@ -564,7 +564,7 @@ class NUMAServersTest(NUMAServersTestBase):
                 expected_usage = {'VCPU': 0, 'PCPU': 2, 'DISK_GB': 20,
                                   'MEMORY_MB': 2048}
 
-            compute_usage = self.placement_api.get(
+            compute_usage = self.placement.get(
                 '/resource_providers/%s/usages' % compute_rp_uuid).body[
                     'usages']
             self.assertEqual(expected_usage, compute_usage)
@@ -593,7 +593,7 @@ class NUMAServersTest(NUMAServersTestBase):
                 expected_usage = {'VCPU': 0, 'PCPU': 2, 'DISK_GB': 20,
                                   'MEMORY_MB': 2048}
 
-            compute_usage = self.placement_api.get(
+            compute_usage = self.placement.get(
                 '/resource_providers/%s/usages' % compute_rp_uuid).body[
                     'usages']
             self.assertEqual(expected_usage, compute_usage)
@@ -646,7 +646,7 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
         # ensure there is no PCPU inventory being reported
 
         for host, compute_rp_uuid in self.compute_rp_uuids.items():
-            compute_inventory = self.placement_api.get(
+            compute_inventory = self.placement.get(
                 '/resource_providers/%s/inventories' % compute_rp_uuid).body[
                     'inventories']
             self.assertEqual(8, compute_inventory['VCPU']['total'])
@@ -672,20 +672,20 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
 
         compute_rp_uuid = self.compute_rp_uuids['test_compute0']
 
-        compute_inventory = self.placement_api.get(
+        compute_inventory = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body[
                 'inventories']
-        compute_usages = self.placement_api.get(
+        compute_usages = self.placement.get(
             '/resource_providers/%s/usages' % compute_rp_uuid).body[
                 'usages']
         self.assertEqual(4, compute_usages['VCPU'])
 
         compute_rp_uuid = self.compute_rp_uuids['test_compute1']
 
-        compute_inventory = self.placement_api.get(
+        compute_inventory = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body[
                 'inventories']
-        compute_usages = self.placement_api.get(
+        compute_usages = self.placement.get(
             '/resource_providers/%s/usages' % compute_rp_uuid).body[
                 'usages']
         self.assertEqual(0, compute_usages['VCPU'])
@@ -709,18 +709,18 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
 
         compute_rp_uuid = self.compute_rp_uuids['test_compute0']
 
-        compute_inventory = self.placement_api.get(
+        compute_inventory = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body[
                 'inventories']
         self.assertEqual(8, compute_inventory['VCPU']['total'])
         self.assertNotIn('PCPU', compute_inventory)
-        compute_usages = self.placement_api.get(
+        compute_usages = self.placement.get(
             '/resource_providers/%s/usages' % compute_rp_uuid).body[
                 'usages']
         self.assertEqual(4, compute_usages['VCPU'])
         self.assertNotIn('PCPU', compute_usages)
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server1['id']).body['allocations']
         # the flavor has disk=10 and ephemeral=10
         self.assertEqual(
@@ -732,18 +732,18 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
 
         compute_rp_uuid = self.compute_rp_uuids['test_compute1']
 
-        compute_inventory = self.placement_api.get(
+        compute_inventory = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body[
                 'inventories']
         self.assertEqual(8, compute_inventory['VCPU']['total'])
         self.assertNotIn('PCPU', compute_inventory)
-        compute_usages = self.placement_api.get(
+        compute_usages = self.placement.get(
             '/resource_providers/%s/usages' % compute_rp_uuid).body[
                 'usages']
         self.assertEqual(2, compute_usages['VCPU'])
         self.assertNotIn('PCPU', compute_usages)
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server2['id']).body['allocations']
         # the flavor has disk=10 and ephemeral=10
         self.assertEqual(
@@ -771,18 +771,18 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
 
         compute_rp_uuid = self.compute_rp_uuids['test_compute0']
 
-        compute_inventory = self.placement_api.get(
+        compute_inventory = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body[
                 'inventories']
         self.assertEqual(8, compute_inventory['PCPU']['total'])
         self.assertNotIn('VCPU', compute_inventory)
-        compute_usages = self.placement_api.get(
+        compute_usages = self.placement.get(
             '/resource_providers/%s/usages' % compute_rp_uuid).body[
                 'usages']
         self.assertEqual(4, compute_usages['PCPU'])
         self.assertNotIn('VCPU', compute_usages)
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server1['id']).body['allocations']
         # the flavor has disk=10 and ephemeral=10
         self.assertEqual(
@@ -794,18 +794,18 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
 
         compute_rp_uuid = self.compute_rp_uuids['test_compute1']
 
-        compute_inventory = self.placement_api.get(
+        compute_inventory = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body[
                 'inventories']
         self.assertEqual(8, compute_inventory['PCPU']['total'])
         self.assertNotIn('VCPU', compute_inventory)
-        compute_usages = self.placement_api.get(
+        compute_usages = self.placement.get(
             '/resource_providers/%s/usages' % compute_rp_uuid).body[
                 'usages']
         self.assertEqual(2, compute_usages['PCPU'])
         self.assertNotIn('VCPU', compute_usages)
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server2['id']).body['allocations']
         # the flavor has disk=10 and ephemeral=10
         self.assertEqual(
@@ -820,12 +820,12 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
 
         compute_rp_uuid = self.compute_rp_uuids['test_compute0']
 
-        compute_inventory = self.placement_api.get(
+        compute_inventory = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body[
                 'inventories']
         self.assertEqual(8, compute_inventory['PCPU']['total'])
         self.assertNotIn('VCPU', compute_inventory)
-        compute_usages = self.placement_api.get(
+        compute_usages = self.placement.get(
             '/resource_providers/%s/usages' % compute_rp_uuid).body[
                 'usages']
         self.assertEqual(6, compute_usages['PCPU'])
@@ -833,7 +833,7 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
 
         # check the allocations for this server specifically
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server3['id']).body[
                 'allocations']
         self.assertEqual(

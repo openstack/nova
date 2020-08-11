@@ -26,7 +26,7 @@ class TestServices(integrated_helpers._IntegratedTestBase):
             host='compute', binary='nova-compute')[0]['id']
 
     def _get_traits_on_compute(self):
-        return self.placement_api.get(
+        return self.placement.get(
             '/resource_providers/%s/traits' % self.compute_rp_uuid,
             version='1.6'
         ).body['traits']
