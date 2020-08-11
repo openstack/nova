@@ -25,8 +25,8 @@ from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_block_device
-import nova.tests.unit.image.fake
 from nova.tests.unit.virt import fakelibosinfo
 from nova.virt import block_device as driver_block_device
 from nova.virt import driver
@@ -41,7 +41,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.get_admin_context()
-        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.test_instance = {
             'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
             'memory_kb': '1024000',

@@ -29,10 +29,10 @@ from nova import exception
 from nova.image import glance
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
-from nova.tests.unit.image import fake
 
 
 CONF = nova.conf.CONF
@@ -69,7 +69,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.stub_out('nova.objects.Instance.save', lambda *a, **kw: None)
 
         fakes.stub_out_compute_api_snapshot(self)
-        fake.stub_out_image_service(self)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.flags(enable_instance_password=True, group='api')
         # TODO(stephenfin): Use uuidsentinel instead of this
         self._image_href = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
@@ -591,7 +591,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
             return image_meta
 
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show',
                       return_image_meta)
         body = {
             "rebuild": {
@@ -643,7 +643,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
             return image_meta
 
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show',
                       return_image_meta)
         self.stub_out('nova.compute.api.API.get', wrap_get)
         self.stub_out('nova.objects.Instance.save', fake_save)

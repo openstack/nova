@@ -70,7 +70,6 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
-from nova.tests.unit.image import fake
 from nova.tests.unit import matchers
 from nova import utils as nova_utils
 
@@ -228,7 +227,7 @@ class ControllerTest(test.TestCase):
         super(ControllerTest, self).setUp()
         fakes.stub_out_nw_api(self)
         fakes.stub_out_key_pair_funcs(self)
-        fake.stub_out_image_service(self)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         fakes.stub_out_secgroup_api(
             self, security_groups=[{'name': 'default'}])
         return_server = fakes.fake_compute_get(id=2, availability_zone='nova',
@@ -3066,7 +3065,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                           self.controller._action_rebuild, self.req,
                           FAKE_UUID, body=self.body)
 
-    @mock.patch.object(fake._FakeImageService, 'show',
+    @mock.patch.object(nova_fixtures.GlanceFixture, 'show',
                        return_value=dict(
                            id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                            name='public image', is_public=True,
@@ -3082,7 +3081,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             self.req.environ['nova.context'], self.image_uuid,
             include_locations=False, show_deleted=True)
 
-    @mock.patch.object(fake._FakeImageService, 'show',
+    @mock.patch.object(nova_fixtures.GlanceFixture, 'show',
                        return_value=dict(
                            id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                            name='public image', is_public=True,
@@ -3098,7 +3097,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             self.req.environ['nova.context'], self.image_uuid,
             include_locations=False, show_deleted=True)
 
-    @mock.patch.object(fake._FakeImageService, 'show',
+    @mock.patch.object(nova_fixtures.GlanceFixture, 'show',
                        return_value=dict(
                            id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                            name='public image', is_public=True,
@@ -3120,7 +3119,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=self.body)
 
-    @mock.patch.object(fake._FakeImageService, 'show',
+    @mock.patch.object(nova_fixtures.GlanceFixture, 'show',
                        return_value=dict(
                            id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                            name='public image', is_public=True,
@@ -3140,7 +3139,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                         name='public image', is_public=True, status='active')
 
         with test.nested(
-            mock.patch.object(fake._FakeImageService, 'show',
+            mock.patch.object(nova_fixtures.GlanceFixture, 'show',
                               side_effect=fake_get_image),
             mock.patch.object(self.controller.compute_api, 'rebuild',
                               side_effect=exception.OnsetFileLimitExceeded)
@@ -4251,7 +4250,7 @@ class ServersControllerCreateTest(test.TestCase):
             return (inst, inst)
 
         fakes.stub_out_key_pair_funcs(self)
-        fake.stub_out_image_service(self)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.stub_out('nova.db.api.instance_create', instance_create)
         self.stub_out('nova.db.api.instance_system_metadata_update',
                       lambda *a, **kw: None)
@@ -4384,7 +4383,7 @@ class ServersControllerCreateTest(test.TestCase):
                 "Flavor's disk is too small for requested image."):
             self.controller.create(self.req, body=self.body)
 
-    @mock.patch.object(fake._FakeImageService, 'show',
+    @mock.patch.object(nova_fixtures.GlanceFixture, 'show',
                        return_value=dict(
                            id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                            status='active',

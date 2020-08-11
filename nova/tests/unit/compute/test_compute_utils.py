@@ -371,12 +371,7 @@ class UsageInfoTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.flavor = objects.Flavor.get_by_name(self.context, 'm1.tiny')
 
-        def fake_show(meh, context, id, **kwargs):
-            return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
-
         self.flags(group='glance', api_servers=['http://localhost:9292'])
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      fake_show)
         fake_network.set_stub_network_methods(self)
         fake_server_actions.stub_out_action_events(self)
 

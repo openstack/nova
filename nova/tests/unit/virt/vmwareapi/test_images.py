@@ -19,14 +19,13 @@ import os
 import tarfile
 
 import mock
-from oslo_utils.fixture import uuidsentinel
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 from oslo_vmware import rw_handles
 
 from nova import exception
 from nova import objects
 from nova import test
-import nova.tests.unit.image.fake
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import vm_util
@@ -46,15 +45,15 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         context = mock.MagicMock()
 
         image_data = {
-                'id': nova.tests.unit.image.fake.get_valid_image_id(),
-                'disk_format': 'vmdk',
-                'size': 512,
-            }
+            'id': uuids.image,
+            'disk_format': 'vmdk',
+            'size': 512,
+        }
         read_file_handle = mock.MagicMock()
         write_file_handle = mock.MagicMock()
         read_iter = mock.MagicMock()
         instance = objects.Instance(id=1,
-                                    uuid=uuidsentinel.foo,
+                                    uuid=uuids.foo,
                                     image_ref=image_data['id'])
 
         def fake_read_handle(read_iter):
@@ -229,7 +228,6 @@ class VMwareImagesTestCase(test.NoDBTestCase):
     def test_from_image_with_image_ref(self):
         raw_disk_size_in_gb = 83
         raw_disk_size_in_bytes = raw_disk_size_in_gb * units.Gi
-        image_id = nova.tests.unit.image.fake.get_valid_image_id()
         mdata = {'size': raw_disk_size_in_bytes,
                  'disk_format': 'vmdk',
                  'properties': {
@@ -239,9 +237,10 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                      "hw_vif_model": constants.DEFAULT_VIF_MODEL,
                      "vmware_linked_clone": True}}
         mdata = objects.ImageMeta.from_dict(mdata)
-        with mock.patch.object(images, 'get_vsphere_location',
-                               return_value=None):
-            img_props = images.VMwareImage.from_image(None, image_id, mdata)
+        with mock.patch.object(
+            images, 'get_vsphere_location', return_value=None,
+        ):
+            img_props = images.VMwareImage.from_image(None, uuids.image, mdata)
 
         image_size_in_kb = raw_disk_size_in_bytes / units.Ki
 
@@ -265,7 +264,6 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         raw_disk_size_in_gb = 93
         raw_disk_size_in_btyes = raw_disk_size_in_gb * units.Gi
 
-        image_id = nova.tests.unit.image.fake.get_valid_image_id()
         mdata = {'size': raw_disk_size_in_btyes,
                  'disk_format': disk_format,
                  'properties': {
@@ -280,8 +278,9 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         context = mock.Mock()
         mdata = objects.ImageMeta.from_dict(mdata)
         with mock.patch.object(
-                images, 'get_vsphere_location', return_value=vsphere_location):
-            return images.VMwareImage.from_image(context, image_id, mdata)
+            images, 'get_vsphere_location', return_value=vsphere_location,
+        ):
+            return images.VMwareImage.from_image(context, uuids.image, mdata)
 
     def test_use_linked_clone_override_nf(self):
         image_props = self._image_build(None, False)

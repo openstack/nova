@@ -36,7 +36,6 @@ from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_block_device
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import utils as test_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import block_device as driver_block_device
@@ -146,11 +145,10 @@ class _FakeDriverBackendTestCase(object):
         # TODO(sdague): it would be nice to do this in a way that only
         # the relevant backends where replaced for tests, though this
         # should not harm anything by doing it for all backends
-        fake_image.stub_out_image_service(self)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self._setup_fakelibvirt()
 
     def tearDown(self):
-        fake_image.FakeImageService_reset()
         self._teardown_fakelibvirt()
         super(_FakeDriverBackendTestCase, self).tearDown()
 
@@ -195,7 +193,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection = importutils.import_object(self.driver_module,
                                                     fake.FakeVirtAPI())
         self.ctxt = test_utils.get_test_admin_context()
-        self.image_service = fake_image.FakeImageService()
+        self.image_service = self.useFixture(nova_fixtures.GlanceFixture(self))
         # NOTE(dripton): resolve_driver_format does some file reading and
         # writing and chowning that complicate testing too much by requiring
         # using real directories with proper permissions.  Just stub it out

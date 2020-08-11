@@ -28,8 +28,8 @@ from nova import exception
 from nova.network import neutron as neutron_api
 from nova import objects
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit.compute import test_compute
-from nova.tests.unit.image import fake as fake_image
 
 
 CONF = nova.conf.CONF
@@ -330,9 +330,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             else:
                 self.fail('Unexpected save!')
 
-        fake_image.stub_out_image_service(self)
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.delete',
-                      fake_delete)
+        self.useFixture(fixtures.GlanceFixture(self))
+        self.stub_out('nova.tests.fixtures.GlanceFixture.delete', fake_delete)
 
         with mock.patch.object(self.rt, 'instance_claim',
                                side_effect=fake_claim), \

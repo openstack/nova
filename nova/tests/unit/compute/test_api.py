@@ -61,7 +61,6 @@ from nova.tests.unit import fake_build_request
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_request_spec
 from nova.tests.unit import fake_volume
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_migration
@@ -3263,7 +3262,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.useFixture(fixtures.MockPatchObject(
             self.compute_api.compute_rpcapi, 'unquiesce_instance',
             side_effect=fake_unquiesce_instance))
-        fake_image.stub_out_image_service(self)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
 
         with test.nested(
                 mock.patch.object(compute_api.API, '_record_action_start'),
@@ -3636,8 +3635,8 @@ class _ComputeAPIUnitTestMixIn(object):
             'properties': {"auto_disk_config": "Disabled"},
         }
 
-        fake_image.stub_out_image_service(self)
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+        self.useFixture(nova_fixtures.GlanceFixture(self))
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show',
                       lambda obj, context, image_id, **kwargs: self.fake_image)
         return self.fake_image['id']
 
@@ -3649,8 +3648,8 @@ class _ComputeAPIUnitTestMixIn(object):
             'properties': {"hw_architecture": "arm64"},
         }
 
-        fake_image.stub_out_image_service(self)
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+        self.useFixture(nova_fixtures.GlanceFixture(self))
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show',
                       lambda obj, context, image_id, **kwargs: self.fake_image)
         return self.fake_image['id']
 

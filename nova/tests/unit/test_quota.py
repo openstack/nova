@@ -27,7 +27,7 @@ from nova import exception
 from nova import objects
 from nova import quota
 from nova import test
-import nova.tests.unit.image.fake
+from nova.tests import fixtures as nova_fixtures
 
 CONF = nova.conf.CONF
 
@@ -67,7 +67,7 @@ class QuotaIntegrationTestCase(test.TestCase):
                                               is_admin=True)
         self.inst_type = objects.Flavor.get_by_name(self.context, 'm1.small')
 
-        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
 
         self.compute_api = compute.API()
 
@@ -78,10 +78,6 @@ class QuotaIntegrationTestCase(test.TestCase):
         # so just mock that out and assume network (port) quota is OK
         self.compute_api.network_api.validate_networks = (
             mock.Mock(side_effect=fake_validate_networks))
-
-    def tearDown(self):
-        super(QuotaIntegrationTestCase, self).tearDown()
-        nova.tests.unit.image.fake.FakeImageService_reset()
 
     def _create_instance(self, flavor_name='m1.large'):
         """Create a test instance in cell1 with an instance mapping."""

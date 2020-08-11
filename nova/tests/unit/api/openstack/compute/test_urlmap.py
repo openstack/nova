@@ -16,18 +16,14 @@
 from oslo_serialization import jsonutils
 
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
-import nova.tests.unit.image.fake
 
 
 class UrlmapTest(test.NoDBTestCase):
     def setUp(self):
         super(UrlmapTest, self).setUp()
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-
-    def tearDown(self):
-        super(UrlmapTest, self).tearDown()
-        nova.tests.unit.image.fake.FakeImageService_reset()
+        self.useFixture(fixtures.GlanceFixture(self))
 
     def test_path_version_v2(self):
         # Test URL path specifying v2 returns v2 content.

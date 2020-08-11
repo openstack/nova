@@ -79,7 +79,6 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import fake_network_cache_model
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_server_actions
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit.objects import test_flavor
@@ -231,9 +230,8 @@ class BaseTestCase(test.TestCase):
             else:
                 raise exception.ImageNotFound(image_id=id)
 
-        fake_image.stub_out_image_service(self)
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      fake_show)
+        self.useFixture(fixtures.GlanceFixture(self))
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', fake_show)
 
         fake_network.set_stub_network_methods(self)
         fake_server_actions.stub_out_action_events(self)
@@ -266,7 +264,6 @@ class BaseTestCase(test.TestCase):
 
     def tearDown(self):
         ctxt = context.get_admin_context()
-        fake_image.FakeImageService_reset()
         instances = db.instance_get_all(ctxt)
         for instance in instances:
             db.instance_destroy(ctxt, instance['uuid'])
@@ -2184,9 +2181,8 @@ class ComputeTestCase(BaseTestCase,
         def fake_delete(self_, ctxt, image_id):
             self.deleted_image_id = image_id
 
-        fake_image.stub_out_image_service(self)
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.delete',
-                      fake_delete)
+        self.useFixture(fixtures.GlanceFixture(self))
+        self.stub_out('nova.tests.fixtures.GlanceFixture.delete', fake_delete)
 
         instance = self._create_fake_instance_obj()
         image = {'id': uuids.image}
@@ -3429,9 +3425,8 @@ class ComputeTestCase(BaseTestCase,
                 raise Exception()
 
         self.stub_out('nova.virt.fake.FakeDriver.snapshot', fake_snapshot)
-        fake_image.stub_out_image_service(self)
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.delete',
-                      fake_delete)
+        self.useFixture(fixtures.GlanceFixture(self))
+        self.stub_out('nova.tests.fixtures.GlanceFixture.delete', fake_delete)
 
         inst_obj = self._get_snapshotting_instance()
         with mock.patch.object(compute_utils,
@@ -3494,22 +3489,20 @@ class ComputeTestCase(BaseTestCase,
                      'status': status}
             return image
 
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', fake_show)
 
         def fake_delete(self_, context, image_id):
             self.fake_image_delete_called = True
             self.assertEqual(uuids.snapshot, image_id)
 
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.delete',
-                      fake_delete)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.delete', fake_delete)
 
         def fake_snapshot(*args, **kwargs):
             raise exc
 
         self.stub_out('nova.virt.fake.FakeDriver.snapshot', fake_snapshot)
 
-        fake_image.stub_out_image_service(self)
+        self.useFixture(fixtures.GlanceFixture(self))
 
         inst_obj = self._get_snapshotting_instance()
 
@@ -8563,8 +8556,7 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type['memory_mb'] = 1
 
         self.fake_image['min_ram'] = 2
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.assertRaises(exception.FlavorMemoryTooSmall,
             self.compute_api.create, self.context,
@@ -8582,8 +8574,7 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type['root_gb'] = 1
 
         self.fake_image['min_disk'] = 2
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
             self.compute_api.create, self.context,
@@ -8602,8 +8593,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.fake_image['size'] = '1073741825'
 
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
             self.compute_api.create, self.context,
@@ -8624,8 +8614,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.fake_image['min_ram'] = 2
         self.fake_image['min_disk'] = 2
         self.fake_image['name'] = 'fake_name'
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         (refs, resv_id) = self.compute_api.create(self.context,
                 inst_type, self.fake_image['id'])
@@ -8637,8 +8626,7 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type['root_gb'] = 1
         inst_type['memory_mb'] = 1
 
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         (refs, resv_id) = self.compute_api.create(self.context,
                 inst_type, self.fake_image['id'])
@@ -8648,8 +8636,7 @@ class ComputeAPITestCase(BaseTestCase):
         # build from it
         self.fake_image['name'] = 'fake_name'
         self.fake_image['status'] = 'DELETED'
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         expected_message = (
             exception.ImageNotActive.msg_fmt % {'image_id':
@@ -8768,8 +8755,7 @@ class ComputeAPITestCase(BaseTestCase):
         # Test an instance type with malformed user data.
 
         self.fake_image['min_ram'] = 2
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.assertRaises(exception.InstanceUserDataMalformed,
             self.compute_api.create, self.context, self.default_flavor,
@@ -8778,8 +8764,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_base64_user_data(self):
         # Test an instance type with ok much user data.
         self.fake_image['min_ram'] = 2
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         # NOTE(mikal): a string of length 48510 encodes to 65532 characters of
         # base64
@@ -8866,8 +8851,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     @mock.patch('nova.compute.api.API._get_requested_instance_group')
     def test_instance_create_adds_to_instance_group(self, get_group_mock):
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         group = objects.InstanceGroup(self.context)
         group.uuid = uuids.fake
@@ -8888,8 +8872,7 @@ class ComputeAPITestCase(BaseTestCase):
     @mock.patch('nova.compute.api.API._get_requested_instance_group')
     def test_create_instance_group_members_over_quota_during_recheck(
             self, get_group_mock, check_deltas_mock):
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         # Simulate a race where the first check passes and the recheck fails.
         # The first call is for checking instances/cores/ram, second and third
@@ -8927,8 +8910,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_instance_group_members_no_quota_recheck(self,
                                                             get_group_mock,
                                                             check_deltas_mock):
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
         # Disable recheck_quota.
         self.flags(recheck_quota=False, group='quota')
 
@@ -8963,8 +8945,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertIn(refs[0]['uuid'], group.members)
 
     def test_instance_create_with_group_uuid_fails_group_not_exist(self):
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.assertRaises(
                 exception.InstanceGroupNotFound,
@@ -9040,8 +9021,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_rebuild_in_error_not_launched(self):
         instance = self._create_fake_instance_obj(params={'image_ref': ''})
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
 
@@ -9063,8 +9043,7 @@ class ComputeAPITestCase(BaseTestCase):
         without an image_ref (volume-backed instance).
         """
         instance = self._create_fake_instance_obj(params={'image_ref': ''})
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
         # The API request schema validates that a UUID is passed for the
         # imageRef parameter so we need to provide an image.
         ex = self.assertRaises(exception.NovaException,
@@ -9081,8 +9060,7 @@ class ComputeAPITestCase(BaseTestCase):
             params={'image_ref': FAKE_IMAGE_REF})
         self.fake_image['name'] = 'fake_name'
         self.fake_image['status'] = 'DELETED'
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         expected_message = (
             exception.ImageNotActive.msg_fmt % {'image_id':
@@ -9100,7 +9078,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance.flavor.root_gb = 1
 
         self.fake_image['min_ram'] = 128
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show',
                       self.fake_show)
 
         self.assertRaises(exception.FlavorMemoryTooSmall,
@@ -9131,8 +9109,7 @@ class ComputeAPITestCase(BaseTestCase):
                        fake_extract_flavor)
 
         self.fake_image['min_disk'] = 2
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
             self.compute_api.rebuild, self.context,
@@ -9163,8 +9140,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.fake_image['min_ram'] = 64
         self.fake_image['min_disk'] = 1
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.compute_api.rebuild(self.context,
                 instance, self.fake_image['id'], 'new_password')
@@ -9185,8 +9161,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.stub_out('nova.compute.flavors.extract_flavor',
                        fake_extract_flavor)
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.compute_api.rebuild(self.context,
                 instance, self.fake_image['id'], 'new_password')
@@ -9209,8 +9184,7 @@ class ComputeAPITestCase(BaseTestCase):
                        fake_extract_flavor)
 
         self.fake_image['size'] = '1073741825'
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
             self.compute_api.rebuild, self.context,
@@ -13047,9 +13021,8 @@ class ComputeInactiveImageTestCase(BaseTestCase):
                                    'ramdisk_id': uuids.ramdisk_id,
                                    'something_else': 'meow'}}
 
-        fake_image.stub_out_image_service(self)
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      fake_show)
+        self.useFixture(fixtures.GlanceFixture(self))
+        self.stub_out('nova.tests.fixtures.GlanceFixture.show', fake_show)
         self.compute_api = compute.API()
 
     def test_create_instance_with_deleted_image(self):

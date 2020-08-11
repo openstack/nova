@@ -13,7 +13,7 @@
 #    under the License.
 
 import mock
-from oslo_utils.fixture import uuidsentinel
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_vmware import exceptions as oslo_vmw_exceptions
 from oslo_vmware import vim_util as vutil
 
@@ -23,7 +23,6 @@ from nova import context
 from nova import exception
 from nova import test
 from nova.tests.unit import fake_instance
-from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import constants
@@ -43,10 +42,10 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         self._context = context.RequestContext('fake_user', 'fake_project')
 
         self._volumeops = volumeops.VMwareVolumeOps(self._session)
-        self._image_id = image_fake.get_valid_image_id()
+        self._image_id = uuids.image
         self._instance_values = {
             'name': 'fake_name',
-            'uuid': uuidsentinel.foo,
+            'uuid': uuids.foo,
             'vcpus': 1,
             'memory_mb': 512,
             'image_ref': self._image_id,
