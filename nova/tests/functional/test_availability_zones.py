@@ -16,7 +16,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
@@ -27,6 +26,7 @@ class TestAvailabilityZoneScheduling(
         super(TestAvailabilityZoneScheduling, self).setUp()
 
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
@@ -35,9 +35,6 @@ class TestAvailabilityZoneScheduling(
 
         self.api = api_fixture.admin_api
         self.api.microversion = 'latest'
-
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
 
         self.start_service('conductor')
         self.start_service('scheduler')

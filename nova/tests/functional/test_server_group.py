@@ -30,10 +30,6 @@ from nova.tests.unit import policy_fixture
 from nova import utils
 from nova.virt import fake
 
-import nova.scheduler.utils
-import nova.servicegroup
-import nova.tests.unit.image.fake
-
 # An alternate project id
 PROJECT_ID_ALT = "616c6c796f7572626173656172656f73"
 
@@ -67,6 +63,7 @@ class ServerGroupTestBase(test.TestCase,
                    group='filter_scheduler')
 
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
 
         self.useFixture(func_fixtures.PlacementFixture())
@@ -78,13 +75,8 @@ class ServerGroupTestBase(test.TestCase,
         self.admin_api = api_fixture.admin_api
         self.admin_api.microversion = self.microversion
 
-        # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-
         self.start_service('conductor')
         self.start_service('scheduler')
-
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
     def _boot_a_server_to_group(self, group,
                                 expected_status='ACTIVE', flavor=None,
@@ -975,15 +967,15 @@ class TestAntiAffinityLiveMigration(test.TestCase,
         # Setup common fixtures.
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
+
         # Setup API.
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
         self.api = api_fixture.api
         self.admin_api = api_fixture.admin_api
-        # Fake out glance.
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
+
         # Start conductor, scheduler and two computes.
         self.start_service('conductor')
         self.start_service('scheduler')

@@ -18,7 +18,6 @@ import fixtures
 import io
 import mock
 
-import nova
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -35,6 +34,7 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         super(TestSerialConsoleLiveMigrate, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
@@ -53,10 +53,6 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         self.admin_api = api_fixture.admin_api
         self.api = api_fixture.api
 
-        # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-        nova.tests.unit.fake_network.set_stub_network_methods(self)
-
         self.flags(compute_driver='libvirt.LibvirtDriver')
         self.flags(enabled=True, group="serial_console")
         self.flags(enabled=False, group="vnc")
@@ -68,7 +64,6 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         self.compute = self.start_service('compute', host='test_compute1')
 
         self.useFixture(cast_as_call.CastAsCall(self))
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         self.image_id = self.api.get_images()[0]['id']
         self.flavor_id = self.api.get_flavors()[0]['id']

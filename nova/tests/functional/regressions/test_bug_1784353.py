@@ -15,7 +15,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 
@@ -32,10 +31,10 @@ class TestRescheduleWithVolumesAttached(
         super(TestRescheduleWithVolumesAttached, self).setUp()
 
         # Use the new attach flow fixture for cinder
-        cinder_fixture = nova_fixtures.CinderFixture(self)
-        self.cinder = self.useFixture(cinder_fixture)
+        self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
 
         fake_network.set_stub_network_methods(self)
 
@@ -44,9 +43,6 @@ class TestRescheduleWithVolumesAttached(
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
         self.api = api_fixture.admin_api
-
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         self.flags(compute_driver='fake.FakeRescheduleDriver')
 

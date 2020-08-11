@@ -16,7 +16,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 
@@ -56,8 +55,7 @@ class TestRescheduleWithServerGroup(test.TestCase,
         self.admin_api = api_fixture.admin_api
 
         # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
 
         self.start_service('conductor')
         self.start_service('scheduler')

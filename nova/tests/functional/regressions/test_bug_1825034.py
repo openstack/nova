@@ -17,7 +17,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 
 
 class FillVirtualInterfaceListMigration(
@@ -38,13 +37,11 @@ class FillVirtualInterfaceListMigration(
             api_version='v2.1'))
         self.api = api_fixture.admin_api
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         self.start_service('conductor')
         self.start_service('scheduler')
         self.start_service('compute')
-        # the image fake backend needed for image discovery
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
 
     def test_fill_vifs_migration(self):
         # Create a test server.

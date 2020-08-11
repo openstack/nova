@@ -14,7 +14,6 @@
 
 from nova.compute import api as compute_api
 from nova.tests.functional.api_sample_tests import test_servers
-from nova.tests.unit.image import fake
 
 
 class PreserveEphemeralOnRebuildJsonTest(test_servers.ServersSampleBase):
@@ -22,9 +21,8 @@ class PreserveEphemeralOnRebuildJsonTest(test_servers.ServersSampleBase):
 
     def _test_server_rebuild_preserve_ephemeral(self, value, resp_tpl=None):
         uuid = self._post_server()
-        image = fake.get_valid_image_id()
         subs = {'host': self._get_host(),
-                'uuid': image,
+                'uuid': self.glance.auto_disk_config_enabled_image['id'],
                 'name': 'foobar',
                 'pass': 'seekr3t',
                 'hostid': '[a-f0-9]+',

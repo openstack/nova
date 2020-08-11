@@ -25,7 +25,6 @@ import nova.conf
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit.image import fake
 
 CONF = nova.conf.CONF
 
@@ -61,7 +60,7 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
         # common server sample files from 'servers' directory.
         # Set False if tests need to use extension specific sample files
         subs = {
-            'image_id': fake.get_valid_image_id(),
+            'image_id': self.glance.auto_disk_config_enabled_image['id'],
             'host': self._get_host(),
             'compute_endpoint': self._get_compute_endpoint(),
             'versioned_compute_endpoint': self._get_vers_compute_endpoint(),
@@ -192,7 +191,7 @@ class ServersSampleJson219Test(ServersSampleJsonTest):
         uuid = self.test_servers_post()
         response = self._do_put('servers/%s' % uuid, 'server-put-req', {})
         subs = {
-            'image_id': fake.get_valid_image_id(),
+            'image_id': self.glance.auto_disk_config_enabled_image['id'],
             'hostid': '[a-f0-9]+',
             'glance_host': self._get_glance_host(),
             'access_ip_v4': '1.2.3.4',
@@ -235,9 +234,8 @@ class ServersSampleJson247Test(ServersSampleJsonTest):
 
     def test_server_rebuild(self):
         uuid = self._post_server()
-        image = fake.get_valid_image_id()
         params = {
-            'uuid': image,
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
             'name': 'foobar',
             'pass': 'seekr3t',
             'hostid': '[a-f0-9]+',
@@ -284,10 +282,8 @@ class ServersSampleJson263Test(ServersSampleBase):
     def test_server_rebuild(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         fakes.stub_out_key_pair_funcs(self)
-        image = fake.get_valid_image_id()
-
         params = {
-            'uuid': image,
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
             'name': 'foobar',
             'key_name': 'new-key',
             'description': 'description of foobar',
@@ -484,9 +480,8 @@ class ServersSampleJson271Test(ServersSampleBase):
     def test_servers_rebuild_with_server_groups(self):
         uuid = self._test_servers_post()
         fakes.stub_out_key_pair_funcs(self)
-        image = fake.get_valid_image_id()
         params = {
-            'uuid': image,
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
             'name': 'foobar',
             'key_name': 'new-key',
             'description': 'description of foobar',
@@ -558,9 +553,8 @@ class ServersSampleJson273Test(ServersSampleBase):
 
     def test_server_rebuild_with_empty_locked_reason(self):
         uuid = self._post_server(use_common_server_api_samples=False)
-        image = fake.get_valid_image_id()
         params = {
-            'uuid': image,
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
             'name': 'foobar',
             'pass': 'seekr3t',
             'hostid': '[a-f0-9]+',
@@ -647,9 +641,8 @@ class ServersSampleJson275Test(ServersUpdateSampleJsonTest):
 
     def test_server_rebuild(self):
         uuid = self._post_server()
-        image = fake.get_valid_image_id()
         params = {
-            'uuid': image,
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
             'name': 'foobar',
             'pass': 'seekr3t',
             'hostid': '[a-f0-9]+',
@@ -711,9 +704,8 @@ class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
 
     def test_server_rebuild(self):
         uuid = self._post_server()
-        image = fake.get_valid_image_id()
         params = {
-            'uuid': image,
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
             'name': 'foobar',
             'pass': 'seekr3t',
             'hostid': '[a-f0-9]+',
@@ -828,9 +820,8 @@ class ServersActionsJson219Test(ServersSampleBase):
 
     def test_server_rebuild(self):
         uuid = self._post_server()
-        image = fake.get_valid_image_id()
         params = {
-            'uuid': image,
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
             'name': 'foobar',
             'description': 'description of foobar',
             'pass': 'seekr3t',
@@ -855,9 +846,8 @@ class ServersActionsJson226Test(ServersSampleBase):
 
     def test_server_rebuild(self):
         uuid = self._post_server()
-        image = fake.get_valid_image_id()
         params = {
-            'uuid': image,
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
             'access_ip_v4': '1.2.3.4',
             'access_ip_v6': '80fe::',
             'disk_config': 'AUTO',
@@ -895,9 +885,8 @@ class ServersActionsJson254Test(ServersSampleBase):
     def test_server_rebuild(self):
         fakes.stub_out_key_pair_funcs(self)
         uuid = self._create_server()
-        image = fake.get_valid_image_id()
         params = {
-            'uuid': image,
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
             'name': 'foobar',
             'key_name': 'new-key',
             'description': 'description of foobar',

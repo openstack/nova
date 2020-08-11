@@ -14,13 +14,10 @@
 
 import time
 
-import nova.scheduler.utils
-import nova.servicegroup
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.unit import cast_as_call
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 
@@ -31,26 +28,22 @@ class TestServerGet(test.TestCase):
         super(TestServerGet, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
-        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-            api_version='v2.1'))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         # The non-admin API client is fine to stay at 2.1 since it just creates
         # and deletes the server.
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
         self.api = api_fixture.api
         self.admin_api = api_fixture.admin_api
         # The admin API client needs to be at microversion 2.16 to exhibit the
         # regression.
         self.admin_api.microversion = '2.16'
 
-        # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-
         self.start_service('conductor')
         self.start_service('scheduler')
         self.compute = self.start_service('compute')
-
-        self.useFixture(cast_as_call.CastAsCall(self))
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         self.image_id = self.api.get_images()[0]['id']
         self.flavor_id = self.api.get_flavors()[0]['id']

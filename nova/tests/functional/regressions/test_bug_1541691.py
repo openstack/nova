@@ -12,12 +12,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import nova.scheduler.utils
-import nova.servicegroup
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 
@@ -28,14 +25,12 @@ class TestServerValidation(test.TestCase):
     def setUp(self):
         super(TestServerValidation, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.GlanceFixture(self))
+
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
-
-        # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
-
         self.api = api_fixture.api
+
         self.image_id = self.api.get_images()[0]['id']
         self.flavor_id = self.api.get_flavors()[0]['id']
 

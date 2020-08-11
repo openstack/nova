@@ -19,7 +19,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 
@@ -30,14 +29,13 @@ class TestLocalDeleteAllocations(test.TestCase,
         self.useFixture(policy_fixture.RealPolicyFixture())
         # The NeutronFixture is needed to show security groups for a server.
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
         self.api = api_fixture.api
         self.admin_api = api_fixture.admin_api
         # We need the latest microversion to force-down the compute service
         self.admin_api.microversion = 'latest'
-        # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.start_service('conductor')
 

@@ -14,7 +14,6 @@
 #    under the License.
 
 from nova.tests.functional.api_sample_tests import test_servers
-from nova.tests.unit.image import fake
 
 
 class MultipleCreateJsonTest(test_servers.ServersSampleBase):
@@ -22,7 +21,7 @@ class MultipleCreateJsonTest(test_servers.ServersSampleBase):
 
     def test_multiple_create(self):
         subs = {
-            'image_id': fake.get_valid_image_id(),
+            'image_id': self.glance.auto_disk_config_enabled_image['id'],
             'compute_endpoint': self._get_compute_endpoint(),
             'min_count': "2",
             'max_count': "3"
@@ -32,7 +31,7 @@ class MultipleCreateJsonTest(test_servers.ServersSampleBase):
 
     def test_multiple_create_without_reservation_id(self):
         subs = {
-            'image_id': fake.get_valid_image_id(),
+            'image_id': self.glance.auto_disk_config_enabled_image['id'],
             'compute_endpoint': self._get_compute_endpoint(),
             'min_count': "2",
             'max_count': "3"

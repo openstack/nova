@@ -15,8 +15,8 @@
 
 import mock
 
+from nova.tests import fixtures
 from nova.tests.functional.api_sample_tests import test_servers
-from nova.tests.unit.image import fake
 
 
 class CreateBackupSamplesJsonTest(test_servers.ServersSampleBase):
@@ -30,7 +30,7 @@ class CreateBackupSamplesJsonTest(test_servers.ServersSampleBase):
         super(CreateBackupSamplesJsonTest, self).setUp()
         self.uuid = self._post_server()
 
-    @mock.patch.object(fake._FakeImageService, 'detail', return_value=[])
+    @mock.patch.object(fixtures.GlanceFixture, 'detail', return_value=[])
     def test_post_backup_server(self, mock_method):
         # Get api samples to backup server request.
         response = self._do_post('servers/%s/action' % self.uuid,

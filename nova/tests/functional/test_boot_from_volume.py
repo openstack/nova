@@ -20,7 +20,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
@@ -171,10 +170,9 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
         super(BootFromVolumeLargeRequestTest, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.CinderFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
-        self.image_service = fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
 
         self.api = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1')).admin_api
@@ -216,7 +214,7 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
         # Wrap the image service get method to check how many times it was
         # called.
         with mock.patch('nova.image.glance.API.get',
-                        wraps=self.image_service.show) as mock_image_get:
+                        wraps=self.glance.show) as mock_image_get:
             self.api.post_server({'server': server})
             # Assert that there was caching of the GET /v2/images/{image_id}
             # calls. The expected total in this case is 3: one for validating

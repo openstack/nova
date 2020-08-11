@@ -177,8 +177,8 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         return server
 
     def stub_image_create(self):
-        """Stubs the _FakeImageService.create method to track created images"""
-        original_create = self.image_service.create
+        """Stubs the GlanceFixture.create method to track created images"""
+        original_create = self.glance.create
 
         def image_create_snooper(*args, **kwargs):
             image = original_create(*args, **kwargs)
@@ -186,7 +186,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             return image
 
         _p = mock.patch.object(
-            self.image_service, 'create', side_effect=image_create_snooper)
+            self.glance, 'create', side_effect=image_create_snooper)
         _p.start()
         self.addCleanup(_p.stop)
 

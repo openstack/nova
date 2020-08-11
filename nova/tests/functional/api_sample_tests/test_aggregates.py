@@ -16,7 +16,6 @@
 from oslo_serialization import jsonutils
 
 from nova.tests.functional.api_sample_tests import api_sample_base
-from nova.tests.unit.image import fake as fake_image
 
 
 class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -132,7 +131,7 @@ class AggregatesV2_81_SampleJsonTest(AggregatesV2_41_SampleJsonTest):
 
     def test_images(self):
         agg_id = self._test_aggregate_create()
-        image = fake_image.get_valid_image_id()
+        image = self.glance.auto_disk_config_enabled_image['id']
         response = self._do_post('os-aggregates/%s/images' % agg_id,
                                  'aggregate-images-post-req',
                                  {'image_id': image})

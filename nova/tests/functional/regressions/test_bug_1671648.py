@@ -14,14 +14,13 @@
 
 import time
 
-import nova.compute.resource_tracker
+from nova.compute import resource_tracker
 from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_network
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 
@@ -59,7 +58,7 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         self.admin_api = api_fixture.admin_api
 
         # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
 
         self.start_service('conductor')
 
@@ -86,8 +85,7 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
         #   https://opendev.org/openstack/nova/src/commit/
         #   bb02d1110a9529217a5e9b1e1fe8ca25873cac59/
         #   nova/compute/resource_tracker.py#L121-L130
-        real_instance_claim =\
-                nova.compute.resource_tracker.ResourceTracker.instance_claim
+        real_instance_claim = resource_tracker.ResourceTracker.instance_claim
 
         def fake_instance_claim(_self, *args, **kwargs):
             self.attempts += 1

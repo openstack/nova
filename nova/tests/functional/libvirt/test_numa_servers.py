@@ -1251,7 +1251,7 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
         # 2 virtual numa nodes.
         ctx = nova_context.get_admin_context()
         image_meta = {'properties': {'hw_numa_nodes': 2}}
-        self.fake_image_service.update(ctx, self.image_ref_1, image_meta)
+        self.glance.update(ctx, self.image_ref_1, image_meta)
 
         # NOTE(sean-k-mooney): this should fail because rebuild uses noop
         # claims therefore it is not allowed for the NUMA topology or resource

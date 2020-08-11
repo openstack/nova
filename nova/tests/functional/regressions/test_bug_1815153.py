@@ -19,7 +19,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit import policy_fixture
 
 
@@ -49,6 +48,7 @@ class NonPersistentFieldNotResetTest(
         super(NonPersistentFieldNotResetTest, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
@@ -57,9 +57,6 @@ class NonPersistentFieldNotResetTest(
         # Use the latest microversion available to make sure something does
         # not regress in new microversions; cap as necessary.
         self.api.microversion = 'latest'
-
-        image_fake.stub_out_image_service(self)
-        self.addCleanup(image_fake.FakeImageService_reset)
 
         self.start_service('conductor')
         self.start_service('scheduler')

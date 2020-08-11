@@ -29,7 +29,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional import test_servers
-from nova.tests.unit.image import fake as image_fake
 
 CONF = config.CONF
 INCOMPLETE_CONSUMER_ID = '00000000-0000-0000-0000-000000000000'
@@ -1814,15 +1813,13 @@ class TestDBArchiveDeletedRowsMultiCell(integrated_helpers.InstanceHelperMixin,
     def setUp(self):
         super(TestDBArchiveDeletedRowsMultiCell, self).setUp()
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
         # We need the admin api to forced_host for server create
         self.api = api_fixture.admin_api
-
-        image_fake.stub_out_image_service(self)
-        self.addCleanup(image_fake.FakeImageService_reset)
 
         self.start_service('conductor')
         self.start_service('scheduler')

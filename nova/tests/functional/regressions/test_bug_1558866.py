@@ -17,7 +17,6 @@ import datetime
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
@@ -27,14 +26,11 @@ class TestServerGet(test.TestCase):
         super(TestServerGet, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 
         self.api = api_fixture.api
-
-        # the image fake backend needed for image discovery
-        image_service = fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
 
         # NOTE(mriedem): This image has an invalid architecture metadata value
         # and is used for negative testing in the functional stack.
@@ -53,7 +49,7 @@ class TestServerGet(test.TestCase):
                  'properties': {'kernel_id': 'nokernel',
                                 'ramdisk_id': 'nokernel',
                                 'architecture': 'x64'}}
-        self.image_id = image_service.create(None, image)['id']
+        self.image_id = self.glance.create(None, image)['id']
         self.flavor_id = self.api.get_flavors()[0]['id']
 
     def test_boot_server_with_invalid_image_meta(self):

@@ -31,7 +31,6 @@ from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
-import nova.tests.unit.image.fake as fake_image
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import config as libvirt_config
 
@@ -50,10 +49,8 @@ FLAVOR_FIXTURES = [
      'root_gb': 1, 'ephemeral_gb': 0, 'swap': 1},
 ]
 
-
 # Choice of image id is arbitrary, but fixed for consistency.
-IMAGE_ID = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
-
+IMAGE_ID = nova_fixtures.GlanceFixture.auto_disk_config_enabled_image['id']
 
 # NOTE(mdbooth): Change I76448196 tests for creation of any local disk, and
 # short-circuits as soon as it sees one created. Disks are created in order:
@@ -423,6 +420,7 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
 
         self.useFixture(nova_fixtures.CinderFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         fake_network.set_stub_network_methods(self)
 
@@ -432,9 +430,6 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
         self.api = api_fixture.admin_api
         # force_down and evacuate without onSharedStorage
         self.api.microversion = '2.14'
-
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)

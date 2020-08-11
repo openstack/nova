@@ -14,7 +14,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_notifier
-import nova.tests.unit.image.fake
 
 
 class ShowErrorServerWithTags(test.TestCase,
@@ -33,13 +32,10 @@ class ShowErrorServerWithTags(test.TestCase,
         self.api = api_fixture.admin_api
 
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
 
         self.start_service('conductor')
         self.start_service('scheduler')
-
-        # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         self.image_id = self.api.get_images()[0]['id']
 

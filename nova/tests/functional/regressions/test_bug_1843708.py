@@ -16,7 +16,6 @@ from nova import context
 from nova import objects
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_notifier
-from nova.tests.unit.image import fake as fake_image
 
 
 class RebuildWithKeypairTestCase(integrated_helpers._IntegratedTestBase):
@@ -55,7 +54,7 @@ class RebuildWithKeypairTestCase(integrated_helpers._IntegratedTestBase):
         # Rebuild a server with keypair 'test-key2'
         body = {
             'rebuild': {
-                'imageRef': fake_image.get_valid_image_id(),
+                'imageRef': self.glance.auto_disk_config_enabled_image['id'],
                 'key_name': 'test-key2',
             },
         }
