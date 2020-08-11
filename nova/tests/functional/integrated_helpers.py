@@ -1045,21 +1045,6 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
             if not self.ADMIN_API:
                 self.admin_api.microversion = self.microversion
 
-    def _check_api_endpoint(self, endpoint, expected_middleware):
-        app = self.api_fixture.app().get((None, '/v2'))
-
-        while getattr(app, 'application', False):
-            for middleware in expected_middleware:
-                if isinstance(app.application, middleware):
-                    expected_middleware.remove(middleware)
-                    break
-            app = app.application
-
-        self.assertEqual([],
-                         expected_middleware,
-                         ("The expected wsgi middlewares %s are not "
-                          "existed") % expected_middleware)
-
 
 # TODO(stephenfin): This is almost identical to '_IntegratedTestBase' now and
 # could be removed
