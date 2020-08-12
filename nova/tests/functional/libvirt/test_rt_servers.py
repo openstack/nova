@@ -15,7 +15,6 @@
 
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
-from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
 class RealTimeServersTest(base.ServersTestBase):
@@ -48,10 +47,7 @@ class RealTimeServersTest(base.ServersTestBase):
     def test_success(self):
         self.flags(cpu_dedicated_set='0-7', group='compute')
 
-        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
-        fake_connection = self._get_connection(host_info=host_info)
+        fake_connection = self._get_connection()
         self.mock_conn.return_value = fake_connection
 
         self.compute = self.start_service('compute', host='test_compute0')

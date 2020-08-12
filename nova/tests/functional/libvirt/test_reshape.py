@@ -78,8 +78,6 @@ class VGPUReshapeTests(base.ServersTestBase):
         }
 
         fake_connection = self._get_connection(
-            # We need more RAM or the 3rd server won't be created
-            host_info=fakelibvirt.HostInfo(kB_mem=8192),
             mdev_info=fakelibvirt.HostMdevDevicesInfo(devices=mdevs))
         self.mock_conn.return_value = fake_connection
 
