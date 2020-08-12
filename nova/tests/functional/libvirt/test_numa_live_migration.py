@@ -114,13 +114,16 @@ class NUMALiveMigrationPositiveBase(NUMALiveMigrationBase):
 
     def start_computes_and_servers(self):
         # Start 2 computes
-        self.start_computes({
-            'host_a': fakelibvirt.HostInfo(
+        self.start_compute(
+            hostname='host_a',
+            host_info=fakelibvirt.HostInfo(
                 cpu_nodes=1, cpu_sockets=4, cpu_cores=1, cpu_threads=1,
-                kB_mem=10740000),
-            'host_b': fakelibvirt.HostInfo(
+                kB_mem=10740000))
+        self.start_compute(
+            hostname='host_b',
+            host_info=fakelibvirt.HostInfo(
                 cpu_nodes=1, cpu_sockets=4, cpu_cores=1, cpu_threads=1,
-                kB_mem=10740000)})
+                kB_mem=10740000))
 
         # Create a 2-CPU flavor
         extra_spec = {'hw:cpu_policy': 'dedicated'}
@@ -394,13 +397,16 @@ class NUMALiveMigrationLegacyBase(NUMALiveMigrationPositiveBase):
             lambda *args, **kwargs: objects.service.SERVICE_VERSION))
 
     def _test(self, pin_source, pin_cond, expect_success=True):
-        self.start_computes({
-            'source': fakelibvirt.HostInfo(
+        self.start_compute(
+            hostname='source',
+            host_info=fakelibvirt.HostInfo(
                 cpu_nodes=1, cpu_sockets=2, cpu_cores=1, cpu_threads=1,
-                kB_mem=10740000),
-            'dest': fakelibvirt.HostInfo(
+                kB_mem=10740000))
+        self.start_compute(
+            hostname='dest',
+            host_info=fakelibvirt.HostInfo(
                 cpu_nodes=1, cpu_sockets=2, cpu_cores=1, cpu_threads=1,
-                kB_mem=10740000)})
+                kB_mem=10740000))
 
         ctxt = context.get_admin_context()
         src_mgr = self.computes['source'].manager
@@ -517,13 +523,16 @@ class NUMALiveMigrationNegativeTests(NUMALiveMigrationBase):
     microversion = '2.67'
 
     def test_insufficient_resources(self):
-        self.start_computes({
-            'host_a': fakelibvirt.HostInfo(
+        self.start_compute(
+            hostname='host_a',
+            host_info=fakelibvirt.HostInfo(
                 cpu_nodes=1, cpu_sockets=3, cpu_cores=1, cpu_threads=1,
-                kB_mem=10740000),
-            'host_b': fakelibvirt.HostInfo(
+                kB_mem=10740000))
+        self.start_compute(
+            hostname='host_b',
+            host_info=fakelibvirt.HostInfo(
                 cpu_nodes=2, cpu_sockets=2, cpu_cores=1, cpu_threads=1,
-                kB_mem=10740000)})
+                kB_mem=10740000))
 
         extra_spec = {'hw:numa_nodes': 1,
                       'hw:cpu_policy': 'dedicated'}
@@ -555,17 +564,20 @@ class NUMALiveMigrationNegativeTests(NUMALiveMigrationBase):
                       'Requested instance NUMA topology cannot fit', log_out)
 
     def test_different_page_sizes(self):
-        self.start_computes({
-            'host_a': fakelibvirt.HostInfo(
+        self.start_compute(
+            hostname='host_a',
+            host_info=fakelibvirt.HostInfo(
                 cpu_nodes=1, cpu_sockets=2, cpu_cores=1, cpu_threads=1,
                 kB_mem=1024000, mempages={
-                    0: fakelibvirt.create_mempages([(4, 256000),
-                                                    (1024, 1000)])}),
-            'host_b': fakelibvirt.HostInfo(
+                    0: fakelibvirt.create_mempages([(4, 256000), (1024, 1000)])
+                }))
+        self.start_compute(
+            hostname='host_b',
+            host_info=fakelibvirt.HostInfo(
                 cpu_nodes=1, cpu_sockets=2, cpu_cores=1, cpu_threads=1,
                 kB_mem=1024000, mempages={
-                    0: fakelibvirt.create_mempages([(4, 256000),
-                                                    (2048, 500)])})})
+                    0: fakelibvirt.create_mempages([(4, 256000), (2048, 500)]),
+                }))
 
         extra_spec = {'hw:numa_nodes': 1,
                       'hw:cpu_policy': 'dedicated',

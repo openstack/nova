@@ -77,14 +77,15 @@ class VGPUReshapeTests(base.ServersTestBase):
                     parent=fakelibvirt.PGPU3_PCI_ADDR),
         }
 
-        fake_connection = self._get_connection(
-            mdev_info=fakelibvirt.HostMdevDevicesInfo(devices=mdevs))
-        self.mock_conn.return_value = fake_connection
-
         # start a compute with vgpu support disabled so the driver will
         # ignore the content of the above HostMdevDeviceInfo
         self.flags(enabled_vgpu_types='', group='devices')
-        self.compute = self.start_service('compute', host='compute1')
+
+        hostname = self.start_compute(
+            hostname='compute1',
+            mdev_info=fakelibvirt.HostMdevDevicesInfo(devices=mdevs),
+        )
+        self.compute = self.computes[hostname]
 
         # create the VGPU resource in placement manually
         compute_rp_uuid = self.placement.get(

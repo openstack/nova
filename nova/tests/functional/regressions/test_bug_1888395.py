@@ -61,13 +61,16 @@ class TestLiveMigrationWithoutMultiplePortBindings(
             'nova.virt.libvirt.driver.connector',
             fake_os_brick_connector))
 
-        self.start_computes({
-            'start_host': fakelibvirt.HostInfo(
+        self.start_compute(
+            hostname='start_host',
+            host_info=fakelibvirt.HostInfo(
                 cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=2,
-                kB_mem=10740000),
-            'end_host': fakelibvirt.HostInfo(
+                kB_mem=10740000))
+        self.start_compute(
+            hostname='end_host',
+            host_info=fakelibvirt.HostInfo(
                 cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=2,
-                kB_mem=10740000)})
+                kB_mem=10740000))
 
         self.ctxt = context.get_admin_context()
         # TODO(sean-k-mooney): remove this when it is part of ServersTestBase

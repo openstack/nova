@@ -15,7 +15,6 @@ import fixtures
 import re
 
 import collections
-import mock
 import os_resource_classes as orc
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -35,9 +34,6 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-_DEFAULT_HOST = 'host1'
-
-
 class VGPUTestBase(base.ServersTestBase):
 
     # We want to target some hosts for some created instances
@@ -50,7 +46,7 @@ class VGPUTestBase(base.ServersTestBase):
 
     # Since we run all computes by a single process, we need to identify which
     # current compute service we use at the moment.
-    _current_host = _DEFAULT_HOST
+    _current_host = 'host1'
 
     def setUp(self):
         super(VGPUTestBase, self).setUp()
@@ -107,19 +103,15 @@ class VGPUTestBase(base.ServersTestBase):
                                                    parent=libvirt_parent)})
         return uuid
 
-    def _start_compute_service(self, hostname):
-        fake_connection = self._get_connection(
-            # We want to create two pGPUs but no other PCI devices
+    def start_compute(self, hostname):
+        hostname = super().start_compute(
             pci_info=fakelibvirt.HostPCIDevicesInfo(
                 num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
             ),
-            hostname=hostname)
-        with mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                        return_value=fake_connection):
-            # this method will update a self.computes dict keyed by hostname
-            compute = self._start_compute(hostname)
-            compute.driver._host.get_connection = lambda: fake_connection
-        rp_uuid = self._get_provider_uuid_by_name(hostname)
+            hostname=hostname,
+        )
+        compute = self.computes[hostname]
+        rp_uuid = self.compute_rp_uuids[hostname]
         rp_uuids = self._get_all_rp_uuids_in_a_tree(rp_uuid)
         for rp in rp_uuids:
             inventory = self._get_provider_inventory(rp)
@@ -156,7 +148,7 @@ class VGPUTests(VGPUTestBase):
             'os_compute_api:os-instance-actions:events': 'rule:admin_or_owner'
         }, overwrite=False)
 
-        self.compute1 = self._start_compute_service(_DEFAULT_HOST)
+        self.compute1 = self.start_compute('host1')
 
     def assert_vgpu_usage_for_compute(self, compute, expected):
         total_usages = collections.defaultdict(int)
@@ -198,7 +190,7 @@ class VGPUTests(VGPUTestBase):
 
     def test_resize_servers_with_vgpu(self):
         # Add another compute for the sake of resizing
-        self.compute2 = self._start_compute_service('host2')
+        self.compute2 = self.start_compute('host2')
         server = self._create_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=self.flavor, host=self.compute1.host,
@@ -320,7 +312,7 @@ class VGPUMultipleTypesTests(VGPUTestBase):
         # Prepare traits for later on
         self._create_trait('CUSTOM_NVIDIA_11')
         self._create_trait('CUSTOM_NVIDIA_12')
-        self.compute1 = self._start_compute_service('host1')
+        self.compute1 = self.start_compute('host1')
 
     def test_create_servers_with_vgpu(self):
         self._create_server(

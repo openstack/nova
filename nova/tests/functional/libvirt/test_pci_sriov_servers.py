@@ -39,8 +39,6 @@ class _PCIServersTestBase(base.ServersTestBase):
 
         super(_PCIServersTestBase, self).setUp()
 
-        self.compute_started = False
-
         # Mock the 'PciPassthroughFilter' filter, as most tests need to inspect
         # this
         host_manager = self.scheduler.manager.driver.host_manager
@@ -52,10 +50,6 @@ class _PCIServersTestBase(base.ServersTestBase):
             side_effect=host_pass_mock)).mock
 
     def _run_build_test(self, flavor_id, end_status='ACTIVE'):
-
-        if not self.compute_started:
-            self.compute = self.start_service('compute', host='test_compute0')
-            self.compute_started = True
 
         # Create server
         good_server = self._build_server(flavor_id=flavor_id)
@@ -120,8 +114,7 @@ class SRIOVServersTest(_PCIServersTestBase):
     def test_create_server_with_VF(self):
 
         pci_info = fakelibvirt.HostPCIDevicesInfo()
-        fake_connection = self._get_connection(pci_info=pci_info)
-        self.mock_conn.return_value = fake_connection
+        self.start_compute(pci_info=pci_info)
 
         # Create a flavor
         extra_spec = {"pci_passthrough:alias": "%s:1" % self.VFS_ALIAS_NAME}
@@ -132,8 +125,7 @@ class SRIOVServersTest(_PCIServersTestBase):
     def test_create_server_with_PF(self):
 
         pci_info = fakelibvirt.HostPCIDevicesInfo()
-        fake_connection = self._get_connection(pci_info=pci_info)
-        self.mock_conn.return_value = fake_connection
+        self.start_compute(pci_info=pci_info)
 
         # Create a flavor
         extra_spec = {"pci_passthrough:alias": "%s:1" % self.PFS_ALIAS_NAME}
@@ -144,8 +136,7 @@ class SRIOVServersTest(_PCIServersTestBase):
     def test_create_server_with_PF_no_VF(self):
 
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=4)
-        fake_connection = self._get_connection(pci_info=pci_info)
-        self.mock_conn.return_value = fake_connection
+        self.start_compute(pci_info=pci_info)
 
         # Create a flavor
         extra_spec_pfs = {"pci_passthrough:alias": "%s:1" %
@@ -161,8 +152,7 @@ class SRIOVServersTest(_PCIServersTestBase):
     def test_create_server_with_VF_no_PF(self):
 
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=4)
-        fake_connection = self._get_connection(pci_info=pci_info)
-        self.mock_conn.return_value = fake_connection
+        self.start_compute(pci_info=pci_info)
 
         # Create a flavor
         extra_spec_pfs = {"pci_passthrough:alias": "%s:1" %
@@ -211,16 +201,11 @@ class GetServerDiagnosticsServerWithVfTestV21(_PCIServersTestBase):
     def test_get_server_diagnostics_server_with_VF(self):
 
         pci_info = fakelibvirt.HostPCIDevicesInfo()
-        fake_connection = self._get_connection(pci_info=pci_info)
-        self.mock_conn.return_value = fake_connection
+        self.start_compute(pci_info=pci_info)
 
         # Create a flavor
         extra_spec = {"pci_passthrough:alias": "%s:1" % self.VFS_ALIAS_NAME}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-
-        if not self.compute_started:
-            self.compute = self.start_service('compute', host='test_compute0')
-            self.compute_started = True
 
         # Create server
         good_server = self._build_server(
@@ -275,8 +260,7 @@ class PCIServersTest(_PCIServersTestBase):
         self.flags(cpu_dedicated_set='0-7', group='compute')
 
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=1)
-        fake_connection = self._get_connection(pci_info=pci_info)
-        self.mock_conn.return_value = fake_connection
+        self.start_compute(pci_info=pci_info)
 
         # create a flavor
         extra_spec = {
@@ -295,8 +279,7 @@ class PCIServersTest(_PCIServersTestBase):
         self.flags(cpu_dedicated_set='0-7', group='compute')
 
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=0)
-        fake_connection = self._get_connection(pci_info=pci_info)
-        self.mock_conn.return_value = fake_connection
+        self.start_compute(pci_info=pci_info)
 
         # boot one instance with no PCI device to "fill up" NUMA node 0
         extra_spec = {
@@ -344,8 +327,7 @@ class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
         self.flags(cpu_dedicated_set='0-7', group='compute')
 
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=0)
-        fake_connection = self._get_connection(pci_info=pci_info)
-        self.mock_conn.return_value = fake_connection
+        self.start_compute(pci_info=pci_info)
 
         # boot one instance with no PCI device to "fill up" NUMA node 0
         extra_spec = {
@@ -410,13 +392,12 @@ class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
     # keep one top level function per policy to make documenting
     # the test cases simpler.
     def _test_policy(self, pci_numa_node, status, policy):
-        pci_info = fakelibvirt.HostPCIDevicesInfo(
-            num_pci=1, numa_node=pci_numa_node)
-        fake_connection = self._get_connection(pci_info=pci_info)
-        self.mock_conn.return_value = fake_connection
-
         # only allow cpus on numa node 1 to be used for pinning
         self.flags(cpu_dedicated_set='4-7', group='compute')
+
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, numa_node=pci_numa_node)
+        self.start_compute(pci_info=pci_info)
 
         # request cpu pinning to create a numa toplogy and allow the test to
         # force which numa node the vm would have to be pinned too.
