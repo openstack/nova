@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-floating-ip-pools'
 floating_ip_pools_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
+        check_str=base.RULE_ANY,
         description="List floating IP pools. This API is deprecated.",
         operations=[
             {
