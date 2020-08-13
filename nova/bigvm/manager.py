@@ -35,6 +35,7 @@ from nova.scheduler.client.report import get_placement_request_id
 from nova.scheduler.client.report import NESTED_PROVIDER_API_VERSION
 from nova.scheduler.client.report import SchedulerReportClient
 from nova.scheduler.utils import ResourceRequest
+from nova import utils
 from nova.utils import BIGVM_EXCLUSIVE_TRAIT
 from nova.virt.vmwareapi import special_spawning
 
@@ -45,6 +46,7 @@ CONF = nova.conf.CONF
 MEMORY_MB = orc.MEMORY_MB
 BIGVM_RESOURCE = special_spawning.BIGVM_RESOURCE
 BIGVM_DISABLED_TRAIT = 'CUSTOM_BIGVM_DISABLED'
+MEMORY_RESERVABLE_MB_RESOURCE = utils.MEMORY_RESERVABLE_MB_RESOURCE
 VMWARE_HV_TYPE = 'VMware vCenter Server'
 SHARD_PREFIX = 'vc-'
 HV_SIZE_BUCKET_THRESHOLD_PERCENT = 10
@@ -85,12 +87,13 @@ class BigVmManager(manager.Manager):
            again if a migration happened in the background. We need to clean up
            the child rp in this case and redo the scheduling.
 
-        We only want to fill up clusters to a certain point, configurable via
-        bigvm_cluster_max_usage_percent. resource-providers having more RAM
-        usage than this, will not be used for a hv_size - if they are not
-        exclusively used for HANA flavors.. Additionally, we check in every
-        iteration, if we have to give up a freed-up host, because the cluster
-        reached the limit.
+        We only want to fill up cluster memory to a certain point, configurable
+        via bigvm_cluster_max_usage_percent and
+        bigvm_cluster_max_reservation_percent. Resource-providers having more
+        RAM usage or -reservation than those two respectively, will not be used
+        for an hv_size - if they are not exclusively used for HANA flavors.
+        Additionally, we check in every iteration, if we have to give up a
+        freed-up host, because the cluster reached one of the limits.
         """
         client = self.placement_client
 
@@ -147,16 +150,23 @@ class BigVmManager(manager.Manager):
 
                 used = vmware_providers.get(p, {})\
                         .get('memory_mb_used_percent', 100)
-                if used > CONF.bigvm_cluster_max_usage_percent:
+                reserved = vmware_providers.get(p, {})\
+                            .get('memory_reservable_mb_used_percent', 100)
+                if (used > CONF.bigvm_cluster_max_usage_percent or
+                    reserved > CONF.bigvm_cluster_max_reservation_percent):
                     continue
                 filtered_provider_summaries[p] = d
 
             if not filtered_provider_summaries:
                 LOG.warning('Could not find a resource-provider to free up a '
                             'host for hypervisor size %(hv_size)d, because '
-                            'all clusters are used more than %(max_used)d.',
+                            'all clusters are already using more than '
+                            '%(max_used)d%% of total memory or reserving more '
+                            'than %(max_reserved)d%% of reservable memory.',
                             {'hv_size': hv_size,
-                             'max_used': CONF.bigvm_cluster_max_usage_percent})
+                             'max_used': CONF.bigvm_cluster_max_usage_percent,
+                             'max_reserved':
+                                CONF.bigvm_cluster_max_reservation_percent})
                 continue
 
             # filter out providers that are disabled in general or for bigVMs
@@ -280,15 +290,30 @@ class BigVmManager(manager.Manager):
             elif rp['uuid'] not in vmware_hvs:  # ignore baremetal
                 continue
             else:
-                # retrieve the MEMORY_MB resource
-                url = '/resource_providers/{}/inventories/{}'.format(
-                        rp['uuid'], MEMORY_MB)
+                # retrieve inventory for MEMORY_MB & MEMORY_RESERVABLE_MB info
+                url = '/resource_providers/{}/inventories'.format(rp['uuid'])
                 resp = client.get(url)
                 if resp.status_code != 200:
                     LOG.error('Could not retrieve inventory for RP %(rp)s.',
                               {'rp': rp['uuid']})
                     continue
-                memory_mb_inventory = resp.json()
+                inventory = resp.json()["inventories"]
+                # Note(jakobk): It's possible to encounter incomplete (e.g.
+                # in-buildup) resource providers here, that don't have all the
+                # usual resources set.
+                memory_mb_inventory = inventory.get(MEMORY_MB)
+                if not memory_mb_inventory:
+                    LOG.info('no %(mem_res)s resource in RP %(rp)s',
+                             {'mem_res': MEMORY_MB, 'rp': rp['uuid']})
+                    continue
+                memory_reservable_mb_inventory = inventory.get(
+                    MEMORY_RESERVABLE_MB_RESOURCE)
+                if not memory_reservable_mb_inventory:
+                    LOG.debug('no %(memreserv_res)s in resource provider'
+                              ' %(rp)s',
+                              {'memreserv_res': MEMORY_RESERVABLE_MB_RESOURCE,
+                               'rp': rp['uuid']})
+                    continue
 
                 # retrieve the usage
                 url = '/resource_providers/{}/usages'
@@ -302,8 +327,25 @@ class BigVmManager(manager.Manager):
                 hv_size = memory_mb_inventory['max_unit']
                 memory_mb_total = (memory_mb_inventory['total'] -
                                    memory_mb_inventory['reserved'])
-                memory_mb_used_percent = (usages[MEMORY_MB] / float(
-                                          memory_mb_total) * 100)
+                try:
+                    memory_mb_used_percent = (usages[MEMORY_MB] / float(
+                                              memory_mb_total) * 100)
+                except ZeroDivisionError:
+                    LOG.warning('memory_mb_total is 0 for resource provider '
+                                '%s', rp['uuid'])
+                    memory_mb_used_percent = 100
+
+                memory_reservable_mb_total = (
+                    memory_reservable_mb_inventory['total'] -
+                    memory_reservable_mb_inventory['reserved'])
+                try:
+                    memory_reservable_mb_used_percent = (
+                        usages.get(MEMORY_RESERVABLE_MB_RESOURCE, 0) / float(
+                        memory_reservable_mb_total) * 100)
+                except ZeroDivisionError:
+                    LOG.info('memory_reservable_mb_total is 0 for resource '
+                             'provider %s', rp['uuid'])
+                    memory_reservable_mb_used_percent = 100
 
                 host = vmware_hvs[rp['uuid']]
                 # ignore hypervisors we would never use anyways
@@ -331,7 +373,9 @@ class BigVmManager(manager.Manager):
                     'vc': host_vcs[host],
                     'cell_mapping': cell_mapping,
                     'traits': traits,
-                    'memory_mb_used_percent': memory_mb_used_percent}
+                    'memory_mb_used_percent': memory_mb_used_percent,
+                    'memory_reservable_mb_used_percent':
+                        memory_reservable_mb_used_percent}
 
             # make sure the placement cache is filled
             client.get_provider_tree_and_ensure_root(context, rp['uuid'],
@@ -399,7 +443,18 @@ class BigVmManager(manager.Manager):
             if used_percent > CONF.bigvm_cluster_max_usage_percent:
                 providers_to_delete[rp_uuid] = rp
                 LOG.info('Resource-provider %(host_rp_uuid)s with free host '
-                         'is overused. Marking %(rp_uuid)s for deletion.',
+                         'is overused on regular memory usage. Marking '
+                         '%(rp_uuid)s for deletion.',
+                         {'host_rp_uuid': rp['host_rp_uuid'],
+                          'rp_uuid': rp_uuid})
+                continue
+
+            reserved_percent = host_rp['memory_reservable_mb_used_percent']
+            if reserved_percent > CONF.bigvm_cluster_max_reservation_percent:
+                providers_to_delete[rp_uuid] = rp
+                LOG.info('Resource-provider %(host_rp_uuid)s with free host '
+                         'is overused on reserved memory usage. Marking '
+                         '%(rp_uuid)s for deletion.',
                          {'host_rp_uuid': rp['host_rp_uuid'],
                           'rp_uuid': rp_uuid})
 

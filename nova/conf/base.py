@@ -158,6 +158,20 @@ Clusters/resource-provider with this much usage are not used for freeing up a
 host for spawning (a big VM). Clusters found to reach that amount, that already
 have a host freed, get their free host removed.
 """),
+    cfg.IntOpt(
+        'bigvm_cluster_max_reservation_percent',
+        default=50,
+        help="""
+
+Clusters/resource-providers with this percentage of memory reserved (of their
+reservable memory, which can be less than total memory) are not used for
+freeing up a host for spawning big VMs. Clusters found to reach that amount,
+that already have a host freed, get their free host removed.
+
+Compare the values of conf.vmware.memory_reservation_cluster_hosts_max_fail and
+conf.vmware.memory_reservation_max_ratio_fallback to see how much of total
+memory is actually reservable.
+"""),
 ]
 
 metrics_opts = [
