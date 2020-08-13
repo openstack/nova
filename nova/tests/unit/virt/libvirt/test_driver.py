@@ -7928,6 +7928,51 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock_build_metadata.assert_called_with(self.context, instance)
                 mock_save.assert_called_with()
 
+    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
+    @mock.patch(
+        'nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume',
+        new=mock.Mock())
+    def test_detach_volume_supports_device_missing(
+        self, mock_get_version, mock_get_guest):
+        """Assert that VIR_ERR_DEVICE_MISSING is only used if libvirt >= v4.1.0
+        """
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_guest.get_power_state.return_value = power_state.RUNNING
+        mock_get_guest.return_value = mock_guest
+
+        v4_0_0 = versionutils.convert_version_to_int((4, 0, 0))
+        mock_get_version.return_value = v4_0_0
+
+        mountpoint = "/dev/foo"
+        expected_disk_dev = "foo"
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.detach_volume(
+            self.context, mock.sentinel.connection_info,
+            mock.sentinel.instance, mountpoint)
+
+        # Assert supports_device_missing_error_code=False is used
+        mock_guest.detach_device_with_retry.assert_called_once_with(
+            mock_guest.get_disk, expected_disk_dev, live=True,
+            supports_device_missing_error_code=False)
+
+        # reset and try again with v4.1.0
+        mock_guest.reset_mock()
+        mock_get_version.reset_mock()
+
+        v4_1_0 = versionutils.convert_version_to_int((4, 1, 0))
+        mock_get_version.return_value = v4_1_0
+
+        drvr.detach_volume(
+            self.context, mock.sentinel.connection_info,
+            mock.sentinel.instance, mountpoint)
+
+        # Assert supports_device_missing_error_code=True is used
+        mock_guest.detach_device_with_retry.assert_called_once_with(
+             mock_guest.get_disk, expected_disk_dev, live=True,
+            supports_device_missing_error_code=True)
+
     @mock.patch('nova.virt.libvirt.host.Host._get_domain')
     def test_detach_volume_with_vir_domain_affect_live_flag(self,
             mock_get_domain):
@@ -16861,6 +16906,51 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             _get_domain.assert_called_once_with(instance)
             _disconnect_volume.assert_called_once_with(
                 self.context, connection_info, instance, encryption=None)
+
+    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
+    def test_detach_interface_supports_device_missing(
+        self, mock_get_version, mock_get_guest):
+        """Assert that VIR_ERR_DEVICE_MISSING is only used if libvirt >= v4.1.0
+        """
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_guest.get_power_state.return_value = power_state.RUNNING
+        mock_get_guest.return_value = mock_guest
+
+        v4_0_0 = versionutils.convert_version_to_int((4, 0, 0))
+        mock_get_version.return_value = v4_0_0
+
+        instance = objects.Instance(**self.test_instance)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with mock.patch.object(drvr, 'vif_driver') as mock_vif_driver:
+            mock_vif_driver.get_config.return_value = mock.sentinel.cfg
+            mock_vif_driver.get_vif_devname.return_value = mock.sentinel.dev
+
+            drvr.detach_interface(
+                self.context, instance, mock.sentinel.vif)
+
+            # Assert supports_device_missing_error_code=False is used
+            mock_guest.detach_device_with_retry.assert_called_once_with(
+                mock_guest.get_interface_by_cfg, mock.sentinel.cfg, live=True,
+                alternative_device_name=mock.sentinel.dev,
+                supports_device_missing_error_code=False)
+
+            # reset and try again with v4.1.0
+            mock_guest.reset_mock()
+            mock_get_version.reset_mock()
+
+            v4_1_0 = versionutils.convert_version_to_int((4, 1, 0))
+            mock_get_version.return_value = v4_1_0
+
+            drvr.detach_interface(
+                self.context, instance, mock.sentinel.vif)
+
+            # Assert supports_device_missing_error_code=True is used
+            mock_guest.detach_device_with_retry.assert_called_once_with(
+                mock_guest.get_interface_by_cfg, mock.sentinel.cfg, live=True,
+                alternative_device_name=mock.sentinel.dev,
+                supports_device_missing_error_code=True)
 
     def _test_attach_detach_interface_get_config(self, method_name):
         """Tests that the get_config() method is properly called in
