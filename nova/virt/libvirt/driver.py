@@ -125,6 +125,7 @@ from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
+from nova.virt.libvirt.volume import fs
 from nova.virt.libvirt.volume import mount
 from nova.virt.libvirt.volume import remotefs
 from nova.virt import netutils
@@ -1609,9 +1610,8 @@ class LibvirtDriver(driver.ComputeDriver):
                               "volume connection", instance=instance)
                 vol_driver.disconnect_volume(connection_info, instance)
 
-    def _should_disconnect_target(self, context, connection_info, instance):
-        connection_count = 0
-
+    def _should_disconnect_target(self, context, instance, multiattach,
+                                  vol_driver, volume_id):
         # NOTE(jdg): Multiattach is a special case (not to be confused
         # with shared_targets). With multiattach we may have a single volume
         # attached multiple times to *this* compute node (ie Server-1 and
@@ -1621,41 +1621,53 @@ class LibvirtDriver(driver.ComputeDriver):
         # will indiscriminantly delete the connection for all Server and that's
         # no good.  So check if it's attached multiple times on this node
         # if it is we skip the call to brick to delete the connection.
-        if connection_info.get('multiattach', False):
-            volume = self._volume_api.get(
-                context,
-                driver_block_device.get_volume_id(connection_info))
-            attachments = volume.get('attachments', {})
-            if len(attachments) > 1:
-                # First we get a list of all Server UUID's associated with
-                # this Host (Compute Node).  We're going to use this to
-                # determine if the Volume being detached is also in-use by
-                # another Server on this Host, ie just check to see if more
-                # than one attachment.server_id for this volume is in our
-                # list of Server UUID's for this Host
-                servers_this_host = objects.InstanceList.get_uuids_by_host(
-                    context, instance.host)
+        if not multiattach:
+            return True
 
-                # NOTE(jdg): nova.volume.cinder translates the
-                # volume['attachments'] response into a dict which includes
-                # the Server UUID as the key, so we're using that
-                # here to check against our server_this_host list
-                for server_id, data in attachments.items():
-                    if server_id in servers_this_host:
-                        connection_count += 1
+        # NOTE(deiter): Volume drivers using _HostMountStateManager are another
+        # special case. _HostMountStateManager ensures that the compute node
+        # only attempts to mount a single mountpoint in use by multiple
+        # attachments once, and that it is not unmounted until it is no longer
+        # in use by any attachments. So we can skip the multiattach check for
+        # volume drivers that based on LibvirtMountedFileSystemVolumeDriver.
+        if isinstance(vol_driver, fs.LibvirtMountedFileSystemVolumeDriver):
+            return True
+
+        connection_count = 0
+        volume = self._volume_api.get(context, volume_id)
+        attachments = volume.get('attachments', {})
+        if len(attachments) > 1:
+            # First we get a list of all Server UUID's associated with
+            # this Host (Compute Node).  We're going to use this to
+            # determine if the Volume being detached is also in-use by
+            # another Server on this Host, ie just check to see if more
+            # than one attachment.server_id for this volume is in our
+            # list of Server UUID's for this Host
+            servers_this_host = objects.InstanceList.get_uuids_by_host(
+                context, instance.host)
+
+            # NOTE(jdg): nova.volume.cinder translates the
+            # volume['attachments'] response into a dict which includes
+            # the Server UUID as the key, so we're using that
+            # here to check against our server_this_host list
+            for server_id, data in attachments.items():
+                if server_id in servers_this_host:
+                    connection_count += 1
         return (False if connection_count > 1 else True)
 
     def _disconnect_volume(self, context, connection_info, instance,
                            encryption=None):
         self._detach_encryptor(context, connection_info, encryption=encryption)
-        if self._should_disconnect_target(context, connection_info, instance):
-            vol_driver = self._get_volume_driver(connection_info)
+        vol_driver = self._get_volume_driver(connection_info)
+        volume_id = driver_block_device.get_volume_id(connection_info)
+        multiattach = connection_info.get('multiattach', False)
+        if self._should_disconnect_target(
+                context, instance, multiattach, vol_driver, volume_id):
             vol_driver.disconnect_volume(connection_info, instance)
         else:
-            LOG.info("Detected multiple connections on this host for volume: "
-                     "%s, skipping target disconnect.",
-                     driver_block_device.get_volume_id(connection_info),
-                     instance=instance)
+            LOG.info('Detected multiple connections on this host for '
+                     'volume: %(volume)s, skipping target disconnect.',
+                     {'volume': volume_id})
 
     def _extend_volume(self, connection_info, instance, requested_size):
         vol_driver = self._get_volume_driver(connection_info)
