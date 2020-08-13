@@ -18,28 +18,56 @@ from oslo_policy import policy
 from nova.policies import base
 
 
-BASE_POLICY_NAME = 'os_compute_api:os-multinic'
+ROOT_POLICY = 'os_compute_api:os-multinic'
+BASE_POLICY_NAME = 'os_compute_api:os-multinic:%s'
+
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    ROOT_POLICY,
+    base.RULE_ADMIN_OR_OWNER,
+)
+
+DEPRECATED_REASON = """
+Nova API policies are introducing new default roles with scope_type
+capabilities. Old policies are deprecated and silently going to be ignored
+in nova 23.0.0 release.
+"""
 
 
 multinic_policies = [
     policy.DocumentedRuleDefault(
-        name=BASE_POLICY_NAME,
-        check_str=base.RULE_ADMIN_OR_OWNER,
-        description="""Add or remove a fixed IP address from a server.
+        name=BASE_POLICY_NAME % 'add',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="""Add a fixed IP address to a server.
 
-These APIs are proxy calls to the Network service. These are all
+This API is proxy calls to the Network service. This is
 deprecated.""",
         operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (addFixedIp)'
-            },
+            }
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
+    policy.DocumentedRuleDefault(
+        name=BASE_POLICY_NAME % 'remove',
+        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        description="""Remove a fixed IP address from a server.
+
+This API is proxy calls to the Network service. This is
+deprecated.""",
+        operations=[
             {
                 'method': 'POST',
                 'path': '/servers/{server_id}/action (removeFixedIp)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
 ]
 
 

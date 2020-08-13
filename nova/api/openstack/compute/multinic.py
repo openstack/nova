@@ -42,7 +42,7 @@ class MultinicController(wsgi.Controller):
         """Adds an IP on a given network to an instance."""
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id)
-        context.can(multinic_policies.BASE_POLICY_NAME,
+        context.can(multinic_policies.BASE_POLICY_NAME % 'add',
                     target={'project_id': instance.project_id})
 
         network_id = body['addFixedIp']['networkId']
@@ -60,7 +60,7 @@ class MultinicController(wsgi.Controller):
         """Removes an IP from an instance."""
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id)
-        context.can(multinic_policies.BASE_POLICY_NAME,
+        context.can(multinic_policies.BASE_POLICY_NAME % 'remove',
                     target={'project_id': instance.project_id})
 
         address = body['removeFixedIp']['address']
