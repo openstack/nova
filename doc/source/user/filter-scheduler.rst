@@ -508,7 +508,7 @@ The Filter Scheduler weighs hosts based on the config option
   host with least RAM available will win (useful for stacking hosts, instead
   of spreading).
   Starting with the Stein release, if per-aggregate value with the key
-  :oslo.config:option:`filter_scheduler.ram_weight_multiplier` is found, this
+  ``ram_weight_multiplier`` is found, this
   value would be chosen as the ram weight multiplier. Otherwise, it will fall
   back to the :oslo.config:option:`filter_scheduler.ram_weight_multiplier`.
   If more than one value is found for a host in aggregate metadata, the minimum
@@ -519,7 +519,7 @@ The Filter Scheduler weighs hosts based on the config option
   host with least CPUs available will win (useful for stacking hosts, instead
   of spreading).
   Starting with the Stein release, if per-aggregate value with the key
-  :oslo.config:option:`filter_scheduler.cpu_weight_multiplier` is found, this
+  ``cpu_weight_multiplier`` is found, this
   value would be chosen as the cpu weight multiplier. Otherwise, it will fall
   back to the :oslo.config:option:`filter_scheduler.cpu_weight_multiplier`. If
   more than one value is found for a host in aggregate metadata, the minimum
@@ -528,7 +528,7 @@ The Filter Scheduler weighs hosts based on the config option
   largest weight winning.  If the multiplier is negative, the host with less disk
   space available will win (useful for stacking hosts, instead of spreading).
   Starting with the Stein release, if per-aggregate value with the key
-  :oslo.config:option:`filter_scheduler.disk_weight_multiplier` is found, this
+  ``disk_weight_multiplier`` is found, this
   value would be chosen as the disk weight multiplier. Otherwise, it will fall
   back to the :oslo.config:option:`filter_scheduler.disk_weight_multiplier`. If
   more than one value is found for a host in aggregate metadata, the minimum value
@@ -550,7 +550,7 @@ The Filter Scheduler weighs hosts based on the config option
   hosts. If the multiplier is positive, the weigher prefer choosing heavy
   workload compute hosts, the weighing has the opposite effect of the default.
   Starting with the Stein release, if per-aggregate value with the key
-  :oslo.config:option:`filter_scheduler.io_ops_weight_multiplier` is found, this
+  ``io_ops_weight_multiplier`` is found, this
   value would be chosen as the IO ops weight multiplier. Otherwise, it will fall
   back to the :oslo.config:option:`filter_scheduler.io_ops_weight_multiplier`.
   If more than one value is found for a host in aggregate metadata, the minimum
@@ -575,7 +575,7 @@ The Filter Scheduler weighs hosts based on the config option
     scheduling issues.
 
   Starting with the Stein release, if per-aggregate value with the key
-  :oslo.config:option:`filter_scheduler.pci_weight_multiplier` is found, this
+  ``pci_weight_multiplier`` is found, this
   value would be chosen as the pci weight multiplier. Otherwise, it will fall
   back to the :oslo.config:option:`filter_scheduler.pci_weight_multiplier`.
   If more than one value is found for a host in aggregate metadata, the
@@ -585,7 +585,7 @@ The Filter Scheduler weighs hosts based on the config option
   weight defines the preferred host for the new instance. For the multiplier
   only a positive value is allowed for the calculation.
   Starting with the Stein release, if per-aggregate value with the key
-  :oslo.config:option:`filter_scheduler.soft_affinity_weight_multiplier` is
+  ``soft_affinity_weight_multiplier`` is
   found, this value would be chosen as the soft affinity weight multiplier.
   Otherwise, it will fall back to the
   :oslo.config:option:`filter_scheduler.soft_affinity_weight_multiplier`.
@@ -597,7 +597,7 @@ The Filter Scheduler weighs hosts based on the config option
   value. The largest weight defines the preferred host for the new instance.
   For the multiplier only a positive value is allowed for the calculation.
   Starting with the Stein release, if per-aggregate value with the key
-  :oslo.config:option:`filter_scheduler.soft_anti_affinity_weight_multiplier`
+  ``soft_anti_affinity_weight_multiplier``
   is found, this value would be chosen as the soft anti-affinity weight
   multiplier. Otherwise, it will fall back to the
   :oslo.config:option:`filter_scheduler.soft_anti_affinity_weight_multiplier`.
@@ -608,7 +608,7 @@ The Filter Scheduler weighs hosts based on the config option
   It considers the build failure counter and can negatively weigh hosts with
   recent failures. This avoids taking computes fully out of rotation.
   Starting with the Stein release, if per-aggregate value with the key
-  :oslo.config:option:`filter_scheduler.build_failure_weight_multiplier` is found,
+  ``build_failure_weight_multiplier`` is found,
   this value would be chosen as the build failure weight multiplier. Otherwise,
   it will fall back to the
   :oslo.config:option:`filter_scheduler.build_failure_weight_multiplier`.
