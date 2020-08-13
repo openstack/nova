@@ -215,10 +215,6 @@ class LiveMigrationNeutronFailure(integrated_helpers._IntegratedTestBase):
         with mock.patch.object(self.computes['src'].manager,
                                '_post_live_migration',
                                side_effect=stub_plm):
-            # FIXME(artom) Until bug 1879787 is fixed, the raised
-            # ConnectionError will go unhandled, the migration will fail, and
-            # the instance will still be reported as being on the source, even
-            # though it's actually running on the destination.
-            self._live_migrate(server, 'error', server_expected_state='ERROR')
+            self._live_migrate(server, 'completed')
             server = self.api.get_server(server['id'])
-            self.assertEqual('src', server['OS-EXT-SRV-ATTR:host'])
+            self.assertEqual('dest', server['OS-EXT-SRV-ATTR:host'])
