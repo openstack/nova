@@ -16,7 +16,6 @@ from oslo_policy import policy
 from nova.policies import base
 
 
-RULE_AOO = base.RULE_ADMIN_OR_OWNER
 SERVERS = 'os_compute_api:servers:%s'
 NETWORK_ATTACH_EXTERNAL = 'network:attach_external_network'
 ZERO_DISK_FLAVOR = SERVERS % 'create:zero_disk_flavor'
@@ -204,7 +203,18 @@ host and/or node by bypassing the scheduler filters unlike the
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=REQUESTED_DESTINATION,
-        check_str=base.RULE_ADMIN_API,
+        # TODO(gmann): We need to make it SYSTEM_ADMIN.
+        # PROJECT_ADMIN is added for now because create server
+        # policy is project scoped and there is no way to
+        # pass the project_id in request body for system scoped
+        # roles so that create server for other project with requested
+        # destination.
+        # To achieve that, we need to update the create server API to
+        # accept the project_id for whom the server needs to be created
+        # and then change the scope of this policy to system-only
+        # Because that is API change it needs to be done with new
+        # microversion.
+        check_str=base.PROJECT_ADMIN,
         description="""
 Create a server on the requested compute service host and/or
 hypervisor_hostname.

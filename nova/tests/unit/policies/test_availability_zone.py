@@ -37,7 +37,9 @@ class AvailabilityZonePolicyTest(base.BasePolicyTest):
             self.project_admin_context, self.system_member_context,
             self.system_reader_context, self.system_foo_context,
             self.project_member_context, self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context]
+            self.project_foo_context, self.project_reader_context,
+            self.other_project_reader_context,
+        ]
         self.everyone_unauthorized_contexts = []
 
         # Check that system reader is able to list the AZ Detail
@@ -54,7 +56,9 @@ class AvailabilityZonePolicyTest(base.BasePolicyTest):
         self.reader_unauthorized_contexts = [
             self.system_foo_context, self.other_project_member_context,
             self.project_foo_context, self.project_member_context,
-            self.project_reader_context]
+            self.project_reader_context,
+            self.other_project_reader_context,
+        ]
 
     @mock.patch('nova.objects.Instance.save')
     def test_availability_zone_list_policy(self, mock_save):
@@ -96,5 +100,6 @@ class AvailabilityZoneScopeTypePolicyTest(AvailabilityZonePolicyTest):
             self.system_foo_context, self.legacy_admin_context,
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context
+            self.project_foo_context, self.project_reader_context,
+            self.other_project_reader_context,
         ]

@@ -73,7 +73,9 @@ class InstanceActionsPolicyTest(base.BasePolicyTest):
         self.system_reader_unauthorized_contexts = [
             self.system_foo_context, self.other_project_member_context,
             self.project_foo_context, self.project_member_context,
-            self.project_reader_context]
+            self.project_reader_context,
+            self.other_project_reader_context,
+        ]
 
         self.project_or_system_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
@@ -84,7 +86,8 @@ class InstanceActionsPolicyTest(base.BasePolicyTest):
 
         self.project_or_system_reader_unauthorized_contexts = [
             self.system_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
     def _set_policy_rules(self, overwrite=True):
@@ -295,7 +298,9 @@ class InstanceActionsNoLegacyPolicyTest(InstanceActionsPolicyTest):
             self.system_foo_context, self.legacy_admin_context,
             self.other_project_member_context,
             self.project_foo_context, self.project_member_context,
-            self.project_reader_context]
+            self.project_reader_context,
+            self.other_project_reader_context,
+        ]
 
         # Check that system or projct reader is able to
         # show the instance actions events.
@@ -310,5 +315,6 @@ class InstanceActionsNoLegacyPolicyTest(InstanceActionsPolicyTest):
         # show the instance actions events.
         self.project_or_system_reader_unauthorized_contexts = [
             self.legacy_admin_context, self.project_foo_context,
-            self.system_foo_context, self.other_project_member_context
+            self.system_foo_context, self.other_project_member_context,
+            self.other_project_reader_context,
         ]

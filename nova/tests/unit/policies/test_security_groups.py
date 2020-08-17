@@ -333,7 +333,8 @@ class SecurityGroupsNoLegacyPolicyTest(SecurityGroupsScopeTypePolicyTest):
             self.project_admin_context,
             self.project_member_context, self.project_reader_context,
             self.system_member_context, self.system_reader_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
         self.reader_unauthorized_contexts = [
             self.project_foo_context,

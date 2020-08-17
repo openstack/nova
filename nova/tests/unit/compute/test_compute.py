@@ -65,6 +65,7 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import fields as obj_fields
 from nova.objects import instance as instance_obj
 from nova.objects import migrate_data as migrate_data_obj
+from nova.policies import base as base_policy
 from nova.policies import servers as servers_policy
 from nova import test
 from nova.tests import fixtures
@@ -13330,7 +13331,7 @@ class CheckRequestedImageTestCase(test.TestCase):
 
     def test_root_gb_zero_disables_size_check(self):
         self.policy.set_rules({
-            servers_policy.ZERO_DISK_FLAVOR: servers_policy.RULE_AOO
+            servers_policy.ZERO_DISK_FLAVOR: base_policy.RULE_ADMIN_OR_OWNER
         }, overwrite=False)
         self.instance_type['root_gb'] = 0
         image = dict(id=uuids.image_id, status='active', size='1073741825')
@@ -13340,7 +13341,7 @@ class CheckRequestedImageTestCase(test.TestCase):
 
     def test_root_gb_zero_disables_min_disk(self):
         self.policy.set_rules({
-            servers_policy.ZERO_DISK_FLAVOR: servers_policy.RULE_AOO
+            servers_policy.ZERO_DISK_FLAVOR: base_policy.RULE_ADMIN_OR_OWNER
         }, overwrite=False)
         self.instance_type['root_gb'] = 0
         image = dict(id=uuids.image_id, status='active', min_disk='2')

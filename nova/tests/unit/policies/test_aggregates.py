@@ -40,6 +40,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
+            self.other_project_reader_context,
             self.project_foo_context, self.project_reader_context
         ]
 
@@ -52,6 +53,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
         self.system_reader_unauthorized_contexts = [
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
+            self.other_project_reader_context,
             self.project_foo_context, self.project_reader_context
         ]
 
@@ -172,6 +174,7 @@ class AggregatesScopeTypePolicyTest(AggregatesPolicyTest):
             self.system_reader_context, self.system_foo_context,
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
+            self.other_project_reader_context,
             self.project_foo_context, self.project_reader_context
         ]
         # Check that system reader is able to get Aggregate
@@ -183,5 +186,6 @@ class AggregatesScopeTypePolicyTest(AggregatesPolicyTest):
             self.legacy_admin_context, self.project_admin_context,
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
+            self.other_project_reader_context,
             self.project_foo_context, self.project_reader_context
         ]

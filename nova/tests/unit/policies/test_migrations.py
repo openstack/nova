@@ -42,7 +42,8 @@ class MigrationsPolicyTest(base.BasePolicyTest):
         self.reader_unauthorized_contexts = [
             self.system_foo_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
     @mock.patch('nova.compute.api.API.get_migrations')
@@ -78,5 +79,6 @@ class MigrationsScopeTypePolicyTest(MigrationsPolicyTest):
             self.legacy_admin_context, self.project_admin_context,
             self.system_foo_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
