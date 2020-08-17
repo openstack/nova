@@ -87,7 +87,7 @@ class FloatingIPController(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given floating IP."""
         context = req.environ['nova.context']
-        context.can(fi_policies.BASE_POLICY_NAME)
+        context.can(fi_policies.BASE_POLICY_NAME % 'show')
 
         try:
             floating_ip = self.network_api.get_floating_ip(context, id)
@@ -104,7 +104,7 @@ class FloatingIPController(wsgi.Controller):
     def index(self, req):
         """Return a list of floating IPs allocated to a project."""
         context = req.environ['nova.context']
-        context.can(fi_policies.BASE_POLICY_NAME)
+        context.can(fi_policies.BASE_POLICY_NAME % 'list')
 
         floating_ips = self.network_api.get_floating_ips_by_project(context)
 
@@ -115,7 +115,7 @@ class FloatingIPController(wsgi.Controller):
     @wsgi.expected_errors((400, 403, 404))
     def create(self, req, body=None):
         context = req.environ['nova.context']
-        context.can(fi_policies.BASE_POLICY_NAME)
+        context.can(fi_policies.BASE_POLICY_NAME % 'create')
 
         pool = None
         if body and 'pool' in body:
@@ -147,7 +147,7 @@ class FloatingIPController(wsgi.Controller):
     @wsgi.expected_errors((400, 403, 404, 409))
     def delete(self, req, id):
         context = req.environ['nova.context']
-        context.can(fi_policies.BASE_POLICY_NAME)
+        context.can(fi_policies.BASE_POLICY_NAME % 'delete')
 
         # get the floating ip object
         try:
@@ -188,7 +188,7 @@ class FloatingIPActionController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = common.get_instance(self.compute_api, context, id,
                                        expected_attrs=['flavor'])
-        context.can(fi_policies.BASE_POLICY_NAME,
+        context.can(fi_policies.BASE_POLICY_NAME % 'add',
                     target={'project_id': instance.project_id})
 
         address = body['addFloatingIp']['address']
@@ -275,7 +275,7 @@ class FloatingIPActionController(wsgi.Controller):
         target = {}
         if instance:
             target = {'project_id': instance.project_id}
-        context.can(fi_policies.BASE_POLICY_NAME,
+        context.can(fi_policies.BASE_POLICY_NAME % 'remove',
                     target=target)
 
         # get the floating ip object
