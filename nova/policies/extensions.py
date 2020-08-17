@@ -23,11 +23,11 @@ BASE_POLICY_NAME = 'os_compute_api:extensions'
 
 extensions_policies = [
     policy.DocumentedRuleDefault(
-        BASE_POLICY_NAME,
-        base.RULE_ADMIN_OR_OWNER,
-        "List available extensions and show information for an extension "
-        "by alias",
-        [
+        name=BASE_POLICY_NAME,
+        check_str=base.RULE_ANY,
+        description="List available extensions and show information "
+        "for an extension by alias",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/extensions'
@@ -36,7 +36,8 @@ extensions_policies = [
                 'method': 'GET',
                 'path': '/extensions/{alias}'
             }
-        ]),
+        ],
+        scope_types=['system', 'project']),
 ]
 
 

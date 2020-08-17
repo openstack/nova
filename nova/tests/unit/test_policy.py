@@ -398,7 +398,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:server-metadata:update_all",
 "os_compute_api:os-suspend-server:suspend",
 "os_compute_api:os-suspend-server:resume",
-"os_compute_api:extensions",
 "os_compute_api:servers:confirm_resize",
 "os_compute_api:servers:create",
 "os_compute_api:servers:create:attach_network",
@@ -463,6 +462,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-quota-sets:defaults",
 "os_compute_api:os-availability-zone:list",
 "os_compute_api:limits",
+"os_compute_api:extensions",
 "os_compute_api:os-floating-ip-pools",
 )
 
