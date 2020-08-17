@@ -19,27 +19,53 @@ from nova.policies import base
 
 
 POLICY_ROOT = 'os_compute_api:os-networks:%s'
+BASE_POLICY_NAME = 'os_compute_api:os-networks:view'
+
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    BASE_POLICY_NAME,
+    base.RULE_ADMIN_OR_OWNER,
+)
+
+DEPRECATED_REASON = """
+Nova API policies are introducing new default roles with scope_type
+capabilities. Old policies are deprecated and silently going to be ignored
+in nova 23.0.0 release.
+"""
 
 
 networks_policies = [
     policy.DocumentedRuleDefault(
-        name=POLICY_ROOT % 'view',
-        check_str=base.RULE_ADMIN_OR_OWNER,
-        description="""List networks for the project and show network details.
+        name=POLICY_ROOT % 'list',
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        description="""List networks for the project.
 
-These APIs are proxy calls to the Network service. These are all
-deprecated.""",
+This API is proxy calls to the Network service. This is deprecated.""",
         operations=[
             {
                 'method': 'GET',
                 'path': '/os-networks'
-            },
+            }
+        ],
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
+    policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'show',
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        description="""Show network details.
+
+This API is proxy calls to the Network service. This is deprecated.""",
+        operations=[
             {
                 'method': 'GET',
                 'path': '/os-networks/{network_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['system', 'project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='22.0.0'),
 ]
 
 

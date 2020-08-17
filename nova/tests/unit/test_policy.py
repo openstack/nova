@@ -428,7 +428,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-floating-ips",
 "os_compute_api:os-multinic:add",
 "os_compute_api:os-multinic:remove",
-"os_compute_api:os-networks:view",
 "os_compute_api:os-rescue",
 "os_compute_api:os-unrescue",
 "os_compute_api:os-security-groups:create",
@@ -490,6 +489,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-hypervisors:search",
 "os_compute_api:os-hypervisors:servers",
 "os_compute_api:limits:other_project",
+"os_compute_api:os-networks:list",
+"os_compute_api:os-networks:show",
 )
 
         self.system_reader_or_owner_rules = (
