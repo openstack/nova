@@ -52,7 +52,6 @@ This module provides Manager, a base class for managers.
 """
 
 from oslo_service import periodic_task
-import six
 
 import nova.conf
 from nova.db import base
@@ -87,8 +86,7 @@ class ManagerMeta(profiler.get_traced_meta(), type(PeriodicTasks)):
     """
 
 
-@six.add_metaclass(ManagerMeta)
-class Manager(base.Base, PeriodicTasks):
+class Manager(base.Base, PeriodicTasks, metaclass=ManagerMeta):
     __trace_args__ = {"name": "rpc"}
 
     def __init__(self, host=None, service_name='undefined'):

@@ -14,7 +14,6 @@ import abc
 import functools
 
 from oslo_utils import excutils
-import six
 
 
 def rollback_wrapper(original):
@@ -28,8 +27,7 @@ def rollback_wrapper(original):
     return wrap
 
 
-@six.add_metaclass(abc.ABCMeta)
-class TaskBase(object):
+class TaskBase(metaclass=abc.ABCMeta):
 
     def __init__(self, context, instance):
         self.context = context

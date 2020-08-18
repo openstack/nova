@@ -22,7 +22,6 @@ import pypowervm.const as pvm_const
 import pypowervm.tasks.scsi_mapper as tsk_map
 import pypowervm.util as pvm_u
 import pypowervm.wrappers.virtual_io_server as pvm_vios
-import six
 
 from nova import exception
 from nova.virt.powervm import mgmt
@@ -61,8 +60,7 @@ class IterableToFileAdapter(object):
         return return_value
 
 
-@six.add_metaclass(abc.ABCMeta)
-class DiskAdapter(object):
+class DiskAdapter(metaclass=abc.ABCMeta):
 
     capabilities = {
         'shared_storage': False,

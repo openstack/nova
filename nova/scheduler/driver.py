@@ -21,15 +21,12 @@ Scheduler base class that all Schedulers should inherit from
 
 import abc
 
-import six
-
 from nova import objects
 from nova.scheduler import host_manager
 from nova import servicegroup
 
 
-@six.add_metaclass(abc.ABCMeta)
-class Scheduler(object):
+class Scheduler(metaclass=abc.ABCMeta):
     """The base class that all Scheduler classes should inherit from."""
 
     # TODO(mriedem): We should remove this flag now so that all scheduler

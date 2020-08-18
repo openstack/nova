@@ -15,11 +15,8 @@
 
 import abc
 
-import six
 
-
-@six.add_metaclass(abc.ABCMeta)
-class SecurityProxy(object):
+class SecurityProxy(metaclass=abc.ABCMeta):
     """A console security Proxy Helper
 
     Console security proxy helpers should subclass

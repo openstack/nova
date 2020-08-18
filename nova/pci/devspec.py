@@ -31,8 +31,7 @@ ANY = '*'
 REGEX_ANY = '.*'
 
 
-@six.add_metaclass(abc.ABCMeta)
-class PciAddressSpec(object):
+class PciAddressSpec(metaclass=abc.ABCMeta):
     """Abstract class for all PCI address spec styles
 
     This class checks the address fields of the pci.passthrough_whitelist

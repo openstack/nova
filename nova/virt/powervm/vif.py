@@ -148,8 +148,7 @@ def unplug(adapter, instance, vif, cna_w_list=None):
         _push_vif_event(adapter, 'unplug', vnet_w, instance, vif['type'])
 
 
-@six.add_metaclass(abc.ABCMeta)
-class PvmVifDriver(object):
+class PvmVifDriver(metaclass=abc.ABCMeta):
     """Represents an abstract class for a PowerVM Vif Driver.
 
     A VIF Driver understands a given virtual interface type (network).  It
