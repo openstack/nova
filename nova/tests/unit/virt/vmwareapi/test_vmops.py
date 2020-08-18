@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import re
 import time
 
 import mock
@@ -1532,20 +1533,30 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     @mock.patch.object(vutil, 'WithRetrieval')
     @mock.patch.object(vim_util, 'get_inner_objects')
-    def test_get_image_template_vms(self, mock_get_inner, mock_with_ret):
+    def _get_image_template_vms(self, mock_get_inner, mock_with_ret,
+                                datastore_regex=None,
+                                additional_fail_names=None):
+        self._vmops._datastore_regex = datastore_regex
+
         # fake image result
         def _fir(moref, name):
             return mock.Mock(propSet=[mock.Mock(val=name)],
                              obj=moref)
 
         fake_ref_ok1 = 'fake-moref-OK1'
+        fake_name_ok1 = '{} (ds-bb01-02)'.format(uuidutils.generate_uuid())
         fake_ref_ok2 = 'fake-moref-OK2'
+        fake_name_ok2 = '{} (ds-bb01-01)'.format(uuidutils.generate_uuid())
+
         ret_res = [
-            _fir(fake_ref_ok1, '{} (ds)'.format(uuidutils.generate_uuid())),
+            _fir(fake_ref_ok1, fake_name_ok1),
             _fir('fake-moref-NOK1', 'non-uuid-name (ds)'),
             _fir('fake-moref-NOK2', '{} ()'.format(uuidutils.generate_uuid())),
-            _fir(fake_ref_ok2, '{} (ds)'.format(uuidutils.generate_uuid()))
+            _fir(fake_ref_ok2, fake_name_ok2)
         ]
+        if additional_fail_names is not None:
+            ret_res.extend([_fir('fake-moref-add', n)
+                            for n in additional_fail_names])
         mock_get_inner.return_value = ret_res
 
         def _mock_with_ret(vim, ret_res):
@@ -1555,6 +1566,14 @@ class VMwareVMOpsTestCase(test.TestCase):
 
         actual_result = self._vmops._get_image_template_vms(None)
         self.assertEqual([fake_ref_ok1, fake_ref_ok2], sorted(actual_result))
+
+    def test_get_image_template_vms(self):
+        self._get_image_template_vms()
+
+    def test_get_image_template_vms_with_datastore_regex(self):
+        fail_name = '{} (ds-bb02-01)'.format(uuidutils.generate_uuid())
+        self._get_image_template_vms(datastore_regex=re.compile('^ds-bb01-.*'),
+                                     additional_fail_names=[fail_name])
 
     @mock.patch.object(vutil, 'get_inventory_path', return_value='fake_path')
     @mock.patch.object(vmops.VMwareVMOps, '_attach_cdrom_to_vm')

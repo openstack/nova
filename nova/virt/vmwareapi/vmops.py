@@ -2563,7 +2563,11 @@ class VMwareVMOps(object):
                 templ_vm_folder_ref, 'childEntity',
                 'VirtualMachine', properties_to_collect=['name'])
             uuid_ptrn = '-'.join(5 * ['[0-9a-f]{{{}}}']).format(8, 4, 4, 4, 12)
-            img_templ_ptrn = r'^{} \([^)]+\)$'.format(uuid_ptrn)
+            if self._datastore_regex is not None:
+                ds_regex = re.sub(r'[\^\$]', '', self._datastore_regex.pattern)
+            else:
+                ds_regex = '[^)]+'
+            img_templ_ptrn = r'^{} \({}\)$'.format(uuid_ptrn, ds_regex)
             templ_vms = []
             with vutil.WithRetrieval(self._session.vim,
                                      all_vms_retr_res) as retr_objects:
