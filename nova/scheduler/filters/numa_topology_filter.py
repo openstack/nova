@@ -25,7 +25,7 @@ class NUMATopologyFilter(filters.BaseHostFilter):
 
     # NOTE(sean-k-mooney): In change I0322d872bdff68936033a6f5a54e8296a6fb343
     # we validate that the NUMA topology does not change in the api. If the
-    # requested image would alter the NUMA constrains we reject the rebuild
+    # requested image would alter the NUMA constraints we reject the rebuild
     # request and therefore do not need to run this filter on rebuild.
     RUN_ON_REBUILD = False
 

@@ -6199,7 +6199,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                              cells)
 
     def test__validate_numa_rebuild_non_numa(self):
-        """This test asserts that a rebuild of an instance without a NUMA
+        """Assert that a rebuild of an instance without a NUMA
         topology passes validation.
         """
         flavor = objects.Flavor(
@@ -6213,7 +6213,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self.compute_api._validate_numa_rebuild(instance, image, flavor)
 
     def test__validate_numa_rebuild_no_conflict(self):
-        """This test asserts that a rebuild of an instance without a change
+        """Assert that a rebuild of an instance without a change
         in NUMA topology passes validation.
         """
         flavor = objects.Flavor(
@@ -6231,7 +6231,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self.compute_api._validate_numa_rebuild(instance, image, flavor)
 
     def test__validate_numa_rebuild_add_numa_toplogy(self):
-        """This test asserts that a rebuild of an instance with a new image
+        """Assert that a rebuild of an instance with a new image
         that requests a NUMA topology when the original instance did not
         have a NUMA topology is invalid.
         """
@@ -6239,6 +6239,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         flavor = objects.Flavor(
             id=42, vcpus=1, memory_mb=512, root_gb=1,
             extra_specs={})
+        # _create_instance_obj results in the instance.image_meta being None.
         instance = self._create_instance_obj(flavor=flavor)
         # we use a dict instead of image metadata object as
         # _validate_numa_rebuild constructs the object internally
@@ -6253,7 +6254,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self.compute_api._validate_numa_rebuild, instance, image, flavor)
 
     def test__validate_numa_rebuild_remove_numa_toplogy(self):
-        """This test asserts that a rebuild of an instance with a new image
+        """Assert that a rebuild of an instance with a new image
         that does not request a NUMA topology when the original image did
         is invalid if it would alter the instances topology as a result.
         """
@@ -6261,6 +6262,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         flavor = objects.Flavor(
             id=42, vcpus=1, memory_mb=512, root_gb=1,
             extra_specs={})
+        # _create_instance_obj results in the instance.image_meta being None.
         instance = self._create_instance_obj(flavor=flavor)
         # we use a dict instead of image metadata object as
         # _validate_numa_rebuild constructs the object internally
@@ -6283,7 +6285,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                 image, flavor)
 
     def test__validate_numa_rebuild_alter_numa_toplogy(self):
-        """This test asserts that a rebuild of an instance with a new image
+        """Assert that a rebuild of an instance with a new image
         that requests a different NUMA topology than the original image
         is invalid.
         """
@@ -6295,6 +6297,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         flavor = objects.Flavor(
             id=42, vcpus=2, memory_mb=512, root_gb=1,
             extra_specs={})
+        # _create_instance_obj results in the instance.image_meta being None.
         instance = self._create_instance_obj(flavor=flavor)
         # we use a dict instead of image metadata object as
         # _validate_numa_rebuild constructs the object internally

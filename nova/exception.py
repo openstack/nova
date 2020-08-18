@@ -1913,7 +1913,7 @@ class ImageNUMATopologyForbidden(Forbidden):
 
 class ImageNUMATopologyRebuildConflict(Invalid):
     msg_fmt = _(
-        "An instance's NUMA typology cannot be changed as part of a rebuild. "
+        "An instance's NUMA topology cannot be changed as part of a rebuild. "
         "The image provided is invalid for this instance.")
 
 
