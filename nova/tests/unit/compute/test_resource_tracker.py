@@ -3704,6 +3704,11 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # NOTE(danms): The resource tracker _should_ report negative resources
         # for things like free_ram_mb if overcommit is being used. This test
         # ensures that we don't collapse negative values to zero.
+        # NOTE(jkulik): We've switched how this works at SAP; because we don't
+        # want limes to see the memory of a compute-node if it's actually
+        # reserved (as limes didn't care for free/used at the time). Therefore,
+        # we actually collaps reserved memory to 0 for reserved resources, but
+        # we don't do it for instance resources.
         self.flags(reserved_host_memory_mb=2048)
         self.flags(reserved_host_disk_mb=(11 * 1024))
         cn = objects.ComputeNode(memory_mb=1024, local_gb=10)
@@ -3713,12 +3718,23 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         self.rt.compute_nodes['foo'] = cn
 
         @mock.patch.object(self.rt, '_update_usage_from_instance')
-        def test(uufi):
-            self.rt._update_usage_from_instances('ctxt', [], 'foo')
+        @mock.patch('nova.objects.Service.get_minimum_version',
+                    return_value=22)
+        def test(version_mock, uufi):
+            def _update_usage(*args, **kwargs):
+                # simulate an instance with 512 MB memory and  1 GB disk using
+                # resources
+                cn.memory_mb_used += 512
+                cn.local_gb_used += 1
+                cn.free_ram_mb = cn.memory_mb - cn.memory_mb_used
+                cn.free_disk_gb = cn.local_gb - cn.local_gb_used
+            uufi.side_effect = _update_usage
+            self.rt._update_usage_from_instances('ctxt', [self.instance],
+                                                 'foo')
 
         test()
 
-        self.assertEqual(-1024, cn.free_ram_mb)
+        self.assertEqual(-512, cn.free_ram_mb)
         self.assertEqual(-1, cn.free_disk_gb)
 
     def test_delete_allocation_for_evacuated_instance(self):
