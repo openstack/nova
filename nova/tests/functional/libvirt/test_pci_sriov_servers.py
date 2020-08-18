@@ -74,6 +74,7 @@ class SRIOVServersTest(_PCIServersTestBase):
         {
             'vendor_id': fakelibvirt.PCI_VEND_ID,
             'product_id': fakelibvirt.VF_PROD_ID,
+            'physical_network': 'physnet4',
         },
     )]
     # PFs will be removed from pools unless they are specifically
@@ -168,11 +169,73 @@ class SRIOVServersTest(_PCIServersTestBase):
             flavor_id=flavor_id_pfs, networks='none', expected_state='ERROR',
         )
 
+    def test_create_server_with_neutron(self):
+        """Create an instance using a neutron-provisioned SR-IOV VIF."""
+
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=2)
+
+        orig_create = nova.virt.libvirt.guest.Guest.create
+
+        def fake_create(cls, xml, host):
+            tree = etree.fromstring(xml)
+            elem = tree.find('./devices/interface/source/address')
+
+            # compare address
+            expected = ('0x81', '0x00', '0x2')
+            actual = (
+                elem.get('bus'), elem.get('slot'), elem.get('function'),
+            )
+            self.assertEqual(expected, actual)
+
+            return orig_create(xml, host)
+
+        self.stub_out(
+            'nova.virt.libvirt.guest.Guest.create',
+            fake_create,
+        )
+
+        self.start_compute(pci_info=pci_info)
+
+        # create the port
+        self.neutron.create_port({'port': self.neutron.network_4_port_1})
+
+        # ensure the binding details are currently unset
+        port = self.neutron.show_port(
+            base.LibvirtNeutronFixture.network_4_port_1['id'],
+        )['port']
+        self.assertNotIn('binding:profile', port)
+
+        # create a server using the VF via neutron
+        flavor_id = self._create_flavor()
+        self._create_server(
+            flavor_id=flavor_id,
+            networks=[
+                {'port': base.LibvirtNeutronFixture.network_4_port_1['id']},
+            ],
+        )
+
+        # ensure the binding details sent to "neutron" were correct
+        port = self.neutron.show_port(
+            base.LibvirtNeutronFixture.network_4_port_1['id'],
+        )['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '8086:1515',
+                'pci_slot': '0000:81:00.2',
+                'physical_network': 'physnet4',
+            },
+            port['binding:profile'],
+        )
+
     def test_get_server_diagnostics_server_with_VF(self):
         """Ensure server disagnostics include info on VF-type PCI devices."""
 
         pci_info = fakelibvirt.HostPCIDevicesInfo()
         self.start_compute(pci_info=pci_info)
+
+        # create the SR-IOV port
+        self.neutron.create_port({'port': self.neutron.network_4_port_1})
 
         # create a server using the VF and multiple networks
         extra_spec = {'pci_passthrough:alias': f'{self.VFS_ALIAS_NAME}:1'}
@@ -181,7 +244,7 @@ class SRIOVServersTest(_PCIServersTestBase):
             flavor_id=flavor_id,
             networks=[
                 {'uuid': base.LibvirtNeutronFixture.network_1['id']},
-                {'uuid': base.LibvirtNeutronFixture.network_4['id']},
+                {'port': base.LibvirtNeutronFixture.network_4_port_1['id']},
             ],
         )
 

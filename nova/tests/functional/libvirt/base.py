@@ -321,12 +321,9 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
                 'subnet_id': subnet_4['id']
             }
         ],
-        'binding:vif_details': {'vlan': 42},
         'binding:vif_type': 'hw_veb',
+        'binding:vif_details': {'vlan': 42},
         'binding:vnic_type': 'direct',
-        'binding:profile': {'pci_vendor_info': '1377:0047',
-                            'pci_slot': '0000:81:00.1',
-                            'physical_network': 'physnet4'},
     }
 
     def __init__(self, test):
@@ -357,6 +354,15 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
         # network_2_port_1 below at the update call
         port = copy.deepcopy(port)
         port.update(body['port'])
+
+        # the tenant ID is normally extracted from credentials in the request
+        # and is not present in the body
+        if 'tenant_id' not in port:
+            port['tenant_id'] = nova_fixtures.NeutronFixture.tenant_id
+
+        # similarly, these attributes are set by neutron itself
+        port['admin_state_up'] = True
+
         self._ports[port['id']] = port
         # this copy is here as nova sometimes modifies the returned port
         # locally and we want to avoid that nova modifies the fixture internals
