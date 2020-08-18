@@ -1325,8 +1325,9 @@ class NeutronFixture(fixtures.Fixture):
         'project_id': tenant_id,
         'device_id': '',
         'binding:profile': {},
-        'binding:vnic_type': 'normal',
+        'binding:vif_details': {},
         'binding:vif_type': 'ovs',
+        'binding:vnic_type': 'normal',
         'port_security_enabled': True,
         'security_groups': [
             security_group['id'],
@@ -1351,8 +1352,9 @@ class NeutronFixture(fixtures.Fixture):
         'project_id': tenant_id,
         'device_id': '',
         'binding:profile': {},
-        'binding:vnic_type': 'normal',
+        'binding:vif_details': {},
         'binding:vif_type': 'ovs',
+        'binding:vnic_type': 'normal',
         'port_security_enabled': True,
         'security_groups': [
             security_group['id'],
@@ -1377,8 +1379,9 @@ class NeutronFixture(fixtures.Fixture):
         'project_id': tenant_id,
         'device_id': '',
         'binding:profile': {},
-        'binding:vnic_type': 'normal',
+        'binding:vif_details': {},
         'binding:vif_type': 'ovs',
+        'binding:vnic_type': 'normal',
         'resource_request': {
             "resources": {
                     orc.NET_BW_IGR_KILOBIT_PER_SEC: 1000,
@@ -1462,9 +1465,9 @@ class NeutronFixture(fixtures.Fixture):
         'device_id': '',
         'resource_request': {},
         'binding:profile': {},
-        'binding:vnic_type': 'direct',
-        'binding:vif_type': 'hw_veb',
         'binding:vif_details': {'vlan': 100},
+        'binding:vif_type': 'hw_veb',
+        'binding:vnic_type': 'direct',
         'port_security_enabled': False,
     }
 
@@ -1616,6 +1619,8 @@ class NeutronFixture(fixtures.Fixture):
             "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_DIRECT"]
         },
         'binding:profile': {},
+        'binding:vif_details': {},
+        'binding:vif_type': 'hw_veb',
         'binding:vnic_type': 'direct',
         'port_security_enabled': False,
     }
@@ -1645,6 +1650,8 @@ class NeutronFixture(fixtures.Fixture):
             "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_MACVTAP"]
         },
         'binding:profile': {},
+        'binding:vif_details': {},
+        'binding:vif_type': 'hw_veb',
         'binding:vnic_type': 'macvtap',
         'port_security_enabled': False,
     }

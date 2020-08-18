@@ -26,7 +26,6 @@ from nova.i18n import _
 from nova.network import neutron
 from nova import objects
 from nova.objects import fields as obj_fields
-from nova.objects import migrate_data as migrate_data_obj
 from nova.scheduler import utils as scheduler_utils
 
 LOG = logging.getLogger(__name__)
@@ -369,14 +368,6 @@ class LiveMigrationTask(base.TaskBase):
 
         # Check to see that neutron supports the binding-extended API.
         if self.network_api.supports_port_binding_extension(self.context):
-            if 'vifs' not in self.migrate_data:
-                # migrate data vifs were not constructed in dest compute
-                # during check_can_live_migrate_destination, construct a
-                # skeleton to be updated after port binding.
-                # TODO(adrianc): This can be removed once we move to U release
-                self.migrate_data.vifs = migrate_data_obj.VIFMigrateData.\
-                    create_skeleton_migrate_vifs(
-                    self.instance.get_network_info())
             bindings = self._bind_ports_on_destination(
                 destination, provider_mapping)
             self._update_migrate_vifs_from_bindings(self.migrate_data.vifs,
@@ -432,8 +423,13 @@ class LiveMigrationTask(base.TaskBase):
 
     def _update_migrate_vifs_from_bindings(self, migrate_vifs, bindings):
         for migrate_vif in migrate_vifs:
-            for attr_name, attr_val in bindings[migrate_vif.port_id].items():
-                setattr(migrate_vif, attr_name, attr_val)
+            binding = bindings[migrate_vif.port_id]
+            migrate_vif.profile = binding.get('profile')
+            migrate_vif.vnic_type = binding['vnic_type']
+            if 'vif_details' in binding:
+                migrate_vif.vif_details = binding['vif_details']
+            if 'vif_type' in binding:
+                migrate_vif.vif_type = binding['vif_type']
 
     def _get_source_cell_mapping(self):
         """Returns the CellMapping for the cell in which the instance lives
