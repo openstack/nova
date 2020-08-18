@@ -17,8 +17,6 @@
 
 import collections
 
-import six
-
 from nova import cache_utils
 import nova.conf
 from nova import objects
@@ -51,8 +49,6 @@ def reset_cache():
 
 
 def _make_cache_key(host):
-    if six.PY2:
-        host = host.encode('utf-8')
     return "azcache-%s" % host
 
 

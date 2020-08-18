@@ -368,11 +368,9 @@ def sanitize_hostname(hostname, default_name=None):
                         {'hostname': name, 'truncated_name': name[:63]})
         return name[:63]
 
-    if isinstance(hostname, six.text_type):
+    if isinstance(hostname, str):
         # Remove characters outside the Unicode range U+0000-U+00FF
-        hostname = hostname.encode('latin-1', 'ignore')
-        if six.PY3:
-            hostname = hostname.decode('latin-1')
+        hostname = hostname.encode('latin-1', 'ignore').decode('latin-1')
 
     hostname = truncate_hostname(hostname)
     hostname = re.sub('[ _]', '-', hostname)
@@ -809,8 +807,6 @@ def get_obj_repr_unicode(obj):
     else it converts the repr() to unicode.
     """
     obj_repr = repr(obj)
-    if not six.PY3:
-        obj_repr = six.text_type(obj_repr, 'utf-8')
     return obj_repr
 
 
@@ -1039,13 +1035,10 @@ def generate_hostid(host, project_id):
     return ""
 
 
-if six.PY2:
-    nested_contexts = contextlib.nested
-else:
-    @contextlib.contextmanager
-    def nested_contexts(*contexts):
-        with contextlib.ExitStack() as stack:
-            yield [stack.enter_context(c) for c in contexts]
+@contextlib.contextmanager
+def nested_contexts(*contexts):
+    with contextlib.ExitStack() as stack:
+        yield [stack.enter_context(c) for c in contexts]
 
 
 def normalize_rc_name(rc_name):

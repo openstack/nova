@@ -65,15 +65,8 @@ class TenantSock(object):
             new_frames, closed = self.reqhandler.recv_frames()
             # flatten frames onto queue
             for frame in new_frames:
-                # The socket returns (byte) strings in Python 2...
-                if six.PY2:
-                    self.queue.extend(frame)
-                # ...and integers in Python 3. For the Python 3 case, we need
-                # to convert these to characters using 'chr' and then, as this
-                # returns unicode, convert the result to byte strings.
-                else:
-                    self.queue.extend(
-                        [six.binary_type(chr(c), 'ascii') for c in frame])
+                self.queue.extend(
+                    [six.binary_type(chr(c), 'ascii') for c in frame])
 
             if closed:
                 break

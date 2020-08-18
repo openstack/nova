@@ -7988,12 +7988,6 @@ class ComputeManager(manager.Manager):
             if events:
                 LOG.debug('Not waiting for events after pre_live_migration: '
                           '%s. ', events, instance=instance)
-            # This is a bit weird, but we need to clear sys.exc_info() so that
-            # oslo.log formatting does not inadvertently use it later if an
-            # error message is logged without an explicit exc_info. This is
-            # only a problem with python 2.
-            if six.PY2:
-                sys.exc_clear()
         except exception.VirtualInterfacePlugException:
             with excutils.save_and_reraise_exception():
                 LOG.exception('Failed waiting for network virtual interfaces '

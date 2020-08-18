@@ -1105,9 +1105,6 @@ Active:          8381604 kB
 
         def emulate_defineXML(xml):
             conn = self.host.get_connection()
-            # Emulate the decoding behavior of defineXML in Python2
-            if six.PY2:
-                xml = xml.decode("utf-8")
             dom = fakelibvirt.Domain(conn, xml, False)
             return dom
         with mock.patch.object(fakelibvirt.virConnect, "defineXML"

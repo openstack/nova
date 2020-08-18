@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
 from six.moves import range
 from webob import exc
 
@@ -47,7 +46,7 @@ def convert_password(context, password):
     Password is stored with the keys 'password_0' -> 'password_3'.
     """
     password = password or ''
-    if six.PY3 and isinstance(password, bytes):
+    if isinstance(password, bytes):
         password = password.decode('utf-8')
 
     meta = {}

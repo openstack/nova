@@ -35,7 +35,6 @@ from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
-import six
 
 from nova.compute import power_state
 from nova import exception
@@ -137,7 +136,7 @@ class Guest(object):
         :returns guest.Guest: Guest ready to be launched
         """
         try:
-            if six.PY3 and isinstance(xml, six.binary_type):
+            if isinstance(xml, bytes):
                 xml = xml.decode('utf-8')
             guest = host.write_instance_config(xml)
         except Exception:
@@ -305,7 +304,7 @@ class Guest(object):
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
 
         device_xml = conf.to_xml()
-        if six.PY3 and isinstance(device_xml, six.binary_type):
+        if isinstance(device_xml, bytes):
             device_xml = device_xml.decode('utf-8')
 
         LOG.debug("attach device xml: %s", device_xml)
@@ -495,7 +494,7 @@ class Guest(object):
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
 
         device_xml = conf.to_xml()
-        if six.PY3 and isinstance(device_xml, six.binary_type):
+        if isinstance(device_xml, bytes):
             device_xml = device_xml.decode('utf-8')
 
         LOG.debug("detach device xml: %s", device_xml)
@@ -599,7 +598,7 @@ class Guest(object):
         flags |= quiesce and libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_QUIESCE or 0
 
         device_xml = conf.to_xml()
-        if six.PY3 and isinstance(device_xml, six.binary_type):
+        if isinstance(device_xml, bytes):
             device_xml = device_xml.decode('utf-8')
 
         self._domain.snapshotCreateXML(device_xml, flags=flags)
@@ -673,13 +672,6 @@ class Guest(object):
         if (flags & libvirt.VIR_MIGRATE_NON_SHARED_INC != 0 and
                 not params.get('migrate_disks')):
             flags &= ~libvirt.VIR_MIGRATE_NON_SHARED_INC
-
-        # In the Python2 libvirt bindings, strings passed to
-        # migrateToURI3 via params must not be unicode.
-        if six.PY2:
-            params = {key: encodeutils.to_utf8(value)
-                      if isinstance(value, six.text_type) else value
-                      for key, value in params.items()}
 
         self._domain.migrateToURI3(
             destination, params=params, flags=flags)

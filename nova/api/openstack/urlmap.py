@@ -14,17 +14,12 @@
 #    under the License.
 
 import re
+from urllib import request as urllib2
 
 from oslo_log import log as logging
 import paste.urlmap
-import six
 
 from nova.api.openstack import wsgi
-
-if six.PY2:
-    import urllib2
-else:
-    from urllib import request as urllib2
 
 
 LOG = logging.getLogger(__name__)
