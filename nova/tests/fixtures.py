@@ -1791,19 +1791,25 @@ class NeutronFixture(fixtures.Fixture):
             return fake_requests.FakeResponse(
                 404, content='Port %s not found' % port_id)
 
-        host = data['binding']['host']
-        # We assume that every binding that is created is inactive.
-        # This is only true from the current nova code perspective where
-        # explicit binding creation only happen for migration where the port
-        # is already actively bound to the source host.
-        # TODO(gibi): enhance update_port to detect if the port is bound by
-        # the update and create a binding internally in _port_bindings. Then
-        # we can change the logic here to mimic neutron better by making the
-        # first binding active by default.
-        data['binding']['status'] = 'INACTIVE'
-        self._port_bindings[port_id][host] = copy.deepcopy(data['binding'])
+        port = self._ports[port_id]
+        binding = copy.deepcopy(data['binding'])
 
-        return fake_requests.FakeResponse(200, content=jsonutils.dumps(data))
+        # NOTE(stephenfin): We don't allow changing of backend
+        binding['vif_type'] = port['binding:vif_type']
+        binding['vif_details'] = port['binding:vif_details']
+        binding['vnic_type'] = port['binding:vnic_type']
+
+        # the first binding is active by default
+        if not self._port_bindings[port_id]:
+            binding['status'] = 'ACTIVE'
+        else:
+            binding['status'] = 'INACTIVE'
+
+        self._port_bindings[port_id][binding['host']] = binding
+
+        return fake_requests.FakeResponse(
+            200, content=jsonutils.dumps({'binding': binding}),
+        )
 
     def _get_failure_response_if_port_or_binding_not_exists(
             self, port_id, host):
@@ -1826,12 +1832,7 @@ class NeutronFixture(fixtures.Fixture):
 
         return fake_requests.FakeResponse(204)
 
-    def activate_port_binding(self, context, client, port_id, host):
-        failure = self._get_failure_response_if_port_or_binding_not_exists(
-            port_id, host)
-        if failure is not None:
-            return failure
-
+    def _activate_port_binding(self, port_id, host):
         # It makes sure that only one binding is active for a port
         for h, binding in self._port_bindings[port_id].items():
             if h == host:
@@ -1840,6 +1841,14 @@ class NeutronFixture(fixtures.Fixture):
                 binding['status'] = 'ACTIVE'
             else:
                 binding['status'] = 'INACTIVE'
+
+    def activate_port_binding(self, context, client, port_id, host):
+        failure = self._get_failure_response_if_port_or_binding_not_exists(
+            port_id, host)
+        if failure is not None:
+            return failure
+
+        self._activate_port_binding(port_id, host)
 
         return fake_requests.FakeResponse(200)
 
@@ -1890,14 +1899,16 @@ class NeutronFixture(fixtures.Fixture):
     def _get_active_binding(self, port_id):
         for host, binding in self._port_bindings[port_id].items():
             if binding['status'] == 'ACTIVE':
-                return binding
+                return host, copy.deepcopy(binding)
+
+        return None, {}
 
     def _merge_in_active_binding(self, port):
         """Update the port dict with the currently active port binding"""
         if port['id'] not in self._port_bindings:
             return
 
-        binding = self._get_active_binding(port['id']) or {}
+        _, binding = self._get_active_binding(port['id'])
         for key, value in binding.items():
             # keys in the binding is like 'vnic_type' but in the port response
             # they are like 'binding:vnic_type'. Except for the host_id that
@@ -1983,13 +1994,43 @@ class NeutronFixture(fixtures.Fixture):
         return {'port': copy.deepcopy(new_port)}
 
     def update_port(self, port_id, body=None):
-        # TODO(gibi): check if the port update binds the port and update the
-        # internal _port_bindings dict accordingly. Such a binding always
-        # becomes and active port binding of the port.
         port = self._ports[port_id]
         # We need to deepcopy here as well as the body can have a nested dict
         # which can be modified by the caller after this update_port call
         port.update(copy.deepcopy(body['port']))
+
+        # update port binding
+
+        if (
+            'binding:host_id' in body['port'] and
+            body['port']['binding:host_id'] is None
+        ):
+            # if the host_id is explicitly set to None, delete the binding
+            host, _ = self._get_active_binding(port_id)
+            del self._port_bindings[port_id][host]
+        else:
+            # else it's an update
+            if 'binding:host_id' in body['port']:
+                # if the host ID is present, update that specific binding
+                host = body['port']['binding:host_id']
+            else:
+                # else update the active one
+                host, _ = self._get_active_binding(port_id)
+
+            self._port_bindings[port_id][host] = {
+                'host': host,
+                'status': 'ACTIVE',
+                'profile': copy.deepcopy(
+                    body['port'].get('binding:profile') or {},
+                ),
+                'vif_details': port.get('binding:vif_details') or {},
+                'vif_type': port['binding:vif_type'],
+                'vnic_type': port['binding:vnic_type'],
+            }
+
+            # mark any other active bindings as inactive
+            self._activate_port_binding(port_id, host)
+
         return {'port': copy.deepcopy(port)}
 
     def show_quota(self, project_id):
