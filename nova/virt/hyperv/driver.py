@@ -24,7 +24,6 @@ import sys
 from os_win import exceptions as os_win_exc
 from os_win import utilsfactory
 from oslo_log import log as logging
-import six
 
 from nova import context as nova_context
 from nova import exception
@@ -62,12 +61,10 @@ def convert_exceptions(function, exception_map):
                         break
 
             exc_info = sys.exc_info()
-            # NOTE(claudiub): Python 3 raises the exception object given as
-            # the second argument in six.reraise.
-            # The original message will be maintained by passing the original
-            # exception.
-            exc = raised_exception(six.text_type(exc_info[1]))
-            six.reraise(raised_exception, exc, exc_info[2])
+            # NOTE(claudiub): The original message will be maintained
+            # by passing the original exception.
+            exc = raised_exception(str(exc_info[1]))
+            raise exc.with_traceback(exc_info[2])
     return wrapper
 
 

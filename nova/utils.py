@@ -584,7 +584,7 @@ class ExceptionHelper(object):
             try:
                 return func(*args, **kwargs)
             except messaging.ExpectedException as e:
-                six.reraise(*e.exc_info)
+                raise e.exc_info[1]
         return wrapper
 
 

@@ -480,7 +480,7 @@ def translate_mixed_exceptions(method):
 
 
 def _reraise(desired_exc):
-    six.reraise(type(desired_exc), desired_exc, sys.exc_info()[2])
+    raise desired_exc.with_traceback(sys.exc_info()[2])
 
 
 class API(object):

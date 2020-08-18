@@ -137,7 +137,7 @@ class NovaExceptionReraiseFormatError(object):
     def _wrap_log_exception(self):
         exc_info = sys.exc_info()
         NovaExceptionReraiseFormatError.real_log_exception(self)
-        six.reraise(*exc_info)
+        raise exc_info[1]
 
 
 # NOTE(melwitt) This needs to be done at import time in order to also catch

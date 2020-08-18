@@ -1740,15 +1740,14 @@ class ComputeManager(manager.Manager):
                 # for this async greenthread to finish before calling
                 # instance.save().
                 return nwinfo
-            except Exception:
-                exc_info = sys.exc_info()
+            except Exception as e:
                 log_info = {'attempt': attempt,
                             'attempts': attempts}
                 if attempt == attempts:
                     LOG.exception('Instance failed network setup '
                                   'after %(attempts)d attempt(s)',
                                   log_info)
-                    six.reraise(*exc_info)
+                    raise e
                 LOG.warning('Instance failed network setup '
                             '(attempt %(attempt)d of %(attempts)d)',
                             log_info, instance=instance)
@@ -2911,7 +2910,7 @@ class ComputeManager(manager.Manager):
 
     def _cleanup_volumes(self, context, instance, bdms, raise_exc=True,
                          detach=True):
-        exc_info = None
+        original_exception = None
         for bdm in bdms:
             if detach and bdm.volume_id:
                 try:
@@ -2921,7 +2920,7 @@ class ComputeManager(manager.Manager):
                     self._detach_volume(context, bdm, instance,
                                         destroy_bdm=destroy)
                 except Exception as exc:
-                    exc_info = sys.exc_info()
+                    original_exception = exc
                     LOG.warning('Failed to detach volume: %(volume_id)s '
                                 'due to %(exc)s',
                                 {'volume_id': bdm.volume_id, 'exc': exc})
@@ -2932,12 +2931,12 @@ class ComputeManager(manager.Manager):
                               instance_uuid=instance.uuid)
                     self.volume_api.delete(context, bdm.volume_id)
                 except Exception as exc:
-                    exc_info = sys.exc_info()
+                    original_exception = exc
                     LOG.warning('Failed to delete volume: %(volume_id)s '
                                 'due to %(exc)s',
                                 {'volume_id': bdm.volume_id, 'exc': exc})
-        if exc_info is not None and raise_exc:
-            six.reraise(exc_info[0], exc_info[1], exc_info[2])
+        if original_exception is not None and raise_exc:
+            raise original_exception
 
     def _delete_instance(self, context, instance, bdms):
         """Delete an instance on this host.
@@ -5299,7 +5298,11 @@ class ComputeManager(manager.Manager):
             )
         else:
             # not re-scheduling
-            six.reraise(*exc_info)
+            if exc_info[1] is None:
+                exc_info[1] = exc_info[0]()
+            if exc_info[1].__traceback__ is not exc_info[2]:
+                raise exc_info[1].with_traceback(exc_info[2])
+            raise exc_info[1]
 
     # TODO(stephenfin): Remove unused request_spec parameter in API v6.0
     @messaging.expected_exceptions(exception.MigrationPreCheckError)
