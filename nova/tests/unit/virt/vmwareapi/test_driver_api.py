@@ -372,12 +372,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
-    @mock.patch.object(vmops.VMwareVMOps, '_find_image_template_vm',
-                       return_value=None)
-    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_from_other_datastores',
-                       return_value=None)
-    def _create_vm(self, fake_fetch_image_from_other_datastores,
-                   fake_find_image_template_vm, fake_is_volume_backed,
+    def _create_vm(self, fake_is_volume_backed,
                    node=None, num_instances=1, uuid=None, flavor='m1.large',
                    powered_on=True, ephemeral=None, bdi=None,
                    flavor_updates=None):
@@ -392,6 +387,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         with test.nested(
             mock.patch.object(self.conn._vmops, 'update_cluster_placement',
                               return_value=None),
+            mock.patch.object(self.conn._vmops, '_find_image_template_vm',
+                              return_value=None),
+            mock.patch.object(self.conn._vmops,
+                              '_fetch_image_from_other_datastores',
+                              return_value=None)
         ):
             self.conn.spawn(self.context, self.instance, self.image,
                             injected_files=[], admin_password=None,
@@ -1164,10 +1164,17 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         mock_get_res_pool_of_vm.return_value = 'fake_res_pool'
 
         block_device_info = {'block_device_mapping': root_disk}
-        self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None, allocations={},
-                        network_info=self.network_info,
-                        block_device_info=block_device_info)
+        with test.nested(
+            mock.patch.object(self.conn._vmops, '_find_image_template_vm',
+                              return_value=None),
+            mock.patch.object(self.conn._vmops,
+                              '_fetch_image_from_other_datastores',
+                              return_value=None)
+        ):
+            self.conn.spawn(self.context, self.instance, self.image,
+                            injected_files=[], admin_password=None,
+                            allocations={}, network_info=self.network_info,
+                            block_device_info=block_device_info)
 
         mock_info_get_mapping.assert_called_once_with(mock.ANY)
         mock_attach_volume.assert_called_once_with(connection_info,
@@ -1181,13 +1188,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 'attach_volume')
     @mock.patch('nova.block_device.volume_in_mapping')
     @mock.patch('nova.virt.driver.block_device_info_get_mapping')
-    @mock.patch.object(vmops.VMwareVMOps, '_find_image_template_vm',
-                       return_value=None)
-    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_from_other_datastores',
-                       return_value=None)
     def test_spawn_attach_volume_iscsi(self,
-                                       mock_fetch_image_from_other_datastores,
-                                       mock_find_image_template_vm,
                                        mock_info_get_mapping,
                                        mock_block_volume_in_mapping,
                                        mock_attach_volume,
@@ -1199,10 +1200,17 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                       'boot_index': 0}]
         mock_info_get_mapping.return_value = root_disk
         block_device_info = {'mount_device': 'vda'}
-        self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None, allocations={},
-                        network_info=self.network_info,
-                        block_device_info=block_device_info)
+        with test.nested(
+            mock.patch.object(self.conn._vmops, '_find_image_template_vm',
+                              return_value=None),
+            mock.patch.object(self.conn._vmops,
+                              '_fetch_image_from_other_datastores',
+                              return_value=None)
+        ):
+            self.conn.spawn(self.context, self.instance, self.image,
+                            injected_files=[], admin_password=None,
+                            allocations={}, network_info=self.network_info,
+                            block_device_info=block_device_info)
 
         mock_info_get_mapping.assert_called_once_with(mock.ANY)
         mock_attach_volume.assert_called_once_with(connection_info,

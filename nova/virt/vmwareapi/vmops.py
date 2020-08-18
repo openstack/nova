@@ -633,6 +633,18 @@ class VMwareVMOps(object):
         except vexc.FileAlreadyExistsException:
             pass
 
+    def _cache_vm_image_from_template(self, vi, templ_vm_ref):
+        LOG.debug("Caching VDMK from template VM", instance=vi.instance)
+        vm_name = self._get_image_template_vm_name(vi.ii.image_id,
+                                                   vi.datastore.name)
+        vmdk = vm_util.get_vmdk_info(self._session, templ_vm_ref, vm_name)
+        # The size of the image is different from the size of the virtual disk.
+        # We want to use the latter. On vSAN this is the only way to get this
+        # size because there is no VMDK descriptor.
+        vi.ii.file_size = vmdk.capacity_in_bytes
+        self._cache_vm_image(vi, vmdk.path)
+        LOG.debug("Cached VDMK from template VM", instance=vi.instance)
+
     def _cache_stream_optimized_image(self, vi, tmp_image_ds_loc):
         dst_path = vi.cache_image_folder.join("%s.vmdk" % vi.ii.image_id)
         ds_util.mkdir(self._session, vi.cache_image_folder, vi.dc_info.ref)
@@ -758,21 +770,33 @@ class VMwareVMOps(object):
                             lock_file_prefix='nova-vmware-fetch_image'):
             self.check_cache_folder(vi.datastore.name, vi.datastore.ref)
             ds_browser = self._get_ds_browser(vi.datastore.ref)
+
+            # normal deployments can work with a VMDK only
             image_available = ds_util.file_exists(
-                self._session, ds_browser,
+                self._session,
+                ds_browser,
                 vi.cache_image_folder,
                 vi.cache_image_path.basename)
 
             if not image_available:
+                LOG.debug("Trying to find template VM", instance=vi.instance)
                 templ_vm_ref = self._find_image_template_vm(vi)
                 image_available = (templ_vm_ref is not None)
+                if image_available:
+                    self._cache_vm_image_from_template(vi, templ_vm_ref)
 
-                if (not image_available and
-                        CONF.vmware.fetch_image_from_other_datastores):
-                    templ_vm_ref = self._fetch_image_from_other_datastores(vi)
-                    image_available = (templ_vm_ref is not None)
+            if (not image_available and
+                    CONF.vmware.fetch_image_from_other_datastores):
+                # fetching from another DS is still faster
+                LOG.debug("Trying to find template VM on other DS",
+                          instance=vi.instance)
+                templ_vm_ref = self._fetch_image_from_other_datastores(vi)
+                image_available = (templ_vm_ref is not None)
+                if image_available:
+                    self._cache_vm_image_from_template(vi, templ_vm_ref)
 
             if not image_available:
+                # we didn't find it anywhere. upload it
                 LOG.debug("Preparing fetch location", instance=vi.instance)
                 tmp_dir_loc, tmp_image_ds_loc = image_prepare(vi)
                 LOG.debug("Fetch image to %s", tmp_image_ds_loc,
