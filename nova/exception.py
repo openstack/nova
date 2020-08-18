@@ -1911,6 +1911,12 @@ class ImageNUMATopologyForbidden(Forbidden):
                 "NUMA configuration set against the flavor")
 
 
+class ImageNUMATopologyRebuildConflict(Invalid):
+    msg_fmt = _(
+        "An instance's NUMA typology cannot be changed as part of a rebuild. "
+        "The image provided is invalid for this instance.")
+
+
 class ImageNUMATopologyAsymmetric(Invalid):
     msg_fmt = _("Instance CPUs and/or memory cannot be evenly distributed "
                 "across instance NUMA nodes. Explicit assignment of CPUs "

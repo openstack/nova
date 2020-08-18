@@ -1,0 +1,16 @@
+---
+fixes:
+  - |
+    An instance can be rebuilt in-place with the original image or a new
+    image. Instance resource usage cannot be altered during a rebuild.
+    Previously Nova would have ignored the NUMA topology of the new image
+    continuing to use the NUMA topology of the existing instance until a move
+    operation was performed. As Nova did not explicitly guard against
+    inadvertent changes in resource request contained in a new image,
+    it was possible to rebuild with an image that would violate this requirement
+    `bug #1763766`_. This resulted in an inconsistent state as the instance that
+    was running did not match the instance that was requested. Nova now explicitly
+    checks if a rebuild would alter the requested NUMA topology of an instance
+    and rejects the rebuild.
+
+    ..  _`bug #1763766`: https://bugs.launchpad.net/nova/+bug/1763766
