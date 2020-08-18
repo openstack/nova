@@ -420,10 +420,17 @@ class VMwareAPIVMTestCase(test.TestCase,
                               ephemeral=ephemeral,
                               flavor_updates=flavor_updates)
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
-        self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None, allocations={},
-                        network_info=self.network_info,
-                        block_device_info=bdi)
+        with test.nested(
+            mock.patch.object(self.conn._vmops, '_find_image_template_vm',
+                              return_value=None),
+            mock.patch.object(self.conn._vmops,
+                              '_fetch_image_from_other_datastores',
+                              return_value=None)
+        ):
+            self.conn.spawn(self.context, self.instance, self.image,
+                            injected_files=[], admin_password=None,
+                            allocations={}, network_info=self.network_info,
+                            block_device_info=bdi)
         self._check_vm_record(num_instances=num_instances,
                               powered_on=powered_on,
                               uuid=uuid)
@@ -1250,10 +1257,17 @@ class VMwareAPIVMTestCase(test.TestCase,
         mock_get_res_pool_of_vm.return_value = 'fake_res_pool'
 
         block_device_info = {'block_device_mapping': root_disk}
-        self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None, allocations={},
-                        network_info=self.network_info,
-                        block_device_info=block_device_info)
+        with test.nested(
+            mock.patch.object(self.conn._vmops, '_find_image_template_vm',
+                              return_value=None),
+            mock.patch.object(self.conn._vmops,
+                              '_fetch_image_from_other_datastores',
+                              return_value=None)
+        ):
+            self.conn.spawn(self.context, self.instance, self.image,
+                            injected_files=[], admin_password=None,
+                            allocations={}, network_info=self.network_info,
+                            block_device_info=block_device_info)
 
         mock_info_get_mapping.assert_called_once_with(mock.ANY)
         mock_attach_volume.assert_called_once_with(connection_info,
@@ -1275,10 +1289,17 @@ class VMwareAPIVMTestCase(test.TestCase,
                       'boot_index': 0}]
         mock_info_get_mapping.return_value = root_disk
         block_device_info = {'mount_device': 'vda'}
-        self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None, allocations={},
-                        network_info=self.network_info,
-                        block_device_info=block_device_info)
+        with test.nested(
+            mock.patch.object(self.conn._vmops, '_find_image_template_vm',
+                              return_value=None),
+            mock.patch.object(self.conn._vmops,
+                              '_fetch_image_from_other_datastores',
+                              return_value=None)
+        ):
+            self.conn.spawn(self.context, self.instance, self.image,
+                            injected_files=[], admin_password=None,
+                            allocations={}, network_info=self.network_info,
+                            block_device_info=block_device_info)
 
         mock_info_get_mapping.assert_called_once_with(mock.ANY)
         mock_attach_volume.assert_called_once_with(connection_info,
