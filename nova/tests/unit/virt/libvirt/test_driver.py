@@ -6623,12 +6623,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     min_version_mock.assert_called_with(lv_ver=ver)
                 else:
                     min_version_mock.assert_not_called()
-        # then assert that fake models fail
-        self.assertFalse(drvr._video_model_supported("fake"))
-        # finally if the min version is not met assert that
-        # the video model is not supported.
-        min_version_mock.return_value = False
-        self.assertFalse(drvr._video_model_supported("none"))
+            # then assert that fake models fail
+            self.assertFalse(drvr._video_model_supported("fake"))
+            # finally if the min version is not met assert that
+            # the video model is not supported.
+            min_version_mock.return_value = False
+            self.assertFalse(drvr._video_model_supported("none"))
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_video_model_supported')
     def test__add_video_driver_gop(self, _supports_gop_video):
