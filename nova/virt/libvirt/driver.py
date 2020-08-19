@@ -250,9 +250,6 @@ VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
 
-MIN_LIBVIRT_NATIVE_TLS_VERSION = (4, 4, 0)
-MIN_QEMU_NATIVE_TLS_VERSION = (2, 11, 0)
-
 # If the host has this libvirt version, then we skip the retry loop of
 # instance destroy() call, as libvirt itself increased the wait time
 # before the SIGKILL signal takes effect.
@@ -1016,13 +1013,8 @@ class LibvirtDriver(driver.ComputeDriver):
             migration_flags |= libvirt.VIR_MIGRATE_TUNNELLED
         return migration_flags
 
-    def _is_native_tls_available(self):
-        return self._host.has_min_version(MIN_LIBVIRT_NATIVE_TLS_VERSION,
-                                          MIN_QEMU_NATIVE_TLS_VERSION)
-
     def _handle_native_tls(self, migration_flags):
-        if (CONF.libvirt.live_migration_with_native_tls and
-                self._is_native_tls_available()):
+        if (CONF.libvirt.live_migration_with_native_tls):
             migration_flags |= libvirt.VIR_MIGRATE_TLS
         return migration_flags
 
