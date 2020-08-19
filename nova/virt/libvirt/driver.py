@@ -249,7 +249,6 @@ VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
-MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION = (4, 4, 0)
 
 MIN_LIBVIRT_NATIVE_TLS_VERSION = (4, 4, 0)
 MIN_QEMU_NATIVE_TLS_VERSION = (2, 11, 0)
@@ -5652,9 +5651,7 @@ class LibvirtDriver(driver.ComputeDriver):
             membacking.filesource = True
             membacking.sharedaccess = True
             membacking.allocateimmediate = True
-            if self._host.has_min_version(
-                    MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION):
-                membacking.discard = True
+            membacking.discard = True
         if self._sev_enabled(flavor, image_meta):
             if not membacking:
                 membacking = vconfig.LibvirtConfigGuestMemoryBacking()
@@ -8570,9 +8567,6 @@ class LibvirtDriver(driver.ComputeDriver):
             data.disk_over_commit = disk_over_commit
         data.disk_available_mb = disk_available_mb
         data.dst_wants_file_backed_memory = CONF.libvirt.file_backed_memory > 0
-        data.file_backed_memory_discard = (CONF.libvirt.file_backed_memory and
-            self._host.has_min_version(
-                MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION))
 
         # TODO(artom) Set to indicate that the destination (us) can perform a
         # NUMA-aware live migration. NUMA-aware live migration will become

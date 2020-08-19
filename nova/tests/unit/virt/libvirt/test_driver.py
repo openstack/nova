@@ -3423,32 +3423,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(result.filesource)
         self.assertTrue(result.allocateimmediate)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
-    def test_get_guest_memory_backing_config_file_backed_discard(self,
-            mock_lib_version):
-        self.flags(file_backed_memory=1024, group='libvirt')
-
-        mock_lib_version.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION)
-
-        result = self._test_get_guest_memory_backing_config(
-            None, None, None
-        )
-        self.assertTrue(result.discard)
-
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
-    def test_get_guest_memory_backing_config_file_backed_discard_libvirt(self,
-            mock_lib_version):
-        self.flags(file_backed_memory=1024, group='libvirt')
-
-        mock_lib_version.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION) - 1
-
-        result = self._test_get_guest_memory_backing_config(
-            None, None, None
-        )
-        self.assertFalse(result.discard)
-
     def test_get_guest_memory_backing_config_file_backed_hugepages(self):
         self.flags(file_backed_memory=1024, group="libvirt")
         host_topology = objects.NUMATopology(cells=[
@@ -10747,7 +10721,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'block_migration': True,
                           'is_volume_backed': False,
                           'dst_wants_file_backed_memory': False,
-                          'file_backed_memory_discard': False,
                           'graphics_listen_addr_spice': '127.0.0.1',
                           'graphics_listen_addr_vnc': '127.0.0.1',
                           'serial_listen_addr': None},
@@ -10784,7 +10757,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'block_migration': True,
                           'is_volume_backed': False,
                           'dst_wants_file_backed_memory': False,
-                          'file_backed_memory_discard': False,
                           'graphics_listen_addr_spice': '127.0.0.1',
                           'graphics_listen_addr_vnc': '127.0.0.1',
                           'serial_listen_addr': None},
@@ -10818,7 +10790,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'disk_available_mb': 409600,
                           'is_volume_backed': False,
                           'dst_wants_file_backed_memory': False,
-                          'file_backed_memory_discard': False,
                           'graphics_listen_addr_spice': '127.0.0.1',
                           'graphics_listen_addr_vnc': '127.0.0.1',
                           'serial_listen_addr': None},
@@ -10893,7 +10864,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'disk_available_mb': 1024,
                           'is_volume_backed': False,
                           'dst_wants_file_backed_memory': False,
-                          'file_backed_memory_discard': False,
                           'graphics_listen_addr_spice': '127.0.0.1',
                           'graphics_listen_addr_vnc': '127.0.0.1',
                           'serial_listen_addr': None},
@@ -10959,7 +10929,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'disk_available_mb': 1024,
                           'is_volume_backed': False,
                           'dst_wants_file_backed_memory': False,
-                          'file_backed_memory_discard': False,
                           'graphics_listen_addr_spice': '127.0.0.1',
                           'graphics_listen_addr_vnc': '127.0.0.1',
                           'serial_listen_addr': None},
@@ -10992,58 +10961,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 instance_ref, None, compute_info, False)
 
         self.assertTrue(return_value.dst_wants_file_backed_memory)
-
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       '_create_shared_storage_test_file')
-    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
-    def _test_check_can_live_migrate_dest_file_backed_discard(
-            self, libvirt_version, mock_cpu, mock_test_file,
-            mock_lib_version):
-
-        self.flags(file_backed_memory=1024, group='libvirt')
-
-        mock_lib_version.return_value = libvirt_version
-
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        compute_info = {'disk_available_least': 400,
-                        'cpu_info': 'asdf',
-                        }
-
-        filename = "file"
-
-        # _check_cpu_match
-        mock_cpu.return_value = 1
-        # mounted_on_same_shared_storage
-        mock_test_file.return_value = filename
-        # No need for the src_compute_info
-        return_value = drvr.check_can_live_migrate_destination(self.context,
-                instance_ref, None, compute_info, False)
-
-        return return_value
-
-    def test_check_can_live_migrate_dest_file_backed_discard(self):
-        libvirt_version = versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION)
-
-        data = self._test_check_can_live_migrate_dest_file_backed_discard(
-                libvirt_version)
-
-        self.assertTrue(data.dst_wants_file_backed_memory)
-        self.assertTrue(data.file_backed_memory_discard)
-
-    def test_check_can_live_migrate_dest_file_backed_discard_bad_libvirt(self):
-        libvirt_version = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION) - 1
-
-        data = self._test_check_can_live_migrate_dest_file_backed_discard(
-            libvirt_version)
-
-        self.assertTrue(data.dst_wants_file_backed_memory)
-        self.assertFalse(data.file_backed_memory_discard)
 
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_incompatible_cpu_raises(

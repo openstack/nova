@@ -656,6 +656,7 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
     <source type="file"/>
     <access mode="shared"/>
     <allocation mode="immediate"/>
+    <discard />
   </memoryBacking>
 </domain>"""
         doc = etree.fromstring(xml)
@@ -679,84 +680,13 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
     <source type="file"/>
     <access mode="shared"/>
     <allocation mode="immediate"/>
+    <discard />
   </memoryBacking>
 </domain>""")
 
     def test_update_memory_backing_xml_keep(self):
         data = objects.LibvirtLiveMigrateData(
             dst_wants_file_backed_memory=True)
-
-        xml = """<domain>
-  <memoryBacking>
-    <source type="file"/>
-    <access mode="shared"/>
-    <allocation mode="immediate"/>
-  </memoryBacking>
-</domain>"""
-        doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_memory_backing_xml(doc, data),
-                             encoding='unicode')
-
-        self.assertXmlEqual(res, """<domain>
-  <memoryBacking>
-    <source type="file"/>
-    <access mode="shared"/>
-    <allocation mode="immediate"/>
-  </memoryBacking>
-</domain>""")
-
-    def test_update_memory_backing_discard_add(self):
-        data = objects.LibvirtLiveMigrateData(
-            dst_wants_file_backed_memory=True, file_backed_memory_discard=True)
-
-        xml = """<domain>
-  <memoryBacking>
-    <source type="file"/>
-    <access mode="shared"/>
-    <allocation mode="immediate"/>
-  </memoryBacking>
-</domain>"""
-        doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_memory_backing_xml(doc, data),
-                             encoding='unicode')
-
-        self.assertXmlEqual(res, """<domain>
-  <memoryBacking>
-    <source type="file"/>
-    <access mode="shared"/>
-    <allocation mode="immediate"/>
-    <discard />
-  </memoryBacking>
-</domain>""")
-
-    def test_update_memory_backing_discard_remove(self):
-        data = objects.LibvirtLiveMigrateData(
-            dst_wants_file_backed_memory=True,
-            file_backed_memory_discard=False)
-
-        xml = """<domain>
-  <memoryBacking>
-    <source type="file"/>
-    <access mode="shared"/>
-    <allocation mode="immediate"/>
-    <discard />
-  </memoryBacking>
-</domain>"""
-        doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_memory_backing_xml(doc, data),
-                             encoding='unicode')
-
-        self.assertXmlEqual(res, """<domain>
-  <memoryBacking>
-    <source type="file"/>
-    <access mode="shared"/>
-    <allocation mode="immediate"/>
-  </memoryBacking>
-</domain>""")
-
-    def test_update_memory_backing_discard_keep(self):
-        data = objects.LibvirtLiveMigrateData(
-            dst_wants_file_backed_memory=True, file_backed_memory_discard=True)
 
         xml = """<domain>
   <memoryBacking>
