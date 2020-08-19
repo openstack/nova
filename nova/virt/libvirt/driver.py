@@ -100,6 +100,7 @@ from nova.pci import utils as pci_utils
 import nova.privsep.libvirt
 import nova.privsep.path
 import nova.privsep.utils
+from nova.storage import rbd_utils
 from nova import utils
 from nova import version
 from nova.virt import arch
@@ -122,7 +123,6 @@ from nova.virt.libvirt import instancejobtracker
 from nova.virt.libvirt import migration as libvirt_migrate
 from nova.virt.libvirt.storage import dmcrypt
 from nova.virt.libvirt.storage import lvm
-from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt.libvirt.volume import fs

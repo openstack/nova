@@ -220,7 +220,7 @@ class _RbdTest(object):
 
         # We never want to actually touch rbd
         self.mock_rbd_driver = self.useFixture(fixtures.MockPatch(
-            'nova.virt.libvirt.storage.rbd_utils.RBDDriver')).mock.return_value
+            'nova.storage.rbd_utils.RBDDriver')).mock.return_value
         self.mock_rbd_driver.get_mon_addrs.return_value = ([], [])
         self.mock_rbd_driver.size.return_value = 10 * units.Gi
         self.mock_rbd_driver.rbd_user = 'rbd'

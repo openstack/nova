@@ -19,9 +19,8 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from nova.compute import task_states
 from nova import exception
 from nova import objects
+from nova.storage import rbd_utils
 from nova import test
-from nova.virt.libvirt.storage import rbd_utils
-from nova.virt.libvirt import utils as libvirt_utils
 
 
 CEPH_MON_DUMP = r"""dumped monmap epoch 1
@@ -466,7 +465,7 @@ class RbdTestCase(test.NoDBTestCase):
         proxy = mock_proxy.return_value
         proxy.__enter__.return_value = proxy
         proxy.list_snaps.return_value = [
-            {'name': libvirt_utils.RESIZE_SNAPSHOT_NAME}]
+            {'name': rbd_utils.RESIZE_SNAPSHOT_NAME}]
         client = mock_client.return_value
         self.driver.cleanup_volumes(filter_fn)
 
@@ -474,7 +473,7 @@ class RbdTestCase(test.NoDBTestCase):
                                 '%s_test' % uuids.instance)
         rbd.remove.assert_has_calls([remove_call, remove_call])
         proxy.remove_snap.assert_called_once_with(
-                libvirt_utils.RESIZE_SNAPSHOT_NAME)
+            rbd_utils.RESIZE_SNAPSHOT_NAME)
         client.__enter__.assert_called_once_with()
         client.__exit__.assert_called_once_with(None, None, None)
 
