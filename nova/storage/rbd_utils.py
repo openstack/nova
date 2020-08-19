@@ -17,13 +17,6 @@
 from eventlet import tpool
 from six.moves import urllib
 
-try:
-    import rados
-    import rbd
-except ImportError:
-    rados = None
-    rbd = None
-
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -41,6 +34,25 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 RESIZE_SNAPSHOT_NAME = 'nova-resize'
+
+# NOTE(lyarwood): Log exceptions if we fail to import rbd or rados in order to
+# provide context later if we end up attempting to use the RbdDriver and
+# raising RuntimeError
+try:
+    import rados
+except ImportError:
+    rados = None
+    LOG.exception(
+        "Unable to import the rados module, this can be ignored if Ceph is "
+        "not used within this environment")
+
+try:
+    import rbd
+except ImportError:
+    rbd = None
+    LOG.exception(
+        "Unable to import the rbd module, this can be ignored if Ceph is not "
+        "used within this environment")
 
 
 class RbdProxy(object):
