@@ -6738,25 +6738,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test__video_model_supported(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        with mock.patch.object(drvr._host, "has_min_version",
-                               return_value=True) as min_version_mock:
-            model_versions = libvirt_driver.MIN_LIBVIRT_VIDEO_MODEL_VERSIONS
-            # assert that all known vif models pass
-            for model in nova.objects.fields.VideoModel.ALL:
-                min_version_mock.reset_mock()
-                self.assertTrue(drvr._video_model_supported(model))
-                # and that vif models with minium versions are checked
-                if model in model_versions:
-                    ver = model_versions[model]
-                    min_version_mock.assert_called_with(lv_ver=ver)
-                else:
-                    min_version_mock.assert_not_called()
-            # then assert that fake models fail
-            self.assertFalse(drvr._video_model_supported("fake"))
-            # finally if the min version is not met assert that
-            # the video model is not supported.
-            min_version_mock.return_value = False
-            self.assertFalse(drvr._video_model_supported("none"))
+        # assert that all known vif models pass
+        for model in nova.objects.fields.VideoModel.ALL:
+            self.assertTrue(drvr._video_model_supported(model))
+        # then assert that fake models fail
+        self.assertFalse(drvr._video_model_supported("fake"))
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_video_model_supported')
     def test__add_video_driver_gop(self, _supports_gop_video):

@@ -264,11 +264,6 @@ MIN_LIBVIRT_VTPM = (5, 6, 0)
 
 MIN_LIBVIRT_S390X_CPU_COMPARE = (5, 9, 0)
 
-# see https://libvirt.org/formatdomain.html#elementsVideo
-MIN_LIBVIRT_VIDEO_MODEL_VERSIONS = {
-    fields.VideoModel.NONE: (4, 6, 0),
-}
-
 
 class LibvirtDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False):
@@ -5430,12 +5425,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 allowed=ALLOWED_QEMU_SERIAL_PORTS, virt_type=virt_type)
 
     def _video_model_supported(self, model):
-        if model not in fields.VideoModel.ALL:
-            return False
-        min_ver = MIN_LIBVIRT_VIDEO_MODEL_VERSIONS.get(model)
-        if min_ver and not self._host.has_min_version(lv_ver=min_ver):
-            return False
-        return True
+        return model in fields.VideoModel.ALL
 
     def _add_video_driver(self, guest, image_meta, flavor):
         video = vconfig.LibvirtConfigGuestVideo()
