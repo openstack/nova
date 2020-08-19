@@ -44,7 +44,7 @@ class NUMALiveMigrationBase(base.ServersTestBase,
 
     def setUp(self):
         super(NUMALiveMigrationBase, self).setUp()
-        self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
+
         # NOTE(artom) There's a specific code path that we want to test.
         # There's an instance.save() call in the compute manager's
         # post_live_migration_at_destination(), and another instance.save()

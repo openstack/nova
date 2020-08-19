@@ -37,6 +37,8 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
     ADDITIONAL_FILTERS = []
 
     def setUp(self):
+        self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
+
         self.computes = {}
         self.compute_rp_uuids = {}
 
