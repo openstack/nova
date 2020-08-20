@@ -1526,7 +1526,7 @@ def upgrade(migrate_engine):
             'ALTER TABLE migrate_version CONVERT TO CHARACTER SET utf8')
         # Set default DB charset to UTF8.
         migrate_engine.execute(
-            'ALTER DATABASE %s DEFAULT CHARACTER SET utf8' %
+            'ALTER DATABASE `%s` DEFAULT CHARACTER SET utf8' %
             migrate_engine.url.database)
 
     _create_shadow_tables(migrate_engine)
