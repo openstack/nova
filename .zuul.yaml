@@ -432,7 +432,7 @@
         - cyborg-tempest:
             irrelevant-files: *dsvm-irrelevant-files
             voting: false
-        - barbican-simple-crypto-devstack-tempest:
+        - barbican-tempest-plugin-simple-crypto:
             irrelevant-files: *dsvm-irrelevant-files
             voting: false
     gate:
