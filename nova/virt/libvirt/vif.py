@@ -411,7 +411,7 @@ class LibvirtGenericVIFDriver(object):
                                     host)
 
         dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
+        designer.set_vif_host_backend_ethernet_config(conf, dev)
 
         designer.set_vif_bandwidth_config(conf, inst_type)
 
@@ -424,7 +424,7 @@ class LibvirtGenericVIFDriver(object):
                                     host)
 
         dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
+        designer.set_vif_host_backend_ethernet_config(conf, dev)
 
         return conf
 
@@ -435,7 +435,7 @@ class LibvirtGenericVIFDriver(object):
                                     host)
 
         dev = self.get_vif_devname(vif)
-        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
+        designer.set_vif_host_backend_ethernet_config(conf, dev)
 
         self._set_mtu_config(vif, host, conf)
 
@@ -468,9 +468,10 @@ class LibvirtGenericVIFDriver(object):
             tx = None
         return rx, tx
 
+    # TODO(stephenfin): Remove unused host argument
     def _set_config_VIFGeneric(self, instance, vif, conf, host):
         dev = vif.vif_name
-        designer.set_vif_host_backend_ethernet_config(conf, dev, host)
+        designer.set_vif_host_backend_ethernet_config(conf, dev)
 
     def _set_config_VIFBridge(self, instance, vif, conf, host=None):
         conf.net_type = "bridge"
