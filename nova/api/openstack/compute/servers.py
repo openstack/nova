@@ -1135,6 +1135,7 @@ class ServersController(wsgi.Controller):
                 exception.ImageUnacceptable,
                 exception.InvalidMetadata,
                 exception.InvalidArchitectureName,
+                exception.InvalidVolume,
                 ) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except INVALID_FLAVOR_IMAGE_EXCEPTIONS as error:
