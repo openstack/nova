@@ -337,7 +337,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-agents:create",
 "os_compute_api:os-agents:update",
 "os_compute_api:os-agents:delete",
-"os_compute_api:os-baremetal-nodes",
 "os_compute_api:os-evacuate",
 "os_compute_api:os-extended-server-attributes",
 "os_compute_api:os-flavor-access:remove_tenant_access",
@@ -470,6 +469,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.system_reader_rules = (
 "os_compute_api:os-tenant-networks:list",
 "os_compute_api:os-tenant-networks:show",
+"os_compute_api:os-baremetal-nodes:list",
+"os_compute_api:os-baremetal-nodes:show",
 "os_compute_api:servers:migrations:index",
 "os_compute_api:servers:migrations:show",
 "os_compute_api:os-simple-tenant-usage:list",
