@@ -9287,6 +9287,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                                    source_node='src')
         image_bdm.attachment_id = uuids.attachment3
 
+        @mock.patch.object(instance, 'get_network_info')
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch('nova.objects.ConsoleAuthToken.'
                     'clean_console_auths_for_instance')
@@ -9305,7 +9306,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         def _test(mock_net_api, mock_notify, mock_driver,
                   mock_rpc, mock_get_bdm_info, mock_attach_delete,
                   mock_update_resource, mock_bdm_save, mock_ga,
-                  mock_clean, mock_notify_action):
+                  mock_clean, mock_notify_action, mock_get_nw_info):
             self._mock_rt()
 
             bdms = objects.BlockDeviceMappingList(objects=[vol_bdm, image_bdm])
@@ -9325,6 +9326,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 mock.call(self.context, instance, 'fake-mini',
                           action='live_migration_post', phase='end')])
             self.assertEqual(2, mock_notify_action.call_count)
+            mock_get_nw_info.assert_called()
 
         _test()
 
