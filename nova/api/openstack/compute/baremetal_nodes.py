@@ -75,7 +75,8 @@ class BareMetalNodeController(wsgi.Controller):
     @wsgi.expected_errors((404, 501))
     def index(self, req):
         context = req.environ['nova.context']
-        context.can(bn_policies.BASE_POLICY_NAME % 'list')
+        context.can(bn_policies.BASE_POLICY_NAME % 'list',
+                    target={})
         nodes = []
         # proxy command to Ironic
         _check_ironic_client_enabled()
@@ -96,7 +97,8 @@ class BareMetalNodeController(wsgi.Controller):
     @wsgi.expected_errors((404, 501))
     def show(self, req, id):
         context = req.environ['nova.context']
-        context.can(bn_policies.BASE_POLICY_NAME % 'show')
+        context.can(bn_policies.BASE_POLICY_NAME % 'show',
+                    target={})
         # proxy command to Ironic
         _check_ironic_client_enabled()
         icli = _get_ironic_client()
