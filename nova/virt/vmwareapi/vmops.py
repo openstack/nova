@@ -2607,7 +2607,7 @@ class VMwareVMOps(object):
                 for oc in retr_objects:
                     vm_name = oc.propSet[0].val
                     if re.match(img_templ_ptrn, vm_name):
-                        templ_vms.append(oc.obj)
+                        templ_vms.append((oc.obj, vm_name))
             return templ_vms
         except vexc.VimFaultException as excep:
             if vexc.NOT_AUTHENTICATED in excep.fault_list:
@@ -2623,7 +2623,8 @@ class VMwareVMOps(object):
         templ_vms = self._get_image_template_vms(templ_vm_folder_ref)
         if not templ_vms:
             return
-        expired_templ_vms = {moref.value: moref for moref in templ_vms}
+        expired_templ_vms = {moref.value: (moref, name)
+                             for moref, name in templ_vms}
 
         client_factory = self._session.vim.client.factory
         task_filter_spec = client_factory.create('ns0:TaskFilterSpec')
@@ -2649,7 +2650,9 @@ class VMwareVMOps(object):
                     if not expired_templ_vms:
                         break
 
-        for templ_vm_ref in expired_templ_vms.values():
+        for templ_vm_ref, templ_vm_name in expired_templ_vms.values():
+            msg = "Destroying expired image-template VM {}"
+            LOG.debug(msg.format(templ_vm_name))
             vm_util.destroy_vm(self._session, None, templ_vm_ref)
 
     def _get_valid_vms_from_retrieve_result(self, retrieve_result,

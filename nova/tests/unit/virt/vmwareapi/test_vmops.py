@@ -1528,8 +1528,8 @@ class VMwareVMOpsTestCase(test.TestCase):
                 mock.patch.object(self._vmops, '_get_all_images_folders',
                                   return_value=['fake-folder']),
                 mock.patch.object(self._vmops, '_get_image_template_vms',
-                                  return_value=[expired_templ_vm_ref,
-                                                used_templ_vm_ref]),
+                                  return_value=[(expired_templ_vm_ref, 'n1'),
+                                                (used_templ_vm_ref, 'n2')]),
                 mock.patch.object(self._session, '_call_method'),
                 mock.patch.object(self._session, '_wait_for_task')):
             self._vmops.manage_image_cache(self._context, fake_instances)
@@ -1571,7 +1571,10 @@ class VMwareVMOpsTestCase(test.TestCase):
         mock_with_ret.side_effect = _mock_with_ret
 
         actual_result = self._vmops._get_image_template_vms(None)
-        self.assertEqual([fake_ref_ok1, fake_ref_ok2], sorted(actual_result))
+        expected = [
+            (fake_ref_ok1, fake_name_ok1),
+            (fake_ref_ok2, fake_name_ok2)]
+        self.assertEqual(expected, sorted(actual_result))
 
     def test_get_image_template_vms(self):
         self._get_image_template_vms()
