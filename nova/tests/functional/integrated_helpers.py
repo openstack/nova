@@ -177,15 +177,22 @@ class InstanceHelperMixin(object):
         api = getattr(self, 'admin_api', self.api)
 
         statuses = [status.lower() for status in expected_statuses]
+        actual_status = None
+
         for attempt in range(10):
             migrations = api.api_get('/os-migrations').body['migrations']
             for migration in migrations:
-                if (migration['instance_uuid'] == server['id'] and
-                        migration['status'].lower() in statuses):
-                    return migration
+                if migration['instance_uuid'] == server['id']:
+                    actual_status = migration['status']
+                    if migration['status'].lower() in statuses:
+                        return migration
             time.sleep(0.5)
-        self.fail('Timed out waiting for migration with status "%s" for '
-                  'instance: %s' % (expected_statuses, server['id']))
+
+        self.fail(
+            'Timed out waiting for migration with status for instance %s '
+            '(expected "%s", got "%s")' % (
+                server['id'], expected_statuses, actual_status,
+            ))
 
     def _wait_for_log(self, log_line):
         for i in range(10):
