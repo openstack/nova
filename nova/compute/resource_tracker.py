@@ -568,6 +568,24 @@ class ResourceTracker(object):
         instance.drop_migration_context()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
+    def drop_move_claim_at_dest(self, context, instance, migration):
+        """Drop a move claim after reverting a resize or cold migration."""
+
+        # NOTE(stephenfin): This runs on the destination, before we return to
+        # the source and resume the instance there. As such, the migration
+        # isn't really really reverted yet, but this status is what we use to
+        # indicate that we no longer needs to account for usage on this host
+        migration.status = 'reverted'
+        migration.save()
+
+        self._drop_move_claim(
+            context, instance, migration.dest_node, instance.new_flavor,
+            prefix='new_')
+
+        instance.revert_migration_context()
+        instance.save(expected_task_state=[task_states.RESIZE_REVERTING])
+
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def drop_move_claim(self, context, instance, nodename,
                         instance_type=None, prefix='new_'):
         self._drop_move_claim(
