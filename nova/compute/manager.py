@@ -6987,7 +6987,13 @@ class ComputeManager(manager.Manager):
         # Releasing vlan.
         # (not necessary in current implementation?)
 
-        network_info = self.network_api.get_instance_nw_info(ctxt, instance)
+        # NOTE(artom) At this point in time we have not bound the ports to the
+        # destination host yet (this happens in migrate_instance_start()
+        # below). Therefore, the "old" source network info that's still in the
+        # instance info cache is safe to use here, since it'll be used below
+        # during driver.post_live_migration_at_source() to unplug the VIFs on
+        # the source.
+        network_info = instance.get_network_info()
 
         self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.start",
