@@ -71,3 +71,11 @@ class ExtensionsScopeTypePolicyTest(ExtensionsPolicyTest):
     def setUp(self):
         super(ExtensionsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+
+class ExtensionsNoLegacyPolicyTest(ExtensionsScopeTypePolicyTest):
+    """Test Extensions APIs policies with system scope enabled,
+    and no more deprecated rules that allow the legacy admin API to
+    access system_admin_or_owner APIs.
+    """
+    without_deprecated_rules = True

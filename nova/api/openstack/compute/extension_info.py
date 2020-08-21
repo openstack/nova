@@ -855,7 +855,7 @@ class ExtensionInfoController(wsgi.Controller):
     @wsgi.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        context.can(ext_policies.BASE_POLICY_NAME)
+        context.can(ext_policies.BASE_POLICY_NAME, target={})
 
         # NOTE(gmann): This is for v2.1 compatible mode where
         # extension list should show all extensions as shown by v2.
@@ -867,7 +867,7 @@ class ExtensionInfoController(wsgi.Controller):
     @wsgi.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
-        context.can(ext_policies.BASE_POLICY_NAME)
+        context.can(ext_policies.BASE_POLICY_NAME, target={})
         all_exts = EXTENSION_LIST
         # NOTE(gmann): This is for v2.1 compatible mode where
         # extension list should show all extensions as shown by v2.
