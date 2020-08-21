@@ -70,7 +70,8 @@ class NetworkController(wsgi.Controller):
     @wsgi.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        context.can(net_policies.POLICY_ROOT % 'list')
+        context.can(net_policies.POLICY_ROOT % 'list',
+                    target={'project_id': context.project_id})
         networks = self.network_api.get_all(context)
         result = [network_dict(context, net_ref) for net_ref in networks]
         return {'networks': result}
@@ -79,7 +80,8 @@ class NetworkController(wsgi.Controller):
     @wsgi.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
-        context.can(net_policies.POLICY_ROOT % 'show')
+        context.can(net_policies.POLICY_ROOT % 'show',
+                    target={'project_id': context.project_id})
 
         try:
             network = self.network_api.get(context, id)
