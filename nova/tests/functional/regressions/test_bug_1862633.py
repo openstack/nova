@@ -27,7 +27,7 @@ class UnshelveNeutronErrorTest(
         # Start standard fixtures.
         placement = func_fixtures.PlacementFixture()
         self.useFixture(placement)
-        self.placement_api = placement.api
+        self.placement = placement.api
         self.neutron = nova_fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
         fake_image.stub_out_image_service(self)
@@ -56,7 +56,7 @@ class UnshelveNeutronErrorTest(
         self._wait_for_server_parameter(
             server, {'status': 'SHELVED_OFFLOADED',
                      'OS-EXT-SRV-ATTR:host': None})
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         self.assertEqual(0, len(allocations))
 
@@ -84,6 +84,6 @@ class UnshelveNeutronErrorTest(
                  'OS-EXT-SRV-ATTR:host': None})
 
         # As the instance went back to offloaded state we expect no allocation
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         self.assertEqual(0, len(allocations))

@@ -640,10 +640,10 @@ class TestNovaManagePlacementHealAllocations(
                 }
             ]
         }
-        self.placement_api.put('/allocations/%s' % server['id'], alloc_body)
+        self.placement.put('/allocations/%s' % server['id'], alloc_body)
         # Make sure we did that correctly. Use version 1.12 so we can assert
         # the project_id and user_id are based on the sentinel values.
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id'], version='1.12').body
         self.assertEqual(INCOMPLETE_CONSUMER_ID, allocations['project_id'])
         self.assertEqual(INCOMPLETE_CONSUMER_ID, allocations['user_id'])
@@ -666,7 +666,7 @@ class TestNovaManagePlacementHealAllocations(
             'Successfully updated allocations for', output)
         self.assertIn('Processed 1 instances.', output)
         # Now assert that the consumer was actually updated.
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id'], version='1.12').body
         self.assertEqual(server['tenant_id'], allocations['project_id'])
         self.assertEqual(server['user_id'], allocations['user_id'])
@@ -830,7 +830,7 @@ class TestNovaManagePlacementHealAllocations(
                 }
             ]
         }
-        self.placement_api.put('/allocations/%s' % server['id'], alloc_body)
+        self.placement.put('/allocations/%s' % server['id'], alloc_body)
 
         # Check allocation to see if memory has changed
         allocs = self._get_allocations_by_server_uuid(
@@ -951,7 +951,7 @@ class TestNovaManagePlacementHealPortAllocations(
         return server, updated_ports
 
     def _assert_placement_updated(self, server, ports):
-        rsp = self.placement_api.get(
+        rsp = self.placement.get(
             '/allocations/%s' % server['id'],
             version=1.28).body
 
@@ -991,7 +991,7 @@ class TestNovaManagePlacementHealPortAllocations(
             self._assert_port_updated(port['id'])
 
     def _assert_placement_not_updated(self, server):
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         self.assertEqual(1, len(allocations))
         self.assertIn(self.compute1_rp_uuid, allocations)
@@ -1111,10 +1111,10 @@ class TestNovaManagePlacementHealPortAllocations(
 
         # NOTE(gibi): putting empty allocation will delete the consumer in
         # placement
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id'], version=1.28).body
         allocations['allocations'] = {}
-        self.placement_api.put(
+        self.placement.put(
             '/allocations/%s' % server['id'], allocations, version=1.28)
 
         # let's trigger a heal
@@ -1154,7 +1154,7 @@ class TestNovaManagePlacementHealPortAllocations(
                 }
             ]
         }
-        self.placement_api.put('/allocations/%s' % server['id'], alloc_body)
+        self.placement.put('/allocations/%s' % server['id'], alloc_body)
 
         # let's trigger a heal
         result = self.cli.heal_allocations(verbose=True, max_count=2)
@@ -1182,10 +1182,10 @@ class TestNovaManagePlacementHealPortAllocations(
 
         # NOTE(gibi): putting empty allocation will delete the consumer in
         # placement
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id'], version=1.28).body
         allocations['allocations'] = {}
-        self.placement_api.put(
+        self.placement.put(
             '/allocations/%s' % server['id'], allocations, version=1.28)
 
         # let's trigger a heal

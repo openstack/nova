@@ -419,7 +419,7 @@ class TestUpdateComputeNodeReservedAndAllocationRatio(
 
         rt = compute_service.manager.rt
 
-        inv = self.placement_api.get(
+        inv = self.placement.get(
             '/resource_providers/%s/inventories' % rp_uuid).body
         ratios = {'VCPU': 16.1, 'MEMORY_MB': 1.6, 'DISK_GB': 1.1}
 

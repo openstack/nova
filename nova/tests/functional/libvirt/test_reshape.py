@@ -89,10 +89,10 @@ class VGPUReshapeTests(base.ServersTestBase):
         self.compute = self.start_service('compute', host='compute1')
 
         # create the VGPU resource in placement manually
-        compute_rp_uuid = self.placement_api.get(
+        compute_rp_uuid = self.placement.get(
             '/resource_providers?name=compute1').body[
             'resource_providers'][0]['uuid']
-        inventories = self.placement_api.get(
+        inventories = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body
         inventories['inventories']['VGPU'] = {
             'allocation_ratio': 1.0,
@@ -101,7 +101,7 @@ class VGPUReshapeTests(base.ServersTestBase):
             'reserved': 0,
             'step_size': 1,
             'total': 3}
-        self.placement_api.put(
+        self.placement.put(
             '/resource_providers/%s/inventories' % compute_rp_uuid,
             inventories)
 
@@ -150,17 +150,17 @@ class VGPUReshapeTests(base.ServersTestBase):
 
         # verify that the inventory, usages and allocation are correct before
         # the reshape
-        compute_inventory = self.placement_api.get(
+        compute_inventory = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body[
             'inventories']
         self.assertEqual(3, compute_inventory['VGPU']['total'])
-        compute_usages = self.placement_api.get(
+        compute_usages = self.placement.get(
             '/resource_providers/%s/usages' % compute_rp_uuid).body[
             'usages']
         self.assertEqual(2, compute_usages['VGPU'])
 
         for server in (server1, server2):
-            allocations = self.placement_api.get(
+            allocations = self.placement.get(
                 '/allocations/%s' % server['id']).body['allocations']
             # the flavor has disk=10 and ephemeral=10
             self.assertEqual(
@@ -172,7 +172,7 @@ class VGPUReshapeTests(base.ServersTestBase):
 
         # verify that the inventory, usages and allocation are correct after
         # the reshape
-        compute_inventory = self.placement_api.get(
+        compute_inventory = self.placement.get(
             '/resource_providers/%s/inventories' % compute_rp_uuid).body[
             'inventories']
         self.assertNotIn('VGPU', compute_inventory)
@@ -185,16 +185,16 @@ class VGPUReshapeTests(base.ServersTestBase):
         for pci_device in [fakelibvirt.PGPU1_PCI_ADDR,
                            fakelibvirt.PGPU2_PCI_ADDR,
                            fakelibvirt.PGPU3_PCI_ADDR]:
-            gpu_rp_uuid = self.placement_api.get(
+            gpu_rp_uuid = self.placement.get(
                 '/resource_providers?name=compute1_%s' % pci_device).body[
                 'resource_providers'][0]['uuid']
             pgpu_uuid_to_name[gpu_rp_uuid] = pci_device
-            gpu_inventory = self.placement_api.get(
+            gpu_inventory = self.placement.get(
                 '/resource_providers/%s/inventories' % gpu_rp_uuid).body[
                 'inventories']
             self.assertEqual(1, gpu_inventory['VGPU']['total'])
 
-            gpu_usages = self.placement_api.get(
+            gpu_usages = self.placement.get(
                 '/resource_providers/%s/usages' % gpu_rp_uuid).body[
                 'usages']
             usages[pci_device] = gpu_usages['VGPU']
@@ -204,7 +204,7 @@ class VGPUReshapeTests(base.ServersTestBase):
         self.assertEqual(2, len(used_devices))
         # Make sure that both instances are using the correct pGPUs
         for server in [server1, server2]:
-            allocations = self.placement_api.get(
+            allocations = self.placement.get(
                 '/allocations/%s' % server['id']).body[
                 'allocations']
             self.assertEqual(
@@ -229,15 +229,15 @@ class VGPUReshapeTests(base.ServersTestBase):
         # find the pGPU that wasn't used before we created the third instance
         # It should have taken the previously available pGPU
         device = avail_devices[0]
-        gpu_rp_uuid = self.placement_api.get(
+        gpu_rp_uuid = self.placement.get(
             '/resource_providers?name=compute1_%s' % device).body[
             'resource_providers'][0]['uuid']
-        gpu_usages = self.placement_api.get(
+        gpu_usages = self.placement.get(
             '/resource_providers/%s/usages' % gpu_rp_uuid).body[
             'usages']
         self.assertEqual(1, gpu_usages['VGPU'])
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server3['id']).body[
             'allocations']
         self.assertEqual(

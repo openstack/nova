@@ -444,46 +444,46 @@ class PlacementHelperMixin:
     """A helper mixin for interacting with placement."""
 
     def _get_all_resource_classes(self):
-        resp = self.placement_api.get(
+        resp = self.placement.get(
             '/resource_classes', version='1.2'
         ).body['resource_classes']
         return [d['name'] for d in resp]
 
     def _get_all_providers(self):
-        return self.placement_api.get(
+        return self.placement.get(
             '/resource_providers', version='1.14'
         ).body['resource_providers']
 
     def _get_all_rp_uuids_in_a_tree(self, in_tree_rp_uuid):
-        rps = self.placement_api.get(
+        rps = self.placement.get(
             '/resource_providers?in_tree=%s' % in_tree_rp_uuid,
             version='1.20',
         ).body['resource_providers']
         return [rp['uuid'] for rp in rps]
 
     def _post_resource_provider(self, rp_name):
-        return self.placement_api.post(
+        return self.placement.post(
             '/resource_providers', version='1.20', body={'name': rp_name}
         ).body
 
     def _get_resource_provider_by_uuid(self, rp_uuid):
-        return self.placement_api.get(
+        return self.placement.get(
             '/resource_providers/%s' % rp_uuid, version='1.15',
         ).body
 
     def _get_provider_uuid_by_name(self, name):
-        return self.placement_api.get(
+        return self.placement.get(
             '/resource_providers?name=%s' % name,
         ).body['resource_providers'][0]['uuid']
 
     def _get_provider_usages(self, provider_uuid):
-        return self.placement_api.get(
+        return self.placement.get(
             '/resource_providers/%s/usages' % provider_uuid
         ).body['usages']
 
     # TODO(stephenfin): Rename to '_get_provider_allocations'
     def _get_allocations_by_provider_uuid(self, rp_uuid):
-        return self.placement_api.get(
+        return self.placement.get(
             '/resource_providers/%s/allocations' % rp_uuid
         ).body['allocations']
 
@@ -493,7 +493,7 @@ class PlacementHelperMixin:
         :param rp_uuid: UUID of the resource provider to update
         :returns: Dict object with the results.
         """
-        return self.placement_api.get(
+        return self.placement.get(
             '/resource_providers/%s/traits' % rp_uuid, version='1.6'
         ).body['traits']
 
@@ -506,10 +506,10 @@ class PlacementHelperMixin:
         :param traits: List of trait strings to set on the provider.
         :returns: APIResponse object with the results.
         """
-        provider = self.placement_api.get(
+        provider = self.placement.get(
             '/resource_providers/%s' % rp_uuid
         ).body
-        return self.placement_api.put(
+        return self.placement.put(
             '/resource_providers/%s/traits' % rp_uuid,
             {
                 'resource_provider_generation': provider['generation'],
@@ -519,7 +519,7 @@ class PlacementHelperMixin:
         )
 
     def _get_provider_inventory(self, rp_uuid):
-        return self.placement_api.get(
+        return self.placement.get(
             '/resource_providers/%s/inventories' % rp_uuid
         ).body['inventories']
 
@@ -531,7 +531,7 @@ class PlacementHelperMixin:
         :param inv_body: inventory to set on the provider
         :returns: APIResponse object with the results
         """
-        return self.placement_api.post(
+        return self.placement.post(
             '/resource_providers/%s/inventories' % rp_uuid,
             version='1.15', body=inv_body
         ).body
@@ -544,21 +544,21 @@ class PlacementHelperMixin:
         :param inv_body: inventory to set on the provider
         :returns: APIResponse object with the results
         """
-        return self.placement_api.put(
+        return self.placement.put(
             '/resource_providers/%s/inventories' % rp_uuid, body=inv_body,
         ).body
 
     def _get_provider_aggregates(self, rp_uuid):
-        return self.placement_api.get(
+        return self.placement.get(
             '/resource_providers/%s/aggregates' % rp_uuid, version='1.1'
         ).body['aggregates']
 
     # TODO(stephenfin): Rename '_set_provider_aggregates'
     def _set_aggregate(self, rp_uuid, agg_id):
-        provider = self.placement_api.get(
+        provider = self.placement.get(
             '/resource_providers/%s' % rp_uuid
         ).body
-        return self.placement_api.put(
+        return self.placement.put(
             '/resource_providers/%s/aggregates' % rp_uuid,
             body={
                 'aggregates': [agg_id],
@@ -568,13 +568,13 @@ class PlacementHelperMixin:
         ).body
 
     def _get_all_traits(self):
-        return self.placement_api.get('/traits', version='1.6').body['traits']
+        return self.placement.get('/traits', version='1.6').body['traits']
 
     def _create_trait(self, trait):
-        return self.placement_api.put('/traits/%s' % trait, {}, version='1.6')
+        return self.placement.put('/traits/%s' % trait, {}, version='1.6')
 
     def _delete_trait(self, trait):
-        return self.placement_api.delete('/traits/%s' % trait, version='1.6')
+        return self.placement.delete('/traits/%s' % trait, version='1.6')
 
     def assertRequestMatchesUsage(self, requested_resources, root_rp_uuid):
         # It matches the usages of the whole tree against the request
@@ -673,7 +673,7 @@ class PlacementInstanceHelperMixin(InstanceHelperMixin, PlacementHelperMixin):
 
     # TODO(stephenfin): Rename to '_get_server_allocations'
     def _get_allocations_by_server_uuid(self, server_uuid):
-        return self.placement_api.get(
+        return self.placement.get(
             '/allocations/%s' % server_uuid
         ).body['allocations']
 
@@ -995,9 +995,7 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
 
         self.useFixture(cast_as_call.CastAsCall(self))
 
-        placement = self.useFixture(func_fixtures.PlacementFixture())
-        self.placement_api = placement.api
-
+        self.placement = self.useFixture(func_fixtures.PlacementFixture()).api
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
 
@@ -1067,13 +1065,12 @@ class ProviderUsageBaseTestCase(test.TestCase, PlacementInstanceHelperMixin):
 
         self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.placement = self.useFixture(func_fixtures.PlacementFixture()).api
         self.useFixture(nova_fixtures.AllServicesCurrent())
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
-        placement = self.useFixture(func_fixtures.PlacementFixture())
-        self.placement_api = placement.api
         self.api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 

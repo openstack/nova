@@ -165,7 +165,7 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
             # host_info do not change with every iteration of the for loop.
             self.computes[host] = start_compute(host, host_info)
             if save_rp_uuids:
-                self.compute_rp_uuids[host] = self.placement_api.get(
+                self.compute_rp_uuids[host] = self.placement.get(
                     '/resource_providers?name=%s' % host).body[
                     'resource_providers'][0]['uuid']
 

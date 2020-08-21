@@ -1410,19 +1410,19 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
             return resp['hypervisors'][0]['id']
 
         def _get_provider_usages(provider_uuid):
-            return self.placement_api.get(
+            return self.placement.get(
                 '/resource_providers/%s/usages' % provider_uuid).body['usages']
 
         def _get_allocations_by_server_uuid(server_uuid):
-            return self.placement_api.get(
+            return self.placement.get(
                 '/allocations/%s' % server_uuid).body['allocations']
 
         def _set_provider_inventory(rp_uuid, resource_class, inventory):
             # Get the resource provider generation for the inventory update.
-            rp = self.placement_api.get(
+            rp = self.placement.get(
                 '/resource_providers/%s' % rp_uuid).body
             inventory['resource_provider_generation'] = rp['generation']
-            return self.placement_api.put(
+            return self.placement.put(
                 '/resource_providers/%s/inventories/%s' %
                 (rp_uuid, resource_class), inventory).body
 
@@ -5639,7 +5639,7 @@ class PortResourceRequestBasedSchedulingTestBase(
         return self.api.post_server({'server': server_req})
 
     def _set_provider_inventories(self, rp_uuid, inventories):
-        rp = self.placement_api.get(
+        rp = self.placement.get(
             '/resource_providers/%s' % rp_uuid).body
         inventories['resource_provider_generation'] = rp['generation']
         return self._update_inventory(rp_uuid, inventories)
@@ -5653,7 +5653,7 @@ class PortResourceRequestBasedSchedulingTestBase(
             "uuid": ovs_agent_rp_uuid,
             "parent_provider_uuid": compute_rp_uuid
         }
-        self.placement_api.post('/resource_providers',
+        self.placement.post('/resource_providers',
                                 body=agent_rp_req,
                                 version='1.20')
         ovs_bridge_rp_uuid = getattr(uuids, ovs_agent_rp_uuid + 'ovs br')
@@ -5662,7 +5662,7 @@ class PortResourceRequestBasedSchedulingTestBase(
             "uuid": ovs_bridge_rp_uuid,
             "parent_provider_uuid": ovs_agent_rp_uuid
         }
-        self.placement_api.post('/resource_providers',
+        self.placement.post('/resource_providers',
                                 body=ovs_bridge_req,
                                 version='1.20')
         self.ovs_bridge_rp_per_host[compute_rp_uuid] = ovs_bridge_rp_uuid
@@ -5696,7 +5696,7 @@ class PortResourceRequestBasedSchedulingTestBase(
             "uuid": device_rp_uuid,
             "parent_provider_uuid": parent_rp_uuid
         }
-        self.placement_api.post('/resource_providers',
+        self.placement.post('/resource_providers',
                                 body=sriov_pf_req,
                                 version='1.20')
 
@@ -5730,7 +5730,7 @@ class PortResourceRequestBasedSchedulingTestBase(
             "uuid": sriov_agent_rp_uuid,
             "parent_provider_uuid": compute_rp_uuid
         }
-        self.placement_api.post('/resource_providers',
+        self.placement.post('/resource_providers',
                                 body=agent_rp_req,
                                 version='1.20')
         dev_rp_name_prefix = ("%s:NIC Switch agent:" % hostname)
@@ -5802,7 +5802,7 @@ class PortResourceRequestBasedSchedulingTestBase(
         updated_qos_sriov_port = self.neutron.show_port(
             qos_sriov_port['id'])['port']
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
         # if there is new_flavor then we either have an in progress resize or
@@ -5839,7 +5839,7 @@ class PortResourceRequestBasedSchedulingTestBase(
         self.assertEqual({}, updated_non_qos_port['binding:profile'])
 
         if migration_uuid:
-            migration_allocations = self.placement_api.get(
+            migration_allocations = self.placement.get(
                 '/allocations/%s' % migration_uuid).body['allocations']
 
             # We expect one set of allocations for the compute resources on the
@@ -6173,7 +6173,7 @@ class PortResourceRequestBasedSchedulingTest(
             non_qos_port['id'])['port']
         updated_qos_port = self.neutron.show_port(qos_port['id'])['port']
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
@@ -6219,7 +6219,7 @@ class PortResourceRequestBasedSchedulingTest(
         ovs_port = self.neutron.show_port(ovs_port['id'])['port']
         sriov_port = self.neutron.show_port(sriov_port['id'])['port']
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
@@ -6259,7 +6259,7 @@ class PortResourceRequestBasedSchedulingTest(
             networks=[{'port': port['id']}])
         self._wait_for_state_change(server, 'ACTIVE')
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         # We expect one set of allocations for the compute resources on the
         # compute rp and one set for the networking resources on the ovs bridge
@@ -6290,7 +6290,7 @@ class PortResourceRequestBasedSchedulingTest(
         updated_port = self.neutron.show_port(
             self.neutron.port_with_resource_request['id'])['port']
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect that the port related resource allocations are removed
@@ -6319,7 +6319,7 @@ class PortResourceRequestBasedSchedulingTest(
             networks=[{'port': port['id']}])
         server = self._wait_for_state_change(server, 'ACTIVE')
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         # We expect one set of allocations for the compute resources on the
         # compute rp and one set for the networking resources on the ovs bridge
@@ -6368,7 +6368,7 @@ class PortResourceRequestBasedSchedulingTest(
                'rp_uuid': port_rp_uuid,
                'server_uuid': server['id']})
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
         # Nova leaks the port allocation so the server still has the same
@@ -6421,7 +6421,7 @@ class PortResourceRequestBasedSchedulingTest(
         sriov_port_with_res_req = self.neutron.show_port(
             sriov_port_with_res_req['id'])['port']
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
@@ -6518,7 +6518,7 @@ class PortResourceRequestBasedSchedulingTest(
 
         port = self.neutron.show_port(port['id'])['port']
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
@@ -6619,7 +6619,7 @@ class ServerMoveWithPortResourceRequestTest(
 
         # but the migration allocation is gone
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
-        migration_allocations = self.placement_api.get(
+        migration_allocations = self.placement.get(
             '/allocations/%s' % migration_uuid).body['allocations']
         self.assertEqual({}, migration_allocations)
 
@@ -6682,7 +6682,7 @@ class ServerMoveWithPortResourceRequestTest(
             server, compute3_rp_uuid, non_qos_normal_port,
             qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
         # but the migration allocation is gone
-        migration_allocations = self.placement_api.get(
+        migration_allocations = self.placement.get(
             '/allocations/%s' % migration_uuid).body['allocations']
         self.assertEqual({}, migration_allocations)
 
@@ -6723,7 +6723,7 @@ class ServerMoveWithPortResourceRequestTest(
             server, self.compute2_rp_uuid, non_qos_normal_port,
             qos_normal_port, qos_sriov_port, self.flavor_with_group_policy,
             new_flavor=new_flavor)
-        migration_allocations = self.placement_api.get(
+        migration_allocations = self.placement.get(
             '/allocations/%s' % migration_uuid).body['allocations']
         self.assertEqual({}, migration_allocations)
 
@@ -6775,7 +6775,7 @@ class ServerMoveWithPortResourceRequestTest(
             {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0,
              'NET_BW_IGR_KILOBIT_PER_SEC': 0, 'NET_BW_EGR_KILOBIT_PER_SEC': 0},
             self.compute2_rp_uuid)
-        migration_allocations = self.placement_api.get(
+        migration_allocations = self.placement.get(
             '/allocations/%s' % migration_uuid).body['allocations']
         self.assertEqual({}, migration_allocations)
 
@@ -6850,7 +6850,7 @@ class ServerMoveWithPortResourceRequestTest(
         self._check_allocation(
             server, compute3_rp_uuid, non_qos_port, qos_port, qos_sriov_port,
             self.flavor_with_group_policy, new_flavor=new_flavor)
-        migration_allocations = self.placement_api.get(
+        migration_allocations = self.placement.get(
             '/allocations/%s' % migration_uuid).body['allocations']
         self.assertEqual({}, migration_allocations)
 
@@ -6894,7 +6894,7 @@ class ServerMoveWithPortResourceRequestTest(
 
         # as the migration is failed we expect that the migration allocation
         # is deleted
-        migration_allocations = self.placement_api.get(
+        migration_allocations = self.placement.get(
             '/allocations/%s' % migration_uuid).body['allocations']
         self.assertEqual({}, migration_allocations)
 
@@ -6915,7 +6915,7 @@ class ServerMoveWithPortResourceRequestTest(
         # unexpected. This will cause
         # update_pci_request_spec_with_allocated_interface_name() to raise
         # when the instance is migrated to the host2.
-        rsp = self.placement_api.put(
+        rsp = self.placement.put(
             '/resource_providers/%s'
             % self.sriov_dev_rp_per_host[self.compute2_rp_uuid][self.PF2],
             {"name": "invalid-device-rp-name"})
@@ -6961,7 +6961,7 @@ class ServerMoveWithPortResourceRequestTest(
 
         # as the migration is failed we expect that the migration allocation
         # is deleted
-        migration_allocations = self.placement_api.get(
+        migration_allocations = self.placement.get(
             '/allocations/%s' % migration_uuid).body['allocations']
         self.assertEqual({}, migration_allocations)
 
@@ -7004,7 +7004,7 @@ class ServerMoveWithPortResourceRequestTest(
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
 
         # The migration allocation is deleted
-        migration_allocations = self.placement_api.get(
+        migration_allocations = self.placement.get(
             '/allocations/%s' % migration_uuid).body['allocations']
         self.assertEqual({}, migration_allocations)
 
@@ -7013,7 +7013,7 @@ class ServerMoveWithPortResourceRequestTest(
             non_qos_normal_port['id'])['port']
         updated_qos_port = self.neutron.show_port(
             qos_normal_port['id'])['port']
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         # We expect one set of allocations for the compute resources on the
         # compute rp and one set for the networking resources on the ovs
@@ -7045,7 +7045,7 @@ class ServerMoveWithPortResourceRequestTest(
         updated_qos_sriov_port = self.neutron.show_port(
             qos_sriov_port['id'])['port']
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect two sets of allocations. One set for the source compute
@@ -7116,7 +7116,7 @@ class ServerMoveWithPortResourceRequestTest(
         updated_qos_sriov_port = self.neutron.show_port(
             qos_sriov_port['id'])['port']
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
         self.assertEqual(3, len(allocations), allocations)
@@ -7252,7 +7252,7 @@ class ServerMoveWithPortResourceRequestTest(
         # unexpected. This will cause
         # update_pci_request_spec_with_allocated_interface_name() to raise
         # when the instance is evacuated to the host2.
-        rsp = self.placement_api.put(
+        rsp = self.placement.put(
             '/resource_providers/%s'
             % self.sriov_dev_rp_per_host[self.compute2_rp_uuid][self.PF2],
             {"name": "invalid-device-rp-name"})
@@ -7432,7 +7432,7 @@ class ServerMoveWithPortResourceRequestTest(
         # unexpected. This will cause
         # update_pci_request_spec_with_allocated_interface_name() to raise
         # when the instance is live migrated to the host2.
-        rsp = self.placement_api.put(
+        rsp = self.placement.put(
             '/resource_providers/%s'
             % self.sriov_dev_rp_per_host[self.compute2_rp_uuid][self.PF2],
             {"name": "invalid-device-rp-name"})
@@ -7490,7 +7490,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.api.post_server_action(server['id'], req)
         self._wait_for_server_parameter(
             server, {'status': 'SHELVED_OFFLOADED'})
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         self.assertEqual(0, len(allocations))
 
@@ -7513,7 +7513,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.api.post_server_action(server['id'], req)
         self._wait_for_server_parameter(
             server, {'status': 'SHELVED_OFFLOADED'})
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         self.assertEqual(0, len(allocations))
 
@@ -7540,7 +7540,7 @@ class ServerMoveWithPortResourceRequestTest(
         # unexpected. This will cause
         # update_pci_request_spec_with_allocated_interface_name() to raise
         # when the instance is unshelved to the host2.
-        rsp = self.placement_api.put(
+        rsp = self.placement.put(
             '/resource_providers/%s'
             % self.sriov_dev_rp_per_host[self.compute2_rp_uuid][self.PF2],
             {"name": "invalid-device-rp-name"})
@@ -7560,7 +7560,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.api.post_server_action(server['id'], req)
         self._wait_for_server_parameter(
             server, {'status': 'SHELVED_OFFLOADED'})
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         self.assertEqual(0, len(allocations))
 
@@ -7585,7 +7585,7 @@ class ServerMoveWithPortResourceRequestTest(
             {'OS-EXT-STS:task_state': None,
              'status': 'SHELVED_OFFLOADED'})
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         self.assertEqual(0, len(allocations))
 
@@ -7608,7 +7608,7 @@ class ServerMoveWithPortResourceRequestTest(
         self.api.post_server_action(server['id'], req)
         self._wait_for_server_parameter(
             server, {'status': 'SHELVED_OFFLOADED'})
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         self.assertEqual(0, len(allocations))
 
@@ -7629,7 +7629,7 @@ class ServerMoveWithPortResourceRequestTest(
                  'OS-EXT-STS:task_state': None})
 
         # As the instance went back to offloaded state we expect no allocation
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
         self.assertEqual(0, len(allocations))
 
@@ -7733,7 +7733,7 @@ class PortResourceRequestReSchedulingTest(
                              if dest_compute_rp_uuid == self.compute2_rp_uuid
                              else self.compute2_rp_uuid)
 
-        allocations = self.placement_api.get(
+        allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
@@ -7870,7 +7870,7 @@ class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
 
     def _post_nested_resource_provider(self, rp_name, parent_rp_uuid):
         body = {'name': rp_name, 'parent_provider_uuid': parent_rp_uuid}
-        return self.placement_api.post(
+        return self.placement.post(
             url='/resource_providers', version='1.20', body=body).body
 
     def _create_acc_flavor(self):

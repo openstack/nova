@@ -66,7 +66,7 @@ class BuildRescheduleClaimFailsTestCase(
                 'project_id': self.api.project_id,
                 'user_id': self.api.project_id
             }
-            resp = self.placement_api.put(
+            resp = self.placement.put(
                 '/allocations/%s' % alt_consumer, allocs, version='1.12')
             self.assertEqual(204, resp.status, resp.content)
             raise exception.ComputeResourcesUnavailable(reason='overhead!')

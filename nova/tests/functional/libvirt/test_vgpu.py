@@ -346,7 +346,7 @@ class VGPUMultipleTypesTests(VGPUTestBase):
         # ... but we double-check by asking the RP by its expected name
         expected_pgpu2_rp_name = (self.compute1.host + '_' +
                                   fakelibvirt.PGPU2_PCI_ADDR)
-        pgpu2_rp = self.placement_api.get(
+        pgpu2_rp = self.placement.get(
             '/resource_providers?name=' + expected_pgpu2_rp_name).body[
             'resource_providers']
         # See, Placement API returned no RP for this name as it doesn't exist.
