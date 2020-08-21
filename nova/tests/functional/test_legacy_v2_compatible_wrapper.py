@@ -24,7 +24,21 @@ class LegacyV2CompatibleTestBase(integrated_helpers._IntegratedTestBase):
 
     def setUp(self):
         super(LegacyV2CompatibleTestBase, self).setUp()
-        self._check_api_endpoint('/v2', [openstack.LegacyV2CompatibleWrapper])
+        self._check_api_endpoint()
+
+    def _check_api_endpoint(self):
+        app = self.api_fixture.app().get((None, '/v2'))
+
+        while getattr(app, 'application', False):
+            if isinstance(
+                app.application, openstack.LegacyV2CompatibleWrapper,
+            ):
+                break
+            app = app.application
+        else:
+            raise Exception(
+                'The LegacyV2CompatibleWrapper middleware is not configured.'
+            )
 
     def test_request_with_microversion_headers(self):
         self.api.microversion = '2.100'
