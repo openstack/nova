@@ -2541,6 +2541,7 @@ class TestResize(BaseTestCase):
         mig_context_obj.new_resources = objects.ResourceList(
             objects=[self.resource_1, self.resource_2])
         instance.migration_context = mig_context_obj
+        instance.system_metadata = {}
 
         migration = objects.Migration(
             id=3,
@@ -2582,15 +2583,18 @@ class TestResize(BaseTestCase):
                              len(self.rt.assigned_resources[cn.uuid][rc]))
 
         # Confirm or revert resize
-        if revert:
-            flavor = new_flavor
-            prefix = 'new_'
-        else:
-            flavor = old_flavor
-            prefix = 'old_'
-
-        self.rt.drop_move_claim(ctx, instance, _NODENAME, flavor,
-                                prefix=prefix)
+        with test.nested(
+            mock.patch('nova.objects.Migration.save'),
+            mock.patch('nova.objects.Instance.drop_migration_context'),
+        ):
+            if revert:
+                flavor = new_flavor
+                prefix = 'new_'
+                self.rt.drop_move_claim(
+                    ctx, instance, _NODENAME, flavor, prefix=prefix)
+            else:  # confirm
+                flavor = old_flavor
+                self.rt.drop_move_claim_at_source(ctx, instance, migration)
 
         expected = compute_update_usage(expected, flavor, sign=-1)
         self.assertTrue(obj_base.obj_equal_prims(

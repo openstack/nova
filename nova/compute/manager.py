@@ -4357,6 +4357,8 @@ class ComputeManager(manager.Manager):
         # NOTE(tr3buchet): tear down networks on source host
         self.network_api.setup_networks_on_host(context, instance,
                            migration.source_compute, teardown=True)
+
+        # TODO(stephenfin): These next three calls should be bundled
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
 
@@ -4370,17 +4372,8 @@ class ComputeManager(manager.Manager):
         self.driver.confirm_migration(context, migration, instance,
                                       network_info)
 
-        migration.status = 'confirmed'
-        migration.save()
-
-        # NOTE(mriedem): drop_move_claim relies on
-        # instance.migration_context so make sure to not call
-        # instance.drop_migration_context() until after drop_move_claim
-        # is called.
-        self.rt.drop_move_claim(
-            context, instance, migration.source_node, instance.old_flavor,
-            prefix='old_')
-        instance.drop_migration_context()
+        # Free up the old_flavor usage from the resource tracker for this host.
+        self.rt.drop_move_claim_at_source(context, instance, migration)
 
         # NOTE(mriedem): The old_vm_state could be STOPPED but the user
         # might have manually powered up the instance to confirm the
@@ -4538,13 +4531,7 @@ class ComputeManager(manager.Manager):
         self._delete_volume_attachments(ctxt, instance.get_bdms())
 
         # Free up the old_flavor usage from the resource tracker for this host.
-        self.rt.drop_move_claim(
-            ctxt, instance, migration.source_node, instance.old_flavor,
-            prefix='old_')
-        instance.drop_migration_context()
-
-        migration.status = 'confirmed'
-        migration.save()
+        self.rt.drop_move_claim_at_source(ctxt, instance, migration)
 
     def _confirm_snapshot_based_resize_delete_port_bindings(
             self, ctxt, instance, migration):

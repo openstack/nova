@@ -981,7 +981,7 @@ class ConfirmResizeTask(base.TaskBase):
         """
         LOG.debug('Updating migration and instance status in target cell DB.',
                   instance=self.instance)
-        # Complete the migration confirmation.
+        # Update the target cell migration.
         self.migration.status = 'confirmed'
         self.migration.save()
         # Update the target cell instance.

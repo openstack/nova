@@ -65,7 +65,7 @@ class TestColdMigrationUsage(integrated_helpers._IntegratedTestBase):
         self.assertUsage(src_host, 1)
         self.assertUsage(dst_host, 0)
 
-        orig_drop_claim = rt.ResourceTracker.drop_move_claim
+        orig_drop_claim = rt.ResourceTracker.drop_move_claim_at_source
 
         def fake_drop_move_claim(*args, **kwargs):
             # run periodics after marking the migration confirmed, simulating a
@@ -78,15 +78,14 @@ class TestColdMigrationUsage(integrated_helpers._IntegratedTestBase):
             if drop_race:
                 self._run_periodics()
 
-                # FIXME(stephenfin): the periodic should not have dropped the
-                # records for the src yet
-                self.assertUsage(src_host, 0)
-                self.assertUsage(dst_host, 1)
+            self.assertUsage(src_host, 1)
+            self.assertUsage(dst_host, 1)
 
             return orig_drop_claim(*args, **kwargs)
 
         self.stub_out(
-            'nova.compute.resource_tracker.ResourceTracker.drop_move_claim',
+            'nova.compute.resource_tracker.ResourceTracker.'
+            'drop_move_claim_at_source',
             fake_drop_move_claim,
         )
 
@@ -102,10 +101,7 @@ class TestColdMigrationUsage(integrated_helpers._IntegratedTestBase):
 
         # migration is now confirmed so we should once again only have usage on
         # one host
-        # FIXME(stephenfin): Our usage here should be 0 and 1 for source and
-        # dest respectively when confirming, but that won't happen until we run
-        # the periodic and rebuild our inventory from scratch
-        self.assertUsage(src_host, -1 if drop_race else 0)
+        self.assertUsage(src_host, 0)
         self.assertUsage(dst_host, 1)
 
         # running periodics shouldn't change things

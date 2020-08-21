@@ -538,8 +538,30 @@ class ResourceTracker(object):
                 self.compute_nodes[nodename].pci_device_pools = dev_pools_obj
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
+    def drop_move_claim_at_source(self, context, instance, migration):
+        """Drop a move claim after confirming a resize or cold migration."""
+        migration.status = 'confirmed'
+        migration.save()
+
+        self._drop_move_claim(
+            context, instance, migration.source_node, instance.old_flavor,
+            prefix='old_')
+
+        # NOTE(stephenfin): Unsetting this is unnecessary for cross-cell
+        # resize, since the source and dest instance objects are different and
+        # the source instance will be deleted soon. It's easier to just do it
+        # though.
+        instance.drop_migration_context()
+
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def drop_move_claim(self, context, instance, nodename,
                         instance_type=None, prefix='new_'):
+        self._drop_move_claim(
+            context, instance, nodename, instance_type, prefix='new_')
+
+    def _drop_move_claim(
+        self, context, instance, nodename, instance_type=None, prefix='new_',
+    ):
         """Remove usage for an incoming/outgoing migration.
 
         :param context: Security context.
