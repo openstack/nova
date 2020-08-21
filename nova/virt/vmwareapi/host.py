@@ -63,9 +63,13 @@ class VCState(object):
         self._datastore_regex = datastore_regex
         self._stats = {}
         ctx = context.get_admin_context()
-        service = objects.Service.get_by_compute_host(ctx, CONF.host)
-        self._auto_service_disabled = service.disabled \
+        try:
+            service = objects.Service.get_by_compute_host(ctx, CONF.host)
+            self._auto_service_disabled = service.disabled \
                         and service.disabled_reason == SERVICE_DISABLED_REASON
+        except exception.ComputeHostNotFound:
+            # this can happend on newly-added hosts
+            self._auto_service_disabled = False
         about_info = self._session._call_method(vim_util, "get_about_info")
         self._hypervisor_type = about_info.name
         self._hypervisor_version = versionutils.convert_version_to_int(
