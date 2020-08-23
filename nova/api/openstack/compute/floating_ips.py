@@ -87,7 +87,8 @@ class FloatingIPController(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given floating IP."""
         context = req.environ['nova.context']
-        context.can(fi_policies.BASE_POLICY_NAME % 'show')
+        context.can(fi_policies.BASE_POLICY_NAME % 'show',
+                    target={'project_id': context.project_id})
 
         try:
             floating_ip = self.network_api.get_floating_ip(context, id)
@@ -104,7 +105,8 @@ class FloatingIPController(wsgi.Controller):
     def index(self, req):
         """Return a list of floating IPs allocated to a project."""
         context = req.environ['nova.context']
-        context.can(fi_policies.BASE_POLICY_NAME % 'list')
+        context.can(fi_policies.BASE_POLICY_NAME % 'list',
+                    target={'project_id': context.project_id})
 
         floating_ips = self.network_api.get_floating_ips_by_project(context)
 
@@ -115,7 +117,8 @@ class FloatingIPController(wsgi.Controller):
     @wsgi.expected_errors((400, 403, 404))
     def create(self, req, body=None):
         context = req.environ['nova.context']
-        context.can(fi_policies.BASE_POLICY_NAME % 'create')
+        context.can(fi_policies.BASE_POLICY_NAME % 'create',
+                    target={'project_id': context.project_id})
 
         pool = None
         if body and 'pool' in body:
@@ -147,7 +150,8 @@ class FloatingIPController(wsgi.Controller):
     @wsgi.expected_errors((400, 403, 404, 409))
     def delete(self, req, id):
         context = req.environ['nova.context']
-        context.can(fi_policies.BASE_POLICY_NAME % 'delete')
+        context.can(fi_policies.BASE_POLICY_NAME % 'delete',
+                    target={'project_id': context.project_id})
 
         # get the floating ip object
         try:
