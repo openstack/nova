@@ -59,13 +59,6 @@ class RegressionTest1835822(
         server = self.api.post_server({'server': basic_server})
         return self._wait_for_state_change(server, 'ACTIVE')
 
-    def _hard_reboot_server(self, active_server):
-        args = {"reboot": {"type": "HARD"}}
-        self.api.api_post('servers/%s/action' %
-                          active_server['id'], args)
-        fake_notifier.wait_for_versioned_notifications('instance.reboot.end')
-        return self._wait_for_state_change(active_server, 'ACTIVE')
-
     def _rebuild_server(self, active_server):
         args = {"rebuild": {"imageRef": self.image_ref_1}}
         self.api.api_post('servers/%s/action' %
@@ -112,7 +105,7 @@ class RegressionTest1835822(
         self.flags(force_config_drive=True)
         active_server = self._create_active_server()
         self.assertTrue(active_server['config_drive'])
-        active_server = self._hard_reboot_server(active_server)
+        active_server = self._reboot_server(active_server, hard=True)
         self.assertTrue(active_server['config_drive'])
 
     def test_create_server_config_drive_reboot_after_conf_change(self):
@@ -132,13 +125,14 @@ class RegressionTest1835822(
         # this server was created with force_config_drive=true
         # so assert now that force_config_drive is false it does
         # not override the value it was booted with.
-        with_config_drive = self._hard_reboot_server(with_config_drive)
+        with_config_drive = self._reboot_server(with_config_drive, hard=True)
         self.assertTrue(with_config_drive['config_drive'])
 
         # this server was booted with force_config_drive=False so
         # assert that it's config drive setting is not overridden
         self.flags(force_config_drive=True)
-        without_config_drive = self._hard_reboot_server(without_config_drive)
+        without_config_drive = self._reboot_server(
+            without_config_drive, hard=True)
         self.assertEqual('', without_config_drive['config_drive'])
 
     def test_create_server_config_drive_rebuild_after_conf_change(self):

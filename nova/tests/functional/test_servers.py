@@ -344,14 +344,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
                                                     'SOFT_DELETED')
 
         # Create a second server
-        server = self._build_server()
-
-        created_server2 = self.api.post_server({'server': server})
-        LOG.debug("created_server: %s", created_server2)
-        self.assertTrue(created_server2['id'])
-
-        # Wait for it to finish being created
-        self._wait_for_state_change(created_server2, 'ACTIVE')
+        self._create_server()
 
         # Try to restore the first server, it should fail
         ex = self.assertRaises(client.OpenStackApiException,
@@ -8092,16 +8085,11 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
             networks='none', expected_state='ACTIVE')
 
     def test_soft_reboot_ok(self):
-        params = {'reboot': {'type': 'SOFT'}}
-        self.api.post_server_action(self.server['id'], params)
-        self._wait_for_state_change(self.server, 'ACTIVE')
+        self._reboot_server(self.server)
         self._check_allocations_usage(self.server)
 
     def test_hard_reboot_ok(self):
-        params = {'reboot': {'type': 'HARD'}}
-        self.api.post_server_action(self.server['id'], params)
-        self._wait_for_state_change(self.server, 'HARD_REBOOT')
-        self._wait_for_state_change(self.server, 'ACTIVE')
+        self._reboot_server(self.server, hard=True)
         self._check_allocations_usage(self.server)
 
     def test_pause_unpause_ok(self):
