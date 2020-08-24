@@ -81,7 +81,6 @@ class MigrateServerController(wsgi.Controller):
         except (
             exception.InstanceIsLocked,
             exception.InstanceNotReady,
-            exception.OperationNotSupportedForVTPM,
             exception.ServiceUnavailable,
         ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())

@@ -968,7 +968,6 @@ class ServersController(wsgi.Controller):
             exception.InstanceIsLocked,
             exception.InstanceNotReady,
             exception.MixedInstanceNotSupportByComputeService,
-            exception.OperationNotSupportedForVTPM,
             exception.ServiceUnavailable,
         ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())

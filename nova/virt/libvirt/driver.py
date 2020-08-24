@@ -33,6 +33,7 @@ import copy
 import errno
 import functools
 import glob
+import grp
 import itertools
 import operator
 import os
@@ -783,7 +784,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt.virt_type not in ('qemu', 'kvm'):
             msg = _(
                 "vTPM support requires '[libvirt] virt_type' of 'qemu' or "
-                "'kvm'; found %s.")
+                "'kvm'; found '%s'.")
             raise exception.InvalidConfiguration(msg % CONF.libvirt.virt_type)
 
         if not self._host.has_min_version(
@@ -807,6 +808,25 @@ class LibvirtDriver(driver.ComputeDriver):
                 "vTPM support is configured but the 'swtpm' and "
                 "'swtpm_setup' binaries could not be found on PATH.")
             raise exception.InvalidConfiguration(msg)
+
+        # The user and group must be valid on this host for cold migration and
+        # resize to function.
+        try:
+            pwd.getpwnam(CONF.libvirt.swtpm_user)
+        except KeyError:
+            msg = _(
+                "The user configured in '[libvirt] swtpm_user' does not exist "
+                "on this host; expected '%s'.")
+            raise exception.InvalidConfiguration(msg % CONF.libvirt.swtpm_user)
+
+        try:
+            grp.getgrnam(CONF.libvirt.swtpm_group)
+        except KeyError:
+            msg = _(
+                "The group configured in '[libvirt] swtpm_group' does not "
+                "exist on this host; expected '%s'.")
+            raise exception.InvalidConfiguration(
+                msg % CONF.libvirt.swtpm_group)
 
         LOG.debug('Enabling emulated TPM support')
 
@@ -1579,6 +1599,29 @@ class LibvirtDriver(driver.ComputeDriver):
             enforce_multipath=True,
             host=CONF.host)
 
+    def _cleanup_resize_vtpm(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ) -> None:
+        """Handle vTPM when confirming a migration or resize.
+
+        If the old flavor have vTPM and the new one doesn't, there are keys to
+        be deleted.
+        """
+        old_vtpm_config = hardware.get_vtpm_constraint(
+            instance.old_flavor, instance.image_meta)
+        new_vtpm_config = hardware.get_vtpm_constraint(
+            instance.new_flavor, instance.image_meta)
+
+        if old_vtpm_config and not new_vtpm_config:
+            # the instance no longer cares for its vTPM so delete the related
+            # secret; the deletion of the instance directory and undefining of
+            # the domain will take care of the TPM files themselves
+            LOG.info('New flavor no longer requests vTPM; deleting secret.')
+            crypto.delete_vtpm_secret(context, instance)
+
+    # TODO(stephenfin): Fold this back into its only caller, cleanup_resize
     def _cleanup_resize(self, context, instance, network_info):
         inst_base = libvirt_utils.get_instance_path(instance)
         target = inst_base + '_resize'
@@ -1587,6 +1630,9 @@ class LibvirtDriver(driver.ComputeDriver):
         vpmems = self._get_vpmems(instance, prefix='old')
         if vpmems:
             self._cleanup_vpmems(vpmems)
+
+        # Remove any old vTPM data, if necessary
+        self._cleanup_resize_vtpm(context, instance)
 
         # Deletion can fail over NFS, so retry the deletion as required.
         # Set maximum attempt as 5, most test can remove the directory
@@ -10354,6 +10400,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                          dst_disk_info_path,
                                          host=dest, on_execute=on_execute,
                                          on_completion=on_completion)
+
+            # Handle migration of vTPM data if needed
+            libvirt_utils.save_and_migrate_vtpm_dir(
+                instance.uuid, inst_base_resize, inst_base, dest,
+                on_execute, on_completion)
+
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._cleanup_remote_migration(dest, inst_base,
@@ -10376,9 +10428,62 @@ class LibvirtDriver(driver.ComputeDriver):
         images.convert_image(path, path_qcow, 'raw', 'qcow2')
         os.rename(path_qcow, path)
 
-    def finish_migration(self, context, migration, instance, disk_info,
-                         network_info, image_meta, resize_instance,
-                         allocations, block_device_info=None, power_on=True):
+    def _finish_migration_vtpm(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ) -> None:
+        """Handle vTPM when migrating or resizing an instance.
+
+        Handle the case where we're resizing between different versions of TPM,
+        or enabling/disabling TPM.
+        """
+        old_vtpm_config = hardware.get_vtpm_constraint(
+            instance.old_flavor, instance.image_meta)
+        new_vtpm_config = hardware.get_vtpm_constraint(
+            instance.new_flavor, instance.image_meta)
+
+        if old_vtpm_config:
+            # we had a vTPM in the old flavor; figure out if we need to do
+            # anything with it
+            inst_base = libvirt_utils.get_instance_path(instance)
+            swtpm_dir = os.path.join(inst_base, 'swtpm', instance.uuid)
+            copy_swtpm_dir = True
+
+            if old_vtpm_config != new_vtpm_config:
+                # we had vTPM in the old flavor but the new flavor either
+                # doesn't or has different config; delete old TPM data and let
+                # libvirt create new data
+                if os.path.exists(swtpm_dir):
+                    LOG.info(
+                        'Old flavor and new flavor have different vTPM '
+                        'configuration; removing existing vTPM data.')
+                    copy_swtpm_dir = False
+                    shutil.rmtree(swtpm_dir)
+
+            # apparently shutil.rmtree() isn't reliable on NFS so don't rely
+            # only on path existance here.
+            if copy_swtpm_dir and os.path.exists(swtpm_dir):
+                libvirt_utils.restore_vtpm_dir(swtpm_dir)
+        elif new_vtpm_config:
+            # we've requested vTPM in the new flavor and didn't have one
+            # previously so we need to create a new secret
+            crypto.ensure_vtpm_secret(context, instance)
+
+    def finish_migration(
+        self,
+        context: nova_context.RequestContext,
+        migration: 'objects.Migration',
+        instance: 'objects.Instance',
+        disk_info: str,
+        network_info: network_model.NetworkInfo,
+        image_meta: 'objects.ImageMeta',
+        resize_instance: bool,
+        allocations: ty.Dict[str, ty.Any],
+        block_device_info: ty.Optional[ty.Dict[str, ty.Any]] = None,
+        power_on: bool = True,
+    ) -> None:
+        """Complete the migration process on the destination host."""
         LOG.debug("Starting finish_migration", instance=instance)
 
         block_disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -10403,8 +10508,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Convert raw disks to qcow2 if migrating to host which uses
         # qcow2 from host which uses raw.
-        disk_info = jsonutils.loads(disk_info)
-        for info in disk_info:
+        for info in jsonutils.loads(disk_info):
             path = info['path']
             disk_name = os.path.basename(path)
 
@@ -10450,6 +10554,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # Does the guest need to be assigned some vGPU mediated devices ?
         mdevs = self._allocate_mdevs(allocations)
 
+        # Handle the case where the guest has emulated TPM
+        self._finish_migration_vtpm(context, instance)
+
         xml = self._get_guest_xml(context, instance, network_info,
                                   block_disk_info, image_meta,
                                   block_device_info=block_device_info,
@@ -10484,11 +10591,45 @@ class LibvirtDriver(driver.ComputeDriver):
             if e.errno != errno.ENOENT:
                 raise
 
-    def finish_revert_migration(self, context, instance, network_info,
-                                migration, block_device_info=None,
-                                power_on=True):
-        LOG.debug("Starting finish_revert_migration",
-                  instance=instance)
+    def _finish_revert_migration_vtpm(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ) -> None:
+        """Handle vTPM differences when reverting a migration or resize.
+
+        We should either restore any emulated vTPM persistent storage files or
+        create new ones.
+        """
+        old_vtpm_config = hardware.get_vtpm_constraint(
+            instance.old_flavor, instance.image_meta)
+        new_vtpm_config = hardware.get_vtpm_constraint(
+            instance.new_flavor, instance.image_meta)
+
+        if old_vtpm_config:
+            # the instance had a vTPM before resize and should have one again;
+            # move the previously-saved vTPM data back to its proper location
+            inst_base = libvirt_utils.get_instance_path(instance)
+            swtpm_dir = os.path.join(inst_base, 'swtpm', instance.uuid)
+            if os.path.exists(swtpm_dir):
+                libvirt_utils.restore_vtpm_dir(swtpm_dir)
+        elif new_vtpm_config:
+            # the instance gained a vTPM and must now lose it; delete the vTPM
+            # secret, knowing that libvirt will take care of everything else on
+            # the destination side
+            crypto.delete_vtpm_secret(context, instance)
+
+    def finish_revert_migration(
+        self,
+        context: nova.context.RequestContext,
+        instance: 'objects.Instance',
+        network_info: network_model.NetworkInfo,
+        migration: 'objects.Migration',
+        block_device_info: ty.Optional[ty.Dict[str, ty.Any]] = None,
+        power_on: bool = True,
+    ) -> None:
+        """Finish the second half of reverting a resize on the source host."""
+        LOG.debug('Starting finish_revert_migration', instance=instance)
 
         inst_base = libvirt_utils.get_instance_path(instance)
         inst_base_resize = inst_base + "_resize"
@@ -10506,6 +10647,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if root_disk.exists():
             root_disk.rollback_to_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
             root_disk.remove_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
+
+        self._finish_revert_migration_vtpm(context, instance)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,

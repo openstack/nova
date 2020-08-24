@@ -14,11 +14,9 @@
 # under the License.
 
 import mock
-import shutil
 
 from castellan.common.objects import passphrase
 from castellan.key_manager import key_manager
-import fixtures
 from oslo_log import log as logging
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
@@ -129,14 +127,12 @@ class VTPMServersTest(base.ServersTestBase):
 
         super().setUp()
 
-        original_which = shutil.which
-
-        def which(cmd, *args, **kwargs):
-            if cmd == 'swtpm':
-                return True
-            return original_which(cmd, *args, **kwargs)
-
-        self.useFixture(fixtures.MonkeyPatch('shutil.which', which))
+        # mock the '_check_vtpm_support' function which validates things like
+        # the presence of users on the host, none of which makes sense here
+        _p = mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver._check_vtpm_support')
+        self.mock_conn = _p.start()
+        self.addCleanup(_p.stop)
 
         self.key_mgr = crypto._get_key_manager()
 
@@ -287,9 +283,26 @@ class VTPMServersTest(base.ServersTestBase):
             '.migrate_disk_and_power_off', return_value='{}',
         ):
             # resize the server to a new flavor *with* vTPM
-            self.assertRaises(
-                client.OpenStackApiException,
-                self._resize_server, server, flavor_id=flavor_id)
+            server = self._resize_server(server, flavor_id=flavor_id)
+
+        # ensure our instance's system_metadata field and key manager inventory
+        # is updated to reflect the new vTPM requirement
+        self.assertInstanceHasSecret(server)
+
+        # revert the instance rather than confirming it, and ensure the secret
+        # is correctly cleaned up
+
+        # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
+        # probably be less...dumb
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            # revert back to the old flavor *without* vTPM
+            server = self._revert_resize(server)
+
+        # ensure we delete the new key since we no longer need it
+        self.assertInstanceHasNoSecret(server)
 
     def test_resize_server__vtpm_to_no_vtpm(self):
         self.computes = {}
@@ -313,10 +326,26 @@ class VTPMServersTest(base.ServersTestBase):
             '.migrate_disk_and_power_off', return_value='{}',
         ):
             # resize the server to a new flavor *without* vTPM
-            # TODO(stephenfin): Add support for this operation
-            self.assertRaises(
-                client.OpenStackApiException,
-                self._resize_server, server, flavor_id=flavor_id)
+            server = self._resize_server(server, flavor_id=flavor_id)
+
+        # ensure we still have the key for the vTPM device in storage in case
+        # we revert
+        self.assertInstanceHasSecret(server)
+
+        # confirm the instance and ensure the secret is correctly cleaned up
+
+        # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
+        # probably be less...dumb
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            # revert back to the old flavor *with* vTPM
+            server = self._confirm_resize(server)
+
+        # ensure we have finally deleted the key for the vTPM device since
+        # there is no going back now
+        self.assertInstanceHasNoSecret(server)
 
     def test_migrate_server(self):
         self.computes = {}
@@ -337,10 +366,10 @@ class VTPMServersTest(base.ServersTestBase):
             '.migrate_disk_and_power_off', return_value='{}',
         ):
             # cold migrate the server
-            # TODO(stephenfin): Add support for this operation
-            self.assertRaises(
-                client.OpenStackApiException,
-                self._migrate_server, server)
+            self._migrate_server(server)
+
+        # ensure nothing has changed
+        self.assertInstanceHasSecret(server)
 
     def test_live_migrate_server(self):
         self.computes = {}

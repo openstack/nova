@@ -14,7 +14,9 @@
 #    under the License.
 
 import functools
+import grp
 import os
+import pwd
 import tempfile
 
 import ddt
@@ -741,3 +743,96 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         # we shouldn't see the hyperthreading trait since that's a valid trait
         # but not a CPU flag
         self.assertEqual(set(['3dnow', 'sse2']), traits)
+
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
+    @mock.patch('nova.privsep.path.chown')
+    @mock.patch('nova.privsep.path.move_tree')
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
+    @mock.patch('os.path.exists', return_value=True)
+    def test_save_migrate_vtpm(
+        self, mock_exists, mock_ensure, mock_move, mock_chown, mock_copy,
+    ):
+        def _on_execute():
+            pass
+
+        def _on_completion():
+            pass
+
+        libvirt_utils.save_and_migrate_vtpm_dir(
+            uuids.instance, 'base_resize', 'base', 'host', _on_execute,
+            _on_completion,
+        )
+
+        vtpm_dir = f'/var/lib/libvirt/swtpm/{uuids.instance}'
+        swtpm_dir = 'base_resize/swtpm'
+        mock_exists.assert_called_once_with(vtpm_dir)
+        mock_ensure.assert_called_once_with(swtpm_dir)
+        mock_move.assert_called_once_with(vtpm_dir, swtpm_dir)
+        mock_chown.assert_called_once_with(
+            swtpm_dir, os.geteuid(), os.getegid(), recursive=True,
+        )
+        mock_copy.assert_called_once_with(
+            swtpm_dir, 'base', host='host', on_completion=_on_completion,
+            on_execute=_on_execute,
+        )
+
+    @mock.patch('nova.privsep.path.move_tree')
+    @mock.patch('nova.privsep.path.chown')
+    @mock.patch('nova.virt.libvirt.utils.copy_image')
+    @mock.patch('os.path.exists', return_value=False)
+    def test_save_migrate_vtpm_not_enabled(
+        self, mock_exists, mock_copy_image, mock_chown, mock_move,
+    ):
+        def _dummy():
+            pass
+
+        libvirt_utils.save_and_migrate_vtpm_dir(
+            uuids.instance, 'base_resize', 'base', 'host', _dummy, _dummy,
+        )
+
+        mock_exists.assert_called_once_with(
+            f'/var/lib/libvirt/swtpm/{uuids.instance}')
+        mock_copy_image.assert_not_called()
+        mock_chown.assert_not_called()
+        mock_move.assert_not_called()
+
+    @mock.patch('grp.getgrnam')
+    @mock.patch('pwd.getpwnam')
+    @mock.patch('nova.privsep.path.chmod')
+    @mock.patch('nova.privsep.path.makedirs')
+    @mock.patch('nova.privsep.path.move_tree')
+    @mock.patch('nova.privsep.path.chown')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.path.isdir')
+    def _test_restore_vtpm(
+        self, exists, mock_isdir, mock_exists, mock_chown, mock_move,
+        mock_makedirs, mock_chmod, mock_getpwnam, mock_getgrnam,
+    ):
+        mock_exists.return_value = exists
+        mock_isdir.return_value = True
+        mock_getpwnam.return_value = pwd.struct_passwd(
+            ('swtpm', '*', 1234, 1234, None, '/home/test', '/bin/bash'))
+        mock_getgrnam.return_value = grp.struct_group(('swtpm', '*', 4321, []))
+
+        libvirt_utils.restore_vtpm_dir('dummy')
+
+        if not exists:
+            mock_makedirs.assert_called_once_with(libvirt_utils.VTPM_DIR)
+            mock_chmod.assert_called_once_with(libvirt_utils.VTPM_DIR, 0o711)
+
+        mock_getpwnam.assert_called_once_with(CONF.libvirt.swtpm_user)
+        mock_getgrnam.assert_called_once_with(CONF.libvirt.swtpm_group)
+        mock_chown.assert_called_with('dummy', 1234, 4321, recursive=True)
+        mock_move.assert_called_with('dummy', libvirt_utils.VTPM_DIR)
+
+    def test_restore_vtpm(self):
+        self._test_restore_vtpm(True)
+
+    def test_restore_vtpm_not_exist(self):
+        self._test_restore_vtpm(False)
+
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('os.path.isdir', return_value=False)
+    def test_restore_vtpm_notdir(self, mock_isdir, mock_exists):
+        self.assertRaises(exception.Invalid,
+                          libvirt_utils.restore_vtpm_dir, 'dummy')

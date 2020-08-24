@@ -856,17 +856,6 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
 
-    @mock.patch('nova.compute.api.API.resize')
-    def test_resize__vtpm_rejected(self, mock_resize):
-        """Test that 'OperationNotSupportedForVTPM' exception is translated."""
-        mock_resize.side_effect = exception.OperationNotSupportedForVTPM(
-            instance_uuid=uuids.instance, operation='foo')
-        body = {'resize': {'flavorRef': 'http://localhost/3'}}
-        self.assertRaises(
-            webob.exc.HTTPConflict,
-            self.controller._action_resize,
-            self.req, FAKE_UUID, body=body)
-
     def test_confirm_resize_server(self):
         body = dict(confirmResize=None)
 

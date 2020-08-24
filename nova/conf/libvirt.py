@@ -1430,6 +1430,40 @@ libvirt_vtpm_opts = [
         help="""
 Enable emulated TPM (Trusted Platform Module) in guests.
 """),
+    cfg.StrOpt('swtpm_user',
+        default='tss',
+        help="""
+User that swtpm binary runs as.
+
+When using emulated TPM, the ``swtpm`` binary will run to emulate a TPM
+device. The user this binary runs as depends on libvirt configuration, with
+``tss`` being the default.
+
+In order to support cold migration and resize, nova needs to know what user
+the swtpm binary is running as in order to ensure that files get the proper
+ownership after being moved between nodes.
+
+Related options:
+
+* ``swtpm_group`` must also be set.
+"""),
+    cfg.StrOpt('swtpm_group',
+        default='tss',
+        help="""
+Group that swtpm binary runs as.
+
+When using emulated TPM, the ``swtpm`` binary will run to emulate a TPM
+device. The user this binary runs as depends on libvirt configuration, with
+``tss`` being the default.
+
+In order to support cold migration and resize, nova needs to know what group
+the swtpm binary is running as in order to ensure that files get the proper
+ownership after being moved between nodes.
+
+Related options:
+
+* ``swtpm_user`` must also be set.
+"""),
 ]
 
 

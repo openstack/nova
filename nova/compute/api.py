@@ -4015,31 +4015,6 @@ class API(base.Base):
         if same_instance_type and flavor_id:
             raise exception.CannotResizeToSameFlavor()
 
-        # NOTE(stephenfin): We use this instead of the 'reject_vtpm_instances'
-        # decorator since the operation can differ depending on args, and for
-        # resize we have two flavors to worry about
-        if same_instance_type:
-            if hardware.get_vtpm_constraint(
-                current_instance_type, instance.image_meta,
-            ):
-                raise exception.OperationNotSupportedForVTPM(
-                    instance_uuid=instance.uuid,
-                    operation=instance_actions.MIGRATE)
-        else:
-            if hardware.get_vtpm_constraint(
-                current_instance_type, instance.image_meta,
-            ):
-                raise exception.OperationNotSupportedForVTPM(
-                    instance_uuid=instance.uuid,
-                    operation=instance_actions.RESIZE)
-
-            if hardware.get_vtpm_constraint(
-                new_instance_type, instance.image_meta,
-            ):
-                raise exception.OperationNotSupportedForVTPM(
-                    instance_uuid=instance.uuid,
-                    operation=instance_actions.RESIZE)
-
         # ensure there is sufficient headroom for upsizes
         if flavor_id:
             self._check_quota_for_upsize(context, instance,

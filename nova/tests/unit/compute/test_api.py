@@ -66,7 +66,6 @@ from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_migration
 from nova import utils
-from nova.virt import hardware
 from nova.volume import cinder
 
 
@@ -2137,35 +2136,6 @@ class _ComputeAPIUnitTestMixIn(object):
                 project_values={'cores': 1, 'ram': 2560},
                 project_id=fake_inst.project_id, user_id=fake_inst.user_id)
 
-    @mock.patch(
-        'nova.compute.api.API.get_instance_host_status',
-        new=mock.Mock(return_value=fields_obj.HostStatus.UP))
-    @mock.patch(
-        'nova.compute.utils.is_volume_backed_instance',
-        new=mock.Mock(return_value=False))
-    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
-    def test_resize__with_vtpm(self, mock_get_flavor):
-        """Ensure resizes are rejected if either flavor requests vTPM."""
-        fake_inst = self._create_instance_obj()
-        current_flavor = fake_inst.flavor
-        new_flavor = self._create_flavor(
-            id=200, flavorid='new-flavor-id', name='new_flavor',
-            disabled=False, extra_specs={'hw:tpm_version': '2.0'})
-        mock_get_flavor.return_value = new_flavor
-
-        orig_get_vtpm_constraint = hardware.get_vtpm_constraint
-        with mock.patch.object(hardware, 'get_vtpm_constraint') as get_vtpm:
-            get_vtpm.side_effect = orig_get_vtpm_constraint
-            self.assertRaises(
-                exception.OperationNotSupportedForVTPM,
-                self.compute_api.resize,
-                self.context, fake_inst, flavor_id=new_flavor.flavorid)
-
-            get_vtpm.assert_has_calls([
-                mock.call(current_flavor, mock.ANY),
-                mock.call(new_flavor, mock.ANY),
-            ])
-
     @mock.patch('nova.compute.api.API.get_instance_host_status',
                 new=mock.Mock(return_value=fields_obj.HostStatus.UP))
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
@@ -2213,28 +2183,6 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_migrate_with_host_name_allow_cross_cell_resize_true(self):
         self._test_migrate(host_name='target_host',
                            allow_cross_cell_resize=True)
-
-    @mock.patch(
-        'nova.compute.api.API.get_instance_host_status',
-        new=mock.Mock(return_value=fields_obj.HostStatus.UP))
-    @mock.patch(
-        'nova.compute.utils.is_volume_backed_instance',
-        new=mock.Mock(return_value=False))
-    def test_migrate__with_vtpm(self):
-        """Ensure migrations are rejected if instance uses vTPM."""
-        flavor = self._create_flavor(
-            extra_specs={'hw:tpm_version': '2.0'})
-        instance = self._create_instance_obj(flavor=flavor)
-
-        orig_get_vtpm_constraint = hardware.get_vtpm_constraint
-        with mock.patch.object(hardware, 'get_vtpm_constraint') as get_vtpm:
-            get_vtpm.side_effect = orig_get_vtpm_constraint
-            self.assertRaises(
-                exception.OperationNotSupportedForVTPM,
-                self.compute_api.resize,
-                self.context, instance)
-
-            get_vtpm.assert_called_once_with(flavor, mock.ANY)
 
     @mock.patch('nova.compute.api.API.get_instance_host_status',
                 new=mock.Mock(return_value=fields_obj.HostStatus.UP))
