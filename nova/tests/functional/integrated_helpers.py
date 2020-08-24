@@ -401,6 +401,20 @@ class InstanceHelperMixin:
         fake_notifier.wait_for_versioned_notifications('instance.reboot.end')
         return self._wait_for_state_change(server, expected_state)
 
+    def _rebuild_server(self, server, image_uuid, expected_state='ACTIVE'):
+        """Rebuild a server."""
+        self.api.post_server_action(
+            server['id'], {'rebuild': {'imageRef': image_uuid}},
+        )
+        fake_notifier.wait_for_versioned_notifications('instance.rebuild.end')
+        return self._wait_for_state_change(server, expected_state)
+
+    def _migrate_server(self, server, host=None):
+        """Cold migrate a server."""
+        body = {'host': host} if host else None
+        self.api.post_server_action(server['id'], {'migrate': body})
+        return self._wait_for_state_change(server, 'VERIFY_RESIZE')
+
     def _resize_server(self, server, flavor_id):
         self.api.post_server_action(
             server['id'], {'resize': {'flavorRef': flavor_id}})
@@ -429,13 +443,17 @@ class InstanceHelperMixin:
             'instance.resize_revert.end')
         return server
 
-    def _live_migrate(self, server, migration_expected_state,
-                      server_expected_state='ACTIVE'):
+    def _live_migrate(
+        self, server, migration_expected_state='completed',
+        server_expected_state='ACTIVE',
+    ):
         self.api.post_server_action(
             server['id'],
             {'os-migrateLive': {'host': None, 'block_migration': 'auto'}})
         self._wait_for_state_change(server, server_expected_state)
         self._wait_for_migration_status(server, [migration_expected_state])
+
+    _live_migrate_server = _live_migrate
 
     def _suspend_server(self, server, expected_state='SUSPENDED'):
         """Suspend a server."""
@@ -447,6 +465,16 @@ class InstanceHelperMixin:
         """Resume a server."""
         self.api.post_server_action(server['id'], {'resume': {}})
         fake_notifier.wait_for_versioned_notifications('instance.resume.end')
+        return self._wait_for_state_change(server, expected_state)
+
+    def _shelve_server(self, server, expected_state='SHELVED_OFFLOADED'):
+        """Shelve a server."""
+        self.api.post_server_action(server['id'], {'shelve': {}})
+        return self._wait_for_state_change(server, expected_state)
+
+    def _unshelve_server(self, server, expected_state='ACTIVE'):
+        """Unshelve a server."""
+        self.api.post_server_action(server['id'], {'unshelve': {}})
         return self._wait_for_state_change(server, expected_state)
 
 
