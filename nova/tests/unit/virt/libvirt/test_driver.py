@@ -18613,6 +18613,41 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         dom_mock.ID.assert_called_once_with()
         mock_get_domain.assert_called_once_with(instance)
 
+    @mock.patch.object(libvirt_guest.Guest, 'create')
+    def test_create_guest__with_callback(
+        self, mock_guest_create,
+    ):
+        """Check that callback function is called if provided."""
+        instance = objects.Instance(**self.test_instance)
+        xml = '<xml>'
+        callback = mock.Mock()
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.supports_vtpm = False
+
+        drvr._create_guest(
+            self.context, xml, instance, post_xml_callback=callback)
+
+        mock_guest_create.assert_called_once_with(xml, drvr._host)
+        mock_guest_create.return_value.launch.assert_called_once_with(
+            pause=False)
+        callback.assert_called_once()
+
+    @mock.patch.object(libvirt_guest.Guest, 'create')
+    def test_create_guest__no_launch(self, mock_guest_create):
+        """Check that guest is not started unless requested."""
+        instance = objects.Instance(**self.test_instance)
+        xml = '<xml>'
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.supports_vtpm = False
+
+        drvr._create_guest(
+            self.context, xml, instance, power_on=False, pause=False)
+
+        mock_guest_create.assert_called_once_with(xml, drvr._host)
+        mock_guest_create.return_value.launch.assert_not_called()
+
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
     @mock.patch('nova.virt.disk.api.setup_container')
@@ -19408,8 +19443,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         with test.nested(
             mock.patch.object(drvr, 'plug_vifs'),
             mock.patch.object(drvr, '_create_guest'),
-        ) as (plug_vifs, create_domain):
-            create_domain.return_value = libvirt_guest.Guest(mock_dom)
+        ) as (plug_vifs, create_guest):
+            create_guest.return_value = libvirt_guest.Guest(mock_dom)
 
             guest = drvr._create_guest_with_network(
                 self.context, fake_xml, instance, network_info,
@@ -19417,8 +19452,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             plug_vifs.assert_called_once_with(instance, network_info)
             pause = self._get_pause_flag(drvr, network_info)
-            create_domain.assert_called_once_with(
-                fake_xml, pause=pause, power_on=True, post_xml_callback=None)
+            create_guest.assert_called_once_with(
+                self.context, fake_xml, instance, pause=pause, power_on=True,
+                post_xml_callback=None)
             self.assertEqual(mock_dom, guest._domain)
 
     def test_get_guest_storage_config(self):
@@ -23342,7 +23378,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         domain_xml = [None]
 
         def fake_create_guest(
-            xml, power_on=True, pause=False, post_xml_callback=None
+            context, xml, instance, power_on=True, pause=False,
+            post_xml_callback=None
         ):
             domain_xml[0] = xml
             if post_xml_callback is not None:
@@ -23771,7 +23808,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                       mock_remove_volumes, mock_glob):
             drvr.unrescue(self.context, instance)
             mock_destroy.assert_called_once_with(instance)
-            mock_create.assert_called_once_with('fake_unrescue_xml')
+            mock_create.assert_called_once_with(
+                self.context, 'fake_unrescue_xml', instance)
             self.assertEqual(2, mock_del.call_count)
             self.assertEqual(unrescue_xml_path,
                              mock_del.call_args_list[0][0][0])

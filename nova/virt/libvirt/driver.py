@@ -3567,7 +3567,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                   mdevs=mdevs,
                                   block_device_info=block_device_info)
         self._destroy(instance)
-        self._create_guest(xml, post_xml_callback=gen_confdrive)
+        self._create_guest(
+            context, xml, instance, post_xml_callback=gen_confdrive,
+        )
 
     def unrescue(
         self,
@@ -3580,7 +3582,7 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = libvirt_utils.load_file(unrescue_xml_path)
 
         self._destroy(instance)
-        self._create_guest(xml)
+        self._create_guest(context, xml, instance)
         os.unlink(unrescue_xml_path)
         rescue_files = os.path.join(instance_dir, "*.rescue")
         for rescue_file in glob.iglob(rescue_files):
@@ -6477,7 +6479,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_guest(
         self,
+        context: nova_context.RequestContext,
         xml: str,
+        instance: 'objects.Instance',
         power_on: bool = True,
         pause: bool = False,
         post_xml_callback: ty.Callable = None,
@@ -6559,7 +6563,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                             instance.image_meta,
                                             block_device_info):
                     guest = self._create_guest(
-                        xml, pause=pause, power_on=power_on,
+                        context, xml, instance,
+                        pause=pause, power_on=power_on,
                         post_xml_callback=post_xml_callback)
         except exception.VirtualInterfaceCreateException:
             # Neutron reported failure and we didn't swallow it, so
