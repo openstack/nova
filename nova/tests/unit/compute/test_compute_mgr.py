@@ -2454,8 +2454,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         @mock.patch.object(compute_utils, 'EventReporter')
         @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+        @mock.patch.object(compute_utils, 'refresh_info_cache_for_instance')
         @mock.patch.object(self.compute, '_set_instance_obj_error_state')
-        def do_test(meth, add_fault, event):
+        def do_test(meth, refresh, add_fault, event):
             self.assertRaises(exception.PortNotFound,
                               self.compute.detach_interface,
                               self.context, f_instance, 'port_id')
@@ -2464,6 +2465,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             event.assert_called_once_with(
                 self.context, 'compute_detach_interface', CONF.host,
                 f_instance.uuid, graceful_exit=False)
+            refresh.assert_called_once_with(self.context, f_instance)
 
         do_test()
 
@@ -2471,8 +2473,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
-    def test_detach_interface_instance_not_found(self, mock_notify, mock_fault,
-                                                 mock_event, mock_log):
+    @mock.patch.object(compute_utils, 'refresh_info_cache_for_instance')
+    def test_detach_interface_instance_not_found(self, mock_refresh,
+                            mock_notify, mock_fault, mock_event, mock_log):
         nw_info = network_model.NetworkInfo([
             network_model.VIF(uuids.port_id)])
         info_cache = objects.InstanceInfoCache(network_info=nw_info,
@@ -2485,6 +2488,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.assertRaises(exception.InterfaceDetachFailed,
                               self.compute.detach_interface,
                               self.context, instance, uuids.port_id)
+            mock_refresh.assert_called_once_with(self.context, instance)
             self.assertEqual(1, mock_log.call_count)
             self.assertEqual(logging.DEBUG, mock_log.call_args[0][0])
 
