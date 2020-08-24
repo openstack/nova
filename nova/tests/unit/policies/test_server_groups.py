@@ -56,7 +56,8 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
         self.admin_or_owner_unauthorized_contexts = [
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
         # Check that system reader or owner is able to get
         # the server group. Due to old default everyone
@@ -69,7 +70,8 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
         ]
         self.system_reader_or_owner_unauthorized_contexts = [
             self.system_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
         # Check that everyone is able to list
         # theie own server group. Due to old defaults everyone
@@ -80,7 +82,9 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
-            self.other_project_member_context]
+            self.other_project_member_context,
+            self.other_project_reader_context,
+        ]
         self.everyone_unauthorized_contexts = [
         ]
         # Check that project member is able to create server group.
@@ -91,7 +95,9 @@ class ServerGroupPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.project_reader_context,
             self.project_foo_context, self.system_reader_context,
             self.system_foo_context,
-            self.other_project_member_context]
+            self.other_project_member_context,
+            self.other_project_reader_context,
+        ]
         self.project_member_unauthorized_contexts = []
 
     @mock.patch('nova.objects.InstanceGroupList.get_by_project_id')
@@ -175,7 +181,8 @@ class ServerGroupScopeTypePolicyTest(ServerGroupPolicyTest):
             self.legacy_admin_context, self.project_admin_context,
             self.project_member_context, self.project_reader_context,
             self.project_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
         # Check if non-project scoped cannot create the server group.
         self.project_member_unauthorized_contexts = [
@@ -211,7 +218,8 @@ class ServerGroupNoLegacyPolicyTest(ServerGroupScopeTypePolicyTest):
             self.legacy_admin_context, self.system_member_context,
             self.system_reader_context, self.system_foo_context,
             self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
         # Check that system reader or owner is able to get
         # the server group.
@@ -223,14 +231,16 @@ class ServerGroupNoLegacyPolicyTest(ServerGroupScopeTypePolicyTest):
         ]
         self.system_reader_or_owner_unauthorized_contexts = [
             self.legacy_admin_context, self.system_foo_context,
-            self.other_project_member_context, self.project_foo_context
+            self.other_project_member_context, self.project_foo_context,
+            self.other_project_reader_context,
         ]
         self.everyone_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context,
             self.project_member_context, self.project_reader_context,
             self.system_member_context, self.system_reader_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
         self.everyone_unauthorized_contexts = [
             self.project_foo_context,
@@ -247,4 +257,5 @@ class ServerGroupNoLegacyPolicyTest(ServerGroupScopeTypePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context, self.project_reader_context,
             self.project_foo_context,
+            self.other_project_reader_context,
         ]

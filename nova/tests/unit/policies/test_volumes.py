@@ -103,7 +103,8 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
         self.admin_or_owner_unauthorized_contexts = [
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
         # Check that admin is able to update the attached volume
@@ -121,7 +122,8 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
             self.project_member_context,
             self.other_project_member_context,
             self.project_foo_context,
-            self.project_reader_context
+            self.project_reader_context,
+            self.other_project_reader_context,
         ]
 
         self.reader_authorized_contexts = [
@@ -133,7 +135,8 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
 
         self.reader_unauthorized_contexts = [
             self.system_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -255,6 +258,7 @@ class VolumeAttachScopeTypePolicyTest(VolumeAttachPolicyTest):
             self.system_reader_context, self.system_foo_context,
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
+            self.other_project_reader_context,
             self.project_foo_context, self.project_reader_context
         ]
 
@@ -284,7 +288,8 @@ class VolumeAttachNoLegacyPolicyTest(VolumeAttachPolicyTest):
             self.legacy_admin_context, self.system_member_context,
             self.system_reader_context, self.project_reader_context,
             self.project_foo_context, self.system_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
         # Check that admin is able to update the attached volume
@@ -298,6 +303,7 @@ class VolumeAttachNoLegacyPolicyTest(VolumeAttachPolicyTest):
             self.system_reader_context, self.system_foo_context,
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
+            self.other_project_reader_context,
             self.project_foo_context, self.project_reader_context
         ]
 
@@ -310,7 +316,8 @@ class VolumeAttachNoLegacyPolicyTest(VolumeAttachPolicyTest):
         self.reader_unauthorized_contexts = [
             self.legacy_admin_context, self.system_foo_context,
             self.project_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
 

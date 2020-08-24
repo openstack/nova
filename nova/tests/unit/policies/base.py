@@ -132,14 +132,9 @@ class BasePolicyTest(test.TestCase):
         authorized_response = []
         unauthorize_response = []
 
-        # TODO(gmann): we need to add the new context
-        # self.other_project_reader_context in all tests and then remove
-        # this conditional adjusment.
-        test_context = authorized_contexts + unauthorized_contexts
-        test_context_len = len(test_context)
-        if self.other_project_reader_context not in test_context:
-            test_context_len += 1
-        self.assertEqual(len(self.all_contexts), test_context_len,
+        self.assertEqual(len(self.all_contexts),
+                         len(authorized_contexts) + len(
+                             unauthorized_contexts),
                         "Expected testing context are mismatch. check all "
                         "contexts mentioned in self.all_contexts are tested")
 

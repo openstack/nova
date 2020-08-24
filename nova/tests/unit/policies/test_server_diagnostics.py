@@ -56,7 +56,8 @@ class ServerDiagnosticsPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
     def test_server_diagnostics_policy(self):
@@ -102,7 +103,8 @@ class ServerDiagnosticsNoLegacyPolicyTest(
             self.system_member_context, self.system_reader_context,
             self.system_foo_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
 
@@ -133,5 +135,6 @@ class ServerDiagnosticsOverridePolicyTest(ServerDiagnosticsNoLegacyPolicyTest):
             self.legacy_admin_context, self.system_member_context,
             self.system_reader_context, self.system_foo_context,
             self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context
+            self.project_foo_context, self.project_reader_context,
+            self.other_project_reader_context,
         ]

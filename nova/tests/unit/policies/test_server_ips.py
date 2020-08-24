@@ -60,7 +60,8 @@ class ServerIpsPolicyTest(base.BasePolicyTest):
         # adderesses
         self.reader_or_owner_unauthorized_contexts = [
             self.system_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
     def test_index_ips_policy(self):
@@ -116,4 +117,6 @@ class ServerIpsNoLegacyPolicyTest(ServerIpsScopeTypePolicyTest):
         # get the server IP adderesses.
         self.reader_or_owner_unauthorized_contexts = [
             self.legacy_admin_context, self.project_foo_context,
-            self.system_foo_context, self.other_project_member_context]
+            self.system_foo_context, self.other_project_member_context,
+            self.other_project_reader_context,
+        ]

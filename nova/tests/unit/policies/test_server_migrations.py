@@ -56,6 +56,7 @@ class ServerMigrationsPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
+            self.other_project_reader_context,
             self.project_foo_context, self.project_reader_context
         ]
         # Check that system-reader are able to perform operations
@@ -69,7 +70,9 @@ class ServerMigrationsPolicyTest(base.BasePolicyTest):
         self.reader_unauthorized_contexts = [
             self.system_foo_context, self.other_project_member_context,
             self.project_foo_context, self.project_member_context,
-            self.project_reader_context]
+            self.project_reader_context,
+            self.other_project_reader_context,
+        ]
 
     @mock.patch('nova.compute.api.API.get_migrations_in_progress_by_instance')
     def test_list_server_migrations_policy(self, mock_get):
@@ -145,7 +148,8 @@ class ServerMigrationsNoLegacyPolicyTest(ServerMigrationsScopeTypePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
         # Check that system reader is able to perform operations
         # for server migrations.
@@ -158,6 +162,7 @@ class ServerMigrationsNoLegacyPolicyTest(ServerMigrationsScopeTypePolicyTest):
             self.legacy_admin_context, self.project_admin_context,
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
+            self.other_project_reader_context,
             self.project_foo_context, self.project_reader_context
         ]
 
@@ -195,7 +200,8 @@ class ServerMigrationsOverridePolicyTest(ServerMigrationsNoLegacyPolicyTest):
             self.legacy_admin_context, self.system_member_context,
             self.system_reader_context, self.system_foo_context,
             self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context
+            self.project_foo_context, self.project_reader_context,
+            self.other_project_reader_context,
         ]
         # Check that system reader is able to perform operations
         # for server migrations.
@@ -207,5 +213,6 @@ class ServerMigrationsOverridePolicyTest(ServerMigrationsNoLegacyPolicyTest):
         # for server migrations.
         self.reader_unauthorized_contexts = [
             self.legacy_admin_context, self.system_foo_context,
-            self.other_project_member_context, self.project_foo_context
+            self.other_project_member_context, self.project_foo_context,
+            self.other_project_reader_context,
         ]

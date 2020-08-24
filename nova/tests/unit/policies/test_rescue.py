@@ -59,7 +59,8 @@ class RescueServerPolicyTest(base.BasePolicyTest):
         self.admin_or_owner_unauthorized_contexts = [
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
     @mock.patch('nova.compute.api.API.rescue')
@@ -145,5 +146,6 @@ class RescueServerNoLegacyPolicyTest(RescueServerScopeTypePolicyTest):
             self.legacy_admin_context, self.system_member_context,
             self.system_reader_context, self.system_foo_context,
             self.other_project_member_context, self.project_reader_context,
-            self.project_foo_context
+            self.project_foo_context,
+            self.other_project_reader_context,
         ]

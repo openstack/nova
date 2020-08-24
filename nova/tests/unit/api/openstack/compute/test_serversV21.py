@@ -7041,21 +7041,6 @@ class ServersControllerCreateTestV274(ServersControllerCreateTest):
                                self.req, body=self.body)
         self.assertIn("mutually exclusive", six.text_type(ex))
 
-    def test_create_instance_invalid_policy(self):
-        self._generate_req(host='host', node='node')
-        # non-admin
-        self.req.environ['nova.context'] = fakes.FakeRequestContext(
-            user_id='fake_user',
-            project_id=fakes.FAKE_PROJECT_ID,
-            is_admin=False)
-
-        ex = self.assertRaises(exception.PolicyNotAuthorized,
-                               self.controller.create,
-                               self.req, body=self.body)
-        self.assertIn("Policy doesn't allow compute:servers:create:"
-                      "requested_destination to be performed.",
-                      six.text_type(ex))
-
     def test_create_instance_private_flavor(self):
         # Here we use admin context, so if we do not pass it or
         # we do not anything, the test case will be failed.

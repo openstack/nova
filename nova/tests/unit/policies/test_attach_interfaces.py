@@ -56,7 +56,8 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
         self.admin_unauthorized_contexts = [
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
         self.reader_authorized_contexts = [
@@ -68,7 +69,8 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
 
         self.reader_unauthorized_contexts = [
             self.system_foo_context,
-            self.other_project_member_context
+            self.other_project_member_context,
+            self.other_project_reader_context,
         ]
 
     @mock.patch('nova.compute.api.API.get')
@@ -222,7 +224,9 @@ class AttachInterfacesNoLegacyPolicyTest(AttachInterfacesPolicyTest):
             self.project_foo_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
-            self.other_project_member_context]
+            self.other_project_member_context,
+            self.other_project_reader_context,
+        ]
 
         # Check that system reader or projct is able to
         # create or delete interfaces.
@@ -230,12 +234,13 @@ class AttachInterfacesNoLegacyPolicyTest(AttachInterfacesPolicyTest):
             self.system_admin_context,
             self.project_admin_context, self.system_member_context,
             self.system_reader_context, self.project_reader_context,
-            self.project_member_context,
+            self.project_member_context
         ]
 
         # Check that non-system reader nd non-admin/owner is not able to
         # create or delete interfaces.
         self.reader_unauthorized_contexts = [
             self.legacy_admin_context, self.project_foo_context,
-            self.system_foo_context, self.other_project_member_context
+            self.system_foo_context, self.other_project_member_context,
+            self.other_project_reader_context,
         ]

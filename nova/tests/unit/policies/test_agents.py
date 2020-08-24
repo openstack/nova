@@ -44,6 +44,7 @@ class AgentsPolicyTest(base.BasePolicyTest):
             self.system_member_context, self.system_reader_context,
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
+            self.other_project_reader_context,
             self.project_foo_context, self.project_reader_context
         ]
 
@@ -63,7 +64,8 @@ class AgentsPolicyTest(base.BasePolicyTest):
         self.reader_unauthorized_contexts = [
             self.system_foo_context, self.other_project_member_context,
             self.project_foo_context, self.project_member_context,
-            self.project_reader_context]
+            self.project_reader_context, self.other_project_reader_context,
+        ]
 
     @mock.patch('nova.db.api.agent_build_destroy')
     def test_delete_agent_policy(self, mock_delete):
@@ -142,7 +144,8 @@ class AgentsScopeTypePolicyTest(AgentsPolicyTest):
             self.system_reader_context, self.project_admin_context,
             self.system_foo_context, self.project_member_context,
             self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context
+            self.project_foo_context, self.project_reader_context,
+            self.other_project_reader_context,
         ]
 
         # Check that system admin, member and reader are able to read the
@@ -156,7 +159,8 @@ class AgentsScopeTypePolicyTest(AgentsPolicyTest):
             self.system_foo_context, self.legacy_admin_context,
             self.project_admin_context, self.project_member_context,
             self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context
+            self.project_foo_context, self.project_reader_context,
+            self.other_project_reader_context,
         ]
 
 

@@ -22,6 +22,7 @@ policy_data = """
     "os_compute_api:servers:create:attach_volume": "",
     "os_compute_api:servers:create:attach_network": "",
     "os_compute_api:servers:create:forced_host": "",
+    "compute:servers:create:requested_destination": "",
     "os_compute_api:servers:create:trusted_certs": "",
     "os_compute_api:servers:create_image": "",
     "os_compute_api:servers:create_image:allow_volume_backed": "",
