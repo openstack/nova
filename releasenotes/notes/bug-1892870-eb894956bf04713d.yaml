@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    Resolve a race condition that may occur during concurrent
+    ``interface detach/attach``, resulting in an interface accidentally unbind
+    after attached. See `bug 1892870`_ for more details.
+
+    .. _bug 1892870: https://bugs.launchpad.net/nova/+bug/1892870

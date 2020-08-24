@@ -7481,6 +7481,19 @@ class ComputeManager(manager.Manager):
     def attach_interface(self, context, instance, network_id, port_id,
                          requested_ip, tag):
         """Use hotplug to add an network adapter to an instance."""
+        lockname = 'interface-%s-%s' % (instance.uuid, port_id)
+
+        @utils.synchronized(lockname)
+        def do_attach_interface(context, instance, network_id, port_id,
+                                requested_ip, tag):
+            return self._attach_interface(context, instance, network_id,
+                                port_id, requested_ip, tag)
+
+        return do_attach_interface(context, instance, network_id, port_id,
+                                   requested_ip, tag)
+
+    def _attach_interface(self, context, instance, network_id, port_id,
+                          requested_ip, tag):
         if not self.driver.capabilities.get('supports_attach_interface',
                                             False):
             raise exception.AttachInterfaceNotSupported(
@@ -7540,6 +7553,18 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def detach_interface(self, context, instance, port_id):
         """Detach a network adapter from an instance."""
+        lockname = 'interface-%s-%s' % (instance.uuid, port_id)
+
+        @utils.synchronized(lockname)
+        def do_detach_interface(context, instance, port_id):
+            self._detach_interface(context, instance, port_id)
+
+        do_detach_interface(context, instance, port_id)
+
+    def _detach_interface(self, context, instance, port_id):
+        # NOTE(aarents): we need to refresh info cache from DB here,
+        # as previous detach/attach lock holder just updated it.
+        compute_utils.refresh_info_cache_for_instance(context, instance)
         network_info = instance.info_cache.network_info
         condemned = None
         for vif in network_info:

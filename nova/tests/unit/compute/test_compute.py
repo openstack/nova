@@ -10285,11 +10285,15 @@ class ComputeAPITestCase(BaseTestCase):
         network_id = nwinfo[0]['network']['id']
         port_id = nwinfo[0]['id']
         req_ip = '1.2.3.4'
+        lock_name = 'interface-%s-%s' % (instance.uuid, port_id)
         mock_allocate = mock.Mock(return_value=nwinfo)
         self.compute.network_api.allocate_port_for_instance = mock_allocate
 
-        with mock.patch.dict(self.compute.driver.capabilities,
-                             supports_attach_interface=True):
+        with test.nested(
+            mock.patch.dict(self.compute.driver.capabilities,
+                             supports_attach_interface=True),
+            mock.patch('oslo_concurrency.lockutils.lock')
+        ) as (cap, mock_lock):
             vif = self.compute.attach_interface(self.context,
                                                 instance,
                                                 network_id,
@@ -10304,6 +10308,9 @@ class ComputeAPITestCase(BaseTestCase):
                       action='interface_attach', phase='start'),
             mock.call(self.context, instance, self.compute.host,
                       action='interface_attach', phase='end')])
+        mock_lock.assert_called_once_with(lock_name, mock.ANY, mock.ANY,
+                mock.ANY, delay=mock.ANY, do_log=mock.ANY, fair=mock.ANY,
+                semaphores=mock.ANY)
         return nwinfo, port_id
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
@@ -10401,6 +10408,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.context, uuids.info_cache_instance)
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
             nwinfo)
+        lock_name = 'interface-%s-%s' % (instance.uuid, port_id)
 
         port_allocation = {uuids.rp1: {'NET_BW_EGR_KILOBIT_PER_SEC': 10000}}
         with test.nested(
@@ -10409,8 +10417,9 @@ class ComputeAPITestCase(BaseTestCase):
                     'remove_resources_from_instance_allocation'),
                 mock.patch.object(self.compute.network_api,
                     'deallocate_port_for_instance',
-                    return_value=([], port_allocation))) as (
-                mock_remove_alloc, mock_deallocate):
+                    return_value=([], port_allocation)),
+                mock.patch('oslo_concurrency.lockutils.lock')) as (
+                mock_remove_alloc, mock_deallocate, mock_lock):
             self.compute.detach_interface(self.context, instance, port_id)
 
             mock_deallocate.assert_called_once_with(
@@ -10424,6 +10433,9 @@ class ComputeAPITestCase(BaseTestCase):
                       action='interface_detach', phase='start'),
             mock.call(self.context, instance, self.compute.host,
                       action='interface_detach', phase='end')])
+        mock_lock.assert_called_once_with(lock_name, mock.ANY, mock.ANY,
+                mock.ANY, delay=mock.ANY, do_log=mock.ANY, fair=mock.ANY,
+                semaphores=mock.ANY)
 
     @mock.patch('nova.compute.manager.LOG.log')
     def test_detach_interface_failed(self, mock_log):
