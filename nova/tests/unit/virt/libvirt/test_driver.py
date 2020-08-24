@@ -16809,7 +16809,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertRaises(fakelibvirt.libvirtError, conn._destroy,
                               instance)
 
-    def test_private_destroy_ebusy_timeout(self):
+    @mock.patch.object(
+        fakelibvirt.Connection, 'getLibVersion',
+        return_value=versionutils.convert_version_to_int(
+            libvirt_driver.MIN_LIBVIRT_BETTER_SIGKILL_HANDLING) - 1)
+    def test_private_destroy_ebusy_timeout(self, mock_get_ver):
         # Tests that _destroy will retry 6 times to destroy the guest when an
         # EBUSY is raised, but eventually times out and raises the libvirtError
         ex = fakelibvirt.make_libvirtError(
@@ -16832,7 +16836,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(6, mock_guest.poweroff.call_count)
 
-    def test_private_destroy_ebusy_multiple_attempt_ok(self):
+    @mock.patch.object(
+        fakelibvirt.Connection, 'getLibVersion',
+        return_value=versionutils.convert_version_to_int(
+            libvirt_driver.MIN_LIBVIRT_BETTER_SIGKILL_HANDLING) - 1)
+    def test_private_destroy_ebusy_multiple_attempt_ok(self, mock_get_ver):
         # Tests that the _destroy attempt loop is broken when EBUSY is no
         # longer raised.
         ex = fakelibvirt.make_libvirtError(
