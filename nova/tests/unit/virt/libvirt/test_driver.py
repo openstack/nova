@@ -11600,6 +11600,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_disks': disk_paths,
             'bandwidth': _bandwidth,
             'destination_xml': target_xml,
+            'persistent_xml': target_xml,
         }
 
         # start test
@@ -11710,7 +11711,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_disks': disk_paths,
             'migrate_uri': 'tcp://127.0.0.2',
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
-            'destination_xml': target_xml
+            'destination_xml': target_xml,
+            'persistent_xml': target_xml,
         }
 
         # Start test
@@ -11869,6 +11871,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_uri': 'tcp://127.0.0.2',
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
             'destination_xml': target_xml,
+            'persistent_xml': target_xml,
         }
 
         # start test
@@ -12229,6 +12232,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_disks': ['vda', 'vdb'],
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
             'destination_xml': target_xml,
+            'persistent_xml': target_xml,
         }
 
         # start test
@@ -12357,6 +12361,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_disks': device_names,
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
             'destination_xml': '<xml/>',
+            'persistent_xml': '<xml/>',
         }
         if not params['migrate_disks']:
             del params['migrate_disks']
@@ -12498,6 +12503,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_disks': disk_paths,
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
             'destination_xml': '<xml/>',
+            'persistent_xml': '<xml/>',
         }
 
         # Prepare mocks
