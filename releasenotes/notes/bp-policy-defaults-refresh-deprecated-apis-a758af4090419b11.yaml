@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    All APIs except deprecated APIs were modified to implement ``scope_type``
+    and use new defaults in 21.0.0 (Ussuri). The remaining APIs
+    have now been updated.
+
+    Refer to the `Nova Policy Concepts <https://docs.openstack.org/nova/latest/configuration/policy-concepts.html>`_
+    for details and migration plan.
