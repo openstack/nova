@@ -926,3 +926,26 @@ Numbered groupings of resource classes and traits
     See `Granular Resource Request Syntax`_ for more details.
 
 .. _Granular Resource Request Syntax: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/granular-resource-requests.html
+
+.. _vtpm-flavor:
+
+Emulated Virtual TPM
+  If supported by the compute host, you can add an :doc:`emulated trusted
+  platform module (TPM) </admin/emulated-tpm>` to the guest OS.
+
+  .. code:: console
+
+     $ openstack flavor set FLAVOR-NAME \
+         --property hw:tpm_version=$VERSION \
+         --property hw:tpm_model=$MODEL
+
+  ``hw:tpm_version`` is required to enable support. Valid ``$VERSION`` values
+  are:
+
+  - ``1.2`` : Selects TPM version 1.2 support.
+  - ``2.0`` : Selects TPM version 2.0 support.
+
+  ``hw:tpm_model`` is optional. Valid ``$MODEL`` values are:
+
+  - ``tpm-tis``: Selects TIS device model. This is the default value.
+  - ``tpm-crb``: Selects CRB device model. Only valid for TPM version 2.0.

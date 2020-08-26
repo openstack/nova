@@ -112,6 +112,7 @@ instance for these kind of workloads.
    file-backed-memory
    ports-with-resource-requests
    virtual-persistent-memory
+   emulated-tpm
 
 
 Additional guides
