@@ -1569,6 +1569,96 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                             profile_spec='fake_profile_spec')
         self.assertEqual(['fake_profile_spec'], create_spec.vmProfile)
 
+    def test_vm_create_spec_with_multi_vifs(self):
+        datastore = ds_obj.Datastore('fake-ds-ref', 'fake-ds-name')
+        extra_specs = vm_util.ExtraSpecs()
+        vif_info = {'network_name': 'br100',
+            'mac_address': '00:00:00:ca:fe:01',
+            'network_ref': {'type': 'DistributedVirtualPortgroup',
+                            'dvsw': 'fake-network-id1',
+                            'dvpg': 'fake-group'},
+            'iface_id': 7,
+            'vif_model': 'VirtualE1000'}
+        vif_info2 = {'network_name': 'br101',
+            'mac_address': '00:00:00:ca:fe:02',
+            'network_ref': {'type': 'DistributedVirtualPortgroup',
+                            'dvsw': 'fake-network-id2',
+                            'dvpg': 'fake-group'},
+            'iface_id': 7,
+            'vif_model': 'VirtualE1000'}
+        create_spec = vm_util.get_vm_create_spec(fake.FakeFactory(),
+                                            self._instance,
+                                            datastore.name,
+                                            [vif_info, vif_info2],
+                                            extra_specs)
+
+        port = 'ns0:DistributedVirtualSwitchPortConnection'
+        backing = 'ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo'
+
+        device_changes = []
+        fake_factory = fake.FakeFactory()
+        device_change = fake_factory.create('ns0:VirtualDeviceConfigSpec')
+        device_change.operation = 'add'
+
+        device = fake_factory.create('ns0:VirtualE1000')
+        device.key = -47
+        device.macAddress = '00:00:00:ca:fe:01'
+        device.addressType = 'manual'
+        device.wakeOnLanEnabled = True
+
+        device.backing = fake_factory.create(backing)
+        device.backing.port = fake_factory.create(port)
+        device.backing.port.portgroupKey = 'fake-group'
+        device.backing.port.switchUuid = 'fake-network-id1'
+
+        device.resourceAllocation = fake_factory.create(
+            'ns0:VirtualEthernetCardResourceAllocation')
+        device.resourceAllocation.share = fake_factory.create(
+            'ns0:SharesInfo')
+        device.resourceAllocation.share.level = None
+        device.resourceAllocation.share.shares = None
+
+        connectable = fake_factory.create('ns0:VirtualDeviceConnectInfo')
+        connectable.allowGuestControl = True
+        connectable.connected = True
+        connectable.startConnected = True
+        device.connectable = connectable
+        device_change.device = device
+
+        device_changes.append(device_change)
+
+        device_change = fake_factory.create('ns0:VirtualDeviceConfigSpec')
+        device_change.operation = 'add'
+
+        device = fake_factory.create('ns0:VirtualE1000')
+        device.key = -48
+        device.macAddress = '00:00:00:ca:fe:02'
+        device.addressType = 'manual'
+        device.wakeOnLanEnabled = True
+
+        device.backing = fake_factory.create(backing)
+        device.backing.port = fake_factory.create(port)
+        device.backing.port.portgroupKey = 'fake-group'
+        device.backing.port.switchUuid = 'fake-network-id2'
+
+        device.resourceAllocation = fake_factory.create(
+            'ns0:VirtualEthernetCardResourceAllocation')
+        device.resourceAllocation.share = fake_factory.create(
+            'ns0:SharesInfo')
+        device.resourceAllocation.share.level = None
+        device.resourceAllocation.share.shares = None
+
+        connectable = fake_factory.create('ns0:VirtualDeviceConnectInfo')
+        connectable.allowGuestControl = True
+        connectable.connected = True
+        connectable.startConnected = True
+        device.connectable = connectable
+        device_change.device = device
+
+        device_changes.append(device_change)
+
+        self.assertEqual(device_changes, create_spec.deviceChange)
+
     @mock.patch.object(pbm, 'get_profile_id_by_name')
     def test_get_storage_profile_spec(self, mock_retrieve_profile_id):
         fake_profile_id = fake.DataObject()
