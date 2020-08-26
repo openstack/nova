@@ -28,8 +28,8 @@ from nova import manager
 from nova.objects.aggregate import AggregateList
 from nova.objects.cell_mapping import CellMappingList
 from nova.objects.compute_node import ComputeNodeList
-from nova.objects import fields
 from nova.objects.host_mapping import HostMappingList
+from nova import rc_fields
 from nova.scheduler import client as scheduler_client
 from nova.scheduler.client.report import get_placement_request_id
 from nova.scheduler.client.report import NESTED_PROVIDER_API_VERSION
@@ -40,7 +40,7 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
-MEMORY_MB = fields.ResourceClass.MEMORY_MB
+MEMORY_MB = rc_fields.ResourceClass.MEMORY_MB
 BIGVM_RESOURCE = special_spawning.BIGVM_RESOURCE
 VMWARE_HV_TYPE = 'VMware vCenter Server'
 SHARD_PREFIX = 'vc-'
@@ -566,7 +566,7 @@ class BigVmManager(manager.Manager):
 
         # Auto-create custom resource classes coming from a virt driver
         for rc_name in inv_data:
-            if rc_name not in fields.ResourceClass.STANDARD:
+            if rc_name not in rc_fields.ResourceClass.STANDARD:
                 client._ensure_resource_class(context, rc_name)
 
         if client._update_inventory(context, rp_uuid, inv_data):
