@@ -1157,13 +1157,6 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
         server = self.api.post_server({'server': basic_server})
         return self._wait_for_state_change(server, 'ACTIVE')
 
-    def _rebuild_server(self, active_server, image_ref):
-        args = {"rebuild": {"imageRef": image_ref}}
-        self.api.api_post(
-            'servers/%s/action' % active_server['id'], args)
-        fake_notifier.wait_for_versioned_notifications('instance.rebuild.end')
-        return self._wait_for_state_change(active_server, 'ACTIVE')
-
     def test_rebuild_server_with_numa(self):
         """Create a NUMA instance and ensure it can be rebuilt.
         """

@@ -20,8 +20,8 @@ from nova.tests.unit import policy_fixture
 
 
 class RegressionTest1835822(
-        test.TestCase, integrated_helpers.InstanceHelperMixin):
-    # ---------------------------- setup ----------------------------
+    test.TestCase, integrated_helpers.InstanceHelperMixin,
+):
 
     def setUp(self):
         super(RegressionTest1835822, self).setUp()
@@ -44,7 +44,6 @@ class RegressionTest1835822(
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
-    # ---------------------------- helpers ----------------------------
     def _create_active_server(self, server_args=None):
         basic_server = {
             'flavorRef': 1,
@@ -59,22 +58,6 @@ class RegressionTest1835822(
         server = self.api.post_server({'server': basic_server})
         return self._wait_for_state_change(server, 'ACTIVE')
 
-    def _rebuild_server(self, active_server):
-        args = {"rebuild": {"imageRef": self.image_ref_1}}
-        self.api.api_post('servers/%s/action' %
-                          active_server['id'], args)
-        fake_notifier.wait_for_versioned_notifications('instance.rebuild.end')
-        return self._wait_for_state_change(active_server, 'ACTIVE')
-
-    def _shelve_server(self, active_server):
-        self.api.post_server_action(active_server['id'], {'shelve': {}})
-        return self._wait_for_state_change(active_server, 'SHELVED_OFFLOADED')
-
-    def _unshelve_server(self, shelved_server):
-        self.api.post_server_action(shelved_server['id'], {'unshelve': {}})
-        return self._wait_for_state_change(shelved_server, 'ACTIVE')
-
-    # ---------------------------- tests ----------------------------
     def test_create_server_with_config_drive(self):
         """Verify that we can create a server with a config drive.
         """
@@ -149,13 +132,15 @@ class RegressionTest1835822(
         # this server was created with force_config_drive=true
         # so assert now that force_config_drive is false it does
         # not override the value it was booted with.
-        with_config_drive = self._rebuild_server(with_config_drive)
+        with_config_drive = self._rebuild_server(
+            with_config_drive, self.image_ref_1)
         self.assertTrue(with_config_drive['config_drive'])
 
         # this server was booted with force_config_drive=False so
         # assert that it's config drive setting is not overridden
         self.flags(force_config_drive=True)
-        without_config_drive = self._rebuild_server(without_config_drive)
+        without_config_drive = self._rebuild_server(
+            without_config_drive, self.image_ref_1)
         self.assertEqual('', without_config_drive['config_drive'])
 
     def test_create_server_config_drive_shelve_unshelve_conf_change(self):
