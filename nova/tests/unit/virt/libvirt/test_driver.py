@@ -84,6 +84,7 @@ from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 import nova.privsep.fs
 import nova.privsep.libvirt
+from nova.storage import rbd_utils
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_block_device
@@ -118,7 +119,6 @@ from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import migration as libvirt_migrate
 from nova.virt.libvirt.storage import dmcrypt
 from nova.virt.libvirt.storage import lvm
-from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt.libvirt.volume import fs as fs_drivers
@@ -23148,7 +23148,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertFalse(mock_inject.called)
 
     @mock.patch('nova.virt.libvirt.utils.fetch_image')
-    @mock.patch('nova.virt.libvirt.storage.rbd_utils.RBDDriver')
+    @mock.patch('nova.storage.rbd_utils.RBDDriver')
     @mock.patch.object(imagebackend, 'IMAGE_API')
     def test_create_fetch_image_ceph_workaround(self, mock_image, mock_rbd,
                                                 mock_fetch):

@@ -38,6 +38,7 @@ from nova.i18n import _
 from nova.image import glance
 import nova.privsep.libvirt
 import nova.privsep.path
+from nova.storage import rbd_utils
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt.image import model as imgmodel
@@ -45,7 +46,6 @@ from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt.storage import dmcrypt
 from nova.virt.libvirt.storage import lvm
-from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = nova.conf.CONF

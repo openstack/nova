@@ -35,6 +35,7 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
+from nova.storage import rbd_utils
 from nova import test
 from nova.tests.unit import fake_processutils
 from nova import utils
@@ -42,7 +43,6 @@ from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import imagebackend
-from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = nova.conf.CONF
@@ -1894,7 +1894,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         mock_imgapi.copy_image_to_store.assert_called_once_with(
             self.CONTEXT, 'foo', 'store')
 
-    @mock.patch('nova.virt.libvirt.storage.rbd_utils.RBDDriver')
+    @mock.patch('nova.storage.rbd_utils.RBDDriver')
     @mock.patch('nova.virt.libvirt.imagebackend.IMAGE_API')
     def test_clone_copy_to_store(self, mock_imgapi, mock_driver_):
         # Call image.clone() in a way that will cause it to fall through
@@ -1921,7 +1921,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             # recursed after the copy-to-store operation
             mock.call('fake', fake_image)])
 
-    @mock.patch('nova.virt.libvirt.storage.rbd_utils.RBDDriver')
+    @mock.patch('nova.storage.rbd_utils.RBDDriver')
     @mock.patch('nova.virt.libvirt.imagebackend.IMAGE_API')
     def test_clone_copy_to_store_failed(self, mock_imgapi, mock_driver_):
         # Call image.clone() in a way that will cause it to fall through
@@ -1950,7 +1950,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             # recursed after the copy-to-store operation
             mock.call('fake', fake_image)])
 
-    @mock.patch('nova.virt.libvirt.storage.rbd_utils.RBDDriver')
+    @mock.patch('nova.storage.rbd_utils.RBDDriver')
     @mock.patch('nova.virt.libvirt.imagebackend.IMAGE_API')
     def test_clone_without_needed_copy(self, mock_imgapi, mock_driver_):
         # Call image.clone() in a way that will cause it to pass the locations
@@ -1971,7 +1971,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             mock_copy.assert_not_called()
         mock_driver.is_cloneable.assert_called_once_with('fake', fake_image)
 
-    @mock.patch('nova.virt.libvirt.storage.rbd_utils.RBDDriver')
+    @mock.patch('nova.storage.rbd_utils.RBDDriver')
     @mock.patch('nova.virt.libvirt.imagebackend.IMAGE_API')
     def test_clone_copy_not_configured(self, mock_imgapi, mock_driver_):
         # Call image.clone() in a way that will cause it to fail the locations

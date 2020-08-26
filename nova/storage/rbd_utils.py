@@ -34,12 +34,13 @@ from oslo_utils import excutils
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.virt.libvirt import utils as libvirt_utils
 
 
 CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
+
+RESIZE_SNAPSHOT_NAME = 'nova-resize'
 
 
 class RbdProxy(object):
@@ -342,7 +343,7 @@ class RBDDriver(object):
                 RbdProxy().remove(ioctx, volume)
                 raise loopingcall.LoopingCallDone(retvalue=False)
             except rbd.ImageHasSnapshots:
-                self.remove_snap(volume, libvirt_utils.RESIZE_SNAPSHOT_NAME,
+                self.remove_snap(volume, RESIZE_SNAPSHOT_NAME,
                                  ignore_errors=True)
             except (rbd.ImageBusy, rbd.ImageHasSnapshots):
                 LOG.warning('rbd remove %(volume)s in pool %(pool)s failed',
