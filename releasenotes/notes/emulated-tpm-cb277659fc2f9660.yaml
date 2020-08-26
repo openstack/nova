@@ -2,8 +2,8 @@
 features:
   - |
     Nova now supports adding an emulated virtual `Trusted Platform Module`__ to
-    libvirt guests with a ``virt_type`` of ``kvm`` or ``qemu``. See the
-    documentation__ for details.
+    libvirt guests with a ``virt_type`` of ``kvm`` or ``qemu``. Not all server
+    operations are fully supported yet. See the documentation__ for details.
 
     .. __: https://en.wikipedia.org/wiki/Trusted_Platform_Module
     .. __: https://docs.openstack.org/nova/latest/admin/emulated-tpm.rst
