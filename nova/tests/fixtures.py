@@ -324,8 +324,12 @@ class SingleCellSimple(fixtures.Fixture):
 
     @contextmanager
     def _fake_target_cell(self, context, target_cell):
-        # NOTE(danms): Just pass through the context without actually
-        # targeting anything.
+        # Just do something simple and set/unset the cell_uuid on the context.
+        if target_cell:
+            context.cell_uuid = getattr(target_cell, 'uuid',
+                                        uuidsentinel.cell1)
+        else:
+            context.cell_uuid = None
         yield context
 
     def _fake_set_target_cell(self, context, cell_mapping):

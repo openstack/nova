@@ -963,6 +963,10 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
             server2['id'], {'migrate': {'host': 'host2'}})
         self._wait_for_migration_status(server2, ['error'])
 
+    @mock.patch('nova.compute.api.API._get_source_compute_service',
+        new=mock.Mock())
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+        new=mock.Mock(return_value=True))
     def test_poll_unconfirmed_resizes_with_upcall(self):
         """Tests the _poll_unconfirmed_resizes periodic task with a cross-cell
         resize once the instance is in VERIFY_RESIZE status on the dest host.
@@ -993,6 +997,10 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self._assert_confirm(
             server, source_rp_uuid, target_rp_uuid, new_flavor)
 
+    @mock.patch('nova.compute.api.API._get_source_compute_service',
+        new=mock.Mock())
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+        new=mock.Mock(return_value=True))
     def test_poll_unconfirmed_resizes_with_no_upcall(self):
         """Tests the _poll_unconfirmed_resizes periodic task with a cross-cell
         resize once the instance is in VERIFY_RESIZE status on the dest host.

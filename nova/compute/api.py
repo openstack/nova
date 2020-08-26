@@ -3775,10 +3775,40 @@ class API(base.Base):
                                               migration.dest_compute,
                                               reqspec)
 
+    @staticmethod
+    def _get_source_compute_service(context, migration):
+        """Find the source compute Service object given the Migration.
+
+        :param context: nova auth RequestContext target at the destination
+            compute cell
+        :param migration: Migration object for the move operation
+        :return: Service object representing the source host nova-compute
+        """
+        if migration.cross_cell_move:
+            # The source compute could be in another cell so look up the
+            # HostMapping to determine the source cell.
+            hm = objects.HostMapping.get_by_host(
+                context, migration.source_compute)
+            with nova_context.target_cell(context, hm.cell_mapping) as cctxt:
+                return objects.Service.get_by_compute_host(
+                    cctxt, migration.source_compute)
+        # Same-cell migration so just use the context we have.
+        return objects.Service.get_by_compute_host(
+            context, migration.source_compute)
+
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.RESIZED])
     def confirm_resize(self, context, instance, migration=None):
-        """Confirms a migration/resize and deletes the 'old' instance."""
+        """Confirms a migration/resize and deletes the 'old' instance.
+
+        :param context: nova auth RequestContext
+        :param instance: Instance object to confirm the resize
+        :param migration: Migration object; provided if called from the
+            _poll_unconfirmed_resizes periodic task on the dest compute.
+        :raises: MigrationNotFound if migration is not provided and a migration
+            cannot be found for the instance with status "finished".
+        :raises: ServiceUnavailable if the source compute service is down.
+        """
         elevated = context.elevated()
         # NOTE(melwitt): We're not checking quota here because there isn't a
         # change in resource usage when confirming a resize. Resource
@@ -3788,6 +3818,13 @@ class API(base.Base):
         if migration is None:
             migration = objects.Migration.get_by_instance_and_status(
                 elevated, instance.uuid, 'finished')
+
+        # Check if the source compute service is up before modifying the
+        # migration record because once we do we cannot come back through this
+        # method since it will be looking for a "finished" status migration.
+        source_svc = self._get_source_compute_service(context, migration)
+        if not self.servicegroup_api.service_is_up(source_svc):
+            raise exception.ServiceUnavailable()
 
         migration.status = 'confirming'
         migration.save()

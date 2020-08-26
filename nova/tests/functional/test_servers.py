@@ -46,7 +46,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_requests
@@ -3359,34 +3358,37 @@ class PollUnconfirmedResizesTest(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.put_service(
             source_service['id'], {'status': 'disabled', 'forced_down': True})
         # Now configure auto-confirm and call the method on the target compute
-        # so we do not have to wait for the periodic to run. Also configure
-        # the RPC call from the API to the source compute to timeout after 1
-        # second.
-        self.flags(resize_confirm_window=1, rpc_response_timeout=1)
+        # so we do not have to wait for the periodic to run.
+        self.flags(resize_confirm_window=1)
         # Stub timeutils so the DB API query finds the unconfirmed migration.
         future = timeutils.utcnow() + datetime.timedelta(hours=1)
         ctxt = context.get_admin_context()
         with osloutils_fixture.TimeFixture(future):
-            # Use the CastAsCall fixture since the fake rpc is not going to
-            # simulate a failure from the service being down.
-            with cast_as_call.CastAsCall(self):
-                self.computes['host2'].manager._poll_unconfirmed_resizes(ctxt)
+            self.computes['host2'].manager._poll_unconfirmed_resizes(ctxt)
         self.assertIn('Error auto-confirming resize',
                       self.stdlog.logger.output)
-        self.assertIn('No reply on topic compute', self.stdlog.logger.output)
-        # FIXME(mriedem): This is bug 1855927 where the migration status is
-        # left in "confirming" so the _poll_unconfirmed_resizes task will not
-        # process it again nor can the user confirm the resize in the API since
-        # the migration status is not "finished".
-        self._wait_for_migration_status(server, ['confirming'])
+        self.assertIn('Service is unavailable at this time',
+                      self.stdlog.logger.output)
+        # The source compute service check should have been done before the
+        # migration status was updated so it should still be "finished".
+        self._wait_for_migration_status(server, ['finished'])
+        # Try to confirm in the API while the source compute service is still
+        # down to assert the 409 (rather than a 500) error.
         ex = self.assertRaises(client.OpenStackApiException,
                                self.api.post_server_action,
                                server['id'], {'confirmResize': None})
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('Instance has not been resized', six.text_type(ex))
-        # That error message is bogus because the server is resized.
-        server = self.api.get_server(server['id'])
-        self.assertEqual('VERIFY_RESIZE', server['status'])
+        self.assertEqual(409, ex.response.status_code)
+        self.assertIn('Service is unavailable at this time', six.text_type(ex))
+        # Bring the source compute back up and try to confirm the resize which
+        # should work since the migration status is still "finished".
+        self.restart_compute_service(self.computes['host1'])
+        self.api.put_service(
+            source_service['id'], {'status': 'enabled', 'forced_down': False})
+        # Use the API to confirm the resize because _poll_unconfirmed_resizes
+        # requires mucking with the current time which causes problems with
+        # the service_is_up check in the API.
+        self.api.post_server_action(server['id'], {'confirmResize': None})
+        self._wait_for_state_change(server, 'ACTIVE')
 
 
 class ServerLiveMigrateForceAndAbort(
