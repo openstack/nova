@@ -140,6 +140,16 @@ class RescueTestV21(test.NoDBTestCase):
                           self.fake_req, UUID, body=body)
         self.assertTrue(mock_rescue.called)
 
+    @mock.patch.object(compute.api.API, "rescue",
+        side_effect=exception.UnsupportedRescueImage(image='fake'))
+    def test_rescue_raises_unsupported_image(self, mock_rescue):
+        body = dict(rescue=None)
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._rescue,
+                          self.fake_req, UUID, body=body)
+        self.assertTrue(mock_rescue.called)
+
     def test_rescue_with_bad_image_specified(self):
         body = {"rescue": {"adminPass": "ABC123",
                            "rescue_image_ref": "img-id"}}
