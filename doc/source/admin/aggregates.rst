@@ -336,14 +336,11 @@ related availability zones feature operate under the hood:
 Finally, as discussed previously, there are a number of host aggregate-specific
 scheduler filters. These are:
 
-- :ref:`AggregateCoreFilter`
-- :ref:`AggregateDiskFilter`
 - :ref:`AggregateImagePropertiesIsolation`
 - :ref:`AggregateInstanceExtraSpecsFilter`
 - :ref:`AggregateIoOpsFilter`
 - :ref:`AggregateMultiTenancyIsolation`
 - :ref:`AggregateNumInstancesFilter`
-- :ref:`AggregateRamFilter`
 - :ref:`AggregateTypeAffinityFilter`
 
 The following configuration options are applicable to the scheduler

@@ -1,0 +1,21 @@
+---
+upgrade:
+  - |
+    The following deprecated scheduler filters have been removed.
+
+    RetryFilter
+      Deprecated in Train (20.0.0). The RetryFilter has
+      not been requied since Queens following the completion of the
+      return-alternate-hosts blueprint
+
+    Aggregatefilter, AggregateRAMFilter, AggregateDiskFilter
+      Deprecated in Train (20.0.0). These filters have not worked
+      correctly since the introduction of placement in ocata.
+
+    On upgrade operators should ensure they have not configured
+    any of the new removed filters and instead should use placement
+    to control cpu, ram and disk allocation ratios.
+
+    Refer to the `config reference documentation`__ for more information.
+
+    .. __: https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html#allocation-ratios
