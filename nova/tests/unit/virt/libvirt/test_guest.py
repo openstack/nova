@@ -682,6 +682,7 @@ class GuestTestCase(test.NoDBTestCase):
                 'an-uri', flags=1, params={'migrate_uri': 'dest-uri',
                                            'migrate_disks': 'disk1',
                                            'destination_xml': '</xml>',
+                                           'persistent_xml': '</xml>',
                                            'bandwidth': 2})
 
     @testtools.skipIf(not six.PY2, 'libvirt python3 bindings accept unicode')
@@ -699,6 +700,7 @@ class GuestTestCase(test.NoDBTestCase):
                                            'migrate_disks': ['disk1',
                                                              'disk2'],
                                            'destination_xml': expect_dest_xml,
+                                           'persistent_xml': expect_dest_xml,
                                            'bandwidth': 2})
 
     def test_abort_job(self):
