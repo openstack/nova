@@ -42,7 +42,7 @@ Possible values:
 * A list where each element is an allowed origin hostnames, else an empty list
 """),
     cfg.StrOpt('ssl_ciphers',
-               help="""
+        help="""
 OpenSSL cipher preference string that specifies what ciphers to allow for TLS
 connections from clients.  For example::
 
@@ -59,19 +59,19 @@ Related options:
 * [DEFAULT] key
 """),
     cfg.StrOpt('ssl_minimum_version',
-               default='default',
-               choices=[
-               # These values must align with SSL_OPTIONS in
-               # websockify/websocketproxy.py
-                   ('default', 'Use the underlying system OpenSSL defaults'),
-                   ('tlsv1_1',
-                    'Require TLS v1.1 or greater for TLS connections'),
-                   ('tlsv1_2',
-                    'Require TLS v1.2 or greater for TLS connections'),
-                   ('tlsv1_3',
-                    'Require TLS v1.3 or greater for TLS connections'),
-               ],
-               help="""
+        default='default',
+        choices=[
+        # These values must align with SSL_OPTIONS in
+        # websockify/websocketproxy.py
+            ('default', 'Use the underlying system OpenSSL defaults'),
+            ('tlsv1_1',
+             'Require TLS v1.1 or greater for TLS connections'),
+            ('tlsv1_2',
+             'Require TLS v1.2 or greater for TLS connections'),
+            ('tlsv1_3',
+             'Require TLS v1.3 or greater for TLS connections'),
+        ],
+        help="""
 Minimum allowed SSL/TLS protocol version.
 
 Related options:
