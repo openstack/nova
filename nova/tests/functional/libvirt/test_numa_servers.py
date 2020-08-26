@@ -258,6 +258,46 @@ class NUMAServersTest(NUMAServersTestBase):
 
         self._run_build_test(flavor_id, expected_usage=expected_usage)
 
+    def test_create_server_with_isolate_thread_policy_old_configuration(self):
+        """Create a server with the legacy 'hw:cpu_thread_policy=isolate' extra
+        spec and configuration.
+
+        This should pass and result in an instance consuming $flavor.vcpu host
+        cores plus the thread sibling(s) of each of these cores. We also be
+        consuming VCPUs since we're on legacy configuration here, though that
+        would in theory be fixed during a later reshape.
+        """
+        self.flags(
+            cpu_dedicated_set=None, cpu_shared_set=None, group='compute')
+        self.flags(vcpu_pin_set='0-3')
+
+        # host has hyperthreads, which means we're going to end up consuming
+        # $flavor.vcpu hosts cores plus the thread sibling(s) for each core
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=1, cpu_sockets=1, cpu_cores=2, cpu_threads=2,
+            kB_mem=(1024 * 1024 * 16),  # GB
+        )
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'hw:cpu_thread_policy': 'isolate',
+        }
+        flavor_id = self._create_flavor(vcpu=2, extra_spec=extra_spec)
+
+        expected_usage = {'DISK_GB': 20, 'MEMORY_MB': 2048, 'VCPU': 2}
+        self._run_build_test(flavor_id, expected_usage=expected_usage)
+
+        # verify that we have consumed two cores plus the thread sibling of
+        # each core, totalling four cores since the HostInfo indicates each
+        # core should have two threads
+        ctxt = nova_context.get_admin_context()
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(ctxt, 'compute1').numa_topology
+        )
+        self.assertEqual({0, 1, 2, 3}, host_numa.cells[0].pinned_cpus)
+
     def test_create_server_with_legacy_pinning_policy_fails(self):
         """Create a pinned instance on a host with no PCPUs.
 
@@ -319,6 +359,37 @@ class NUMAServersTest(NUMAServersTestBase):
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server, post)
         self.assertEqual(403, ex.response.status_code)
+
+    def test_create_server_with_isolate_thread_policy_fails(self):
+        """Create a server with the legacy 'hw:cpu_thread_policy=isolate' extra
+        spec.
+
+        This should fail on a host with hyperthreading.
+        """
+        self.flags(
+            cpu_dedicated_set='0-3', cpu_shared_set='4-7', group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        # host has hyperthreads, which means it should be rejected
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2,
+            kB_mem=(1024 * 1024 * 16),  # GB
+        )
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'hw:cpu_thread_policy': 'isolate',
+        }
+        flavor_id = self._create_flavor(vcpu=2, extra_spec=extra_spec)
+
+        # FIXME(stephenfin): This should go to error status since there should
+        # not be a host available
+        expected_usage = {
+            'DISK_GB': 20, 'MEMORY_MB': 2048, 'PCPU': 0, 'VCPU': 2,
+        }
+        self._run_build_test(flavor_id, expected_usage=expected_usage)
 
     def test_create_server_with_pcpu(self):
         """Create a server using an explicit 'resources:PCPU' request.
