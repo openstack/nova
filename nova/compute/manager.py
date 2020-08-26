@@ -34,6 +34,7 @@ import inspect
 import sys
 import time
 import traceback
+import typing as ty
 
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
@@ -239,15 +240,25 @@ def delete_image_on_error(function):
     return decorated_function
 
 
+# Each collection of events is a dict of eventlet Events keyed by a tuple of
+# event name and associated tag
+_InstanceEvents = ty.Dict[ty.Tuple[str, str], eventlet.event.Event]
+
+
 class InstanceEvents(object):
     def __init__(self):
-        self._events = {}
+        self._events: ty.Optional[ty.Dict[str, _InstanceEvents]] = {}
 
     @staticmethod
-    def _lock_name(instance):
+    def _lock_name(instance) -> str:
         return '%s-%s' % (instance.uuid, 'events')
 
-    def prepare_for_instance_event(self, instance, name, tag):
+    def prepare_for_instance_event(
+        self,
+        instance: 'objects.Instance',
+        name: str,
+        tag: str,
+    ) -> eventlet.event.Event:
         """Prepare to receive an event for an instance.
 
         This will register an event for the given instance that we will
@@ -260,14 +271,14 @@ class InstanceEvents(object):
         :param tag: the tag associated with the event we're expecting
         :returns: an event object that should be wait()'d on
         """
-        if self._events is None:
-            # NOTE(danms): We really should have a more specific error
-            # here, but this is what we use for our default error case
-            raise exception.NovaException('In shutdown, no new events '
-                                          'can be scheduled')
-
         @utils.synchronized(self._lock_name(instance))
         def _create_or_get_event():
+            if self._events is None:
+                # NOTE(danms): We really should have a more specific error
+                # here, but this is what we use for our default error case
+                raise exception.NovaException(
+                    'In shutdown, no new events can be scheduled')
+
             instance_events = self._events.setdefault(instance.uuid, {})
             return instance_events.setdefault((name, tag),
                                               eventlet.event.Event())
@@ -313,10 +324,16 @@ class InstanceEvents(object):
                       instance=instance)
             return None
         elif result is no_matching_event_sentinel:
-            LOG.debug('No event matching %(event)s in %(events)s',
-                      {'event': event.key,
-                       'events': self._events.get(instance.uuid, {}).keys()},
-                      instance=instance)
+            LOG.debug(
+                'No event matching %(event)s in %(events)s',
+                {
+                    'event': event.key,
+                    # mypy can't identify the none check in _pop_event
+                    'events': self._events.get(  # type: ignore
+                        instance.uuid, {}).keys(),
+                },
+                instance=instance,
+            )
             return None
         else:
             return result
@@ -457,7 +474,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
             early_events = set([objects.InstanceExternalEvent.make_key(n, t)
                                 for n, t in e.events])
         else:
-            early_events = []
+            early_events = set([])
 
         with eventlet.timeout.Timeout(deadline):
             for event_name, event in events.items():
@@ -525,7 +542,7 @@ class ComputeManager(manager.Manager):
         self.network_api = neutron.API()
         self.volume_api = cinder.API()
         self.image_api = glance.API()
-        self._last_bw_usage_poll = 0
+        self._last_bw_usage_poll = 0.0
         self._bw_usage_supported = True
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
@@ -1891,12 +1908,19 @@ class ComputeManager(manager.Manager):
         if update_root_bdm:
             root_bdm.save()
 
-        ephemerals = list(filter(block_device.new_format_is_ephemeral,
-                            block_devices))
-        swap = list(filter(block_device.new_format_is_swap,
-                      block_devices))
-        block_device_mapping = list(filter(
-              driver_block_device.is_block_device_mapping, block_devices))
+        ephemerals = []
+        swap = []
+        block_device_mapping = []
+
+        for device in block_devices:
+            if block_device.new_format_is_ephemeral(device):
+                ephemerals.append(device)
+
+            if block_device.new_format_is_swap(device):
+                swap.append(device)
+
+            if driver_block_device.is_block_device_mapping(device):
+                block_device_mapping.append(device)
 
         self._default_device_names_for_instance(instance,
                                                 root_device_name,
@@ -5298,11 +5322,10 @@ class ComputeManager(manager.Manager):
             )
         else:
             # not re-scheduling
-            if exc_info[1] is None:
-                exc_info[1] = exc_info[0]()
-            if exc_info[1].__traceback__ is not exc_info[2]:
-                raise exc_info[1].with_traceback(exc_info[2])
-            raise exc_info[1]
+            exc = exc_info[1] or exc_info[0]()
+            if exc.__traceback__ is not exc_info[2]:
+                raise exc.with_traceback(exc_info[2])
+            raise exc
 
     # TODO(stephenfin): Remove unused request_spec parameter in API v6.0
     @messaging.expected_exceptions(exception.MigrationPreCheckError)
