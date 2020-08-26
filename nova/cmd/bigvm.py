@@ -25,7 +25,6 @@ import nova.conf
 from nova import config
 from nova import objects
 from nova import service
-from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
@@ -34,7 +33,6 @@ CONF = nova.conf.CONF
 def main():
     config.parse_args(sys.argv)
     logging.setup(CONF, "nova")
-    utils.monkey_patch()
     objects.register_all()
     gmr_opts.set_defaults(CONF)
     objects.Service.enable_min_version_cache()
