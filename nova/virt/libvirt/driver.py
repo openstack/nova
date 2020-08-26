@@ -231,7 +231,6 @@ MIN_QEMU_VERSION = (2, 11, 0)
 NEXT_MIN_LIBVIRT_VERSION = (5, 0, 0)
 NEXT_MIN_QEMU_VERSION = (4, 0, 0)
 
-
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 
@@ -280,6 +279,10 @@ MIN_QEMU_BLOCKDEV = (4, 2, 0)
 
 MIN_LIBVIRT_VIR_ERR_DEVICE_MISSING = (4, 1, 0)
 
+# Virtual TPM (vTPM) support
+MIN_LIBVIRT_VTPM = (5, 6, 0)
+MIN_QEMU_VTPM = (2, 11, 0)
+
 
 class LibvirtDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False):
@@ -326,7 +329,7 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_pcpus": True,
             "supports_accelerators": True,
             "supports_bfv_rescue": True,
-            "supports_vtpm": False,
+            "supports_vtpm": CONF.libvirt.swtpm_enabled,
         }
         super(LibvirtDriver, self).__init__(virtapi)
 
@@ -723,6 +726,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._check_cpu_compatibility()
 
+        self._check_vtpm_support()
+
     def _check_cpu_compatibility(self):
         mode = CONF.libvirt.cpu_mode
         models = CONF.libvirt.cpu_models
@@ -771,6 +776,43 @@ class LibvirtDriver(driver.ComputeDriver):
                          "correct the config and try again. %(e)s") % {
                             'flag': flag, 'e': e})
                 raise exception.InvalidCPUInfo(msg)
+
+    def _check_vtpm_support(self) -> None:
+        # TODO(efried): A key manager must be configured to create/retrieve
+        # secrets. Is there a way to check that one is set up correctly?
+        # CONF.key_manager.backend is optional :(
+        if not CONF.libvirt.swtpm_enabled:
+            return
+
+        if CONF.libvirt.virt_type not in ('qemu', 'kvm'):
+            msg = _(
+                "vTPM support requires '[libvirt] virt_type' of 'qemu' or "
+                "'kvm'; found %s.")
+            raise exception.InvalidConfiguration(msg % CONF.libvirt.virt_type)
+
+        if not self._host.has_min_version(
+            lv_ver=MIN_LIBVIRT_VTPM, hv_ver=MIN_QEMU_VTPM,
+        ):
+            msg = _(
+                'vTPM support requires QEMU version %(qemu)s or greater and '
+                'Libvirt version %(libvirt)s or greater.')
+            raise exception.InvalidConfiguration(msg % {
+                'qemu': libvirt_utils.version_to_string(MIN_QEMU_VTPM),
+                'libvirt': libvirt_utils.version_to_string(MIN_LIBVIRT_VTPM),
+            })
+
+        # These executables need to be installed for libvirt to make use of
+        # emulated TPM.
+        # NOTE(stephenfin): This checks using the PATH of the user running
+        # nova-compute rather than the libvirtd service, meaning it's an
+        # imperfect check but the best we can do
+        if not any(shutil.which(cmd) for cmd in ('swtpm_setup', 'swtpm')):
+            msg = _(
+                "vTPM support is configured but the 'swtpm' and "
+                "'swtpm_setup' binaries could not be found on PATH.")
+            raise exception.InvalidConfiguration(msg)
+
+        LOG.debug('Enabling emulated TPM support')
 
     @staticmethod
     def _is_existing_mdev(uuid):
@@ -1442,6 +1484,9 @@ class LibvirtDriver(driver.ComputeDriver):
             if success:
                 instance.cleaned = True
             instance.save()
+
+        if cleanup_instance_disks:
+            crypto.delete_vtpm_secret(context, instance)
 
         self._undefine_domain(instance)
 
@@ -3269,6 +3314,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # on which vif type we're using and we are working with a stale network
         # info cache here, so won't rely on waiting for neutron plug events.
         # vifs_already_plugged=True means "do not wait for neutron plug events"
+        # NOTE(efried): The instance should already have a vtpm_secret_uuid
+        # registered if appropriate.
         self._create_guest_with_network(
             context, xml, instance, network_info, block_device_info,
             vifs_already_plugged=True)
@@ -3418,6 +3465,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """resume the specified instance."""
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
+        # NOTE(efried): The instance should already have a vtpm_secret_uuid
+        # registered if appropriate.
         guest = self._create_guest_with_network(
             context, xml, instance, network_info, block_device_info,
             vifs_already_plugged=True)
@@ -3562,6 +3611,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._create_image(context, instance, disk_info['mapping'],
                            injection_info=injection_info, suffix='.rescue',
                            disk_images=rescue_images)
+        # NOTE(efried): The instance should already have a vtpm_secret_uuid
+        # registered if appropriate.
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   image_meta, rescue=rescue_images,
                                   mdevs=mdevs,
@@ -3579,6 +3630,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """Reboot the VM which is being rescued back into primary images."""
         instance_dir = libvirt_utils.get_instance_path(instance)
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
+        # The xml should already contain the secret_uuid if relevant.
         xml = libvirt_utils.load_file(unrescue_xml_path)
 
         self._destroy(instance)
@@ -3624,6 +3676,18 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Does the guest need to be assigned some vGPU mediated devices ?
         mdevs = self._allocate_mdevs(allocations)
+
+        # If the guest needs a vTPM, _get_guest_xml needs its secret to exist
+        # and its uuid to be registered in the instance prior to _get_guest_xml
+        if CONF.libvirt.swtpm_enabled and hardware.get_vtpm_constraint(
+            instance.flavor, image_meta
+        ):
+            if not instance.system_metadata.get('vtpm_secret_uuid'):
+                # Create the secret via the key manager service so that we have
+                # it to hand when generating the XML. This is slightly wasteful
+                # as we'll perform a redundant key manager API call later when
+                # we create the domain but the alternative is an ugly mess
+                crypto.ensure_vtpm_secret(context, instance)
 
         xml = self._get_guest_xml(context, instance, network_info,
                                   disk_info, image_meta,
@@ -5446,6 +5510,27 @@ class LibvirtDriver(driver.ComputeDriver):
         virtio_controller.type = 'virtio-serial'
         guest.add_device(virtio_controller)
 
+    def _add_vtpm_device(
+        self,
+        guest: libvirt_guest.Guest,
+        flavor: 'objects.Flavor',
+        instance: 'objects.Instance',
+        image_meta: 'objects.ImageMeta',
+    ):
+        """Add a vTPM device to the guest, if requested."""
+        # Enable virtual tpm support if required in the flavor or image.
+        vtpm_config = hardware.get_vtpm_constraint(flavor, image_meta)
+        if not vtpm_config:
+            return
+
+        vtpm_secret_uuid = instance.system_metadata.get('vtpm_secret_uuid')
+        if not vtpm_secret_uuid:
+            raise exception.Invalid(
+                'Refusing to create an emulated TPM with no secret!')
+
+        vtpm = vconfig.LibvirtConfigGuestVTPM(vtpm_config, vtpm_secret_uuid)
+        guest.add_device(vtpm)
+
     def _set_qemu_guest_agent(self, guest, flavor, instance, image_meta):
         # Enable qga only if the 'hw_qemu_guest_agent' is equal to yes
         if image_meta.properties.get('hw_qemu_guest_agent', False):
@@ -6045,10 +6130,11 @@ class LibvirtDriver(driver.ComputeDriver):
             if caps.host.cpu.arch == fields.Architecture.AARCH64:
                 self._guest_add_usb_host_keyboard(guest)
 
-        # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
+        # Some features are only supported 'qemu' and 'kvm' hypervisor
         if virt_type in ('qemu', 'kvm'):
             self._set_qemu_guest_agent(guest, flavor, instance, image_meta)
             self._add_rng_device(guest, flavor, image_meta)
+            self._add_vtpm_device(guest, flavor, instance, image_meta)
 
         if self._guest_needs_pcie(guest, caps):
             self._guest_add_pcie_root_ports(guest)
@@ -6493,14 +6579,29 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :returns guest.Guest: Created guest.
         """
-        guest = libvirt_guest.Guest.create(xml, self._host)
-        if post_xml_callback is not None:
-            post_xml_callback()
+        libvirt_secret = None
+        # determine whether vTPM is in use and, if so, create the secret
+        if CONF.libvirt.swtpm_enabled and hardware.get_vtpm_constraint(
+            instance.flavor, instance.image_meta,
+        ):
+            secret_uuid, passphrase = crypto.ensure_vtpm_secret(
+                context, instance)
+            libvirt_secret = self._host.create_secret(
+                'vtpm', instance.uuid, password=passphrase,
+                uuid=secret_uuid)
 
-        if power_on or pause:
-            guest.launch(pause=pause)
+        try:
+            guest = libvirt_guest.Guest.create(xml, self._host)
+            if post_xml_callback is not None:
+                post_xml_callback()
 
-        return guest
+            if power_on or pause:
+                guest.launch(pause=pause)
+
+            return guest
+        finally:
+            if libvirt_secret is not None:
+                libvirt_secret.undefine()
 
     def _neutron_failed_callback(self, event_name, instance):
         LOG.error('Neutron Reported failure on event '
@@ -7795,6 +7896,7 @@ class LibvirtDriver(driver.ComputeDriver):
         traits.update(self._get_storage_bus_traits())
         traits.update(self._get_video_model_traits())
         traits.update(self._get_vif_model_traits())
+        traits.update(self._get_tpm_traits())
 
         _, invalid_traits = ot.check_traits(traits)
         for invalid_trait in invalid_traits:
@@ -10905,6 +11007,13 @@ class LibvirtDriver(driver.ComputeDriver):
                            nova.privsep.fs.FS_FORMAT_EXT3,
                            nova.privsep.fs.FS_FORMAT_EXT4,
                            nova.privsep.fs.FS_FORMAT_XFS]
+
+    def _get_tpm_traits(self) -> ty.Dict[str, bool]:
+        # Assert or deassert TPM support traits
+        return {
+            ot.COMPUTE_SECURITY_TPM_2_0: CONF.libvirt.swtpm_enabled,
+            ot.COMPUTE_SECURITY_TPM_1_2: CONF.libvirt.swtpm_enabled,
+        }
 
     def _get_vif_model_traits(self) -> ty.Dict[str, bool]:
         """Get vif model traits based on the currently enabled virt_type.

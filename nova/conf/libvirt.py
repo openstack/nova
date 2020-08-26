@@ -1427,6 +1427,15 @@ For example::
 ]
 
 
+libvirt_vtpm_opts = [
+    cfg.BoolOpt('swtpm_enabled',
+        default=False,
+        help="""
+Enable emulated TPM (Trusted Platform Module) in guests.
+"""),
+]
+
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -1446,6 +1455,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_virtio_queue_sizes,
     libvirt_volume_nvmeof_opts,
     libvirt_pmem_opts,
+    libvirt_vtpm_opts,
 ))
 
 

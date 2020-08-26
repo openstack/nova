@@ -1088,6 +1088,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertTrue(drvr.capabilities['supports_image_type_ploop'])
 
+    def test_driver_capabilities_vtpm(self):
+        self.flags(swtpm_enabled=True, group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertTrue(
+            drvr.capabilities['supports_vtpm'],
+            "Driver capabilities for 'supports_vtpm' is invalid when "
+            "'swtpm_enabled=True'"
+        )
+
     def test_driver_raises_on_non_linux_platform(self):
         with utils.temporary_mutation(sys, platform='darwin'):
             self.assertRaises(
@@ -1172,6 +1181,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'COMPUTE_STORAGE_BUS_VIRTIO': True,
             'COMPUTE_GRAPHICS_MODEL_VGA': True,
             'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
+            'COMPUTE_SECURITY_TPM_1_2': False,
+            'COMPUTE_SECURITY_TPM_2_0': False,
         }
 
         static_traits = drvr.static_traits
@@ -1213,7 +1224,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_vif_traits.return_value = {'COMPUTE_NET_VIF_MODEL_VIRTIO': True}
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        expected = {'COMPUTE_NET_VIF_MODEL_VIRTIO': True}
+        expected = {
+            'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
+            'COMPUTE_SECURITY_TPM_1_2': False,
+            'COMPUTE_SECURITY_TPM_2_0': False,
+        }
 
         static_traits = drvr.static_traits
 
@@ -1504,6 +1519,73 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                return_value=caps):
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
             drvr.init_host("dummyhost")
+
+    def test__check_vtpm_support_non_qemu(self):
+        """Test checking for vTPM support when we're not using QEMU or KVM."""
+        self.flags(swtpm_enabled=True, virt_type='lxc', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        exc = self.assertRaises(exception.InvalidConfiguration,
+                                drvr.init_host, 'dummyhost')
+        self.assertIn("vTPM support requires '[libvirt] virt_type' of 'qemu' "
+                      "or 'kvm'; found lxc.", six.text_type(exc))
+
+    @mock.patch.object(host.Host, 'has_min_version')
+    def test__check_vtpm_support_old_qemu(self, mock_version):
+        """Test checking for vTPM support when our QEMU or libvirt version is
+        too old.
+        """
+        self.flags(swtpm_enabled=True, virt_type='kvm', group='libvirt')
+
+        def fake_has_min_version(lv_ver=None, hv_ver=None, hv_type=None):
+            if lv_ver and hv_ver:
+                return lv_ver < (5, 6, 0) and hv_ver < (2, 11, 0)
+            return True
+
+        mock_version.side_effect = fake_has_min_version
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        exc = self.assertRaises(exception.InvalidConfiguration,
+                                drvr.init_host, 'dummyhost')
+        self.assertIn("vTPM support requires QEMU version", six.text_type(exc))
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch('shutil.which')
+    def test__check_vtpm_support_missing_exe(self, mock_which, mock_version):
+        """Test checking for vTPM support when the swtpm binaries are
+        missing.
+        """
+        self.flags(swtpm_enabled=True, virt_type='kvm', group='libvirt')
+        mock_which.return_value = False
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        exc = self.assertRaises(exception.InvalidConfiguration,
+                                drvr.init_host, "dummyhost")
+        self.assertIn(
+            "vTPM support is configured but the 'swtpm' and 'swtpm_setup' "
+            "binaries could not be found on PATH.",
+            str(exc),
+        )
+
+        mock_which.assert_has_calls(
+            [mock.call('swtpm_setup'), mock.call('swtpm')],
+        )
+
+    @mock.patch.object(host.Host, 'has_min_version')
+    @mock.patch('shutil.which')
+    def test__check_vtpm_support(self, mock_which, mock_version):
+        """Test checking for vTPM support when everything is configured
+        correctly.
+        """
+        self.flags(swtpm_enabled=True, virt_type='kvm', group='libvirt')
+        mock_version.return_value = True
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host('dummyhost')
+
+        mock_which.assert_has_calls(
+            [mock.call('swtpm_setup'), mock.call().__bool__()],
+        )
+        mock_version.assert_called_with(lv_ver=(5, 6, 0), hv_ver=(2, 11, 0))
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_check_cpu_set_configuration__no_configuration(self, mock_log):
@@ -6543,6 +6625,49 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(cfg.devices[8].uses_virtio)
         self.assertEqual(cfg.devices[9].type, "unix")
         self.assertEqual(cfg.devices[9].target_name, "org.qemu.guest_agent.0")
+
+    def test_get_guest_config_with_vtpm(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance = objects.Instance(**self.test_instance)
+        instance.system_metadata['vtpm_secret_uuid'] = uuids.vtpm
+        image_meta = objects.ImageMeta.from_dict({
+            'disk_format': 'raw',
+            'properties': {
+                'hw_tpm_version': '2.0',
+                'hw_tpm_model': 'tpm-crb',
+            },
+        })
+
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance, image_meta)
+        cfg = drvr._get_guest_config(instance, [], image_meta, disk_info)
+        self.assertEqual(len(cfg.devices), 9)
+        self.assertIsInstance(
+            cfg.devices[0], vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(
+            cfg.devices[1], vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(
+            cfg.devices[2], vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(
+            cfg.devices[3], vconfig.LibvirtConfigGuestInput)
+        self.assertIsInstance(
+            cfg.devices[4], vconfig.LibvirtConfigGuestGraphics)
+        self.assertIsInstance(
+            cfg.devices[5], vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(
+            cfg.devices[6], vconfig.LibvirtConfigGuestRng)
+        self.assertIsInstance(
+            cfg.devices[7], vconfig.LibvirtConfigGuestVTPM)
+        self.assertIsInstance(
+            cfg.devices[8], vconfig.LibvirtConfigMemoryBalloon)
+
+        self.assertEqual(cfg.devices[3].type, 'tablet')
+        self.assertEqual(cfg.devices[4].type, 'vnc')
+        self.assertEqual(cfg.devices[7].version, '2.0')
+        self.assertEqual(cfg.devices[7].model, 'tpm-crb')
+        self.assertEqual(cfg.devices[7].secret_uuid, uuids.vtpm)
 
     def test_get_guest_config_with_video_driver_vram(self):
         self.flags(enabled=False, group='vnc')
@@ -14869,7 +14994,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # We should have created the root and ephemeral disks
         self.assertEqual(['disk', 'disk.local'], disks_created)
 
-    def test_start_lxc_from_volume(self):
+    def test_spawn_lxc_from_volume(self):
         self.flags(virt_type="lxc",
                    group='libvirt')
 
@@ -15002,6 +15127,39 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         with mock.patch.object(drvr, '_get_connection',
                                return_value=mock_connection):
             drvr.spawn(self.context, instance, image_meta, [], None, {})
+
+    @mock.patch('nova.crypto.ensure_vtpm_secret')
+    @mock.patch.object(hardware, 'get_vtpm_constraint')
+    @mock.patch(
+        'nova.virt.libvirt.driver.LibvirtDriver._create_guest_with_network')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
+    @mock.patch(
+        'nova.virt.libvirt.driver.LibvirtDriver._get_guest_xml',
+        new=mock.Mock())
+    def test_spawn_with_vtpm(
+        self, mock_get_info, mock_create_guest, mock_get_vtpm,
+        mock_ensure_vtpm,
+    ):
+        """Ensure spawning with vTPM requested results in pre-config of
+        instance.
+        """
+        self.flags(swtpm_enabled=True, group='libvirt')
+        self.useFixture(fake_imagebackend.ImageBackendFixture())
+
+        mock_get_info.return_value = hardware.InstanceInfo(
+            state=power_state.RUNNING)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = 'my_fake_image'
+        instance = objects.Instance(**instance_ref)
+        instance.system_metadata = {}
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        drvr.spawn(self.context, instance, image_meta, [], None, {})
+
+        mock_get_vtpm.assert_called_once_with(instance.flavor, image_meta)
+        mock_ensure_vtpm.assert_called_once_with(self.context, instance)
 
     def _test_create_image_plain(self, os_type='', filename='', mkfs=False):
         gotFiles = []
@@ -18619,9 +18777,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         dom_mock.ID.assert_called_once_with()
         mock_get_domain.assert_called_once_with(instance)
 
+    @mock.patch.object(hardware, 'get_vtpm_constraint')
     @mock.patch.object(libvirt_guest.Guest, 'create')
     def test_create_guest__with_callback(
-        self, mock_guest_create,
+        self, mock_guest_create, mock_get_vtpm,
     ):
         """Check that callback function is called if provided."""
         instance = objects.Instance(**self.test_instance)
@@ -18629,30 +18788,135 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         callback = mock.Mock()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        drvr.supports_vtpm = False
-
         drvr._create_guest(
             self.context, xml, instance, post_xml_callback=callback)
 
+        mock_get_vtpm.assert_not_called()
         mock_guest_create.assert_called_once_with(xml, drvr._host)
         mock_guest_create.return_value.launch.assert_called_once_with(
             pause=False)
         callback.assert_called_once()
 
+    @mock.patch.object(hardware, 'get_vtpm_constraint')
     @mock.patch.object(libvirt_guest.Guest, 'create')
-    def test_create_guest__no_launch(self, mock_guest_create):
+    def test_create_guest__no_launch(self, mock_guest_create, mock_get_vtpm):
         """Check that guest is not started unless requested."""
         instance = objects.Instance(**self.test_instance)
         xml = '<xml>'
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        drvr.supports_vtpm = False
-
         drvr._create_guest(
             self.context, xml, instance, power_on=False, pause=False)
 
+        mock_get_vtpm.assert_not_called()
         mock_guest_create.assert_called_once_with(xml, drvr._host)
         mock_guest_create.return_value.launch.assert_not_called()
+
+    @mock.patch('nova.crypto.ensure_vtpm_secret')
+    @mock.patch(
+        'nova.objects.Instance.image_meta',
+        new_callable=mock.PropertyMock)
+    @mock.patch.object(hardware, 'get_vtpm_constraint')
+    @mock.patch.object(libvirt_guest.Guest, 'create')
+    def test_create_guest__with_vtpm_support_but_no_request(
+        self, mock_guest_create, mock_get_vtpm, mock_image_meta, mock_secret,
+    ):
+        """Check that vTPM is not created unless requested by the guest."""
+        self.flags(swtpm_enabled=True, group='libvirt')
+
+        instance = objects.Instance(**self.test_instance)
+        instance = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({})
+        xml = '<xml>'
+
+        mock_image_meta.return_value = image_meta
+        mock_get_vtpm.return_value = None
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._create_guest(
+            self.context, xml, instance)
+
+        # we should have queried the instance's flavor, image for vTPM stuff...
+        mock_get_vtpm.assert_called_once_with(instance.flavor, image_meta)
+        mock_guest_create.assert_called_once_with(xml, drvr._host)
+        mock_guest_create.return_value.launch.assert_called_once()
+        # ...but we should not have created the secret because it wasn't needed
+        mock_secret.assert_not_called()
+
+    @mock.patch('nova.virt.libvirt.host.Host')
+    @mock.patch('nova.crypto.ensure_vtpm_secret')
+    @mock.patch(
+        'nova.objects.Instance.image_meta',
+        new_callable=mock.PropertyMock)
+    @mock.patch.object(hardware, 'get_vtpm_constraint')
+    @mock.patch.object(libvirt_guest.Guest, 'create')
+    def test_create_guest__with_vtpm(
+        self, mock_guest_create, mock_get_vtpm, mock_image_meta, mock_secret,
+        mock_host,
+    ):
+        """Check that vTPM secret is created and cleaned up again after."""
+        self.flags(swtpm_enabled=True, group='libvirt')
+
+        instance = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({})
+        xml = '<xml>'
+
+        mock_image_meta.return_value = image_meta
+        mock_secret.return_value = (uuids.fake_secret, 'passphrase')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._create_guest(self.context, xml, instance)
+
+        # we should have queried the instance's flavor, image for vTPM stuff
+        mock_get_vtpm.assert_called_once_with(instance.flavor, image_meta)
+        mock_guest_create.assert_called_once_with(xml, drvr._host)
+        mock_guest_create.return_value.launch.assert_called_once()
+
+        # we should also have created the secret...
+        drvr._host.create_secret.assert_called_once_with(
+            'vtpm', instance.uuid, password='passphrase',
+            uuid=uuids.fake_secret)
+        # ...and undefined it after
+        drvr._host.create_secret.return_value.undefine.assert_called_once()
+
+    @mock.patch('nova.virt.libvirt.host.Host')
+    @mock.patch('nova.crypto.ensure_vtpm_secret')
+    @mock.patch(
+        'nova.objects.Instance.image_meta',
+        new_callable=mock.PropertyMock)
+    @mock.patch.object(hardware, 'get_vtpm_constraint')
+    @mock.patch.object(libvirt_guest.Guest, 'create')
+    def test_create_guest__with_vtpm_error(
+        self, mock_guest_create, mock_get_vtpm, mock_image_meta, mock_secret,
+        mock_host,
+    ):
+        """Check that vTPM secret is always cleaned up even if there's an
+        error.
+        """
+        self.flags(swtpm_enabled=True, group='libvirt')
+
+        instance = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({})
+        xml = '<xml>'
+
+        mock_guest_create.side_effect = ValueError('foo')
+        mock_image_meta.return_value = image_meta
+        mock_secret.return_value = (uuids.fake_secret, 'passphrase')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(
+            ValueError, drvr._create_guest, self.context, xml, instance)
+
+        # we should have queried the instance's flavor, image for vTPM stuff
+        mock_get_vtpm.assert_called_once_with(instance.flavor, image_meta)
+        mock_guest_create.assert_called_once_with(xml, drvr._host)
+
+        # we should also have created the secret...
+        drvr._host.create_secret.assert_called_once_with(
+            'vtpm', instance.uuid, password='passphrase',
+            uuid=uuids.fake_secret)
+        # ...and undefined it after, despite the error
+        drvr._host.create_secret.return_value.undefine.assert_called_once()
 
     @mock.patch('nova.virt.disk.api.clean_lxc_namespace')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_info')
@@ -19572,6 +19836,32 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertRaises(test.TestingException,
                               drvr.cleanup, 'ctxt', fake_inst, 'netinfo')
             unplug.assert_called_once_with(fake_inst, 'netinfo', True)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    @mock.patch('nova.crypto.delete_vtpm_secret')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.delete_instance_files')
+    @mock.patch('nova.virt.driver.block_device_info_get_mapping')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._unplug_vifs')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vpmems',
+                new=mock.Mock(return_value=None))
+    def test_cleanup_pass(
+        self, mock_unplug, mock_get_mapping, mock_delete_files,
+        mock_delete_vtpm, mock_undefine,
+    ):
+        """Test with default parameters."""
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        fake_inst = objects.Instance(**self.test_instance)
+        mock_get_mapping.return_value = []
+        mock_delete_files.return_value = True
+
+        with mock.patch.object(fake_inst, 'save'):
+            drvr.cleanup('ctxt', fake_inst, 'netinfo')
+
+        mock_unplug.assert_called_once_with(fake_inst, 'netinfo', True)
+        mock_get_mapping.assert_called_once_with(None)
+        mock_delete_files.assert_called_once_with(fake_inst)
+        mock_delete_vtpm.assert_called_once_with('ctxt', fake_inst)
+        mock_undefine.assert_called_once_with(fake_inst)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
                        return_value=True)
@@ -21121,6 +21411,12 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                            'HW_CPU_X86_VMX', 'HW_CPU_X86_XOP')
         self._test_update_provider_tree()
         for trait in ['HW_CPU_X86_AVX512F', 'HW_CPU_X86_BMI']:
+            self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
+
+    def test_update_provider_tree_with_tpm_traits(self):
+        self.flags(swtpm_enabled=True, group='libvirt')
+        self._test_update_provider_tree()
+        for trait in ('COMPUTE_SECURITY_TPM_2_0', 'COMPUTE_SECURITY_TPM_1_2'):
             self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
