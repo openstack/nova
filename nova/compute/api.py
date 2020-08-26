@@ -1742,6 +1742,13 @@ class API(base.Base):
                     "(source: 'blank', dest: 'volume') need to have non-zero "
                     "size"))
 
+            # NOTE(lyarwood): Ensure the disk_bus is at least known to Nova.
+            # The virt driver may reject this later but for now just ensure
+            # it's listed as an acceptable value of the DiskBus field class.
+            disk_bus = bdm.disk_bus if 'disk_bus' in bdm else None
+            if disk_bus and disk_bus not in fields_obj.DiskBus.ALL:
+                raise exception.InvalidBDMDiskBus(disk_bus=disk_bus)
+
         ephemeral_size = sum(bdm.volume_size or instance_type['ephemeral_gb']
                 for bdm in block_device_mappings
                 if block_device.new_format_is_ephemeral(bdm))
