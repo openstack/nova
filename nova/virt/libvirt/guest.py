@@ -357,7 +357,8 @@ class Guest(object):
     def detach_device_with_retry(self, get_device_conf_func, device, live,
                                  max_retry_count=7, inc_sleep_time=2,
                                  max_sleep_time=30,
-                                 alternative_device_name=None):
+                                 alternative_device_name=None,
+                                 supports_device_missing_error_code=False):
         """Detaches a device from the guest. After the initial detach request,
         a function is returned which can be used to ensure the device is
         successfully removed from the guest domain (retrying the removal as
@@ -378,8 +379,16 @@ class Guest(object):
                                max_sleep_time will be used as the sleep time.
         :param alternative_device_name: This is an alternative identifier for
             the device if device is not an ID, used solely for error messages.
+        :param supports_device_missing_error_code: does the installed version
+                                                   of libvirt provide the
+                                                   VIR_ERR_DEVICE_MISSING error
+                                                   code.
         """
         alternative_device_name = alternative_device_name or device
+        unplug_libvirt_error_codes = set([
+            libvirt.VIR_ERR_OPERATION_FAILED,
+            libvirt.VIR_ERR_INTERNAL_ERROR
+        ])
 
         def _try_detach_device(conf, persistent=False, live=False):
             # Raise DeviceNotFound if the device isn't found during detach
@@ -396,9 +405,10 @@ class Guest(object):
                     # TODO(lyarwood): Remove libvirt.VIR_ERR_OPERATION_FAILED
                     # and libvirt.VIR_ERR_INTERNAL_ERROR once
                     # MIN_LIBVIRT_VERSION is >= 4.1.0
-                    if errcode in (libvirt.VIR_ERR_OPERATION_FAILED,
-                                   libvirt.VIR_ERR_INTERNAL_ERROR,
-                                   libvirt.VIR_ERR_DEVICE_MISSING):
+                    if supports_device_missing_error_code:
+                        unplug_libvirt_error_codes.add(
+                            libvirt.VIR_ERR_DEVICE_MISSING)
+                    if errcode in unplug_libvirt_error_codes:
                         # TODO(lyarwood): Remove the following error message
                         # check once we only care about VIR_ERR_DEVICE_MISSING
                         errmsg = ex.get_error_message()

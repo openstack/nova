@@ -287,8 +287,8 @@ class GuestTestCase(test.NoDBTestCase):
 
     @mock.patch.object(libvirt_guest.Guest, "detach_device")
     def _test_detach_device_with_retry_second_detach_failure(
-        self, mock_detach, error_code=fakelibvirt.VIR_ERR_DEVICE_MISSING,
-        error_message="device not found: disk vdb not found"):
+            self, mock_detach, error_code=None, error_message=None,
+            supports_device_missing=False):
         # This simulates a retry of the transient/live domain detach
         # failing because the device is not found
         conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
@@ -305,7 +305,8 @@ class GuestTestCase(test.NoDBTestCase):
         mock_detach.side_effect = [None, fake_exc]
         retry_detach = self.guest.detach_device_with_retry(
             get_config, fake_device, live=True,
-            inc_sleep_time=.01, max_retry_count=3)
+            inc_sleep_time=.01, max_retry_count=3,
+            supports_device_missing_error_code=supports_device_missing)
         # Some time later, we can do the wait/retry to ensure detach
         self.assertRaises(exception.DeviceNotFound, retry_detach)
         # Check that the save_and_reraise_exception context manager didn't log
@@ -318,20 +319,25 @@ class GuestTestCase(test.NoDBTestCase):
     def test_detach_device_with_retry_second_detach_operation_failed(self):
         self._test_detach_device_with_retry_second_detach_failure(
             error_code=fakelibvirt.VIR_ERR_OPERATION_FAILED,
-            error_message="operation failed: disk vdb not found")
+            error_message="operation failed: disk vdb not found",
+            supports_device_missing=False)
 
     # TODO(lyarwood): Remove this test once MIN_LIBVIRT_VERSION is >= 4.1.0
     def test_detach_device_with_retry_second_detach_internal_error(self):
         self._test_detach_device_with_retry_second_detach_failure(
             error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR,
-            error_message="operation failed: disk vdb not found")
+            error_message="operation failed: disk vdb not found",
+            supports_device_missing=False)
 
     def test_detach_device_with_retry_second_detach_device_missing(self):
-        self._test_detach_device_with_retry_second_detach_failure()
+        self._test_detach_device_with_retry_second_detach_failure(
+            error_code=fakelibvirt.VIR_ERR_DEVICE_MISSING,
+            error_message="device not found: disk vdb not found",
+            supports_device_missing=True)
 
     def _test_detach_device_with_retry_first_detach_failure(
-        self, error_code=fakelibvirt.VIR_ERR_DEVICE_MISSING,
-        error_message="device not found: disk vdb not found"):
+            self, error_code=None, error_message=None,
+            supports_device_missing=False):
         # This simulates a persistent or live domain detach failing because the
         # device is not found during the first attempt to detach the device.
         # We should still attempt to detach the device from the live config if
@@ -362,7 +368,8 @@ class GuestTestCase(test.NoDBTestCase):
         # succeeds afterward
         self.domain.detachDeviceFlags.side_effect = [fake_exc, None]
         retry_detach = self.guest.detach_device_with_retry(get_config,
-            fake_device, live=True, inc_sleep_time=.01, max_retry_count=3)
+            fake_device, live=True, inc_sleep_time=.01, max_retry_count=3,
+            supports_device_missing_error_code=supports_device_missing)
         # We should have tried to detach from the persistent domain
         self.domain.detachDeviceFlags.assert_called_once_with(
             "</xml>", flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
@@ -378,22 +385,28 @@ class GuestTestCase(test.NoDBTestCase):
     def test_detach_device_with_retry_first_detach_operation_failed(self):
         self._test_detach_device_with_retry_first_detach_failure(
             error_code=fakelibvirt.VIR_ERR_OPERATION_FAILED,
-            error_message="operation failed: disk vdb not found")
+            error_message="operation failed: disk vdb not found",
+            supports_device_missing=False)
 
     # TODO(lyarwood): Remove this test once MIN_LIBVIRT_VERSION is >= 4.1.0
     def test_detach_device_with_retry_first_detach_internal_error(self):
         self._test_detach_device_with_retry_first_detach_failure(
             error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR,
-            error_message="operation failed: disk vdb not found")
+            error_message="operation failed: disk vdb not found",
+            supports_device_missing=False)
 
     # TODO(lyarwood): Remove this test once MIN_LIBVIRT_VERSION is >= 4.1.0
     def test_detach_device_with_retry_first_detach_invalid_arg(self):
         self._test_detach_device_with_retry_first_detach_failure(
             error_code=fakelibvirt.VIR_ERR_INVALID_ARG,
-            error_message="invalid argument: no target device vdb")
+            error_message="invalid argument: no target device vdb",
+            supports_device_missing=False)
 
     def test_detach_device_with_retry_first_detach_device_missing(self):
-        self._test_detach_device_with_retry_first_detach_failure()
+        self._test_detach_device_with_retry_first_detach_failure(
+            error_code=fakelibvirt.VIR_ERR_DEVICE_MISSING,
+            error_message="device not found: disk vdb not found",
+            supports_device_missing=True)
 
     def test_get_xml_desc(self):
         self.guest.get_xml_desc()
