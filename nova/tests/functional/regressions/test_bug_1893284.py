@@ -84,10 +84,8 @@ class TestServersPerUserQuota(test.TestCase,
         server_req = self._build_server(
             image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
             networks='none')
-        # FIXME(melwitt): Uncomment this when the bug is fixed. Because of the
-        # the bug, the first request by the non-admin user will fail.
-        # server = self.api.post_server({'server': server_req})
-        # self._wait_for_state_change(server, 'ACTIVE')
+        server = self.api.post_server({'server': server_req})
+        self._wait_for_state_change(server, 'ACTIVE')
         # A request to boot a second instance should fail because the
         # non-admin has already booted 1 allowed instance.
         ex = self.assertRaises(
