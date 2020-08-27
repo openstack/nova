@@ -1057,10 +1057,71 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     @mock.patch('nova.privsep.linux_net.device_exists', return_value=True)
     @mock.patch('nova.privsep.linux_net.set_device_mtu')
     @mock.patch('nova.privsep.linux_net.create_tap_dev')
-    def test_plug_tap(self, mock_create_tap_dev, mock_set_mtu,
+    def test_plug_tap_kvm_virtio(self, mock_create_tap_dev, mock_set_mtu,
                       mock_device_exists):
-        d = vif.LibvirtGenericVIFDriver()
-        d.plug(self.instance, self.vif_tap)
+
+        d1 = vif.LibvirtGenericVIFDriver()
+        ins = objects.Instance(
+            id=1, uuid='f0000000-0000-0000-0000-000000000001',
+            project_id=723, system_metadata={}
+        )
+        d1.plug(ins, self.vif_tap)
+        mock_create_tap_dev.assert_called_once_with('tap-xxx-yyy-zzz', None,
+                                                    multiqueue=False)
+
+        mock_create_tap_dev.reset_mock()
+
+        d2 = vif.LibvirtGenericVIFDriver()
+        mq_ins = objects.Instance(
+            id=1, uuid='f0000000-0000-0000-0000-000000000001',
+            project_id=723, system_metadata={
+                'image_hw_vif_multiqueue_enabled': 'True'
+            }
+        )
+        d2.plug(mq_ins, self.vif_tap)
+        mock_create_tap_dev.assert_called_once_with('tap-xxx-yyy-zzz', None,
+                                                    multiqueue=True)
+
+    @mock.patch('nova.privsep.linux_net.device_exists', return_value=True)
+    @mock.patch('nova.privsep.linux_net.set_device_mtu')
+    @mock.patch('nova.privsep.linux_net.create_tap_dev')
+    def test_plug_tap_mq_ignored_virt_type(
+            self, mock_create_tap_dev, mock_set_mtu, mock_device_exists):
+
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='xen',
+                   group='libvirt')
+
+        d1 = vif.LibvirtGenericVIFDriver()
+        ins = objects.Instance(
+            id=1, uuid='f0000000-0000-0000-0000-000000000001',
+            project_id=723, system_metadata={
+                'image_hw_vif_multiqueue_enabled': 'True'
+            }
+        )
+        d1.plug(ins, self.vif_tap)
+        mock_create_tap_dev.assert_called_once_with('tap-xxx-yyy-zzz',
+                                                    None,
+                                                    multiqueue=False)
+
+    @mock.patch('nova.privsep.linux_net.device_exists', return_value=True)
+    @mock.patch('nova.privsep.linux_net.set_device_mtu')
+    @mock.patch('nova.privsep.linux_net.create_tap_dev')
+    def test_plug_tap_mq_ignored_vif_model(
+            self, mock_create_tap_dev, mock_set_mtu, mock_device_exists):
+
+        d1 = vif.LibvirtGenericVIFDriver()
+        ins = objects.Instance(
+            id=1, uuid='f0000000-0000-0000-0000-000000000001',
+            project_id=723, system_metadata={
+                'image_hw_vif_multiqueue_enabled': 'True',
+                'image_hw_vif_model': 'e1000',
+            }
+        )
+        d1.plug(ins, self.vif_tap)
+        mock_create_tap_dev.assert_called_once_with('tap-xxx-yyy-zzz',
+                                                    None,
+                                                    multiqueue=False)
 
     def test_unplug_tap(self):
         d = vif.LibvirtGenericVIFDriver()

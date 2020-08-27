@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Addressed an issue that prevented instances using multiqueue feature from
+    being created successfully when their vif_type is TAP.
