@@ -10752,6 +10752,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 get_pci_req_side_effect
             self.instance.pci_devices = instance_pci_devs
             self.instance.pci_requests = instance_pci_reqs
+            self.instance.migration_context = objects.MigrationContext(
+                new_numa_topology=objects.InstanceNUMATopology())
 
             rt_mock.reset()
             claimed_pci_dev = objects.PciDevice(request_id=uuids.pci_req,
@@ -10766,7 +10768,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.instance)
             self.assertEqual(len(nw_vifs),
                              mock_get_instance_pci_request_from_vif.call_count)
-            self.assertTrue(rt_mock.claim_pci_devices.called)
+
+            rt_mock.claim_pci_devices.assert_called_once_with(
+                self.context, test.MatchType(objects.InstancePCIRequests),
+                self.instance.migration_context.new_numa_topology)
             self.assertEqual(len(port_id_to_pci), 1)
 
         _test()
