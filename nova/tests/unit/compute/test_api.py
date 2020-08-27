@@ -232,6 +232,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                     requested_networks=requested_networks,
                                     max_count=None)
 
+    @mock.patch('nova.objects.Quotas.get_all_by_project_and_user',
+                new=mock.MagicMock())
     @mock.patch('nova.objects.Quotas.count_as_dict')
     @mock.patch('nova.objects.Quotas.limit_check')
     @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
@@ -4203,6 +4205,8 @@ class _ComputeAPIUnitTestMixIn(object):
             self._test_check_injected_file_quota_onset_file_limit_exceeded,
             side_effect)
 
+    @mock.patch('nova.objects.Quotas.get_all_by_project_and_user',
+                new=mock.MagicMock())
     @mock.patch('nova.objects.Quotas.count_as_dict')
     @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
     @mock.patch('nova.objects.Instance.save')
@@ -4227,9 +4231,11 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(instance.task_state, task_states.RESTORING)
         # mock.ANY might be 'instances', 'cores', or 'ram' depending on how the
         # deltas dict is iterated in check_deltas
+        # user_id is expected to be None because no per-user quotas have been
+        # defined
         quota_count.assert_called_once_with(admin_context, mock.ANY,
                                             instance.project_id,
-                                            user_id=instance.user_id)
+                                            user_id=None)
         quota_check.assert_called_once_with(
             admin_context,
             user_values={'instances': 2,
@@ -4238,9 +4244,11 @@ class _ComputeAPIUnitTestMixIn(object):
             project_values={'instances': 2,
                             'cores': 1 + instance.flavor.vcpus,
                             'ram': 512 + instance.flavor.memory_mb},
-            project_id=instance.project_id, user_id=instance.user_id)
+            project_id=instance.project_id)
         update_qfd.assert_called_once_with(admin_context, instance, False)
 
+    @mock.patch('nova.objects.Quotas.get_all_by_project_and_user',
+                new=mock.MagicMock())
     @mock.patch('nova.objects.Quotas.count_as_dict')
     @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
     @mock.patch('nova.objects.Instance.save')
@@ -4264,9 +4272,11 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(instance.task_state, task_states.RESTORING)
         # mock.ANY might be 'instances', 'cores', or 'ram' depending on how the
         # deltas dict is iterated in check_deltas
+        # user_id is expected to be None because no per-user quotas have been
+        # defined
         quota_count.assert_called_once_with(self.context, mock.ANY,
                                             instance.project_id,
-                                            user_id=instance.user_id)
+                                            user_id=None)
         quota_check.assert_called_once_with(
             self.context,
             user_values={'instances': 2,
@@ -4275,7 +4285,7 @@ class _ComputeAPIUnitTestMixIn(object):
             project_values={'instances': 2,
                             'cores': 1 + instance.flavor.vcpus,
                             'ram': 512 + instance.flavor.memory_mb},
-            project_id=instance.project_id, user_id=instance.user_id)
+            project_id=instance.project_id)
         update_qfd.assert_called_once_with(self.context, instance, False)
 
     @mock.patch.object(objects.InstanceAction, 'action_start')

@@ -1396,6 +1396,46 @@ class ComputeUtilsQuotaTestCase(test.TestCase):
             else:
                 self.fail("Exception not raised")
 
+    @mock.patch('nova.objects.Quotas.get_all_by_project_and_user')
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_check_num_instances_omits_user_if_no_user_quota(self, mock_check,
+                                                             mock_get):
+        # Return no per-user quota.
+        mock_get.return_value = {'project_id': self.context.project_id,
+                                 'user_id': self.context.user_id}
+        fake_flavor = objects.Flavor(vcpus=1, memory_mb=512)
+        compute_utils.check_num_instances_quota(
+            self.context, fake_flavor, 1, 1)
+        deltas = {'instances': 1, 'cores': 1, 'ram': 512}
+        # Verify that user_id has not been passed along to scope the resource
+        # counting.
+        mock_check.assert_called_once_with(
+            self.context, deltas, self.context.project_id, user_id=None,
+            check_project_id=self.context.project_id, check_user_id=None)
+
+    @mock.patch('nova.objects.Quotas.get_all_by_project_and_user')
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_check_num_instances_passes_user_if_user_quota(self, mock_check,
+                                                           mock_get):
+        for resource in ['instances', 'cores', 'ram']:
+            # Return some per-user quota for each of the instance-related
+            # resources.
+            mock_get.return_value = {'project_id': self.context.project_id,
+                                     'user_id': self.context.user_id,
+                                     resource: 5}
+            fake_flavor = objects.Flavor(vcpus=1, memory_mb=512)
+            compute_utils.check_num_instances_quota(
+                self.context, fake_flavor, 1, 1)
+            deltas = {'instances': 1, 'cores': 1, 'ram': 512}
+            # Verify that user_id is passed along to scope the resource
+            # counting and limit checking.
+            mock_check.assert_called_once_with(
+                self.context, deltas, self.context.project_id,
+                user_id=self.context.user_id,
+                check_project_id=self.context.project_id,
+                check_user_id=self.context.user_id)
+            mock_check.reset_mock()
+
 
 class IsVolumeBackedInstanceTestCase(test.TestCase):
     def setUp(self):
