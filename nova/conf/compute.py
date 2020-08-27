@@ -968,6 +968,19 @@ Possible values:
 * -1 means unlimited
 * Any integer >= 0 represents the maximum allowed
 """),
+    cfg.StrOpt('provider_config_location',
+        default='/etc/nova/provider_config/',
+        help="""
+Location of YAML files containing resource provider configuration data.
+
+These files allow the operator to specify additional custom inventory and
+traits to assign to one or more resource providers.
+
+Additional documentation is available here:
+
+  https://docs.openstack.org/nova/latest/admin/managing-resource-providers.html
+
+"""),
 ]
 
 interval_opts = [

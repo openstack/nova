@@ -4002,13 +4002,23 @@ class ProviderConfigTestCases(BaseTestCase):
         """If traits from provider config are duplicated with traits
         from virt driver or placement api, make sure exception will be raised.
         """
-        ex_trait = "EXCEPTION_TRAIT"
         provider = self._get_provider_config(uuid=uuids.cn1)
 
         # add the same trait in p_tree and provider config
         # for raising exception
+        ex_trait = "EXCEPTION_TRAIT"
         self.p_tree.add_traits(uuids.cn1, ex_trait)
         provider["traits"]["additional"].append(ex_trait)
+
+        # add the same trait in p_tree and provider config
+        # for testing ignoring CUSTOM trait code logic.
+        # If a programmer accidently forgets to ignore (substract)
+        # existing custom traits, this test case will fail as we only expect
+        # "EXCEPTION_TRAIT" showed in ValueError exception rather than
+        # "EXCEPTION_TRAIT,CUSTOM_IGNORE_TRAIT"
+        ignore_trait = "CUSTOM_IGNORE_TRAIT"
+        self.p_tree.add_traits(uuids.cn1, ignore_trait)
+        provider["traits"]["additional"].append(ignore_trait)
 
         expected = ("Provider config 'test_provider_config.yaml' attempts to "
                     "define a trait that is owned by the virt driver or "

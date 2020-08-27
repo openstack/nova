@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Nova now supports defining of additional resource provider traits and
+    inventories by way of YAML configuration files. The location of these
+    files is defined by the new config option
+    ``[compute]provider_config_location``. Nova will look in this directory
+    for ``*.yaml`` files. See the `specification`__ and `admin guide`__ for
+    more details.
+
+    __ https://specs.openstack.org/openstack/nova-specs/specs/ussuri/approved/provider-config-file.html
+    __ https://docs.openstack.org/nova/latest/admin/managing-resource-providers.html
+

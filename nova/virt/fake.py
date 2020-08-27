@@ -510,7 +510,7 @@ class FakeDriver(driver.ComputeDriver):
                 'sockets': 4,
                 }),
             ])
-        if nodename not in self._nodes:
+        if nodename not in self.get_available_nodes():
             return {}
 
         host_status = self.host_status_base.copy()
