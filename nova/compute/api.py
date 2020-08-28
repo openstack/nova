@@ -3875,6 +3875,12 @@ class API(base.Base):
         else:
             new_instance_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, read_deleted="no")
+            # NOTE(wenping): We use this instead of the 'block_accelerator'
+            # decorator since the operation can differ depending on args,
+            # and for resize we have two flavors to worry about, we should
+            # reject resize with new flavor with accelerator.
+            if new_instance_type.extra_specs.get('accel:device_profile'):
+                raise exception.ForbiddenWithAccelerators()
             # Check to see if we're resizing to a zero-disk flavor which is
             # only supported with volume-backed servers.
             if (new_instance_type.get('root_gb') == 0 and
