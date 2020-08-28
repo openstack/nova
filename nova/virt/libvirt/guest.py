@@ -654,6 +654,7 @@ class Guest(object):
 
         if destination_xml:
             params['destination_xml'] = destination_xml
+            params['persistent_xml'] = destination_xml
         if migrate_disks:
             params['migrate_disks'] = migrate_disks
         if migrate_uri:
