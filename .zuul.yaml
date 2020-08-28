@@ -56,6 +56,7 @@
       bindep_profile: test py38
     timeout: 3600
 
+# TODO(lyarwood): Remove once the new zuulv3 nova-multinode jobs are voting
 - job:
     name: nova-live-migration
     parent: nova-dsvm-multinode-base
@@ -67,6 +68,45 @@
     run: playbooks/legacy/nova-live-migration/run.yaml
     post-run: playbooks/legacy/nova-live-migration/post.yaml
     irrelevant-files: *dsvm-irrelevant-files
+
+- job:
+    name: nova-multinode-live-migration
+    parent: tempest-multinode-full-py3
+    description: |
+      Run tempest live migration tests against local qcow2 ephemeral storage
+      and shared LVM/iSCSI cinder volumes.
+    irrelevant-files: *dsvm-irrelevant-files
+    vars:
+      tox_envlist: all
+      tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
+      devstack_local_conf:
+        test-config:
+          $TEMPEST_CONFIG:
+            compute-feature-enabled:
+              volume_backed_live_migration: true
+              block_migration_for_live_migration: true
+              block_migrate_cinder_iscsi: true
+
+# TODO(lyarwood): The following jobs need to be written as part of the
+# migration to zuulv3 before nova-live-migration can be removed:
+#
+#- job:
+#    name: nova-multinode-live-migration-ceph
+#    description: |
+#      Run tempest live migration tests against ceph ephemeral storage and
+#      cinder volumes.
+#
+#- job:
+#    name: nova-multinode-evacuate
+#    description: |
+#       Verifiy the evacuation of instances with local qcow2 ephemeral disks
+#       from down compute hosts.
+#
+#- job:
+#    name: nova-multinode-evacuate-ceph
+#    description: |
+#       Verifiy the evacuation of instances with ceph ephemeral disks
+#       from down compute hosts.
 
 - job:
     name: nova-lvm
@@ -400,6 +440,8 @@
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
         - nova-grenade-multinode
         - nova-live-migration
+        - nova-multinode-live-migration:
+            voting: false
         - nova-lvm
         - nova-multi-cell
         - nova-next
