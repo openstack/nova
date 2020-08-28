@@ -258,7 +258,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.mock_call_plugin.assert_called_once_with(
                 'glance.py',
                 'download_vhd2',
-                0,
+                3,
                 mock.ANY,
                 mock.ANY,
                 extra_headers={'X-Auth-Token': 'auth_token',
