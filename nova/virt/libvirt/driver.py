@@ -2710,6 +2710,10 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.extract_snapshot(disk_delta, 'qcow2',
                                        out_path, image_format)
 
+        # Remove the disk_delta file once the snapshot extracted, so that
+        # it doesn't hang around till the snapshot gets uploaded
+        fileutils.delete_if_exists(disk_delta)
+
     def _volume_snapshot_update_status(self, context, snapshot_id, status):
         """Send a snapshot status update to Cinder.
 

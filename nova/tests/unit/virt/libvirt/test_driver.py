@@ -19666,10 +19666,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         disconnect_volume.assert_called_once_with(self.context,
                 mock.sentinel.new_connection_info, instance)
 
+    @mock.patch.object(fileutils, 'delete_if_exists')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     @mock.patch('nova.privsep.path.chown')
     def _test_live_snapshot(
-            self, mock_chown, mock_is_job_complete,
+            self, mock_chown, mock_is_job_complete, mock_delete,
             can_quiesce=False, require_quiesce=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         mock_dom = mock.MagicMock()
@@ -19727,6 +19728,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_chown.assert_called_once_with(dltfile, uid=os.getuid())
             mock_snapshot.assert_called_once_with(dltfile, "qcow2",
                                                   dstfile, "qcow2")
+            mock_delete.assert_called_once_with(dltfile)
             mock_define.assert_called_once_with(xmldoc)
             mock_quiesce.assert_any_call(mock.ANY, self.test_instance,
                                          mock.ANY, True)
