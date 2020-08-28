@@ -278,7 +278,7 @@ class SubnetTests(test.NoDBTestCase):
 class NetworkTests(test.NoDBTestCase):
     def test_create_network(self):
         network = fake_network_cache_model.new_network()
-        self.assertEqual(1, network['id'])
+        self.assertEqual(uuids.network_id, network['id'])
         self.assertEqual('br0', network['bridge'])
         self.assertEqual('public', network['label'])
         self.assertEqual(
@@ -336,7 +336,7 @@ class NetworkTests(test.NoDBTestCase):
         fake_network_cache_model.new_subnet(dict(cidr='255.255.255.255'))
         network = model.Network.hydrate(fake_network_cache_model.new_network())
 
-        self.assertEqual(1, network['id'])
+        self.assertEqual(uuids.network_id, network['id'])
         self.assertEqual('br0', network['bridge'])
         self.assertEqual('public', network['label'])
         self.assertEqual(
@@ -348,7 +348,7 @@ class NetworkTests(test.NoDBTestCase):
 class VIFTests(test.NoDBTestCase):
     def test_create_vif(self):
         vif = fake_network_cache_model.new_vif()
-        self.assertEqual(1, vif['id'])
+        self.assertEqual(uuids.vif_id, vif['id'])
         self.assertEqual('aa:aa:aa:aa:aa:aa', vif['address'])
         self.assertEqual(fake_network_cache_model.new_network(),
                          vif['network'])
@@ -405,12 +405,12 @@ class VIFTests(test.NoDBTestCase):
 
     def test_create_vif_with_type(self):
         vif_dict = dict(
-            id=1,
+            id=uuids.vif_id,
             address='aa:aa:aa:aa:aa:aa',
             network=fake_network_cache_model.new_network(),
             type='bridge')
         vif = fake_network_cache_model.new_vif(vif_dict)
-        self.assertEqual(1, vif['id'])
+        self.assertEqual(uuids.vif_id, vif['id'])
         self.assertEqual('aa:aa:aa:aa:aa:aa', vif['address'])
         self.assertEqual('bridge', vif['type'])
         self.assertEqual(fake_network_cache_model.new_network(),
@@ -440,7 +440,7 @@ class VIFTests(test.NoDBTestCase):
         vif = fake_network_cache_model.new_vif()
         labeled_ips = vif.labeled_ips()
         ip_dict = {
-            'network_id': 1,
+            'network_id': uuids.network_id,
             'ips': [fake_network_cache_model.new_ip(
                         {'address': '10.10.0.2', 'type': 'fixed'}),
                     fake_network_cache_model.new_ip(
@@ -451,19 +451,19 @@ class VIFTests(test.NoDBTestCase):
     def test_hydrate(self):
         fake_network_cache_model.new_network()
         vif = model.VIF.hydrate(fake_network_cache_model.new_vif())
-        self.assertEqual(1, vif['id'])
+        self.assertEqual(uuids.vif_id, vif['id'])
         self.assertEqual('aa:aa:aa:aa:aa:aa', vif['address'])
         self.assertEqual(fake_network_cache_model.new_network(),
                          vif['network'])
 
     def test_hydrate_vif_with_type(self):
         vif_dict = dict(
-            id=1,
+            id=uuids.vif_id,
             address='aa:aa:aa:aa:aa:aa',
             network=fake_network_cache_model.new_network(),
             type='bridge')
         vif = model.VIF.hydrate(fake_network_cache_model.new_vif(vif_dict))
-        self.assertEqual(1, vif['id'])
+        self.assertEqual(uuids.vif_id, vif['id'])
         self.assertEqual('aa:aa:aa:aa:aa:aa', vif['address'])
         self.assertEqual('bridge', vif['type'])
         self.assertEqual(fake_network_cache_model.new_network(),
@@ -938,7 +938,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
                 'id': 'interface0',
                 'type': 'phy',
                 'ethernet_mac_address': 'aa:aa:aa:aa:aa:aa',
-                'vif_id': 1,
+                'vif_id': uuids.vif_id,
                 'mtu': 1500
             },
             net_metadata['links'][0])
@@ -965,7 +965,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
                 ],
                 'services': [{'address': '1.2.3.4', 'type': 'dns'},
                              {'address': '2.3.4.5', 'type': 'dns'}],
-                'network_id': 1
+                'network_id': uuids.network_id
             },
             net_metadata['networks'][0])
 
@@ -990,7 +990,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
                 ],
                 'services': [{'address': '1:2:3:4::', 'type': 'dns'},
                              {'address': '2:3:4:5::', 'type': 'dns'}],
-                'network_id': 1
+                'network_id': uuids.network_id
             },
             net_metadata['networks'][1])
 
@@ -1010,7 +1010,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
                 'id': 'network0',
                 'link': 'interface0',
                 'type': 'ipv4_dhcp',
-                'network_id': 1
+                'network_id': uuids.network_id
             },
             net_metadata['networks'][0])
 
@@ -1020,7 +1020,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
                 'id': 'network1',
                 'link': 'interface0',
                 'type': 'ipv6_dhcp',
-                'network_id': 1
+                'network_id': uuids.network_id
             },
             net_metadata['networks'][1])
 
@@ -1055,7 +1055,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
                     {'address': '2:3:4:5::', 'type': 'dns'}
                 ],
                 'type': 'ipv6_%s' % mode,
-                'network_id': 1
+                'network_id': uuids.network_id
             },
             net_metadata['networks'][1])
 
@@ -1074,7 +1074,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
             'ip_address': '10.10.0.2',
             'link': 1,
             'netmask': '255.255.255.0',
-            'network_id': 1,
+            'network_id': uuids.network_id,
             'routes': [
                 {
                     'gateway': '10.10.0.1',
@@ -1097,7 +1097,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
     def test__get_eth_link(self):
         expected_link = {
             'id': 'interface0',
-            'vif_id': 1,
+            'vif_id': uuids.vif_id,
             'type': 'vif',
             'ethernet_mac_address': 'aa:aa:aa:aa:aa:aa',
             'mtu': 1500
@@ -1109,7 +1109,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
     def test__get_eth_link_physical(self):
         expected_link = {
             'id': 'interface1',
-            'vif_id': 1,
+            'vif_id': uuids.vif_id,
             'type': 'phy',
             'ethernet_mac_address': 'aa:aa:aa:aa:aa:aa',
             'mtu': 1500
@@ -1161,14 +1161,14 @@ class TestNetworkMetadata(test.NoDBTestCase):
                     "ethernet_mac_address": "aa:aa:aa:aa:aa:aa",
                     "id": "interface0",
                     "type": "phy",
-                    "vif_id": 1,
+                    "vif_id": uuids.vif_id,
                     "mtu": 1500
                 },
                 {
                     "ethernet_mac_address": "aa:aa:aa:aa:aa:ab",
                     "id": "interface1",
                     "type": "phy",
-                    "vif_id": 1,
+                    "vif_id": uuids.vif_id,
                     "mtu": 1500
                 },
             ],
@@ -1277,7 +1277,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
             ],
             "networks": [
                 {
-                    "network_id": 1,
+                    "network_id": uuids.network_id,
                     "type": "ipv6",
                     "netmask": "ffff:ffff:ffff::",
                     "link": "interface0",
@@ -1305,7 +1305,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
                     "mtu": 1500,
                     "type": "phy",
                     "id": "interface0",
-                    "vif_id": 1
+                    "vif_id": uuids.vif_id
                 }
             ]
         }

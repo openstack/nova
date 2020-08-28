@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils.fixture import uuidsentinel as uuids
+
 from nova.network import model
 
 
@@ -81,7 +83,7 @@ def new_subnet(subnet_dict=None, version=4):
 def new_network(network_dict=None, version=4):
     if version == 6:
         new_net = dict(
-            id=1,
+            id=uuids.network_id,
             bridge='br0',
             label='public',
             subnets=[new_subnet(version=6),
@@ -89,7 +91,7 @@ def new_network(network_dict=None, version=4):
                                 version=6)])
     elif version == 4:
         new_net = dict(
-            id=1,
+            id=uuids.network_id,
             bridge='br0',
             label='public',
             subnets=[new_subnet(), new_subnet(dict(cidr='255.255.255.255'))])
@@ -100,7 +102,7 @@ def new_network(network_dict=None, version=4):
 
 def new_vif(vif_dict=None, version=4):
     vif = dict(
-        id=1,
+        id=uuids.vif_id,
         address='aa:aa:aa:aa:aa:aa',
         type='bridge',
         network=new_network(version=version))
