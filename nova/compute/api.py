@@ -3943,8 +3943,6 @@ class API(base.Base):
 
     # TODO(stephenfin): This logic would be so much easier to grok if we
     # finally split resize and cold migration into separate code paths
-    # TODO(stephenfin): The 'block_accelerators' decorator doesn't take into
-    # account the accelerators requested in the new flavor
     @block_accelerators()
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
@@ -3980,6 +3978,12 @@ class API(base.Base):
         else:
             new_instance_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, read_deleted="no")
+            # NOTE(wenping): We use this instead of the 'block_accelerator'
+            # decorator since the operation can differ depending on args,
+            # and for resize we have two flavors to worry about, we should
+            # reject resize with new flavor with accelerator.
+            if new_instance_type.extra_specs.get('accel:device_profile'):
+                raise exception.ForbiddenWithAccelerators()
             # Check to see if we're resizing to a zero-disk flavor which is
             # only supported with volume-backed servers.
             if (new_instance_type.get('root_gb') == 0 and
