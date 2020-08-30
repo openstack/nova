@@ -840,14 +840,16 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                              network_model.VIF_MODEL_RTL8139,
                              network_model.VIF_MODEL_E1000,
                              network_model.VIF_MODEL_E1000E,
-                             network_model.VIF_MODEL_SPAPR_VLAN)
+                             network_model.VIF_MODEL_SPAPR_VLAN,
+                             network_model.VIF_MODEL_VMXNET3)
             else:
                 supported = (network_model.VIF_MODEL_NE2K_PCI,
                              network_model.VIF_MODEL_PCNET,
                              network_model.VIF_MODEL_RTL8139,
                              network_model.VIF_MODEL_E1000,
                              network_model.VIF_MODEL_E1000E,
-                             network_model.VIF_MODEL_SPAPR_VLAN)
+                             network_model.VIF_MODEL_SPAPR_VLAN,
+                             network_model.VIF_MODEL_VMXNET3)
             for model in supported:
                 image_meta = objects.ImageMeta.from_dict(
                     {'properties': {'hw_vif_model': model}})

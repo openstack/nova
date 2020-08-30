@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Add the ability to use ``vmxnet3`` NIC on a host using the QEMU/KVM driver. This allows
+    the migration of an ESXi VM to QEMU/KVM, without any driver changes. ``vmxnet3``
+    comes with better performance and lower latency comparing to an emulated driver like
+    ``e1000``.
