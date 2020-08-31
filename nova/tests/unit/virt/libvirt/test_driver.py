@@ -5566,10 +5566,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         return cfg
 
     def test_get_guest_config_with_vnc(self):
-        self.flags(enabled=True,
-                   server_listen='10.0.0.1',
-                   keymap='en-ie',
-                   group='vnc')
+        self.flags(enabled=True, server_listen='10.0.0.1', group='vnc')
         self.flags(virt_type='kvm', group='libvirt')
         self.flags(pointer_model='ps2mouse')
         self.flags(enabled=False, group='spice')
@@ -5593,8 +5590,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               vconfig.LibvirtConfigMemoryBalloon)
 
         self.assertEqual(cfg.devices[3].type, 'vnc')
-        self.assertEqual(cfg.devices[3].keymap, 'en-ie')
         self.assertEqual(cfg.devices[3].listen, '10.0.0.1')
+        self.assertIsNone(cfg.devices[3].keymap)
 
     def test_get_guest_config_with_vnc_and_tablet(self):
         self.flags(enabled=True, group='vnc')
@@ -5634,7 +5631,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(enabled=True,
                    agent_enabled=False,
                    server_listen='10.0.0.1',
-                   keymap='en-ie',
                    group='spice')
 
         cfg = self._get_guest_config_with_graphics()
@@ -5659,8 +5655,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(cfg.devices[3].type, 'tablet')
         self.assertEqual(cfg.devices[4].type, 'spice')
-        self.assertEqual(cfg.devices[4].keymap, 'en-ie')
         self.assertEqual(cfg.devices[4].listen, '10.0.0.1')
+        self.assertIsNone(cfg.devices[4].keymap)
 
     def test_get_guest_config_with_spice_and_agent(self):
         self.flags(enabled=False, group='vnc')
@@ -5698,34 +5694,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[3].type, 'spicevmc')
         self.assertEqual(cfg.devices[4].type, "spice")
         self.assertEqual(cfg.devices[5].type, video_type)
-
-    def test_get_guest_config_with_vnc_no_keymap(self):
-        self.flags(virt_type='kvm', group='libvirt')
-        self.flags(enabled=True, keymap=None, group='vnc')
-        self.flags(enabled=False, group='spice')
-
-        cfg = self._get_guest_config_with_graphics()
-
-        for device in cfg.devices:
-            if device.root_name == 'graphics':
-                self.assertIsInstance(device,
-                                      vconfig.LibvirtConfigGuestGraphics)
-                self.assertEqual('vnc', device.type)
-                self.assertIsNone(device.keymap)
-
-    def test_get_guest_config_with_spice_no_keymap(self):
-        self.flags(virt_type='kvm', group='libvirt')
-        self.flags(enabled=True, keymap=None, group='spice')
-        self.flags(enabled=False, group='vnc')
-
-        cfg = self._get_guest_config_with_graphics()
-
-        for device in cfg.devices:
-            if device.root_name == 'graphics':
-                self.assertIsInstance(device,
-                                      vconfig.LibvirtConfigGuestGraphics)
-                self.assertEqual('spice', device.type)
-                self.assertIsNone(device.keymap)
 
     @mock.patch.object(host.Host, 'get_guest')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -7748,10 +7716,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
                       get_host_capabilities_stub)
-        self.flags(enabled=True,
-                   server_listen='10.0.0.1',
-                   keymap='en-ie',
-                   group='vnc')
+        self.flags(enabled=True, server_listen='10.0.0.1', group='vnc')
         self.flags(virt_type='kvm', group='libvirt')
         self.flags(enabled=False, group='spice')
 

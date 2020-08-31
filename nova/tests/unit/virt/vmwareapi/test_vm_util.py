@@ -502,10 +502,10 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(0, unit_number)
         self.assertEqual(1, controller_spec.device.busNumber)
 
-    def _test_get_vnc_config_spec(self, keymap):
+    def test_get_vnc_config_spec(self):
+        self.flags(vnc_keymap='en-ie', group='vmware')
         fake_factory = fake.FakeFactory()
-        result = vm_util.get_vnc_config_spec(fake_factory,
-                                             7)
+        result = vm_util.get_vnc_config_spec(fake_factory, 7)
         expected = fake_factory.create('ns0:VirtualMachineConfigSpec')
         expected.extraConfig = []
 
@@ -520,22 +520,11 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.extraConfig.append(remote_display_vnc_port)
 
         remote_display_vnc_keymap = fake_factory.create('ns0:OptionValue')
-        remote_display_vnc_keymap.value = keymap
+        remote_display_vnc_keymap.value = 'en-ie'
         remote_display_vnc_keymap.key = 'RemoteDisplay.vnc.keyMap'
         expected.extraConfig.append(remote_display_vnc_keymap)
 
         self.assertEqual(expected, result)
-
-    def test_get_vnc_config_spec(self):
-        # TODO(stephenfin): Fold this back in and stop overridding the keymap
-        # option once we remove the '[vnc] keymap' option
-        self.flags(vnc_keymap='en-ie', group='vmware')
-        self._test_get_vnc_config_spec('en-ie')
-
-    def test_get_vnc_config_spec__legacy_keymap(self):
-        self.flags(keymap='en-uk', group='vnc')
-        self.flags(vnc_keymap='en-ie', group='vmware')
-        self._test_get_vnc_config_spec('en-uk')
 
     def _create_fake_vms(self):
         fake_vms = fake.FakeRetrieveResult()

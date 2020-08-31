@@ -138,7 +138,6 @@ noVNC-based VNC console support:
 - :oslo.config:option:`vnc.novncproxy_base_url`
 - :oslo.config:option:`vnc.server_listen`
 - :oslo.config:option:`vnc.server_proxyclient_address`
-- :oslo.config:option:`vnc.keymap`
 
 If using the VMware compute driver, the following additional options are
 supported:
@@ -155,7 +154,6 @@ For example, to configure this via a ``nova.conf`` file:
    novncproxy_base_url = http://IP_ADDRESS:6082/vnc_auto.html
    server_listen = 127.0.0.1
    server_proxyclient_address = 127.0.0.1
-   keymap = en-us
 
 Replace ``IP_ADDRESS`` with the IP address from which the proxy is accessible
 by the outside world. For example, this may be the management interface IP
@@ -349,7 +347,6 @@ SPICE console support.
 - :oslo.config:option:`spice.html5proxy_base_url`
 - :oslo.config:option:`spice.server_listen`
 - :oslo.config:option:`spice.server_proxyclient_address`
-- :oslo.config:option:`spice.keymap`
 
 For example, to configure this via a ``nova.conf`` file:
 
@@ -361,7 +358,6 @@ For example, to configure this via a ``nova.conf`` file:
    html5proxy_base_url = http://IP_ADDRESS:6082/spice_auto.html
    server_listen = 127.0.0.1
    server_proxyclient_address = 127.0.0.1
-   keymap = en-us
 
 Replace ``IP_ADDRESS`` with the IP address from which the proxy is accessible
 by the outside world. For example, this may be the management interface IP

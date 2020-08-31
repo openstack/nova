@@ -36,31 +36,6 @@ Guests will get created with graphical devices to support this. Clients
 (for example Horizon) can then establish a VNC connection to the guest.
 """),
 
-    cfg.StrOpt(
-        'keymap',
-        deprecated_group='DEFAULT',
-        deprecated_name='vnc_keymap',
-        deprecated_for_removal=True,
-        deprecated_since='18.0.0',
-        deprecated_reason="""
-Configuring this option forces QEMU to do keymap conversions. These conversions
-are lossy and can result in significant issues for users of non en-US
-keyboards. You should instead use a VNC client that supports Extended Key Event
-messages, such as noVNC 1.0.0. Refer to bug #1682020 for more information.""",
-        help="""
-Keymap for VNC.
-
-The keyboard mapping (keymap) determines which keyboard layout a VNC
-session should use by default.
-
-Possible values:
-
-* A keyboard layout which is supported by the underlying hypervisor on
-  this node. This is usually an 'IETF language tag' (for example
-  'en-us').  If you use QEMU as hypervisor, you should find the  list
-  of supported keyboard layouts at ``/usr/share/qemu/keymaps``.
-"""),
-
     cfg.HostAddressOpt(
         'server_listen',
         default='127.0.0.1',

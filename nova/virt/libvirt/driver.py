@@ -621,18 +621,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 {'arch': hostarch},
             )
 
-        if CONF.vnc.keymap:
-            LOG.warning('The option "[vnc] keymap" has been deprecated '
-                        'in favor of configuration within the guest. '
-                        'Update nova.conf to address this change and '
-                        'refer to bug #1682020 for more information.')
-
-        if CONF.spice.keymap:
-            LOG.warning('The option "[spice] keymap" has been deprecated '
-                        'in favor of configuration within the guest. '
-                        'Update nova.conf to address this change and '
-                        'refer to bug #1682020 for more information.')
-
     def _handle_conn_event(self, enabled, reason):
         LOG.info("Connection event '%(enabled)d' reason '%(reason)s'",
                  {'enabled': enabled, 'reason': reason})
@@ -6376,16 +6364,12 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.vnc.enabled and guest.virt_type not in ('lxc', 'uml'):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "vnc"
-            if CONF.vnc.keymap:
-                graphics.keymap = CONF.vnc.keymap
             graphics.listen = CONF.vnc.server_listen
             guest.add_device(graphics)
             add_video_driver = True
         if CONF.spice.enabled and guest.virt_type not in ('lxc', 'uml', 'xen'):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "spice"
-            if CONF.spice.keymap:
-                graphics.keymap = CONF.spice.keymap
             graphics.listen = CONF.spice.server_listen
             guest.add_device(graphics)
             add_video_driver = True
