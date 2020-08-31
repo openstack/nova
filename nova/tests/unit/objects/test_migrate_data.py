@@ -190,36 +190,6 @@ class TestRemoteLibvirtLiveMigrateData(test_objects._RemoteTest,
     pass
 
 
-class _TestXenapiLiveMigrateData(object):
-    def test_obj_make_compatible(self):
-        obj = migrate_data.XenapiLiveMigrateData(
-            is_volume_backed=False,
-            block_migration=False,
-            destination_sr_ref='foo',
-            migrate_send_data={'key': 'val'},
-            sr_uuid_map={'apple': 'banana'},
-            vif_uuid_map={'orange': 'lemon'},
-            old_vol_attachment_ids={uuids.volume: uuids.attachment},
-            wait_for_vif_plugged=True)
-        primitive = obj.obj_to_primitive('1.0')
-        self.assertNotIn('vif_uuid_map', primitive['nova_object.data'])
-        primitive2 = obj.obj_to_primitive('1.1')
-        self.assertIn('vif_uuid_map', primitive2['nova_object.data'])
-        self.assertNotIn('old_vol_attachment_ids', primitive2)
-        primitive3 = obj.obj_to_primitive('1.2')['nova_object.data']
-        self.assertNotIn('wait_for_vif_plugged', primitive3)
-
-
-class TestXenapiLiveMigrateData(test_objects._LocalTest,
-                                _TestXenapiLiveMigrateData):
-    pass
-
-
-class TestRemoteXenapiLiveMigrateData(test_objects._RemoteTest,
-                                      _TestXenapiLiveMigrateData):
-    pass
-
-
 class _TestHyperVLiveMigrateData(object):
     def test_obj_make_compatible(self):
         obj = migrate_data.HyperVLiveMigrateData(
