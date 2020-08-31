@@ -1,0 +1,9 @@
+---
+deprecations:
+  - |
+    Support for the ``xen``, ``uml``, ``lxc`` and ``parallels`` libvirt
+    backends, configured via the ``[libvirt] virt_type`` config option, has
+    been deprecated. None of these drivers have upstream testing and the
+    ``xen`` and ``uml`` backends specifically have never been considered
+    production ready. With this change, only the ``kvm`` and ``qemu`` backends
+    are considered supported when using the libvirt virt driver.

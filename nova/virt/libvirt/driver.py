@@ -601,17 +601,25 @@ class LibvirtDriver(driver.ComputeDriver):
         host arch configurations in order to indicate potential issues to
         administrators.
         """
+        if CONF.libvirt.virt_type not in ('qemu', 'kvm'):
+            LOG.warning(
+                "Support for the '%(type)s' libvirt backend has been "
+                "deprecated and will be removed in a future release.",
+                {'type': CONF.libvirt.virt_type},
+            )
+
         caps = self._host.get_capabilities()
         hostarch = caps.host.cpu.arch
-        if (CONF.libvirt.virt_type not in ('qemu', 'kvm') or
-            hostarch not in (fields.Architecture.I686,
-                             fields.Architecture.X86_64)):
-            LOG.warning('The libvirt driver is not tested on '
-                        '%(type)s/%(arch)s by the OpenStack project and '
-                        'thus its quality can not be ensured. For more '
-                        'information, see: https://docs.openstack.org/'
-                        'nova/latest/user/support-matrix.html',
-                        {'type': CONF.libvirt.virt_type, 'arch': hostarch})
+        if hostarch not in (
+            fields.Architecture.I686, fields.Architecture.X86_64,
+        ):
+            LOG.warning(
+                'The libvirt driver is not tested on %(arch)s by the '
+                'OpenStack project and thus its quality can not be ensured. '
+                'For more information, see: https://docs.openstack.org/'
+                'nova/latest/user/support-matrix.html',
+                {'arch': hostarch},
+            )
 
         if CONF.vnc.keymap:
             LOG.warning('The option "[vnc] keymap" has been deprecated '
