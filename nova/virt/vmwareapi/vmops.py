@@ -627,6 +627,24 @@ class VMwareVMOps(object):
         except vexc.FileAlreadyExistsException:
             pass
 
+    def _unregister_template_vm(self, templ_vm_ref, instance=None):
+        """Unregister a template VM
+
+        We need to Unregister instead of Destroy, if the datastore path does
+        not exist anymore.
+        """
+        try:
+            LOG.debug("Unregistering the template VM %s",
+                      templ_vm_ref.value,
+                      instance=instance)
+            self._session._call_method(self._session.vim,
+                                       "UnregisterVM", templ_vm_ref)
+            LOG.debug("Unregistered the template VM", instance=instance)
+        except Exception as excep:
+            LOG.warning("got this exception while un-registering a ",
+                        "template VM: %s",
+                        excep, instance=instance)
+
     def _cache_vm_image_from_template(self, vi, templ_vm_ref):
         LOG.debug("Caching VDMK from template VM", instance=vi.instance)
         vm_name = self._get_image_template_vm_name(vi.ii.image_id,
@@ -636,8 +654,16 @@ class VMwareVMOps(object):
         # We want to use the latter. On vSAN this is the only way to get this
         # size because there is no VMDK descriptor.
         vi.ii.file_size = vmdk.capacity_in_bytes
-        self._cache_vm_image(vi, vmdk.path)
+        try:
+            self._cache_vm_image(vi, vmdk.path)
+        except vexc.FileNotFoundException:
+            LOG.warning("Could not find files for template VM %s",
+                        templ_vm_ref.value, instance=vi.instance)
+            self._unregister_template_vm(templ_vm_ref, vi.instance)
+            return False
+
         LOG.debug("Cached VDMK from template VM", instance=vi.instance)
+        return True
 
     def _cache_stream_optimized_image(self, vi, tmp_image_ds_loc):
         dst_path = vi.cache_image_folder.join("%s.vmdk" % vi.ii.image_id)
@@ -741,7 +767,14 @@ class VMwareVMOps(object):
                     name=self._get_image_template_vm_name(vi.ii.image_id,
                                                           vi.datastore.name),
                     spec=clone_spec)
-                task_info = self._session._wait_for_task(templ_vm_clone_task)
+                try:
+                    task_info = \
+                        self._session._wait_for_task(templ_vm_clone_task)
+                except vexc.FileNotFoundException:
+                    LOG.warning("Could not find files for template VM %s",
+                                other_templ_vm_ref.value, instance=vi.instance)
+                    continue
+
                 templ_vm_ref = task_info.result
                 return templ_vm_ref
 
@@ -770,7 +803,8 @@ class VMwareVMOps(object):
                 templ_vm_ref = self._find_image_template_vm(vi)
                 image_available = (templ_vm_ref is not None)
                 if image_available and not CONF.vmware.image_as_template:
-                    self._cache_vm_image_from_template(vi, templ_vm_ref)
+                    image_available = \
+                        self._cache_vm_image_from_template(vi, templ_vm_ref)
 
             if (not image_available and
                     CONF.vmware.fetch_image_from_other_datastores):
@@ -780,7 +814,8 @@ class VMwareVMOps(object):
                 templ_vm_ref = self._fetch_image_from_other_datastores(vi)
                 image_available = (templ_vm_ref is not None)
                 if image_available and not CONF.vmware.image_as_template:
-                    self._cache_vm_image_from_template(vi, templ_vm_ref)
+                    image_available = \
+                        self._cache_vm_image_from_template(vi, templ_vm_ref)
 
             if not image_available:
                 # we didn't find it anywhere. upload it
@@ -2658,7 +2693,18 @@ class VMwareVMOps(object):
         for templ_vm_ref, templ_vm_name in expired_templ_vms.values():
             msg = "Destroying expired image-template VM {}"
             LOG.debug(msg.format(templ_vm_name))
-            vm_util.destroy_vm(self._session, None, templ_vm_ref)
+            try:
+                vm_util.destroy_vm(self._session, None, templ_vm_ref)
+            except vexc.VimFaultException as e:
+                with excutils.save_and_reraise_exception() as ctx:
+                    if 'InvalidArgument' in e.fault_list \
+                            and 'ConfigSpec.files.vmPathName' \
+                                 in e.message:
+                        ctx.reraise = False
+                        # the datastore path for the template VM got lost. we
+                        # unregister instead of destroying then, because we
+                        # can't use it anymore anyways.
+                        self._unregister_template_vm(templ_vm_ref)
 
     def _get_valid_vms_from_retrieve_result(self, retrieve_result,
                                             return_properties=False):
