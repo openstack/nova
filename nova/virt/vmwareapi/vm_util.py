@@ -1397,6 +1397,13 @@ def destroy_vm(session, instance, vm_ref=None):
                                             vm_ref)
         session._wait_for_task(destroy_task)
         LOG.info("Destroyed the VM", instance=instance)
+    except vexc.VimFaultException as e:
+        with excutils.save_and_reraise_exception() as ctx:
+            LOG.exception('Destroy VM failed', instance=instance)
+            # we need the `InvalidArgument` fault to bubble out of this
+            # function so it can be acted upon on higher levels
+            if 'InvalidArgument' not in e.fault_list:
+                ctx.reraise = False
     except Exception:
         LOG.exception('Destroy VM failed', instance=instance)
 

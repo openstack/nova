@@ -1105,7 +1105,12 @@ class VMwareVMOps(object):
                 vmdk_size=vmdk.capacity_in_bytes)
         finally:
             if snapshot_vm_ref:
-                vm_util.destroy_vm(self._session, instance, snapshot_vm_ref)
+                try:
+                    vm_util.destroy_vm(self._session, instance,
+                                       snapshot_vm_ref)
+                except Exception:
+                    # exception is logged inside the function. we can continue.
+                    pass
             # Deleting the snapshot after destroying the temporary VM created
             # based on it allows the instance vm's disks to be consolidated.
             # TODO(vui) Add handling for when vmdk volume is attached.
