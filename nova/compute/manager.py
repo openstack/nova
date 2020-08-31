@@ -8440,8 +8440,8 @@ class ComputeManager(manager.Manager):
         """
         # NOTE(pkoniszewski): block migration specific params are set inside
         # migrate_data objects for drivers that expose block live migration
-        # information (i.e. Libvirt, Xenapi and HyperV). For other drivers
-        # cleanup is not needed.
+        # information (i.e. Libvirt, HyperV). For other drivers cleanup is not
+        # needed.
         do_cleanup = False
         destroy_disks = False
         if isinstance(migrate_data, migrate_data_obj.LibvirtLiveMigrateData):
