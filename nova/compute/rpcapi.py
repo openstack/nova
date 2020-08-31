@@ -780,6 +780,7 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'get_console_output',
                           instance=instance, tail_length=tail_length)
 
+    # TODO(stephenfin): This is no longer used and can be removed in v6.0
     def get_console_pool_info(self, ctxt, host, console_type):
         version = '5.0'
         cctxt = self.router.client(ctxt).prepare(

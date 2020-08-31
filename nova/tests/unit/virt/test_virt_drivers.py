@@ -576,14 +576,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                                       instance_ref)
         self.assertIsInstance(mks_console, ctype.ConsoleMKS)
 
-    @catch_notimplementederror
-    def test_get_console_pool_info(self):
-        instance_ref, network_info = self._get_running_instance()
-        console_pool = self.connection.get_console_pool_info(instance_ref)
-        self.assertIn('address', console_pool)
-        self.assertIn('username', console_pool)
-        self.assertIn('password', console_pool)
-
     @mock.patch(
         'nova.tests.unit.virt.libvirt.fakelibvirt.Domain.jobStats',
         new=mock.Mock(return_value={

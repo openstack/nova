@@ -7719,14 +7719,6 @@ class LibvirtDriver(driver.ComputeDriver):
                      'Cannot get block stats for device', instance.name,
                      instance=instance)
 
-    def get_console_pool_info(self, console_type):
-        # TODO(mdragon): console proxy should be implemented for libvirt,
-        #                in case someone wants to use it with kvm or
-        #                such. For now return fake data.
-        return {'address': '127.0.0.1',
-                'username': 'fakeuser',
-                'password': 'fakepassword'}
-
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
         """Update a ProviderTree object with current resource provider,
         inventory information and CPU traits.
