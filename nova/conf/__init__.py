@@ -65,7 +65,6 @@ from nova.conf import vmware
 from nova.conf import vnc
 from nova.conf import workarounds
 from nova.conf import wsgi
-from nova.conf import xenserver
 from nova.conf import zvm
 
 CONF = cfg.CONF
@@ -116,5 +115,4 @@ vmware.register_opts(CONF)
 vnc.register_opts(CONF)
 workarounds.register_opts(CONF)
 wsgi.register_opts(CONF)
-xenserver.register_opts(CONF)
 zvm.register_opts(CONF)

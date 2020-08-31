@@ -713,17 +713,9 @@ class ImageDeleteConflict(NovaException):
     msg_fmt = _("Conflict deleting image. Reason: %(reason)s.")
 
 
-class ImageHandlerUnsupported(NovaException):
-    msg_fmt = _("Error: unsupported image handler %(image_handler)s.")
-
-
 class PreserveEphemeralNotSupported(Invalid):
     msg_fmt = _("The current driver does not support "
                 "preserving ephemeral partitions.")
-
-
-class StorageRepositoryNotFound(NotFound):
-    msg_fmt = _("Cannot find SR to read/write VDI.")
 
 
 class InstanceMappingNotFound(NotFound):
@@ -1193,10 +1185,6 @@ class BootFromVolumeRequiredForZeroDiskFlavor(Forbidden):
                 "zero disk.")
 
 
-class InsufficientFreeMemory(NovaException):
-    msg_fmt = _("Insufficient free memory on compute node to start %(uuid)s.")
-
-
 class NoValidHost(NovaException):
     msg_fmt = _("No valid host was found. %(reason)s")
 
@@ -1255,6 +1243,7 @@ class PortLimitExceeded(QuotaError):
     msg_fmt = _("Maximum number of ports exceeded")
 
 
+# TODO(stephenfin): Remove this XenAPI relic
 class AggregateError(NovaException):
     msg_fmt = _("Aggregate %(aggregate_id)s: action '%(action)s' "
                 "caused an error: %(reason)s.")
@@ -1456,19 +1445,6 @@ class OrphanedObjectError(NovaException):
 
 class ObjectActionError(NovaException):
     msg_fmt = _('Object action %(action)s failed because: %(reason)s')
-
-
-class AgentError(NovaException):
-    msg_fmt = _('Error during following call to agent: %(method)s')
-
-
-class AgentTimeout(AgentError):
-    msg_fmt = _('Unable to contact guest agent. '
-                'The following call timed out: %(method)s')
-
-
-class AgentNotImplemented(AgentError):
-    msg_fmt = _('Agent does not support the call: %(method)s')
 
 
 class InstanceGroupNotFound(NotFound):
