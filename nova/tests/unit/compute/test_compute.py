@@ -7047,10 +7047,10 @@ class ComputeTestCase(BaseTestCase,
 
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instances_on_driver')
-    @mock.patch.object(fake.FakeDriver, "set_bootable")
     @mock.patch.object(fake.FakeDriver, "power_off")
-    def test_cleanup_running_deleted_instances_shutdown(self, mock_power,
-                                                        mock_set, mock_get):
+    def test_cleanup_running_deleted_instances_shutdown(
+        self, mock_power, mock_get,
+    ):
         ctxt, inst1, inst2 = self._test_cleanup_running('shutdown')
         mock_get.return_value = [inst1, inst2]
 
@@ -7060,34 +7060,13 @@ class ComputeTestCase(BaseTestCase,
                                               {'deleted': True,
                                                'soft_deleted': False})
         mock_power.assert_has_calls([mock.call(inst1), mock.call(inst2)])
-        mock_set.assert_has_calls([mock.call(inst1, False),
-                                   mock.call(inst2, False)])
 
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instances_on_driver')
-    @mock.patch.object(fake.FakeDriver, "set_bootable")
     @mock.patch.object(fake.FakeDriver, "power_off")
-    def test_cleanup_running_deleted_instances_shutdown_notimpl(self,
-                                            mock_power, mock_set, mock_get):
-        ctxt, inst1, inst2 = self._test_cleanup_running('shutdown')
-        mock_get.return_value = [inst1, inst2]
-        mock_set.side_effect = [NotImplementedError, NotImplementedError]
-
-        self.compute._cleanup_running_deleted_instances(ctxt)
-
-        mock_get.assert_called_once_with(ctxt,
-                                         {'deleted': True,
-                                          'soft_deleted': False})
-        mock_set.assert_has_calls([mock.call(inst1, False),
-                                   mock.call(inst2, False)])
-        mock_power.assert_has_calls([mock.call(inst1), mock.call(inst2)])
-
-    @mock.patch.object(compute_manager.ComputeManager,
-                       '_get_instances_on_driver')
-    @mock.patch.object(fake.FakeDriver, "set_bootable")
-    @mock.patch.object(fake.FakeDriver, "power_off")
-    def test_cleanup_running_deleted_instances_shutdown_error(self, mock_power,
-                                        mock_set, mock_get):
+    def test_cleanup_running_deleted_instances_shutdown_error(
+        self, mock_power, mock_get,
+    ):
         ctxt, inst1, inst2 = self._test_cleanup_running('shutdown')
         e = test.TestingException('bad')
         mock_get.return_value = [inst1, inst2]
@@ -7099,8 +7078,6 @@ class ComputeTestCase(BaseTestCase,
                                          {'deleted': True,
                                           'soft_deleted': False})
         mock_power.assert_has_calls([mock.call(inst1), mock.call(inst2)])
-        mock_set.assert_has_calls([mock.call(inst1, False),
-                                   mock.call(inst2, False)])
 
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instances_on_driver')

@@ -9990,13 +9990,6 @@ class ComputeManager(manager.Manager):
                              "DELETED but still present on host.",
                              instance.name, instance=instance)
                     try:
-                        try:
-                            # disable starting the instance
-                            self.driver.set_bootable(instance, False)
-                        except NotImplementedError:
-                            LOG.debug("set_bootable is not implemented "
-                                      "for the current driver")
-                        # and power it off
                         self.driver.power_off(instance)
                     except Exception:
                         LOG.warning("Failed to power off instance",

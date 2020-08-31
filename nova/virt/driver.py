@@ -866,15 +866,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
-    # should be removed.
-    def set_bootable(self, instance, is_bootable):
-        """Set the ability to power on/off an instance.
-
-        :param instance: nova.objects.instance.Instance
-        """
-        raise NotImplementedError()
-
     def unrescue(
         self,
         context: nova_context.RequestContext,

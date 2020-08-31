@@ -736,10 +736,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
             self.connection.emit_event(started_event)
         callback.assert_called_once_with(started_event)
 
-    def test_set_bootable(self):
-        self.assertRaises(NotImplementedError, self.connection.set_bootable,
-                          'instance', True)
-
     @catch_notimplementederror
     def test_get_instance_disk_info(self):
         # This should be implemented by any driver that supports live migrate.
