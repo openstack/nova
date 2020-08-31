@@ -61,3 +61,4 @@ upgrade:
     * ``[xenserver] ovs_integration_bridge``
     * ``[xenserver] use_join_force``
     * ``[xenserver] console_public_hostname``
+    * ``[DEFAULT] bandwidth_poll_interval``

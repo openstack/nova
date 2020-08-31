@@ -300,6 +300,7 @@ class InstanceUpdatePayload(InstancePayload):
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
+        # TODO(stephenfin): Remove this field in 2.0
         'bandwidth': fields.ListOfObjectsField('BandwidthPayload'),
         'old_display_name': fields.StringField(nullable=True),
         'tags': fields.ListOfStringsField(),
@@ -411,6 +412,7 @@ class IpPayload(base.NotificationPayloadBase):
         return ips
 
 
+# TODO(stephenfin): Drop this object
 @nova_base.NovaObjectRegistry.register_notification
 class BandwidthPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
@@ -722,6 +724,7 @@ class InstanceExistsPayload(InstancePayload):
     VERSION = '1.2'
     fields = {
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
+        # TODO(stephenfin): Remove this field in version 2.0
         'bandwidth': fields.ListOfObjectsField('BandwidthPayload'),
     }
 

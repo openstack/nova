@@ -15,6 +15,8 @@ from nova.objects import base
 from nova.objects import fields
 
 
+# TODO(stephenfin): Remove after W, once we no longer need to worry about the
+# versioned notification framework using this
 @base.NovaObjectRegistry.register
 class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
@@ -60,7 +62,6 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
         if db_bw_usage:
             return cls._from_db_object(context, cls(), db_bw_usage)
 
-    # TODO(stephenfin): Remove 'update_cells' in version 2.0 of the object
     @base.serialize_args
     @base.remotable
     def create(self, uuid, mac, bw_in, bw_out, last_ctr_in,
@@ -73,6 +74,8 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
         self._from_db_object(self._context, self, db_bw_usage)
 
 
+# TODO(stephenfin): Remove after W, once we no longer need to worry about the
+# versioned notification framework using this
 @base.NovaObjectRegistry.register
 class BandwidthUsageList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version

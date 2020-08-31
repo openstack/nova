@@ -17,8 +17,8 @@
 # need to be changed after we moved these function inside the package
 # Todo(gibi): remove these imports after legacy notifications using these are
 # transformed to versioned notifications
+
 from nova.notifications.base import audit_period_bounds  # noqa
-from nova.notifications.base import bandwidth_usage  # noqa
 from nova.notifications.base import image_meta  # noqa
 from nova.notifications.base import info_from_instance  # noqa
 from nova.notifications.base import send_update  # noqa

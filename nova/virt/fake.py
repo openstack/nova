@@ -420,18 +420,6 @@ class FakeDriver(driver.ComputeDriver):
             maximum=524288, used=0)
         return diags
 
-    def get_all_bw_counters(self, instances):
-        """Return bandwidth usage counters for each interface on each
-           running VM.
-        """
-        bw = []
-        for instance in instances:
-            bw.append({'uuid': instance.uuid,
-                       'mac_address': 'fa:16:3e:4c:2c:30',
-                       'bw_in': 0,
-                       'bw_out': 0})
-        return bw
-
     def get_all_volume_usage(self, context, compute_host_bdms):
         """Return usage info for volumes attached to vms on
            a given host.

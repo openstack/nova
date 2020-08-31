@@ -1229,6 +1229,8 @@ class AgentBuild(BASE, NovaBase, models.SoftDeleteMixin):
     md5hash = Column(String(255))
 
 
+# TODO(stephenfin): Remove this in the W release or later, once we're sure we
+# won't want it back (it's for a XenAPI-only feature)
 class BandwidthUsage(BASE, NovaBase, models.SoftDeleteMixin):
     """Cache for instance bandwidth usage data pulled from the hypervisor."""
     __tablename__ = 'bw_usage_cache'

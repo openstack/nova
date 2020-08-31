@@ -198,21 +198,7 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
         self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
-    def get_fake_bandwidth(self):
-        usage = objects.BandwidthUsage(context=self.context)
-        usage.create(
-                self.instance.uuid,
-                mac='DE:AD:BE:EF:00:01',
-                bw_in=1,
-                bw_out=2,
-                last_ctr_in=0,
-                last_ctr_out=0,
-                start_period='2012-10-29T13:42:11Z')
-        return usage
-
-    @mock.patch.object(objects.BandwidthUsageList, 'get_by_uuids')
-    def test_vm_update_with_states(self, mock_bandwidth_list):
-        mock_bandwidth_list.return_value = [self.get_fake_bandwidth()]
+    def test_vm_update_with_states(self):
         fake_net_info = fake_network.fake_get_instance_nw_info(self)
         self.instance.info_cache.network_info = fake_net_info
 
@@ -279,17 +265,11 @@ class NotificationsTestCase(test.TestCase):
             self.assertEqual(actual_ip['address'], expected_ip['address'])
 
         bandwidth = payload['bandwidth']
-        self.assertEqual(len(bandwidth), 1)
-        bandwidth = bandwidth[0]['nova_object.data']
-        self.assertEqual(bandwidth['in_bytes'], 1)
-        self.assertEqual(bandwidth['out_bytes'], 2)
-        self.assertEqual(bandwidth['network_name'], 'test1')
+        self.assertEqual(0, len(bandwidth))
 
-    @mock.patch.object(objects.BandwidthUsageList, 'get_by_uuids')
-    def test_task_update_with_states(self, mock_bandwidth_list):
+    def test_task_update_with_states(self):
         self.flags(notify_on_state_change="vm_and_task_state",
                    group='notifications')
-        mock_bandwidth_list.return_value = [self.get_fake_bandwidth()]
         fake_net_info = fake_network.fake_get_instance_nw_info(self)
         self.instance.info_cache.network_info = fake_net_info
 

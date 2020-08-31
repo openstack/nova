@@ -14,7 +14,6 @@ import time
 
 import mock
 
-from nova import context
 from nova import exception
 from nova.tests import fixtures
 from nova.tests.functional.api import client
@@ -503,10 +502,6 @@ class TestInstanceNotificationSample(
 
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
 
-        # Let's generate some bandwidth usage data.
-        # Just call the periodic task directly for simplicity
-        self.compute.manager._poll_bandwidth_usage(context.get_admin_context())
-
         fake_notifier.reset()
 
         post = {
@@ -671,10 +666,6 @@ class TestInstanceNotificationSample(
 
         fake_notifier.reset()
 
-        # Let's generate some bandwidth usage data.
-        # Just call the periodic task directly for simplicity
-        self.compute.manager._poll_bandwidth_usage(context.get_admin_context())
-
         self._delete_server(server)
 
         instance_updates = self._get_notifications('instance.update')
@@ -688,14 +679,7 @@ class TestInstanceNotificationSample(
              'state_update.old_state': 'active',
              'state': 'active',
              'task_state': 'deleting',
-             'bandwidth': [
-                 {'nova_object.namespace': 'nova',
-                  'nova_object.name': 'BandwidthPayload',
-                  'nova_object.data':
-                      {'network_name': 'private',
-                       'out_bytes': 0,
-                       'in_bytes': 0},
-                  'nova_object.version': '1.0'}],
+             'bandwidth': [],
              'tags': ["tag1"],
              'block_devices': [{
                 "nova_object.data": {
