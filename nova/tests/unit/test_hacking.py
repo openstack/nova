@@ -246,17 +246,20 @@ class HackingTestCase(test.NoDBTestCase):
         for method in ('dump', 'dumps', 'load', 'loads'):
             self.assertEqual(
                 __get_msg(method),
-                list(checks.use_jsonutils("json.%s(" % method,
-                                     "./nova/virt/xenapi/driver.py")))
-            self.assertEqual(0,
-                len(list(checks.use_jsonutils("json.%s(" % method,
-                                     "./plugins/xenserver/script.py"))))
-            self.assertEqual(0,
-                len(list(checks.use_jsonutils("jsonx.%s(" % method,
-                                     "./nova/virt/xenapi/driver.py"))))
-        self.assertEqual(0,
-            len(list(checks.use_jsonutils("json.dumb",
-                                 "./nova/virt/xenapi/driver.py"))))
+                list(checks.use_jsonutils(
+                    "json.%s(" % method, "./nova/virt/libvirt/driver.py")),
+            )
+            self.assertEqual(
+                0,
+                len(list(checks.use_jsonutils(
+                    "jsonx.%s(" % method, "./nova/virt/libvirt/driver.py"))),
+            )
+
+        self.assertEqual(
+            0,
+            len(list(checks.use_jsonutils(
+                "json.dumb", "./nova/virt/libvirt/driver.py"))),
+        )
 
     # We are patching pycodestyle so that only the check under test is actually
     # installed.

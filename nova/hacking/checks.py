@@ -362,12 +362,6 @@ def check_explicit_underscore_import(logical_line, filename):
 
 @core.flake8ext
 def use_jsonutils(logical_line, filename):
-    # the code below that path is not meant to be executed from neutron
-    # tree where jsonutils module is present, so don't enforce its usage
-    # for this subdirectory
-    if "plugins/xenserver" in filename:
-        return
-
     # tools are OK to use the standard json module
     if "/tools/" in filename:
         return
