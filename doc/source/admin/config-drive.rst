@@ -39,11 +39,11 @@ compute host and image.
 
 .. rubric:: Compute host requirements
 
-The following virt drivers support the config drive: libvirt, XenServer,
+The following virt drivers support the config drive: libvirt,
 Hyper-V, VMware, and (since 17.0.0 Queens) PowerVM. The Bare Metal service also
 supports the config drive.
 
-- To use config drives with libvirt, XenServer, or VMware, you must first
+- To use config drives with libvirt or VMware, you must first
   install the :command:`genisoimage` package on each compute host. Use the
   :oslo.config:option:`mkisofs_cmd` config option to set the path where you
   install the :command:`genisoimage` program. If :command:`genisoimage` is in
@@ -105,11 +105,5 @@ following to :file:`nova.conf`:
     the config drive. In addition, users can explicitly request a config drive
     when booting instances. For more information, refer to the :ref:`user guide
     <metadata-config-drive>`.
-
-.. note::
-
-    If using Xen with a config drive, you must use the
-    :oslo.config:option:`xenserver.disable_agent` config option to disable the
-    agent.
 
 .. _cloud-init: https://cloudinit.readthedocs.io/en/latest/

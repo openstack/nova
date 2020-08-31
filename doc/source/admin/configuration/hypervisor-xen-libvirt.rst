@@ -4,11 +4,8 @@ Xen via libvirt
 
 OpenStack Compute supports the Xen Project Hypervisor (or Xen). Xen can be
 integrated with OpenStack Compute via the `libvirt <http://libvirt.org/>`_
-`toolstack <http://wiki.xen.org/wiki/Choice_of_Toolstacks>`_ or via the `XAPI
-<http://xenproject.org/developers/teams/xapi.html>`_ `toolstack
-<http://wiki.xen.org/wiki/Choice_of_Toolstacks>`_.  This section describes how
-to set up OpenStack Compute with Xen and libvirt.  For information on how to
-set up Xen with XAPI refer to :doc:`hypervisor-xen-api`.
+`toolstack <http://wiki.xen.org/wiki/Choice_of_Toolstacks>`_ `toolstack
+<http://wiki.xen.org/wiki/Choice_of_Toolstacks>`_.
 
 Installing Xen with libvirt
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

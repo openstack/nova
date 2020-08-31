@@ -53,12 +53,6 @@ the ``/etc/shadow`` file inside the virtual machine instance.
    `CentOS cloud images <http://cloud.centos.org/centos/>`_ which, by default,
    does not allow :command:`ssh` access to the instance with password.
 
-.. rubric:: Password injection and XenAPI (XenServer/XCP)
-
-When using the XenAPI hypervisor back end, Compute uses the XenAPI agent to
-inject passwords into guests. The virtual machine image must be configured with
-the agent for password injection to work.
-
 .. rubric:: Password injection and Windows images (all hypervisors)
 
 For Windows virtual machines, configure the Windows image to retrieve the admin

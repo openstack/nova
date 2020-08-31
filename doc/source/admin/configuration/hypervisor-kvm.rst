@@ -135,8 +135,7 @@ system or find a system with this support.
    and enable the VT option.
 
 If KVM acceleration is not supported, configure Compute to use a different
-hypervisor, such as ``QEMU`` or ``Xen``. See :ref:`compute_qemu` or
-:ref:`compute_xen_api` for details.
+hypervisor, such as :ref:`QEMU <compute_qemu>`.
 
 These procedures help you load the kernel modules for Intel-based and AMD-based
 processors if they do not load automatically during KVM installation.

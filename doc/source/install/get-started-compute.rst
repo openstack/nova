@@ -31,8 +31,6 @@ OpenStack Compute consists of the following areas and their components:
   A worker daemon that creates and terminates virtual machine instances through
   hypervisor APIs. For example:
 
-  - XenAPI for XenServer/XCP
-
   - libvirt for KVM or QEMU
 
   - VMwareAPI for VMware
