@@ -53,7 +53,6 @@ from nova.objects import fields
 from nova import rpc
 from nova import safe_utils
 from nova import utils
-from nova.virt import driver
 
 CONF = nova.conf.CONF
 LOG = log.getLogger(__name__)
@@ -229,10 +228,6 @@ def get_next_device_name(instance, device_name_list,
     except (TypeError, AttributeError, ValueError):
         raise exception.InvalidDevicePath(path=root_device_name)
 
-    # NOTE(vish): remove this when xenapi is setting default_root_device
-    if driver.is_xenapi():
-        prefix = '/dev/xvd'
-
     if req_prefix != prefix:
         LOG.debug("Using %(prefix)s instead of %(req_prefix)s",
                   {'prefix': prefix, 'req_prefix': req_prefix})
@@ -241,16 +236,6 @@ def get_next_device_name(instance, device_name_list,
     for device_path in device_name_list:
         letter = block_device.get_device_letter(device_path)
         used_letters.add(letter)
-
-    # NOTE(vish): remove this when xenapi is properly setting
-    #             default_ephemeral_device and default_swap_device
-    if driver.is_xenapi():
-        flavor = instance.get_flavor()
-        if flavor.ephemeral_gb:
-            used_letters.add('b')
-
-        if flavor.swap:
-            used_letters.add('c')
 
     check_max_disk_devices_to_attach(len(used_letters) + 1)
 

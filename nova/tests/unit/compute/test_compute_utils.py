@@ -87,17 +87,10 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeValidateDeviceTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
-        # check if test name includes "xen"
-        if 'xen' in self.id():
-            self.flags(compute_driver='xenapi.XenAPIDriver')
-            self.instance = objects.Instance(
-                uuid=uuidutils.generate_uuid(dashed=False),
-                root_device_name=None, default_ephemeral_device=None)
-        else:
-            self.instance = objects.Instance(
-                uuid=uuidutils.generate_uuid(dashed=False),
-                root_device_name='/dev/vda',
-                default_ephemeral_device='/dev/vdb')
+        self.instance = objects.Instance(
+            uuid=uuidutils.generate_uuid(dashed=False),
+            root_device_name='/dev/vda',
+            default_ephemeral_device='/dev/vdb')
 
         flavor = objects.Flavor(**test_flavor.fake_flavor)
         self.instance.system_metadata = {}
@@ -197,33 +190,6 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
         self.instance.default_swap_device = "/dev/vdb"
         device = self._validate_device()
         self.assertEqual(device, '/dev/vdc')
-
-    def test_ephemeral_xenapi(self):
-        self.instance.flavor.ephemeral_gb = 10
-        self.instance.flavor.swap = 0
-        device = self._validate_device()
-        self.assertEqual(device, '/dev/xvdc')
-
-    def test_swap_xenapi(self):
-        self.instance.flavor.ephemeral_gb = 0
-        self.instance.flavor.swap = 10
-        device = self._validate_device()
-        self.assertEqual(device, '/dev/xvdb')
-
-    def test_swap_and_ephemeral_xenapi(self):
-        self.instance.flavor.ephemeral_gb = 10
-        self.instance.flavor.swap = 10
-        device = self._validate_device()
-        self.assertEqual(device, '/dev/xvdd')
-
-    def test_swap_and_one_attachment_xenapi(self):
-        self.instance.flavor.ephemeral_gb = 0
-        self.instance.flavor.swap = 10
-        device = self._validate_device()
-        self.assertEqual(device, '/dev/xvdb')
-        self.data.append(self._fake_bdm(device))
-        device = self._validate_device()
-        self.assertEqual(device, '/dev/xvdd')
 
     def test_no_dev_root_device_name_get_next_name(self):
         self.instance['root_device_name'] = 'vda'
