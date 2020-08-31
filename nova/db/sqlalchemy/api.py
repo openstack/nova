@@ -3404,58 +3404,6 @@ def instance_system_metadata_update(context, instance_uuid, metadata, delete):
 
 ####################
 
-
-@pick_context_manager_writer
-def agent_build_create(context, values):
-    agent_build_ref = models.AgentBuild()
-    agent_build_ref.update(values)
-    try:
-        agent_build_ref.save(context.session)
-    except db_exc.DBDuplicateEntry:
-        raise exception.AgentBuildExists(hypervisor=values['hypervisor'],
-                        os=values['os'], architecture=values['architecture'])
-    return agent_build_ref
-
-
-@pick_context_manager_reader
-def agent_build_get_by_triple(context, hypervisor, os, architecture):
-    return model_query(context, models.AgentBuild, read_deleted="no").\
-                   filter_by(hypervisor=hypervisor).\
-                   filter_by(os=os).\
-                   filter_by(architecture=architecture).\
-                   first()
-
-
-@pick_context_manager_reader
-def agent_build_get_all(context, hypervisor=None):
-    if hypervisor:
-        return model_query(context, models.AgentBuild, read_deleted="no").\
-                   filter_by(hypervisor=hypervisor).\
-                   all()
-    else:
-        return model_query(context, models.AgentBuild, read_deleted="no").\
-                   all()
-
-
-@pick_context_manager_writer
-def agent_build_destroy(context, agent_build_id):
-    rows_affected = model_query(context, models.AgentBuild).filter_by(
-                                        id=agent_build_id).soft_delete()
-    if rows_affected == 0:
-        raise exception.AgentBuildNotFound(id=agent_build_id)
-
-
-@pick_context_manager_writer
-def agent_build_update(context, agent_build_id, values):
-    rows_affected = model_query(context, models.AgentBuild).\
-                   filter_by(id=agent_build_id).\
-                   update(values)
-    if rows_affected == 0:
-        raise exception.AgentBuildNotFound(id=agent_build_id)
-
-
-####################
-
 @require_context
 @pick_context_manager_reader_allow_async
 def bw_usage_get(context, uuid, start_period, mac):

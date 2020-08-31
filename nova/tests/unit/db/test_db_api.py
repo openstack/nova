@@ -4621,68 +4621,6 @@ class BlockDeviceMappingTestCase(test.TestCase):
         self.assertEqual(bdm2['instance_uuid'], self.instance2['uuid'])
 
 
-class AgentBuildTestCase(test.TestCase, ModelsObjectComparatorMixin):
-
-    """Tests for db.api.agent_build_* methods."""
-
-    def setUp(self):
-        super(AgentBuildTestCase, self).setUp()
-        self.ctxt = context.get_admin_context()
-
-    def test_agent_build_create_and_get_all(self):
-        self.assertEqual(0, len(db.agent_build_get_all(self.ctxt)))
-        agent_build = db.agent_build_create(self.ctxt, {'os': 'GNU/HURD'})
-        all_agent_builds = db.agent_build_get_all(self.ctxt)
-        self.assertEqual(1, len(all_agent_builds))
-        self._assertEqualObjects(agent_build, all_agent_builds[0])
-
-    def test_agent_build_get_by_triple(self):
-        agent_build = db.agent_build_create(
-            self.ctxt, {'hypervisor': 'kvm', 'os': 'FreeBSD',
-                        'architecture': fields.Architecture.X86_64})
-        self.assertIsNone(db.agent_build_get_by_triple(
-            self.ctxt, 'kvm', 'FreeBSD', 'i386'))
-        self._assertEqualObjects(agent_build, db.agent_build_get_by_triple(
-            self.ctxt, 'kvm', 'FreeBSD', fields.Architecture.X86_64))
-
-    def test_agent_build_destroy(self):
-        agent_build = db.agent_build_create(self.ctxt, {})
-        self.assertEqual(1, len(db.agent_build_get_all(self.ctxt)))
-        db.agent_build_destroy(self.ctxt, agent_build.id)
-        self.assertEqual(0, len(db.agent_build_get_all(self.ctxt)))
-
-    def test_agent_build_update(self):
-        agent_build = db.agent_build_create(self.ctxt, {'os': 'HaikuOS'})
-        db.agent_build_update(self.ctxt, agent_build.id, {'os': 'ReactOS'})
-        self.assertEqual('ReactOS', db.agent_build_get_all(self.ctxt)[0].os)
-
-    def test_agent_build_destroy_destroyed(self):
-        agent_build = db.agent_build_create(self.ctxt, {})
-        db.agent_build_destroy(self.ctxt, agent_build.id)
-        self.assertRaises(exception.AgentBuildNotFound,
-            db.agent_build_destroy, self.ctxt, agent_build.id)
-
-    def test_agent_build_update_destroyed(self):
-        agent_build = db.agent_build_create(self.ctxt, {'os': 'HaikuOS'})
-        db.agent_build_destroy(self.ctxt, agent_build.id)
-        self.assertRaises(exception.AgentBuildNotFound,
-            db.agent_build_update, self.ctxt, agent_build.id, {'os': 'OS/2'})
-
-    def test_agent_build_exists(self):
-        values = {'hypervisor': 'kvm', 'os': 'FreeBSD',
-                  'architecture': fields.Architecture.X86_64}
-        db.agent_build_create(self.ctxt, values)
-        self.assertRaises(exception.AgentBuildExists, db.agent_build_create,
-                          self.ctxt, values)
-
-    def test_agent_build_get_all_by_hypervisor(self):
-        values = {'hypervisor': 'kvm', 'os': 'FreeBSD',
-                  'architecture': fields.Architecture.X86_64}
-        created = db.agent_build_create(self.ctxt, values)
-        actual = db.agent_build_get_all(self.ctxt, hypervisor='kvm')
-        self._assertEqualListsOfObjects([created], actual)
-
-
 class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
         super(VirtualInterfaceTestCase, self).setUp()

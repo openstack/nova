@@ -633,15 +633,6 @@ class NotFound(NovaException):
     code = 404
 
 
-class AgentBuildNotFound(NotFound):
-    msg_fmt = _("No agent-build associated with id %(id)s.")
-
-
-class AgentBuildExists(NovaException):
-    msg_fmt = _("Agent-build with hypervisor %(hypervisor)s os %(os)s "
-                "architecture %(architecture)s exists.")
-
-
 class VolumeAttachmentNotFound(NotFound):
     msg_fmt = _("Volume attachment %(attachment_id)s could not be found.")
 

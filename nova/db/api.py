@@ -1102,35 +1102,6 @@ def instance_system_metadata_update(context, instance_uuid, metadata, delete):
 ####################
 
 
-def agent_build_create(context, values):
-    """Create a new agent build entry."""
-    return IMPL.agent_build_create(context, values)
-
-
-def agent_build_get_by_triple(context, hypervisor, os, architecture):
-    """Get agent build by hypervisor/OS/architecture triple."""
-    return IMPL.agent_build_get_by_triple(context, hypervisor, os,
-            architecture)
-
-
-def agent_build_get_all(context, hypervisor=None):
-    """Get all agent builds."""
-    return IMPL.agent_build_get_all(context, hypervisor)
-
-
-def agent_build_destroy(context, agent_update_id):
-    """Destroy agent build entry."""
-    IMPL.agent_build_destroy(context, agent_update_id)
-
-
-def agent_build_update(context, agent_build_id, values):
-    """Update agent build entry."""
-    IMPL.agent_build_update(context, agent_build_id, values)
-
-
-####################
-
-
 def bw_usage_get(context, uuid, start_period, mac):
     """Return bw usage for instance and mac in a given audit period."""
     return IMPL.bw_usage_get(context, uuid, start_period, mac)

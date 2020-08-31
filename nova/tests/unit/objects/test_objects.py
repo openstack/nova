@@ -1045,8 +1045,6 @@ class TestRegistry(test.NoDBTestCase):
 # they come with a corresponding version bump in the affected
 # objects
 object_data = {
-    'Agent': '1.0-c0c092abaceb6f51efe5d82175f15eba',
-    'AgentList': '1.0-5a7380d02c3aaf2a32fc8115ae7ca98c',
     'Aggregate': '1.3-f315cb68906307ca2d1cca84d4753585',
     'AggregateList': '1.3-3ea55a050354e72ef3306adefa553957',
     'BandwidthUsage': '1.2-c6e4c779c7f40f2407e3d70022e3cd1c',
