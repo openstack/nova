@@ -253,12 +253,6 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                  lambda *args, **kwargs: None)
 
     @catch_notimplementederror
-    def test_post_interrupted_snapshot_cleanup(self):
-        instance_ref, network_info = self._get_running_instance()
-        self.connection.post_interrupted_snapshot_cleanup(self.ctxt,
-                instance_ref)
-
-    @catch_notimplementederror
     def test_reboot(self):
         reboot_type = "SOFT"
         instance_ref, network_info = self._get_running_instance()

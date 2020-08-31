@@ -1027,11 +1027,6 @@ class ComputeManager(manager.Manager):
             LOG.debug("Instance in transitional state %s at start-up "
                       "clearing task state",
                       instance.task_state, instance=instance)
-            try:
-                self._post_interrupted_snapshot_cleanup(context, instance)
-            except Exception:
-                # we don't want that an exception blocks the init_host
-                LOG.exception('Failed to cleanup snapshot.', instance=instance)
             instance.task_state = None
             instance.save()
 
@@ -3972,9 +3967,6 @@ class ComputeManager(manager.Manager):
             instance.task_state = None
             instance.save()
             LOG.warning("Image not found during snapshot", instance=instance)
-
-    def _post_interrupted_snapshot_cleanup(self, context, instance):
-        self.driver.post_interrupted_snapshot_cleanup(context, instance)
 
     @messaging.expected_exceptions(NotImplementedError)
     @wrap_exception()
