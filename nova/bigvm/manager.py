@@ -94,71 +94,8 @@ class BigVmManager(manager.Manager):
         vcenters, bigvm_providers, vmware_providers = \
             self._get_providers(context)
 
-        # check for reserved resources which indicate that the free host was
-        # consumed
-        reserved_providers = {rp_uuid: rp
-                              for rp_uuid, rp in bigvm_providers.items()
-                              if rp['inventory'].get(BIGVM_RESOURCE, {})
-                                                .get('reserved')}
-
-        # check for resource-providers having more than
-        # bigvm_cluster_max_usage_percent usage
-        overused_providers = {}
-        for rp_uuid, rp in bigvm_providers.items():
-            if rp_uuid in reserved_providers:
-                # no need to check if we already remove it anyways
-                continue
-            parent_rp = vmware_providers[rp['rp']['parent_provider_uuid']]
-            used_percent = parent_rp['memory_mb_used_percent']
-            if used_percent > CONF.bigvm_cluster_max_usage_percent:
-                overused_providers[rp_uuid] = rp
-                LOG.info('Resource-provider %(parent_rp_uuid)s with free host '
-                         'is overused. Marking %(rp_uuid)s for deletion.',
-                         {'parent_rp_uuid': rp['rp']['parent_provider_uuid'],
-                          'rp_uuid': rp_uuid})
-
-        # check if a provider got used in the background without our knowledge
-        unexpectedly_used_providers = {}
-        for rp_uuid, rp in bigvm_providers.items():
-            # no need to look if their host is free. they should be used
-            # anyways
-            if rp_uuid in reserved_providers:
-                continue
-
-            if rp_uuid in overused_providers:
-                # no need to check if we already remove it anyways
-                continue
-
-            # if we have no resources on the resource-provider, we don't expect
-            # it to be free, yet
-            if not rp['inventory'].get(BIGVM_RESOURCE, {}):
-                continue
-
-            # ask the compute-node if the host is still free. anything other
-            # than FREE_HOST_STATE_DONE means we've got an unexpected state and
-            # should re-schedule that size
-            cm = rp['cell_mapping']
-            with nova_context.target_cell(context, cm) as cctxt:
-                state = self.special_spawn_rpc.free_host(cctxt, rp['host'])
-                if state != special_spawning.FREE_HOST_STATE_DONE:
-                    LOG.info('Checking on already freed up host %(host)s '
-                             'returned with state %(state)s. Marking '
-                             '%(rp_uuid)s for deletion.',
-                             {'host': rp['host'],
-                              'state': state,
-                              'rp_uuid': rp_uuid})
-                    unexpectedly_used_providers[rp_uuid] = rp
-
-        _providers = itertools.chain(reserved_providers.items(),
-                                     overused_providers.items(),
-                                     unexpectedly_used_providers.items())
-        for rp_uuid, rp in _providers:
-            self._clean_up_consumed_provider(context, rp_uuid, rp)
-
-        # clean up our list of resource-providers from consumed or overused
-        # hosts
-        for rp_uuid in itertools.chain(reserved_providers, overused_providers):
-            del bigvm_providers[rp_uuid]
+        self._check_and_clean_providers(context, bigvm_providers,
+                                        vmware_providers)
 
         missing_hv_sizes_per_vc = self._get_missing_hv_sizes(context,
             vcenters, bigvm_providers, vmware_providers)
@@ -208,6 +145,7 @@ class BigVmManager(manager.Manager):
                             'all clusters are used more than %(max_used)d.',
                             {'hv_size': hv_size,
                              'max_used': CONF.bigvm_cluster_max_usage_percent})
+                continue
 
             candidates[hv_size] = (alloc_reqs, filtered_provider_summaries)
 
@@ -387,6 +325,77 @@ class BigVmManager(manager.Manager):
             rp['hv_size'] = hv_size_bucket
 
         return (vcenters, bigvm_providers, vmware_providers)
+
+    def _check_and_clean_providers(self, context, bigvm_providers,
+                                   vmware_providers):
+
+        # check for reserved resources which indicate that the free host was
+        # consumed
+        reserved_providers = {rp_uuid: rp
+                              for rp_uuid, rp in bigvm_providers.items()
+                              if rp['inventory'].get(BIGVM_RESOURCE, {})
+                                                .get('reserved')}
+
+        # check for resource-providers having more than
+        # bigvm_cluster_max_usage_percent usage
+        overused_providers = {}
+        for rp_uuid, rp in bigvm_providers.items():
+            if rp_uuid in reserved_providers:
+                # no need to check if we already remove it anyways
+                continue
+            parent_rp = vmware_providers[rp['rp']['parent_provider_uuid']]
+            used_percent = parent_rp['memory_mb_used_percent']
+            if used_percent > CONF.bigvm_cluster_max_usage_percent:
+                overused_providers[rp_uuid] = rp
+                LOG.info('Resource-provider %(parent_rp_uuid)s with free host '
+                         'is overused. Marking %(rp_uuid)s for deletion.',
+                         {'parent_rp_uuid': rp['rp']['parent_provider_uuid'],
+                          'rp_uuid': rp_uuid})
+
+        # check if a provider got used in the background without our knowledge
+        unexpectedly_used_providers = {}
+        for rp_uuid, rp in bigvm_providers.items():
+            # no need to look if their host is free. they should be used
+            # anyways
+            if rp_uuid in reserved_providers:
+                continue
+
+            if rp_uuid in overused_providers:
+                # no need to check if we already remove it anyways
+                continue
+
+            # if we have no resources on the resource-provider, we don't expect
+            # it to be free, yet
+            if not rp['inventory'].get(BIGVM_RESOURCE, {}):
+                continue
+
+            # ask the compute-node if the host is still free. anything other
+            # than FREE_HOST_STATE_DONE means we've got an unexpected state and
+            # should re-schedule that size
+            cm = rp['cell_mapping']
+            with nova_context.target_cell(context, cm) as cctxt:
+                state = self.special_spawn_rpc.free_host(cctxt, rp['host'])
+                if state != special_spawning.FREE_HOST_STATE_DONE:
+                    LOG.info('Checking on already freed up host %(host)s '
+                             'returned with state %(state)s. Marking '
+                             '%(rp_uuid)s for deletion.',
+                             {'host': rp['host'],
+                              'state': state,
+                              'rp_uuid': rp_uuid})
+                    unexpectedly_used_providers[rp_uuid] = rp
+
+        _providers = itertools.chain(reserved_providers.items(),
+                                     overused_providers.items(),
+                                     unexpectedly_used_providers.items())
+        for rp_uuid, rp in _providers:
+            self._clean_up_consumed_provider(context, rp_uuid, rp)
+
+        # clean up our list of resource-providers from consumed or overused
+        # hosts
+        for rp_uuid in itertools.chain(reserved_providers,
+                                       overused_providers,
+                                       unexpectedly_used_providers):
+            del bigvm_providers[rp_uuid]
 
     def _get_allocations_for_consumer(self, context, consumer_uuid):
         """Same as SchedulerReportClient.get_allocations_for_consumer() but
