@@ -34,7 +34,8 @@ REQUEST_SPEC_OPTIONAL_ATTRS = ['requested_destination',
                                'security_groups',
                                'network_metadata',
                                'requested_resources',
-                               'request_level_params']
+                               'request_level_params',
+                               'requested_networks']
 
 
 @base.NovaObjectRegistry.register
@@ -53,7 +54,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.11: Added is_bfv
     # Version 1.12: Added requested_resources
     # Version 1.13: Added request_level_params
-    VERSION = '1.13'
+    # Version 1.14: Added requested_networks
+    VERSION = '1.14'
 
     fields = {
         'id': fields.IntegerField(),
@@ -108,11 +110,15 @@ class RequestSpec(base.NovaObject):
                                                          default=None),
         # NOTE(efried): This field won't be persisted.
         'request_level_params': fields.ObjectField('RequestLevelParams'),
+        # NOTE(sbauza); This field won't be persisted.
+        'requested_networks': fields.ObjectField('NetworkRequestList')
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(RequestSpec, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 14) and 'requested_networks' in primitive:
+            del primitive['requested_networks']
         if target_version < (1, 13) and 'request_level_params' in primitive:
             del primitive['request_level_params']
         if target_version < (1, 12):
@@ -150,6 +156,10 @@ class RequestSpec(base.NovaObject):
 
         if attrname == 'request_level_params':
             self.request_level_params = RequestLevelParams()
+            return
+
+        if attrname == 'requested_networks':
+            self.requested_networks = objects.NetworkRequestList(objects=[])
             return
 
         # NOTE(sbauza): In case the primitive was not providing that field
@@ -563,7 +573,8 @@ class RequestSpec(base.NovaObject):
             if key in ['id', 'instance_uuid']:
                 setattr(spec, key, db_spec[key])
             elif key in ('requested_destination', 'requested_resources',
-                         'network_metadata', 'request_level_params'):
+                         'network_metadata', 'request_level_params',
+                         'requested_networks'):
                 # Do not override what we already have in the object as this
                 # field is not persisted. If save() is called after
                 # one of these fields is populated, it will reset the field to
@@ -653,6 +664,10 @@ class RequestSpec(base.NovaObject):
             # no need for it after scheduling
             if 'network_metadata' in spec and spec.network_metadata:
                 del spec.network_metadata
+            # NOTE(sbauza): Don't persist requested_networks since we have
+            # no need for it after scheduling
+            if 'requested_networks' in spec and spec.requested_networks:
+                del spec.requested_networks
 
             db_updates = {'spec': jsonutils.dumps(spec.obj_to_primitive())}
             if 'instance_uuid' in updates:
