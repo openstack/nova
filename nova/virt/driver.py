@@ -1544,54 +1544,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
-    # should be removed.
-    def add_to_aggregate(self, context, aggregate, host, **kwargs):
-        """Add a compute host to an aggregate.
-
-        The counter action to this is :func:`remove_from_aggregate`
-
-        :param nova.context.RequestContext context:
-            The security context.
-        :param nova.objects.aggregate.Aggregate aggregate:
-            The aggregate which should add the given `host`
-        :param str host:
-            The name of the host to add to the given `aggregate`.
-        :param dict kwargs:
-            A free-form thingy...
-
-        :return: None
-        """
-        # NOTE(jogo) Currently only used for XenAPI-Pool
-        raise NotImplementedError()
-
-    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
-    # should be removed.
-    def remove_from_aggregate(self, context, aggregate, host, **kwargs):
-        """Remove a compute host from an aggregate.
-
-        The counter action to this is :func:`add_to_aggregate`
-
-        :param nova.context.RequestContext context:
-            The security context.
-        :param nova.objects.aggregate.Aggregate aggregate:
-            The aggregate which should remove the given `host`
-        :param str host:
-            The name of the host to remove from the given `aggregate`.
-        :param dict kwargs:
-            A free-form thingy...
-
-        :return: None
-        """
-        raise NotImplementedError()
-
-    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
-    # should be removed.
-    def undo_aggregate_operation(self, context, op, aggregate,
-                                  host, set_error=True):
-        """Undo for Resource Pools."""
-        raise NotImplementedError()
-
     def get_volume_connector(self, instance):
         """Get connector information for the instance for attaching to volumes.
 

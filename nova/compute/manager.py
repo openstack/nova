@@ -10092,39 +10092,17 @@ class ComputeManager(manager.Manager):
                 # NOTE(mriedem): Why don't we pass clean_task_state=True here?
                 self._set_instance_obj_error_state(instance)
 
+    # TODO(stephenfin): Remove this once we bump the compute API to v6.0
     @wrap_exception()
     def add_aggregate_host(self, context, aggregate, host, slave_info):
-        """Notify hypervisor of change (for hypervisor pools)."""
-        try:
-            self.driver.add_to_aggregate(context, aggregate, host,
-                                         slave_info=slave_info)
-        except NotImplementedError:
-            LOG.debug('Hypervisor driver does not support '
-                      'add_aggregate_host')
-        except exception.AggregateError:
-            with excutils.save_and_reraise_exception():
-                self.driver.undo_aggregate_operation(
-                                    context,
-                                    aggregate.delete_host,
-                                    aggregate, host)
+        """(REMOVED) Notify hypervisor of change (for hypervisor pools)."""
+        raise NotImplementedError()
 
+    # TODO(stephenfin): Remove this once we bump the compute API to v6.0
     @wrap_exception()
     def remove_aggregate_host(self, context, host, slave_info, aggregate):
-        """Removes a host from a physical hypervisor pool."""
-        try:
-            self.driver.remove_from_aggregate(context, aggregate, host,
-                                              slave_info=slave_info)
-        except NotImplementedError:
-            LOG.debug('Hypervisor driver does not support '
-                      'remove_aggregate_host')
-        except (exception.AggregateError,
-                exception.InvalidAggregateAction) as e:
-            with excutils.save_and_reraise_exception():
-                self.driver.undo_aggregate_operation(
-                                    context,
-                                    aggregate.add_host,
-                                    aggregate, host,
-                                    isinstance(e, exception.AggregateError))
+        """(REMOVED) Removes a host from a physical hypervisor pool."""
+        raise NotImplementedError()
 
     def _process_instance_event(self, instance, event):
         _event = self.instance_events.pop_instance_event(instance, event)

@@ -12247,13 +12247,6 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                 host=fake_host,
                 hypervisor_hostname=fake_host)])
 
-        def fake_add_aggregate_host(*args, **kwargs):
-            hosts = kwargs["aggregate"].hosts
-            self.assertIn(fake_host, hosts)
-
-        self.stub_out('nova.compute.rpcapi.ComputeAPI.add_aggregate_host',
-                       fake_add_aggregate_host)
-
         fake_notifier.NOTIFICATIONS = []
         aggr = self.api.add_host_to_aggregate(self.context,
                                               aggr.id, fake_host)
@@ -12448,13 +12441,6 @@ class ComputeAPIAggrTestCase(BaseTestCase):
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr.id, host)
         host_to_remove = values[0][1][0]
-
-        def fake_remove_aggregate_host(*args, **kwargs):
-            hosts = kwargs["aggregate"].hosts
-            self.assertNotIn(host_to_remove, hosts)
-
-        self.stub_out('nova.compute.rpcapi.ComputeAPI.remove_aggregate_host',
-                       fake_remove_aggregate_host)
 
         fake_notifier.NOTIFICATIONS = []
         mock_notify.reset_mock()
@@ -12668,12 +12654,12 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_add_host')
     @mock.patch('nova.compute.utils.notify_about_aggregate_action')
-    @mock.patch('nova.compute.rpcapi.ComputeAPI.add_aggregate_host')
     @mock.patch('nova.scheduler.client.query.SchedulerQueryClient.'
                 'update_aggregates')
-    def test_add_host_to_aggregate(self, update_aggregates, mock_add_agg,
-                                   mock_notify, mock_add_host,
-                                   mock_get_all_by_host):
+    def test_add_host_to_aggregate(
+        self, update_aggregates, mock_notify, mock_add_host,
+        mock_get_all_by_host,
+    ):
         self.api.is_safe_to_update_az = mock.Mock()
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={}, uuid=uuids.agg)
@@ -12690,9 +12676,6 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
                                   return_value=agg)):
             self.api.add_host_to_aggregate(self.context, 1, 'fakehost')
         update_aggregates.assert_called_once_with(self.context, [agg])
-        mock_add_agg.assert_called_once_with(self.context, aggregate=agg,
-                                             host_param='fakehost',
-                                             host='fakehost')
         mock_add_host.assert_called_once_with(
             self.context, agg.uuid, host_name='fakehost')
 
@@ -12700,13 +12683,12 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'aggregate_remove_host')
     @mock.patch('nova.compute.utils.notify_about_aggregate_action')
-    @mock.patch('nova.compute.rpcapi.ComputeAPI.remove_aggregate_host')
     @mock.patch('nova.scheduler.client.query.SchedulerQueryClient.'
                 'update_aggregates')
-    def test_remove_host_from_aggregate(self, update_aggregates,
-                                        mock_remove_agg, mock_notify,
-                                        mock_remove_host,
-                                        mock_get_all_by_host):
+    def test_remove_host_from_aggregate(
+        self, update_aggregates, mock_notify, mock_remove_host,
+        mock_get_all_by_host,
+    ):
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={}, uuid=uuids.agg)
         agg.delete_host = mock.Mock()
@@ -12720,9 +12702,6 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
                                   return_value=agg)):
             self.api.remove_host_from_aggregate(self.context, 1, 'fakehost')
         update_aggregates.assert_called_once_with(self.context, [agg])
-        mock_remove_agg.assert_called_once_with(self.context, aggregate=agg,
-                                                host_param='fakehost',
-                                                host='fakehost')
         mock_notify.assert_has_calls([
             mock.call(context=self.context, aggregate=agg,
                       action='remove_host', phase='start'),
@@ -12730,72 +12709,6 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
                       action='remove_host', phase='end')])
         mock_remove_host.assert_called_once_with(
             self.context, agg.uuid, 'fakehost')
-
-
-class ComputeAggrTestCase(BaseTestCase):
-    """This is for unit coverage of aggregate-related methods
-    defined in nova.compute.manager.
-    """
-
-    def setUp(self):
-        super(ComputeAggrTestCase, self).setUp()
-        self.context = context.get_admin_context()
-        az = {'availability_zone': 'test_zone'}
-        self.aggr = objects.Aggregate(self.context, name='test_aggr',
-                                      metadata=az)
-        self.aggr.create()
-
-    def test_add_aggregate_host(self):
-        def fake_driver_add_to_aggregate(self, context, aggregate, host,
-                                         **_ignore):
-            fake_driver_add_to_aggregate.called = True
-            return {"foo": "bar"}
-        self.stub_out("nova.virt.fake.FakeDriver.add_to_aggregate",
-                       fake_driver_add_to_aggregate)
-
-        self.compute.add_aggregate_host(self.context, host="host",
-            aggregate=self.aggr, slave_info=None)
-        self.assertTrue(fake_driver_add_to_aggregate.called)
-
-    def test_remove_aggregate_host(self):
-        def fake_driver_remove_from_aggregate(cls, context, aggregate, host,
-                                              **_ignore):
-            fake_driver_remove_from_aggregate.called = True
-            self.assertEqual("host", host, "host")
-            return {"foo": "bar"}
-        self.stub_out("nova.virt.fake.FakeDriver.remove_from_aggregate",
-                       fake_driver_remove_from_aggregate)
-
-        self.compute.remove_aggregate_host(self.context,
-            aggregate=self.aggr, host="host", slave_info=None)
-        self.assertTrue(fake_driver_remove_from_aggregate.called)
-
-    def test_add_aggregate_host_passes_slave_info_to_driver(self):
-        def driver_add_to_aggregate(cls, context, aggregate, host, **kwargs):
-            self.assertEqual(self.context, context)
-            self.assertEqual(aggregate.id, self.aggr.id)
-            self.assertEqual(host, "the_host")
-            self.assertEqual("SLAVE_INFO", kwargs.get("slave_info"))
-
-        self.stub_out("nova.virt.fake.FakeDriver.add_to_aggregate",
-                       driver_add_to_aggregate)
-
-        self.compute.add_aggregate_host(self.context, host="the_host",
-            slave_info="SLAVE_INFO", aggregate=self.aggr)
-
-    def test_remove_from_aggregate_passes_slave_info_to_driver(self):
-        def driver_remove_from_aggregate(cls, context, aggregate, host,
-                                         **kwargs):
-            self.assertEqual(self.context, context)
-            self.assertEqual(aggregate.id, self.aggr.id)
-            self.assertEqual(host, "the_host")
-            self.assertEqual("SLAVE_INFO", kwargs.get("slave_info"))
-
-        self.stub_out("nova.virt.fake.FakeDriver.remove_from_aggregate",
-                       driver_remove_from_aggregate)
-
-        self.compute.remove_aggregate_host(self.context,
-            aggregate=self.aggr, host="the_host", slave_info="SLAVE_INFO")
 
 
 class DisabledInstanceTypesTestCase(BaseTestCase):

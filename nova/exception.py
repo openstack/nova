@@ -1243,12 +1243,6 @@ class PortLimitExceeded(QuotaError):
     msg_fmt = _("Maximum number of ports exceeded")
 
 
-# TODO(stephenfin): Remove this XenAPI relic
-class AggregateError(NovaException):
-    msg_fmt = _("Aggregate %(aggregate_id)s: action '%(action)s' "
-                "caused an error: %(reason)s.")
-
-
 class AggregateNotFound(NotFound):
     msg_fmt = _("Aggregate %(aggregate_id)s could not be found.")
 

@@ -511,6 +511,7 @@ class ComputeAPI(object):
                               serializer=serializer,
                               call_monitor_timeout=cmt)
 
+    # TODO(stephenfin): This is no longer used and can be removed in v6.0
     def add_aggregate_host(self, ctxt, host, aggregate, host_param,
                            slave_info=None):
         '''Add aggregate host.
@@ -1092,6 +1093,7 @@ class ComputeAPI(object):
                    recreate=recreate, on_shared_storage=on_shared_storage,
                    **msg_args)
 
+    # TODO(stephenfin): This is no longer used and can be removed in v6.0
     def remove_aggregate_host(self, ctxt, host, aggregate, host_param,
                               slave_info=None):
         '''Remove aggregate host.

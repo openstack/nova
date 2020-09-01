@@ -6212,8 +6212,6 @@ class AggregateAPI(base.Base):
                         node_name, err)
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
         # NOTE(jogo): Send message to host to support resource pools
-        self.compute_rpcapi.add_aggregate_host(context,
-                aggregate=aggregate, host_param=host_name, host=host_name)
         aggregate_payload.update({'name': aggregate.name})
         compute_utils.notify_about_aggregate_update(context,
                                                     "addhost.end",
@@ -6266,8 +6264,6 @@ class AggregateAPI(base.Base):
         aggregate.delete_host(host_name)
         self.query_client.update_aggregates(context, [aggregate])
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
-        self.compute_rpcapi.remove_aggregate_host(context,
-                aggregate=aggregate, host_param=host_name, host=host_name)
         compute_utils.notify_about_aggregate_update(context,
                                                     "removehost.end",
                                                     aggregate_payload)
