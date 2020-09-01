@@ -214,7 +214,7 @@ class LibvirtGenericVIFDriver(object):
 
         if driver == 'vhost' or driver is None:
             # vhost backend only supports update of RX queue size
-            if CONF.libvirt.rx_queue_size:
+            if rx_queue_size:
                 # TODO(sahid): Specifically force driver to be vhost
                 # that because if None we don't generate the XML
                 # driver element needed to set the queue size
