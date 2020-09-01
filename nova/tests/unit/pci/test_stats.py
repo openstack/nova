@@ -533,6 +533,30 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         self.pci_stats.remove_device(dev2)
         self._assertPools()
 
+    def test_update_device(self):
+        # Update device type of one of the device from type-PCI to
+        # type-PF. Verify if the existing pool is updated and a new
+        # pool is created with dev_type type-PF.
+        self._create_pci_devices()
+        dev1 = self.pci_tagged_devices.pop()
+        dev1.dev_type = 'type-PF'
+        self.pci_stats.update_device(dev1)
+        self.assertEqual(3, len(self.pci_stats.pools))
+        self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072',
+                                len(self.pci_untagged_devices))
+        self.assertEqual(self.pci_untagged_devices,
+                         self.pci_stats.pools[0]['devices'])
+        self._assertPoolContent(self.pci_stats.pools[1], '1137', '0071',
+                                len(self.pci_tagged_devices),
+                                physical_network='physnet1')
+        self.assertEqual(self.pci_tagged_devices,
+                         self.pci_stats.pools[1]['devices'])
+        self._assertPoolContent(self.pci_stats.pools[2], '1137', '0071',
+                                1,
+                                physical_network='physnet1')
+        self.assertEqual(dev1,
+                         self.pci_stats.pools[2]['devices'][0])
+
 
 class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
 
