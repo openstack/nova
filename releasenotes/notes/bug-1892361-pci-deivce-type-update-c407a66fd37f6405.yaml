@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    Fixes `bug 1892361`_ in which the pci stat pools are not updated when an
+    existing device is enabled with SRIOV capability. Restart of nova-compute
+    service updates the pci device type from type-PCI to type-PF but the pools
+    still maintain the device type as type-PCI. And so the PF is considered for
+    allocation to instance that requests vnic_type=direct. With this fix, the
+    pci device type updates are detected and the pci stat pools are updated
+    properly.
+
+    .. _bug 1892361: https://bugs.launchpad.net/nova/+bug/1892361
