@@ -70,6 +70,7 @@ class SRIOVServersTest(_PCIServersTestBase):
         {
             'vendor_id': fakelibvirt.PCI_VEND_ID,
             'product_id': fakelibvirt.PF_PROD_ID,
+            'physical_network': 'physnet4',
         },
         {
             'vendor_id': fakelibvirt.PCI_VEND_ID,
@@ -102,6 +103,20 @@ class SRIOVServersTest(_PCIServersTestBase):
         # new fixture here means that we re-stub what the previous neutron
         # fixture already stubbed.
         self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
+
+    def _disable_sriov_in_pf(self, pci_info):
+        # Check for PF and change the capability from virt_functions
+        # Delete all the VFs
+        vfs_to_delete = []
+
+        for device_name, device in pci_info.devices.items():
+            if 'virt_functions' in device.pci_device:
+                device.generate_xml(skip_capability=True)
+            elif 'phys_function' in device.pci_device:
+                vfs_to_delete.append(device_name)
+
+        for device in vfs_to_delete:
+            del pci_info.devices[device]
 
     def test_create_server_with_VF(self):
         """Create a server with an SR-IOV VF-type PCI device."""
@@ -265,6 +280,69 @@ class SRIOVServersTest(_PCIServersTestBase):
             diagnostics['nic_details'][1]['mac_address'],
         )
         self.assertIsNone(diagnostics['nic_details'][1]['tx_packets'])
+
+    def test_create_server_after_change_in_nonsriov_pf_to_sriov_pf(self):
+        # Starts a compute with PF not configured with SRIOV capabilities
+        # Updates the PF with SRIOV capability and restart the compute service
+        # Then starts a VM with the sriov port. The VM should be in active
+        # state with sriov port attached.
+
+        # To emulate the device type changing, we first create a
+        # HostPCIDevicesInfo object with PFs and VFs. Then we make a copy
+        # and remove the VFs and the virt_function capability. This is
+        # done to ensure the physical function product id is same in both
+        # the versions.
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
+        pci_info_no_sriov = copy.deepcopy(pci_info)
+
+        # Disable SRIOV capabilties in PF and delete the VFs
+        self._disable_sriov_in_pf(pci_info_no_sriov)
+
+        fake_connection = self._get_connection(pci_info=pci_info_no_sriov,
+                                               hostname='test_compute0')
+        self.mock_conn.return_value = fake_connection
+
+        self.compute = self.start_service('compute', host='test_compute0')
+
+        ctxt = context.get_admin_context()
+        pci_devices = objects.PciDeviceList.get_by_compute_node(
+            ctxt,
+            objects.ComputeNode.get_by_nodename(
+                ctxt, 'test_compute0',
+            ).id,
+        )
+        self.assertEqual(1, len(pci_devices))
+        self.assertEqual('type-PCI', pci_devices[0].dev_type)
+
+        # Update connection with original pci info with sriov PFs
+        fake_connection = self._get_connection(pci_info=pci_info,
+                                               hostname='test_compute0')
+        self.mock_conn.return_value = fake_connection
+
+        # Restart the compute service
+        self.restart_compute_service(self.compute)
+
+        # Verify if PCI devices are of type type-PF or type-VF
+        pci_devices = objects.PciDeviceList.get_by_compute_node(
+            ctxt,
+            objects.ComputeNode.get_by_nodename(
+                ctxt, 'test_compute0',
+            ).id,
+        )
+        for pci_device in pci_devices:
+            self.assertIn(pci_device.dev_type, ['type-PF', 'type-VF'])
+
+        # create the port
+        self.neutron.create_port({'port': self.neutron.network_4_port_1})
+
+        # create a server using the VF via neutron
+        flavor_id = self._create_flavor()
+        self._create_server(
+            flavor_id=flavor_id,
+            networks=[
+                {'port': base.LibvirtNeutronFixture.network_4_port_1['id']},
+            ],
+        )
 
 
 class SRIOVAttachDetachTest(_PCIServersTestBase):
