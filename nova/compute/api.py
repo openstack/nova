@@ -3534,6 +3534,8 @@ class API(base.Base):
             new_sys_metadata = utils.get_system_metadata_from_image(
                 image, flavor)
 
+            new_sys_metadata.update({'image_base_image_ref': image_id})
+
             instance.system_metadata.update(new_sys_metadata)
             instance.save()
             return orig_sys_metadata
@@ -4170,6 +4172,14 @@ class API(base.Base):
         hypervisor.
         """
         instance.task_state = task_states.SHELVING
+
+        # NOTE(aarents): Ensure image_base_image_ref is present as it will be
+        # needed during unshelve and instance rebuild done before Bug/1893618
+        # Fix dropped it.
+        instance.system_metadata.update(
+                {'image_base_image_ref': instance.image_ref}
+        )
+
         instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.SHELVE)
