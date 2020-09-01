@@ -44,6 +44,7 @@ class _PCIServersTestBase(base.ServersTestBase):
     ADDITIONAL_FILTERS = ['NUMATopologyFilter', 'PciPassthroughFilter']
 
     def setUp(self):
+        self.ctxt = context.get_admin_context()
         self.flags(passthrough_whitelist=self.PCI_PASSTHROUGH_WHITELIST,
                    alias=self.PCI_ALIAS,
                    group='pci')
@@ -62,9 +63,9 @@ class _PCIServersTestBase(base.ServersTestBase):
 
     def assertPCIDeviceCounts(self, hostname, total, free):
         """Ensure $hostname has $total devices, $free of which are free."""
-        ctxt = context.get_admin_context()
         devices = objects.PciDeviceList.get_by_compute_node(
-            ctxt, objects.ComputeNode.get_by_nodename(ctxt, hostname).id,
+            self.ctxt,
+            objects.ComputeNode.get_by_nodename(self.ctxt, hostname).id,
         )
         self.assertEqual(total, len(devices))
         self.assertEqual(free, len([d for d in devices if d.is_available()]))
@@ -366,16 +367,19 @@ class SRIOVServersTest(_PCIServersTestBase):
         # start two compute services with differing PCI device inventory
         self.start_compute(
             hostname='test_compute0',
-            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pfs=2, num_vfs=8))
+            pci_info=fakelibvirt.HostPCIDevicesInfo(
+                num_pfs=2, num_vfs=8, numa_node=0))
         self.start_compute(
             hostname='test_compute1',
-            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=2))
+            pci_info=fakelibvirt.HostPCIDevicesInfo(
+                num_pfs=1, num_vfs=2, numa_node=1))
 
         # create the port
         self.neutron.create_port({'port': self.neutron.network_4_port_1})
 
         # create a server using the VF via neutron
-        flavor_id = self._create_flavor()
+        extra_spec = {'hw:cpu_policy': 'dedicated'}
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
         server = self._create_server(
             flavor_id=flavor_id,
             networks=[
@@ -384,11 +388,21 @@ class SRIOVServersTest(_PCIServersTestBase):
             host='test_compute0',
         )
 
-        # our source host should have marked two PCI devices are used, the VF
-        # and the parent PF, while the future destination is currnetly unused
+        # our source host should have marked two PCI devices as used, the VF
+        # and the parent PF, while the future destination is currently unused
         self.assertEqual('test_compute0', server['OS-EXT-SRV-ATTR:host'])
         self.assertPCIDeviceCounts('test_compute0', total=10, free=8)
         self.assertPCIDeviceCounts('test_compute1', total=3, free=3)
+
+        # the instance should be on host NUMA node 0, since that's where our
+        # PCI devices are
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, 'test_compute0',
+            ).numa_topology
+        )
+        self.assertEqual({0, 1, 2, 3}, host_numa.cells[0].pinned_cpus)
+        self.assertEqual(set(), host_numa.cells[1].pinned_cpus)
 
         # ensure the binding details sent to "neutron" are correct
         port = self.neutron.show_port(
@@ -401,7 +415,7 @@ class SRIOVServersTest(_PCIServersTestBase):
                 # TODO(stephenfin): Stop relying on a side-effect of how nova
                 # chooses from multiple PCI devices (apparently the last
                 # matching one)
-                'pci_slot': '0000:81:00.4',
+                'pci_slot': '0000:81:01.4',
                 'physical_network': 'physnet4',
             },
             port['binding:profile'],
@@ -414,6 +428,16 @@ class SRIOVServersTest(_PCIServersTestBase):
         # up the source in the process
         self.assertPCIDeviceCounts('test_compute0', total=10, free=10)
         self.assertPCIDeviceCounts('test_compute1', total=3, free=1)
+
+        # the instance should now be on host NUMA node 1, since that's where
+        # our PCI devices are for this second host
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, 'test_compute1',
+            ).numa_topology
+        )
+        self.assertEqual(set(), host_numa.cells[0].pinned_cpus)
+        self.assertEqual({4, 5, 6, 7}, host_numa.cells[1].pinned_cpus)
 
         # ensure the binding details sent to "neutron" have been updated
         port = self.neutron.show_port(
