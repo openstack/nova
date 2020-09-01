@@ -473,7 +473,6 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         inst_2 = copy.copy(self.inst)
         inst_2.uuid = uuidsentinel.instance2
         migr = {'instance_uuid': 'uuid2', 'vm_state': vm_states.BUILDING}
-        orph = {'uuid': 'uuid3', 'vm_state': vm_states.BUILDING}
 
         pci_requests_obj = self._create_pci_requests_object(
             [{'count': 1, 'spec': [{'vendor_id': 'v'}]}])
@@ -490,7 +489,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(len(free_devs), 1)
         self.assertEqual(free_devs[0].vendor_id, 'v')
 
-        self.tracker.clean_usage([self.inst], [migr], [orph])
+        self.tracker.clean_usage([self.inst], [migr])
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 2)
         self.assertEqual(
@@ -504,7 +503,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.tracker.update_pci_for_instance(None, self.inst, sign=1)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(3, len(free_devs))
-        self.tracker.clean_usage([], [], [])
+        self.tracker.clean_usage([], [])
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(3, len(free_devs))
         self.assertEqual(

@@ -1577,15 +1577,6 @@ class ComputeDriver(object):
         # Refresh and check again.
         return nodename in self.get_available_nodes(refresh=True)
 
-    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
-    # should be removed.
-    def get_per_instance_usage(self):
-        """Get information about instance resource usage.
-
-        :returns: dict of  nova uuid => dict of usage info
-        """
-        return {}
-
     def instance_on_disk(self, instance):
         """Checks access of instance files on the host.
 

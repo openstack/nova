@@ -363,14 +363,13 @@ class PciDevTracker(object):
         if sign == 1:
             self.allocate_instance(instance)
 
-    def clean_usage(self, instances, migrations, orphans):
+    def clean_usage(self, instances, migrations):
         """Remove all usages for instances not passed in the parameter.
 
         The caller should hold the COMPUTE_RESOURCE_SEMAPHORE lock
         """
         existed = set(inst['uuid'] for inst in instances)
         existed |= set(mig['instance_uuid'] for mig in migrations)
-        existed |= set(inst['uuid'] for inst in orphans)
 
         # need to copy keys, because the dict is modified in the loop body
         for uuid in list(self.claims):

@@ -934,18 +934,13 @@ class ResourceTracker(object):
                 context, self.compute_nodes[nodename], migrations,
                 instance_by_uuid)
 
-        # Detect and account for orphaned instances that may exist on the
-        # hypervisor, but are not in the DB:
-        orphans = self._find_orphaned_instances()
-        self._update_usage_from_orphans(orphans, nodename)
-
         cn = self.compute_nodes[nodename]
 
         # NOTE(yjiang5): Because pci device tracker status is not cleared in
         # this periodic task, and also because the resource tracker is not
         # notified when instances are deleted, we need remove all usages
         # from deleted instances.
-        self.pci_tracker.clean_usage(instances, migrations, orphans)
+        self.pci_tracker.clean_usage(instances, migrations)
         dev_pools_obj = self.pci_tracker.stats.to_device_pools_obj()
         cn.pci_device_pools = dev_pools_obj
 
@@ -1629,40 +1624,6 @@ class ResourceTracker(object):
             LOG.error("Failed to clean allocation of evacuated "
                       "instance on the %s node %s",
                       node_type, cn_uuid, instance=instance)
-
-    def _find_orphaned_instances(self):
-        """Given the set of instances and migrations already account for
-        by resource tracker, sanity check the hypervisor to determine
-        if there are any "orphaned" instances left hanging around.
-
-        Orphans could be consuming memory and should be accounted for in
-        usage calculations to guard against potential out of memory
-        errors.
-        """
-        uuids1 = frozenset(self.tracked_instances)
-        uuids2 = frozenset(self.tracked_migrations.keys())
-        uuids = uuids1 | uuids2
-
-        usage = self.driver.get_per_instance_usage()
-        vuuids = frozenset(usage.keys())
-
-        orphan_uuids = vuuids - uuids
-        orphans = [usage[uuid] for uuid in orphan_uuids]
-
-        return orphans
-
-    def _update_usage_from_orphans(self, orphans, nodename):
-        """Include orphaned instances in usage."""
-        for orphan in orphans:
-            memory_mb = orphan['memory_mb']
-
-            LOG.warning("Detected running orphan instance: %(uuid)s "
-                        "(consuming %(memory_mb)s MB memory)",
-                        {'uuid': orphan['uuid'], 'memory_mb': memory_mb})
-
-            # just record memory usage for the orphan
-            usage = {'memory_mb': memory_mb}
-            self._update_usage(usage, nodename)
 
     def delete_allocation_for_shelve_offloaded_instance(self, context,
                                                         instance):
