@@ -13,11 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import fixtures
 import mock
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
+from nova import context
+from nova import objects
 from nova.objects import fields
 from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -116,6 +119,20 @@ class SRIOVServersTest(_PCIServersTestBase):
         },
     )]
 
+    def _disable_sriov_in_pf(self, pci_info):
+        # Check for PF and change the capability from virt_functions
+        # Delete all the VFs
+        vfs_to_delete = []
+
+        for device_name, device in pci_info.devices.items():
+            if 'virt_functions' in device.pci_device:
+                device.generate_xml(skip_capability=True)
+            elif 'phys_function' in device.pci_device:
+                vfs_to_delete.append(device_name)
+
+        for device in vfs_to_delete:
+            del pci_info.devices[device]
+
     def test_create_server_with_VF(self):
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
@@ -185,6 +202,69 @@ class SRIOVServersTest(_PCIServersTestBase):
 
         self._run_build_test(flavor_id_vfs)
         self._run_build_test(flavor_id_pfs, end_status='ERROR')
+
+    def test_create_server_after_change_in_nonsriov_pf_to_sriov_pf(self):
+        # Starts a compute with PF not configured with SRIOV capabilities
+        # Updates the PF with SRIOV capability and restart the compute service
+        # Then starts a VM with the sriov port. The VM should be in active
+        # state with sriov port attached.
+
+        # To emulate the device type changing, we first create a
+        # HostPCIDevicesInfo object with PFs and VFs. Then we make a copy
+        # and remove the VFs and the virt_function capability. This is
+        # done to ensure the physical function product id is same in both
+        # the versions.
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
+        pci_info_no_sriov = copy.deepcopy(pci_info)
+
+        # Disable SRIOV capabilties in PF and delete the VFs
+        self._disable_sriov_in_pf(pci_info_no_sriov)
+
+        fake_connection = self._get_connection(host_info,
+                                               pci_info=pci_info_no_sriov,
+                                               hostname='test_compute0')
+        self.mock_conn.return_value = fake_connection
+
+        self.compute = self.start_service('compute', host='test_compute0')
+
+        ctxt = context.get_admin_context()
+        pci_devices = objects.PciDeviceList.get_by_compute_node(
+            ctxt,
+            objects.ComputeNode.get_by_nodename(
+                ctxt, 'test_compute0',
+            ).id,
+        )
+        self.assertEqual(1, len(pci_devices))
+        self.assertEqual('type-PCI', pci_devices[0].dev_type)
+
+        # Update connection with original pci info with sriov PFs
+        fake_connection = self._get_connection(host_info,
+                                               pci_info=pci_info,
+                                               hostname='test_compute0')
+        self.mock_conn.return_value = fake_connection
+
+        # Restart the compute service
+        self.restart_compute_service(self.compute)
+        self.compute_started = True
+
+        # Verify if PCI devices are of type type-PF or type-VF
+        pci_devices = objects.PciDeviceList.get_by_compute_node(
+            ctxt,
+            objects.ComputeNode.get_by_nodename(
+                ctxt, 'test_compute0',
+            ).id,
+        )
+        for pci_device in pci_devices:
+            self.assertIn(pci_device.dev_type, ['type-PF', 'type-VF'])
+
+        # Create a flavor
+        extra_spec = {"pci_passthrough:alias": "%s:1" % self.VFS_ALIAS_NAME}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        self._run_build_test(flavor_id)
 
 
 class GetServerDiagnosticsServerWithVfTestV21(_PCIServersTestBase):

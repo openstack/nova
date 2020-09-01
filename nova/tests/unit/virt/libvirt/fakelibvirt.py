@@ -251,60 +251,71 @@ class FakePCIDevice(object):
             applicable if ``dev_type`` is one of: ``PF``, ``VF``.
         """
 
-        if dev_type == 'PCI':
-            if vf_ratio:
+        self.dev_type = dev_type
+        self.slot = slot
+        self.function = function
+        self.iommu_group = iommu_group
+        self.numa_node = numa_node
+        self.vf_ratio = vf_ratio
+        self.generate_xml()
+
+    def generate_xml(self, skip_capability=False):
+        capability = ''
+        if self.dev_type == 'PCI':
+            if self.vf_ratio:
                 raise ValueError('vf_ratio does not apply for PCI devices')
 
             prod_id = PCI_PROD_ID
             prod_name = PCI_PROD_NAME
             driver = PCI_DRIVER_NAME
-            capability = ''
-        elif dev_type == 'PF':
+        elif self.dev_type == 'PF':
             prod_id = PF_PROD_ID
             prod_name = PF_PROD_NAME
             driver = PF_DRIVER_NAME
-            capability = self.cap_templ % {
-                'cap_type': PF_CAP_TYPE,
-                'addresses': '\n'.join([
-                    self.addr_templ % {
-                        # these are the slot, function values of the child VFs
-                        # we can only assign 8 functions to a slot (0-7) so
-                        # bump the slot each time we exceed this
-                        'slot': slot + (x // 8),
-                        # ...and wrap the function value
-                        'function': x % 8,
-                    # the offset is because the PF is occupying function 0
-                    } for x in range(1, vf_ratio + 1)])
-            }
-        elif dev_type == 'VF':
+            if not skip_capability:
+                capability = self.cap_templ % {
+                    'cap_type': PF_CAP_TYPE,
+                    'addresses': '\n'.join([
+                        self.addr_templ % {
+                            # these are the slot, function values of the child
+                            # VFs, we can only assign 8 functions to a slot
+                            # (0-7) so bump the slot each time we exceed this
+                            'slot': self.slot + (x // 8),
+                            # ...and wrap the function value
+                            'function': x % 8,
+                        # the offset is because the PF is occupying function 0
+                        } for x in range(1, self.vf_ratio + 1)])
+                }
+        elif self.dev_type == 'VF':
             prod_id = VF_PROD_ID
             prod_name = VF_PROD_NAME
             driver = VF_DRIVER_NAME
-            capability = self.cap_templ % {
-                'cap_type': VF_CAP_TYPE,
-                'addresses': self.addr_templ % {
-                    # this is the slot, function value of the parent PF
-                    # if we're e.g. device 8, we'll have a different slot
-                    # to our parent so reverse this
-                    'slot': slot - ((vf_ratio + 1) // 8),
-                    # the parent PF is always function 0
-                    'function': 0,
+            if not skip_capability:
+                capability = self.cap_templ % {
+                    'cap_type': VF_CAP_TYPE,
+                    'addresses': self.addr_templ % {
+                        # this is the slot, function value of the parent PF
+                        # if we're e.g. device 8, we'll have a different slot
+                        # to our parent so reverse this
+                        'slot': self.slot - ((self.vf_ratio + 1) // 8),
+                        # the parent PF is always function 0
+                        'function': 0,
+                    }
                 }
-            }
         else:
             raise ValueError('Expected one of: PCI, VF, PCI')
 
         self.pci_device = self.pci_device_template % {
-            'slot': slot,
-            'function': function,
+            'slot': self.slot,
+            'function': self.function,
             'vend_id': PCI_VEND_ID,
             'vend_name': PCI_VEND_NAME,
             'prod_id': prod_id,
             'prod_name': prod_name,
             'driver': driver,
             'capability': capability,
-            'iommu_group': iommu_group,
-            'numa_node': numa_node,
+            'iommu_group': self.iommu_group,
+            'numa_node': self.numa_node,
         }
 
     def XMLDesc(self, flags):
@@ -847,6 +858,20 @@ class Domain(object):
                         nic_info['source'] = source.get('network')
                     elif nic_info['type'] == 'bridge':
                         nic_info['source'] = source.get('bridge')
+                    elif nic_info['type'] == 'hostdev':
+                        # <interface type='hostdev'> is for VF when vnic_type
+                        # is direct. Add sriov vf pci information in nic_info
+                        address = source.find('./address')
+                        pci_type = address.get('type')
+                        pci_domain = address.get('domain').replace('0x', '')
+                        pci_bus = address.get('bus').replace('0x', '')
+                        pci_slot = address.get('slot').replace('0x', '')
+                        pci_function = address.get('function').replace(
+                            '0x', '')
+                        pci_device = "%s_%s_%s_%s_%s" % (pci_type, pci_domain,
+                                                         pci_bus, pci_slot,
+                                                         pci_function)
+                        nic_info['source'] = pci_device
 
                 nics_info += [nic_info]
 
@@ -888,11 +913,32 @@ class Domain(object):
 
         return definition
 
+    def verify_hostdevs_interface_are_vfs(self):
+        """Verify for interface type hostdev if the pci device is VF or not.
+        """
+
+        error_message = ("Interface type hostdev is currently supported on "
+                         "SR-IOV Virtual Functions only")
+
+        nics = self._def['devices'].get('nics', [])
+        for nic in nics:
+            if nic['type'] == 'hostdev':
+                pci_device = nic['source']
+                pci_info_from_connection = self._connection.pci_info.devices[
+                    pci_device]
+                if 'phys_function' not in pci_info_from_connection.pci_device:
+                    raise make_libvirtError(
+                        libvirtError,
+                        error_message,
+                        error_code=VIR_ERR_CONFIG_UNSUPPORTED,
+                        error_domain=VIR_FROM_DOMAIN)
+
     def create(self):
         self.createWithFlags(0)
 
     def createWithFlags(self, flags):
         # FIXME: Not handling flags at the moment
+        self.verify_hostdevs_interface_are_vfs()
         self._state = VIR_DOMAIN_RUNNING
         self._connection._mark_running(self)
         self._has_saved_state = False
@@ -1016,7 +1062,7 @@ class Domain(object):
 
         nics = ''
         for nic in self._def['devices']['nics']:
-            if 'source' in nic:
+            if 'source' in nic and nic['type'] != 'hostdev':
                 nics += '''<interface type='%(type)s'>
           <mac address='%(mac)s'/>
           <source %(type)s='%(source)s'/>
