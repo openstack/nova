@@ -1347,13 +1347,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
-    # should be removed.
-    def reset_network(self, instance):
-        """reset networking for specified instance."""
-        # TODO(Vek): Need to pass context in for access to auth_token
-        pass
-
     def set_admin_password(self, instance, new_pass):
         """Set the root password on the specified instance.
 

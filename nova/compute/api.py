@@ -4531,11 +4531,6 @@ class API(base.Base):
             source=fields_obj.NotificationSource.API)
 
     @check_instance_lock
-    def reset_network(self, context, instance):
-        """Reset networking on the instance."""
-        self.compute_rpcapi.reset_network(context, instance=instance)
-
-    @check_instance_lock
     def inject_network_info(self, context, instance):
         """Inject network info for the instance."""
         self.compute_rpcapi.inject_network_info(context, instance=instance)

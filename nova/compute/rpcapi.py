@@ -1124,13 +1124,6 @@ class ComputeAPI(object):
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'rescue_instance', **msg_args)
 
-    # Remove as it only supports nova network
-    def reset_network(self, ctxt, instance):
-        version = '5.0'
-        cctxt = self.router.client(ctxt).prepare(
-                server=_compute_host(None, instance), version=version)
-        cctxt.cast(ctxt, 'reset_network', instance=instance)
-
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
                         request_spec, clean_shutdown=True):
         msg_args = {'instance': instance, 'migration': migration,

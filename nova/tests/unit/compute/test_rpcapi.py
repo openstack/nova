@@ -776,10 +776,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             rescue_image_ref='fake_image_ref',
             clean_shutdown=True, version='5.0')
 
-    def test_reset_network(self):
-        self._test_compute_api('reset_network', 'cast',
-                instance=self.fake_instance_obj)
-
     def test_resize_instance(self):
         self._test_compute_api('resize_instance', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},

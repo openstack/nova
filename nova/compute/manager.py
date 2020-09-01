@@ -6075,7 +6075,6 @@ class ComputeManager(manager.Manager):
                                                                  instance,
                                                                  network_id)
         self._inject_network_info(instance, network_info)
-        self.reset_network(context, instance)
 
         # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
         instance.updated_at = timeutils.utcnow()
@@ -6098,7 +6097,6 @@ class ComputeManager(manager.Manager):
                                                                       instance,
                                                                       address)
         self._inject_network_info(instance, network_info)
-        self.reset_network(context, instance)
 
         # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
         instance.updated_at = timeutils.utcnow()
@@ -6629,11 +6627,9 @@ class ComputeManager(manager.Manager):
 
     # TODO(stephenfin): Remove this in RPC 6.0 since it's nova-network only
     @messaging.expected_exceptions(NotImplementedError)
-    @wrap_instance_fault
     def reset_network(self, context, instance):
         """Reset networking on the given instance."""
-        LOG.debug('Reset network', instance=instance)
-        self.driver.reset_network(instance)
+        raise NotImplementedError()
 
     def _inject_network_info(self, instance, network_info):
         """Inject network info for the given instance."""

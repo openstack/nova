@@ -326,7 +326,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:servers:show:host_status:unknown-only",
 "os_compute_api:servers:migrations:force_complete",
 "os_compute_api:servers:migrations:delete",
-"os_compute_api:os-admin-actions:reset_network",
 "os_compute_api:os-admin-actions:inject_network_info",
 "os_compute_api:os-admin-actions:reset_state",
 "os_compute_api:os-aggregates:index",
