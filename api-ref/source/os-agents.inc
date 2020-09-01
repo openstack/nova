@@ -11,6 +11,12 @@ hypervisor-specific extension is currently only for the Xen driver. Use of
 guest agents is possible only if the underlying service provider uses
 the Xen driver.
 
+.. warning::
+
+   These APIs only works with the Xen virt driver, which was deprecated in the
+   20.0.0 (Train) release.
+   They were removed in the 22.0.0 (Victoria) release.
+
 List Agent Builds
 =================
 
@@ -20,7 +26,7 @@ Lists agent builds.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403)
+Error response codes: unauthorized(401), forbidden(403), gone(410)
 
 Request
 -------
@@ -58,7 +64,8 @@ Creates an agent build.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+conflict(409), gone(410)
 
 Request
 -------
@@ -106,7 +113,8 @@ Updates an agent build.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), gone(410)
 
 Request
 -------
@@ -150,7 +158,8 @@ Deletes an existing agent build.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), gone(410)
 
 Request
 -------

@@ -15,7 +15,6 @@ import itertools
 
 from nova.policies import admin_actions
 from nova.policies import admin_password
-from nova.policies import agents
 from nova.policies import aggregates
 from nova.policies import assisted_volume_snapshots
 from nova.policies import attach_interfaces
@@ -75,7 +74,6 @@ def list_rules():
         base.list_rules(),
         admin_actions.list_rules(),
         admin_password.list_rules(),
-        agents.list_rules(),
         aggregates.list_rules(),
         assisted_volume_snapshots.list_rules(),
         attach_interfaces.list_rules(),

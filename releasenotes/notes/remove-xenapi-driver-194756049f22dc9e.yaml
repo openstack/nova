@@ -3,10 +3,25 @@ upgrade:
   - |
     The ``XenAPI`` driver, which was deprecated in the 20.0.0 (Train), has now
     been removed.
-  - |
-    The following config options only apply when using the ``XenAPI`` virt
-    driver which has now been removed. The config options have therefore been
-    removed also.
+
+    A number of APIs that only worked with the ``XenAPI`` driver have been
+    removed along with their related policy rules. Calling these APIs will now
+    result in a ``410 (Gone)`` error response.
+
+    * ``GET /os-agents``
+    * ``POST /os-agents``
+    * ``PUT /os-agents/{agent_id}``
+    * ``DELETE /os-agents/{agent_id}``
+
+    The ``XenAPI`` specific policies have been removed:
+
+    * ``os_compute_api:os-agents``
+    * ``os_compute_api:os-agents:list``
+    * ``os_compute_api:os-agents:create``
+    * ``os_compute_api:os-agents:update``
+    * ``os_compute_api:os-agents:delete``
+
+    The ``XenAPI`` specific configuration options have been removed.
 
     * ``[xenserver] agent_timeout``
     * ``[xenserver] agent_version_timeout``

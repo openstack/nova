@@ -19,6 +19,8 @@ from nova.objects import base
 from nova.objects import fields
 
 
+# TODO(stephenfin): Remove this object; it's not necessary since the removal of
+# XenAPI
 @base.NovaObjectRegistry.register
 class Agent(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.0'
@@ -69,6 +71,8 @@ class Agent(base.NovaPersistentObject, base.NovaObject):
         self.obj_reset_changes()
 
 
+# TODO(stephenfin): Remove this object; it's not necessary since the removal of
+# XenAPI
 @base.NovaObjectRegistry.register
 class AgentList(base.ObjectListBase, base.NovaObject):
     VERSION = '1.0'
