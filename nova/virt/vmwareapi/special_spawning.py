@@ -26,6 +26,7 @@ from nova import exception
 from nova import profiler
 from nova import rpc
 from nova.virt.vmwareapi import cluster_util
+from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi.vm_util import propset_dict
 
@@ -162,6 +163,15 @@ class _SpecialVmSpawningServer(object):
         """
         cluster_config = self._session._call_method(
             vutil, "get_object_property", self._cluster, "configurationEx")
+
+        # check if DRS is enabled, so freeing up can work
+        if cluster_config.drsConfig.defaultVmBehavior != \
+                constants.DRS_BEHAVIOR_FULLY_AUTOMATED:
+            LOG.error('DRS set to %(actual)s, expected %(expected)s.',
+                      {'actual': cluster_config.drsConfig.defaultVmBehavior,
+                       'expected': constants.DRS_BEHAVIOR_FULLY_AUTOMATED})
+            return FREE_HOST_STATE_ERROR
+
         # get the group
         group = self._get_group(cluster_config)
 
