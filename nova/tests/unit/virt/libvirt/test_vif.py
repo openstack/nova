@@ -561,7 +561,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         if not isinstance(actualXmlstr, six.string_types):
             actualXmlstr = etree.tostring(actualXmlstr, encoding='unicode',
                                           pretty_print=True)
-        self.assertXmlEqual(actualXmlstr, expectedXmlstr)
+        self.assertXmlEqual(expectedXmlstr, actualXmlstr)
 
     def _get_conf(self):
         conf = vconfig.LibvirtConfigGuest()
@@ -572,8 +572,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         conf.vcpus = 4
         return conf
 
-    def _get_instance_xml(self, driver, vif, image_meta=None, flavor=None,
-                          has_min_libvirt_version=True):
+    def _get_instance_xml(self, driver, vif, image_meta=None, flavor=None):
         if flavor is None:
             flavor = objects.Flavor(name='m1.small',
                                 memory_mb=128,
@@ -593,11 +592,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
         conf = self._get_conf()
         hostimpl = host.Host("qemu:///system")
-        with mock.patch.object(hostimpl, 'has_min_version',
-                               return_value=has_min_libvirt_version):
-            nic = driver.get_config(self.instance, vif, image_meta,
-                                    flavor, CONF.libvirt.virt_type,
-                                    hostimpl)
+        nic = driver.get_config(self.instance, vif, image_meta,
+                                flavor, CONF.libvirt.virt_type,
+                                hostimpl)
         # TODO(stephenfin): There doesn't appear to be any reason we should do
         # this: just return 'nic.to_xml()' and remove '_get_node'
         conf.add_device(nic)
@@ -666,7 +663,6 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     def test_vhostuser_os_vif_multiqueue(self):
         d = vif.LibvirtGenericVIFDriver()
-        hostimpl = host.Host("qemu:///system")
         image_meta = objects.ImageMeta.from_dict(
             {'properties': {'hw_vif_model': 'virtio',
                             'hw_vif_multiqueue_enabled': 'true'}})
@@ -682,12 +678,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                     is_public=True, vcpu_weight=None,
                     id=2, disabled=False, rxtx_factor=1.0)
         conf = d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
-                                 flavor, 'kvm', 'normal', hostimpl)
+                                 flavor, 'kvm', 'normal')
         self.assertEqual(4, conf.vhost_queues)
         self.assertEqual('vhost', conf.driver_name)
 
-        d._set_config_VIFVHostUser(self.instance, self.os_vif_vhostuser,
-                                   conf, hostimpl)
+        d._set_config_VIFVHostUser(self.instance, self.os_vif_vhostuser, conf)
         self.assertEqual(4, conf.vhost_queues)
         self.assertIsNone(conf.driver_name)
 
@@ -695,70 +690,45 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             self, vnic_type=network_model.VNIC_TYPE_NORMAL):
         self.flags(rx_queue_size=512, group='libvirt')
         self.flags(tx_queue_size=1024, group='libvirt')
-        hostimpl = host.Host("qemu:///system")
         v = vif.LibvirtGenericVIFDriver()
         conf = v.get_base_config(
-            None, 'ca:fe:de:ad:be:ef', {}, objects.Flavor(), 'kvm', vnic_type,
-            hostimpl)
-        return hostimpl, v, conf
+            None, 'ca:fe:de:ad:be:ef', {}, objects.Flavor(), 'kvm', vnic_type)
+        return v, conf
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_virtio_vhost_queue_sizes(self, has_min_version):
-        _, _, conf = self._test_virtio_config_queue_sizes()
+    def test_virtio_vhost_queue_sizes(self):
+        _, conf = self._test_virtio_config_queue_sizes()
         self.assertEqual(512, conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_virtio_vhost_queue_sizes_vnic_type_direct(self, has_min_version):
-        _, _, conf = self._test_virtio_config_queue_sizes(
+    def test_virtio_vhost_queue_sizes_vnic_type_direct(self):
+        _, conf = self._test_virtio_config_queue_sizes(
             vnic_type=network_model.VNIC_TYPE_DIRECT)
         self.assertIsNone(conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_virtio_vhost_queue_sizes_vnic_type_direct_physical(
-            self, has_min_version):
-        _, _, conf = self._test_virtio_config_queue_sizes(
+    def test_virtio_vhost_queue_sizes_vnic_type_direct_physical(self):
+        _, conf = self._test_virtio_config_queue_sizes(
             vnic_type=network_model.VNIC_TYPE_DIRECT_PHYSICAL)
         self.assertIsNone(conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_virtio_vhost_queue_sizes_vnic_type_macvtap(self, has_min_version):
-        _, _, conf = self._test_virtio_config_queue_sizes(
+    def test_virtio_vhost_queue_sizes_vnic_type_macvtap(self):
+        _, conf = self._test_virtio_config_queue_sizes(
             vnic_type=network_model.VNIC_TYPE_MACVTAP)
         self.assertEqual(512, conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_virtio_vhost_queue_sizes_vnic_type_virtio_forwarder(
-            self, has_min_version):
-        _, _, conf = self._test_virtio_config_queue_sizes(
+    def test_virtio_vhost_queue_sizes_vnic_type_virtio_forwarder(self):
+        _, conf = self._test_virtio_config_queue_sizes(
             vnic_type=network_model.VNIC_TYPE_VIRTIO_FORWARDER)
         self.assertEqual(512, conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
 
-    @mock.patch.object(host.Host, "has_min_version", return_value=False)
-    def test_virtio_vhost_queue_sizes_nover(self, has_min_version):
-        _, _, conf = self._test_virtio_config_queue_sizes()
-        self.assertEqual(512, conf.vhost_rx_queue_size)
-        self.assertIsNone(conf.vhost_tx_queue_size)
-
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_virtio_vhostuser_osvif_queue_sizes(self, has_min_version):
-        hostimpl, v, conf = self._test_virtio_config_queue_sizes()
-        v._set_config_VIFVHostUser(self.instance, self.os_vif_vhostuser,
-                                   conf, hostimpl)
+    def test_virtio_vhostuser_osvif_queue_sizes(self):
+        v, conf = self._test_virtio_config_queue_sizes()
+        v._set_config_VIFVHostUser(self.instance, self.os_vif_vhostuser, conf)
         self.assertEqual(512, conf.vhost_rx_queue_size)
         self.assertEqual(1024, conf.vhost_tx_queue_size)
-
-    @mock.patch.object(host.Host, "has_min_version", return_value=False)
-    def test_virtio_vhostuser_osvif_queue_sizes_ver_err(self, has_min_version):
-        hostimpl, v, conf = self._test_virtio_config_queue_sizes()
-        v._set_config_VIFVHostUser(self.instance, self.os_vif_vhostuser,
-                                   conf, hostimpl)
-        self.assertEqual(512, conf.vhost_rx_queue_size)
-        self.assertIsNone(conf.vhost_tx_queue_size)
 
     def test_multiple_nics(self):
         conf = self._get_conf()
@@ -866,11 +836,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             'nova.virt.osinfo.libosinfo',
             fakelibosinfo))
         d = vif.LibvirtGenericVIFDriver()
-        hostimpl = host.Host("qemu:///system")
         image_meta = {'properties': {'os_name': 'fedora22'}}
         image_meta = objects.ImageMeta.from_dict(image_meta)
         d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
-                          None, 'kvm', 'normal', hostimpl)
+                          None, 'kvm', 'normal')
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
                                          'virtio', None, None, None)
 
@@ -885,12 +854,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             'nova.virt.osinfo.libosinfo',
             fakelibosinfo))
         d = vif.LibvirtGenericVIFDriver()
-        hostimpl = host.Host("qemu:///system")
         image_meta = objects.ImageMeta.from_dict(
             {'properties': {'hw_vif_model': 'virtio'}})
         conf = d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
-                                 None, 'kvm', network_model.VNIC_TYPE_DIRECT,
-                                 hostimpl)
+                                 None, 'kvm', network_model.VNIC_TYPE_DIRECT)
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
                                          None, None, None, None)
         self.assertIsNone(conf.vhost_queues)
@@ -1142,8 +1109,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
                        return_value='eth1')
-    @mock.patch.object(host.Host, "has_min_version", return_value=True)
-    def test_hw_veb_driver_macvtap(self, ver_mock, mock_get_ifname):
+    def test_hw_veb_driver_macvtap(self, mock_get_ifname):
         d = vif.LibvirtGenericVIFDriver()
         xml = self._get_instance_xml(d, self.vif_hw_veb_macvtap)
         node = self._get_node(xml)
@@ -1471,14 +1437,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
     def _test_config_os_vif(self, os_vif_model, vif_model,
-            libvirt_supports_mtu, expected_xml, mock_convert_vif,
+            expected_xml, mock_convert_vif,
             mock_convert_inst):
         mock_convert_vif.return_value = os_vif_model
         mock_convert_inst.return_value = self.os_vif_inst_info
 
         d = vif.LibvirtGenericVIFDriver()
-        xml = self._get_instance_xml(d, vif_model,
-            has_min_libvirt_version=libvirt_supports_mtu)
+        xml = self._get_instance_xml(d, vif_model)
         node = self._get_node(xml)
 
         self._assertXmlEqual(expected_xml, node)
@@ -1486,7 +1451,6 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_config_os_vif_bridge(self):
         os_vif_type = self.os_vif_bridge
         vif_type = self.vif_bridge
-        libvirt_supports_mtu = True
 
         expected_xml = """
             <interface type="bridge">
@@ -1501,33 +1465,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
              </bandwidth>
             </interface>"""
 
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
-
-    def test_config_os_vif_bridge_no_mtu(self):
-        os_vif_type = self.os_vif_bridge
-        vif_type = self.vif_bridge
-        libvirt_supports_mtu = False
-
-        expected_xml = """
-            <interface type="bridge">
-             <mac address="22:52:25:62:e2:aa"/>
-             <model type="virtio"/>
-             <source bridge="br100"/>
-             <target dev="nicdc065497-3c"/>
-             <bandwidth>
-              <inbound average="100" peak="200" burst="300"/>
-              <outbound average="10" peak="20" burst="30"/>
-             </bandwidth>
-            </interface>"""
-
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
+        self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 
     def test_config_os_vif_bridge_nofw(self):
         os_vif_type = self.os_vif_bridge
         vif_type = self.vif_bridge
-        libvirt_supports_mtu = True
 
         expected_xml = """
             <interface type="bridge">
@@ -1542,33 +1484,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
              </bandwidth>
             </interface>"""
 
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
-
-    def test_config_os_vif_bridge_nofw_no_mtu(self):
-        os_vif_type = self.os_vif_bridge
-        vif_type = self.vif_bridge
-        libvirt_supports_mtu = False
-
-        expected_xml = """
-            <interface type="bridge">
-             <mac address="22:52:25:62:e2:aa"/>
-             <model type="virtio"/>
-             <source bridge="br100"/>
-             <target dev="nicdc065497-3c"/>
-             <bandwidth>
-              <inbound average="100" peak="200" burst="300"/>
-              <outbound average="10" peak="20" burst="30"/>
-             </bandwidth>
-            </interface>"""
-
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
+        self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 
     def test_config_os_vif_vhostuser(self):
         os_vif_type = self.os_vif_vhostuser
         vif_type = self.vif_vhostuser
-        libvirt_supports_mtu = False
 
         expected_xml = """
             <interface type="vhostuser">
@@ -1578,13 +1498,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
               path="/var/run/openvswitch/vhudc065497-3c" type="unix"/>
             </interface>"""
 
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
+        self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 
     def test_config_os_vif_agilio_ovs_fallthrough(self):
         os_vif_type = self.os_vif_agilio_ovs
         vif_type = self.vif_agilio_ovs
-        libvirt_supports_mtu = True
 
         expected_xml = """
             <interface type="bridge">
@@ -1603,37 +1521,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
               </bandwidth>
             </interface>"""
 
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
-
-    def test_config_os_vif_agilio_ovs_fallthrough_no_mtu(self):
-        os_vif_type = self.os_vif_agilio_ovs
-        vif_type = self.vif_agilio_ovs
-        libvirt_supports_mtu = False
-
-        expected_xml = """
-            <interface type="bridge">
-             <mac address="22:52:25:62:e2:aa"/>
-             <model type="virtio"/>
-             <source bridge="br0"/>
-             <target dev="nicdc065497-3c"/>
-             <virtualport type="openvswitch">
-              <parameters
-              interfaceid="07bd6cea-fb37-4594-b769-90fc51854ee9"/>
-             </virtualport>
-             <bandwidth>
-              <inbound average="100" peak="200" burst="300"/>
-              <outbound average="10" peak="20" burst="30"/>
-             </bandwidth>
-            </interface>"""
-
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
+        self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 
     def test_config_os_vif_agilio_ovs_forwarder(self):
         os_vif_type = self.os_vif_agilio_forwarder
         vif_type = self.vif_agilio_ovs_forwarder
-        libvirt_supports_mtu = None  # not supported for direct VIFs
 
         expected_xml = """
             <interface type="vhostuser">
@@ -1643,13 +1535,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
               path="/var/run/openvswitch/vhudc065497-3c" type="unix"/>
             </interface>"""
 
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
+        self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 
     def test_config_os_vif_agilio_ovs_direct(self):
         os_vif_type = self.os_vif_agilio_direct
         vif_type = self.vif_agilio_ovs_direct
-        libvirt_supports_mtu = None  # not supported for direct VIFs
 
         expected_xml = """
             <interface type="hostdev" managed="yes">
@@ -1660,13 +1550,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
              </source>
             </interface>"""
 
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
+        self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 
     def test_config_os_vif_ovs(self):
         os_vif_type = self.os_vif_ovs
         vif_type = self.vif_ovs
-        libvirt_supports_mtu = True
 
         expected_xml = """
             <interface type="bridge">
@@ -1684,36 +1572,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
              </bandwidth>
             </interface>"""
 
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
-
-    def test_config_os_vif_ovs_no_mtu(self):
-        os_vif_type = self.os_vif_ovs
-        vif_type = self.vif_ovs
-        libvirt_supports_mtu = False
-
-        expected_xml = """
-            <interface type="bridge">
-             <mac address="22:52:25:62:e2:aa"/>
-             <model type="virtio"/>
-             <source bridge="br0"/>
-             <target dev="nicdc065497-3c"/>
-             <virtualport type="openvswitch">
-              <parameters interfaceid="07bd6cea-fb37-4594-b769-90fc51854ee9"/>
-             </virtualport>
-             <bandwidth>
-              <inbound average="100" peak="200" burst="300"/>
-              <outbound average="10" peak="20" burst="30"/>
-             </bandwidth>
-            </interface>"""
-
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
+        self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 
     def test_config_os_vif_ovs_hybrid(self):
         os_vif_type = self.os_vif_ovs_hybrid
         vif_type = self.vif_ovs
-        libvirt_supports_mtu = True
 
         expected_xml = """
             <interface type="bridge">
@@ -1728,33 +1591,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
              </bandwidth>
             </interface>"""
 
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
-
-    def test_config_os_vif_ovs_hybrid_no_mtu(self):
-        os_vif_type = self.os_vif_ovs_hybrid
-        vif_type = self.vif_ovs
-        libvirt_supports_mtu = False
-
-        expected_xml = """
-            <interface type="bridge">
-             <mac address="22:52:25:62:e2:aa"/>
-             <model type="virtio"/>
-             <source bridge="br0"/>
-             <target dev="nicdc065497-3c"/>
-             <bandwidth>
-              <inbound average="100" peak="200" burst="300"/>
-              <outbound average="10" peak="20" burst="30"/>
-             </bandwidth>
-            </interface>"""
-
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
+        self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 
     def test_config_os_vif_hostdevice_ethernet(self):
         os_vif_type = self.os_vif_hostdevice_ethernet
         vif_type = self.vif_bridge
-        libvirt_supports_mtu = None  # not supported for hostdev
 
         expected_xml = """
             <interface type="hostdev" managed="yes">
@@ -1765,8 +1606,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
              </source>
             </interface>"""
 
-        self._test_config_os_vif(
-            os_vif_type, vif_type, libvirt_supports_mtu, expected_xml)
+        self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
     @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
