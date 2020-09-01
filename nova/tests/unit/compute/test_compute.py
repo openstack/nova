@@ -9133,6 +9133,7 @@ class ComputeAPITestCase(BaseTestCase):
                      'image_ramdisk_id': uuids.ramdisk_id,
                      'image_something_else': 'meow',
                      'preserved': 'preserve this!',
+                     'image_base_image_ref': image_ref,
                      'boot_roles': ''},
                     sys_meta)
 
