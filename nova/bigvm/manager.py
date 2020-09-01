@@ -42,6 +42,7 @@ CONF = nova.conf.CONF
 
 MEMORY_MB = rc_fields.ResourceClass.MEMORY_MB
 BIGVM_RESOURCE = special_spawning.BIGVM_RESOURCE
+BIGVM_DISABLED_TRAIT = 'CUSTOM_BIGVM_DISABLED'
 VMWARE_HV_TYPE = 'VMware vCenter Server'
 SHARD_PREFIX = 'vc-'
 HV_SIZE_BUCKET_THRESHOLD_PERCENT = 10
@@ -91,10 +92,13 @@ class BigVmManager(manager.Manager):
         """
         client = self.placement_client
 
+        # make sure our custom trait exists
+        client._ensure_traits(context, [BIGVM_DISABLED_TRAIT])
+
         vcenters, bigvm_providers, vmware_providers = \
             self._get_providers(context)
 
-        self._check_and_clean_providers(context, bigvm_providers,
+        self._check_and_clean_providers(context, client, bigvm_providers,
                                         vmware_providers)
 
         missing_hv_sizes_per_vc = self._get_missing_hv_sizes(context,
@@ -145,6 +149,21 @@ class BigVmManager(manager.Manager):
                             'all clusters are used more than %(max_used)d.',
                             {'hv_size': hv_size,
                              'max_used': CONF.bigvm_cluster_max_usage_percent})
+                continue
+
+            # filter out providers that are disabled for bigVMs
+            provider_summaries = filtered_provider_summaries
+            filtered_provider_summaries = {}
+            for p, d in provider_summaries.items():
+                if BIGVM_DISABLED_TRAIT in d['traits']:
+                    continue
+                filtered_provider_summaries[p] = d
+
+            if not filtered_provider_summaries:
+                LOG.warning('Could not find a resource-provider to free up a '
+                            'host for hypervisor size %(hv_size)d, because '
+                            'all providers with enough space are disabled.',
+                            {'hv_size': hv_size})
                 continue
 
             candidates[hv_size] = (alloc_reqs, filtered_provider_summaries)
@@ -326,7 +345,7 @@ class BigVmManager(manager.Manager):
 
         return (vcenters, bigvm_providers, vmware_providers)
 
-    def _check_and_clean_providers(self, context, bigvm_providers,
+    def _check_and_clean_providers(self, context, client, bigvm_providers,
                                    vmware_providers):
 
         # check for reserved resources which indicate that the free host was
@@ -384,9 +403,34 @@ class BigVmManager(manager.Manager):
                               'rp_uuid': rp_uuid})
                     unexpectedly_used_providers[rp_uuid] = rp
 
+        # check if a provider was disabled by now
+        disabled_providers = {}
+        for rp_uuid, rp in bigvm_providers.items():
+            if rp_uuid in reserved_providers:
+                # no need to check if we already remove it anyways
+                continue
+
+            if rp_uuid in overused_providers:
+                # no need to check if we already remove it anyways
+                continue
+
+            if rp_uuid in unexpectedly_used_providers:
+                # no need to check if we already remove it anyways
+                continue
+
+            parent_rp_uuid = rp['rp']['parent_provider_uuid']
+            traits = client._get_provider_traits(context, parent_rp_uuid)
+            if BIGVM_DISABLED_TRAIT in traits:
+                disabled_providers[rp_uuid] = rp
+                LOG.info('Resource-provider %(parent_rp_uuid)s got disabled '
+                         'bigVMs. Marking %(rp_uuid)s for deletion.',
+                         {'parent_rp_uuid': parent_rp_uuid,
+                          'rp_uuid': rp_uuid})
+
         _providers = itertools.chain(reserved_providers.items(),
                                      overused_providers.items(),
-                                     unexpectedly_used_providers.items())
+                                     unexpectedly_used_providers.items(),
+                                     disabled_providers.items())
         for rp_uuid, rp in _providers:
             self._clean_up_consumed_provider(context, rp_uuid, rp)
 
@@ -394,7 +438,8 @@ class BigVmManager(manager.Manager):
         # hosts
         for rp_uuid in itertools.chain(reserved_providers,
                                        overused_providers,
-                                       unexpectedly_used_providers):
+                                       unexpectedly_used_providers,
+                                       disabled_providers):
             del bigvm_providers[rp_uuid]
 
     def _get_allocations_for_consumer(self, context, consumer_uuid):
