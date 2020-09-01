@@ -516,9 +516,7 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
-    # TODO(stephenfin): Remove unused host argument
-    def get_config(self, instance, vif, image_meta,
-                   inst_type, virt_type, host):
+    def get_config(self, instance, vif, image_meta, inst_type, virt_type):
         vif_type = vif['type']
         vnic_type = vif['vnic_type']
 
