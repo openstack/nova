@@ -1386,7 +1386,6 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
         self.assertIn(fakelibvirt.virConnect, proxy_classes)
         self.assertIn(fakelibvirt.virNodeDevice, proxy_classes)
         self.assertIn(fakelibvirt.virSecret, proxy_classes)
-        self.assertIn(fakelibvirt.virNWFilter, proxy_classes)
 
         # Assert that we filtered out libvirtError
         self.assertNotIn(fakelibvirt.libvirtError, proxy_classes)

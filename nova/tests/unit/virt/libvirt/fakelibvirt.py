@@ -782,22 +782,6 @@ class libvirtError(Exception):
         return self.err[8]
 
 
-class NWFilter(object):
-    def __init__(self, connection, xml):
-        self._connection = connection
-
-        self._xml = xml
-        self._parse_xml(xml)
-
-    def _parse_xml(self, xml):
-        tree = etree.fromstring(xml)
-        root = tree.find('.')
-        self._name = root.get('name')
-
-    def undefine(self):
-        self._connection._remove_filter(self)
-
-
 class NodeDevice(object):
 
     def __init__(self, connection, xml=None):
@@ -1421,7 +1405,6 @@ class Connection(object):
         self._vms = {}
         self._running_vms = {}
         self._id_counter = 1  # libvirt reserves 0 for the hypervisor.
-        self._nwfilters = {}
         self._nodedevs = {}
         self._secrets = {}
         self._event_callbacks = {}
@@ -1433,12 +1416,6 @@ class Connection(object):
                                                        num_vfs=0)
         self.mdev_info = mdev_info or HostMdevDevicesInfo(devices={})
         self.hostname = hostname or 'compute1'
-
-    def _add_filter(self, nwfilter):
-        self._nwfilters[nwfilter._name] = nwfilter
-
-    def _remove_filter(self, nwfilter):
-        del self._nwfilters[nwfilter._name]
 
     def _add_nodedev(self, nodedev):
         self._nodedevs[nodedev._name] = nodedev
@@ -1703,20 +1680,6 @@ class Connection(object):
                     error_code=VIR_ERR_INTERNAL_ERROR,
                     error_domain=VIR_FROM_QEMU)
 
-    def nwfilterLookupByName(self, name):
-        try:
-            return self._nwfilters[name]
-        except KeyError:
-            raise make_libvirtError(
-                    libvirtError,
-                    "no nwfilter with matching name %s" % name,
-                    error_code=VIR_ERR_NO_NWFILTER,
-                    error_domain=VIR_FROM_NWFILTER)
-
-    def nwfilterDefineXML(self, xml):
-        nwfilter = NWFilter(self, xml)
-        self._add_filter(nwfilter)
-
     def device_lookup_by_name(self, dev_name):
         return self.pci_info.get_device_by_name(dev_name)
 
@@ -1834,7 +1797,6 @@ virNodeDevice = NodeDevice
 
 virConnect = Connection
 virSecret = Secret
-virNWFilter = NWFilter
 
 
 class FakeLibvirtFixture(fixtures.Fixture):
