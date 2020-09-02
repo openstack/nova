@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    New ``[glance]/enable_rbd_download`` config option was introduced.
+    The option allows for the configuration of direct downloads
+    of Ceph hosted glance images into the libvirt image cache via rbd when
+    ``[glance]/enable_rbd_download= True`` and ``[glance]/rbd_user``,
+    ``[glance]/rbd_pool``, ``[glance]/rbd_connect_timeout``,
+    ``[glance]/rbd_ceph_conf`` are correctly configured.
