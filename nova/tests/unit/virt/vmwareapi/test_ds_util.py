@@ -468,8 +468,8 @@ class DsUtilTestCase(test.NoDBTestCase):
                     'fake_datastore', 'host')
 
     def test_get_connected_hosts(self):
-        host = mock.Mock(spec=object)
-        host.value = 'fake-host'
+        host = fake.ManagedObjectReference(value='fake-host',
+                                           name='HostSystem')
         host_mount = mock.Mock(spec=object)
         host_mount.key = host
         host_mounts = mock.Mock(spec=object)

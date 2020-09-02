@@ -188,8 +188,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
         base_name = 'folder'
         ds_name = "datastore"
-        ds_ref = mock.Mock()
-        ds_ref.value = 1
+        ds_ref = vmwareapi_fake.ManagedObjectReference(value=1)
         dc_ref = mock.Mock()
         ds_util._DS_DC_MAPPING[ds_ref.value] = ds_util.DcInfo(
                 ref=dc_ref,
@@ -352,13 +351,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self._instance)
 
     def _test_get_datacenter_ref_and_name(self, ds_ref_exists=False):
-        instance_ds_ref = mock.Mock()
-        instance_ds_ref.value = "ds-1"
+        instance_ds_ref = vmwareapi_fake.ManagedObjectReference(value='ds-1')
         _vcvmops = vmops.VMwareVMOps(self._session, None, None)
         result = vmwareapi_fake.FakeRetrieveResult()
         if ds_ref_exists:
-            ds_ref = mock.Mock()
-            ds_ref.value = "ds-1"
+            ds_ref = vmwareapi_fake.ManagedObjectReference(value='ds-1')
             result.add_object(vmwareapi_fake.Datacenter(ds_ref=ds_ref))
         else:
             result.add_object(vmwareapi_fake.Datacenter(ds_ref=None))
