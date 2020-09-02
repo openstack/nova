@@ -132,110 +132,19 @@ class SchemaValidationTestCasesV1(SchemaValidationMixin):
 @ddt.ddt
 class ValidateProviderConfigTestCases(base.BaseTestCase):
     @ddt.unpack
-    @ddt.file_data('provider_config_data/validate_provider_test_data.yaml')
-    def test__validate_provider_config(self, sample):
+    @ddt.file_data('provider_config_data/validate_provider_good_config.yaml')
+    def test__validate_provider_good_config(self, sample):
         provider_config._validate_provider_config(sample, "fake_path")
 
-    # TODO(tony): gibi's comment,
-    # negative tests should be in the same format as the other test
-    # for the provider config. continue work on this a follow up.
-    def test__validate_provider_config_one_invalid_additional_inventory(self):
-        config = {
-            "providers": [
-                {
-                    "identification": {"name": "NAME"},
-                    "inventories": {
-                        "additional": [
-                            {"CUSTOM_RESOURCE_CLASS": {}},
-                            {"INVALID_RESOURCE_CLASS": {}}
-                        ]
-                    }
-                }
-            ]
-        }
+    @ddt.unpack
+    @ddt.file_data('provider_config_data/validate_provider_bad_config.yaml')
+    def test__validate_provider_bad_config(self, sample, expected_messages):
+        actual_msg = self.assertRaises(
+            nova_exc.ProviderConfigException,
+            provider_config._validate_provider_config,
+            sample, 'fake_path').message
 
-        actual = self.assertRaises(nova_exc.ProviderConfigException,
-                                   provider_config._validate_provider_config,
-                                   config, "fake_path").message
-
-        self.assertEqual(
-            "An error occurred while processing a provider config file: "
-            "Invalid resource class, only custom resource classes are allowed:"
-            " INVALID_RESOURCE_CLASS", actual)
-
-    def test__validate_provider_config_two_invalid_additional_inventory(self):
-        config = {
-            "providers": [
-                {
-                    "identification": {"name": "NAME"},
-                    "inventories": {
-                        "additional": [
-                            {"CUSTOM_RESOURCE_CLASS": {}},
-                            {"INVALID_RESOURCE_CLASS": {}},
-                            {"INVALID_RESOURCE_CLASS2": {}}
-                        ]
-                    }
-                }
-            ]
-        }
-
-        actual = self.assertRaises(nova_exc.ProviderConfigException,
-                                   provider_config._validate_provider_config,
-                                   config, "fake_path").message
-
-        self.assertEqual(
-            "An error occurred while processing a provider config file: "
-            "Invalid resource class, only custom resource classes are allowed:"
-            " INVALID_RESOURCE_CLASS, INVALID_RESOURCE_CLASS2", actual)
-
-    def test__validate_provider_config_one_invalid_additional_trait(self):
-        config = {
-            "providers": [
-                {
-                    "identification": {"name": "NAME"},
-                    "traits": {
-                        "additional": [
-                            "CUSTOM_TRAIT",
-                            "INVALID_TRAIT"
-                        ]
-                    }
-                }
-            ]
-        }
-
-        actual = self.assertRaises(nova_exc.ProviderConfigException,
-                                   provider_config._validate_provider_config,
-                                   config, "fake_path").message
-
-        self.assertEqual(
-            "An error occurred while processing a provider config "
-            "file: Invalid traits, only custom traits are allowed: "
-            "['INVALID_TRAIT']", actual)
-
-    def test__validate_provider_config_two_invalid_additional_trait(self):
-        config = {
-            "providers": [
-                {
-                    "identification": {"name": "NAME"},
-                    "traits": {
-                        "additional": [
-                            "CUSTOM_TRAIT",
-                            "INVALID_TRAIT",
-                            "INVALID_TRAIT2"
-                        ]
-                    }
-                }
-            ]
-        }
-
-        actual = self.assertRaises(nova_exc.ProviderConfigException,
-                                   provider_config._validate_provider_config,
-                                   config, "fake_path").message
-
-        self.assertEqual(
-            "An error occurred while processing a provider config "
-            "file: Invalid traits, only custom traits are allowed: "
-            "['INVALID_TRAIT', 'INVALID_TRAIT2']", actual)
+        self.assertIn(actual_msg, expected_messages)
 
     @mock.patch.object(provider_config, 'LOG')
     def test__validate_provider_config_one_noop_provider(self, mock_log):

@@ -269,8 +269,7 @@ def _validate_provider_config(config, provider_config_path):
         for inventory in additional_inventories:
             inventory_conflicts = [rc for rc in inventory
                                    if not os_resource_classes.is_custom(rc)]
-            if inventory_conflicts:
-                all_inventory_conflicts += inventory_conflicts
+            all_inventory_conflicts += inventory_conflicts
 
         if all_inventory_conflicts:
             # sort for more predictable message for testing

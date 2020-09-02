@@ -12,8 +12,8 @@
 
 # This file contains ddt test data consumed by test_provider_config.py to test
 # good paths through _validate_provider_config(). Sample is required for each
-# test. This sample and passed to _validate_provider_config(). If no exception
-# is raised, the test passes.
+# test and passed to _validate_provider_config(). If no exception is raised,
+# the test passes.
 
 no_trait_or_inventory_keys:
   sample:
