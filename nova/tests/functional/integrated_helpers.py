@@ -477,6 +477,13 @@ class InstanceHelperMixin:
         self.api.post_server_action(server['id'], {'unshelve': {}})
         return self._wait_for_state_change(server, expected_state)
 
+    def _evacuate_server(self, server, host, expected_state='ACTIVE'):
+        """Evacuate a server."""
+        self.api.post_server_action(server['id'], {'evacuate': {}})
+        self._wait_for_server_parameter(
+            self.server, {'OS-EXT-SRV-ATTR:host': host,
+                          'status': expected_state})
+
 
 class PlacementHelperMixin:
     """A helper mixin for interacting with placement."""

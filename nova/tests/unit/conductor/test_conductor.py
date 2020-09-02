@@ -390,6 +390,7 @@ class _BaseTaskTestCase(object):
         compute_rebuild_args['migration'] = migration
         compute_rebuild_args['node'] = node
         compute_rebuild_args['limits'] = limits
+        compute_rebuild_args['accel_uuids'] = []
 
         return rebuild_args, compute_rebuild_args
 
@@ -1780,6 +1781,7 @@ class _BaseTaskTestCase(object):
         rebuild_args, _ = self._prepare_rebuild_args(
             {'host': None, 'recreate': True})
         fake_spec = objects.RequestSpec()
+        fake_spec.flavor = inst_obj.flavor
         rebuild_args['request_spec'] = fake_spec
 
         with test.nested(
@@ -1847,6 +1849,7 @@ class _BaseTaskTestCase(object):
         fake_selection = objects.Selection(service_host=expected_host,
                 nodename=expected_node, limits=None)
         fake_spec = objects.RequestSpec(ignore_hosts=[uuids.ignored_host])
+        fake_spec.flavor = inst_obj.flavor
         rebuild_args, compute_args = self._prepare_rebuild_args(
             {'host': None, 'node': expected_node, 'limits': expected_limits,
              'request_spec': fake_spec, 'recreate': True})

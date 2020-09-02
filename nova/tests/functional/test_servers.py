@@ -8086,6 +8086,20 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none', expected_state='ACTIVE')
 
+    def _test_evacuate(self, server, num_hosts):
+        server_hostname = server['OS-EXT-SRV-ATTR:host']
+        for i in range(num_hosts):
+            if self.compute_services[i].host == server_hostname:
+                compute_to_stop = self.compute_services[i]
+            else:
+                compute_to_evacuate = self.compute_services[i]
+        # Stop and force down the compute service.
+        compute_id = self.admin_api.get_services(
+            host=server_hostname, binary='nova-compute')[0]['id']
+        compute_to_stop.stop()
+        self.admin_api.put_service(compute_id, {'forced_down': 'true'})
+        return compute_to_stop, compute_to_evacuate
+
     def test_soft_reboot_ok(self):
         self._reboot_server(self.server)
         self._check_allocations_usage(self.server)
@@ -8160,6 +8174,30 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         self.api.post_server_action(self.server['id'], {'unrescue': {}})
         self._check_allocations_usage(self.server)
 
+    def test_evacuate_ok(self):
+        server_hostname = self.server['OS-EXT-SRV-ATTR:host']
+        arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
+        compute_to_stop, compute_to_evacuate = self._test_evacuate(
+            self.server, self.NUM_HOSTS)
+        self._evacuate_server(self.server, compute_to_evacuate.host)
+        compute_to_stop.start()
+        self.server = self.api.get_server(self.server['id'])
+        arqs_new = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
+        evac_hostname = self.server['OS-EXT-SRV-ATTR:host']
+        self.assertNotEqual(server_hostname, evac_hostname)
+        self.assertEqual(server_hostname, arqs[0]['hostname'])
+        self.assertEqual(evac_hostname, arqs_new[0]['hostname'])
+
+    def test_rebuild_ok(self):
+        rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
+        self.api.post_server_action(self.server['id'],
+            {'rebuild': {
+                'imageRef': rebuild_image_ref,
+                'OS-DCF:diskConfig': 'AUTO'}})
+        fake_notifier.wait_for_versioned_notifications('instance.rebuild.end')
+        self._wait_for_state_change(self.server, 'ACTIVE')
+        self._check_allocations_usage(self.server)
+
     def test_resize_fails(self):
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server_action, self.server['id'],
@@ -8186,30 +8224,29 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         self.assertEqual(403, ex.response.status_code)
         self._check_allocations_usage(self.server)
 
-    def test_evacuate_fails(self):
-        server_hostname = self.server['OS-EXT-SRV-ATTR:host']
-        for i in range(self.NUM_HOSTS):
-            hostname = 'accel_host' + str(i)
-            if hostname != server_hostname:
-                other_hostname = hostname
-            if self.compute_services[i].host == server_hostname:
-                compute_to_stop = self.compute_services[i]
-
-        # Stop and force down the compute service.
-        compute_id = self.admin_api.get_services(
-            host=server_hostname, binary='nova-compute')[0]['id']
-        compute_to_stop.stop()
-        self.admin_api.put_service(compute_id, {'forced_down': 'true'})
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells')
+    def test_evacuate_old_compute(self, old_compute_version):
+        """Tests when the source compute service is too old to call
+        evacuate so OpenStackApiException is raised.
+        """
+        old_compute_version.return_value = 52
+        _, compute_to_evacuate = self._test_evacuate(
+            self.server, self.NUM_HOSTS)
 
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server_action, self.server['id'],
             {'evacuate': {
-                 'host': other_hostname,
+                 'host': compute_to_evacuate.host,
                  'adminPass': 'MySecretPass'}})
         self.assertEqual(403, ex.response.status_code)
         self._check_allocations_usage(self.server)
 
-    def test_rebuild_fails(self):
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells')
+    def test_rebuild_old_compute(self, old_compute_version):
+        """Tests when the source compute service is too old to call
+        rebuild so OpenStackApiException is raised.
+        """
+        old_compute_version.return_value = 52
         rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server_action, self.server['id'],

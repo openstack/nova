@@ -29,9 +29,8 @@ appropriate privileges) must do the following:
 
     openstack server create --flavor $myflavor --image $myimage $servername
 
-As of 21.0.0 (Ussuri), nova supports only specific operations for instances
-with accelerators. The lists of supported and unsupported operations are as
-below:
+Nova supports only specific operations for instances with accelerators.
+The lists of supported and unsupported operations are as below:
 
 * Supported operations.
 
@@ -42,16 +41,20 @@ below:
   * Take a snapshot.
   * Backup.
   * Rescue and unrescue.
+  * Rebuild.
+  * Evacuate.
 
 * Unsupported operations
 
-  * Rebuild.
   * Resize.
-  * Evacuate.
   * Suspend and resume.
   * Shelve and unshelve.
   * Cold migration.
   * Live migration.
+
+.. versionchanged:: 22.0.0(Victoria)
+
+   Added support for rebuild and evacuate operations.
 
 Some operations, such as lock and unlock, work as they are effectively
 no-ops for accelerators.

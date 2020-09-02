@@ -378,6 +378,8 @@ class ComputeAPI(object):
         * 5.10 - Add finish_revert_snapshot_based_resize_at_source()
         * 5.11 - Add accel_uuids (accelerator requests) parameter to
                  build_and_run_instance()
+        * 5.12 - Add accel_uuids (accelerator requests) parameter to
+                 rebuild_instance()
     '''
 
     VERSION_ALIASES = {
@@ -1056,20 +1058,29 @@ class ComputeAPI(object):
                    block_device_info=block_device_info,
                    reboot_type=reboot_type)
 
-    def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
+    def rebuild_instance(
+            self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
             recreate, on_shared_storage, host, node,
-            preserve_ephemeral, migration, limits, request_spec):
+            preserve_ephemeral, migration, limits, request_spec, accel_uuids):
+
         # NOTE(edleafe): compute nodes can only use the dict form of limits.
         if isinstance(limits, objects.SchedulerLimits):
             limits = limits.to_dict()
-        msg_args = {'preserve_ephemeral': preserve_ephemeral,
-                    'migration': migration,
-                    'scheduled_node': node,
-                    'limits': limits,
-                    'request_spec': request_spec}
-        version = '5.0'
+
+        msg_args = {
+            'preserve_ephemeral': preserve_ephemeral,
+            'migration': migration,
+            'scheduled_node': node,
+            'limits': limits,
+            'request_spec': request_spec,
+            'accel_uuids': accel_uuids
+        }
+        version = '5.12'
         client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            del msg_args['accel_uuids']
+            version = '5.0'
         cctxt = client.prepare(server=_compute_host(host, instance),
                 version=version)
         cctxt.cast(ctxt, 'rebuild_instance',
