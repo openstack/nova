@@ -366,9 +366,9 @@ class TestOpenStackClient(object):
     def delete_snapshot(self, snap_id):
         return self.api_delete('/os-snapshots/%s' % snap_id)
 
-    def get_server_volume(self, server_id, attachment_id):
+    def get_server_volume(self, server_id, volume_id):
         return self.api_get('/servers/%s/os-volume_attachments/%s' %
-                            (server_id, attachment_id)
+                            (server_id, volume_id)
                         ).body['volumeAttachment']
 
     def get_server_volumes(self, server_id):
@@ -380,14 +380,14 @@ class TestOpenStackClient(object):
                              (server_id), volume_attachment
                             ).body['volumeAttachment']
 
-    def put_server_volume(self, server_id, attachment_id, volume_id):
+    def put_server_volume(self, server_id, original_volume_id, volume_id):
         return self.api_put('/servers/%s/os-volume_attachments/%s' %
-                            (server_id, attachment_id),
+                            (server_id, original_volume_id),
                             {"volumeAttachment": {"volumeId": volume_id}})
 
-    def delete_server_volume(self, server_id, attachment_id):
+    def delete_server_volume(self, server_id, volume_id):
         return self.api_delete('/servers/%s/os-volume_attachments/%s' %
-                            (server_id, attachment_id))
+                            (server_id, volume_id))
 
     def post_server_metadata(self, server_id, metadata):
         post_body = {'metadata': {}}
