@@ -2166,6 +2166,25 @@ class _ComputeAPIUnitTestMixIn(object):
                 mock.call(new_flavor, mock.ANY),
             ])
 
+    @mock.patch('nova.compute.api.API.get_instance_host_status',
+                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                new=mock.Mock(return_value=False))
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    def test_resize__with_accelerator(self, mock_get_flavor):
+        """Ensure resizes are rejected if either flavor requests accelerator.
+        """
+        fake_inst = self._create_instance_obj()
+        new_flavor = self._create_flavor(
+            id=200, flavorid='new-flavor-id', name='new_flavor',
+            disabled=False, extra_specs={'accel:device_profile': 'dp'})
+        mock_get_flavor.return_value = new_flavor
+
+        self.assertRaises(
+            exception.ForbiddenWithAccelerators,
+            self.compute_api.resize,
+            self.context, fake_inst, flavor_id=new_flavor.flavorid)
+
     def _test_migrate(self, *args, **kwargs):
         self._test_resize(*args, flavor_id_passed=False, **kwargs)
 
