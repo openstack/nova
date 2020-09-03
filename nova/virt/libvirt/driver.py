@@ -248,11 +248,6 @@ VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
-PERF_EVENTS_CPU_FLAG_MAPPING = {'cmt': 'cmt',
-                                'mbml': 'mbm_local',
-                                'mbmt': 'mbm_total',
-                               }
-
 MIN_LIBVIRT_FILE_BACKED_DISCARD_VERSION = (4, 4, 0)
 
 MIN_LIBVIRT_NATIVE_TLS_VERSION = (4, 4, 0)
@@ -5686,37 +5681,28 @@ class LibvirtDriver(driver.ComputeDriver):
                  caps.host.cpu.arch == fields.Architecture.AARCH64))
 
     def _get_supported_perf_events(self):
-
-        if (len(CONF.libvirt.enabled_perf_events) == 0):
+        if not len(CONF.libvirt.enabled_perf_events):
             return []
 
         supported_events = []
-        host_cpu_info = self._get_cpu_info()
         for event in CONF.libvirt.enabled_perf_events:
-            if self._supported_perf_event(event, host_cpu_info['features']):
-                supported_events.append(event)
+            libvirt_perf_event_name = LIBVIRT_PERF_EVENT_PREFIX + event.upper()
+
+            if not hasattr(libvirt, libvirt_perf_event_name):
+                LOG.warning("Libvirt does not support event type '%s'.", event)
+                continue
+
+            if event in ('cmt', 'mbml', 'mbmt'):
+                LOG.warning(
+                    "Monitoring of Intel CMT `perf` event(s) '%s' is not "
+                    "supported by recent Linux kernels; ignoring.",
+                    event,
+                )
+                continue
+
+            supported_events.append(event)
+
         return supported_events
-
-    def _supported_perf_event(self, event, cpu_features):
-
-        libvirt_perf_event_name = LIBVIRT_PERF_EVENT_PREFIX + event.upper()
-
-        if not hasattr(libvirt, libvirt_perf_event_name):
-            LOG.warning("Libvirt doesn't support event type %s.", event)
-            return False
-
-        if event in PERF_EVENTS_CPU_FLAG_MAPPING:
-            LOG.warning('Monitoring Intel CMT `perf` event(s) %s is '
-                        'deprecated and will be removed in the "Stein" '
-                        'release.  It was broken by design in the '
-                        'Linux kernel, so support for Intel CMT was '
-                        'removed from Linux 4.14 onwards. Therefore '
-                        'it is recommended to not enable them.',
-                        event)
-            if PERF_EVENTS_CPU_FLAG_MAPPING[event] not in cpu_features:
-                LOG.warning("Host does not support event type %s.", event)
-                return False
-        return True
 
     def _configure_guest_by_virt_type(self, guest, virt_type, caps, instance,
                                       image_meta, flavor, root_device_name,
