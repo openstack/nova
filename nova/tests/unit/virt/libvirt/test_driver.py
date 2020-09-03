@@ -9736,6 +9736,76 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 'instance', data, block_device_info=bdi))
         self.assertEqual(0, mock_get_instance_disk_info.call_count)
 
+    @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
+    @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
+    def test_live_migration_persistent_xml(
+        self, mock_get_version, mock_get_updated_xml, mock_migrateToURI3):
+        """Assert that persistent_xml only provided when libvirt is >= v1.3.4
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = self.test_instance
+        dest = '127.0.0.1'
+        block_migration = False
+        migrate_data = objects.LibvirtLiveMigrateData(
+            graphics_listen_addr_vnc='10.0.0.1',
+            graphics_listen_addr_spice='10.0.0.2',
+            serial_listen_addr='127.0.0.1',
+            target_connect_addr='127.0.0.1',
+            bdms=[],
+            block_migration=block_migration)
+        guest = libvirt_guest.Guest(fakelibvirt.virDomain)
+        device_names = ['vda']
+
+        mock_get_updated_xml.return_value = mock.sentinel.dest_xml
+
+        # persistent_xml was introduced in v1.3.4 so provide v1.3.3
+        v1_3_3 = versionutils.convert_version_to_int((1, 3, 3))
+        mock_get_version.return_value = v1_3_3
+
+        drvr._live_migration_operation(
+            self.context, instance, dest, block_migration, migrate_data,
+            guest, device_names)
+
+        expected_uri = drvr._live_migration_uri(dest)
+        expected_flags = 0
+        expected_params = {
+            'bandwidth': 0,
+            'destination_xml': mock.sentinel.dest_xml,
+            'migrate_disks': device_names,
+            'migrate_uri': 'tcp://127.0.0.1'
+        }
+
+        # Assert that migrateToURI3 is called without the persistent_xml param
+        mock_get_version.assert_called()
+        mock_migrateToURI3.assert_called_once_with(
+            expected_uri, params=expected_params, flags=expected_flags)
+
+        # reset mocks and try again with v1.3.4
+        mock_get_version.reset_mock()
+        mock_migrateToURI3.reset_mock()
+
+        # persistent_xml was introduced in v1.3.4 so provide it this time
+        v1_3_4 = versionutils.convert_version_to_int((1, 3, 4))
+        mock_get_version.return_value = v1_3_4
+
+        drvr._live_migration_operation(
+            self.context, instance, dest,
+            block_migration, migrate_data, guest, device_names)
+
+        expected_params = {
+            'bandwidth': 0,
+            'destination_xml': mock.sentinel.dest_xml,
+            'persistent_xml': mock.sentinel.dest_xml,
+            'migrate_disks': device_names,
+            'migrate_uri': 'tcp://127.0.0.1'
+        }
+
+        # Assert that migrateToURI3 is called with the persistent_xml param
+        mock_get_version.assert_called()
+        mock_migrateToURI3.assert_called_once_with(
+                expected_uri, params=expected_params, flags=expected_flags)
+
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
     @mock.patch.object(fakelibvirt.virDomain, "XMLDesc")
@@ -9778,6 +9848,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_disks': disk_paths,
             'bandwidth': _bandwidth,
             'destination_xml': target_xml,
+            'persistent_xml': target_xml,
         }
 
         # start test
@@ -9885,7 +9956,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_disks': disk_paths,
             'migrate_uri': 'tcp://127.0.0.2',
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
-            'destination_xml': target_xml
+            'destination_xml': target_xml,
         }
 
         # Start test
@@ -9985,6 +10056,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_uri': 'tcp://127.0.0.2',
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
             'destination_xml': target_xml,
+            'persistent_xml': target_xml,
         }
 
         # start test
@@ -10335,6 +10407,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_disks': ['vda', 'vdb'],
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
             'destination_xml': target_xml,
+            'persistent_xml': target_xml,
         }
 
         # start test
@@ -10388,14 +10461,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
-    @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml',
-                return_value='')
+    @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml')
     @mock.patch('nova.virt.libvirt.guest.Guest.get_xml_desc',
                 return_value='<xml></xml>')
     def test_live_migration_uses_migrateToURI3(
             self, mock_old_xml, mock_new_xml, mock_migrateToURI3,
             mock_min_version):
 
+        mock_new_xml.return_value = mock.sentinel.new_xml
         target_connection = '127.0.0.2'
         # Preparing mocks
         disk_paths = ['vda', 'vdb']
@@ -10403,6 +10476,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_uri': 'tcp://127.0.0.2',
             'migrate_disks': ['vda', 'vdb'],
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
+            'destination_xml': mock.sentinel.new_xml,
+            'persistent_xml': mock.sentinel.new_xml,
         }
         mock_migrateToURI3.side_effect = fakelibvirt.libvirtError("ERR")
 
@@ -10461,6 +10536,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_disks': device_names,
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
             'destination_xml': '<xml/>',
+            'persistent_xml': '<xml/>',
         }
         if not params['migrate_disks']:
             del params['migrate_disks']
@@ -10492,14 +10568,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
-    @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml',
-                return_value='')
+    @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml')
     @mock.patch('nova.virt.libvirt.guest.Guest.get_xml_desc', return_value='')
     def test_block_live_migration_tunnelled_migrateToURI3(
             self, mock_old_xml, mock_new_xml,
             mock_migrateToURI3, mock_min_version):
         self.flags(live_migration_tunnelled=True, group='libvirt')
 
+        mock_new_xml.return_value = mock.sentinel.new_xml
         target_connection = None
         device_names = ['disk1', 'disk2']
 
@@ -10507,7 +10583,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # Since we are passing the VIR_MIGRATE_TUNNELLED flag, the
         # 'parms' dict will not (as expected) contain 'migrate_disks'
         params = {
-            'bandwidth': CONF.libvirt.live_migration_bandwidth
+            'bandwidth': CONF.libvirt.live_migration_bandwidth,
+            'destination_xml': mock.sentinel.new_xml,
+            'persistent_xml': mock.sentinel.new_xml,
         }
         # Start test
         migrate_data = objects.LibvirtLiveMigrateData(
@@ -10554,6 +10632,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'migrate_disks': disk_paths,
             'bandwidth': CONF.libvirt.live_migration_bandwidth,
             'destination_xml': '<xml/>',
+            'persistent_xml': '<xml/>',
         }
 
         # Prepare mocks

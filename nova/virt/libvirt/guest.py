@@ -610,7 +610,8 @@ class Guest(object):
         self._domain.suspend()
 
     def migrate(self, destination, migrate_uri=None, migrate_disks=None,
-                destination_xml=None, flags=0, bandwidth=0):
+                destination_xml=None, flags=0, bandwidth=0,
+                persistent_xml_param=False):
         """Migrate guest object from its current host to the destination
 
         :param destination: URI of host destination where guest will be migrate
@@ -645,6 +646,9 @@ class Guest(object):
                               unsafe.
            VIR_MIGRATE_OFFLINE Migrate offline
         :param bandwidth: The maximum bandwidth in MiB/s
+        :param persistent_xml_param: Boolean indicating if the
+                                     VIR_MIGRATE_PARAM_PERSIST_XML param should
+                                     be provided to migrateToURI3.
         """
         params = {}
         # In migrateToURI3 these parameters are extracted from the
@@ -653,6 +657,9 @@ class Guest(object):
 
         if destination_xml:
             params['destination_xml'] = destination_xml
+            # NOTE(lyarwood): Only available from v1.3.4
+            if persistent_xml_param:
+                params['persistent_xml'] = destination_xml
         if migrate_disks:
             params['migrate_disks'] = migrate_disks
         if migrate_uri:
