@@ -50,7 +50,7 @@ class IsolationTestCase(test.TestCase):
         class NeverCalled(object):
 
             def __getattribute__(self, name):
-                if name == 'target':
+                if name == 'target' or name == 'oslo_rpc_server_ping':
                     # oslo.messaging 5.31.0 explicitly looks for 'target'
                     # on the endpoint and checks it's type, so we can't avoid
                     # it here, just ignore it if that's the case.
