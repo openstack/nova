@@ -17,6 +17,7 @@
 
 import errno
 import os
+import shutil
 
 from oslo_utils import fileutils
 
@@ -48,10 +49,21 @@ def readlink(path):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def chown(path, uid=-1, gid=-1):
+def chown(
+    path: str, uid: int = -1, gid: int = -1, recursive: bool = False,
+) -> None:
     if not os.path.exists(path):
         raise exception.FileNotFound(file_path=path)
-    return os.chown(path, uid, gid)
+
+    if not recursive or os.path.isfile(path):
+        return os.chown(path, uid, gid)
+
+    for root, dirs, files in os.walk(path):
+        os.chown(root, uid, gid)
+        for item in dirs:
+            os.chown(os.path.join(root, item), uid, gid)
+        for item in files:
+            os.chown(os.path.join(root, item), uid, gid)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -64,6 +76,11 @@ def chmod(path, mode):
     if not os.path.exists(path):
         raise exception.FileNotFound(file_path=path)
     os.chmod(path, mode)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def move_tree(source_path: str, dest_path: str) -> None:
+    shutil.move(source_path, dest_path)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
