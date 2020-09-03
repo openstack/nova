@@ -21,11 +21,13 @@ import fixtures
 from lxml import etree
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
+from oslo_utils import versionutils
 
 from nova import conf
 from nova.objects import fields as obj_fields
 from nova.tests.unit.virt.libvirt import fake_libvirt_data
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import driver as libvirt_driver
 
 
 # Allow passing None to the various connect methods
@@ -182,9 +184,11 @@ VIR_SECRET_USAGE_TYPE_CEPH = 2
 VIR_SECRET_USAGE_TYPE_ISCSI = 3
 
 # Libvirt version to match MIN_LIBVIRT_VERSION in driver.py
-FAKE_LIBVIRT_VERSION = 4000000
-# QEMU version to match MIN_QEMU_VERSION in driver.py
-FAKE_QEMU_VERSION = 2011000
+FAKE_LIBVIRT_VERSION = versionutils.convert_version_to_int(
+    libvirt_driver.MIN_LIBVIRT_VERSION)
+# Libvirt version to match MIN_QEMU_VERSION in driver.py
+FAKE_QEMU_VERSION = versionutils.convert_version_to_int(
+    libvirt_driver.MIN_QEMU_VERSION)
 
 PCI_VEND_ID = '8086'
 PCI_VEND_NAME = 'Intel Corporation'
