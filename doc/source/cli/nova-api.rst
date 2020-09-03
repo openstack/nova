@@ -27,7 +27,7 @@ Files
 
 * ``/etc/nova/nova.conf``
 * ``/etc/nova/api-paste.ini``
-* ``/etc/nova/policy.json``
+* ``/etc/nova/policy.yaml``
 * ``/etc/nova/rootwrap.conf``
 * ``/etc/nova/rootwrap.d/``
 

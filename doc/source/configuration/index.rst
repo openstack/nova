@@ -3,7 +3,7 @@ Configuration Guide
 ===================
 
 The static configuration for nova lives in two main files: ``nova.conf`` and
-``policy.json``. These are described below. For a bigger picture view on
+``policy.yaml``. These are described below. For a bigger picture view on
 configuring nova to solve specific problems, refer to the :doc:`Nova Admin
 Guide </admin/index>`.
 

@@ -211,7 +211,7 @@ where an instance is launched. For example:
 
     This is an admin-only operation by default, though you can modify this
     behavior using the ``os_compute_api:servers:create:forced_host`` rule in
-    ``policy.json``.
+    ``policy.yaml``.
 
 However, as discussed `previously <Implications for moving servers>`_, when
 launching instances in this manner the scheduler filters are not run. For this
@@ -228,7 +228,7 @@ example:
 
     This is an admin-only operation by default, though you can modify this
     behavior using the ``compute:servers:create:requested_destination`` rule in
-    ``policy.json``.
+    ``policy.yaml``.
 
 This avoids the need to explicitly select an availability zone and ensures the
 scheduler filters are not bypassed.

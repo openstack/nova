@@ -348,7 +348,7 @@ on Hyper-V. Below is a sample ``nova.conf`` for Windows:
    use_cow_images = true
    force_config_drive = false
    injected_network_template = C:\Program Files (x86)\OpenStack\Nova\etc\interfaces.template
-   policy_file = C:\Program Files (x86)\OpenStack\Nova\etc\policy.json
+   policy_file = C:\Program Files (x86)\OpenStack\Nova\etc\policy.yaml
    mkisofs_cmd = C:\Program Files (x86)\OpenStack\Nova\bin\mkisofs.exe
    allow_resize_to_same_host = true
    running_deleted_instance_action = reap

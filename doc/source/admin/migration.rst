@@ -94,7 +94,7 @@ To migrate an instance and watch the status, use this example script:
 .. note::
 
    If you see the following error, it means you are either running the command
-   with the wrong credentials, such as a non-admin user, or the ``policy.json``
+   with the wrong credentials, such as a non-admin user, or the ``policy.yaml``
    file prevents migration for your user::
 
      Policy doesn't allow os_compute_api:os-migrate-server:migrate to be performed. (HTTP 403)

@@ -46,7 +46,7 @@ class RealPolicyFixture(fixtures.Fixture):
     def setUp(self):
         super(RealPolicyFixture, self).setUp()
         # policy_file can be overridden by subclasses
-        self.policy_file = paths.state_path_def('etc/nova/policy.json')
+        self.policy_file = paths.state_path_def('etc/nova/policy.yaml')
         self._prepare_policy()
         CONF.set_override('policy_file', self.policy_file, group='oslo_policy')
         nova.policy.reset()
@@ -95,7 +95,7 @@ class PolicyFixture(RealPolicyFixture):
     def _prepare_policy(self):
         self.policy_dir = self.useFixture(fixtures.TempDir())
         self.policy_file = os.path.join(self.policy_dir.path,
-                                        'policy.json')
+                                        'policy.yaml')
 
         # load the fake_policy data and add the missing default rules.
         policy_rules = jsonutils.loads(fake_policy.policy_data)
@@ -126,7 +126,7 @@ class RoleBasedPolicyFixture(RealPolicyFixture):
             policy[rule.name] = 'role:%s' % self.role
 
         self.policy_dir = self.useFixture(fixtures.TempDir())
-        self.policy_file = os.path.join(self.policy_dir.path, 'policy.json')
+        self.policy_file = os.path.join(self.policy_dir.path, 'policy.yaml')
         with open(self.policy_file, 'w') as f:
             jsonutils.dump(policy, f)
 
@@ -164,7 +164,7 @@ class OverridePolicyFixture(RealPolicyFixture):
     def _prepare_policy(self):
         self.policy_dir = self.useFixture(fixtures.TempDir())
         self.policy_file = os.path.join(self.policy_dir.path,
-                                        'policy.json')
+                                        'policy.yaml')
         with open(self.policy_file, 'w') as f:
             jsonutils.dump(self.rules_in_file, f)
         CONF.set_override('policy_dirs', [], group='oslo_policy')

@@ -155,7 +155,7 @@ class ServicesDeprecatedPolicyTest(base.BasePolicyTest):
     """Test os-services APIs Deprecated policies.
 
     This class checks if deprecated policy rules are
-    overridden by user on policy.json file then they
+    overridden by user on policy.yaml file then they
     still work because oslo.policy add deprecated rules
     in logical OR condition and enforce them for policy
     checks if overridden.
@@ -185,7 +185,7 @@ class ServicesDeprecatedPolicyTest(base.BasePolicyTest):
         # Test to verify if deprecatd overridden policy is working.
 
         # check for success as member role. Deprecated rule
-        # has been overridden with member checks in policy.json
+        # has been overridden with member checks in policy.yaml
         # If member role pass it means overridden rule is enforced by
         # olso.policy because new default is system admin and the old
         # default is admin.

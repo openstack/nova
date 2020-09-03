@@ -112,7 +112,7 @@ For projects, you can use quota controls to limit the:
 
 Roles control the actions a user is allowed to perform. By default, most
 actions do not require a particular role, but you can configure them by editing
-the ``policy.json`` file for user roles. For example, a rule can be defined so
+the ``policy.yaml`` file for user roles. For example, a rule can be defined so
 that a user must have the ``admin`` role in order to be able to allocate a
 public IP address.
 
@@ -237,7 +237,7 @@ The displayed image attributes are:
 Virtual hardware templates are called ``flavors``. By default, these are
 configurable by admin users, however that behavior can be changed by redefining
 the access controls for ``compute_extension:flavormanage`` in
-``/etc/nova/policy.json`` on the ``compute-api`` server.
+``/etc/nova/policy.yaml`` on the ``compute-api`` server.
 For more information, refer to :doc:`/configuration/policy`.
 
 For a list of flavors that are available on your system:
