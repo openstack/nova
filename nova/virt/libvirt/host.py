@@ -56,6 +56,7 @@ from nova import rpc
 from nova import utils
 from nova.virt import event as virtevent
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import migration as libvirt_migrate
 from nova.virt.libvirt import utils as libvirt_utils
@@ -197,6 +198,32 @@ class Host(object):
             self._conn_event_handler_queue.task_done()
 
     @staticmethod
+    def _event_device_removed_callback(conn, dom, dev, opaque):
+        """Receives device removed events from libvirt.
+
+        NB: this method is executing in a native thread, not
+        an eventlet coroutine. It can only invoke other libvirt
+        APIs, or use self._queue_event(). Any use of logging APIs
+        in particular is forbidden.
+        """
+        self = opaque
+        uuid = dom.UUIDString()
+        self._queue_event(libvirtevent.DeviceRemovedEvent(uuid, dev))
+
+    @staticmethod
+    def _event_device_removal_failed_callback(conn, dom, dev, opaque):
+        """Receives device removed events from libvirt.
+
+        NB: this method is executing in a native thread, not
+        an eventlet coroutine. It can only invoke other libvirt
+        APIs, or use self._queue_event(). Any use of logging APIs
+        in particular is forbidden.
+        """
+        self = opaque
+        uuid = dom.UUIDString()
+        self._queue_event(libvirtevent.DeviceRemovalFailedEvent(uuid, dev))
+
+    @staticmethod
     def _event_lifecycle_callback(conn, dom, event, detail, opaque):
         """Receives lifecycle events from libvirt.
 
@@ -330,9 +357,9 @@ class Host(object):
         while not self._event_queue.empty():
             try:
                 event_type = ty.Union[
-                    virtevent.LifecycleEvent, ty.Mapping[str, ty.Any]]
+                    virtevent.InstanceEvent, ty.Mapping[str, ty.Any]]
                 event: event_type = self._event_queue.get(block=False)
-                if isinstance(event, virtevent.LifecycleEvent):
+                if issubclass(type(event), virtevent.InstanceEvent):
                     # call possibly with delay
                     self._event_emit_delayed(event)
 
@@ -366,10 +393,10 @@ class Host(object):
         if event.uuid in self._events_delayed.keys():
             self._events_delayed[event.uuid].cancel()
             self._events_delayed.pop(event.uuid, None)
-            LOG.debug("Removed pending event for %s due to "
-                      "lifecycle event", event.uuid)
+            LOG.debug("Removed pending event for %s due to event", event.uuid)
 
-        if event.transition == virtevent.EVENT_LIFECYCLE_STOPPED:
+        if (isinstance(event, virtevent.LifecycleEvent) and
+            event.transition == virtevent.EVENT_LIFECYCLE_STOPPED):
             # Delay STOPPED event, as they may be followed by a STARTED
             # event in case the instance is rebooting
             id_ = greenthread.spawn_after(self._lifecycle_delay,
@@ -442,6 +469,16 @@ class Host(object):
                 None,
                 libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
                 self._event_lifecycle_callback,
+                self)
+            wrapped_conn.domainEventRegisterAny(
+                None,
+                libvirt.VIR_DOMAIN_EVENT_ID_DEVICE_REMOVED,
+                self._event_device_removed_callback,
+                self)
+            wrapped_conn.domainEventRegisterAny(
+                None,
+                libvirt.VIR_DOMAIN_EVENT_ID_DEVICE_REMOVAL_FAILED,
+                self._event_device_removal_failed_callback,
                 self)
         except Exception as e:
             LOG.warning("URI %(uri)s does not support events: %(error)s",

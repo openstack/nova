@@ -33,6 +33,7 @@ from nova.tests.unit.virt.libvirt import fake_libvirt_data
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import event
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 
@@ -301,6 +302,42 @@ class HostTestCase(test.NoDBTestCase):
         hostimpl._event_emit_delayed(ev)
         gt_mock.cancel.assert_called_once_with()
         self.assertNotIn(uuid, hostimpl._events_delayed.keys())
+
+    def test_device_removed_event(self):
+        hostimpl = mock.MagicMock()
+        conn = mock.MagicMock()
+        fake_dom_xml = """
+                <domain type='kvm'>
+                  <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                </domain>
+            """
+        dom = fakelibvirt.Domain(conn, fake_dom_xml, running=True)
+        host.Host._event_device_removed_callback(
+            conn, dom, dev='virtio-1', opaque=hostimpl)
+        expected_event = hostimpl._queue_event.call_args[0][0]
+        self.assertEqual(
+            libvirtevent.DeviceRemovedEvent, type(expected_event))
+        self.assertEqual(
+            'cef19ce0-0ca2-11df-855d-b19fbce37686', expected_event.uuid)
+        self.assertEqual('virtio-1', expected_event.dev)
+
+    def test_device_removal_failed(self):
+        hostimpl = mock.MagicMock()
+        conn = mock.MagicMock()
+        fake_dom_xml = """
+                <domain type='kvm'>
+                  <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                </domain>
+            """
+        dom = fakelibvirt.Domain(conn, fake_dom_xml, running=True)
+        host.Host._event_device_removal_failed_callback(
+            conn, dom, dev='virtio-1', opaque=hostimpl)
+        expected_event = hostimpl._queue_event.call_args[0][0]
+        self.assertEqual(
+            libvirtevent.DeviceRemovalFailedEvent, type(expected_event))
+        self.assertEqual(
+            'cef19ce0-0ca2-11df-855d-b19fbce37686', expected_event.uuid)
+        self.assertEqual('virtio-1', expected_event.dev)
 
     @mock.patch.object(fakelibvirt.virConnect, "domainEventRegisterAny")
     @mock.patch.object(host.Host, "_connect")
