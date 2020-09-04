@@ -72,8 +72,24 @@ The metadata service
 
 The *metadata service* provides a way for instances to retrieve
 instance-specific data via a REST API. Instances access this service at
-``169.254.169.254`` and all types of metadata, be it user-, nova- or
-vendor-provided, can be accessed via this service.
+``169.254.169.254`` or at ``fe80::a9fe:a9fe``. All types of metadata,
+be it user-, nova- or vendor-provided, can be accessed via this service.
+
+.. versionchanged:: 22.0.0
+
+    Starting with the Victoria release the metadata service is accessible
+    over IPv6 at the link-local address ``fe80::a9fe:a9fe``.
+
+.. note::
+
+    As with all IPv6 link-local addresses, the metadata IPv6
+    address is not complete without a zone identifier (in a Linux
+    guest that is usually the interface name concatenated after
+    a percent sign). Please also note that in URLs you should
+    URL-encode the percent sign itself. For example, assuming
+    that the primary network interface in the guest is ``ens2``
+    substitute ``http://[fe80::a9fe:a9fe%25ens2]:80/...`` for
+    ``http://169.254.169.254/...``.
 
 Using the metadata service
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

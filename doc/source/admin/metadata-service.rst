@@ -25,7 +25,14 @@ the :ref:`cells V2 guide <cells-v2-layout-metadata-api>`.
    added in Stein. For versions prior to this release, you should not use the
    standalone :program:`nova-api-metadata` application for multiple cells.
 
-Guests access the service at ``169.254.169.254``. The networking service,
+Guests access the service at ``169.254.169.254`` or at ``fe80::a9fe:a9fe``.
+
+.. versionchanged:: 22.0.0
+
+    Starting with the Victoria release the metadata service is accessible
+    over IPv6 at the link-local address ``fe80::a9fe:a9fe``.
+
+The networking service,
 neutron, is responsible for intercepting these requests and adding HTTP headers
 which uniquely identify the source of the request before forwarding it to the
 metadata API server. For the Open vSwitch and Linux Bridge backends provided
