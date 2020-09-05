@@ -4157,7 +4157,9 @@ class LibvirtDriver(driver.ComputeDriver):
             if instance.task_state == task_states.RESIZE_FINISH:
                 backend.create_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
             if backend.SUPPORTS_CLONE:
-                def clone_fallback_to_fetch(*args, **kwargs):
+                def clone_fallback_to_fetch(
+                    context, target, image_id, trusted_certs=None,
+                ):
                     refuse_fetch = (
                         CONF.libvirt.images_type == 'rbd' and
                         CONF.workarounds.never_download_image_if_on_rbd)
@@ -4176,10 +4178,13 @@ class LibvirtDriver(driver.ComputeDriver):
                                     'never_download_image_if_on_rbd=True;'
                                     ' refusing to fetch and upload.',
                                     disk_images['image_id'])
-                        libvirt_utils.fetch_image(*args, **kwargs)
+                        libvirt_utils.fetch_image(
+                            context, target, image_id, trusted_certs,
+                        )
                 fetch_func = clone_fallback_to_fetch
             else:
                 fetch_func = libvirt_utils.fetch_image
+
             self._try_fetch_image_cache(backend, fetch_func, context,
                                         root_fname, disk_images['image_id'],
                                         instance, size, fallback_from_host)
@@ -11117,8 +11122,9 @@ class LibvirtDriver(driver.ComputeDriver):
         caps = deepcopy(self._host.get_capabilities())
         if cpu.mode in ('host-model', 'host-passthrough'):
             # Account for features in cpu_model_extra_flags conf
-            host_features = [f.name for f in
-                             caps.host.cpu.features | cpu.features]
+            host_features: ty.Set[str] = {
+                f.name for f in caps.host.cpu.features | cpu.features
+            }
             return libvirt_utils.cpu_features_to_traits(host_features)
 
         def _resolve_features(cpu):

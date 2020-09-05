@@ -6,3 +6,4 @@ nova/virt/hardware.py
 nova/virt/libvirt/__init__.py
 nova/virt/libvirt/driver.py
 nova/virt/libvirt/host.py
+nova/virt/libvirt/utils.py
