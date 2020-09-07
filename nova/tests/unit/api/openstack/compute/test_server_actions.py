@@ -642,6 +642,21 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=body)
 
+    @mock.patch.object(compute_api.API, 'rebuild')
+    def test_rebuild_raise_invalid_volume_exc(self, mock_rebuild):
+        """Make sure that we can't rebuild with an InvalidVolume exception."""
+        body = {
+            "rebuild": {
+                "imageRef": self._image_href,
+            },
+        }
+
+        mock_rebuild.side_effect = exception.InvalidVolume('error')
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=body)
+
     def test_resize_server(self):
 
         body = dict(resize=dict(flavorRef="http://localhost/3"))
