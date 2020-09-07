@@ -804,7 +804,10 @@ class PrepResizeAtSourceTaskTestCase(test.NoDBTestCase):
                 vm_state=vm_states.ACTIVE,
                 display_name='fake-server',
                 system_metadata={},
-                host='source.host.com'),
+                host='source.host.com',
+                flavor=objects.Flavor(),
+            ),
+            objects.Flavor(),
             objects.Migration(),
             objects.RequestSpec(),
             compute_rpcapi=mock.Mock(),
@@ -828,6 +831,8 @@ class PrepResizeAtSourceTaskTestCase(test.NoDBTestCase):
         # The instance should have been updated.
         instance_save.assert_called_once_with(
             expected_task_state=task_states.RESIZE_PREP)
+        self.assertIs(self.task.instance.old_flavor, self.task.instance.flavor)
+        self.assertIs(self.task.instance.new_flavor, self.task.flavor)
         self.assertEqual(
             task_states.RESIZE_MIGRATING, self.task.instance.task_state)
         self.assertEqual(self.task.instance.vm_state,
@@ -855,6 +860,8 @@ class PrepResizeAtSourceTaskTestCase(test.NoDBTestCase):
         # The instance should have been updated.
         instance_save.assert_called_once_with(
             expected_task_state=task_states.RESIZE_PREP)
+        self.assertIs(self.task.instance.old_flavor, self.task.instance.flavor)
+        self.assertIs(self.task.instance.new_flavor, self.task.flavor)
         self.assertEqual(
             task_states.RESIZE_MIGRATING, self.task.instance.task_state)
         self.assertEqual(self.task.instance.vm_state,
@@ -1182,7 +1189,6 @@ class ConfirmResizeTaskTestCase(test.NoDBTestCase):
                                     uuid=uuids.instance,
                                     flavor=objects.Flavor())
         self.task._cleanup_source_host(instance)
-        self.assertIs(instance.old_flavor, instance.flavor)
         mock_action_start.assert_called_once_with(
             instance._context, instance.uuid, instance_actions.CONFIRM_RESIZE,
             want_result=False)
@@ -1434,8 +1440,6 @@ class RevertResizeTaskTestCase(test.NoDBTestCase, ObjectComparatorMixin):
         # Fields on the source cell instance should have been updated.
         self.assertEqual(vm_states.ACTIVE,
                          source_cell_instance.system_metadata['old_vm_state'])
-        self.assertIs(source_cell_instance.old_flavor,
-                      source_cell_instance.flavor)
         self.assertEqual(task_states.RESIZE_REVERTING,
                          source_cell_instance.task_state)
         mock_inst_save.assert_called_once_with()

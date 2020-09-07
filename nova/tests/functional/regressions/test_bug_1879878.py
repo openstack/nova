@@ -270,8 +270,7 @@ class TestCrossCell(integrated_helpers.ProviderUsageBaseTestCase):
 
         def fake_cleanup(_self, _context, _instance, *args, **kwargs):
             self.assertIsNotNone(_instance.old_flavor)
-            # FIXME(stephenfin): This should not be unset
-            self.assertIsNone(_instance.new_flavor)
+            self.assertIsNotNone(_instance.new_flavor)
             return orig_cleanup(_self, _context, _instance, *args, **kwargs)
 
         # TODO(stephenfin): Use a helper
@@ -331,8 +330,7 @@ class TestCrossCell(integrated_helpers.ProviderUsageBaseTestCase):
 
         def fake_finish_revert_migration(_self, _context, _instance, *a, **kw):
             self.assertIsNotNone(_instance.old_flavor)
-            # FIXME(stephenfin): This should not be unset
-            self.assertIsNone(_instance.new_flavor)
+            self.assertIsNotNone(_instance.new_flavor)
             return orig_finish_revert(_self, _context, _instance, *a, **kw)
 
         # TODO(stephenfin): Use a helper

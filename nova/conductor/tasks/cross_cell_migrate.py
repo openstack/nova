@@ -392,18 +392,23 @@ class PrepResizeAtSourceTask(base.TaskBase):
     ``resize_migrated`` and the migration.status will be ``post-migrating``.
     """
 
-    def __init__(self, context, instance, migration, request_spec,
-                 compute_rpcapi, image_api):
+    def __init__(
+        self, context, instance, flavor, migration, request_spec,
+        compute_rpcapi, image_api,
+    ):
         """Initializes this PrepResizeAtSourceTask instance.
 
         :param context: nova auth context targeted at the source cell
         :param instance: Instance object from the source cell
+        :param flavor: The new flavor if performing resize and not just a
+            cold migration
         :param migration: Migration object from the source cell
         :param request_spec: RequestSpec object for the resize operation
         :param compute_rpcapi: instance of nova.compute.rpcapi.ComputeAPI
         :param image_api: instance of nova.image.glance.API
         """
         super(PrepResizeAtSourceTask, self).__init__(context, instance)
+        self.flavor = flavor
         self.migration = migration
         self.request_spec = request_spec
         self.compute_rpcapi = compute_rpcapi
@@ -416,6 +421,8 @@ class PrepResizeAtSourceTask(base.TaskBase):
         # guest should be powered on.
         self.instance.system_metadata['old_vm_state'] = self.instance.vm_state
         self.instance.task_state = task_states.RESIZE_MIGRATING
+        self.instance.old_flavor = self.instance.flavor
+        self.instance.new_flavor = self.flavor
 
         # If the instance is not volume-backed, create a snapshot of the root
         # disk.
@@ -782,7 +789,7 @@ class CrossCellMigrationTask(base.TaskBase):
         LOG.debug('Preparing source host %s for cross-cell resize.',
                   self.source_migration.source_compute, instance=self.instance)
         prep_source_task = PrepResizeAtSourceTask(
-            self.context, self.instance, self.source_migration,
+            self.context, self.instance, self.flavor, self.source_migration,
             self.request_spec, self.compute_rpcapi, self.image_api)
         snapshot_id = prep_source_task.execute()
         self._completed_tasks['PrepResizeAtSourceTask'] = prep_source_task
@@ -960,9 +967,6 @@ class ConfirmResizeTask(base.TaskBase):
             ctxt, self.migration.uuid)
         LOG.debug('Cleaning up source host %s for cross-cell resize confirm.',
                   source_migration.source_compute, instance=source_instance)
-        # The instance.old_flavor field needs to be set before the source
-        # host drops the MoveClaim in the ResourceTracker.
-        source_instance.old_flavor = source_instance.flavor
         # Use the EventReport context manager to create the same event that
         # the source compute will create but in the target cell DB so we do not
         # have to explicitly copy it over from source to target DB.
@@ -1303,7 +1307,6 @@ class RevertResizeTask(base.TaskBase):
         # source cell instance for doing the revert on the source compute host.
         instance.system_metadata['old_vm_state'] = (
             self.instance.system_metadata.get('old_vm_state'))
-        instance.old_flavor = instance.flavor
         instance.task_state = task_states.RESIZE_REVERTING
         instance.save()
 
