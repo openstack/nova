@@ -10273,9 +10273,10 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch.dict(self.compute.driver.capabilities,
                              supports_attach_interface=True),
             mock.patch('oslo_concurrency.lockutils.lock'),
-            mock.patch.object(self.compute,
-            '_claim_pci_device_for_interface_attach',
-            return_value=None)
+            mock.patch.object(
+                self.compute,
+                "_claim_pci_device_for_interface_attach",
+                return_value=None)
         ) as (cap, mock_lock, mock_claim_pci):
             vif = self.compute.attach_interface(self.context,
                                                 instance,
@@ -10328,9 +10329,8 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch.object(self.compute.rt,
                               'allocate_pci_devices_for_instance'),
             mock.patch.object(instance, 'save')
-        ) as (
-                mock_capabilities, mock_create_resource_req, mock_claim_pci,
-                mock_allocate_pci, mock_save):
+        ) as (mock_capabilities, mock_create_resource_req, mock_claim_pci,
+              mock_allocate_pci, mock_save):
 
             pci_req = objects.InstancePCIRequest(request_id=uuids.pci_req)
             pci_device = objects.PciDevice(request_id=pci_req.request_id)
@@ -10460,9 +10460,8 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch.object(self.compute,
                               '_claim_pci_device_for_interface_attach',
                               return_value=None),
-        ) as (
-                mock_notify, mock_attach, mock_allocate, mock_deallocate,
-                mock_dict, mock_claim_pci):
+        ) as (mock_notify, mock_attach, mock_allocate, mock_deallocate,
+              mock_dict, mock_claim_pci):
 
             mock_allocate.return_value = nwinfo
             mock_attach.side_effect = exception.NovaException("attach_failed")

@@ -1217,6 +1217,18 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         return objects.BlockDeviceMappingList.get_by_instance_uuid(
             self._context, self.uuid)
 
+    def remove_pci_device_and_request(self, pci_device):
+        """Remove the PciDevice and the related InstancePciRequest"""
+        if pci_device in self.pci_devices.objects:
+            self.pci_devices.objects.remove(pci_device)
+        self.pci_requests.requests = [
+            pci_req for pci_req in self.pci_requests.requests
+            if pci_req.request_id != pci_device.request_id]
+
+    def add_pci_device_and_request(self, pci_device, pci_request):
+        self.pci_requests.requests.append(pci_request)
+        self.pci_devices.objects.append(pci_device)
+
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     get_fault = expected_attrs and 'fault' in expected_attrs
