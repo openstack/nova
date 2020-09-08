@@ -614,11 +614,11 @@ class TestAPIBase(test.TestCase):
         nw_info = None
         if exception:
             self.assertRaises(exception, self.api.allocate_for_instance,
-                              ctxt, self.instance, False,
+                              ctxt, self.instance,
                               requested_networks, bind_host_id=bind_host_id)
         else:
             nw_info = self.api.allocate_for_instance(
-                ctxt, self.instance, False, requested_networks,
+                ctxt, self.instance, requested_networks,
                 bind_host_id=bind_host_id)
 
         mock_get_client.assert_has_calls([
@@ -1277,7 +1277,7 @@ class TestAPI(TestAPIBase):
         mocked_client.list_networks.return_value = {
             'networks': model.NetworkInfo([])}
         nwinfo = self.api.allocate_for_instance(self.context, self.instance,
-                                                False, None)
+                                                None)
         self.assertEqual(0, len(nwinfo))
         mock_get_client.assert_has_calls([
             mock.call(self.context),
@@ -1343,7 +1343,7 @@ class TestAPI(TestAPIBase):
 
         self.assertRaises(exception.PortInUse,
                           self.api.allocate_for_instance,
-                          self.context, self.instance, False,
+                          self.context, self.instance,
                           requested_networks=requested_networks)
         mock_unbind.assert_called_once_with(self.context, [],
                                             mocked_client, mock.ANY)
@@ -1388,7 +1388,7 @@ class TestAPI(TestAPIBase):
             "fail to create port")
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
                           self.api.allocate_for_instance,
-                          self.context, self.instance, False,
+                          self.context, self.instance,
                           requested_networks=requested_networks)
         mock_get_client.assert_has_calls([
             mock.call(self.context),
@@ -1412,7 +1412,7 @@ class TestAPI(TestAPIBase):
             objects=[objects.NetworkRequest()])
         self.assertRaises(test.TestingException,
                           self.api.allocate_for_instance, self.context,
-                          self.instance, False, requested_networks)
+                          self.instance, requested_networks)
         mock_get_client.assert_has_calls([
             mock.call(self.context),
             mock.call(self.context, admin=True)])
@@ -1474,7 +1474,7 @@ class TestAPI(TestAPIBase):
             {'networks': self.nets8}]
         self.assertRaises(exception.ExternalNetworkAttachForbidden,
                           self.api.allocate_for_instance, self.context,
-                          self.instance, False, None)
+                          self.instance, None)
         mock_get_client.assert_has_calls([
             mock.call(self.context),
             mock.call(self.context, admin=True)])
@@ -1501,7 +1501,7 @@ class TestAPI(TestAPIBase):
         self.assertRaises(
             exception.NetworkAmbiguous,
             self.api.allocate_for_instance,
-            self.context, self.instance, False, None)
+            self.context, self.instance, None)
         mock_get_client.assert_has_calls([
             mock.call(self.context),
             mock.call(self.context, admin=True)])
@@ -5092,7 +5092,7 @@ class TestAPI(TestAPIBase):
         mock_avail_nets.return_value = [{'id': 'net-1',
                                          'subnets': ['subnet1']}]
 
-        self.api.allocate_for_instance(mock.sentinel.ctx, mock_inst, False,
+        self.api.allocate_for_instance(mock.sentinel.ctx, mock_inst,
                                        requested_networks=nw_req)
 
         mock_unbind.assert_called_once_with(mock.sentinel.ctx,
@@ -5328,7 +5328,7 @@ class TestAPI(TestAPIBase):
         self.assertRaises(exception.PortBindingFailed,
                           self.api.allocate_for_instance,
                           mock.sentinel.ctx,
-                          mock_inst, False, None)
+                          mock_inst, None)
         mock_nc.delete_port.assert_called_once_with(uuids.portid_1)
 
     @mock.patch('nova.network.neutron.API._show_port')
@@ -5349,7 +5349,7 @@ class TestAPI(TestAPIBase):
 
         self.assertRaises(exception.PortBindingFailed,
                           self.api.allocate_for_instance,
-                          mock.sentinel.ctx, mock_inst, False,
+                          mock.sentinel.ctx, mock_inst,
                           requested_networks=nw_req)
 
     @mock.patch('nova.objects.virtual_interface.VirtualInterface.create')
@@ -5383,7 +5383,7 @@ class TestAPI(TestAPIBase):
 
         with mock.patch.object(self.api, 'get_instance_nw_info'):
             self.api.allocate_for_instance(
-                mock.sentinel.ctx, mock_inst, False,
+                mock.sentinel.ctx, mock_inst,
                 requested_networks=nw_req,
                 resource_provider_mapping={uuids.portid_1: [uuids.rp1]})
 
@@ -6843,8 +6843,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
         self.instance.project_id = ""
 
         self.assertRaises(exception.InvalidInput,
-            api.allocate_for_instance, self.context, self.instance,
-            False, None)
+            api.allocate_for_instance, self.context, self.instance, None)
 
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_ports_for_instance')
@@ -6871,8 +6870,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
             {"id": uuids.created}, {"id": uuids.preexist}, {"id": "foo"}
         ]
 
-        result = api.allocate_for_instance(self.context, self.instance,
-                                           False, None)
+        result = api.allocate_for_instance(self.context, self.instance, None)
 
         self.assertEqual(len(result), 2)
         self.assertEqual(result[0], {"id": uuids.created})
@@ -7431,7 +7429,7 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
         api = neutronapi.API()
         mock_create_port.return_value = {'id': 'foo', 'mac_address': 'bar'}
         api.allocate_for_instance(
-            'context', instance, False, requested_networks=onets,
+            'context', instance, requested_networks=onets,
             security_groups=secgroups)
 
         mock_process_security_groups.assert_called_once_with(
@@ -7484,7 +7482,7 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
         api = neutronapi.API()
         mock_create_port.return_value = {'id': 'foo', 'mac_address': 'bar'}
         api.allocate_for_instance(
-            'context', instance, False, requested_networks=onets,
+            'context', instance, requested_networks=onets,
             security_groups=secgroups)
 
         mock_create_port.assert_has_calls([
@@ -7535,7 +7533,7 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
         api = neutronapi.API()
         mock_create_port.return_value = {'id': 'foo', 'mac_address': 'bar'}
         api.allocate_for_instance(
-            'context', instance, False, requested_networks=onets,
+            'context', instance, requested_networks=onets,
             security_groups=secgroups)
 
         mock_process_security_groups.assert_called_once_with(
@@ -7589,7 +7587,7 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
         self.assertRaises(
             exception.SecurityGroupCannotBeApplied,
             api.allocate_for_instance,
-            'context', instance, False, requested_networks=onets,
+            'context', instance, requested_networks=onets,
             security_groups=secgroups)
 
         mock_process_security_groups.assert_called_once_with(
@@ -7782,7 +7780,7 @@ class TestAPIAutoAllocateNetwork(test.NoDBTestCase):
             requested_networks = objects.NetworkRequestList(objects=[net_req])
 
             nw_info = self.api.allocate_for_instance(
-                self.context, instance, False, requested_networks)
+                self.context, instance, requested_networks)
             self.assertEqual(1, len(nw_info))
             self.assertEqual(uuids.port_id, nw_info[0]['id'])
             # assert that we filtered available networks on admin_state_up=True

@@ -1722,8 +1722,7 @@ class ComputeManager(manager.Manager):
             raise exception.InstanceExists(name=instance.name)
 
     def _allocate_network_async(self, context, instance, requested_networks,
-                                security_groups, is_vpn,
-                                resource_provider_mapping):
+                                security_groups, resource_provider_mapping):
         """Method used to allocate networks in the background.
 
         Broken out for testing.
@@ -1744,7 +1743,7 @@ class ComputeManager(manager.Manager):
         for attempt in range(1, attempts + 1):
             try:
                 nwinfo = self.network_api.allocate_for_instance(
-                        context, instance, vpn=is_vpn,
+                        context, instance,
                         requested_networks=requested_networks,
                         security_groups=security_groups,
                         bind_host_id=bind_host_id,
@@ -1807,11 +1806,9 @@ class ComputeManager(manager.Manager):
         instance.task_state = task_states.NETWORKING
         instance.save(expected_task_state=[None])
 
-        is_vpn = False
         return network_model.NetworkInfoAsyncWrapper(
                 self._allocate_network_async, context, instance,
-                requested_networks, security_groups, is_vpn,
-                resource_provider_mapping)
+                requested_networks, security_groups, resource_provider_mapping)
 
     def _default_root_device_name(self, instance, image_meta, root_bdm):
         """Gets a default root device name from the driver.
