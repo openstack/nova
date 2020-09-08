@@ -19,7 +19,7 @@ from nova.tests.functional import integrated_helpers
 
 
 @ddt.ddt
-class TestColdMigrationUsage(integrated_helpers.ProviderUsageBaseTestCase):
+class TestColdMigrationUsage(integrated_helpers._IntegratedTestBase):
     """Reproducer for bug #1879878.
 
     Demonstrate the possibility of races caused by running the resource
@@ -27,15 +27,19 @@ class TestColdMigrationUsage(integrated_helpers.ProviderUsageBaseTestCase):
     reverted and dropping the claim for that migration on the source or
     destination host, respectively.
     """
+
     compute_driver = 'fake.MediumFakeDriver'
+    microversion = 'latest'
 
     def setUp(self):
+        self.flags(compute_driver=self.compute_driver)
         super().setUp()
+        self.ctxt = nova_context.get_admin_context()
+
+    def _setup_compute_service(self):
         # Start two computes so we can migrate between them.
         self._start_compute('host1')
         self._start_compute('host2')
-
-        self.ctxt = nova_context.get_admin_context()
 
     def _create_server(self):
         """Creates and return a server along with a source host and target
