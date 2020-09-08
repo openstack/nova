@@ -1751,8 +1751,7 @@ class API(base.Base):
         # Delete the VirtualInterface for the given port_id.
         vif = objects.VirtualInterface.get_by_uuid(context, port_id)
         if vif:
-            if 'tag' in vif and vif.tag:
-                self._delete_nic_metadata(instance, vif)
+            self._delete_nic_metadata(instance, vif)
             vif.destroy()
         else:
             LOG.debug('VirtualInterface not found for port: %s',
@@ -1786,6 +1785,10 @@ class API(base.Base):
         return self.get_instance_nw_info(context, instance), port_allocation
 
     def _delete_nic_metadata(self, instance, vif):
+        if not instance.device_metadata:
+            # nothing to delete
+            return
+
         for device in instance.device_metadata.devices:
             if (isinstance(device, objects.NetworkInterfaceMetadata) and
                     device.mac == vif.address):

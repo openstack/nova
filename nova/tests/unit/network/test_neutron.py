@@ -5197,7 +5197,6 @@ class TestAPI(TestAPIBase):
         mock_client.show_port.return_value = {'port': {}}
         mock_ntrn.return_value = mock_client
         vif = objects.VirtualInterface()
-        vif.tag = 'foo'
         vif.destroy = mock.MagicMock()
         mock_get_vif_by_uuid.return_value = vif
         _, port_allocation = self.api.deallocate_port_for_instance(
@@ -5270,7 +5269,6 @@ class TestAPI(TestAPIBase):
         ]
         mock_inst.get_network_info.return_value = network_info
         vif = objects.VirtualInterface()
-        vif.tag = 'foo'
         vif.destroy = mock.MagicMock()
         mock_get_vif_by_uuid.return_value = vif
 
@@ -5297,6 +5295,14 @@ class TestAPI(TestAPIBase):
         self.api._delete_nic_metadata(instance, vif)
         self.assertEqual(0, len(instance.device_metadata.devices))
         instance.save.assert_called_once_with()
+
+    def test_delete_nic_metadata_no_metadata(self):
+        vif = objects.VirtualInterface(address='aa:bb:cc:dd:ee:ff', tag='foo')
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.device_metadata = None
+        instance.save = mock.Mock()
+        self.api._delete_nic_metadata(instance, vif)
+        instance.save.assert_not_called()
 
     @mock.patch('nova.network.neutron.API._check_external_network_attach')
     @mock.patch('nova.network.neutron.API._populate_neutron_extension_values')
