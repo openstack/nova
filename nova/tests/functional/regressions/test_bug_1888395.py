@@ -1,0 +1,99 @@
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+import fixtures
+
+from nova import context
+from nova.network import constants as neutron_constants
+from nova.network import neutron
+from nova.tests.functional.libvirt import base as libvirt_base
+from nova.tests.unit.virt.libvirt import fake_os_brick_connector
+from nova.tests.unit.virt.libvirt import fakelibvirt
+
+
+class TestLiveMigrationWithoutMultiplePortBindings(
+        libvirt_base.ServersTestBase):
+    """Regression test for bug 1888395.
+
+    This regression test asserts that Live migration works when
+    neutron does not support the binding-extended api extension
+    and the legacy single port binding workflow is used.
+    """
+
+    ADMIN_API = True
+    microversion = 'latest'
+
+    def list_extensions(self, *args, **kwargs):
+        return {
+            'extensions': [
+                {
+                    # Copied from neutron-lib portbindings.py
+                    "updated": "2014-02-03T10:00:00-00:00",
+                    "name": neutron_constants.PORT_BINDING,
+                    "links": [],
+                    "alias": "binding",
+                    "description": "Expose port bindings of a virtual port to "
+                                   "external application"
+                }
+            ]
+        }
+
+    def setUp(self):
+        super().setUp()
+        self.neutron.list_extensions = self.list_extensions
+        self.neutron_api = neutron.API()
+        # TODO(sean-k-mooney): remove after
+        # I275509eb0e0eb9eaf26fe607b7d9a67e1edc71f8
+        # has merged.
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.connector',
+            fake_os_brick_connector))
+
+        self.start_computes({
+            'start_host': fakelibvirt.HostInfo(
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=2,
+                kB_mem=10740000),
+            'end_host': fakelibvirt.HostInfo(
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=2,
+                kB_mem=10740000)})
+
+        self.ctxt = context.get_admin_context()
+
+    def test_live_migrate(self):
+        server = self._create_server(
+            host='start_host',
+            networks=[{'port': self.neutron.port_1['id']}])
+
+        self.assertFalse(
+            self.neutron_api.supports_port_binding_extension(self.ctxt))
+        # TODO(sean-k-mooney): extend _live_migrate to support passing a host
+        self.api.post_server_action(
+            server['id'],
+            {
+                'os-migrateLive': {
+                    'host': 'end_host',
+                    'block_migration': 'auto'
+                }
+            }
+        )
+
+        # FIXME(sean-k-mooney): this should succeed but because of bug #188395
+        # it will fail.
+        # self._wait_for_server_parameter(
+        #     server, {'OS-EXT-SRV-ATTR:host': 'end_host', 'status': 'ACTIVE'})
+        # because of the bug the migration will fail in pre_live_migrate so
+        # the vm should still be active on the start_host
+        self._wait_for_server_parameter(
+            server, {'OS-EXT-SRV-ATTR:host': 'start_host', 'status': 'ACTIVE'})
+
+        msg = "NotImplementedError: Cannot load 'vif_type' in the base class"
+        self.assertIn(msg, self.stdlog.logger.output)
