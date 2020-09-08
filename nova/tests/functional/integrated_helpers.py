@@ -421,12 +421,14 @@ class InstanceHelperMixin:
         fake_notifier.wait_for_versioned_notifications('instance.resize.end')
         return self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
-    def _confirm_resize(self, server):
+    def _confirm_resize(self, server, *, cross_cell=False):
         self.api.post_server_action(server['id'], {'confirmResize': None})
         server = self._wait_for_state_change(server, 'ACTIVE')
+        event = 'compute_confirm_resize'
+        if cross_cell:
+            event = 'conductor_confirm_snapshot_based_resize'
         self._wait_for_instance_action_event(
-            server, instance_actions.CONFIRM_RESIZE,
-            'compute_confirm_resize', 'success')
+            server, instance_actions.CONFIRM_RESIZE, event, 'success')
         return server
 
     def _revert_resize(self, server):
