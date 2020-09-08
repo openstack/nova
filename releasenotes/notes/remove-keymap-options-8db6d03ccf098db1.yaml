@@ -1,0 +1,19 @@
+---
+upgrade:
+  - |
+    The ``[vnc] keymap`` and ``[spice] keymap`` configuration options, first
+    deprecated in 18.0.0 (Rocky), have now been removed.  The VNC option
+    affected the libvirt and VMWare virt drivers, while the SPICE option only
+    affected libvirt. For the libvirt driver, configuring these options
+    resulted in lossy keymap conversions for the given graphics method.  Users
+    can replace this host-level configuration with guest-level configuration.
+    This requires noVNC 1.0.0 or greater, which provides support for QEMU's
+    Extended Key Event messages. Refer to `bug #1682020`__ and the `QEMU RFB
+    pull request`__ for more information.
+
+    For the VMWare driver, only the VNC option applied. However, the
+    ``[vmware] vnc_keymap`` option was introduce in 18.0.0 (Rocky) and can be
+    used to replace ``[vnc] keymap``.
+
+    __ https://bugs.launchpad.net/nova/+bug/1682020
+    __ https://github.com/novnc/noVNC/pull/596

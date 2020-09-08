@@ -142,23 +142,6 @@ Related options:
   The proxy client must be able to access the address specified in
   ``server_listen`` using the value of this option.
 """),
-    cfg.StrOpt('keymap',
-        deprecated_for_removal=True,
-        deprecated_since='18.0.0',
-        deprecated_reason="""
-Configuring this option forces QEMU to do keymap conversions. These conversions
-are lossy and can result in significant issues for users of non en-US
-keyboards. Refer to bug #1682020 for more information.""",
-        help="""
-A keyboard layout which is supported by the underlying hypervisor on this
-node.
-
-Possible values:
-
-* This is usually an 'IETF language tag' (default is 'en-us'). If you
-  use QEMU as hypervisor, you should find the list of supported keyboard
-  layouts at /usr/share/qemu/keymaps.
-""")
 ]
 
 ALL_OPTS.extend(CLI_OPTS)
