@@ -2277,7 +2277,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                          CONF.libvirt.virt_type)
         interface = guest.get_interface_by_cfg(cfg)
         try:
-            self.vif_driver.unplug(instance, vif)
             # NOTE(mriedem): When deleting an instance and using Neutron,
             # we can be racing against Neutron deleting the port and
             # sending the vif-deleted event which then triggers a call to
@@ -2357,6 +2356,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warning('Detaching interface %(mac)s failed because '
                             'the device is no longer found on the guest.',
                             {'mac': mac}, instance=instance)
+        finally:
+            # NOTE(gibi): we need to unplug the vif _after_ the detach is done
+            # on the libvirt side as otherwise libvirt will still manage the
+            # device that our unplug code trying to reset. This can cause a
+            # race and leave the detached device configured. Also even if we
+            # are failed to detach due to race conditions the unplug is
+            # necessary for the same reason
+            self.vif_driver.unplug(instance, vif)
 
     def _create_snapshot_metadata(self, image_meta, instance,
                                   img_fmt, snp_name):

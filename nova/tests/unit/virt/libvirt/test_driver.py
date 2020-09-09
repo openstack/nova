@@ -23596,11 +23596,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock.patch.object(guest, 'get_interface_by_cfg',
                               side_effect=get_interface_calls),
             mock.patch.object(domain, 'detachDeviceFlags'),
-            mock.patch('nova.virt.libvirt.driver.LOG.warning')
+            mock.patch('nova.virt.libvirt.driver.LOG.warning'),
+            mock.patch.object(self.drvr.vif_driver, 'unplug')
         ) as (
             mock_get_guest, mock_get_config,
             mock_get_interface, mock_detach_device_flags,
-            mock_warning
+            mock_warning, mock_unplug
         ):
             # run the detach method
             self.drvr.detach_interface(self.context, instance, network_info[0])
@@ -23620,6 +23621,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_detach_device_flags.assert_called_once_with(
                 expected_cfg.to_xml(), flags=expected_flags)
             mock_warning.assert_not_called()
+
+        mock_unplug.assert_called_once_with(instance, network_info[0])
 
     def test_detach_interface_with_running_instance(self):
         self._test_detach_interface(
