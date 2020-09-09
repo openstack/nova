@@ -343,7 +343,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         self.assertEqual('otherGuest', image.os_type)
         self.assertEqual('lsiLogic', image.adapter_type)
         self.assertEqual('preallocated', image.disk_type)
-        self.assertEqual('e1000', image.vif_model)
+        self.assertEqual('e1000e', image.vif_model)
 
     def test_use_vsphere_location(self):
         image = self._image_build(None, True, vsphere_location='vsphere://ok')

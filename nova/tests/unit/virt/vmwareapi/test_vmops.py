@@ -2413,7 +2413,7 @@ class VMwareVMOpsTestCase(test.TestCase):
         # Test that the VM's network is configured as specified
         devices = vm.get('config.hardware.device').VirtualDevice
         for device in devices:
-            if device.obj_name != 'ns0:VirtualE1000':
+            if device.obj_name != 'ns0:VirtualE1000e':
                 continue
             self.assertEqual(self._network_values['address'],
                              device.macAddress)
@@ -3194,7 +3194,7 @@ class VMwareVMOpsTestCase(test.TestCase):
         self._vmops._network_api = _network_api
 
         vif_info = vif.get_vif_dict(self._session, self._cluster,
-                                    'VirtualE1000', self._network_values)
+                                    'VirtualE1000e', self._network_values)
         extra_specs = vm_util.ExtraSpecs()
         mock_extra_specs.return_value = extra_specs
         self._vmops.attach_interface(self._context, self._instance,
@@ -3298,7 +3298,7 @@ class VMwareVMOpsTestCase(test.TestCase):
         self._vmops._network_api = _network_api
 
         vif_info = vif.get_vif_dict(self._session, self._cluster,
-                                    'VirtualE1000', self._network_values)
+                                    'VirtualE1000e', self._network_values)
         vif_limits = vm_util.Limits(shares_level='custom',
                                     shares_share=40)
         extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)
