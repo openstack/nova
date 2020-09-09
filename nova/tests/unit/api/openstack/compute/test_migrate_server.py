@@ -138,11 +138,6 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                               allowed=0)
         self._test_migrate_exception(exc_info, webob.exc.HTTPForbidden)
 
-    def test_migrate_vtpm_not_supported(self):
-        exc_info = exception.OperationNotSupportedForVTPM(
-            instance_uuid=uuids.instance, operation='foo')
-        self._test_migrate_exception(exc_info, webob.exc.HTTPConflict)
-
     def _test_migrate_live_succeeded(self, param):
         instance = self._stub_instance_get()
 

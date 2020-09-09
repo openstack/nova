@@ -19,7 +19,9 @@
 #    under the License.
 
 import errno
+import grp
 import os
+import pwd
 import re
 import typing as ty
 import uuid
@@ -31,12 +33,14 @@ from oslo_utils import fileutils
 
 import nova.conf
 from nova import context as nova_context
+from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import fields as obj_fields
 import nova.privsep.fs
 import nova.privsep.idmapshift
 import nova.privsep.libvirt
+import nova.privsep.path
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
 from nova.virt import images
@@ -97,6 +101,9 @@ CPU_TRAITS_MAPPING = {
 
 # Reverse CPU_TRAITS_MAPPING
 TRAITS_CPU_MAPPING = {v: k for k, v in CPU_TRAITS_MAPPING.items()}
+
+# global directory for emulated TPM
+VTPM_DIR = '/var/lib/libvirt/swtpm/'
 
 
 def create_image(
@@ -658,3 +665,77 @@ def get_flags_by_flavor_specs(flavor: 'objects.Flavor') -> ty.Set[str]:
              if trait in TRAITS_CPU_MAPPING]
 
     return set(flags)
+
+
+def save_and_migrate_vtpm_dir(
+    instance_uuid: str,
+    inst_base_resize: str,
+    inst_base: str,
+    dest: str,
+    on_execute: ty.Callable,
+    on_completion: ty.Callable,
+) -> None:
+    """Save vTPM data to instance directory and migrate to the destination.
+
+    If the instance has vTPM enabled, then we need to save its vTPM data
+    locally (to allow for revert) and then migrate the data to the dest node.
+    Do so by copying vTPM data from the swtpm data directory to a resize
+    working directory, $inst_base_resize, and then copying this to the remote
+    directory at $dest:$inst_base.
+
+    :param instance_uuid: The instance's UUID.
+    :param inst_base_resize: The instance's base resize working directory.
+    :param inst_base: The instances's base directory on the destination host.
+    :param dest: Destination host.
+    :param on_execute: Callback method to store PID of process in cache.
+    :param on_completion: Callback method to remove PID of process from cache.
+    :returns: None.
+    """
+    vtpm_dir = os.path.join(VTPM_DIR, instance_uuid)
+    if not os.path.exists(vtpm_dir):
+        return
+
+    # We likely need to create the instance swtpm directory on the dest node
+    # with ownership that is not the user running nova. We only have
+    # permissions to copy files to <instance_path> on the dest node so we need
+    # to get creative.
+
+    # First, make a new directory in the local instance directory
+    swtpm_dir = os.path.join(inst_base_resize, 'swtpm')
+    fileutils.ensure_tree(swtpm_dir)
+    # Now move the per-instance swtpm persistent files into the
+    # local instance directory.
+    nova.privsep.path.move_tree(vtpm_dir, swtpm_dir)
+    # Now adjust ownership.
+    nova.privsep.path.chown(
+        swtpm_dir, os.geteuid(), os.getegid(), recursive=True)
+    # Copy the swtpm subtree to the remote instance directory
+    copy_image(
+        swtpm_dir, inst_base, host=dest, on_execute=on_execute,
+        on_completion=on_completion)
+
+
+def restore_vtpm_dir(swtpm_dir: str) -> None:
+    """Given a saved TPM directory, restore it where libvirt can find it.
+
+    :path swtpm_dir: Path to swtpm directory.
+    :returns: None
+    """
+    # Ensure global swtpm dir exists with suitable
+    # permissions/ownership
+    if not os.path.exists(VTPM_DIR):
+        nova.privsep.path.makedirs(VTPM_DIR)
+        nova.privsep.path.chmod(VTPM_DIR, 0o711)
+    elif not os.path.isdir(VTPM_DIR):
+        msg = _(
+            'Guest wants emulated TPM but host path %s is not a directory.')
+        raise exception.Invalid(msg % VTPM_DIR)
+
+    # These can raise KeyError but they're validated by the driver on startup.
+    uid = pwd.getpwnam(CONF.libvirt.swtpm_user).pw_uid
+    gid = grp.getgrnam(CONF.libvirt.swtpm_group).gr_gid
+
+    # Set ownership of instance-specific files
+    nova.privsep.path.chown(swtpm_dir, uid, gid, recursive=True)
+    # Move instance-specific directory to global dir
+    nova.privsep.path.move_tree(swtpm_dir, VTPM_DIR)
