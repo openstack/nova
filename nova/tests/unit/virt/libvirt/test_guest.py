@@ -80,7 +80,7 @@ class GuestTestCase(test.NoDBTestCase):
         self.domain.createWithFlags.assert_called_once_with(
             fakelibvirt.VIR_DOMAIN_START_PAUSED)
 
-    @mock.patch.object(libvirt_guest.LOG, 'error')
+    @mock.patch.object(libvirt_guest.LOG, 'exception')
     @mock.patch.object(encodeutils, 'safe_decode')
     def test_launch_exception(self, mock_safe_decode, mock_log):
         fake_xml = '<test>this is a test</test>'
