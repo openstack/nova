@@ -2870,8 +2870,10 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         }
         self.api.post_server_action(server['id'], post)
         # The compute manager will put the migration record into error status
-        # when pre_live_migration fails, so wait for that to happen.
-        migration = self._wait_for_migration_status(server, ['error'])
+        # when start _cleanup_pre_live_migration, then set it to failed status
+        # at the end of _rollback_live_migration
+        migration = self._wait_for_migration_status(
+            server, ['error', 'failed'])
         # The _rollback_live_migration method in the compute manager will reset
         # the task_state on the instance, so wait for that to happen.
         server = self._wait_for_server_parameter(

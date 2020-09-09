@@ -2463,13 +2463,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_delete.assert_has_calls([mock.call(mock.ANY),
                                       mock.call(mock.ANY)])
 
+    @mock.patch.object(objects.Instance, 'mutated_migration_context')
     @mock.patch.object(objects.Migration, 'save')
     @mock.patch.object(objects.MigrationList, 'get_by_filters')
     @mock.patch.object(objects.InstanceList, 'get_by_filters')
     def _test_cleanup_incomplete_migrations(self, inst_host,
                                             mock_inst_get_by_filters,
                                             mock_migration_get_by_filters,
-                                            mock_save):
+                                            mock_save, mock_mutated_mgr_ctxt):
         def fake_inst(context, uuid, host):
             inst = objects.Instance(context)
             inst.uuid = uuid
@@ -2498,7 +2499,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_migration_get_by_filters.return_value = fake_migrations
         mock_inst_get_by_filters.return_value = fake_instances
 
-        with mock.patch.object(self.compute.driver, 'delete_instance_files'):
+        with test.nested(
+            mock.patch.object(self.compute.driver, 'delete_instance_files'),
+            mock.patch.object(self.compute.driver,
+                             'cleanup_lingering_instance_resources')
+        ) as (mock_delete_files, mock_cleanup_resources):
             self.compute._cleanup_incomplete_migrations(self.context)
 
         # Ensure that migration status is set to 'failed' after instance

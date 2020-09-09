@@ -1482,6 +1482,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._undefine_domain(instance)
 
+    def cleanup_lingering_instance_resources(self, instance):
+        # zero the data on backend pmem device, if fails
+        # it will raise an exception
+        vpmems = self._get_vpmems(instance)
+        if vpmems:
+            self._cleanup_vpmems(vpmems)
+
     def _cleanup_vpmems(self, vpmems):
         for vpmem in vpmems:
             try:

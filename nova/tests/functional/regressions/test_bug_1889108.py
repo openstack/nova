@@ -82,7 +82,7 @@ class TestVolAttachmentsDuringPreLiveMigration(
         # Migrate the instance and wait until the migration errors out thanks
         # to our mocked version of pre_live_migration raising
         # test.TestingException
-        self._live_migrate(server, 'error')
+        self._live_migrate(server, 'failed')
 
         # Assert that we called the fake pre_live_migration method
         mock_plm.assert_called_once()

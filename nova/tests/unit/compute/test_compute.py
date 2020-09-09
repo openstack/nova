@@ -6251,7 +6251,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual('src_host', instance.host)
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
         self.assertIsNone(instance.task_state)
-        self.assertEqual('error', migration.status)
+        self.assertEqual('failed', migration.status)
         mock_get_disk.assert_called()
         mock_pre.assert_called_once_with(c,
                 instance, True, mock_get_disk.return_value, dest_host,
@@ -6651,7 +6651,7 @@ class ComputeTestCase(BaseTestCase,
 
         _test()
 
-        self.assertEqual(migration_status or 'error', migration.status)
+        self.assertEqual(migration_status or 'failed', migration.status)
         self.assertEqual(0, instance.progress)
 
     def test_rollback_live_migration_set_migration_status(self):

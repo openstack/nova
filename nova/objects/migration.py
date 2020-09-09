@@ -222,7 +222,9 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
     #              for an instance.
     # Version 1.4: Added sort_keys, sort_dirs, limit, marker kwargs to
     #              get_by_filters for migrations pagination support.
-    VERSION = '1.4'
+    # Version 1.5: Added a new function to get in progress migrations
+    #              and error migrations for a given host + node.
+    VERSION = '1.5'
 
     fields = {
         'objects': fields.ListOfObjectsField('Migration'),
@@ -264,5 +266,13 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
                                     migration_type=None):
         db_migrations = db.migration_get_in_progress_by_instance(
             context, instance_uuid, migration_type)
+        return base.obj_make_list(context, cls(context), objects.Migration,
+                                  db_migrations)
+
+    @base.remotable_classmethod
+    def get_in_progress_and_error(cls, context, host, node):
+        db_migrations = \
+            db.migration_get_in_progress_and_error_by_host_and_node(
+                context, host, node)
         return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)

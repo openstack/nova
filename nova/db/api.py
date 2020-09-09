@@ -470,6 +470,14 @@ def migration_get_by_sort_filters(context, sort_keys, sort_dirs, values):
                                               values)
 
 
+def migration_get_in_progress_and_error_by_host_and_node(context, host, node):
+    """Finds all in progress migrations and error migrations for the given
+    host + node.
+    """
+    return IMPL.migration_get_in_progress_and_error_by_host_and_node(
+        context, host, node)
+
+
 ####################
 
 

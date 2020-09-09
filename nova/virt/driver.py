@@ -1856,6 +1856,17 @@ class ComputeDriver(object):
         """
         return False
 
+    def cleanup_lingering_instance_resources(self, instance):
+        """Cleanup resources occupied by lingering instance.
+
+        For example, cleanup other specific resources or whatever we
+        add in the future.
+
+        :param instance: nova.objects.instance.Instance
+        :returns: True if the cleanup is successful, else false.
+        """
+        return True
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.

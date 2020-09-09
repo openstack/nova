@@ -1441,6 +1441,13 @@ class _TestInstanceObject(object):
                     getattr(inst.migration_context, 'new_' + attr_name))
                 self.assertIs(inst_value, migration_context_value)
 
+        with inst.mutated_migration_context(revert=True):
+            for attr_name in instance._MIGRATION_CONTEXT_ATTRS:
+                inst_value = getattr(inst, attr_name)
+                migration_context_value = (
+                    getattr(inst.migration_context, 'old_' + attr_name))
+                self.assertIs(inst_value, migration_context_value)
+
         for attr_name in instance._MIGRATION_CONTEXT_ATTRS:
             inst_value = getattr(inst, attr_name)
             self.assertIs(expected_objs[attr_name], inst_value)
