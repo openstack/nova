@@ -1,10 +1,19 @@
 Understanding Nova Policies
 ===========================
 
+.. warning::
+
+   JSON formatted policy file is deprecated since Nova 22.0.0(Victoria).
+   Use YAML formatted file. Use `oslopolicy-convert-json-to-yaml`__ tool
+   to convert the existing JSON to YAML formatted policy file in backward
+   compatible way.
+
+.. __: https://docs.openstack.org/oslo.policy/latest/cli/oslopolicy-convert-json-to-yaml.html
+
 Nova supports a rich policy system that has evolved significantly over its
 lifetime. Initially, this took the form of a large, mostly hand-written
-``policy.json`` file but, starting in the Newton (14.0.0) release, policy
-defaults have been defined in the codebase, requiring the ``policy.json``
+``policy.yaml`` file but, starting in the Newton (14.0.0) release, policy
+defaults have been defined in the codebase, requiring the ``policy.yaml``
 file only to override these defaults.
 
 In the Ussuri (21.0.0) release, further work was undertaken to address some

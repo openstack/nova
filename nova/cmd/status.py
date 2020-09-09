@@ -25,6 +25,7 @@ from keystoneauth1 import exceptions as ks_exc
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_upgradecheck import upgradecheck
+from oslo_utils import fileutils
 import pkg_resources
 import six
 from sqlalchemy import func as sqlfunc
@@ -409,6 +410,23 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         policy.reset()
         return status
 
+    def _check_policy_json(self):
+        "Checks to see if policy file is JSON-formatted policy file."
+        msg = _("Your policy file  is JSON-formatted which is "
+                "deprecated since Victoria release (Nova 22.0.0). "
+                "You need to switch to YAML-formatted file. You can use the "
+                "``oslopolicy-convert-json-to-yaml`` tool to convert existing "
+                "JSON-formatted files to YAML-formatted files in a "
+                "backwards-compatible manner: "
+                "https://docs.openstack.org/oslo.policy/"
+                "latest/cli/oslopolicy-convert-json-to-yaml.html.")
+        status = upgradecheck.Result(upgradecheck.Code.SUCCESS)
+        # Check if policy file exist and is JSON-formatted.
+        policy_path = CONF.find_file(CONF.oslo_policy.policy_file)
+        if policy_path and fileutils.is_json(policy_path):
+            status = upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
+        return status
+
     # The format of the check functions is to return an upgradecheck.Result
     # object with the appropriate upgradecheck.Code and details set. If the
     # check hits warnings or failures then those should be stored in the
@@ -427,6 +445,8 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         (_('Cinder API'), _check_cinder),
         # Added in Ussuri
         (_('Policy Scope-based Defaults'), _check_policy),
+        # Added in Victoria
+        (_('Policy File JSON to YAML Migration'), _check_policy_json),
     )
 
 

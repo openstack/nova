@@ -127,3 +127,7 @@ Verify operation of the Compute service.
       | Result: Success                                                    |
       | Details: None                                                      |
       +--------------------------------------------------------------------+
+      | Check: Policy File JSON to YAML Migration                          |
+      | Result: Success                                                    |
+      | Details: None                                                      |
+      +--------------------------------------------------------------------+

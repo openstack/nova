@@ -139,6 +139,10 @@ Upgrade
   * Checks for the policy files are not automatically overwritten with
     new defaults.
 
+  **22.0.0 (Victoria)**
+
+  * Checks for the policy files is not JSON-formatted.
+
 See Also
 ========
 
