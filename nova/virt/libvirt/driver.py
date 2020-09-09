@@ -2226,6 +2226,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 self.detach_interface(context, instance, vif)
                 raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
+        try:
+            guest.set_metadata(
+                self._get_guest_config_meta(
+                    instance, instance.get_network_info()))
+        except libvirt.libvirtError:
+            LOG.warning('updating libvirt metadata failed.', instance=instance)
 
     def detach_interface(self, context, instance, vif):
         guest = self._host.get_guest(instance)
@@ -2319,6 +2325,17 @@ class LibvirtDriver(driver.ComputeDriver):
             # are failed to detach due to race conditions the unplug is
             # necessary for the same reason
             self.vif_driver.unplug(instance, vif)
+        try:
+            # NOTE(nmiki): In order for the interface to be removed from
+            # network_info, the nova-compute process need to wait for
+            # processing on the neutron side.
+            # Here, I simply exclude the target VIF from metadata.
+            network_info = list(filter(lambda info: info['id'] != vif['id'],
+                                       instance.get_network_info()))
+            guest.set_metadata(
+                self._get_guest_config_meta(instance, network_info))
+        except libvirt.libvirtError:
+            LOG.warning('updating libvirt metadata failed.', instance=instance)
 
     def _create_snapshot_metadata(self, image_meta, instance,
                                   img_fmt, snp_name):
@@ -4941,7 +4958,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return dev
 
-    def _get_guest_config_meta(self, instance):
+    def _get_guest_config_meta(self, instance, network_info):
         """Get metadata config for guest."""
 
         meta = vconfig.LibvirtConfigGuestMetaNovaInstance()
@@ -4971,6 +4988,18 @@ class LibvirtDriver(driver.ComputeDriver):
         fmeta.swap = flavor.swap
 
         meta.flavor = fmeta
+
+        ports = []
+        for vif in network_info:
+            ips = []
+            for subnet in vif.get('network', {}).get('subnets', []):
+                for ip in subnet.get('ips', []):
+                    ips.append(vconfig.LibvirtConfigGuestMetaNovaIp(
+                        ip.get('type'), ip.get('address'), ip.get('version')))
+            ports.append(vconfig.LibvirtConfigGuestMetaNovaPort(
+                vif.get('id'), ips=ips))
+
+        meta.ports = vconfig.LibvirtConfigGuestMetaNovaPorts(ports)
 
         return meta
 
@@ -6094,7 +6123,8 @@ class LibvirtDriver(driver.ComputeDriver):
             guest_numa_config.numatune,
             flavor, image_meta)
 
-        guest.metadata.append(self._get_guest_config_meta(instance))
+        guest.metadata.append(self._get_guest_config_meta(
+            instance, network_info))
         guest.idmaps = self._get_guest_idmaps()
 
         for event in self._supported_perf_events:

@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Added IP addresses to the metadata in libvirt XML. If an instance has more
+    than one IP address, enumerate those IP addresses. The port attach or
+    detach is performed dynamically after the creation of the instance. Every
+    time there is a change, it is reflected in the contents of the XML.

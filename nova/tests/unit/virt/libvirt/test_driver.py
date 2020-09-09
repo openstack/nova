@@ -784,6 +784,9 @@ class FakeVirtDomain(object):
     def undefine(self):
         return True
 
+    def setMetadata(self, metadata_type, metadata, key, uri, flags=0):
+        pass
+
 
 class CacheConcurrencyTestCase(test.NoDBTestCase):
     def setUp(self):
@@ -2700,6 +2703,44 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # we don't care what the log message is, we just want to make sure
             # our stub method is called which asserts the password is scrubbed
             self.assertTrue(debug_mock.called)
+
+    def test_get_guest_config_meta_with_no_port(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        meta = drvr._get_guest_config_meta(
+                   objects.Instance(**self.test_instance),
+                   _fake_network_info(self, num_networks=0))
+
+        self.assertEqual(len(meta.ports.ports), 0)
+
+    def test_get_guest_config_meta_with_multiple_ports(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        meta = drvr._get_guest_config_meta(
+                   objects.Instance(**self.test_instance),
+                   _fake_network_info(self, num_networks=2))
+
+        self.assertEqual(len(meta.ports.ports), 2)
+
+        # first port
+        self.assertEqual(meta.ports.ports[0].uuid, getattr(uuids, 'vif1'))
+        self.assertEqual(len(meta.ports.ports[0].ips), 2)
+        self.assertEqual(meta.ports.ports[0].ips[0].address, '192.168.1.100')
+        self.assertEqual(meta.ports.ports[0].ips[0].ip_type, 'fixed')
+        self.assertEqual(meta.ports.ports[0].ips[0].ip_version, 4)
+        self.assertEqual(meta.ports.ports[0].ips[1].address,
+                         '2001:db8:0:1:dcad:beff:feef:1')
+        self.assertEqual(meta.ports.ports[0].ips[1].ip_type, 'fixed')
+        self.assertEqual(meta.ports.ports[0].ips[1].ip_version, 6)
+
+        # second port
+        self.assertEqual(meta.ports.ports[1].uuid, getattr(uuids, 'vif2'))
+        self.assertEqual(len(meta.ports.ports[0].ips), 2)
+        self.assertEqual(meta.ports.ports[1].ips[0].address, '192.168.2.100')
+        self.assertEqual(meta.ports.ports[1].ips[0].ip_type, 'fixed')
+        self.assertEqual(meta.ports.ports[1].ips[0].ip_version, 4)
+        self.assertEqual(meta.ports.ports[1].ips[1].address,
+                         '2001:db8:0:2:dcad:beff:feef:1')
+        self.assertEqual(meta.ports.ports[1].ips[1].ip_type, 'fixed')
+        self.assertEqual(meta.ports.ports[1].ips[1].ip_version, 6)
 
     @mock.patch.object(time, "time")
     def test_get_guest_config(self, time_mock):
@@ -19036,6 +19077,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_build.return_value = objects.InstanceDeviceMetadata()
             mock_save = self.useFixture(fixtures.MockPatchObject(
                 objects.Instance, 'save')).mock
+            mock_get_network_info = self.useFixture(fixtures.MockPatchObject(
+                objects.Instance, 'get_network_info')).mock
 
         expected = drvr.vif_driver.get_config(instance, network_info[0],
                                               fake_image_meta,
@@ -19050,6 +19093,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   network_info[0])
             mock_build.assert_called_once_with(self.context, instance)
             mock_save.assert_called_once_with()
+            mock_get_network_info.assert_called_once_with()
         elif method_name == "detach_interface":
             drvr.detach_interface(self.context, instance, network_info[0])
         else:
@@ -23504,6 +23548,37 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_detach_interface.assert_called_with(self.context, instance,
                                                      network_info[0])
 
+    def test_attach_interface_guest_set_metadata(self):
+        guest = mock.Mock(spec=libvirt_guest.Guest)
+        instance = self._create_instance()
+        network_info = _fake_network_info(self)[0]
+        domain = FakeVirtDomain(fake_xml='</xml>')
+        image_meta = objects.ImageMeta.from_dict({})
+        config_meta = vconfig.LibvirtConfigGuestMetaNovaInstance()
+
+        with test.nested(
+            mock.patch.object(host.Host, '_get_domain', return_value=domain),
+            mock.patch.object(self.drvr, '_build_device_metadata',
+                return_value=objects.InstanceDeviceMetadata()),
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(instance, 'get_network_info'),
+            mock.patch.object(
+                self.drvr, '_get_guest_config_meta', return_value=config_meta),
+            mock.patch.object(guest, 'set_metadata'),
+            mock.patch.object(self.drvr._host, 'get_guest', return_value=guest)
+        ) as (
+            mock_get_domain, mock_build_device_metadata, mock_save,
+            mock_get_network_info, mock_get_guest_config_meta,
+            mock_set_metadata, mock_get_guest
+        ):
+            self.drvr.attach_interface(
+                self.context, instance, image_meta, network_info)
+            mock_build_device_metadata.assert_called_once_with(
+                self.context, instance)
+            mock_save.assert_called_once_with()
+            mock_set_metadata.assert_called_once_with(config_meta)
+
+    @mock.patch.object(objects.Instance, 'get_network_info')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
     @mock.patch.object(FakeVirtDomain, 'info')
@@ -23511,7 +23586,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch.object(host.Host, '_get_domain')
     def _test_attach_interface(self, power_state, expected_flags,
                                mock_get_domain, mock_attach,
-                               mock_info, mock_build, mock_save):
+                               mock_info, mock_build, mock_save,
+                               mock_get_network_info):
         instance = self._create_instance()
         network_info = _fake_network_info(self)
         domain = FakeVirtDomain(fake_xml="""
@@ -23551,6 +23627,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_info.assert_called_once_with()
             mock_build.assert_called_once_with(self.context, instance)
             mock_save.assert_called_once_with()
+            mock_get_network_info.assert_called_once_with()
             mock_attach.assert_called_once_with(expected.to_xml(),
                                                 flags=expected_flags)
 
@@ -23617,11 +23694,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                               side_effect=get_interface_calls),
             mock.patch.object(domain, 'detachDeviceFlags'),
             mock.patch('nova.virt.libvirt.driver.LOG.warning'),
-            mock.patch.object(self.drvr.vif_driver, 'unplug')
+            mock.patch.object(self.drvr.vif_driver, 'unplug'),
+            mock.patch.object(instance, 'get_network_info')
         ) as (
             mock_get_guest, mock_get_config,
             mock_get_interface, mock_detach_device_flags,
-            mock_warning, mock_unplug
+            mock_warning, mock_unplug, mock_get_network_info
         ):
             # run the detach method
             self.drvr.detach_interface(self.context, instance, network_info[0])
@@ -23641,6 +23719,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_detach_device_flags.assert_called_once_with(
                 expected_cfg.to_xml(), flags=expected_flags)
             mock_warning.assert_not_called()
+            mock_get_network_info.assert_called_once_with()
 
         mock_unplug.assert_called_once_with(instance, network_info[0])
 
@@ -23763,7 +23842,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                               side_effect=[expected, expected, None, None]),
             mock.patch.object(self.drvr.vif_driver, 'get_config',
                               return_value=expected),
-        ) as (mock_get_interface, mock_get_config):
+            mock.patch.object(instance, 'get_network_info')
+        ) as (mock_get_interface, mock_get_config, mock_get_network_info):
             self.drvr.detach_interface(self.context, instance, network_info[0])
 
             mock_get_interface.assert_has_calls([mock.call(expected)] * 3)
@@ -23775,6 +23855,58 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_info.assert_called_once_with()
             mock_detach.assert_called_once_with(expected.to_xml(),
                                                 flags=expected_flags)
+            mock_get_network_info.assert_called_once_with()
+
+    def test_detach_interface_guest_set_metadata(self):
+        guest = mock.Mock(spec=libvirt_guest.Guest)
+        instance = self._create_instance()
+        network_info = _fake_network_info(self, num_networks=3)
+        vif = network_info[0]
+        interface = vconfig.LibvirtConfigGuestInterface()
+        image_meta = objects.ImageMeta.from_dict({})
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance, image_meta)
+        cfg = self.drvr._get_guest_config(
+            instance, network_info, image_meta, disk_info)
+        mock_wait_for_detach = mock.Mock()
+        config_meta = vconfig.LibvirtConfigGuestMetaNovaInstance()
+
+        with test.nested(
+            mock.patch.object(
+                self.drvr._host, 'get_guest', return_value=guest),
+            mock.patch.object(
+                self.drvr.vif_driver, 'get_config', return_value=cfg),
+            mock.patch.object(
+                guest, 'get_interface_by_cfg', return_value=interface),
+            mock.patch.object(guest, 'get_power_state'),
+            mock.patch.object(
+                instance, 'get_network_info', return_value=network_info),
+            mock.patch.object(guest,
+                'detach_device_with_retry', return_value=mock_wait_for_detach),
+            mock.patch.object(
+                self.drvr, '_get_guest_config_meta', return_value=config_meta),
+            mock.patch.object(guest, 'set_metadata')
+        ) as (
+            mock_get_guest, mock_get_config, mock_get_interface_by_cfg,
+            mock_get_power_state, mock_get_network_info,
+            mock_detach_device_with_retry, mock_get_guest_config_meta,
+            mock_set_metadata
+        ):
+            self.drvr.detach_interface(self.context, instance, vif)
+            mock_get_guest.assert_called_once_with(instance)
+            mock_get_config.assert_called_once_with(
+                instance, vif, test.MatchType(objects.ImageMeta),
+                test.MatchType(objects.Flavor), CONF.libvirt.virt_type)
+            mock_get_interface_by_cfg.assert_called_once_with(cfg)
+            mock_get_power_state.assert_called_once_with(self.drvr._host)
+            mock_detach_device_with_retry.assert_called_once_with(
+                guest.get_interface_by_cfg, cfg, live=False,
+                alternative_device_name=None)
+            mock_wait_for_detach.assert_called_once_with()
+            mock_get_network_info.assert_called_once_with()
+            mock_get_guest_config_meta.assert_called_once_with(
+                instance, network_info[1:])
+            mock_set_metadata.assert_called_once_with(config_meta)
 
     @mock.patch('nova.objects.block_device.BlockDeviceMapping.save',
                 new=mock.Mock())

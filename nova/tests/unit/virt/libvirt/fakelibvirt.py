@@ -183,6 +183,11 @@ VIR_SECRET_USAGE_TYPE_VOLUME = 1
 VIR_SECRET_USAGE_TYPE_CEPH = 2
 VIR_SECRET_USAGE_TYPE_ISCSI = 3
 
+# metadata types
+VIR_DOMAIN_METADATA_DESCRIPTION = 0
+VIR_DOMAIN_METADATA_TITLE = 1
+VIR_DOMAIN_METADATA_ELEMENT = 2
+
 # Libvirt version to match MIN_LIBVIRT_VERSION in driver.py
 FAKE_LIBVIRT_VERSION = versionutils.convert_version_to_int(
     libvirt_driver.MIN_LIBVIRT_VERSION)
@@ -1378,6 +1383,9 @@ class Domain(object):
         pass
 
     def fsThaw(self):
+        pass
+
+    def setMetadata(self, metadata_type, metadata, key, uri, flags=0):
         pass
 
 
