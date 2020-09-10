@@ -547,9 +547,6 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
         If we fail during evacuate and the instance directory didn't
         previously exist on the destination, we should delete it
         """
-        # Use a unique instances_path per test to allow cleanup
-        self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
-
         # Create instances on compute0
         compute0 = self._start_compute('compute0')
         servers = self._create_servers()
@@ -612,8 +609,6 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
         By default our 2 compute hosts share the same instance directory on
         the test runner.
         """
-        # Use a unique instances_path per test to allow cleanup
-        self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
         # Create test instances on compute0
         compute0 = self._start_compute('compute0')
         servers = self._create_servers()
