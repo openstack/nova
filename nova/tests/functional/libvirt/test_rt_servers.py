@@ -47,10 +47,7 @@ class RealTimeServersTest(base.ServersTestBase):
     def test_success(self):
         self.flags(cpu_dedicated_set='0-7', group='compute')
 
-        fake_connection = self._get_connection()
-        self.mock_conn.return_value = fake_connection
-
-        self.compute = self.start_service('compute', host='test_compute0')
+        self.start_compute()
 
         flavor_id = self._create_flavor(extra_spec={
             'hw:cpu_realtime': 'yes',
