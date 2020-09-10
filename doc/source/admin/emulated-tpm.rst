@@ -82,8 +82,8 @@ Limitations
   host. Thus the admin may need to decide whether to grant the user additional
   policy roles; if not, those operations are effectively disabled.
 
-* Live migration, cold migration, resize, evacuation, shelving and rescuing of
-  servers with vTPMs is not currently supported.
+* Live migration, evacuation, shelving and rescuing of servers with vTPMs is
+  not currently supported.
 
 
 Security
