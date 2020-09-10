@@ -180,3 +180,50 @@ class TestVolAttachmentsDuringLiveMigration(
         attachments = self.cinder.volume_to_attachment.get(volume_id)
         self.assertIn(src_attachment_id, attachments.keys())
         self.assertEqual(1, len(attachments))
+
+
+class LiveMigrationNeutronFailure(integrated_helpers._IntegratedTestBase):
+    # NOTE(artom) We need the admin API to force the host when booting the test
+    # server.
+    ADMIN_API = True
+    microversion = 'latest'
+
+    def _setup_compute_service(self):
+        self._start_compute('src')
+        self._start_compute('dest')
+
+    def test_live_migrate_get_nw_info_fails(self):
+        """Test that if the driver.post_live_migration() call fails (for
+        example by not being able to connect to Neutron), the exception goes
+        unhandled and results in the live-migration erroring out. This is bug
+        1879787.
+        """
+        server = self._create_server(networks='auto',
+                                     host=self.computes['src'].host)
+
+        orig_plm = self.computes['src'].manager._post_live_migration
+
+        def stub_plm(*args, **kwargs):
+            """We simulate a failure in driver.post_live_migration() on the
+            source by stubbing the source compute's _post_live_migration() with
+            a method that, within a context that mocks
+            driver.post_live_migration() to raise an exception, calls the
+            original compute.manager._post_live_migration(). This is needed to
+            make sure driver.post_live_migration() raises only once, and only
+            on the source.
+            """
+            with mock.patch.object(self.computes['src'].manager.network_api,
+                                   'get_instance_nw_info',
+                                   side_effect=ConnectionError):
+                return orig_plm(*args, **kwargs)
+
+        with mock.patch.object(self.computes['src'].manager,
+                               '_post_live_migration',
+                               side_effect=stub_plm):
+            # FIXME(artom) Until bug 1879787 is fixed, the raised
+            # ConnectionError will go unhandled, the migration will fail, and
+            # the instance will still be reported as being on the source, even
+            # though it's actually running on the destination.
+            self._live_migrate(server, 'error', server_expected_state='ERROR')
+            server = self.api.get_server(server['id'])
+            self.assertEqual('src', server['OS-EXT-SRV-ATTR:host'])
