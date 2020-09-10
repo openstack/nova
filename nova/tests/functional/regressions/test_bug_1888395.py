@@ -12,6 +12,9 @@
 
 import fixtures
 
+from lxml import etree
+from urllib import parse as urlparse
+
 from nova import context
 from nova.network import constants as neutron_constants
 from nova.network import neutron
@@ -67,6 +70,40 @@ class TestLiveMigrationWithoutMultiplePortBindings(
                 kB_mem=10740000)})
 
         self.ctxt = context.get_admin_context()
+        # TODO(sean-k-mooney): remove this when it is part of ServersTestBase
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.tests.unit.virt.libvirt.fakelibvirt.Domain.migrateToURI3',
+            self._migrate_stub))
+
+    def _migrate_stub(self, domain, destination, params, flags):
+        """Stub out migrateToURI3."""
+
+        src_hostname = domain._connection.hostname
+        dst_hostname = urlparse.urlparse(destination).netloc
+
+        # In a real live migration, libvirt and QEMU on the source and
+        # destination talk it out, resulting in the instance starting to exist
+        # on the destination. Fakelibvirt cannot do that, so we have to
+        # manually create the "incoming" instance on the destination
+        # fakelibvirt.
+        dst = self.computes[dst_hostname]
+        dst.driver._host.get_connection().createXML(
+            params['destination_xml'],
+            'fake-createXML-doesnt-care-about-flags')
+
+        src = self.computes[src_hostname]
+        conn = src.driver._host.get_connection()
+
+        # because migrateToURI3 is spawned in a background thread, this method
+        # does not block the upper nova layers. Because we don't want nova to
+        # think the live migration has finished until this method is done, the
+        # last thing we do is make fakelibvirt's Domain.jobStats() return
+        # VIR_DOMAIN_JOB_COMPLETED.
+        server = etree.fromstring(
+            params['destination_xml']
+        ).find('./uuid').text
+        dom = conn.lookupByUUIDString(server)
+        dom.complete_job()
 
     def test_live_migrate(self):
         server = self._create_server(
@@ -86,14 +123,7 @@ class TestLiveMigrationWithoutMultiplePortBindings(
             }
         )
 
-        # FIXME(sean-k-mooney): this should succeed but because of bug #188395
-        # it will fail.
-        # self._wait_for_server_parameter(
-        #     server, {'OS-EXT-SRV-ATTR:host': 'end_host', 'status': 'ACTIVE'})
-        # because of the bug the migration will fail in pre_live_migrate so
-        # the vm should still be active on the start_host
         self._wait_for_server_parameter(
-            server, {'OS-EXT-SRV-ATTR:host': 'start_host', 'status': 'ACTIVE'})
-
+            server, {'OS-EXT-SRV-ATTR:host': 'end_host', 'status': 'ACTIVE'})
         msg = "NotImplementedError: Cannot load 'vif_type' in the base class"
-        self.assertIn(msg, self.stdlog.logger.output)
+        self.assertNotIn(msg, self.stdlog.logger.output)
