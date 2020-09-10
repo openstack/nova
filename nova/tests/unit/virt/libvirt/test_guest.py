@@ -607,6 +607,44 @@ class GuestTestCase(test.NoDBTestCase):
             self.guest.get_interface_by_cfg(cfg))
         self.assertIsNone(self.guest.get_interface_by_cfg(None))
 
+    def test_get_interface_by_cfg_hostdev_pci(self):
+        self.domain.XMLDesc.return_value = """<domain>
+            <devices>
+                <hostdev mode='subsystem' type='pci' managed='yes'>
+                <driver name='vfio'/>
+                <source>
+                <address domain='0x0000' bus='0x81' slot='0x00'
+                    function='0x1'/>
+                </source>
+                <alias name='hostdev0'/>
+                <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
+                    function='0x0'/>
+                </hostdev>
+            </devices>
+        </domain>"""
+        cfg = vconfig.LibvirtConfigGuestHostdevPCI()
+        cfg.parse_str("""
+            <hostdev mode='subsystem' type='pci' managed='yes'>
+            <driver name='vfio'/>
+            <source>
+            <address domain='0x0000' bus='0x81' slot='0x00' function='0x1'/>
+            </source>
+            </hostdev>""")
+        self.assertIsNotNone(
+            self.guest.get_interface_by_cfg(cfg))
+
+        cfg.parse_str("""
+            <hostdev mode='subsystem' type='pci' managed='yes'>
+            <driver name='vfio'/>
+            <source>
+            <address domain='0000' bus='81' slot='00' function='1'/>
+            </source>
+            </hostdev>""")
+        self.assertIsNotNone(
+            self.guest.get_interface_by_cfg(cfg))
+
+        self.assertIsNone(self.guest.get_interface_by_cfg(None))
+
     def test_get_info(self):
         self.domain.info.return_value = (1, 2, 3, 4, 5)
         self.domain.ID.return_value = 6

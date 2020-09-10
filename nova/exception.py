@@ -1353,6 +1353,11 @@ class InterfaceAttachFailedNoNetwork(Invalid):
                 "for project '%(project_id)s'.")
 
 
+class InterfaceAttachPciClaimFailed(Invalid):
+    msg_fmt = _("Failed to claim PCI device for %(instance_uuid)s during "
+                "interface attach")
+
+
 class InterfaceDetachFailed(Invalid):
     msg_fmt = _("Failed to detach network adapter device from "
                 "%(instance_uuid)s")

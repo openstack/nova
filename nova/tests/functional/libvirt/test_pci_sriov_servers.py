@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import ddt
 import fixtures
 import mock
@@ -26,7 +27,10 @@ import nova
 from nova import context
 from nova import objects
 from nova.objects import fields
+from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
+from nova.tests.unit import fake_notifier
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
 CONF = cfg.CONF
@@ -196,6 +200,123 @@ class SRIOVServersTest(_PCIServersTestBase):
             diagnostics['nic_details'][1]['mac_address'],
         )
         self.assertIsNone(diagnostics['nic_details'][1]['tx_packets'])
+
+
+class SRIOVAttachDetachTest(_PCIServersTestBase):
+    # no need for aliases as these test will request SRIOV via neutron
+    PCI_ALIAS = []
+
+    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PF_PROD_ID,
+            "physical_network": "physnet2",
+        },
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.VF_PROD_ID,
+            "physical_network": "physnet2",
+        },
+    )]
+
+    def setUp(self):
+        super().setUp()
+
+        self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
+
+        # add extra ports and the related network to the neutron fixture
+        # specifically for these tests. It cannot be added globally in the
+        # fixture init as it adds a second network that makes auto allocation
+        # based test to fail due to ambiguous networks.
+        self.neutron._networks[
+            self.neutron.network_2['id']] = self.neutron.network_2
+        self.neutron._subnets[
+            self.neutron.subnet_2['id']] = self.neutron.subnet_2
+        for port in [self.neutron.sriov_port, self.neutron.sriov_port2,
+                     self.neutron.sriov_pf_port, self.neutron.sriov_pf_port2,
+                     self.neutron.macvtap_port, self.neutron.macvtap_port2]:
+            self.neutron._ports[port['id']] = copy.deepcopy(port)
+
+    def _get_attached_port_ids(self, instance_uuid):
+        return [
+            attachment['port_id']
+            for attachment in self.api.get_port_interfaces(instance_uuid)]
+
+    def _detach_port(self, instance_uuid, port_id):
+        self.api.detach_interface(instance_uuid, port_id)
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.interface_detach.end')
+
+    def _attach_port(self, instance_uuid, port_id):
+        self.api.attach_interface(
+            instance_uuid,
+            {'interfaceAttachment': {
+                'port_id': port_id}})
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.interface_attach.end')
+
+    def _test_detach_attach(self, first_port_id, second_port_id):
+        # This test takes two ports that requires PCI claim.
+        # Starts a compute with one PF and one connected VF.
+        # Then starts a VM with the first port. Then detach it, then
+        # re-attach it. These expected to be successful. Then try to attach the
+        # second port and asserts that it fails as no free PCI device left on
+        # the host.
+        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=2,
+                                         kB_mem=15740000)
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
+        fake_connection = self._get_connection(host_info, pci_info)
+        self.mock_conn.return_value = fake_connection
+
+        self.compute = self.start_service('compute', host='test_compute0')
+
+        # Create server with a port
+        server = self._create_server(networks=[{'port': first_port_id}])
+
+        updated_port = self.neutron.show_port(first_port_id)['port']
+        self.assertEqual('test_compute0', updated_port['binding:host_id'])
+        self.assertIn(first_port_id, self._get_attached_port_ids(server['id']))
+
+        self._detach_port(server['id'], first_port_id)
+
+        updated_port = self.neutron.show_port(first_port_id)['port']
+        self.assertIsNone(updated_port['binding:host_id'])
+        self.assertNotIn(
+            first_port_id,
+            self._get_attached_port_ids(server['id']))
+
+        # Attach back the port
+        self._attach_port(server['id'], first_port_id)
+
+        updated_port = self.neutron.show_port(first_port_id)['port']
+        self.assertEqual('test_compute0', updated_port['binding:host_id'])
+        self.assertIn(first_port_id, self._get_attached_port_ids(server['id']))
+
+        # Try to attach the second port but no free PCI device left
+        ex = self.assertRaises(
+            client.OpenStackApiException, self._attach_port, server['id'],
+            second_port_id)
+
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Failed to claim PCI device', str(ex))
+        attached_ports = self._get_attached_port_ids(server['id'])
+        self.assertIn(first_port_id, attached_ports)
+        self.assertNotIn(second_port_id, attached_ports)
+
+    def test_detach_attach_direct(self):
+        self._test_detach_attach(
+            self.neutron.sriov_port['id'], self.neutron.sriov_port2['id'])
+
+    def test_detach_macvtap(self):
+        self._test_detach_attach(
+            self.neutron.macvtap_port['id'],
+            self.neutron.macvtap_port2['id'])
+
+    def test_detach_direct_physical(self):
+        self._test_detach_attach(
+            self.neutron.sriov_pf_port['id'],
+            self.neutron.sriov_pf_port2['id'])
 
 
 class PCIServersTest(_PCIServersTestBase):

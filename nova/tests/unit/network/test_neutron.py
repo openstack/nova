@@ -6964,12 +6964,6 @@ class TestAllocateForInstance(test.NoDBTestCase):
             exception.PortBindingFailed,
             {"binding:vif_type": model.VIF_TYPE_BINDING_FAILED})
 
-    def test_validate_requested_port_ids_raise_sriov(self):
-        self._assert_validate_requested_port_ids_raises(
-            exception.AttachSRIOVPortNotSupported,
-            {"binding:vnic_type": model.VNIC_TYPE_DIRECT},
-            attach=True)
-
     def test_validate_requested_network_ids_success_auto_net(self):
         requested_networks = []
         ordered_networks = []

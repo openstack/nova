@@ -1889,17 +1889,33 @@ class ResourceTracker(object):
         self.stats[nodename].build_succeeded()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
-    def claim_pci_devices(self, context, pci_requests):
+    def claim_pci_devices(
+        self, context, pci_requests, instance_numa_topology=None):
         """Claim instance PCI resources
 
         :param context: security context
         :param pci_requests: a list of nova.objects.InstancePCIRequests
+        :param instance_numa_topology: an InstanceNumaTopology object used to
+            ensure PCI devices are aligned with the NUMA topology of the
+            instance
         :returns: a list of nova.objects.PciDevice objects
         """
         result = self.pci_tracker.claim_instance(
-            context, pci_requests, None)
+            context, pci_requests, instance_numa_topology)
         self.pci_tracker.save(context)
         return result
+
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
+    def unclaim_pci_devices(self, context, pci_device, instance):
+        """Deallocate PCI devices
+
+        :param context: security context
+        :param pci_device: the objects.PciDevice describing the PCI device to
+            be freed
+        :param instance: the objects.Instance the PCI resources are freed from
+        """
+        self.pci_tracker.free_device(pci_device, instance)
+        self.pci_tracker.save(context)
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def allocate_pci_devices_for_instance(self, context, instance):

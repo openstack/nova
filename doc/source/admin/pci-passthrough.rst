@@ -29,10 +29,10 @@ devices with potentially different capabilities.
 
    **Limitations**
 
-   * Attaching SR-IOV ports to existing servers is not currently supported.
-     This is now rejected by the API but previously it fail later in the
-     process. See `bug 1708433 <https://bugs.launchpad.net/nova/+bug/1708433>`_
-     for details.
+   * Attaching SR-IOV ports to existing servers was not supported until the
+     22.0.0 Victoria release. Due to various bugs in libvirt and qemu we
+     recommend to use at least libvirt version 6.0.0 and at least qemu version
+     4.2.
    * Cold migration (resize) of servers with SR-IOV devices attached was not
      supported until the 14.0.0 Newton release, see
      `bug 1512800 <https://bugs.launchpad.net/nova/+bug/1512880>`_ for details.

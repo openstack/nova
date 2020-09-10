@@ -1463,6 +1463,131 @@ class NeutronFixture(fixtures.Fixture):
         'resource_request': {},
         'binding:profile': {},
         'binding:vnic_type': 'direct',
+        'binding:vif_type': 'hw_veb',
+        'binding:vif_details': {'vlan': 100},
+        'port_security_enabled': False,
+    }
+
+    sriov_port2 = {
+        'id': '3f675f19-8b2d-479d-9d42-054644a95a04',
+        'name': '',
+        'description': '',
+        'network_id': network_2['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c5',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.13.2',
+                'subnet_id': subnet_2['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+        'device_id': '',
+        'resource_request': {},
+        'binding:profile': {},
+        'binding:vnic_type': 'direct',
+        'binding:vif_type': 'hw_veb',
+        'binding:vif_details': {'vlan': 100},
+        'port_security_enabled': False,
+    }
+
+    sriov_pf_port = {
+        'id': 'ce2a6ff9-573d-493e-9498-8100953e6f00',
+        'name': '',
+        'description': '',
+        'network_id': network_2['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c6',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.13.2',
+                'subnet_id': subnet_2['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+        'device_id': '',
+        'resource_request': {},
+        'binding:profile': {},
+        'binding:vnic_type': 'direct-physical',
+        'binding:vif_type': 'hostdev_physical',
+        'binding:vif_details': {'vlan': 100},
+        'port_security_enabled': False,
+    }
+
+    sriov_pf_port2 = {
+        'id': 'ad2fd6c2-2c55-4c46-abdc-a8ec0d5f6a29',
+        'name': '',
+        'description': '',
+        'network_id': network_2['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c7',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.13.2',
+                'subnet_id': subnet_2['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+        'device_id': '',
+        'resource_request': {},
+        'binding:profile': {},
+        'binding:vnic_type': 'direct-physical',
+        'binding:vif_type': 'hostdev_physical',
+        'binding:vif_details': {'vlan': 100},
+        'port_security_enabled': False,
+    }
+
+    macvtap_port = {
+        'id': '6eada1f1-6311-428c-a7a5-52b35cabc8fd',
+        'name': '',
+        'description': '',
+        'network_id': network_2['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c8',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.13.4',
+                'subnet_id': subnet_2['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+        'device_id': '',
+        'binding:profile': {},
+        'binding:vnic_type': 'macvtap',
+        'binding:vif_type': 'hw_veb',
+        'binding:vif_details': {'vlan': 100},
+        'port_security_enabled': False,
+    }
+
+    macvtap_port2 = {
+        'id': 'fc79cc0c-93e9-4613-9f78-34c828d92e9f',
+        'name': '',
+        'description': '',
+        'network_id': network_2['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c9',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.13.4',
+                'subnet_id': subnet_2['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+        'device_id': '',
+        'binding:profile': {},
+        'binding:vnic_type': 'macvtap',
+        'binding:vif_type': 'hw_veb',
+        'binding:vif_details': {'vlan': 100},
         'port_security_enabled': False,
     }
 

@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Nova now supports attaching and detaching PCI device backed Neutron ports
+    to running servers.

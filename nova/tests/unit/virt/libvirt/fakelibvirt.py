@@ -1825,6 +1825,19 @@ class FakeLibvirtFixture(fixtures.Fixture):
             'nova.pci.utils.get_ifname_by_pci_address',
             return_value='fake_pf_interface_name'))
 
+        # libvirt calls out to sysfs to get the vfs ID during macvtap plug
+        self.useFixture(fixtures.MockPatch(
+            'nova.pci.utils.get_vf_num_by_pci_address', return_value=1))
+
+        # libvirt calls out to privsep to set the mac and vlan of a macvtap
+        self.useFixture(fixtures.MockPatch(
+            'nova.privsep.linux_net.set_device_macaddr_and_vlan'))
+
+        # libvirt calls out to privsep to set the port state during macvtap
+        # plug
+        self.useFixture(fixtures.MockPatch(
+            'nova.privsep.linux_net.set_device_macaddr'))
+
         # Don't assume that the system running tests has a valid machine-id
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.driver.LibvirtDriver'
