@@ -99,10 +99,8 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         return self.start_service('scheduler')
 
     def _get_connection(
-        self, host_info=None, pci_info=None,
-        libvirt_version=fakelibvirt.FAKE_LIBVIRT_VERSION,
-        qemu_version=fakelibvirt.FAKE_QEMU_VERSION,
-        mdev_info=None, hostname=None,
+        self, host_info=None, pci_info=None, mdev_info=None,
+        libvirt_version=None, qemu_version=None, hostname=None,
     ):
         if not host_info:
             host_info = fakelibvirt.HostInfo(
@@ -114,6 +112,9 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         self.assertGreater(16, host_info.cpus,
             "Host.get_online_cpus is only accounting for 16 CPUs but you're "
             "requesting %d; change the mock or your test" % host_info.cpus)
+
+        libvirt_version = libvirt_version or fakelibvirt.FAKE_LIBVIRT_VERSION
+        qemu_version = qemu_version or fakelibvirt.FAKE_QEMU_VERSION
 
         fake_connection = fakelibvirt.Connection(
             'qemu:///system',

@@ -109,12 +109,10 @@ class VGPUTestBase(base.ServersTestBase):
 
     def _start_compute_service(self, hostname):
         fake_connection = self._get_connection(
-            host_info=fakelibvirt.HostInfo(cpu_nodes=2, kB_mem=8192),
             # We want to create two pGPUs but no other PCI devices
-            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=0,
-                                                    num_pfs=0,
-                                                    num_vfs=0,
-                                                    num_mdevcap=2),
+            pci_info=fakelibvirt.HostPCIDevicesInfo(
+                num_pci=0, num_pfs=0, num_vfs=0, num_mdevcap=2,
+            ),
             hostname=hostname)
         with mock.patch('nova.virt.libvirt.host.Host.get_connection',
                         return_value=fake_connection):
