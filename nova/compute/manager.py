@@ -7635,11 +7635,10 @@ class ComputeManager(manager.Manager):
             instance,
             requested_networks,
             bind_host_id=bind_host_id,
-            attach=True,
         )
 
         if len(network_info) != 1:
-            LOG.error('allocate_port_for_instance returned %(ports)s '
+            LOG.error('allocate_for_instance returned %(ports)s '
                       'ports', {'ports': len(network_info)})
             # TODO(elod.illes): an instance.interface_attach.error notification
             # should be sent here
