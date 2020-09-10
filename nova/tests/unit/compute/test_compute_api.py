@@ -2063,7 +2063,7 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_inst = self._create_instance_obj()
         fake_inst.flavor = cur_flavor
         new_flavor = objects.Flavor(id=2, name='bar', vcpus=1, memory_mb=2048,
-                                    root_gb=10, disabled=False)
+                                    root_gb=10, disabled=False, extra_specs={})
         mock_get.return_value = new_flavor
         mock_check.side_effect = exception.OverQuota(
                 overs=['ram'], quotas={'cores': 1, 'ram': 2048},
@@ -2077,6 +2077,25 @@ class _ComputeAPIUnitTestMixIn(object):
                 user_values={'cores': 1, 'ram': 2560},
                 project_values={'cores': 1, 'ram': 2560},
                 project_id=fake_inst.project_id, user_id=fake_inst.user_id)
+
+    @mock.patch('nova.compute.api.API.get_instance_host_status',
+                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                new=mock.Mock(return_value=False))
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    def test_resize__with_accelerator(self, mock_get_flavor):
+        """Ensure resizes are rejected if either flavor requests accelerator.
+        """
+        fake_inst = self._create_instance_obj()
+        new_flavor = self._create_flavor(
+            id=200, flavorid='new-flavor-id', name='new_flavor',
+            disabled=False, extra_specs={'accel:device_profile': 'dp'})
+        mock_get_flavor.return_value = new_flavor
+
+        self.assertRaises(
+            exception.ForbiddenWithAccelerators,
+            self.compute_api.resize,
+            self.context, fake_inst, flavor_id=new_flavor.flavorid)
 
     def test_migrate(self):
         self._test_migrate()
