@@ -9817,9 +9817,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
         self.compute._remove_remote_volume_connections(self.context, 'fake',
                                                        bdms, instance)
-        mock_remove_vol_conn.assert_has_calls = [
+        mock_remove_vol_conn.assert_has_calls([
             mock.call(self.context, instance, bdm.volume_id, 'fake') for
-            bdm in bdms]
+            bdm in bdms])
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.remove_volume_connection')
     def test_remove_remote_volume_connections_exc(self, mock_remove_vol_conn):
@@ -9846,9 +9846,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 original_bdms, instance)
 
         # Assert that we delete the current attachments
-        mock_delete_attachment.assert_has_calls = [
+        mock_delete_attachment.assert_has_calls([
                 mock.call(self.context, uuids.vol1_attach),
-                mock.call(self.context, uuids.vol2_attach)]
+                mock.call(self.context, uuids.vol2_attach)])
         # Assert that we switch the attachment ids and connection_info for each
         # bdm back to their original values
         self.assertEqual(uuids.vol1_attach_original,
