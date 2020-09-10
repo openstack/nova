@@ -10283,7 +10283,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                 network_id,
                                                 port_id,
                                                 req_ip, None)
-        self.assertEqual(vif['id'], network_id)
+        self.assertEqual(vif['id'], port_id)
         mock_allocate.assert_called_once_with(
             self.context, instance, port_id, network_id, req_ip,
             bind_host_id='fake-mini', tag=None)
@@ -10315,7 +10315,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                 network_id,
                                                 port_id,
                                                 req_ip, tag='foo')
-        self.assertEqual(vif['id'], network_id)
+        self.assertEqual(vif['id'], port_id)
         mock_allocate.assert_called_once_with(
             self.context, instance, port_id, network_id, req_ip,
             bind_host_id='fake-mini', tag='foo')
@@ -10371,7 +10371,7 @@ class ComputeAPITestCase(BaseTestCase):
                               self.compute.attach_interface, self.context,
                               instance, network_id, port_id, req_ip, None)
             mock_allocate.assert_called_once_with(self.context, instance,
-                                                  network_id, port_id, req_ip,
+                                                  port_id, network_id, req_ip,
                                                   bind_host_id='fake-host',
                                                   tag=None)
             mock_deallocate.assert_called_once_with(self.context, instance,
