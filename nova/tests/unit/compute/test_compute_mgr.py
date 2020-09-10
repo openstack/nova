@@ -8800,14 +8800,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                               mock_mig_save, mock_mig_get, mock_inst_get,
                               mock_delete_scheduler_info):
 
-            def fake_drop_move_claim(*args, **kwargs):
-                # RT.drop_move_claim must be called before
-                # instance.drop_migration_context.
-                mock_drop.assert_not_called()
-
-            mock_rt = self._mock_rt()
-            # Enforce order of drop_move_claim/drop_migration_context calls.
-            mock_rt.drop_move_claim.side_effect = fake_drop_move_claim
+            self._mock_rt()
             self.instance.migration_context = objects.MigrationContext(
                 new_pci_devices=None,
                 old_pci_devices=None)
@@ -11592,22 +11585,22 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 '_confirm_snapshot_based_resize_delete_port_bindings')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_delete_volume_attachments')
-    @mock.patch('nova.objects.Instance.drop_migration_context')
     def test_confirm_snapshot_based_resize_at_source(
-            self, mock_drop_mig_ctx, mock_delete_vols, mock_delete_bindings,
+            self, mock_delete_vols, mock_delete_bindings,
             mock_delete_allocs, mock_get_bdms):
         """Happy path test for confirm_snapshot_based_resize_at_source."""
         self.instance.old_flavor = objects.Flavor()
         with test.nested(
-                mock.patch.object(self.compute, 'network_api'),
-                mock.patch.object(self.compute.driver, 'cleanup'),
-                mock.patch.object(self.compute.rt, 'drop_move_claim')
+            mock.patch.object(self.compute, 'network_api'),
+            mock.patch.object(self.compute.driver, 'cleanup'),
+            mock.patch.object(self.compute.rt, 'drop_move_claim_at_source')
         ) as (
-                mock_network_api, mock_cleanup, mock_drop_claim
+            mock_network_api, mock_cleanup, mock_drop_claim,
         ):
             # Run the code.
             self.compute.confirm_snapshot_based_resize_at_source(
                 self.context, self.instance, self.migration)
+
         # Assert the mocks.
         mock_network_api.get_instance_nw_info.assert_called_once_with(
             self.context, self.instance)
@@ -11623,12 +11616,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.context, mock_get_bdms.return_value)
         # Move claim and migration context were dropped.
         mock_drop_claim.assert_called_once_with(
-            self.context, self.instance, self.migration.source_node,
-            self.instance.old_flavor, prefix='old_')
-        mock_drop_mig_ctx.assert_called_once_with()
-        # The migration was updated.
-        self.assertEqual('confirmed', self.migration.status)
-        self.migration.save.assert_called_once_with()
+            self.context, self.instance, self.migration)
         mock_delete_allocs.assert_called_once_with(
             self.context, self.instance, self.migration)
 

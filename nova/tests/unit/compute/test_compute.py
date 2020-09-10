@@ -8151,14 +8151,10 @@ class ComputeTestCase(BaseTestCase,
         instance.new_flavor = new_type
         instance.migration_context = objects.MigrationContext()
 
-        def fake_drop_move_claim(*args, **kwargs):
-            pass
-
         def fake_setup_networks_on_host(self, *args, **kwargs):
             pass
 
-        self._mock_rt(
-            drop_move_claim=mock.Mock(side_effect=fake_drop_move_claim))
+        self._mock_rt()
 
         with test.nested(
             mock.patch.object(self.compute.network_api,
