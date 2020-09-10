@@ -49,37 +49,10 @@ class _PCIServersTestBase(base.ServersTestBase):
             '.PciPassthroughFilter.host_passes',
             side_effect=host_pass_mock)).mock
 
-    def _run_build_test(self, flavor_id, end_status='ACTIVE'):
-
-        # Create server
-        good_server = self._build_server(flavor_id=flavor_id)
-
-        post = {'server': good_server}
-
-        created_server = self.api.post_server(post)
-        LOG.debug("created_server: %s", created_server)
-        self.assertTrue(created_server['id'])
-        created_server_id = created_server['id']
-
-        # Validate that the server has been created
-        found_server = self.api.get_server(created_server_id)
-        self.assertEqual(created_server_id, found_server['id'])
-
-        # It should also be in the all-servers list
-        servers = self.api.get_servers()
-        server_ids = [s['id'] for s in servers]
-        self.assertIn(created_server_id, server_ids)
-
-        # Validate that PciPassthroughFilter has been called
-        self.assertTrue(self.mock_filter.called)
-
-        found_server = self._wait_for_state_change(found_server, end_status)
-
-        self.addCleanup(self._delete_server, found_server)
-        return created_server
-
 
 class SRIOVServersTest(_PCIServersTestBase):
+
+    microversion = '2.48'
 
     VFS_ALIAS_NAME = 'vfs'
     PFS_ALIAS_NAME = 'pfs'
@@ -111,86 +84,8 @@ class SRIOVServersTest(_PCIServersTestBase):
         },
     )]
 
-    def test_create_server_with_VF(self):
-
-        pci_info = fakelibvirt.HostPCIDevicesInfo()
-        self.start_compute(pci_info=pci_info)
-
-        # Create a flavor
-        extra_spec = {"pci_passthrough:alias": "%s:1" % self.VFS_ALIAS_NAME}
-        flavor_id = self._create_flavor(extra_spec=extra_spec)
-
-        self._run_build_test(flavor_id)
-
-    def test_create_server_with_PF(self):
-
-        pci_info = fakelibvirt.HostPCIDevicesInfo()
-        self.start_compute(pci_info=pci_info)
-
-        # Create a flavor
-        extra_spec = {"pci_passthrough:alias": "%s:1" % self.PFS_ALIAS_NAME}
-        flavor_id = self._create_flavor(extra_spec=extra_spec)
-
-        self._run_build_test(flavor_id)
-
-    def test_create_server_with_PF_no_VF(self):
-
-        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=4)
-        self.start_compute(pci_info=pci_info)
-
-        # Create a flavor
-        extra_spec_pfs = {"pci_passthrough:alias": "%s:1" %
-                          self.PFS_ALIAS_NAME}
-        extra_spec_vfs = {"pci_passthrough:alias": "%s:1" %
-                          self.VFS_ALIAS_NAME}
-        flavor_id_pfs = self._create_flavor(extra_spec=extra_spec_pfs)
-        flavor_id_vfs = self._create_flavor(extra_spec=extra_spec_vfs)
-
-        self._run_build_test(flavor_id_pfs)
-        self._run_build_test(flavor_id_vfs, end_status='ERROR')
-
-    def test_create_server_with_VF_no_PF(self):
-
-        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=4)
-        self.start_compute(pci_info=pci_info)
-
-        # Create a flavor
-        extra_spec_pfs = {"pci_passthrough:alias": "%s:1" %
-                          self.PFS_ALIAS_NAME}
-        extra_spec_vfs = {"pci_passthrough:alias": "%s:1" %
-                          self.VFS_ALIAS_NAME}
-        flavor_id_pfs = self._create_flavor(extra_spec=extra_spec_pfs)
-        flavor_id_vfs = self._create_flavor(extra_spec=extra_spec_vfs)
-
-        self._run_build_test(flavor_id_vfs)
-        self._run_build_test(flavor_id_pfs, end_status='ERROR')
-
-
-class GetServerDiagnosticsServerWithVfTestV21(_PCIServersTestBase):
-
-    api_major_version = 'v2.1'
-    microversion = '2.48'
-    image_ref_parameter = 'imageRef'
-
-    VFS_ALIAS_NAME = 'vfs'
-
-    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
-        {
-            'vendor_id': fakelibvirt.PCI_VEND_ID,
-            'product_id': fakelibvirt.VF_PROD_ID,
-        },
-    )]
-    PCI_ALIAS = [jsonutils.dumps(x) for x in (
-        {
-            'vendor_id': fakelibvirt.PCI_VEND_ID,
-            'product_id': fakelibvirt.VF_PROD_ID,
-            'name': VFS_ALIAS_NAME,
-        },
-    )]
-
     def setUp(self):
-        super(GetServerDiagnosticsServerWithVfTestV21, self).setUp()
-        self.api.microversion = self.microversion
+        super().setUp()
 
         # The ultimate base class _IntegratedTestBase uses NeutronFixture but
         # we need a bit more intelligent neutron for these tests. Applying the
@@ -198,44 +93,109 @@ class GetServerDiagnosticsServerWithVfTestV21(_PCIServersTestBase):
         # fixture already stubbed.
         self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
 
-    def test_get_server_diagnostics_server_with_VF(self):
+    def test_create_server_with_VF(self):
+        """Create a server with an SR-IOV VF-type PCI device."""
 
         pci_info = fakelibvirt.HostPCIDevicesInfo()
         self.start_compute(pci_info=pci_info)
 
-        # Create a flavor
+        # create a server
         extra_spec = {"pci_passthrough:alias": "%s:1" % self.VFS_ALIAS_NAME}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
+        self._create_server(flavor_id=flavor_id, networks='none')
 
-        # Create server
-        good_server = self._build_server(
-            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-            flavor_id=flavor_id)
-        good_server['networks'] = [
-            {'uuid': base.LibvirtNeutronFixture.network_1['id']},
-            {'uuid': base.LibvirtNeutronFixture.network_4['id']},
-        ]
+        # ensure the filter was called
+        self.assertTrue(self.mock_filter.called)
 
-        post = {'server': good_server}
-        created_server = self.api.post_server(post)
-        self._wait_for_state_change(created_server, 'ACTIVE')
+    def test_create_server_with_PF(self):
+        """Create a server with an SR-IOV PF-type PCI device."""
 
-        diagnostics = self.api.get_server_diagnostics(created_server['id'])
+        pci_info = fakelibvirt.HostPCIDevicesInfo()
+        self.start_compute(pci_info=pci_info)
 
-        self.assertEqual(base.LibvirtNeutronFixture.
-                         network_1_port_2['mac_address'],
-                         diagnostics['nic_details'][0]['mac_address'])
+        # create a server
+        extra_spec = {"pci_passthrough:alias": "%s:1" % self.PFS_ALIAS_NAME}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        self._create_server(flavor_id=flavor_id, networks='none')
 
-        self.assertEqual(base.LibvirtNeutronFixture.
-                         network_4_port_1['mac_address'],
-                         diagnostics['nic_details'][1]['mac_address'])
+        # ensure the filter was called
+        self.assertTrue(self.mock_filter.called)
 
+    def test_create_server_with_PF_no_VF(self):
+        """Create a server with a PF and ensure the VFs are then reserved."""
+
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=4)
+        self.start_compute(pci_info=pci_info)
+
+        # create a server using the PF
+        extra_spec_pfs = {"pci_passthrough:alias": f"{self.PFS_ALIAS_NAME}:1"}
+        flavor_id_pfs = self._create_flavor(extra_spec=extra_spec_pfs)
+        self._create_server(flavor_id=flavor_id_pfs, networks='none')
+
+        # now attempt to build another server, this time using the VF; this
+        # should fail because the VF is used by an instance
+        extra_spec_vfs = {"pci_passthrough:alias": f"{self.VFS_ALIAS_NAME}:1"}
+        flavor_id_vfs = self._create_flavor(extra_spec=extra_spec_vfs)
+        self._create_server(
+            flavor_id=flavor_id_vfs, networks='none', expected_state='ERROR',
+        )
+
+    def test_create_server_with_VF_no_PF(self):
+        """Create a server with a VF and ensure the PF is then reserved."""
+
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=4)
+        self.start_compute(pci_info=pci_info)
+
+        # create a server using the VF
+        extra_spec_vfs = {'pci_passthrough:alias': f'{self.VFS_ALIAS_NAME}:1'}
+        flavor_id_vfs = self._create_flavor(extra_spec=extra_spec_vfs)
+        self._create_server(flavor_id=flavor_id_vfs, networks='none')
+
+        # now attempt to build another server, this time using the PF; this
+        # should fail because the PF is used by an instance
+        extra_spec_pfs = {'pci_passthrough:alias': f'{self.PFS_ALIAS_NAME}:1'}
+        flavor_id_pfs = self._create_flavor(extra_spec=extra_spec_pfs)
+        self._create_server(
+            flavor_id=flavor_id_pfs, networks='none', expected_state='ERROR',
+        )
+
+    def test_get_server_diagnostics_server_with_VF(self):
+        """Ensure server disagnostics include info on VF-type PCI devices."""
+
+        pci_info = fakelibvirt.HostPCIDevicesInfo()
+        self.start_compute(pci_info=pci_info)
+
+        # create a server using the VF and multiple networks
+        extra_spec = {'pci_passthrough:alias': f'{self.VFS_ALIAS_NAME}:1'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(
+            flavor_id=flavor_id,
+            networks=[
+                {'uuid': base.LibvirtNeutronFixture.network_1['id']},
+                {'uuid': base.LibvirtNeutronFixture.network_4['id']},
+            ],
+        )
+
+        # now check the server diagnostics to ensure the VF-type PCI device is
+        # attached
+        diagnostics = self.api.get_server_diagnostics(server['id'])
+
+        self.assertEqual(
+            base.LibvirtNeutronFixture.network_1_port_2['mac_address'],
+            diagnostics['nic_details'][0]['mac_address'],
+        )
         self.assertIsNotNone(diagnostics['nic_details'][0]['tx_packets'])
 
+        self.assertEqual(
+            base.LibvirtNeutronFixture.network_4_port_1['mac_address'],
+            diagnostics['nic_details'][1]['mac_address'],
+        )
         self.assertIsNone(diagnostics['nic_details'][1]['tx_packets'])
 
 
 class PCIServersTest(_PCIServersTestBase):
+
+    microversion = 'latest'
 
     ALIAS_NAME = 'a1'
     PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(
@@ -269,7 +229,7 @@ class PCIServersTest(_PCIServersTestBase):
         }
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
-        self._run_build_test(flavor_id)
+        self._create_server(flavor_id=flavor_id, networks='none')
 
     def test_create_server_with_pci_dev_and_numa_fails(self):
         """This test ensures that it is not possible to allocated CPU and
@@ -282,18 +242,15 @@ class PCIServersTest(_PCIServersTestBase):
         self.start_compute(pci_info=pci_info)
 
         # boot one instance with no PCI device to "fill up" NUMA node 0
-        extra_spec = {
-            'hw:cpu_policy': 'dedicated',
-        }
+        extra_spec = {'hw:cpu_policy': 'dedicated'}
         flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
-
-        self._run_build_test(flavor_id)
+        self._create_server(flavor_id=flavor_id, networks='none')
 
         # now boot one with a PCI device, which should fail to boot
         extra_spec['pci_passthrough:alias'] = '%s:1' % self.ALIAS_NAME
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-
-        self._run_build_test(flavor_id, end_status='ERROR')
+        self._create_server(
+            flavor_id=flavor_id, networks='none', expected_state='ERROR')
 
 
 class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
@@ -314,7 +271,7 @@ class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
             'numa_policy': fields.PCINUMAAffinityPolicy.PREFERRED,
         }
     )]
-    end_status = 'ACTIVE'
+    expected_state = 'ACTIVE'
 
     def test_create_server_with_pci_dev_and_numa(self):
         """Validate behavior of 'preferred' PCI NUMA policy.
@@ -334,15 +291,14 @@ class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
             'hw:cpu_policy': 'dedicated',
         }
         flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
-
-        self._run_build_test(flavor_id)
+        self._create_server(flavor_id=flavor_id)
 
         # now boot one with a PCI device, which should succeed thanks to the
         # use of the PCI policy
         extra_spec['pci_passthrough:alias'] = '%s:1' % self.ALIAS_NAME
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-
-        self._run_build_test(flavor_id, end_status=self.end_status)
+        self._create_server(
+            flavor_id=flavor_id, expected_state=self.expected_state)
 
 
 class PCIServersWithRequiredNUMATest(PCIServersWithPreferredNUMATest):
@@ -357,17 +313,12 @@ class PCIServersWithRequiredNUMATest(PCIServersWithPreferredNUMATest):
             'numa_policy': fields.PCINUMAAffinityPolicy.REQUIRED,
         }
     )]
-    end_status = 'ERROR'
+    expected_state = 'ERROR'
 
 
 @ddt.ddt
 class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
 
-    # The order of the filters is required to make the assertion that the
-    # PciPassthroughFilter is invoked in _run_build_test pass in the
-    # numa affinity tests otherwise the NUMATopologyFilter will eliminate
-    # all hosts before we execute the PciPassthroughFilter.
-    ADDITIONAL_FILTERS = ['PciPassthroughFilter', 'NUMATopologyFilter']
     ALIAS_NAME = 'a1'
     PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(
         {
@@ -407,7 +358,14 @@ class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
             'hw:pci_numa_affinity_policy': policy
         }
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-        self._run_build_test(flavor_id, end_status=status)
+        self._create_server(flavor_id=flavor_id, expected_state=status)
+
+        if status == 'ACTIVE':
+            self.assertTrue(self.mock_filter.called)
+        else:
+            # the PciPassthroughFilter should not have been called, since the
+            # NUMATopologyFilter should have eliminated the filter first
+            self.assertFalse(self.mock_filter.called)
 
     @ddt.unpack  # unpacks each sub-tuple e.g. *(pci_numa_node, status)
     # the preferred policy should always pass regardless of numa affinity
