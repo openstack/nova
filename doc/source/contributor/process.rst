@@ -39,9 +39,9 @@ Dates overview
 For Victoria, please see:
 https://wiki.openstack.org/wiki/Nova/Victoria_Release_Schedule
 
-.. note: Throughout this document any link which references the name of a
-         release cycle in the link can usually be changed to the name of the
-         current cycle to get up to date information.
+.. note:: Throughout this document any link which references the name of a
+          release cycle in the link can usually be changed to the name of the
+          current cycle to get up to date information.
 
 Feature Freeze
 ~~~~~~~~~~~~~~

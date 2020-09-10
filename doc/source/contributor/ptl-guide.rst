@@ -179,7 +179,9 @@ Week following milestone 3
 
   * https://docs.openstack.org/nova/latest/contributor/process.html#non-priority-feature-freeze
 
-  * Note: if there is only a short time between FF and RC1 (lately it’s been 2
+  .. note::
+
+    if there is only a short time between FF and RC1 (lately it’s been 2
     weeks), then the only likely candidates will be low-risk things that are
     almost done
 
