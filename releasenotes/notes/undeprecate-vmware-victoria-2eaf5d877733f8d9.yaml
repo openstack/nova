@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The vmwareapi driver was deprecated in Ussuri due to missing 3pp CI
+    coverage and a clear maintainer. These issues have been addressed
+    during the Victoria cycle and the driver is now undeprecated.
