@@ -459,6 +459,8 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
+    # should be removed.
     def get_console_pool_info(self, console_type):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
@@ -546,6 +548,8 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
+    # should be removed.
     def get_all_bw_counters(self, instances):
         """Return bandwidth usage counters for each interface on each
            running VM.
@@ -726,6 +730,8 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
+    # should be removed.
     def post_interrupted_snapshot_cleanup(self, context, instance):
         """Cleans up any resources left after an interrupted snapshot.
 
@@ -876,6 +882,8 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
+    # should be removed.
     def set_bootable(self, instance, is_bootable):
         """Set the ability to power on/off an instance.
 
@@ -1346,6 +1354,8 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
+    # should be removed.
     def reset_network(self, instance):
         """reset networking for specified instance."""
         # TODO(Vek): Need to pass context in for access to auth_token
@@ -1359,6 +1369,8 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
+    # should be removed.
     def change_instance_metadata(self, context, instance, diff):
         """Applies a diff to the instance metadata.
 
@@ -1558,6 +1570,8 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
+    # should be removed.
     def add_to_aggregate(self, context, aggregate, host, **kwargs):
         """Add a compute host to an aggregate.
 
@@ -1577,6 +1591,8 @@ class ComputeDriver(object):
         # NOTE(jogo) Currently only used for XenAPI-Pool
         raise NotImplementedError()
 
+    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
+    # should be removed.
     def remove_from_aggregate(self, context, aggregate, host, **kwargs):
         """Remove a compute host from an aggregate.
 
@@ -1595,6 +1611,8 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
+    # should be removed.
     def undo_aggregate_operation(self, context, op, aggregate,
                                   host, set_error=True):
         """Undo for Resource Pools."""
@@ -1633,6 +1651,8 @@ class ComputeDriver(object):
         # Refresh and check again.
         return nodename in self.get_available_nodes(refresh=True)
 
+    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
+    # should be removed.
     def get_per_instance_usage(self):
         """Get information about instance resource usage.
 
