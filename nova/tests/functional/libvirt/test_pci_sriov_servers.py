@@ -17,14 +17,19 @@ import ddt
 import fixtures
 import mock
 
+from lxml import etree
+from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
+import nova
+from nova import context
+from nova import objects
 from nova.objects import fields
 from nova.tests.functional.libvirt import base
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
-
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -195,6 +200,7 @@ class SRIOVServersTest(_PCIServersTestBase):
 
 class PCIServersTest(_PCIServersTestBase):
 
+    ADMIN_API = True
     microversion = 'latest'
 
     ALIAS_NAME = 'a1'
@@ -251,6 +257,102 @@ class PCIServersTest(_PCIServersTestBase):
         flavor_id = self._create_flavor(extra_spec=extra_spec)
         self._create_server(
             flavor_id=flavor_id, networks='none', expected_state='ERROR')
+
+    def _confirm_resize(self, server, host='host1'):
+        # NOTE(sbauza): Unfortunately, _cleanup_resize() in libvirt checks the
+        # host option to know the source hostname but given we have a global
+        # CONF, the value will be the hostname of the last compute service that
+        # was created, so we need to change it here.
+        # TODO(sbauza): Remove the below once we stop using CONF.host in
+        # libvirt and rather looking at the compute host value.
+        orig_host = CONF.host
+        self.flags(host=host)
+        super()._confirm_resize(server)
+        self.flags(host=orig_host)
+
+    def assertPCIDeviceCounts(self, hostname, total, free):
+        """Ensure $hostname has $total devices, $free of which are free."""
+        ctxt = context.get_admin_context()
+        devices = objects.PciDeviceList.get_by_compute_node(
+            ctxt, objects.ComputeNode.get_by_nodename(ctxt, hostname).id,
+        )
+        self.assertEqual(total, len(devices))
+        self.assertEqual(free, len([d for d in devices if d.is_available()]))
+
+    def test_cold_migrate_server_with_pci(self):
+
+        host_devices = {}
+        orig_create = nova.virt.libvirt.guest.Guest.create
+
+        def fake_create(cls, xml, host):
+            tree = etree.fromstring(xml)
+            elem = tree.find('./devices/hostdev/source/address')
+
+            hostname = host.get_hostname()
+            address = (
+                elem.get('bus'), elem.get('slot'), elem.get('function'),
+            )
+            if hostname in host_devices:
+                self.assertNotIn(address, host_devices[hostname])
+            else:
+                host_devices[hostname] = []
+            host_devices[host.get_hostname()].append(address)
+
+            return orig_create(xml, host)
+
+        self.stub_out(
+            'nova.virt.libvirt.guest.Guest.create',
+            fake_create,
+        )
+
+        # start two compute services
+        for hostname in ('test_compute0', 'test_compute1'):
+            pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=2)
+            self.start_compute(hostname=hostname, pci_info=pci_info)
+
+        # boot an instance with a PCI device on each host
+        extra_spec = {
+            'pci_passthrough:alias': '%s:1' % self.ALIAS_NAME,
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        server_a = self._create_server(
+            flavor_id=flavor_id, networks='none', host='test_compute0')
+        server_b = self._create_server(
+            flavor_id=flavor_id, networks='none', host='test_compute1')
+
+        # the instances should have landed on separate hosts; ensure both hosts
+        # have one used PCI device and one free PCI device
+        self.assertNotEqual(
+            server_a['OS-EXT-SRV-ATTR:host'], server_b['OS-EXT-SRV-ATTR:host'],
+        )
+        for hostname in ('test_compute0', 'test_compute1'):
+            self.assertPCIDeviceCounts(hostname, total=2, free=1)
+
+        # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
+        # probably be less...dumb
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            # TODO(stephenfin): Use a helper
+            self.api.post_server_action(server_a['id'], {'migrate': None})
+            server_a = self._wait_for_state_change(server_a, 'VERIFY_RESIZE')
+
+        # the instances should now be on the same host; ensure the source host
+        # still has one used PCI device while the destination now has two used
+        # test_compute0 initially
+        self.assertEqual(
+            server_a['OS-EXT-SRV-ATTR:host'], server_b['OS-EXT-SRV-ATTR:host'],
+        )
+        self.assertPCIDeviceCounts('test_compute0', total=2, free=1)
+        self.assertPCIDeviceCounts('test_compute1', total=2, free=0)
+
+        # now, confirm the migration and check our counts once again
+        self._confirm_resize(server_a)
+
+        self.assertPCIDeviceCounts('test_compute0', total=2, free=2)
+        self.assertPCIDeviceCounts('test_compute1', total=2, free=0)
 
 
 class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
