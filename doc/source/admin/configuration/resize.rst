@@ -27,12 +27,6 @@ compute host to another is needed to copy the VM file across.
 Cloud end users can find out how to resize a server by reading
 :doc:`/user/resize`.
 
-XenServer
-~~~~~~~~~
-
-To get resize to work with XenServer (and XCP), you need to establish a root
-trust between all hypervisor nodes and provide an ``/image`` mount point to
-your hypervisors dom0.
 
 Automatic confirm
 -----------------

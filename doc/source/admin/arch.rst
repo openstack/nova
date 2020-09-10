@@ -43,7 +43,7 @@ Compute controls hypervisors through an API server. Selecting the best
 hypervisor to use can be difficult, and you must take budget, resource
 constraints, supported features, and required technical specifications into
 account. However, the majority of OpenStack development is done on systems
-using KVM and Xen-based hypervisors. For a detailed list of features and
+using KVM-based hypervisors. For a detailed list of features and
 support across different hypervisors, see :doc:`/user/support-matrix`.
 
 You can also orchestrate clouds using multiple hypervisors in different
@@ -71,8 +71,6 @@ availability zones. Compute supports the following hypervisors:
   <https://www.vmware.com/support/vsphere-hypervisor.html>`__
 
 - `Xen (using libvirt) <https://www.xenproject.org>`__
-
-- `XenServer <https://xenserver.org>`__
 
 - `zVM <https://www.ibm.com/it-infrastructure/z/zvm>`__
 

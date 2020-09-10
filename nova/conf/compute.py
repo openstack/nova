@@ -37,7 +37,6 @@ Defines which driver to use for controlling virtualization.
 Possible values:
 
 * ``libvirt.LibvirtDriver``
-* ``xenapi.XenAPIDriver``
 * ``fake.FakeDriver``
 * ``ironic.IronicDriver``
 * ``vmwareapi.VMwareVCDriver``

@@ -436,8 +436,8 @@ The image properties that the filter checks for are:
       This was previously called ``architecture``.
 
 ``img_hv_type``
-  Describes the hypervisor required by the image.  Examples are ``qemu``,
-  ``xenapi``, and ``hyperv``.
+  Describes the hypervisor required by the image.  Examples are ``qemu``
+  and ``hyperv``.
 
   .. note::
 
@@ -874,13 +874,6 @@ file.  For example to configure metric1 with ratio1 and metric2 with ratio2:
 
    weight_setting = "metric1=ratio1, metric2=ratio2"
 
-XenServer hypervisor pools to support live migration
-----------------------------------------------------
-
-When using the XenAPI-based hypervisor, the Compute service uses host
-aggregates to manage XenServer Resource pools, which are used in supporting
-live migration.
-
 Allocation ratios
 ~~~~~~~~~~~~~~~~~
 
@@ -980,19 +973,6 @@ HyperV
     :oslo.config:option:`reserved_host_disk_mb` config option to
     account for this overhead, based on the amount of memory available
     to instances.
-
-XenAPI
-    XenServer memory overhead is proportional to the size of the VM and larger
-    flavor VMs become more efficient with respect to overhead. This overhead
-    can be calculated using the following formula::
-
-      overhead (MB) = (instance.memory * 0.00781) + (instance.vcpus * 1.5) + 3
-
-    You should configure the
-    :oslo.config:option:`reserved_host_memory_mb` config option to
-    account for this overhead, based on the size of your hosts and
-    instances. For more information, refer to
-    https://wiki.openstack.org/wiki/XenServer/Overhead.
 
 Cells considerations
 ~~~~~~~~~~~~~~~~~~~~

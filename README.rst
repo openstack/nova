@@ -10,7 +10,7 @@ OpenStack Nova
 
 OpenStack Nova provides a cloud computing fabric controller, supporting a wide
 variety of compute technologies, including: libvirt (KVM, Xen, LXC and more),
-Hyper-V, VMware, XenServer, OpenStack Ironic and PowerVM.
+Hyper-V, VMware, OpenStack Ironic and PowerVM.
 
 Use the following resources to learn more.
 

@@ -376,12 +376,12 @@ affinity check, you should set
 ``[workarounds]/disable_group_policy_check_upcall=True`` and
 ``[filter_scheduler]/track_instance_changes=False`` in ``nova.conf``.
 
-The fourth is currently only a problem when performing live migrations
-using the XenAPI driver and not specifying ``--block-migrate``. The
-driver will attempt to figure out if block migration should be performed
-based on source and destination hosts being in the same aggregate. Since
-aggregates data has migrated to the API database, the cell conductor will
-not be able to access the aggregate information and will fail.
+The fourth was previously only a problem when performing live migrations using
+the since-removed XenAPI driver and not specifying ``--block-migrate``. The
+driver would attempt to figure out if block migration should be performed based
+on source and destination hosts being in the same aggregate. Since aggregates
+data had migrated to the API database, the cell conductor would not be able to
+access the aggregate information and would fail.
 
 The fifth is a problem because when a volume is attached to an instance
 in the *nova-compute* service, and ``[cinder]/cross_az_attach=False`` in

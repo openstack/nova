@@ -10,11 +10,9 @@ source host, but migration can also be useful to redistribute the load when
 many VM instances are running on a specific physical machine.
 
 This document covers live migrations using the
-:ref:`configuring-migrations-kvm-libvirt` and
-:ref:`configuring-migrations-xenserver` hypervisors.
+:ref:`configuring-migrations-kvm-libvirt` and VMWare hypervisors
 
 .. :ref:`_configuring-migrations-kvm-libvirt`
-.. :ref:`_configuring-migrations-xenserver`
 
 .. note::
 
@@ -68,17 +66,17 @@ The migration types are:
    different host in the same cell, but not across cells.
 
 The following sections describe how to configure your hosts for live migrations
-using the KVM and XenServer hypervisors.
+using the libvirt virt driver and KVM hypervisor.
 
 .. _configuring-migrations-kvm-libvirt:
 
-KVM-libvirt
-~~~~~~~~~~~
+Libvirt
+-------
 
 .. _configuring-migrations-kvm-general:
 
 General configuration
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 To enable any type of live migration, configure the compute hosts according to
 the instructions below:
@@ -135,7 +133,7 @@ the instructions below:
 .. _`configuring-migrations-securing-live-migration-streams`:
 
 Securing live migration streams
--------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If your compute nodes have at least libvirt 4.4.0 and QEMU 2.11.0, it is
 strongly recommended to secure all your live migration streams by taking
@@ -148,7 +146,7 @@ on how to set this all up, refer to the
 .. _configuring-migrations-kvm-block-and-volume-migration:
 
 Block migration, volume-based live migration
---------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If your environment satisfies the requirements for "QEMU-native TLS",
 then block migration requires some setup; refer to the above section,
@@ -161,7 +159,7 @@ Be aware that block migration adds load to the network and storage subsystems.
 .. _configuring-migrations-kvm-shared-storage:
 
 Shared storage
---------------
+~~~~~~~~~~~~~~
 
 Compute hosts have many options for sharing storage, for example NFS, shared
 disk array LUNs, Ceph or GlusterFS.
@@ -221,7 +219,7 @@ hosts.
 .. _configuring-migrations-kvm-advanced:
 
 Advanced configuration for KVM and QEMU
----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Live migration copies the instance's memory from the source to the destination
 compute host. After a memory page has been copied, the instance may write to it
@@ -319,94 +317,16 @@ memory-intensive instances succeed.
 The full list of live migration configuration parameters is documented in the
 :doc:`Nova Configuration Options </configuration/config>`
 
-.. _configuring-migrations-xenserver:
-
-XenServer
-~~~~~~~~~
-
-.. :ref:Shared Storage
-.. :ref:Block migration
-
-.. _configuring-migrations-xenserver-shared-storage:
-
-Shared storage
---------------
-
-**Prerequisites**
-
-- **Compatible XenServer hypervisors**.
-
-  For more information, see the `Requirements for Creating Resource Pools
-  <https://docs.citrix.com/en-us/xenserver/7-1.html#pooling_homogeneity_requirements>`_
-  section of the XenServer Administrator's Guide.
-
-- **Shared storage**.
-
-  An NFS export, visible to all XenServer hosts.
-
-  .. note::
-
-     For the supported NFS versions, see the `NFS and SMB
-     <https://docs.citrix.com/en-us/xenserver/7-1.html#id1002701>`_
-     section of the XenServer Administrator's Guide.
-
-To use shared storage live migration with XenServer hypervisors, the hosts must
-be joined to a XenServer pool.
-
-.. rubric:: Using shared storage live migrations with XenServer Hypervisors
-
-#. Add an NFS VHD storage to your master XenServer, and set it as the default
-   storage repository. For more information, see NFS VHD in the XenServer
-   Administrator's Guide.
-
-#. Configure all compute nodes to use the default storage repository (``sr``)
-   for pool operations. Add this line to your ``nova.conf`` configuration files
-   on all compute nodes:
-
-   .. code-block:: ini
-
-      sr_matching_filter=default-sr:true
-
-#. To add a host to a pool, you need to know the pool master ip address,
-   user name and password. Run below command on the XenServer host:
-
-   .. code-block:: console
-
-      $ xe pool-join master-address=MASTER_IP master-username=root master-password=MASTER_PASSWORD
-
-   .. note::
-
-      The added compute node and the host will shut down to join the host to
-      the XenServer pool. The operation will fail if any server other than the
-      compute node is running or suspended on the host.
-
-.. _configuring-migrations-xenserver-block-migration:
-
-Block migration
----------------
-
-- **Compatible XenServer hypervisors**.
-
-  The hypervisors must support the Storage XenMotion feature.  See your
-  XenServer manual to make sure your edition has this feature.
-
-  .. note::
-
-     - To use block migration, you must use the ``--block-migrate`` parameter
-       with the live migration command.
-
-     - Block migration works only with EXT local storage storage repositories,
-       and the server must not have any volumes attached.
 
 VMware
-~~~~~~
+------
 
 .. :ref:`_configuring-migrations-vmware`
 
 .. _configuring-migrations-vmware:
 
 vSphere configuration
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 Enable vMotion on all ESX hosts which are managed by Nova by following the
 instructions in `this <https://kb.vmware.com/s/article/2054994>`_ KB article.
