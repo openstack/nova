@@ -250,8 +250,7 @@ class SRIOVAttachDetachTest(_PCIServersTestBase):
     def _attach_port(self, instance_uuid, port_id):
         self.api.attach_interface(
             instance_uuid,
-            {'interfaceAttachment': {
-                'port_id': port_id}})
+            {'interfaceAttachment': {'port_id': port_id}})
         fake_notifier.wait_for_versioned_notifications(
             'instance.interface_attach.end')
 

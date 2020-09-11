@@ -7462,14 +7462,7 @@ class ComputeManager(manager.Manager):
         else:
             if pci_device:
                 self.rt.unclaim_pci_devices(context, pci_device, instance)
-
-                # remove pci device from instance
-                instance.pci_devices.objects.remove(pci_device)
-
-                # remove pci request from instance
-                instance.pci_requests.requests = [
-                    pci_req for pci_req in instance.pci_requests.requests
-                    if pci_req.request_id != pci_device.request_id]
+                instance.remove_pci_device_and_request(pci_device)
 
             if port_allocation:
                 # Deallocate the resources in placement that were used by the
@@ -7509,17 +7502,19 @@ class ComputeManager(manager.Manager):
         :param requested_networks: the objects.NetworkRequestList describing
             the requested interface. The requested_networks.objects list shall
             have a single item.
-        :raises ValueError: if there is more than one interface requested
-        :raises InterfaceAttachFailed: if the PCI device claim fails
+        :raises InterfaceAttachPciClaimFailed: if the PCI device claim fails
+        :raises InterfaceAttachFailed: if more than one interface is requested
         :returns: An objects.PciDevice describing the claimed PCI device for
             the interface or None if no device is requested
         """
 
-        if len(requested_networks.objects) != 1:
-            raise ValueError(
-                "Only support one interface per interface attach request")
+        if len(requested_networks) != 1:
+            LOG.warning(
+                "Interface attach only supports one interface per attach "
+                "request", instance=instance)
+            raise exception.InterfaceAttachFailed(instance_uuid=instance.uuid)
 
-        requested_network = requested_networks.objects[0]
+        requested_network = requested_networks[0]
 
         pci_numa_affinity_policy = hardware.get_pci_numa_policy_constraint(
             instance.flavor, instance.image_meta)
@@ -7534,8 +7529,10 @@ class ComputeManager(manager.Manager):
             return None
 
         if len(pci_reqs.requests) > 1:
-            raise ValueError(
-                "Only support one interface per interface attach request")
+            LOG.warning(
+                "Interface attach only supports one interface per attach "
+                "request", instance=instance)
+            raise exception.InterfaceAttachFailed(instance_uuid=instance.uuid)
 
         pci_req = pci_reqs.requests[0]
 
@@ -7552,9 +7549,7 @@ class ComputeManager(manager.Manager):
 
         # Update the requested network with the pci request id
         requested_network.pci_request_id = pci_req.request_id
-
-        instance.pci_requests.requests.append(pci_req)
-        instance.pci_devices.objects.append(device)
+        instance.add_pci_device_and_request(device, pci_req)
 
         return device
 
@@ -7707,15 +7702,14 @@ class ComputeManager(manager.Manager):
             raise exception.PortNotFound(_("Port %s is not "
                                            "attached") % port_id)
 
-        pci_device = None
         pci_req = pci_req_module.get_instance_pci_request_from_vif(
             context, instance, condemned)
 
         pci_device = None
         if pci_req:
             pci_devices = [pci_device
-                            for pci_device in instance.pci_devices.objects
-                            if pci_device.request_id == pci_req.request_id]
+                           for pci_device in instance.pci_devices.objects
+                           if pci_device.request_id == pci_req.request_id]
 
             if not pci_devices:
                 LOG.warning(
