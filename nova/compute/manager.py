@@ -8537,9 +8537,6 @@ class ComputeManager(manager.Manager):
         self._post_live_migration_remove_source_vol_connections(
             ctxt, instance, source_bdms)
 
-        # Releasing vlan.
-        # (not necessary in current implementation?)
-
         # NOTE(artom) At this point in time we have not bound the ports to the
         # destination host yet (this happens in migrate_instance_start()
         # below). Therefore, the "old" source network info that's still in the
