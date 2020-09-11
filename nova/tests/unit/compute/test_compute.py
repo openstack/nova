@@ -5772,6 +5772,7 @@ class ComputeTestCase(BaseTestCase,
         migration.status = 'finished'
         migration.migration_type = 'migration'
         migration.source_node = NODENAME
+        migration.dest_node = NODENAME
         migration.create()
 
         migration_context = objects.MigrationContext()

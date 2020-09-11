@@ -8613,7 +8613,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         request_spec = objects.RequestSpec()
 
         @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
-                    'drop_move_claim')
+                    'drop_move_claim_at_dest')
         @mock.patch('nova.compute.rpcapi.ComputeAPI.finish_revert_resize')
         @mock.patch.object(self.instance, 'revert_migration_context')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
@@ -8651,9 +8651,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                        migration=self.migration,
                                        instance=self.instance,
                                        request_spec=request_spec)
-            mock_drop_move_claim.assert_called_once_with(self.context,
-                self.instance, self.instance.node)
-            self.assertIsNotNone(self.instance.migration_context)
+
+            mock_drop_move_claim.assert_called_once_with(
+                self.context, self.instance, self.migration)
 
         # Three fake BDMs:
         # 1. volume BDM with an attachment_id which will be updated/completed
@@ -11784,11 +11784,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # Assert _error_out_instance_on_exception wasn't tripped somehow.
         self.assertNotEqual(vm_states.ERROR, self.instance.vm_state)
 
-    @mock.patch('nova.objects.Instance.save')
-    @mock.patch('nova.objects.Instance.revert_migration_context')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
-    def test_revert_snapshot_based_resize_at_dest(
-            self, mock_get_bdms, mock_revert_mig_ctxt, mock_inst_save):
+    def test_revert_snapshot_based_resize_at_dest(self, mock_get_bdms):
         """Happy path test for _revert_snapshot_based_resize_at_dest"""
         # Setup more mocks.
         def stub_migrate_instance_start(ctxt, instance, migration):
@@ -11801,7 +11798,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute, '_get_instance_block_device_info'),
             mock.patch.object(self.compute.driver, 'destroy'),
             mock.patch.object(self.compute, '_delete_volume_attachments'),
-            mock.patch.object(self.compute.rt, 'drop_move_claim')
+            mock.patch.object(self.compute.rt, 'drop_move_claim_at_dest')
         ) as (
             mock_network_api, mock_get_bdi, mock_destroy,
             mock_delete_attachments, mock_drop_claim
@@ -11816,6 +11813,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             # Run the code.
             self.compute._revert_snapshot_based_resize_at_dest(
                 self.context, self.instance, self.migration)
+
         # Assert the calls.
         mock_network_api.get_instance_nw_info.assert_called_once_with(
             self.context, self.instance)
@@ -11836,12 +11834,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                       self.stdlog.logger.output)
         mock_delete_attachments.assert_called_once_with(
             self.context, mock_get_bdms.return_value)
-        mock_revert_mig_ctxt.assert_called_once_with()
-        mock_inst_save.assert_called_once_with(
-            expected_task_state=task_states.RESIZE_REVERTING)
         mock_drop_claim.assert_called_once_with(
-            self.context, self.instance, self.instance.node,
-            instance_type=self.instance.new_flavor)
+            self.context, self.instance, self.migration)
 
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_finish_revert_snapshot_based_resize_at_source')
@@ -11940,9 +11934,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             # Run the code.
             self.compute.finish_revert_snapshot_based_resize_at_source(
                 self.context, self.instance, self.migration)
-        # Assert the migration status was updated.
-        self.migration.save.assert_called_once_with()
-        self.assertEqual('reverted', self.migration.status)
+
         # Assert the instance host/node and flavor info was updated.
         self.assertEqual(self.migration.source_compute, self.instance.host)
         self.assertEqual(self.migration.source_node, self.instance.node)

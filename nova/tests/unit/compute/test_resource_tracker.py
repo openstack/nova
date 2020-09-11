@@ -2649,12 +2649,11 @@ class TestResize(BaseTestCase):
         with test.nested(
             mock.patch('nova.objects.Migration.save'),
             mock.patch('nova.objects.Instance.drop_migration_context'),
+            mock.patch('nova.objects.Instance.save'),
         ):
             if revert:
                 flavor = new_flavor
-                prefix = 'new_'
-                self.rt.drop_move_claim(
-                    ctx, instance, _NODENAME, flavor, prefix=prefix)
+                self.rt.drop_move_claim_at_dest(ctx, instance, migration)
             else:  # confirm
                 flavor = old_flavor
                 self.rt.drop_move_claim_at_source(ctx, instance, migration)
@@ -2821,32 +2820,40 @@ class TestResize(BaseTestCase):
         instance.migration_context.new_pci_devices = objects.PciDeviceList(
             objects=pci_devs)
 
-        # When reverting a resize and dropping the move claim, the
-        # destination compute calls drop_move_claim to drop the new_flavor
+        # When reverting a resize and dropping the move claim, the destination
+        # compute calls drop_move_claim_at_dest to drop the new_flavor
         # usage and the instance should be in tracked_migrations from when
         # the resize_claim was made on the dest during prep_resize.
-        self.rt.tracked_migrations = {
-            instance.uuid: objects.Migration(migration_type='resize')}
+        migration = objects.Migration(
+            dest_node=cn.hypervisor_hostname,
+            migration_type='resize',
+        )
+        self.rt.tracked_migrations = {instance.uuid: migration}
 
-        # not using mock.sentinel.ctx because drop_move_claim calls elevated
+        # not using mock.sentinel.ctx because _drop_move_claim calls elevated
         ctx = mock.MagicMock()
 
         with test.nested(
             mock.patch.object(self.rt, '_update'),
             mock.patch.object(self.rt.pci_tracker, 'free_device'),
             mock.patch.object(self.rt, '_get_usage_dict'),
-            mock.patch.object(self.rt, '_update_usage')
+            mock.patch.object(self.rt, '_update_usage'),
+            mock.patch.object(migration, 'save'),
+            mock.patch.object(instance, 'save'),
         ) as (
             update_mock, mock_pci_free_device, mock_get_usage,
-            mock_update_usage,
+            mock_update_usage, mock_migrate_save, mock_instance_save,
         ):
-            self.rt.drop_move_claim(ctx, instance, _NODENAME)
+            self.rt.drop_move_claim_at_dest(ctx, instance, migration)
+
             mock_pci_free_device.assert_called_once_with(
                 pci_dev, mock.ANY)
             mock_get_usage.assert_called_once_with(
                 instance.new_flavor, instance, numa_topology=None)
             mock_update_usage.assert_called_once_with(
                 mock_get_usage.return_value, _NODENAME, sign=-1)
+            mock_migrate_save.assert_called_once()
+            mock_instance_save.assert_called_once()
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait', new=mock.Mock())
