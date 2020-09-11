@@ -19727,17 +19727,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_unplug_vifs_ignores_errors(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         with mock.patch.object(drvr, 'vif_driver') as vif_driver:
-            vif_driver.unplug.side_effect = exception.AgentError(
-                method='unplug')
+            vif_driver.unplug.side_effect = exception.InternalError('foo')
             drvr._unplug_vifs('inst', [1], ignore_errors=True)
             vif_driver.unplug.assert_called_once_with('inst', 1)
 
     def test_unplug_vifs_reports_errors(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         with mock.patch.object(drvr, 'vif_driver') as vif_driver:
-            vif_driver.unplug.side_effect = exception.AgentError(
-                method='unplug')
-            self.assertRaises(exception.AgentError,
+            vif_driver.unplug.side_effect = exception.InternalError('foo')
+            self.assertRaises(exception.InternalError,
                               drvr.unplug_vifs, 'inst', [1])
             vif_driver.unplug.assert_called_once_with('inst', 1)
 

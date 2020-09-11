@@ -1,0 +1,46 @@
+---
+upgrade:
+  - |
+    The ``XenAPI`` driver, which was deprecated in the 20.0.0 (Train), has now
+    been removed.
+  - |
+    The following config options only apply when using the ``XenAPI`` virt
+    driver which has now been removed. The config options have therefore been
+    removed also.
+
+    * ``[xenserver] agent_timeout``
+    * ``[xenserver] agent_version_timeout``
+    * ``[xenserver] agent_resetnetwork_timeout``
+    * ``[xenserver] agent_path``
+    * ``[xenserver] disable_agent``
+    * ``[xenserver] use_agent_default``
+    * ``[xenserver] login_timeout``
+    * ``[xenserver] connection_concurrent``
+    * ``[xenserver] cache_images``
+    * ``[xenserver] image_compression_level``
+    * ``[xenserver] default_os_type``
+    * ``[xenserver] block_device_creation_timeout``
+    * ``[xenserver] max_kernel_ramdisk_size``
+    * ``[xenserver] sr_matching_filter``
+    * ``[xenserver] sparse_copy``
+    * ``[xenserver] num_vbd_unplug_retries``
+    * ``[xenserver] ipxe_network_name``
+    * ``[xenserver] ipxe_boot_menu_url``
+    * ``[xenserver] ipxe_mkisofs_cmd``
+    * ``[xenserver] connection_url``
+    * ``[xenserver] connection_username``
+    * ``[xenserver] connection_password``
+    * ``[xenserver] vhd_coalesce_poll_interval``
+    * ``[xenserver] check_host``
+    * ``[xenserver] vhd_coalesce_max_attempts``
+    * ``[xenserver] sr_base_path``
+    * ``[xenserver] target_host``
+    * ``[xenserver] target_port``
+    * ``[xenserver] independent_compute``
+    * ``[xenserver] running_timeout``
+    * ``[xenserver] image_upload_handler``
+    * ``[xenserver] image_handler``
+    * ``[xenserver] introduce_vdi_retry_wait``
+    * ``[xenserver] ovs_integration_bridge``
+    * ``[xenserver] use_join_force``
+    * ``[xenserver] console_public_hostname``
