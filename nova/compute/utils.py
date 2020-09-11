@@ -1105,9 +1105,18 @@ def check_num_instances_quota(context, instance_type, min_count,
                               max_count, project_id=None, user_id=None,
                               orig_num_req=None):
     """Enforce quota limits on number of instances created."""
-    # project_id is used for the TooManyInstances error message
+    # project_id is also used for the TooManyInstances error message
     if project_id is None:
         project_id = context.project_id
+    if user_id is None:
+        user_id = context.user_id
+    # Check whether we need to count resources per-user and check a per-user
+    # quota limit. If we have no per-user quota limit defined for a
+    # project/user, we can avoid wasteful resource counting.
+    user_quotas = objects.Quotas.get_all_by_project_and_user(
+        context, project_id, user_id)
+    if not any(r in user_quotas for r in ['instances', 'cores', 'ram']):
+        user_id = None
     # Determine requested cores and ram
     req_cores = max_count * instance_type.vcpus
     req_ram = max_count * instance_type.memory_mb
