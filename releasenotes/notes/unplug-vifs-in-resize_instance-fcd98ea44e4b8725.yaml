@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    Support for cold migration and resize between hosts with different network backends
+    was previously incomplete. If the os-vif plugin for all network backends available
+    in the cloud are not installed on all nodes unplugging will fail during confirming
+    the resize. The issue is caused by the VIF unplug that happened during the resize
+    confirm action on the source host when the original backend information of the VIF
+    was not available. The fix moved the unplug to happen during the resize action
+    when such information is still available. See `bug #1895220`_ for more details.
+
+    .. _`bug #1895220`: https://bugs.launchpad.net/nova/+bug/1895220

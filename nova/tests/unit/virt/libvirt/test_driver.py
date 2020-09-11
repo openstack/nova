@@ -21765,6 +21765,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           context.get_admin_context(), ins_ref, '10.0.0.2',
                           flavor_obj, None)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unplug_vifs')
     @mock.patch('nova.virt.libvirt.utils.save_and_migrate_vtpm_dir')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_get_instance_disk_info')
@@ -21779,8 +21780,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     def _test_migrate_disk_and_power_off(
             self, ctxt, flavor_obj, mock_execute, mock_exists, mock_rename,
             mock_is_shared, mock_get_host_ip, mock_destroy,
-            mock_get_disk_info, mock_vtpm, block_device_info=None,
-            params_for_instance=None):
+            mock_get_disk_info, mock_vtpm, mock_unplug_vifs,
+            block_device_info=None, params_for_instance=None):
         """Test for nova.virt.libvirt.driver.LivirtConnection
         .migrate_disk_and_power_off.
         """
@@ -21798,7 +21799,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual(out, disk_info_text)
         mock_vtpm.assert_called_with(
             instance.uuid, mock.ANY, mock.ANY, '10.0.0.2', mock.ANY, mock.ANY)
-
+        mock_unplug_vifs.assert_called_once()
+        mock_unplug_vifs.reset_mock()
         # dest is same host case
         out = self.drvr.migrate_disk_and_power_off(
                ctxt, instance, '10.0.0.1', flavor_obj, None,
@@ -21807,6 +21809,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual(out, disk_info_text)
         mock_vtpm.assert_called_with(
             instance.uuid, mock.ANY, mock.ANY, '10.0.0.1', mock.ANY, mock.ANY)
+        mock_unplug_vifs.assert_called_once()
 
     def test_migrate_disk_and_power_off(self):
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
@@ -21863,6 +21866,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         disconnect_volume.assert_called_with(self.context,
             mock.sentinel.conn_info_vda, mock.ANY)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unplug_vifs',
+                new=mock.Mock())
     @mock.patch('os.rename')
     @mock.patch('nova.virt.libvirt.utils.copy_image')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
@@ -21911,6 +21916,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         for call in mock_copy_image.mock_calls:
             self.assertFalse(call[0].endswith('.swap'))
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unplug_vifs',
+                new=mock.Mock())
     def _test_migrate_disk_and_power_off_resize_check(self, expected_exc):
         """Test for nova.virt.libvirt.libvirt_driver.LibvirtConnection
         .migrate_disk_and_power_off.
@@ -21924,6 +21931,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
               self.drvr.migrate_disk_and_power_off,
               None, instance, '10.0.0.1', flavor_obj, None)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unplug_vifs',
+                new=mock.Mock())
     @mock.patch('nova.virt.libvirt.utils.save_and_migrate_vtpm_dir')
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('os.rename')
@@ -22105,6 +22114,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         flavor_obj = objects.Flavor(**flavor)
         self._test_migrate_disk_and_power_off(self.context, flavor_obj)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unplug_vifs',
+                new=mock.Mock())
     @mock.patch('os.rename')
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.virt.libvirt.utils.copy_image')
@@ -22793,6 +22804,44 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self.assertEqual(5, mock_rmtree.call_count)
             mock_undef.assert_called_once_with(instance)
             mock_unplug.assert_called_once_with(instance, fake_net)
+
+    @mock.patch('time.sleep', new=mock.Mock())
+    def test_cleanup_resize_not_same_host_works_when_unplug_fails(self):
+        CONF.set_override('policy_dirs', [], group='oslo_policy')
+        host = 'not' + CONF.host
+        instance = self._create_instance({'host': host})
+        instance.old_flavor = instance.flavor
+        instance.new_flavor = instance.flavor
+        fake_net = _fake_network_info(self)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        with test.nested(
+                mock.patch('nova.compute.utils.is_volume_backed_instance',
+                           return_value=False),
+                mock.patch.object(os.path, 'exists'),
+                mock.patch.object(libvirt_utils, 'get_instance_path'),
+                mock.patch.object(shutil, 'rmtree'),
+                mock.patch.object(drvr.image_backend, 'by_name',
+                                  new_callable=mock.NonCallableMock),
+                mock.patch.object(drvr, '_undefine_domain'),
+                mock.patch.object(drvr, 'unplug_vifs'),
+                mock.patch('nova.virt.libvirt.driver.LOG.debug')
+        ) as (mock_volume_backed, mock_exists, mock_get_path,
+              mock_rmtree, mock_image_by_name, mock_undef, mock_unplug,
+              mock_log):
+            mock_exists.return_value = True
+            mock_get_path.return_value = '/fake/inst'
+            error = exception.InternalError("fake error")
+            mock_unplug.side_effect = error
+
+            drvr._cleanup_resize(self.context, instance, fake_net)
+
+            mock_get_path.assert_called_once_with(instance)
+            self.assertEqual(5, mock_rmtree.call_count)
+            mock_undef.assert_called_once_with(instance)
+            mock_unplug.assert_called_once_with(instance, fake_net)
+            mock_log.assert_called_once_with(error, instance=instance)
 
     @mock.patch('time.sleep', new=mock.Mock())
     def test_cleanup_resize_not_same_host_volume_backed(self):
