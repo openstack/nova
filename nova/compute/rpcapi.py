@@ -396,6 +396,7 @@ class ComputeAPI(object):
         'stein': '5.1',
         'train': '5.3',
         'ussuri': '5.11',
+        'victoria': '5.12',
     }
 
     @property
