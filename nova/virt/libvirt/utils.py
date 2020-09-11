@@ -93,9 +93,13 @@ CPU_TRAITS_MAPPING = {
     'sse4.2': os_traits.HW_CPU_X86_SSE42,
     'sse4a': os_traits.HW_CPU_X86_SSE4A,
     'ssse3': os_traits.HW_CPU_X86_SSSE3,
-    'svm': os_traits.HW_CPU_X86_SVM,
+    # We have to continue to support the old (generic) trait for the
+    # AMD-specific svm feature.
+    'svm': (os_traits.HW_CPU_X86_SVM, os_traits.HW_CPU_X86_AMD_SVM),
     'tbm': os_traits.HW_CPU_X86_TBM,
-    'vmx': os_traits.HW_CPU_X86_VMX,
+    # We have to continue to support the old (generic) trait for the
+    # Intel-specific vmx feature.
+    'vmx': (os_traits.HW_CPU_X86_VMX, os_traits.HW_CPU_X86_INTEL_VMX),
     'xop': os_traits.HW_CPU_X86_XOP
 }
 
@@ -577,11 +581,15 @@ def cpu_features_to_traits(features: ty.Set[str]) -> ty.Dict[str, bool]:
     """Returns this driver's CPU traits dict where keys are trait names from
     CPU_TRAITS_MAPPING, values are boolean indicates whether the trait should
     be set in the provider tree.
+
+    :param features: A set of feature names (short, lowercase,
+            CPU_TRAITS_MAPPING's keys).
     """
-    traits = {trait_name: False for trait_name in CPU_TRAITS_MAPPING.values()}
-    for f in features:
-        if f in CPU_TRAITS_MAPPING:
-            traits[CPU_TRAITS_MAPPING[f]] = True
+    traits = {}
+    for feature_name, val in CPU_TRAITS_MAPPING.items():
+        trait_tuple = val if isinstance(val, tuple) else (val,)
+        for trait_name in trait_tuple:
+            traits[trait_name] = feature_name in features
 
     return traits
 

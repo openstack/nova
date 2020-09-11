@@ -21101,7 +21101,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
     pcpus = 12
     memory_mb = 1024
     disk_gb = 200
-    cpu_traits = {t: False for t in libvirt_utils.CPU_TRAITS_MAPPING.values()}
+    cpu_traits = libvirt_utils.cpu_features_to_traits({})
 
     def setUp(self):
         super(TestUpdateProviderTree, self).setUp()
@@ -21816,7 +21816,7 @@ class TraitsComparisonMixin(object):
 
     def assertTraitsEqual(self, expected, actual):
         exp = {t: t in expected
-               for t in libvirt_utils.CPU_TRAITS_MAPPING.values()}
+               for t in libvirt_utils.cpu_features_to_traits({})}
         self.assertEqual(exp, actual)
 
 
@@ -25538,8 +25538,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         are calculated from fakelibvirt's baseline CPU features.
         """
         self.flags(cpu_mode='host-passthrough', group='libvirt')
-        self.assertTraitsEqual(['HW_CPU_X86_AESNI', 'HW_CPU_X86_VMX'],
-                               self.drvr._get_cpu_feature_traits())
+        self.assertTraitsEqual(
+            ['HW_CPU_X86_AESNI', 'HW_CPU_X86_VMX', 'HW_CPU_X86_INTEL_VMX'],
+            self.drvr._get_cpu_feature_traits())
 
     @mock.patch('nova.virt.libvirt.host.libvirt.Connection.baselineCPU')
     def test_cpu_traits_with_mode_none(self, mock_baseline):
@@ -25548,9 +25549,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         """
         self.flags(cpu_mode='none', group='libvirt')
         mock_baseline.return_value = _fake_qemu64_cpu_feature
-        self.assertTraitsEqual(['HW_CPU_X86_SSE', 'HW_CPU_X86_SVM',
-                                'HW_CPU_X86_MMX', 'HW_CPU_X86_SSE2'],
-                               self.drvr._get_cpu_feature_traits())
+        self.assertTraitsEqual(
+            ['HW_CPU_X86_SSE', 'HW_CPU_X86_SVM', 'HW_CPU_X86_AMD_SVM',
+             'HW_CPU_X86_MMX', 'HW_CPU_X86_SSE2'],
+            self.drvr._get_cpu_feature_traits())
 
         mock_baseline.assert_called_with([u'''<cpu>
   <arch>x86_64</arch>
@@ -25638,6 +25640,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 'HW_CPU_X86_SSE2',
                 'HW_CPU_X86_SSE',
                 'HW_CPU_X86_MMX',
+                'HW_CPU_X86_AMD_SVM',
                 'HW_CPU_X86_SVM'
             ], self.drvr._get_cpu_feature_traits()
         )
@@ -25705,6 +25708,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 'HW_CPU_X86_SSE2',
                 'HW_CPU_X86_SSE',
                 'HW_CPU_X86_MMX',
+                'HW_CPU_X86_AMD_SVM',
                 'HW_CPU_X86_SVM'
             ], self.drvr._get_cpu_feature_traits()
         )
