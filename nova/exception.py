@@ -521,7 +521,7 @@ class ComputeResourcesUnavailable(ServiceUnavailable):
 
 
 class HypervisorUnavailable(NovaException):
-    msg_fmt = _("Connection to the hypervisor is broken on host: %(host)s")
+    msg_fmt = _("Connection to the hypervisor is broken on host")
 
 
 class ComputeServiceUnavailable(ServiceUnavailable):
