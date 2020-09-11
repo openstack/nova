@@ -1135,8 +1135,8 @@ Validation is only used for recognized extra spec namespaces, currently:
 ``hw_rng``, ``hw_video``, ``os``, ``pci_passthrough``, ``powervm``, ``quota``,
 ``resources``, ``trait``, and ``vmware``.
 
-2.87 (Maximum in Ussuri)
-------------------------
+2.87 (Maximum in Ussuri and Victoria)
+-------------------------------------
 
 Adds support for rescuing boot from volume instances when the compute host
 reports the ``COMPUTE_BFV_RESCUE`` capability trait.
