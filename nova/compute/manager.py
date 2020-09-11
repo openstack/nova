@@ -8847,7 +8847,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def _rollback_live_migration(self, context, instance,
                                  dest, migrate_data=None,
-                                 migration_status='error',
+                                 migration_status='failed',
                                  source_bdms=None):
         """Recovers Instance/volume state from migrating -> running.
 
@@ -8988,9 +8988,8 @@ class ComputeManager(manager.Manager):
                 phase=fields.NotificationPhase.END,
                 bdms=bdms)
 
-        # TODO(luyao): set migration status to 'failed' but not 'error'
-        # which means rollback_live_migration is done, we have successfully
-        # cleaned up and returned instance back to normal status.
+        # NOTE(luyao): we have cleanup everything and get instance
+        # back to normal status, now set migration status to 'failed'
         self._set_migration_status(migration, migration_status)
 
     @wrap_exception()
@@ -10508,11 +10507,14 @@ class ComputeManager(manager.Manager):
 
     @periodic_task.periodic_task(spacing=CONF.instance_delete_interval)
     def _cleanup_incomplete_migrations(self, context):
-        """Delete instance files on failed resize/revert-resize operation
+        """Cleanup on failed resize/revert-resize operation and
+        failed rollback live migration operation.
 
-        During resize/revert-resize operation, if that instance gets deleted
-        in-between then instance files might remain either on source or
-        destination compute node because of race condition.
+        During resize/revert-resize operation, or after a failed rollback
+        live migration operation, if that instance gets deleted then instance
+        files might remain either on source or destination compute node and
+        other specific resources might not be cleaned up because of the race
+        condition.
         """
         LOG.debug('Cleaning up deleted instances with incomplete migration ')
         migration_filters = {'host': CONF.host,
@@ -10534,21 +10536,29 @@ class ComputeManager(manager.Manager):
                 context, inst_filters, expected_attrs=attrs, use_slave=True)
 
         for instance in instances:
-            if instance.host != CONF.host:
-                for migration in migrations:
-                    if instance.uuid == migration.instance_uuid:
-                        # Delete instance files if not cleanup properly either
-                        # from the source or destination compute nodes when
-                        # the instance is deleted during resizing.
-                        self.driver.delete_instance_files(instance)
-                        try:
-                            migration.status = 'failed'
-                            migration.save()
-                        except exception.MigrationNotFound:
-                            LOG.warning("Migration %s is not found.",
-                                        migration.id,
-                                        instance=instance)
-                        break
+            if instance.host == CONF.host:
+                continue
+            for migration in migrations:
+                if instance.uuid != migration.instance_uuid:
+                    continue
+                self.driver.delete_instance_files(instance)
+                # we are not sure whether the migration_context is applied
+                # during incompleted migrating, we need to apply/revert
+                # migration_context to get instance object content matching
+                # current host.
+                revert = (True if migration.source_compute == CONF.host
+                          else False)
+                with instance.mutated_migration_context(revert=revert):
+                    self.driver.cleanup_lingering_instance_resources(instance)
+
+                try:
+                    migration.status = 'failed'
+                    migration.save()
+                except exception.MigrationNotFound:
+                    LOG.warning("Migration %s is not found.",
+                                migration.id,
+                                instance=instance)
+                break
 
     @messaging.expected_exceptions(exception.InstanceQuiesceNotSupported,
                                    exception.QemuGuestAgentNotEnabled,

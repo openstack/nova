@@ -919,9 +919,9 @@ class ResourceTracker(object):
         instance_by_uuid = self._update_usage_from_instances(
             context, instances, nodename)
 
-        # Grab all in-progress migrations:
-        migrations = objects.MigrationList.get_in_progress_by_host_and_node(
-                context, self.host, nodename)
+        # Grab all in-progress migrations and error migrations:
+        migrations = objects.MigrationList.get_in_progress_and_error(
+            context, self.host, nodename)
 
         self._pair_instances_to_migrations(migrations, instance_by_uuid)
         self._update_usage_from_migrations(context, migrations, nodename)
@@ -1360,6 +1360,11 @@ class ResourceTracker(object):
 
             try:
                 if uuid not in instances:
+                    # Track migrating instance even if it is deleted but still
+                    # has database record. This kind of instance might be
+                    # deleted during unfinished migrating but exist in the
+                    # hypervisor.
+                    migration._context = context.elevated(read_deleted='yes')
                     instances[uuid] = migration.instance
             except exception.InstanceNotFound as e:
                 # migration referencing deleted instance

@@ -354,7 +354,7 @@ class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
         # rollback test, so server_a is expected to remain on host_a.
         if pin_dest:
             self._rpc_pin_host('host_b')
-        self._live_migrate(self.server_a, 'error')
+        self._live_migrate(self.server_a, 'failed')
         self.assertEqual('host_a', self.get_host(self.server_a['id']))
         self.assertIsNone(self._get_migration_context(self.server_a['id']))
 
@@ -448,7 +448,7 @@ class NUMALiveMigrationLegacyBase(NUMALiveMigrationPositiveBase):
                                             ['completed'])
         else:
             final_host = 'source'
-            self._wait_for_migration_status(self.migrating_server, ['error'])
+            self._wait_for_migration_status(self.migrating_server, ['failed'])
         self.assertEqual(final_host,
                          self.get_host(self.migrating_server['id']))
         self.assertTrue(self.migrate_stub_ran)

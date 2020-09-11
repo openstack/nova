@@ -585,7 +585,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_disabled(self, get_mock, migr_mock, get_cn_mock, pci_mock,
             instance_pci_mock):
@@ -618,7 +618,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_no_migrations_no_reserved(self, get_mock, migr_mock,
                                                     get_cn_mock, pci_mock,
@@ -670,7 +670,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_remove_deleted_instances_allocations')
@@ -699,7 +699,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_init_compute_node', return_value=True)
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_remove_deleted_instances_allocations')
@@ -729,7 +729,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_no_migrations_reserved_disk_ram_and_cpu(
             self, get_mock, migr_mock, get_cn_mock, pci_mock,
@@ -771,7 +771,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_some_instances_no_migrations(self, get_mock, migr_mock,
                                           get_cn_mock, pci_mock,
@@ -820,7 +820,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_orphaned_instances_no_migrations(self, get_mock, migr_mock,
                                               get_cn_mock, pci_mock,
@@ -886,7 +886,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_source_migration(self, get_mock, get_inst_mock,
@@ -952,7 +952,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_dest_migration(self, get_mock, get_inst_mock,
@@ -1015,7 +1015,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_dest_evacuation(self, get_mock, get_inst_mock,
@@ -1076,7 +1076,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.MigrationContext.get_by_instance_uuid',
                 return_value=None)
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_some_instances_source_and_dest_migration(self, get_mock,
@@ -1141,13 +1141,76 @@ class TestUpdateAvailableResources(BaseTestCase):
         update_mock.assert_called_once()
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList())
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_no_instances_err_migration(
+        self, get_mock, get_inst_mock, migr_mock, get_cn_mock, pci_mock,
+        instance_pci_mock, mock_is_volume_backed_instance
+    ):
+        # We test the behavior of update_available_resource() when
+        # there is an error migration that involves this compute node
+        # as the destination host not the source host, and the resource
+        # tracker does not yet have any instances assigned to it. This is
+        # the case when a migration to this compute host from another host
+        # is in error, the resources claimed on destination host might not
+        # be cleaned up, so the resource tracker must reserve the resources
+        # for the error migration.
+
+        # Setup virt resources to match used resources to number
+        # of defined instances on the hypervisor
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(
+            vcpus_used=2, memory_mb_used=256, local_gb_used=5)
+        self._setup_rt(virt_resources=virt_resources)
+
+        get_mock.return_value = []
+        migr_obj = _MIGRATION_FIXTURES['dest-only']
+        migr_obj.status = 'error'
+        # in-process and error migrations
+        migr_mock.return_value = [migr_obj]
+        inst_uuid = migr_obj.instance_uuid
+        instance = _MIGRATION_INSTANCE_FIXTURES[inst_uuid].obj_clone()
+        get_inst_mock.return_value = instance
+        get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
+        instance.migration_context = _MIGRATION_CONTEXT_FIXTURES[inst_uuid]
+
+        update_mock = self._update_available_resources()
+
+        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
+        expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        vals = {
+            'free_disk_gb': 1,
+            'local_gb': 6,
+            'free_ram_mb': 256,  # 512 total - 256 for possible confirm of new
+            'memory_mb_used': 256,  # 256 possible confirmed amount
+            'vcpus_used': 2,
+            'local_gb_used': 5,
+            'memory_mb': 512,
+            'current_workload': 0,
+            'vcpus': 4,
+            'running_vms': 0
+        }
+        _update_compute_node(expected_resources, **vals)
+        actual_resources = update_mock.call_args[0][1]
+        self.assertTrue(
+            obj_base.obj_equal_prims(expected_resources, actual_resources))
+        update_mock.assert_called_once()
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 new=mock.Mock(return_value=False))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 new=mock.Mock(return_value=objects.PciDeviceList()))
     @mock.patch('nova.objects.MigrationContext.get_by_instance_uuid',
                 new=mock.Mock(return_value=None))
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_populate_assigned_resources(self, mock_get_instances,
@@ -1199,7 +1262,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.MigrationContext.get_by_instance_uuid',
                 new=mock.Mock(return_value=None))
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_check_resources_startup_success(self, mock_get_instances,
@@ -1240,7 +1303,7 @@ class TestUpdateAvailableResources(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 new=mock.Mock(return_value=objects.PciDeviceList()))
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_check_resources_startup_fail(self, mock_get_instances,
                                           mock_get_migrations,
@@ -1949,7 +2012,7 @@ class TestInstanceClaim(BaseTestCase):
         self.assertIsInstance(claim, claims.NopClaim)
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     def test_update_usage_with_claim(self, migr_mock, check_bfv_mock):
         # Test that RT.update_usage() only changes the compute node
         # resources if there has been a claim first.
@@ -1989,7 +2052,7 @@ class TestInstanceClaim(BaseTestCase):
             self.assertTrue(obj_base.obj_equal_prims(expected, cn))
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     def test_update_usage_removed(self, migr_mock, check_bfv_mock):
         # Test that RT.update_usage() removes the instance when update is
         # called in a removed state
@@ -2065,7 +2128,7 @@ class TestInstanceClaim(BaseTestCase):
             self.assertEqual(0, len(self.rt.assigned_resources[cn.uuid][rc]))
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     def test_claim(self, migr_mock, check_bfv_mock):
         self.instance.pci_requests = objects.InstancePCIRequests(requests=[])
         check_bfv_mock.return_value = False
@@ -2105,7 +2168,7 @@ class TestInstanceClaim(BaseTestCase):
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=True)
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     def test_claim_with_pci(self, migr_mock, pci_stats_mock,
                             check_bfv_mock):
         # Test that a claim involving PCI requests correctly claims
@@ -2238,7 +2301,7 @@ class TestInstanceClaim(BaseTestCase):
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_claim_abort_context_manager(self, save_mock, migr_mock,
                                          check_bfv_mock):
@@ -2282,7 +2345,7 @@ class TestInstanceClaim(BaseTestCase):
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait', new=mock.Mock())
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_claim_abort(self, save_mock, migr_mock, check_bfv_mock):
         self.instance.pci_requests = objects.InstancePCIRequests(requests=[])
@@ -2324,7 +2387,7 @@ class TestInstanceClaim(BaseTestCase):
         self.assertEqual(0, cn.running_vms)
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_claim_numa(self, save_mock, migr_mock, check_bfv_mock):
         self.instance.pci_requests = objects.InstancePCIRequests(requests=[])
@@ -2360,7 +2423,7 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_resize_claim_same_host(self, save_mock, get_mock, migr_mock,
@@ -2465,7 +2528,7 @@ class TestResize(BaseTestCase):
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
                 return_value=_COMPUTE_NODE_FIXTURES[0])
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node',
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error',
                 return_value=[])
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node',
                 return_value=[])
@@ -2473,7 +2536,7 @@ class TestResize(BaseTestCase):
     def _test_instance_build_resize(self,
                                     save_mock,
                                     get_by_host_and_node_mock,
-                                    get_in_progress_by_host_and_node_mock,
+                                    get_in_progress_and_error_mock,
                                     get_by_host_and_nodename_mock,
                                     pci_get_by_compute_node_mock,
                                     pci_get_by_instance_mock,
@@ -2638,7 +2701,7 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.pci.request.get_pci_requests_from_flavor')
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_resize_claim_dest_host_with_pci(self, save_mock, get_mock,
@@ -2794,7 +2857,7 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_resize_claim_two_instances(self, save_mock, get_mock, migr_mock,
@@ -2926,7 +2989,7 @@ class TestRebuild(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_rebuild_claim(self, save_mock, get_mock, migr_mock, get_cn_mock,
@@ -3099,13 +3162,13 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
             instance_uuid='some_uuid',
         )
         self._setup_rt()
-        self.rt._update_usage_from_migrations(mock.sentinel.ctx, [migration],
+        ctx = mock.MagicMock()
+        self.rt._update_usage_from_migrations(ctx, [migration],
                                               _NODENAME)
-        mock_get_instance.assert_called_once_with(mock.sentinel.ctx,
-                                                  'some_uuid',
-                                                  expected_attrs=[
-                                                      'migration_context',
-                                                      'flavor'])
+        mock_get_instance.assert_called_once_with(
+            ctx.elevated.return_value, 'some_uuid',
+            expected_attrs=['migration_context', 'flavor'])
+        ctx.elevated.assert_called_once_with(read_deleted='yes')
         self.assertFalse(mock_update_usage.called)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
@@ -3153,17 +3216,16 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
         mig_list = objects.MigrationList(objects=migrations)
         instance.migration_context = objects.MigrationContext(
             migration_id=mig2.id)
-        self.rt._update_usage_from_migrations(mock.sentinel.ctx, mig_list,
-                                              _NODENAME)
-        upd_mock.assert_called_once_with(mock.sentinel.ctx, instance, mig2,
-                                         _NODENAME)
+        ctxt = mock.MagicMock()
+        self.rt._update_usage_from_migrations(ctxt, mig_list, _NODENAME)
+        upd_mock.assert_called_once_with(ctxt, instance, mig2, _NODENAME)
 
         upd_mock.reset_mock()
         mig2.updated_at = None
         instance.migration_context.migration_id = mig1.id
-        self.rt._update_usage_from_migrations(mock.sentinel.ctx, mig_list,
+        self.rt._update_usage_from_migrations(ctxt, mig_list,
                 _NODENAME)
-        upd_mock.assert_called_once_with(mock.sentinel.ctx, instance, mig1,
+        upd_mock.assert_called_once_with(ctxt, instance, mig1,
                 _NODENAME)
 
     @mock.patch('nova.objects.migration.Migration.save')
@@ -3192,8 +3254,8 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
                               id=1,
                               instance=instance)
         mig_list = objects.MigrationList(objects=[mig1])
-        self.rt._update_usage_from_migrations(mock.sentinel.ctx, mig_list,
-                                              _NODENAME)
+        ctxt = mock.MagicMock()
+        self.rt._update_usage_from_migrations(ctxt, mig_list, _NODENAME)
         self.assertFalse(upd_mock.called)
         self.assertEqual(mig1.status, "error")
 
@@ -3212,10 +3274,11 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
             instance_uuid=uuids.instance, id=1, instance=instance)
         for state in task_states.rebuild_states + task_states.resizing_states:
             instance.task_state = state
+            ctxt = mock.MagicMock()
             self.rt._update_usage_from_migrations(
-                mock.sentinel.ctx, [migration], _NODENAME)
+                ctxt, [migration], _NODENAME)
             mock_update_usage.assert_called_once_with(
-                mock.sentinel.ctx, instance, migration, _NODENAME)
+                ctxt, instance, migration, _NODENAME)
             mock_update_usage.reset_mock()
 
     @mock.patch('nova.objects.migration.Migration.save')
@@ -3232,10 +3295,11 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
             dest_compute=_HOSTNAME, dest_node=_NODENAME,
             instance_uuid=uuids.instance, id=1, instance=instance,
             migration_type='live-migration')
+        ctxt = mock.MagicMock()
         self.rt._update_usage_from_migrations(
-            mock.sentinel.ctx, [migration], _NODENAME)
+            ctxt, [migration], _NODENAME)
         mock_update_usage.assert_called_once_with(
-            mock.sentinel.ctx, instance, migration, _NODENAME)
+            ctxt, instance, migration, _NODENAME)
 
 
 class TestUpdateUsageFromInstance(BaseTestCase):

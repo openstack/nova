@@ -3204,6 +3204,10 @@ def migration_get_all_by_filters(context, filters,
     elif "source_compute" in filters:
         host = filters['source_compute']
         query = query.filter(models.Migration.source_compute == host)
+    if "node" in filters:
+        node = filters['node']
+        query = query.filter(or_(models.Migration.source_node == node,
+                                 models.Migration.dest_node == node))
     if "migration_type" in filters:
         migtype = filters["migration_type"]
         query = query.filter(models.Migration.migration_type == migtype)
@@ -3270,6 +3274,20 @@ def migration_migrate_to_uuid(context, count):
     # We don't have any situation where we can (detectably) not
     # migrate a thing, so report anything that matched as "completed".
     return done, done
+
+
+@pick_context_manager_reader
+def migration_get_in_progress_and_error_by_host_and_node(context, host, node):
+    return model_query(context, models.Migration).\
+            filter(or_(and_(models.Migration.source_compute == host,
+                            models.Migration.source_node == node),
+                       and_(models.Migration.dest_compute == host,
+                            models.Migration.dest_node == node))).\
+            filter(~models.Migration.status.in_(['confirmed', 'reverted',
+                                                 'failed', 'completed',
+                                                 'cancelled', 'done'])).\
+            options(_joinedload_all('instance.system_metadata')).\
+            all()
 
 
 ########################

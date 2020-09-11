@@ -1047,8 +1047,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 setattr(self, inst_attr_name, attr_value)
 
     @contextlib.contextmanager
-    def mutated_migration_context(self):
-        """Context manager to temporarily apply the migration context.
+    def mutated_migration_context(self, revert=False):
+        """Context manager to temporarily apply/revert the migration context.
 
         Calling .save() from within the context manager means that the mutated
         context will be saved which can cause incorrect resource tracking, and
@@ -1063,7 +1063,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         current_values = {}
         for attr_name in _MIGRATION_CONTEXT_ATTRS:
             current_values[attr_name] = getattr(self, attr_name)
-        self.apply_migration_context()
+        if revert:
+            self.revert_migration_context()
+        else:
+            self.apply_migration_context()
         try:
             yield
         finally:
