@@ -902,6 +902,30 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
                       'for the isolate policy without this.')
             return
 
+        # TODO(stephenfin): Drop this when we drop support for 'vcpu_pin_set'
+        # NOTE(stephenfin): This is total hack. We're relying on the fact that
+        # the libvirt driver, which is the only one that currently supports
+        # pinned CPUs, will set cpuset and pcpuset to the same value if using
+        # legacy configuration, i.e. 'vcpu_pin_set', as part of
+        # '_get_host_numa_topology'. They can't be equal otherwise since
+        # 'cpu_dedicated_set' and 'cpu_shared_set' must be disjoint. Therefore,
+        # if these are equal, the host that this NUMA cell corresponds to is
+        # using legacy configuration and it's okay to use the old, "pin a core
+        # and reserve its siblings" implementation of the 'isolate' policy. If
+        # they're not, the host is using new-style configuration and we've just
+        # hit bug #1889633
+        if threads_per_core != 1 and host_cell.pcpuset != host_cell.cpuset:
+            LOG.warning(
+                "Host supports hyperthreads, but instance requested no "
+                "hyperthreads. This should have been rejected by the "
+                "scheduler but we likely got here due to the fallback VCPU "
+                "query. Consider setting '[workarounds] "
+                "disable_fallback_pcpu_query' to 'True' once hosts are no "
+                "longer using 'vcpu_pin_set'. Refer to bug #1889633 for more "
+                "information."
+            )
+            return
+
         pinning = _get_pinning(
             1,  # we only want to "use" one thread per core
             sibling_sets[threads_per_core],
