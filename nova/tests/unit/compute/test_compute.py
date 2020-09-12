@@ -10288,7 +10288,7 @@ class ComputeAPITestCase(BaseTestCase):
         mock_allocate.assert_called_once_with(
             self.context, instance,
             test.MatchType(objects.NetworkRequestList),
-            bind_host_id='fake-mini', attach=True)
+            bind_host_id='fake-mini')
         network_requests = mock_allocate.mock_calls[0][1][2]
         self.assertEqual(1, len(network_requests.objects))
         network_request = network_requests[0]
@@ -10351,7 +10351,7 @@ class ComputeAPITestCase(BaseTestCase):
         mock_allocate.assert_called_once_with(
             self.context, instance,
             test.MatchType(objects.NetworkRequestList),
-            bind_host_id='fake-mini', attach=True)
+            bind_host_id='fake-mini')
         network_requests = mock_allocate.mock_calls[0][1][2]
         self.assertEqual(1, len(network_requests.objects))
         network_request = network_requests[0]
@@ -10404,7 +10404,7 @@ class ComputeAPITestCase(BaseTestCase):
         mock_allocate.assert_called_once_with(
             self.context, instance,
             test.MatchType(objects.NetworkRequestList),
-            bind_host_id='fake-mini', attach=True)
+            bind_host_id='fake-mini')
         network_requests = mock_allocate.mock_calls[0][1][2]
         self.assertEqual(1, len(network_requests.objects))
         network_request = network_requests[0]
@@ -10472,7 +10472,7 @@ class ComputeAPITestCase(BaseTestCase):
             mock_allocate.assert_called_once_with(
                 self.context, instance,
                 test.MatchType(objects.NetworkRequestList),
-                bind_host_id='fake-host', attach=True)
+                bind_host_id='fake-host')
             network_requests = mock_allocate.mock_calls[0][1][2]
             self.assertEqual(1, len(network_requests.objects))
             network_request = network_requests[0]
@@ -10549,7 +10549,7 @@ class ComputeAPITestCase(BaseTestCase):
             mock_allocate.assert_called_once_with(
                 self.context, instance,
                 test.MatchType(objects.NetworkRequestList),
-                bind_host_id='fake-host', attach=True)
+                bind_host_id='fake-host')
             network_requests = mock_allocate.mock_calls[0][1][2]
             self.assertEqual(1, len(network_requests.objects))
             network_request = network_requests[0]

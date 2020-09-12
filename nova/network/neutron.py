@@ -687,9 +687,8 @@ class API(base.Base):
             # under user's zone.
             self._reset_port_dns_name(network, port_id, neutron)
 
-    # TODO(gibi): remove unused attach flag
     def _validate_requested_port_ids(self, context, instance, neutron,
-                                     requested_networks, attach=False):
+                                     requested_networks):
         """Processes and validates requested networks for allocation.
 
         Iterates over the list of NetworkRequest objects, validating the
@@ -704,9 +703,6 @@ class API(base.Base):
         :type neutron: neutronclient.v2_0.client.Client
         :param requested_networks: List of user-requested networks and/or ports
         :type requested_networks: nova.objects.NetworkRequestList
-        :param attach: Boolean indicating if a port is being attached to an
-            existing running instance. Should be False during server create.
-        :type attach: bool
         :returns: tuple of:
             - ports: dict mapping of port id to port dict
             - ordered_networks: list of nova.objects.NetworkRequest objects
@@ -902,9 +898,6 @@ class API(base.Base):
                 return {}
 
         # if this function is directly called without a requested_network param
-        # or if it is indirectly called through allocate_port_for_instance()
-        # with None params=(network_id=None, requested_ip=None, port_id=None,
-        # pci_request_id=None):
         if (not requested_networks or
             requested_networks.is_single_unspecified or
             requested_networks.auto_allocate):
@@ -995,11 +988,10 @@ class API(base.Base):
 
         return requests_and_created_ports
 
-    # TODO(gibi): remove the unused attach flag
     def allocate_for_instance(self, context, instance,
                               requested_networks,
                               security_groups=None, bind_host_id=None,
-                              attach=False, resource_provider_mapping=None):
+                              resource_provider_mapping=None):
         """Allocate network resources for the instance.
 
         :param context: The request context.
@@ -1008,8 +1000,6 @@ class API(base.Base):
         :param security_groups: None or security groups to allocate for
             instance.
         :param bind_host_id: the host ID to attach to the ports being created.
-        :param attach: Boolean indicating if a port is being attached to an
-            existing running instance. Should be False during server create.
         :param resource_provider_mapping: a dict keyed by ids of the entities
             (for example Neutron port) requesting resources for this instance
             mapped to a list of resource provider UUIDs that are fulfilling
@@ -1043,8 +1033,7 @@ class API(base.Base):
         # See bug 1849657.
         requested_ports_dict, ordered_networks = (
             self._validate_requested_port_ids(
-                context, instance, admin_client, requested_networks,
-                attach=attach))
+                context, instance, admin_client, requested_networks))
 
         nets = self._validate_requested_network_ids(
             context, instance, neutron, requested_networks, ordered_networks)
@@ -1686,21 +1675,6 @@ class API(base.Base):
         # has already been deleted this call does nothing.
         update_instance_cache_with_nw_info(self, context, instance,
                                            network_model.NetworkInfo([]))
-
-    # TODO(gibi): remove this unused function
-    def allocate_port_for_instance(self, context, instance, port_id,
-                                   network_id=None, requested_ip=None,
-                                   bind_host_id=None, tag=None):
-        """Allocate a port for the instance."""
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=network_id,
-                                            address=requested_ip,
-                                            port_id=port_id,
-                                            pci_request_id=None,
-                                            tag=tag)])
-        return self.allocate_for_instance(context, instance,
-                requested_networks=requested_networks,
-                bind_host_id=bind_host_id, attach=True)
 
     def deallocate_port_for_instance(self, context, instance, port_id):
         """Remove a specified port from the instance.

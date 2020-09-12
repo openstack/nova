@@ -5100,38 +5100,6 @@ class TestAPI(TestAPIBase):
                                             mock.ANY,
                                             mock.ANY)
 
-    @mock.patch('nova.network.neutron.API._validate_requested_port_ids')
-    @mock.patch('nova.network.neutron.API._get_available_networks')
-    @mock.patch('nova.network.neutron.get_client')
-    def test_allocate_port_for_instance_no_networks(self,
-                                                    mock_getclient,
-                                                    mock_avail_nets,
-                                                    mock_validate_port_ids):
-        """Tests that if no networks are requested and no networks are
-        available, we fail with InterfaceAttachFailedNoNetwork.
-        """
-        instance = fake_instance.fake_instance_obj(self.context,
-                                                   project_id=uuids.my_tenant)
-        mock_validate_port_ids.return_value = ({}, [])
-        mock_avail_nets.return_value = []
-        api = neutronapi.API()
-        ex = self.assertRaises(exception.InterfaceAttachFailedNoNetwork,
-                               api.allocate_port_for_instance,
-                               self.context, instance, port_id=None)
-        self.assertEqual(
-            "No specific network was requested and none are available for "
-            "project '%s'." % uuids.my_tenant, six.text_type(ex))
-
-    @mock.patch.object(neutronapi.API, 'allocate_for_instance')
-    def test_allocate_port_for_instance_with_tag(self, mock_allocate):
-        instance = fake_instance.fake_instance_obj(self.context)
-        api = neutronapi.API()
-        api.allocate_port_for_instance(self.context, instance, None,
-                                       network_id=None, requested_ip=None,
-                                       bind_host_id=None, tag='foo')
-        req_nets_in_call = mock_allocate.call_args[1]['requested_networks']
-        self.assertEqual('foo', req_nets_in_call.objects[0].tag)
-
     @mock.patch('nova.network.neutron.LOG')
     @mock.patch('nova.network.neutron.API._delete_ports')
     @mock.patch('nova.network.neutron.API._unbind_ports')
@@ -6877,7 +6845,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
         self.assertEqual(result[1], {"id": uuids.preexist})
 
         mock_validate_ports.assert_called_once_with(
-            self.context, self.instance, "admin", None, attach=False)
+            self.context, self.instance, "admin", None)
 
     def test_ensure_no_port_binding_failure_raises(self):
         port = {
@@ -6926,8 +6894,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
         self.assertEqual(requested_networks[0], ordered_networks[0])
         self.assertEqual('net-2', ordered_networks[1].network_id)
 
-    def _assert_validate_requested_port_ids_raises(self, exception, extras,
-                                                   attach=False):
+    def _assert_validate_requested_port_ids_raises(self, exception, extras):
         api = neutronapi.API()
         mock_client = mock.Mock()
         requested_networks = objects.NetworkRequestList(objects=[
@@ -6941,8 +6908,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
         mock_client.show_port.return_value = {"port": port}
 
         self.assertRaises(exception, api._validate_requested_port_ids,
-            self.context, self.instance, mock_client, requested_networks,
-            attach=attach)
+            self.context, self.instance, mock_client, requested_networks)
 
     def test_validate_requested_port_ids_raise_not_usable(self):
         self._assert_validate_requested_port_ids_raises(
