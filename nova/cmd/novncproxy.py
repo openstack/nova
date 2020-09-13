@@ -39,13 +39,7 @@ def main():
     CONF.set_default('web', '/usr/share/novnc')
     config.parse_args(sys.argv)
 
-    # TODO(stephenfin): Always enable the security proxy once we support RFB
-    # version 3.3, as used in XenServer.
-    security_proxy = None
-    if CONF.compute_driver != 'xenapi.XenAPIDriver':
-        security_proxy = rfb.RFBSecurityProxy()
-
     baseproxy.proxy(
         host=CONF.vnc.novncproxy_host,
         port=CONF.vnc.novncproxy_port,
-        security_proxy=security_proxy)
+        security_proxy=rfb.RFBSecurityProxy())

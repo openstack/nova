@@ -6224,8 +6224,10 @@ class ComputeTestCase(BaseTestCase,
             fake_bdms.append(bdms)
             return bdms
 
-        migrate_data = migrate_data_obj.XenapiLiveMigrateData(
-            block_migration=True)
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            block_migration=True,
+            is_shared_instance_path=False,
+            is_shared_block_storage=False)
 
         mock_pre.side_effect = test.TestingException
         mock_get_bdms.side_effect = gen_fake_bdms
@@ -6245,9 +6247,9 @@ class ComputeTestCase(BaseTestCase,
             # submitted to a thread executor raises, the exception will not be
             # raised unless Future.result() is called.
             self.compute.live_migration(
-                    c, dest=dest_host, block_migration=True,
-                    instance=instance, migration=migration,
-                    migrate_data=migrate_data)
+                c, dest=dest_host, block_migration=True,
+                instance=instance, migration=migration,
+                migrate_data=migrate_data)
             mock_setup.assert_called_once_with(c, instance, self.compute.host)
             mock_client.move_allocations.assert_called_once_with(
                 c, migration.uuid, instance.uuid)
@@ -6262,8 +6264,8 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual('failed', migration.status)
         mock_get_disk.assert_called()
         mock_pre.assert_called_once_with(c,
-                instance, True, mock_get_disk.return_value, dest_host,
-                migrate_data)
+            instance, True, mock_get_disk.return_value, dest_host,
+            migrate_data)
 
         # Assert that _rollback_live_migration puts connection_info back to
         # what it was before the call to pre_live_migration.
@@ -6289,7 +6291,7 @@ class ComputeTestCase(BaseTestCase,
         mock_rollback.assert_called_once_with(c, instance, dest_host,
             destroy_disks=True,
             migrate_data=test.MatchType(
-                            migrate_data_obj.XenapiLiveMigrateData))
+                migrate_data_obj.LibvirtLiveMigrateData))
         # Assert that the final attachment_ids returned by
         # BlockDeviceMappingList.get_by_instance_uuid are then deleted.
         mock_attachment_delete.assert_has_calls([

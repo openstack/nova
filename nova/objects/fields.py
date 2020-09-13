@@ -778,6 +778,8 @@ class DiskFormat(BaseNovaEnum):
     ALL = (RBD, LVM, QCOW2, RAW, PLOOP, VHD, VMDK, VDI, ISO)
 
 
+# TODO(stephenfin): Remove the xenapi value when we bump the 'Diagnostics'
+# object (the only user of this enum) to 2.0
 class HypervisorDriver(BaseNovaEnum):
     LIBVIRT = "libvirt"
     XENAPI = "xenapi"
