@@ -2624,7 +2624,6 @@ class LibvirtDriver(driver.ComputeDriver):
         elif not CONF.libvirt.virt_type == 'parallels':
             raise exception.SetAdminPasswdNotSupported()
 
-    # TODO(melwitt): Combine this with the similar xenapi code at some point.
     def _save_instance_password_if_sshkey_present(self, instance, new_pass):
         sshkey = instance.key_data if 'key_data' in instance else None
         if sshkey and sshkey.startswith("ssh-rsa"):

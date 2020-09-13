@@ -179,8 +179,7 @@ Resets networking on a server.
 
 .. note::
 
-    Only the XenServer driver implements this feature and only if the guest
-    has the XenAPI agent in the targeted server.
+    No longer supported by any in-tree virt driver.
 
 Specify the ``resetNetwork`` action in the request body.
 

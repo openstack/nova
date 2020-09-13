@@ -597,7 +597,7 @@ class GlanceImageServiceV2(object):
         """
         # These preferred disk formats are in order:
         # 1. we want qcow2 if possible (at least for backward compat)
-        # 2. vhd for xenapi and hyperv
+        # 2. vhd for hyperv
         # 3. vmdk for vmware
         # 4. raw should be universally accepted
         preferred_disk_formats = (
@@ -1276,20 +1276,19 @@ class API(object):
         Note that because of the poor design of the
         `glance.ImageService.download` method, the function returns different
         things depending on what arguments are passed to it. If a data argument
-        is supplied but no dest_path is specified (only done in the XenAPI virt
-        driver's image.utils module) then None is returned from the method. If
-        the data argument is not specified but a destination path *is*
-        specified, then a writeable file handle to the destination path is
-        constructed in the method and the image bits written to that file, and
-        again, None is returned from the method. If no data argument is
-        supplied and no dest_path argument is supplied (VMWare and XenAPI virt
-        drivers), then the method returns an iterator to the image bits that
-        the caller uses to write to wherever location it wants. Finally, if the
-        allow_direct_url_schemes CONF option is set to something, then the
-        nova.image.download modules are used to attempt to do an SCP copy of
-        the image bits from a file location to the dest_path and None is
-        returned after retrying one or more download locations (libvirt and
-        Hyper-V virt drivers through nova.virt.images.fetch).
+        is supplied but no dest_path is specified (not currently done by any
+        caller) then None is returned from the method. If the data argument is
+        not specified but a destination path *is* specified, then a writeable
+        file handle to the destination path is constructed in the method and
+        the image bits written to that file, and again, None is returned from
+        the method. If no data argument is supplied and no dest_path argument
+        is supplied (VMWare virt driver), then the method returns an iterator
+        to the image bits that the caller uses to write to wherever location it
+        wants. Finally, if the allow_direct_url_schemes CONF option is set to
+        something, then the nova.image.download modules are used to attempt to
+        do an SCP copy of the image bits from a file location to the dest_path
+        and None is returned after retrying one or more download locations
+        (libvirt and Hyper-V virt drivers through nova.virt.images.fetch).
 
         I think the above points to just how hacky/wacky all of this code is,
         and the reason it needs to be cleaned up and standardized across the

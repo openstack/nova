@@ -138,8 +138,8 @@ class ComputeDriver(object):
     """Base class for compute drivers.
 
     The interface to this class talks in terms of 'instances' (Amazon EC2 and
-    internal Nova terminology), by which we mean 'running virtual machine'
-    (XenAPI terminology) or domain (Xen or libvirt terminology).
+    internal Nova terminology), by which we mean 'running virtual machine' or
+    domain (libvirt terminology).
 
     An instance has an ID, which is the identifier chosen by Nova to represent
     the instance further up the stack.  This is unfortunately also called a
@@ -1526,10 +1526,9 @@ class ComputeDriver(object):
 
         All counters are long integers.
 
-        This method is optional.  On some platforms (e.g. XenAPI) performance
-        statistics can be retrieved directly in aggregate form, without Nova
-        having to do the aggregation.  On those platforms, this method is
-        unused.
+        This method is optional.  On some platforms performance statistics can
+        be retrieved directly in aggregate form, without Nova having to do the
+        aggregation.  On those platforms, this method is unused.
 
         Note that this function takes an instance ID.
 

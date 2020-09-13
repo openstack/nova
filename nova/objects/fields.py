@@ -382,8 +382,7 @@ class HVType(BaseNovaEnum):
     Provide the standard names for all known guest virtualization
     types. This is not to be confused with the Nova hypervisor driver
     types, since one driver may support multiple virtualization types
-    and one virtualization type (eg 'xen') may be supported by multiple
-    drivers ('XenAPI' or  'Libvirt-Xen').
+    and one virtualization type may be supported by multiple drivers.
     """
 
     BAREMETAL = 'baremetal'

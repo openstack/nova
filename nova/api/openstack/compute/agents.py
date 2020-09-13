@@ -37,7 +37,6 @@ class AgentController(wsgi.Controller):
 
     You can find the design of agent update in this link:
     http://wiki.openstack.org/AgentUpdate
-    and find the code in nova.virt.xenapi.vmops.VMOps._boot_new_instance.
     In this design We need update agent in guest from host, so we need
     some interfaces to update the agent info in host.
 

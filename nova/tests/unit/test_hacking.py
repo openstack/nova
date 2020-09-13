@@ -57,11 +57,11 @@ class HackingTestCase(test.NoDBTestCase):
 
         self.assertEqual(expect, checks.import_no_virt_driver_import_deps(
             "from nova.virt.libvirt import utils as libvirt_utils",
-            "./nova/virt/xenapi/driver.py"))
+            "./nova/virt/hyperv/driver.py"))
 
         self.assertEqual(expect, checks.import_no_virt_driver_import_deps(
             "import nova.virt.libvirt.utils as libvirt_utils",
-            "./nova/virt/xenapi/driver.py"))
+            "./nova/virt/hyperv/driver.py"))
 
         self.assertIsNone(checks.import_no_virt_driver_import_deps(
             "from nova.virt.libvirt import utils as libvirt_utils",
@@ -71,7 +71,7 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertIsInstance(checks.import_no_virt_driver_config_deps(
             "CONF.import_opt('volume_drivers', "
             "'nova.virt.libvirt.driver', group='libvirt')",
-            "./nova/virt/xenapi/driver.py"), tuple)
+            "./nova/virt/hyperv/driver.py"), tuple)
 
         self.assertIsNone(checks.import_no_virt_driver_config_deps(
             "CONF.import_opt('volume_drivers', "

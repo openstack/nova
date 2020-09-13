@@ -40,8 +40,6 @@ class IterableToFileAdapter(object):
 
     The Glance client returns an iterable, but PowerVM requires a file.  This
     is the adapter between the two.
-
-    Taken from xenapi/image/apis.py
     """
 
     def __init__(self, iterable):
