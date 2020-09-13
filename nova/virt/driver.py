@@ -1924,7 +1924,3 @@ def load_compute_driver(virtapi, compute_driver=None):
         LOG.exception("Compute driver '%s' from 'nova.virt' is not of type "
                       "'%s'", compute_driver, str(ComputeDriver))
         sys.exit(1)
-
-
-def is_xenapi():
-    return CONF.compute_driver == 'xenapi.XenAPIDriver'
