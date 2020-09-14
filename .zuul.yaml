@@ -435,8 +435,7 @@
             irrelevant-files:
               # NOTE(mriedem): This job has its own irrelevant-files section
               # so that we only run it on changes to networking and libvirt/vif
-              # code; we don't need to run this on all changes, nor do we run
-              # it in the gate.
+              # code; we don't need to run this on all changes.
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
         - nova-grenade-multinode
         - nova-live-migration
@@ -484,6 +483,14 @@
         - nova-tox-functional-py38
         - nova-multi-cell
         - nova-next
+        - nova-ceph-multistore:
+            irrelevant-files: *dsvm-irrelevant-files
+        - neutron-tempest-linuxbridge:
+            irrelevant-files:
+              # NOTE(mriedem): This job has its own irrelevant-files section
+              # so that we only run it on changes to networking and libvirt/vif
+              # code; we don't need to run this on all changes.
+              - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
         - tempest-integrated-compute:
             irrelevant-files: *policies-irrelevant-files
         - grenade:
