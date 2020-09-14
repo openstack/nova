@@ -261,6 +261,7 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
                 'subnet_id': subnet_1['id']
             }
         ],
+        'binding:vif_details': {},
         'binding:vif_type': 'ovs',
         'binding:vnic_type': 'normal',
     }
@@ -275,6 +276,7 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
                 'subnet_id': subnet_1['id']
             }
         ],
+        'binding:vif_details': {},
         'binding:vif_type': 'ovs',
         'binding:vnic_type': 'normal',
     }
@@ -289,6 +291,7 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
                 'subnet_id': subnet_2['id']
             }
         ],
+        'binding:vif_details': {},
         'binding:vif_type': 'ovs',
         'binding:vnic_type': 'normal',
     }
@@ -303,6 +306,7 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
                 'subnet_id': subnet_3['id']
             }
         ],
+        'binding:vif_details': {},
         'binding:vif_type': 'ovs',
         'binding:vnic_type': 'normal',
     }
@@ -317,9 +321,9 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
                 'subnet_id': subnet_4['id']
             }
         ],
+        'binding:vif_details': {'vlan': 42},
         'binding:vif_type': 'hw_veb',
         'binding:vnic_type': 'direct',
-        'binding:vif_details': {'vlan': 42},
         'binding:profile': {'pci_vendor_info': '1377:0047',
                             'pci_slot': '0000:81:00.1',
                             'physical_network': 'physnet4'},
