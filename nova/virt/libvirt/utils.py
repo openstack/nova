@@ -310,17 +310,6 @@ def copy_image(
             compression=compression)
 
 
-# TODO(stephenfin): This is dumb; remove it.
-def write_to_file(path: str, contents: str) -> None:
-    """Write the given contents to a file
-
-    :param path: Destination file
-    :param contents: Desired contents of the file
-    """
-    with open(path, 'w') as f:
-        f.write(contents)
-
-
 def chown_for_id_maps(
     path: str, id_maps: ty.List[vconfig.LibvirtConfigGuestIDMap],
 ) -> None:

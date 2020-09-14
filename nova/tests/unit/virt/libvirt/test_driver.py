@@ -14363,19 +14363,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         disk_info_path = os.path.join(instance_path, 'disk.info')
 
         with test.nested(
+            mock.patch('builtins.open', new_callable=mock.mock_open),
             mock.patch.object(os, 'mkdir'),
-            mock.patch('nova.virt.libvirt.utils.write_to_file'),
             mock.patch.object(drvr, '_create_images_and_backing')
         ) as (
-            mkdir, write_to_file, create_images_and_backing
+            mock_open, mkdir, create_images_and_backing
         ):
             drvr.pre_live_migration(self.context, instance,
                                     block_device_info=None,
                                     network_info=[],
                                     disk_info=jsonutils.dumps(disk_info),
                                     migrate_data=migrate_data)
-            write_to_file.assert_called_with(disk_info_path,
-                                             jsonutils.dumps(image_disk_info))
+
+            self.assertIn(mock.call(disk_info_path, 'w'), mock_open.mock_calls)
+            mock_open.return_value.write.assert_called_with(
+                jsonutils.dumps(image_disk_info))
 
     @mock.patch('nova.virt.libvirt.utils.file_open',
                 side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
@@ -16292,16 +16294,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_images_and_backing')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.'
                 '_get_instance_disk_info_from_config')
-    @mock.patch('nova.virt.libvirt.utils.write_to_file')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_config')
     @mock.patch('nova.virt.libvirt.blockinfo.get_disk_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._destroy')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.'
                 '_get_all_assigned_mediated_devices')
+    @mock.patch('builtins.open', new=mock.mock_open())
     def test_hard_reboot_does_not_call_glance_show(self,
             mock_get_mdev, mock_destroy, mock_get_disk_info,
-            mock_get_guest_config, mock_get_instance_path, mock_write_to_file,
+            mock_get_guest_config, mock_get_instance_path,
             mock_get_instance_disk_info, mock_create_images_and_backing,
             mock_create_domand_and_network, mock_prepare_pci_devices_for_use,
             mock_get_instance_pci_devs, mock_looping_call, mock_ensure_tree):
@@ -22373,18 +22375,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_guest_with_network')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_disk_raw_to_qcow2')
-    # Don't write libvirt xml to disk
-    @mock.patch.object(libvirt_utils, 'write_to_file')
     # NOTE(mdbooth): The following 4 mocks are required to execute
     #                get_guest_xml().
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_host_enabled')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
     @mock.patch('nova.privsep.utils.supports_direct_io')
     @mock.patch('nova.api.metadata.base.InstanceMetadata')
+    @mock.patch('builtins.open', new=mock.mock_open())
     def _test_finish_migration(self, mock_instance_metadata,
                                mock_supports_direct_io,
                                mock_build_device_metadata,
-                               mock_set_host_enabled, mock_write_to_file,
+                               mock_set_host_enabled,
                                mock_raw_to_qcow2,
                                mock_create_guest_with_network,
                                mock_get_info, mock_inject_data,
@@ -23759,18 +23760,19 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch('nova.objects.image_meta.ImageMeta.from_image_ref')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.'
                 '_get_all_assigned_mediated_devices')
-    @mock.patch('nova.virt.libvirt.utils.write_to_file')
     # NOTE(mdbooth): The following 4 mocks are required to execute
     #                get_guest_xml().
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_host_enabled')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
     @mock.patch('nova.privsep.utils.supports_direct_io')
     @mock.patch('nova.api.metadata.base.InstanceMetadata')
-    def _test_rescue(self, instance, mock_instance_metadata,
-            mock_supports_direct_io, mock_build_device_metadata,
-            mock_set_host_enabled, mock_write_to_file, mock_get_mdev,
-            mock_get_image_meta_by_ref, image_meta_dict=None, exists=None,
-            instance_image_meta_dict=None, block_device_info=None):
+    @mock.patch('builtins.open', new=mock.mock_open())
+    def _test_rescue(
+        self, instance, mock_instance_metadata, mock_supports_direct_io,
+        mock_build_device_metadata, mock_set_host_enabled, mock_get_mdev,
+        mock_get_image_meta_by_ref, image_meta_dict=None, exists=None,
+        instance_image_meta_dict=None, block_device_info=None,
+    ):
 
         self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
         mock_build_device_metadata.return_value = None
@@ -23927,9 +23929,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual(expected_kernel_ramdisk_paths,
                          kernel_ramdisk_paths)
 
-    @mock.patch('nova.virt.libvirt.utils.write_to_file')
-    def test_rescue_stable_device_unsupported_virt_types(self,
-        mock_libvirt_write_to_file):
+    @mock.patch('builtins.open', new=mock.mock_open())
+    def test_rescue_stable_device_unsupported_virt_types(self):
         network_info = _fake_network_info(self, 1)
         instance = self._create_instance({'config_drive': str(True)})
         rescue_image_meta_dict = {'id': uuids.rescue_image_id,
@@ -24085,15 +24086,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock.patch.object(drvr, '_get_guest_xml'),
             mock.patch.object(drvr, '_create_image'),
             mock.patch.object(drvr, '_get_existing_domain_xml'),
-            mock.patch.object(libvirt_utils, 'write_to_file'),
             mock.patch.object(libvirt_utils, 'get_instance_path'),
             mock.patch('nova.virt.libvirt.blockinfo.get_disk_info'),
             mock.patch('nova.image.glance.API.get'),
-            mock.patch('nova.objects.image_meta.ImageMeta.from_dict')
-        ) as (mock_create, mock_destroy, mock_get_guest_xml, mock_create_image,
-              mock_get_existing_xml, mock_write, mock_inst_path,
-              mock_get_disk_info, mock_image_get, mock_from_dict):
-
+            mock.patch('nova.objects.image_meta.ImageMeta.from_dict'),
+            mock.patch('builtins.open', new_callable=mock.mock_open),
+        ) as (
+            mock_create, mock_destroy, mock_get_guest_xml, mock_create_image,
+            mock_get_existing_xml, mock_inst_path, mock_get_disk_info,
+            mock_image_get, mock_from_dict, mock_open,
+        ):
             self.flags(virt_type='kvm', group='libvirt')
             mock_image_get.return_value = mock.sentinel.bdm_image_meta_dict
             mock_from_dict.return_value = mock.sentinel.bdm_image_meta
@@ -24183,8 +24185,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     @mock.patch.object(libvirt_utils, 'get_instance_path')
     @mock.patch.object(libvirt_utils, 'load_file')
     @mock.patch.object(host.Host, '_get_domain')
-    def _test_unrescue(self, instance, mock_get_domain, mock_load_file,
-                                           mock_get_instance_path):
+    @mock.patch('builtins.open', new=mock.mock_open())
+    def _test_unrescue(
+        self, instance, mock_get_domain, mock_load_file,
+        mock_get_instance_path,
+    ):
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"
                     "<disk type='block' device='disk'>"
@@ -24208,7 +24213,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         with test.nested(
-                mock.patch.object(libvirt_utils, 'write_to_file'),
                 mock.patch.object(drvr, '_destroy'),
                 mock.patch.object(drvr, '_create_guest'),
                 mock.patch.object(os, 'unlink'),
@@ -24220,7 +24224,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 mock.patch.object(lvm, 'remove_volumes'),
                 mock.patch.object(glob, 'iglob',
                                   return_value=[rescue_file, rescue_dir])
-                ) as (mock_write, mock_destroy, mock_create, mock_del,
+                ) as (mock_destroy, mock_create, mock_del,
                       mock_rmtree, mock_isdir, mock_lvm_disks,
                       mock_remove_volumes, mock_glob):
             drvr.unrescue(self.context, instance)

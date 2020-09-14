@@ -3589,7 +3589,8 @@ class LibvirtDriver(driver.ComputeDriver):
         instance_dir = libvirt_utils.get_instance_path(instance)
         unrescue_xml = self._get_existing_domain_xml(instance, network_info)
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
-        libvirt_utils.write_to_file(unrescue_xml_path, unrescue_xml)
+        with open(unrescue_xml_path, 'w') as f:
+            f.write(unrescue_xml)
 
         rescue_image_id = None
         rescue_image_meta = None
@@ -9706,8 +9707,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 image_disk_info_path = os.path.join(instance_dir,
                                                     'disk.info')
-                libvirt_utils.write_to_file(image_disk_info_path,
-                                            jsonutils.dumps(image_disk_info))
+                with open(image_disk_info_path, 'w') as f:
+                    f.write(jsonutils.dumps(image_disk_info))
 
             if not is_shared_block_storage:
                 # Ensure images and backing files are present.
