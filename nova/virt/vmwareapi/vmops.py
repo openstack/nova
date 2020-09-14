@@ -774,6 +774,14 @@ class VMwareVMOps(object):
                     LOG.warning("Could not find files for template VM %s",
                                 other_templ_vm_ref.value, instance=vi.instance)
                     continue
+                except vexc.VimFaultException as e:
+                    if 'VirtualHardwareVersionNotSupported' in e.fault_list:
+                        LOG.debug('Could not clone image-template from '
+                                  'incompatible hardware platform')
+                    else:
+                        LOG.warning('Could not clone image-template from '
+                                    'other datastore.')
+                    continue
 
                 templ_vm_ref = task_info.result
                 return templ_vm_ref
