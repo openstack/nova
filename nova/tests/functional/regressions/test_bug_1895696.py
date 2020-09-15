@@ -122,15 +122,9 @@ class TestNonBootableImageMeta(integrated_helpers._IntegratedTestBase):
             'volume_size': 1,
         }]
 
-        # FIXME(lyarwood) n-api should ignore cinder_encryption_key_id in the
-        # original image in this case and accept the request.
-        ex = self.assertRaises(
-            client.OpenStackApiException, self.api.post_server,
-            {'server': server})
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn(
-            "Direct booting of an image uploaded from an encrypted volume is "
-            "unsupported", str(ex))
+        # Assert that this request is accepted and the server moves to ACTIVE
+        server = self.api.post_server({'server': server})
+        self._wait_for_state_change(server, 'ACTIVE')
 
     def test_nonbootable_metadata_bfv_volume_image_metadata(self):
         """Assert behaviour when c-api has created volume using encrypted image
@@ -147,12 +141,6 @@ class TestNonBootableImageMeta(integrated_helpers._IntegratedTestBase):
             'uuid': uuids.cinder_encrypted_volume_uuid,
         }]
 
-        # FIXME(lyarwood) n-api should ignore cinder_encryption_key_id in the
-        # volume volume_image_metadata in this case and accept the request.
-        ex = self.assertRaises(
-            client.OpenStackApiException, self.api.post_server,
-            {'server': server})
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn(
-            "Direct booting of an image uploaded from an encrypted volume is "
-            "unsupported", str(ex))
+        # Assert that this request is accepted and the server moves to ACTIVE
+        server = self.api.post_server({'server': server})
+        self._wait_for_state_change(server, 'ACTIVE')
