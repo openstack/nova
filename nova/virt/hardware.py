@@ -961,10 +961,15 @@ def _numa_fit_instance_cell(
             LOG.debug('No specific pagesize requested for instance, '
                       'selected pagesize: %d', pagesize)
             # we want to allow overcommit in this case as we're not using
-            # hugepages
-            if not host_cell.can_fit_pagesize(pagesize,
-                                              instance_cell.memory * units.Ki,
-                                              use_free=False):
+            # hugepages *except* if using CPU pinning, which for legacy reasons
+            # does not allow overcommit
+            use_free = instance_cell.cpu_policy in (
+                fields.CPUAllocationPolicy.DEDICATED,
+                fields.CPUAllocationPolicy.MIXED,
+            )
+            if not host_cell.can_fit_pagesize(
+                pagesize, instance_cell.memory * units.Ki, use_free=use_free
+            ):
                 LOG.debug('Not enough available memory to schedule instance '
                           'with pagesize %(pagesize)d. Required: '
                           '%(required)s, available: %(available)s, total: '
@@ -977,16 +982,35 @@ def _numa_fit_instance_cell(
         else:
             # The host does not support explicit page sizes. Ignore pagesizes
             # completely.
+
             # NOTE(stephenfin): Do not allow an instance to overcommit against
             # itself on any NUMA cell, i.e. with 'ram_allocation_ratio = 2.0'
             # on a host with 1GB RAM, we should allow two 1GB instances but not
-            # one 2GB instance.
-            if instance_cell.memory > host_cell.memory:
-                LOG.debug('Not enough host cell memory to fit instance cell. '
-                          'Required: %(required)d, actual: %(actual)d',
-                          {'required': instance_cell.memory,
-                           'actual': host_cell.memory})
-                return None
+            # one 2GB instance. If CPU pinning is in use, don't allow
+            # overcommit at all.
+            if instance_cell.cpu_policy in (
+                fields.CPUAllocationPolicy.DEDICATED,
+                fields.CPUAllocationPolicy.MIXED,
+            ):
+                if host_cell.avail_memory < instance_cell.memory:
+                    LOG.debug(
+                        'Not enough host cell memory to fit instance cell. '
+                        'Oversubscription is not possible with pinned '
+                        'instances. '
+                        'Required: %(required)d, available: %(available)d, '
+                        'total: %(total)d. ',
+                        {'required': instance_cell.memory,
+                         'available': host_cell.avail_memory,
+                         'total': host_cell.memory})
+                    return None
+            else:
+                if host_cell.memory < instance_cell.memory:
+                    LOG.debug(
+                        'Not enough host cell memory to fit instance cell. '
+                        'Required: %(required)d, actual: %(total)d',
+                        {'required': instance_cell.memory,
+                         'total': host_cell.memory})
+                    return None
 
     # NOTE(stephenfin): As with memory, do not allow an instance to overcommit
     # against itself on any NUMA cell
@@ -1034,16 +1058,6 @@ def _numa_fit_instance_cell(
                        'vcpus': len(instance_cell.pcpuset),
                        'actual': host_cell.avail_pcpus,
                        'num_cpu_reserved': cpuset_reserved})
-            return None
-
-        if instance_cell.memory > host_cell.avail_memory:
-            LOG.debug('Not enough available memory to schedule instance. '
-                      'Oversubscription is not possible with pinned '
-                      'instances. Required: %(required)s, available: '
-                      '%(available)s, total: %(total)s. ',
-                      {'required': instance_cell.memory,
-                       'available': host_cell.avail_memory,
-                       'total': host_cell.memory})
             return None
 
         # Try to pack the instance cell onto cores
