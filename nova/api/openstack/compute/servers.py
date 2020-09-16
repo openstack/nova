@@ -666,7 +666,8 @@ class ServersController(wsgi.Controller):
         except exception.InvalidInput as err:
             raise exc.HTTPBadRequest(explanation=six.text_type(err))
         if host or node:
-            context.can(server_policies.SERVERS % 'create:forced_host', {})
+            context.can(server_policies.SERVERS % 'create:forced_host',
+                        target=target)
 
         if api_version_request.is_supported(req, min_version='2.74'):
             self._process_hosts_for_create(context, target, server_dict,
