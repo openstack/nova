@@ -15,7 +15,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
@@ -45,6 +44,7 @@ class TestServersPerUserQuota(test.TestCase,
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
@@ -52,9 +52,6 @@ class TestServersPerUserQuota(test.TestCase,
         self.admin_api = api_fixture.admin_api
         self.api.microversion = '2.37'  # so we can specify networks='none'
         self.admin_api.microversion = '2.37'
-
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
 
         self.start_service('conductor')
         self.start_service('scheduler')
@@ -75,15 +72,11 @@ class TestServersPerUserQuota(test.TestCase,
         # Boot one instance into the default project as the admin user.
         # This results in usage of 1 instance for the project and 1 instance
         # for the admin user.
-        self._create_server(
-            image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
-            networks='none', api=self.admin_api)
+        self._create_server(networks='none', api=self.admin_api)
         # Now try to boot an instance as the non-admin user.
         # This should succeed because the non-admin user has 0 instances and
         # the project limit allows 10 instances.
-        server_req = self._build_server(
-            image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
-            networks='none')
+        server_req = self._build_server(networks='none')
         server = self.api.post_server({'server': server_req})
         self._wait_for_state_change(server, 'ACTIVE')
         # A request to boot a second instance should fail because the

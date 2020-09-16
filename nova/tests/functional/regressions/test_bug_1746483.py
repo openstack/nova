@@ -15,7 +15,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as image_fakes
 from nova.tests.unit import policy_fixture
 from nova import utils
 
@@ -39,6 +38,7 @@ class TestBootFromVolumeIsolatedHostsFilter(
 
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.CinderFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
@@ -46,9 +46,6 @@ class TestBootFromVolumeIsolatedHostsFilter(
             api_version='v2.1'))
 
         self.api = api_fixture.admin_api
-
-        image_fakes.stub_out_image_service(self)
-        self.addCleanup(image_fakes.FakeImageService_reset)
 
         self.start_service('conductor')
 
@@ -58,7 +55,7 @@ class TestBootFromVolumeIsolatedHostsFilter(
         enabled_filters.append('IsolatedHostsFilter')
         self.flags(
             enabled_filters=enabled_filters,
-            isolated_images=[image_fakes.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID],
+            isolated_images=[self.glance.auto_disk_config_enabled_image['id']],
             isolated_hosts=['host1'],
             restrict_isolated_hosts_to_isolated_images=True,
             group='filter_scheduler')

@@ -24,7 +24,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 
 
 class fake_result(object):
@@ -50,8 +49,7 @@ class MetadataTest(test.TestCase, integrated_helpers.InstanceHelperMixin):
     def setUp(self):
         super(MetadataTest, self).setUp()
 
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         self.start_service('conductor')

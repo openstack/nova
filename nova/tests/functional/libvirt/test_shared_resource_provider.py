@@ -19,7 +19,7 @@ import unittest
 from nova.compute import instance_actions
 from nova import conf
 from nova.tests.functional.libvirt import integrated_helpers
-import nova.tests.unit.image.fake
+from nova import utils
 
 
 CONF = conf.CONF
@@ -126,10 +126,9 @@ class SharedStorageProviderUsageTestCase(
             networks='none'
         )
 
-        rebuild_image_ref = (
-            nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
+        rebuild_image_ref = self.glance.auto_disk_config_enabled_image['id']
 
-        with nova.utils.temporary_mutation(self.api, microversion='2.35'):
+        with utils.temporary_mutation(self.api, microversion='2.35'):
             self.api.api_put('/images/%s/metadata' % rebuild_image_ref,
                              {'metadata': {
                                  'trait:STORAGE_DISK_SSD': 'required'}})
@@ -185,10 +184,9 @@ class SharedStorageProviderUsageTestCase(
             networks='none',
         )
 
-        rebuild_image_ref = (
-            nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
+        rebuild_image_ref = self.glance.auto_disk_config_enabled_image['id']
 
-        with nova.utils.temporary_mutation(self.api, microversion='2.35'):
+        with utils.temporary_mutation(self.api, microversion='2.35'):
             self.api.api_put('/images/%s/metadata' % rebuild_image_ref,
                              {'metadata': {
                                  'trait:CUSTOM_FOO': 'required'}})

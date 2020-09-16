@@ -18,7 +18,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 from nova.tests.unit import utils as test_utils
 from nova import utils
@@ -476,7 +475,8 @@ class IsolateAggregateFilterTest(AggregateRequestFiltersTest):
         self.useFixture(nova_fixtures.HostNameWeigherFixture())
 
         super(IsolateAggregateFilterTest, self).setUp()
-        self.image_service = nova.tests.unit.image.fake.FakeImageService()
+
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         # setting traits to flavors
         flavor_body = {'flavor': {'name': 'test_flavor',
                                   'ram': 512,
@@ -610,10 +610,9 @@ class IsolateAggregateFilterTest(AggregateRequestFiltersTest):
         # Creating a new image and setting traits on it.
         with nova.utils.temporary_mutation(self.api, microversion='2.35'):
             self.ctxt = test_utils.get_test_admin_context()
-            img_ref = self.image_service.create(self.ctxt, {'name': 'image10'})
+            img_ref = self.glance.create(self.ctxt, {'name': 'image10'})
             image_id_with_trait = img_ref['id']
-            self.addCleanup(
-                self.image_service.delete, self.ctxt, image_id_with_trait)
+            self.addCleanup(self.glance.delete, self.ctxt, image_id_with_trait)
             self.api.api_put('/images/%s/metadata' % image_id_with_trait,
                              {'metadata': {
                                  'trait:HW_CPU_X86_VMX': 'required'}})
@@ -640,10 +639,9 @@ class IsolateAggregateFilterTest(AggregateRequestFiltersTest):
         # Creating a new image and setting traits on it.
         with nova.utils.temporary_mutation(self.api, microversion='2.35'):
             self.ctxt = test_utils.get_test_admin_context()
-            img_ref = self.image_service.create(self.ctxt, {'name': 'image10'})
+            img_ref = self.glance.create(self.ctxt, {'name': 'image10'})
             image_id_with_trait = img_ref['id']
-            self.addCleanup(
-                self.image_service.delete, self.ctxt, image_id_with_trait)
+            self.addCleanup(self.glance.delete, self.ctxt, image_id_with_trait)
             self.api.api_put('/images/%s/metadata' % image_id_with_trait,
                              {'metadata': {
                                  'trait:HW_CPU_X86_VMX': 'required'}})
@@ -674,10 +672,9 @@ class IsolateAggregateFilterTest(AggregateRequestFiltersTest):
         # Creating a new image and setting traits on it.
         with nova.utils.temporary_mutation(self.api, microversion='2.35'):
             self.ctxt = test_utils.get_test_admin_context()
-            img_ref = self.image_service.create(self.ctxt, {'name': 'image10'})
+            img_ref = self.glance.create(self.ctxt, {'name': 'image10'})
             image_id_with_trait = img_ref['id']
-            self.addCleanup(
-                self.image_service.delete, self.ctxt, image_id_with_trait)
+            self.addCleanup(self.glance.delete, self.ctxt, image_id_with_trait)
             self.api.api_put('/images/%s/metadata' % image_id_with_trait,
                              {'metadata': {
                                  'trait:HW_CPU_X86_VMX': 'required'}})
@@ -832,10 +829,10 @@ class TestAggregateMultiTenancyIsolationFilter(
     def setUp(self):
         super(TestAggregateMultiTenancyIsolationFilter, self).setUp()
         # Stub out glance, placement and neutron.
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+
         # Start nova services.
         self.start_service('conductor')
         self.admin_api = self.useFixture(
@@ -937,6 +934,7 @@ class AggregateMultiTenancyIsolationColdMigrateTest(
     def setUp(self):
         super(AggregateMultiTenancyIsolationColdMigrateTest, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         # Intentionally keep these separate since we want to create the
@@ -949,10 +947,6 @@ class AggregateMultiTenancyIsolationColdMigrateTest(
             api_version='v2.1', project_id=uuids.user_project))
         self.api = user_api_fixture.api
         self.api.microversion = 'latest'
-
-        # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         self.start_service('conductor')
         # Enable the AggregateMultiTenancyIsolation filter before starting the
@@ -1003,10 +997,7 @@ class AggregateMultiTenancyIsolationColdMigrateTest(
         the server and asserts the server goes to the other host in the
         isolated host aggregate via the AggregateMultiTenancyIsolation filter.
         """
-        img = nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
-        server_req_body = self._build_server(
-            image_uuid=img,
-            networks='none')
+        server_req_body = self._build_server(networks='none')
         server = self.api.post_server({'server': server_req_body})
         server = self._wait_for_state_change(server, 'ACTIVE')
         # Ensure the server ended up in host2 or host3

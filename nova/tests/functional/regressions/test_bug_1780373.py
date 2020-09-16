@@ -14,7 +14,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
@@ -41,15 +40,13 @@ class TestMultiCreateServerGroupMemberOverQuota(
         self.flags(server_group_members=2, group='quota')
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
         self.api = api_fixture.api
         self.api.microversion = '2.37'  # so we can specify networks='none'
-
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
 
         group = {'name': 'test group', 'policies': ['soft-anti-affinity']}
         self.created_group = self.api.post_server_groups(group)
@@ -59,9 +56,7 @@ class TestMultiCreateServerGroupMemberOverQuota(
         server group and then create 3 servers in the group using a
         multi-create POST /servers request.
         """
-        server_req = self._build_server(
-            image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
-            networks='none')
+        server_req = self._build_server(networks='none')
         server_req['min_count'] = 3
         server_req['return_reservation_id'] = True
         hints = {'group': self.created_group['id']}
@@ -86,9 +81,7 @@ class TestMultiCreateServerGroupMemberOverQuota(
         # by using NoopConductorFixture.
         self.useFixture(nova_fixtures.NoopConductorFixture())
         for x in range(3):
-            server_req = self._build_server(
-                image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
-                networks='none')
+            server_req = self._build_server(networks='none')
             hints = {'group': self.created_group['id']}
             # This should result in a 403 response on the 3rd server.
             if x == 2:

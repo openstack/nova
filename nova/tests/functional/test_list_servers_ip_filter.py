@@ -14,13 +14,10 @@
 
 import time
 
-import nova.scheduler.utils
-import nova.servicegroup
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.unit import cast_as_call
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 
@@ -29,16 +26,13 @@ class TestListServersIpFilter(test.TestCase):
     def setUp(self):
         super(TestListServersIpFilter, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
-        self.neutron = self.useFixture(
-            nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
+        self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         # Add a 2nd port to the neutron fixture to have multiple ports
         self.neutron.create_port({'port': self.neutron.port_2})
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
         self.api = api_fixture.api
-
-        # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.useFixture(func_fixtures.PlacementFixture())
 

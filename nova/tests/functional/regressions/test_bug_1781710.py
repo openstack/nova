@@ -15,7 +15,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit import policy_fixture
 
 
@@ -40,6 +39,7 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
     def setUp(self):
         super(AntiAffinityMultiCreateRequest, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
@@ -49,9 +49,6 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
         # host on which the server was built.
         self.admin_api = api_fixture.admin_api
         self.api = api_fixture.api
-
-        image_fake.stub_out_image_service(self)
-        self.addCleanup(image_fake.FakeImageService_reset)
 
         self.start_service('conductor')
 
@@ -102,9 +99,7 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
                       '_get_alternate_hosts', stub_get_alternate_hosts)
 
         # Now create two servers in that group.
-        server_req = self._build_server(
-            image_uuid=image_fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
-            networks='none')
+        server_req = self._build_server(networks='none')
         server_req['min_count'] = 2
         self.api.api_post(
             '/servers', {'server': server_req,

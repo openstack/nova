@@ -16,7 +16,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
-import nova.tests.unit.image.fake as fake_image
 from nova.tests.unit import policy_fixture
 
 CELL1_NAME = 'cell1'
@@ -32,6 +31,7 @@ class MultiCellSchedulerTestCase(test.TestCase,
         super(MultiCellSchedulerTestCase, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.AllServicesCurrent())
         self.useFixture(func_fixtures.PlacementFixture())
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
@@ -46,8 +46,6 @@ class MultiCellSchedulerTestCase(test.TestCase,
                    group='filter_scheduler')
         self.start_service('conductor')
         self.start_service('scheduler')
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
 
     def _test_create_and_migrate(self, expected_status, az=None):
         server = self._create_server(az=az)

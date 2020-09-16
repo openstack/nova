@@ -21,7 +21,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.unit import cast_as_call
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 LOG = logging.getLogger(__name__)
@@ -60,7 +59,7 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         self.api.microversion = 'latest'
 
         # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
 
         self.start_service('conductor')
         self.start_service('scheduler')
@@ -128,7 +127,7 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         LOG.info('Creating server and waiting for it to be ACTIVE.')
         server = dict(
             name='local-delete-volume-attach-test',
-            # The image ID comes from nova.tests.unit.image.fake.
+            # The image ID comes from GlanceFixture
             imageRef='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
             flavorRef=self.flavor_id,
             # Bypass network setup on the compute.

@@ -22,7 +22,6 @@ from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 
@@ -47,6 +46,7 @@ class FailedEvacuateStateTests(test.TestCase,
 
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
@@ -55,12 +55,8 @@ class FailedEvacuateStateTests(test.TestCase,
         self.api = api_fixture.admin_api
         self.api.microversion = self.microversion
 
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-
         self.start_service('conductor')
         self.start_service('scheduler')
-
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         self.hostname = 'host1'
         self.compute1 = self.start_service('compute', host=self.hostname)

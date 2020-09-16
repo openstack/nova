@@ -28,7 +28,6 @@ from nova.tests import json_ref
 from nova.tests.unit.api.openstack.compute import test_services
 from nova.tests.unit import fake_crypto
 from nova.tests.unit import fake_notifier
-import nova.tests.unit.image.fake
 
 CONF = cfg.CONF
 
@@ -80,10 +79,7 @@ class NotificationSampleTestBase(test.TestCase,
         self.addCleanup(fake_notifier.reset)
 
         self.useFixture(utils_fixture.TimeFixture(test_services.fake_utcnow()))
-
-        # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
         context_patcher = self.mock_gen_request_id = mock.patch(

@@ -49,7 +49,6 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_requests
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit.objects import test_instance_info_cache
 from nova import utils as nova_utils
 from nova.virt import fake
@@ -1343,7 +1342,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
         # Now update the image metadata to be something that won't work with
         # the fake compute driver we're using since the fake driver has an
         # "x86_64" architecture.
-        rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
+        rebuild_image_ref = self.glance.auto_disk_config_enabled_image['id']
         self.api.put_image_meta_key(
             rebuild_image_ref, 'hw_architecture', 'unicore32')
         # Now rebuild the server with that updated image and it should result
@@ -1456,7 +1455,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
         allocs = allocs[rp_uuid]['resources']
         assertFlavorMatchesAllocation(flavor, allocs)
 
-        rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
+        rebuild_image_ref = self.glance.auto_disk_config_enabled_image['id']
         # Now rebuild the server with a different image.
         rebuild_req_body = {
             'rebuild': {
@@ -1508,7 +1507,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
 
         # Now rebuild the server with a different image than was used to create
         # our fake volume.
-        rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
+        rebuild_image_ref = self.glance.auto_disk_config_enabled_image['id']
         rebuild_req_body = {
             'rebuild': {
                 'imageRef': rebuild_image_ref
@@ -8190,7 +8189,7 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         self.assertEqual(evac_hostname, arqs_new[0]['hostname'])
 
     def test_rebuild_ok(self):
-        rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
+        rebuild_image_ref = self.glance.auto_disk_config_enabled_image['id']
         self.api.post_server_action(self.server['id'],
             {'rebuild': {
                 'imageRef': rebuild_image_ref,
@@ -8248,7 +8247,8 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         rebuild so OpenStackApiException is raised.
         """
         old_compute_version.return_value = 52
-        rebuild_image_ref = fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID
+        rebuild_image_ref = self.glance.auto_disk_config_enabled_image['id']
+
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server_action, self.server['id'],
             {'rebuild': {

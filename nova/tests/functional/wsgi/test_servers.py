@@ -19,7 +19,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
@@ -43,9 +42,9 @@ class ServersPreSchedulingTestCase(test.TestCase,
 
     def setUp(self):
         super(ServersPreSchedulingTestCase, self).setUp()
-        fake_image.stub_out_image_service(self)
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NoopConductorFixture())
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
@@ -58,7 +57,7 @@ class ServersPreSchedulingTestCase(test.TestCase,
 
     def test_instance_from_buildrequest(self):
         self.useFixture(nova_fixtures.AllServicesCurrent())
-        image_ref = fake_image.get_valid_image_id()
+        image_ref = self.glance.auto_disk_config_enabled_image['id']
         body = {
             'server': {
                 'name': 'foo',
@@ -89,7 +88,7 @@ class ServersPreSchedulingTestCase(test.TestCase,
         self.assertEqual('BUILD', server['status'])
 
     def test_instance_from_buildrequest_old_service(self):
-        image_ref = fake_image.get_valid_image_id()
+        image_ref = self.glance.auto_disk_config_enabled_image['id']
         body = {
             'server': {
                 'name': 'foo',
@@ -120,7 +119,7 @@ class ServersPreSchedulingTestCase(test.TestCase,
 
     def test_delete_instance_from_buildrequest(self):
         self.useFixture(nova_fixtures.AllServicesCurrent())
-        image_ref = fake_image.get_valid_image_id()
+        image_ref = self.glance.auto_disk_config_enabled_image['id']
         body = {
             'server': {
                 'name': 'foo',
@@ -137,7 +136,7 @@ class ServersPreSchedulingTestCase(test.TestCase,
         self.assertEqual(404, get_resp.status)
 
     def test_delete_instance_from_buildrequest_old_service(self):
-        image_ref = fake_image.get_valid_image_id()
+        image_ref = self.glance.auto_disk_config_enabled_image['id']
         body = {
             'server': {
                 'name': 'foo',
@@ -154,7 +153,7 @@ class ServersPreSchedulingTestCase(test.TestCase,
         self.assertEqual(404, get_resp.status)
 
     def _test_instance_list_from_buildrequests(self):
-        image_ref = fake_image.get_valid_image_id()
+        image_ref = self.glance.auto_disk_config_enabled_image['id']
         body = {
             'server': {
                 'name': 'foo',
@@ -198,7 +197,7 @@ class ServersPreSchedulingTestCase(test.TestCase,
         used to test the various tags filters working in the BuildRequestList.
         """
         self.useFixture(nova_fixtures.AllServicesCurrent())
-        image_ref = fake_image.get_valid_image_id()
+        image_ref = self.glance.auto_disk_config_enabled_image['id']
         body = {
             'server': {
                 'name': 'foo',
@@ -297,7 +296,7 @@ class ServersPreSchedulingTestCase(test.TestCase,
         body = {
             'server': {
                 'name': 'test_instance_list_build_request_marker_ip_filter',
-                'imageRef': fake_image.get_valid_image_id(),
+                'imageRef': self.glance.auto_disk_config_enabled_image['id'],
                 'flavorRef': '1',
                 'networks': 'none'
             }
@@ -324,8 +323,7 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
 
     def setUp(self):
         super(EnforceVolumeBackedForZeroDiskFlavorTestCase, self).setUp()
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.policy_fixture = (
             self.useFixture(policy_fixture.RealPolicyFixture()))
@@ -354,7 +352,7 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
             servers_policies.ZERO_DISK_FLAVOR: base_policies.RULE_ADMIN_API},
             overwrite=False)
         server_req = self._build_server(
-            image_uuid=fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
+            image_uuid=self.glance.auto_disk_config_enabled_image['id'],
             flavor_id=self.zero_disk_flavor['id'])
         ex = self.assertRaises(api_client.OpenStackApiException,
                                self.api.post_server, {'server': server_req})

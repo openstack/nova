@@ -10,14 +10,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+from nova.compute import manager
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 
@@ -53,8 +52,7 @@ class TestEvacuationWithSourceReturningDuringRebuild(
         self.api.microversion = '2.14'
 
         # the image fake backend needed for image discovery
-        nova.tests.unit.image.fake.stub_out_image_service(self)
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
 
         self.start_service('conductor')
         self.start_service('scheduler')
@@ -71,7 +69,7 @@ class TestEvacuationWithSourceReturningDuringRebuild(
         # Stub out rebuild with a slower method allowing the src compute to be
         # restarted once the migration hits pre-migrating after claiming
         # resources on the dest.
-        manager_class = nova.compute.manager.ComputeManager
+        manager_class = manager.ComputeManager
         original_rebuild = manager_class._do_rebuild_instance
 
         def start_src_rebuild(self_, context, instance, *args, **kwargs):

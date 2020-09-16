@@ -14,7 +14,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as image_fake
 from nova.tests.unit import policy_fixture
 
 
@@ -40,6 +39,7 @@ class ColdMigrateTargetHostThenLiveMigrateTest(
         super(ColdMigrateTargetHostThenLiveMigrateTest, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
@@ -53,9 +53,6 @@ class ColdMigrateTargetHostThenLiveMigrateTest(
         self.admin_api.microversion = 'latest'
         self.api.microversion = 'latest'
 
-        image_fake.stub_out_image_service(self)
-        self.addCleanup(image_fake.FakeImageService_reset)
-
         self.start_service('conductor')
         self.start_service('scheduler')
 
@@ -64,9 +61,7 @@ class ColdMigrateTargetHostThenLiveMigrateTest(
 
     def test_cold_migrate_target_host_then_live_migrate(self):
         # Create a server, it doesn't matter on which host it builds.
-        server = self._build_server(
-            image_uuid=image_fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
-            networks='none')
+        server = self._build_server(networks='none')
         server = self.api.post_server({'server': server})
         server = self._wait_for_state_change(server, 'ACTIVE')
         original_host = server['OS-EXT-SRV-ATTR:host']

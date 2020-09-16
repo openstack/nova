@@ -33,7 +33,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_notifier
-from nova.tests.unit.image import fake as fake_image
 from nova.virt import driver as virt_driver
 
 
@@ -697,10 +696,9 @@ class TestProviderConfig(integrated_helpers.ProviderUsageBaseTestCase):
         compute service that provides that trait.
         """
 
-        self.neutron = nova_fixtures.NeutronFixture(self)
-        self.useFixture(self.neutron)
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
+        self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.GlanceFixture(self))
+
         # Start nova services.
         self.api = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1')).admin_api

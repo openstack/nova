@@ -16,7 +16,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 from nova import utils
 
@@ -49,8 +48,7 @@ class InstanceListWithDeletedServicesTestCase(
         self.admin_api.microversion = 'latest'
 
         # the image fake backend needed for image discovery
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
+        self.useFixture(nova_fixtures.GlanceFixture(self))
 
         self.api.microversion = 'latest'
 

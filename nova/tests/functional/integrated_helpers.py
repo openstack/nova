@@ -42,7 +42,6 @@ from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_notifier
-import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 from nova import utils
 
@@ -1050,15 +1049,12 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
 
-        self.fake_image_service =\
-            nova.tests.unit.image.fake.stub_out_image_service(self)
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
-
         self.useFixture(cast_as_call.CastAsCall(self))
 
         self.placement = self.useFixture(func_fixtures.PlacementFixture()).api
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
 
         fake_notifier.stub_notifier(self)
@@ -1128,6 +1124,7 @@ class ProviderUsageBaseTestCase(test.TestCase, PlacementInstanceHelperMixin):
 
         self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.placement = self.useFixture(func_fixtures.PlacementFixture()).api
         self.useFixture(nova_fixtures.AllServicesCurrent())
 
@@ -1141,11 +1138,5 @@ class ProviderUsageBaseTestCase(test.TestCase, PlacementInstanceHelperMixin):
         self.admin_api.microversion = self.microversion
         self.api = self.admin_api
 
-        # the image fake backend needed for image discovery
-        self.image_service = (
-            nova.tests.unit.image.fake.stub_out_image_service(self))
-
         self.start_service('conductor')
         self.scheduler_service = self.start_service('scheduler')
-
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)

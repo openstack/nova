@@ -15,7 +15,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_notifier
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
@@ -27,16 +26,16 @@ class RegressionTest1835822(
         super(RegressionTest1835822, self).setUp()
         # Use the standard fixtures.
         self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
+
         self.api = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1')).api
         self.start_service('conductor')
         self.start_service('scheduler')
         self.start_service('compute')
-        # the image fake backend needed for image discovery
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
+
         images = self.api.get_images()
         self.image_ref_0 = images[0]['id']
         self.image_ref_1 = images[1]['id']

@@ -16,7 +16,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
@@ -31,11 +30,9 @@ class ServerFaultTestCase(test.TestCase,
 
     def setUp(self):
         super(ServerFaultTestCase, self).setUp()
-        # Setup the standard fixtures.
-        fake_image.stub_out_image_service(self)
-        self.addCleanup(fake_image.FakeImageService_reset)
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
+        self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(policy_fixture.RealPolicyFixture())
 
         # Start the compute services.
