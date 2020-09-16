@@ -86,7 +86,7 @@ class _HostMountStateManager(object):
         with self.cond:
             state = self.state
             if state is None:
-                raise exception.HypervisorUnavailable(host=CONF.host)
+                raise exception.HypervisorUnavailable()
             self.use_count += 1
 
         try:
