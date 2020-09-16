@@ -6482,8 +6482,9 @@ class ComputeTestCase(BaseTestCase,
             mock.patch.object(
                 self.compute.network_api, 'setup_networks_on_host'),
             mock.patch.object(migration_obj, 'save'),
+            mock.patch.object(instance, 'get_network_info', return_value=[]),
         ) as (
-            mock_migrate, mock_setup, mock_mig_save
+            mock_migrate, mock_setup, mock_mig_save, mock_get_nw_info
         ):
             self.compute._post_live_migration(c, instance, dest,
                                               migrate_data=migrate_data,
@@ -6495,6 +6496,7 @@ class ComputeTestCase(BaseTestCase,
         mock_migrate.assert_called_once_with(c, instance, migration)
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
+        mock_get_nw_info.assert_called()
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_post_live_migration_working_correctly(self, mock_notify):
@@ -6537,12 +6539,15 @@ class ComputeTestCase(BaseTestCase,
                               'clear_events_for_instance'),
             mock.patch.object(self.compute, 'update_available_resource'),
             mock.patch.object(migration_obj, 'save'),
+            mock.patch.object(instance, 'get_network_info'),
         ) as (
             post_live_migration, unfilter_instance,
             migrate_instance_start, post_live_migration_at_destination,
             post_live_migration_at_source, setup_networks_on_host,
-            clear_events, update_available_resource, mig_save
+            clear_events, update_available_resource, mig_save, get_nw_info,
         ):
+            nw_info = network_model.NetworkInfo.hydrate([])
+            get_nw_info.return_value = nw_info
             self.compute._post_live_migration(c, instance, dest,
                                               migrate_data=migrate_data,
                                               source_bdms=bdms)
@@ -6565,7 +6570,7 @@ class ComputeTestCase(BaseTestCase,
             post_live_migration_at_destination.assert_has_calls([
                 mock.call(c, instance, False, dest)])
             post_live_migration_at_source.assert_has_calls(
-                [mock.call(c, instance, [])])
+                [mock.call(c, instance, nw_info)])
             clear_events.assert_called_once_with(instance)
             update_available_resource.assert_has_calls([mock.call(c)])
             self.assertEqual('completed', migration_obj.status)
