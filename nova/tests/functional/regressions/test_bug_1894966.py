@@ -37,5 +37,4 @@ class TestCreateServerGroupWithEmptyPolicies(
             client.OpenStackApiException,
             self.api.post_server_groups,
             {'name': 'test group', 'policies': []})
-        # FIXME(stephenfin): This should not be a 500 error
-        self.assertEqual(500, exc.response.status_code)
+        self.assertEqual(400, exc.response.status_code)

@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    Resolved an issue whereby providing an empty list for the ``policies``
+    field in the request body of the ``POST /os-server-groups`` API would
+    result in a server error. This only affects the 2.1 to 2.63 microversions,
+    as the 2.64 microversion replaces the ``policies`` list field with a
+    ``policy`` string field. See `bug #1894966`__ for more information.
+
+    .. __: https://bugs.launchpad.net/nova/+bug/1894966
