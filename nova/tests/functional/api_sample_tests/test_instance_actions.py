@@ -15,7 +15,6 @@
 
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.functional import api_samples_test_base
-from nova.tests.unit import policy_fixture
 
 
 class ServerActionsSampleJsonTest(test_servers.ServersSampleBase):
@@ -35,7 +34,6 @@ class ServerActionsSampleJsonTest(test_servers.ServersSampleBase):
         actions = api_samples_test_base.objectify(response_data)
         self.action_stop = actions['instanceActions'][0]
         self._wait_for_state_change({'id': self.uuid}, 'SHUTOFF')
-        self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
 
     def _get_subs(self):
         return {

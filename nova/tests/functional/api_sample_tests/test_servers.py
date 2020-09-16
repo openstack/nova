@@ -104,6 +104,9 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
 
 
 class ServersSampleJsonTest(ServersSampleBase):
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
     # This controls whether or not we use the common server API sample
     # for server post req/resp.
     use_common_server_post = True
@@ -256,6 +259,9 @@ class ServersSampleJson252Test(ServersSampleJsonTest):
 
 
 class ServersSampleJson263Test(ServersSampleBase):
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
     microversion = '2.63'
     scenarios = [('v2_63', {'api_major_version': 'v2.1'})]
 
@@ -324,6 +330,9 @@ class ServersSampleJson263Test(ServersSampleBase):
 
 
 class ServersSampleJson266Test(ServersSampleBase):
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
     microversion = '2.66'
     scenarios = [('v2_66', {'api_major_version': 'v2.1'})]
 
@@ -376,6 +385,9 @@ class ServersSampleJson267Test(ServersSampleBase):
 
 
 class ServersSampleJson269Test(ServersSampleBase):
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
     microversion = '2.69'
     scenarios = [('v2_69', {'api_major_version': 'v2.1'})]
 
@@ -423,6 +435,9 @@ class ServersSampleJson269Test(ServersSampleBase):
 
 
 class ServersSampleJson271Test(ServersSampleBase):
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
     microversion = '2.71'
     scenarios = [('v2_71', {'api_major_version': 'v2.1'})]
 
@@ -515,6 +530,9 @@ class ServersSampleJson271Test(ServersSampleBase):
 
 
 class ServersSampleJson273Test(ServersSampleBase):
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
     microversion = '2.73'
     scenarios = [('v2_73', {'api_major_version': 'v2.1'})]
 
@@ -571,6 +589,8 @@ class ServersSampleJson274Test(ServersSampleBase):
     """Supporting host and/or hypervisor_hostname is an admin API
     to create servers.
     """
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
     ADMIN_API = True
     SUPPORTS_CELLS = True
     microversion = '2.74'
@@ -600,6 +620,10 @@ class ServersSampleJson274Test(ServersSampleBase):
 
 
 class ServersUpdateSampleJsonTest(ServersSampleBase):
+
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
 
     def test_update_server(self):
         uuid = self._post_server()
@@ -668,6 +692,9 @@ class _ServersActionsJsonTestMixin(object):
 
 
 class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
     SUPPORTS_CELLS = True
 
     def test_server_reboot_hard(self):
@@ -793,6 +820,9 @@ class ServersActionsJsonTest(ServersSampleBase, _ServersActionsJsonTestMixin):
 
 
 class ServersActionsJson219Test(ServersSampleBase):
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
     microversion = '2.19'
     scenarios = [('v2_19', {'api_major_version': 'v2.1'})]
 
@@ -817,6 +847,9 @@ class ServersActionsJson219Test(ServersSampleBase):
 
 
 class ServersActionsJson226Test(ServersSampleBase):
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
     microversion = '2.26'
     scenarios = [('v2_26', {'api_major_version': 'v2.1'})]
 
@@ -849,6 +882,9 @@ class ServersActionsJson226Test(ServersSampleBase):
 
 
 class ServersActionsJson254Test(ServersSampleBase):
+    # Many of the 'os_compute_api:servers:*' policies are admin-only, and we
+    # want to get admin-style (complete) responses even for those aren't
+    ADMIN_API = True
     microversion = '2.54'
     sample_dir = 'servers'
     scenarios = [('v2_54', {'api_major_version': 'v2.1'})]

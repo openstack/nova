@@ -118,6 +118,9 @@ class FakeKeyManager(key_manager.KeyManager):
 
 class VTPMServersTest(base.ServersTestBase):
 
+    # many move operations are admin-only
+    ADMIN_API = True
+
     def setUp(self):
         # enable vTPM and use our own fake key service
         self.flags(swtpm_enabled=True, group='libvirt')

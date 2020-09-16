@@ -1052,25 +1052,28 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
 
         self.fake_image_service =\
             nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         self.useFixture(cast_as_call.CastAsCall(self))
 
         self.placement = self.useFixture(func_fixtures.PlacementFixture()).api
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
+        self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
         self._setup_services()
 
-        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
-
     def _setup_compute_service(self):
         return self._start_compute('compute')
 
     def _setup_scheduler_service(self):
         return self.start_service('scheduler')
+
+    def _setup_conductor_service(self):
+        return self.start_service('conductor')
 
     def _setup_services(self):
         # NOTE(danms): Set the global MQ connection to that of our first cell
@@ -1079,7 +1082,7 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
         if 'cell1' in self.cell_mappings:
             self.flags(transport_url=self.cell_mappings['cell1'].transport_url)
 
-        self.conductor = self.start_service('conductor')
+        self.conductor = self._setup_conductor_service()
         self.scheduler = self._setup_scheduler_service()
         self.compute = self._setup_compute_service()
 

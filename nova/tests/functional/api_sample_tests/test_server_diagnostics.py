@@ -17,6 +17,8 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class ServerDiagnosticsSamplesJsonTest(test_servers.ServersSampleBase):
+    # The 'os_compute_api:os-server-diagnostics' policy is admin-only
+    ADMIN_API = True
     sample_dir = "os-server-diagnostics"
 
     def test_server_diagnostics_get(self):

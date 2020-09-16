@@ -27,6 +27,9 @@ from nova.tests.unit import fake_instance
 
 
 class ServerMigrationsSampleJsonTest(test_servers.ServersSampleBase):
+    # The 'os_compute_api:servers:migrations:*' and
+    # 'os_compute_api:os-migrations:*' policies are admin-only
+    ADMIN_API = True
     sample_dir = 'server-migrations'
     scenarios = [('v2_22', {'api_major_version': 'v2.1'})]
     microversion = '2.22'
@@ -66,6 +69,8 @@ class ServerMigrationsSampleJsonTest(test_servers.ServersSampleBase):
 
 
 class ServerMigrationsSamplesJsonTestV2_23(test_servers.ServersSampleBase):
+    # The 'os_compute_api:servers:migrations:*' and
+    # 'os_compute_api:os-migrations:*' policies are admin-only
     ADMIN_API = True
     sample_dir = "server-migrations"
     microversion = '2.23'
@@ -163,6 +168,8 @@ class ServerMigrationsSamplesJsonTestV2_23(test_servers.ServersSampleBase):
 
 
 class ServerMigrationsSampleJsonTestV2_24(test_servers.ServersSampleBase):
+    # The 'os_compute_api:servers:migrations:*' and
+    # 'os_compute_api:os-migrations:*' policies are admin-only
     ADMIN_API = True
     microversion = '2.24'
     sample_dir = "server-migrations"
@@ -216,7 +223,6 @@ class ServerMigrationsSampleJsonTestV2_24(test_servers.ServersSampleBase):
 class ServerMigrationsSamplesJsonTestV2_59(
     ServerMigrationsSamplesJsonTestV2_23
 ):
-    ADMIN_API = True
     microversion = '2.59'
     scenarios = [('v2_59', {'api_major_version': 'v2.1'})]
 
@@ -230,7 +236,6 @@ class ServerMigrationsSamplesJsonTestV2_59(
 
 
 class ServerMigrationsSampleJsonTestV2_65(ServerMigrationsSampleJsonTestV2_24):
-    ADMIN_API = True
     microversion = '2.65'
     scenarios = [('v2_65', {'api_major_version': 'v2.1'})]
 

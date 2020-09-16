@@ -190,6 +190,8 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
 
 
 class VolumeAttachmentsSample(test_servers.ServersSampleBase):
+    # The 'os_compute_api:os-volumes-attachments:swap' policy is admin-only
+    ADMIN_API = True
     sample_dir = "os-volumes"
 
     OLD_VOLUME_ID = fixtures.CinderFixture.SWAP_OLD_VOL

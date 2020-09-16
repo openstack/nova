@@ -82,6 +82,6 @@
         "tenant_id": "6f70656e737461636b20342065766572",
         "trusted_image_certificates": null,
         "updated": "%(isotime)s",
-        "user_id": "fake"
+        "user_id": "admin"
     }
 }

@@ -1303,13 +1303,12 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
 
     def _disable_compute_for(self, server):
         # Refresh to get its host
-        server = self.api.get_server(server['id'])
+        server = self.admin_api.get_server(server['id'])
         host = server['OS-EXT-SRV-ATTR:host']
 
         # Disable the service it is on
-        self.api_fixture.admin_api.put_service('disable',
-                                               {'host': host,
-                                                'binary': 'nova-compute'})
+        self.admin_api.put_service(
+            'disable', {'host': host, 'binary': 'nova-compute'})
 
     def test_rebuild_with_image_novalidhost(self):
         """Creates a server with an image that is valid for the single compute

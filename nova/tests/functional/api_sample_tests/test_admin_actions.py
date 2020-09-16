@@ -17,6 +17,8 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class AdminActionsSamplesJsonTest(test_servers.ServersSampleBase):
+    # The various 'os_compute_api:os-admin-actions:*' policies are admin-only
+    ADMIN_API = True
     sample_dir = "os-admin-actions"
 
     def setUp(self):

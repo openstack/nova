@@ -60,6 +60,6 @@
         "trusted_image_certificates": null,
         "updated": "2019-02-28T03:16:20Z",
         "user_data": "ZWNobyAiaGVsbG8gd29ybGQi",
-        "user_id": "fake"
+        "user_id": "admin"
     }
 }

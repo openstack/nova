@@ -2,16 +2,6 @@
     "server": {
         "OS-DCF:diskConfig": "AUTO",
         "OS-EXT-AZ:availability_zone": "us-west",
-        "OS-EXT-SRV-ATTR:host": "compute",
-        "OS-EXT-SRV-ATTR:hostname": "new-server-test",
-        "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
-        "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
-        "OS-EXT-SRV-ATTR:kernel_id": "",
-        "OS-EXT-SRV-ATTR:launch_index": 0,
-        "OS-EXT-SRV-ATTR:ramdisk_id": "",
-        "OS-EXT-SRV-ATTR:reservation_id": "r-d0bls59j",
-        "OS-EXT-SRV-ATTR:root_device_name": "/dev/sda",
-        "OS-EXT-SRV-ATTR:user_data": "IyEvYmluL2Jhc2gKL2Jpbi9zdQplY2hvICJJIGFtIGluIHlvdSEiCg==",
         "OS-EXT-STS:power_state": 4,
         "OS-EXT-STS:task_state": null,
         "OS-EXT-STS:vm_state": "rescued",
@@ -42,7 +32,6 @@
             "vcpus": 1
         },
         "hostId": "2091634baaccdc4c5a1d57069c833e402921df696b7f970791b12ec6",
-        "host_status": "UP",
         "id": "69bebe1c-3bdb-4feb-9b79-afa3d4782d95",
         "image": {
             "id": "70a599e0-31e7-49b7-b260-868f441e862b",

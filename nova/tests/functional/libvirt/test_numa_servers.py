@@ -330,7 +330,7 @@ class NUMAServersTest(NUMAServersTestBase):
         flavor_id = self._create_flavor(vcpu=2, extra_spec=extra_spec)
 
         # Update the core quota less than we requested
-        self.api.update_quota({'cores': 1})
+        self.admin_api.update_quota({'cores': 1})
 
         post = {'server': self._build_server(flavor_id=flavor_id)}
 
@@ -430,7 +430,7 @@ class NUMAServersTest(NUMAServersTestBase):
         flavor_id = self._create_flavor(vcpu=2, extra_spec=extra_spec)
 
         # Update the core quota less than we requested
-        self.api.update_quota({'cores': 1})
+        self.admin_api.update_quota({'cores': 1})
 
         post = {'server': self._build_server(flavor_id=flavor_id)}
 
@@ -1140,7 +1140,7 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         # probably be less...dumb
         with mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                         '.migrate_disk_and_power_off', return_value='{}'):
-            self.api.post_server_action(server['id'], {'migrate': None})
+            self.admin_api.post_server_action(server['id'], {'migrate': None})
 
         server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
