@@ -163,6 +163,14 @@ The following sections describe the available compute filters.
 AggregateImagePropertiesIsolation
 ---------------------------------
 
+.. versionchanged:: 12.0.0 (Liberty)
+
+    Prior to 12.0.0 Liberty, it was possible to specify and use arbitrary
+    metadata with this filter. Starting in Liberty, nova only parses
+    :glance-doc:`standard metadata <admin/useful-image-properties.html>`. If
+    you wish to use arbitrary metadata, consider using the
+    :ref:`AggregateInstanceExtraSpecsFilter` filter instead.
+
 Matches properties defined in an image's metadata against those of aggregates
 to determine host matches:
 
