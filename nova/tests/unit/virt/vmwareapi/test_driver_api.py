@@ -46,9 +46,9 @@ from nova.image import glance
 from nova.network import model as network_model
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_instance
-import nova.tests.unit.image.fake
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit import utils
@@ -219,7 +219,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.context = context.RequestContext(self.user_id, self.project_id)
         stubs.set_stubs(self)
         vmwareapi_fake.reset()
-        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         service = self._create_service(host=HOST)
 
         self.conn = driver.VMwareVCDriver(None, False)
@@ -234,7 +234,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
         self.network_info = utils.get_test_network_info()
-        image_ref = nova.tests.unit.image.fake.get_valid_image_id()
+        image_ref = self.glance.auto_disk_config_enabled_image['id']
         (image_service, image_id) = glance.get_remote_image_service(
             self.context, image_ref)
         metadata = image_service.show(self.context, image_id)
@@ -244,7 +244,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             'size': int(metadata['size']),
         })
         self.fake_image_uuid = self.image.id
-        nova.tests.unit.image.fake.stub_out_image_service(self)
         self.vnc_host = 'ha-host'
 
         # create compute node resource provider
@@ -266,7 +265,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     def tearDown(self):
         super(VMwareAPIVMTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
-        nova.tests.unit.image.fake.FakeImageService_reset()
 
     def test_legacy_block_device_info(self):
         self.assertFalse(self.conn.need_legacy_block_device_info)

@@ -21,8 +21,8 @@ from nova import context
 from nova.image import glance
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_instance
-import nova.tests.unit.image.fake
 from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
@@ -50,11 +50,11 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.flags(enabled=False, group='vnc')
         vmwareapi_fake.reset()
         stubs.set_stubs(self)
-        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
         self.network_info = utils.get_test_network_info()
         self.node_name = self.conn._nodename
-        image_ref = nova.tests.unit.image.fake.get_valid_image_id()
+        image_ref = self.glance.auto_disk_config_enabled_image['id']
         instance_values = {
             'vm_state': 'building',
             'project_id': 'fake',
@@ -121,7 +121,6 @@ class ConfigDriveTestCase(test.NoDBTestCase):
     def tearDown(self):
         super(ConfigDriveTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
-        nova.tests.unit.image.fake.FakeImageService_reset()
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata',
                        return_value='fake_metadata')

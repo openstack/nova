@@ -17,7 +17,7 @@ import time
 
 import mock
 from oslo_serialization import jsonutils
-from oslo_utils.fixture import uuidsentinel
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
@@ -33,7 +33,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
-import nova.tests.unit.image.fake
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova import version
@@ -70,7 +69,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._session = driver.VMwareAPISession()
 
         self._virtapi = mock.Mock()
-        self._image_id = nova.tests.unit.image.fake.get_valid_image_id()
+        self._image_id = uuids.image
         fake_ds_ref = vmwareapi_fake.ManagedObjectReference(value='fake-ds')
         self._ds = ds_obj.Datastore(
                 ref=fake_ds_ref, name='fake_ds',
@@ -80,7 +79,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 ref='fake_dc_ref', name='fake_dc',
                 vmFolder='fake_vm_folder')
         cluster = vmwareapi_fake.create_cluster('fake_cluster', fake_ds_ref)
-        self._uuid = uuidsentinel.foo
+        self._uuid = uuids.foo
         fake_info_cache = {
             'created_at': None,
             'updated_at': None,
@@ -173,8 +172,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             "flavor:ephemeral_gb:8128\n"
             "flavor:root_gb:496\n"
             "flavor:swap:33550336\n"
-            "imageid:70a599e0-31e7-49b7-b260-868f441e862b\n"
-            "package:%s\n" % version.version_string_with_package())
+            "imageid:%s\n"
+            "package:%s\n" % (
+                uuids.image,
+                version.version_string_with_package()))
 
     def test_get_machine_id_str(self):
         result = vmops.VMwareVMOps._get_machine_id_str(self.network_info)
@@ -754,8 +755,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                         'flavor:ephemeral_gb:0\n'
                         'flavor:root_gb:10\n'
                         'flavor:swap:0\n'
-                        'imageid:70a599e0-31e7-49b7-b260-868f441e862b\n'
-                        'package:%s\n' % version.version_string_with_package())
+                        'imageid:%s\n'
+                        'package:%s\n' % (
+                            uuids.image,
+                            version.version_string_with_package()))
             fake_resize_spec.assert_called_once_with(
                 self._session.vim.client.factory,
                 int(self._instance.vcpus),
@@ -1191,10 +1194,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertTrue(self.password_logged)
 
     def _get_metadata(self, is_image_used=True):
-        if is_image_used:
-            image_id = '70a599e0-31e7-49b7-b260-868f441e862b'
-        else:
-            image_id = None
         return ("name:fake_display_name\n"
                 "userid:fake_user\n"
                 "username:None\n"
@@ -1208,7 +1207,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 "flavor:swap:0\n"
                 "imageid:%(image_id)s\n"
                 "package:%(version)s\n" % {
-                    'image_id': image_id,
+                    'image_id': uuids.image if is_image_used else None,
                     'version': version.version_string_with_package()})
 
     @mock.patch.object(vm_util, 'rename_vm')
@@ -1222,8 +1221,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
-    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
-                       'from_image')
+    @mock.patch.object(images.VMwareImage, 'from_image')
     def test_spawn_non_root_block_device(self, from_image,
                                          get_extra_specs,
                                          get_vm_config_info,
@@ -1284,8 +1282,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
-    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
-                       'from_image')
+    @mock.patch.object(images.VMwareImage, 'from_image')
     def test_spawn_with_no_image_and_block_devices(self, from_image,
                                                    get_extra_specs,
                                                    get_vm_config_info,
@@ -1347,8 +1344,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
-    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
-                       'from_image')
+    @mock.patch.object(images.VMwareImage, 'from_image')
     def test_spawn_unsupported_hardware(self, from_image,
                                         get_extra_specs,
                                         get_vm_config_info,
@@ -1859,8 +1855,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
-    @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
-                       'from_image')
+    @mock.patch.object(images.VMwareImage, 'from_image')
     def test_spawn_with_ephemerals_and_swap(self, from_image,
                                             get_extra_specs,
                                             get_vm_config_info,
@@ -2048,8 +2043,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
                        return_value='fake_vm_folder')
     def test_build_virtual_machine(self, mock_create_folder):
-        image_id = nova.tests.unit.image.fake.get_valid_image_id()
-        image = images.VMwareImage(image_id=image_id)
+        image = images.VMwareImage(image_id=self._image_id)
 
         extra_specs = vm_util.ExtraSpecs()
 
@@ -2805,8 +2799,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     "flavor:ephemeral_gb:8128\n"
                     "flavor:root_gb:496\n"
                     "flavor:swap:33550336\n"
-                    "imageid:70a599e0-31e7-49b7-b260-868f441e862b\n"
-                    "package:%s\n" % version.version_string_with_package())
+                    "imageid:%s\n"
+                    "package:%s\n" % (
+                        uuids.image,
+                        version.version_string_with_package()))
         self.assertEqual(expected, metadata)
 
     def test_get_instance_metadata_flavor(self):

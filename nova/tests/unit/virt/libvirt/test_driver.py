@@ -988,8 +988,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.test_image_meta = {
             "disk_format": "raw",
         }
-        self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
-                self)
+        self.image_service = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.device_xml_tmpl = """
         <domain type='kvm'>
           <devices>
@@ -1009,7 +1008,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         return os.path.relpath(path, CONF.instances_path)
 
     def tearDown(self):
-        nova.tests.unit.image.fake.FakeImageService_reset()
         super(LibvirtConnTestCase, self).tearDown()
 
     def test_driver_capabilities(self):
@@ -26977,8 +26975,7 @@ class _BaseSnapshotTests(test.NoDBTestCase):
 
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
-        self.image_service = nova.tests.unit.image.fake.stub_out_image_service(
-                self)
+        self.image_service = self.useFixture(nova_fixtures.GlanceFixture(self))
 
         self.mock_update_task_state = mock.Mock()
 

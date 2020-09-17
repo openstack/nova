@@ -17,8 +17,8 @@ from oslo_serialization import jsonutils
 from nova.api.openstack.compute import servers as servers_v21
 from nova import exception
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit.image import fake
 
 v4_key = "accessIPv4"
 v6_key = "accessIPv6"
@@ -38,7 +38,7 @@ class AccessIPsAPIValidationTestV21(test.TestCase):
 
         fakes.stub_out_nw_api(self)
         self._set_up_controller()
-        fake.stub_out_image_service(self)
+        self.useFixture(fixtures.GlanceFixture(self))
         self.stub_out('nova.compute.api.API.get',
                       # This project_id matches fakes.HTTPRequest.blank.
                       fakes.fake_compute_get(project_id=fakes.FAKE_PROJECT_ID))
