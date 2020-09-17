@@ -2,34 +2,6 @@
 # for job naming conventions.
 
 - job:
-    name: nova-dsvm-multinode-base
-    parent: legacy-dsvm-base-multinode
-    description: |
-      Base job for multinode nova devstack/tempest jobs.
-      Will setup firewall rules on all the nodes allowing them to talk to
-      each other.
-    timeout: 10800
-    required-projects:
-      - openstack/devstack-gate
-      - openstack/nova
-      - openstack/tempest
-    irrelevant-files: &dsvm-irrelevant-files
-      - ^api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/policies/.*$
-      - ^nova/tests/.*$
-      - ^nova/test.py$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tools/.*$
-      - ^tox.ini$
-
-- job:
     name: nova-tox-functional-py38
     parent: openstack-tox-functional-py38
     description: |
@@ -56,26 +28,27 @@
       bindep_profile: test py38
     timeout: 3600
 
-# TODO(lyarwood): Remove once the new zuulv3 nova-multinode jobs are voting
 - job:
     name: nova-live-migration
-    parent: nova-dsvm-multinode-base
-    description: |
-      Run tempest live migration tests against both local storage and shared
-      storage using ceph (the environment is reconfigured for ceph after the
-      local storage tests are run). Also runs simple evacuate tests.
-      Config drive is forced on all instances. Runs with python 3.
-    run: playbooks/legacy/nova-live-migration/run.yaml
-    post-run: playbooks/legacy/nova-live-migration/post.yaml
-    irrelevant-files: *dsvm-irrelevant-files
-
-- job:
-    name: nova-multinode-live-migration
     parent: tempest-multinode-full-py3
     description: |
       Run tempest live migration tests against local qcow2 ephemeral storage
       and shared LVM/iSCSI cinder volumes.
-    irrelevant-files: *dsvm-irrelevant-files
+    irrelevant-files: &dsvm-irrelevant-files
+      - ^api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/policies/.*$
+      - ^nova/tests/.*$
+      - ^nova/test.py$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tools/.*$
+      - ^tox.ini$
     vars:
       tox_envlist: all
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
@@ -96,7 +69,6 @@
 #    description: |
 #      Run tempest live migration tests against ceph ephemeral storage and
 #      cinder volumes.
-
 #- job:
 #    name: nova-multinode-evacuate-ceph
 #    description: |
@@ -434,8 +406,6 @@
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
         - nova-grenade-multinode
         - nova-live-migration
-        - nova-multinode-live-migration:
-            voting: false
         - nova-lvm
         - nova-multi-cell
         - nova-next
