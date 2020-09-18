@@ -1,0 +1,44 @@
+---
+prelude: |
+    The 22.0.0 release includes many new features and bug fixes. Please be
+    sure to read the upgrade section which describes the required actions to
+    upgrade your cloud from 21.0.0 (Ussuri) to 22.0.0 (Victoria).
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for Victoria is v2.87.
+      No new microversions were added during this cycle but you can find all
+      of them in the `REST API Version History`__ page.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html
+
+    - Support for a new ``mixed`` `flavor CPU allocation policy`__ that allows
+      both pinned and floating CPUs within the same instance.
+
+      .. __: https://docs.openstack.org/nova/latest/user/flavors.html
+
+    - Custom Placement resource inventories and traits can now be described
+      using a single `providers configuration file`__.
+
+      .. __: https://docs.openstack.org/nova/latest/admin/managing-resource-providers.html
+
+    - Glance multistore configuration with multiple RBD backends is now
+      supported within Nova for libvirt RBD-backed images using
+      ``[libvirt]/images_rbd_glance_store_name`` configuration option.
+
+    - An `emulated Virtual Trusted Platform Module`__ can be exposed to
+      instances running on a ``libvirt`` hypervisor with ``qemu`` or ``kvm``
+      backends.
+
+      .. __: https://docs.openstack.org/nova/latest/admin/emulated-tpm.html
+
+    - Support for the ``xen``, ``uml``, ``lxc`` and ``parallels`` libvirt
+      backends has been deprecated.
+
+    - ``XenAPI`` virt driver has been removed, including the related
+      configuration options.
+
+    - ``VMWare`` virt driver is now supported again in Victoria after being
+      deprecated during the Ussuri release, as testing issues have been
+      addressed.
