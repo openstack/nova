@@ -533,6 +533,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         events = self._vmops._get_neutron_events(network_info)
         self.assertEqual([], events)
 
+    @mock.patch.object(vmops.version, 'product_string')
     @mock.patch.object(vmops.VMOps, '_attach_pci_devices')
     @mock.patch.object(vmops.VMOps, '_requires_secure_boot')
     @mock.patch.object(vmops.VMOps, '_requires_certificate')
@@ -554,6 +555,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                               mock_requires_certificate,
                               mock_requires_secure_boot,
                               mock_attach_pci_devices,
+                              mock_product_string,
                               enable_instance_metrics,
                               vm_gen=constants.VM_GEN_1,
                               vnuma_enabled=False,
@@ -604,7 +606,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock_instance.name, mock_instance.flavor.memory_mb, mem_per_numa,
             mock_instance.flavor.vcpus, cpus_per_numa,
             CONF.hyperv.limit_cpu_features, dynamic_memory_ratio,
-            host_shutdown_action=host_shutdown_action)
+            host_shutdown_action=host_shutdown_action,
+            chassis_asset_tag=mock_product_string.return_value)
 
         mock_configure_remotefx.assert_called_once_with(mock_instance, vm_gen)
         mock_create_scsi_ctrl = self._vmops._vmutils.create_scsi_controller
