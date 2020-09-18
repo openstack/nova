@@ -1,0 +1,15 @@
+---
+issues:
+  - |
+    `bug 1894804`_ documents a known device detachment issue with QEMU
+    ``4.2.0`` as shipped by the Focal ``20.04`` Ubuntu release. This can lead
+    to the failure to detach devices from the underlying libvirt domain of an
+    instance as QEMU never emits the correct ``DEVICE_DELETED`` event to
+    libvirt. This in turn leaves the device attached within libvirt and
+    OpenStack Nova while it has been detached from the underlying QEMU process.
+    Subsequent attempts to detach the device will also fail as it is no longer
+    found within the QEMU process.
+
+    There is no known workaround within OpenStack Nova to this issue.
+
+    .. _bug 1894804: https://bugs.launchpad.net/qemu/+bug/1894804
