@@ -3170,8 +3170,7 @@ class IronicDriverGenerateConfigDriveTestCase(test.NoDBTestCase):
         mock_instance_meta.assert_called_once_with(
             self.instance, content=None, extra_md={},
             network_info=self.network_info,
-            network_metadata=network_metadata_mock.return_value,
-            request_context=None)
+            network_metadata=network_metadata_mock.return_value)
 
     def test_generate_configdrive_fail(self, mock_cd_builder,
                                        mock_instance_meta):
@@ -3191,8 +3190,7 @@ class IronicDriverGenerateConfigDriveTestCase(test.NoDBTestCase):
         mock_instance_meta.assert_called_once_with(
             self.instance, content=None, extra_md={},
             network_info=self.network_info,
-            network_metadata=network_metadata_mock.return_value,
-            request_context=None)
+            network_metadata=network_metadata_mock.return_value)
 
     @mock.patch.object(FAKE_CLIENT.node, 'list_ports')
     @mock.patch.object(FAKE_CLIENT.portgroup, 'list')

@@ -859,8 +859,7 @@ class VMwareVMOps(object):
         inst_md = instance_metadata.InstanceMetadata(instance,
                                                      content=injected_files,
                                                      extra_md=extra_md,
-                                                     network_info=network_info,
-                                                     request_context=context)
+                                                     network_info=network_info)
         try:
             with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
                 with utils.tempdir() as tmp_path:

@@ -15172,7 +15172,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             CONF.instances_path, instance.uuid, 'disk.config')
         mock_make_drive.assert_called_once_with(expected_config_drive_path)
         mock_instance_metadata.assert_called_once_with(instance,
-            request_context=self.context,
             network_info=mock.sentinel.network_info,
             content=mock.sentinel.files,
             extra_md={'admin_pass': mock.sentinel.admin_pass})

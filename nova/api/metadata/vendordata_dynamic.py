@@ -59,12 +59,7 @@ def _load_ks_session(conf):
 
 
 class DynamicVendorData(vendordata.VendorDataDriver):
-    def __init__(self, context=None, instance=None, address=None,
-                 network_info=None):
-        # NOTE(mikal): address and network_info are unused, but can't be
-        # removed / renamed as this interface is shared with the static
-        # JSON plugin.
-        self.context = context
+    def __init__(self, instance):
         self.instance = instance
         # We only create the session if we make a request.
         self.session = None
