@@ -63,7 +63,7 @@ echo "Forcing down the subnode so we can evacuate from it"
 openstack --os-compute-api-version 2.11 compute service set --down ${subnode} nova-compute
 
 echo "Stopping libvirt on the localhost before evacuating to trigger failure"
-sudo systemctl stop libvirt-bin
+sudo systemctl stop libvirtd
 
 # Now force the evacuation to *this* host; we have to force to bypass the
 # scheduler since we killed libvirtd which will trigger the libvirt compute
@@ -97,7 +97,7 @@ evacuate_and_wait_for_error evacuate-test
 evacuate_and_wait_for_error evacuate-bfv-test
 
 echo "Now restart libvirt and perform a successful evacuation"
-sudo systemctl start libvirt-bin
+sudo systemctl start libvirtd
 sleep 10
 
 # Wait for the compute service to be enabled.
