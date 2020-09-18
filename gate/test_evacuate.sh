@@ -62,6 +62,19 @@ $ANSIBLE subnodes --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "for domai
 echo "Forcing down the subnode so we can evacuate from it"
 openstack --os-compute-api-version 2.11 compute service set --down ${subnode} nova-compute
 
+count=0
+status=$(openstack compute service list --host ${subnode} --service nova-compute -f value -c State)
+while [ "${status}" != "down" ]
+do
+    sleep 1
+    count=$((count+1))
+    if [ ${count} -eq 30 ]; then
+        echo "Timed out waiting for subnode compute service to be marked as down"
+        exit 5
+    fi
+    status=$(openstack compute service list --host ${subnode} --service nova-compute -f value -c State)
+done
+
 echo "Stopping libvirt on the localhost before evacuating to trigger failure"
 sudo systemctl stop libvirt-bin
 
