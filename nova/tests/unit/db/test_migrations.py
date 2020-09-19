@@ -184,6 +184,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         stein_placeholders = list(range(392, 397))
         train_placeholders = list(range(403, 408))
         ussuri_placeholders = list(range(408, 413))
+        victoria_placeholders = list(range(413, 418))
 
         return (special +
                 havana_placeholders +
@@ -198,7 +199,8 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                 queens_placeholders +
                 stein_placeholders +
                 train_placeholders +
-                ussuri_placeholders)
+                ussuri_placeholders +
+                victoria_placeholders)
 
     def migrate_up(self, version, with_data=False):
         if with_data:

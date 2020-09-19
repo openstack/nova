@@ -181,6 +181,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         stein_placeholders = list(range(63, 68))
         train_placeholders = list(range(68, 73))
         ussuri_placeholders = list(range(73, 78))
+        victoria_placeholders = list(range(78, 83))
         special_cases = [
             30,  # Enforcement migration, no changes to test
         ]
@@ -192,6 +193,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
                 stein_placeholders +
                 train_placeholders +
                 ussuri_placeholders +
+                victoria_placeholders +
                 special_cases)
 
     def migrate_up(self, version, with_data=False):
