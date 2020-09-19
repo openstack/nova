@@ -6492,7 +6492,7 @@ class ComputeManager(manager.Manager):
                     # save current attachment so we can detach it on success,
                     # or restore it on a rollback.
                     # NOTE(mdbooth): This data is no longer used by the source
-                    # host since change I0390c9ff. We can't remove it until we
+                    # host since change Ibe9215c0. We can't remove it until we
                     # are sure the source host has been upgraded.
                     migrate_data.old_vol_attachment_ids[bdm.volume_id] = \
                         bdm.attachment_id
@@ -7284,24 +7284,17 @@ class ComputeManager(manager.Manager):
                 self.compute_rpcapi.remove_volume_connection(
                         context, instance, bdm.volume_id, dest)
 
-                if bdm.attachment_id:
-                    # 3.44 cinder api flow. Set the bdm's
-                    # attachment_id to the old attachment of the source
-                    # host. If old_attachments is not there, then
-                    # there was an error before the new attachment was made.
-                    # TODO(lyarwood): migrate_data.old_vol_attachment_ids can
-                    # be removed now as we can lookup the original
-                    # attachment_ids from the source_bdms list here.
-                    old_attachments = migrate_data.old_vol_attachment_ids \
-                        if 'old_vol_attachment_ids' in migrate_data else None
-                    if old_attachments and bdm.volume_id in old_attachments:
-                        self.volume_api.attachment_delete(context,
-                                                          bdm.attachment_id)
-                        bdm.attachment_id = old_attachments[bdm.volume_id]
+                source_bdm = source_bdms_by_volid[bdm.volume_id]
+                if bdm.attachment_id and source_bdm.attachment_id:
+                    # NOTE(lyarwood): 3.44 cinder api flow. Delete the
+                    # attachment used by the destination and reset the bdm
+                    # attachment_id to the old attachment of the source host.
+                    self.volume_api.attachment_delete(context,
+                                                      bdm.attachment_id)
+                    bdm.attachment_id = source_bdm.attachment_id
 
                 # NOTE(lyarwood): Rollback the connection_info stored within
                 # the BDM to that used by the source and not the destination.
-                source_bdm = source_bdms_by_volid[bdm.volume_id]
                 bdm.connection_info = source_bdm.connection_info
                 bdm.save()
 
