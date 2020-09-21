@@ -121,7 +121,12 @@ class InstanceMetadata(object):
         if not content:
             content = []
 
+        # NOTE(gibi): this is not a cell targeted context even if we are called
+        # in a situation when the instance is in a different cell than the
+        # metadata service itself.
         ctxt = context.get_admin_context()
+
+        self.mappings = _format_instance_mapping(instance)
 
         # NOTE(danms): Sanitize the instance to limit the amount of stuff
         # inside that may not pickle well (i.e. context). We also touch
@@ -142,8 +147,6 @@ class InstanceMetadata(object):
 
         self.security_groups = security_group_api.get_instance_security_groups(
             ctxt, instance)
-
-        self.mappings = _format_instance_mapping(ctxt, instance)
 
         if instance.user_data is not None:
             self.userdata_raw = base64.decode_as_bytes(instance.user_data)
@@ -680,9 +683,8 @@ def get_metadata_by_instance_id(instance_id, address, ctxt=None):
         return InstanceMetadata(instance, address)
 
 
-def _format_instance_mapping(ctxt, instance):
-    bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-            ctxt, instance.uuid)
+def _format_instance_mapping(instance):
+    bdms = instance.get_bdms()
     return block_device.instance_block_mapping(instance, bdms)
 
 
