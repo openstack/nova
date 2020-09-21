@@ -322,12 +322,14 @@ class MetadataTestCase(test.TestCase):
                          'uuid': 'e5fe5518-0288-4fa3-b0c4-c79764101b85',
                          'root_device_name': None,
                          'default_ephemeral_device': None,
-                         'default_swap_device': None})
+                         'default_swap_device': None,
+                         'context': self.context})
         instance_ref1 = objects.Instance(**{'id': 0,
                          'uuid': 'b65cee2f-8c69-4aeb-be2f-f79742548fc2',
                          'root_device_name': '/dev/sda1',
                          'default_ephemeral_device': None,
-                         'default_swap_device': None})
+                         'default_swap_device': None,
+                         'context': self.context})
 
         def fake_bdm_get(ctxt, uuid):
             return [fake_block_device.FakeDbBlockDeviceDict(
@@ -366,10 +368,12 @@ class MetadataTestCase(test.TestCase):
                     'swap': '/dev/sdc',
                     'ebs0': '/dev/sdh'}
 
-        self.assertEqual(base._format_instance_mapping(self.context,
-                         instance_ref0), block_device._DEFAULT_MAPPINGS)
-        self.assertEqual(base._format_instance_mapping(self.context,
-                         instance_ref1), expected)
+        self.assertEqual(
+            base._format_instance_mapping(instance_ref0),
+            block_device._DEFAULT_MAPPINGS)
+        self.assertEqual(
+            base._format_instance_mapping(instance_ref1),
+            expected)
 
     def test_pubkey(self):
         md = fake_InstanceMetadata(self, self.instance.obj_clone())
