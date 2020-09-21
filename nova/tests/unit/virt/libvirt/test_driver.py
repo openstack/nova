@@ -6712,7 +6712,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(cfg.devices[4].type, "spice")
         self.assertEqual(cfg.devices[5].type, "qxl")
-        self.assertEqual(cfg.devices[5].vram, 64 * units.Mi / units.Ki)
+        self.assertEqual(cfg.devices[5].vram, 65536)
 
     def _test_add_video_driver(self, model):
         self.flags(virt_type='kvm', group='libvirt')
@@ -6723,15 +6723,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         guest = vconfig.LibvirtConfigGuest()
-        instance_ref = objects.Instance(**self.test_instance)
-        flavor = instance_ref.get_flavor()
+        flavor = objects.Flavor(
+            extra_specs={'hw_video:ram_max_mb': '512'})
         image_meta = objects.ImageMeta.from_dict({
-            'properties': {'hw_video_model': model}})
+            'properties': {
+                'hw_video_model': model,
+                'hw_video_ram': 8,
+            },
+        })
 
         self.assertTrue(drvr._guest_add_video_device(guest))
-        video = drvr._add_video_driver(guest, image_meta,
-                                       flavor)
+        video = drvr._add_video_driver(guest, image_meta, flavor)
         self.assertEqual(model, video.type)
+        self.assertEqual(8192, video.vram)  # should be in bytes
 
     def test__add_video_driver(self):
         self._test_add_video_driver('qxl')
