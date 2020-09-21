@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    When using the libvirt virt driver with the QEMU or KVM backends, instances
+    will now be created with the *vmcoreinfo* feature enabled by default. This
+    creates a fw_cfg entry for a guest to store dump details, necessary to
+    process kernel dump with KASLR enabled and providing additional kernel
+    details. For more information, refer to the `libvirt`__ documentation.
+
+    __ https://libvirt.org/formatdomain.html#hypervisor-features
