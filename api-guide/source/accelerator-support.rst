@@ -80,6 +80,6 @@ For nested resource providers:
   For example, creating servers with accelerators provisioned with the Cyborg
   service, if two children RPs have 4 vGPU inventories each:
 
-    - You can ask for a device profile in the flavor with 2 vGPU with --max 2.
-    - But you can't ask for a device profile in the flavor with 4 vGPU and
-      --max 2.
+  * You can ask for a device profile in the flavor with 2 vGPU with --max 2.
+  * But you can't ask for a device profile in the flavor with 4 vGPU and
+    --max 2.
