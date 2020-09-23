@@ -33,10 +33,6 @@ from nova.virt.libvirt import driver
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
-FAKE_LIBVIRT_VERSION = versionutils.convert_version_to_int(
-    driver.MIN_LIBVIRT_VTPM)
-FAKE_QEMU_VERSION = versionutils.convert_version_to_int(driver.MIN_QEMU_VTPM)
-
 
 class FakeKeyManager(key_manager.KeyManager):
     """A fake key manager.
@@ -143,11 +139,8 @@ class VTPMServersTest(base.ServersTestBase):
     def start_compute(self, hostname='compute1'):
         libvirt_version = versionutils.convert_version_to_int(
             driver.MIN_LIBVIRT_VTPM)
-        qemu_version = versionutils.convert_version_to_int(
-            driver.MIN_QEMU_VTPM)
         fake_connection = self._get_connection(
-            libvirt_version=libvirt_version, qemu_version=qemu_version,
-            hostname=hostname)
+            libvirt_version=libvirt_version, hostname=hostname)
 
         # This is fun. Firstly we need to do a global'ish mock so we can
         # actually start the service.

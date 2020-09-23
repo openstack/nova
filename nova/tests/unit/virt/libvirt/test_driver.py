@@ -1527,25 +1527,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIn("vTPM support requires '[libvirt] virt_type' of 'qemu' "
                       "or 'kvm'; found 'lxc'.", six.text_type(exc))
 
-    @mock.patch.object(host.Host, 'has_min_version')
-    def test__check_vtpm_support_old_qemu(self, mock_version):
-        """Test checking for vTPM support when our QEMU or libvirt version is
-        too old.
-        """
-        self.flags(swtpm_enabled=True, virt_type='kvm', group='libvirt')
-
-        def fake_has_min_version(lv_ver=None, hv_ver=None, hv_type=None):
-            if lv_ver and hv_ver:
-                return lv_ver < (5, 6, 0) and hv_ver < (2, 11, 0)
-            return True
-
-        mock_version.side_effect = fake_has_min_version
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        exc = self.assertRaises(exception.InvalidConfiguration,
-                                drvr.init_host, 'dummyhost')
-        self.assertIn("vTPM support requires QEMU version", six.text_type(exc))
-
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch('shutil.which')
     def test__check_vtpm_support_missing_exe(self, mock_which, mock_version):
@@ -1642,7 +1623,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_which.assert_has_calls(
             [mock.call('swtpm_setup'), mock.call().__bool__()],
         )
-        mock_version.assert_called_with(lv_ver=(5, 6, 0), hv_ver=(2, 11, 0))
+        mock_version.assert_called_with(lv_ver=(5, 6, 0))
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_check_cpu_set_configuration__no_configuration(self, mock_log):

@@ -222,15 +222,15 @@ patch_tpool_proxy()
 # versions. Over time, this will become a common min version
 # for all architectures/hypervisors, as this value rises to
 # meet them.
-MIN_LIBVIRT_VERSION = (4, 0, 0)
-MIN_QEMU_VERSION = (2, 11, 0)
+MIN_LIBVIRT_VERSION = (5, 0, 0)
+MIN_QEMU_VERSION = (4, 0, 0)
 # TODO(berrange): Re-evaluate this at start of each release cycle
 # to decide if we want to plan a future min version bump.
 # MIN_LIBVIRT_VERSION can be updated to match this after
 # NEXT_MIN_LIBVIRT_VERSION  has been at a higher value for
 # one cycle
-NEXT_MIN_LIBVIRT_VERSION = (5, 0, 0)
-NEXT_MIN_QEMU_VERSION = (4, 0, 0)
+NEXT_MIN_LIBVIRT_VERSION = (6, 0, 0)
+NEXT_MIN_QEMU_VERSION = (4, 2, 0)
 
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
@@ -271,7 +271,6 @@ MIN_LIBVIRT_VIR_ERR_DEVICE_MISSING = (4, 1, 0)
 
 # Virtual TPM (vTPM) support
 MIN_LIBVIRT_VTPM = (5, 6, 0)
-MIN_QEMU_VTPM = (2, 11, 0)
 
 MIN_LIBVIRT_S390X_CPU_COMPARE = (5, 9, 0)
 
@@ -783,14 +782,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 "'kvm'; found '%s'.")
             raise exception.InvalidConfiguration(msg % CONF.libvirt.virt_type)
 
-        if not self._host.has_min_version(
-            lv_ver=MIN_LIBVIRT_VTPM, hv_ver=MIN_QEMU_VTPM,
-        ):
+        if not self._host.has_min_version(lv_ver=MIN_LIBVIRT_VTPM):
             msg = _(
-                'vTPM support requires QEMU version %(qemu)s or greater and '
-                'Libvirt version %(libvirt)s or greater.')
+                'vTPM support requires Libvirt version %(libvirt)s or '
+                'greater.')
             raise exception.InvalidConfiguration(msg % {
-                'qemu': libvirt_utils.version_to_string(MIN_QEMU_VTPM),
                 'libvirt': libvirt_utils.version_to_string(MIN_LIBVIRT_VTPM),
             })
 
