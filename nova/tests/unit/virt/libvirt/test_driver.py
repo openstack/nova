@@ -348,6 +348,29 @@ _fake_NodeDevXml = {
         </capability>
       </capability>
     </device>""",
+     "pci_0000_06_00_1": """
+    <device>
+      <name>pci_0000_06_00_1</name>
+      <path>/sys/devices/pci0000:00/0000:00:06.1</path>
+      <parent></parent>
+      <driver>
+        <name>i915</name>
+      </driver>
+      <capability type="pci">
+        <domain>0</domain>
+        <bus>6</bus>
+        <slot>0</slot>
+        <function>1</function>
+        <product id="0x591d">HD Graphics P630</product>
+        <vendor id="0x8086">Intel Corporation</vendor>
+        <capability type='mdev_types'>
+          <type id='i915-GVTg_V5_8'>
+            <deviceAPI>vfio-pci</deviceAPI>
+            <availableInstances>2</availableInstances>
+          </type>
+        </capability>
+      </capability>
+    </device>""",
      "mdev_4b20d080_1b54_4048_85b3_a6a62d165c01": """
     <device>
       <name>mdev_4b20d080_1b54_4048_85b3_a6a62d165c01</name>
@@ -24998,6 +25021,28 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # we don't get results.
         self.assertEqual([],
                          drvr._get_mdev_capable_devices(types=['nvidia-12']))
+
+    @mock.patch.object(host.Host, 'device_lookup_by_name')
+    def test_get_mdev_capabilities_for_dev_name_optional(
+            self, device_lookup_by_name):
+        # We use another PCI device that doesn't provide a name attribute for
+        # each mdev type.
+        def fake_nodeDeviceLookupByName(name):
+            return FakeNodeDevice(_fake_NodeDevXml[name])
+        device_lookup_by_name.side_effect = fake_nodeDeviceLookupByName
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        expected = {"dev_id": "pci_0000_06_00_1",
+                     "vendor_id": 0x8086,
+                     "types": {'i915-GVTg_V5_8': {'availableInstances': 2,
+                                                  'name': None,
+                                                  'deviceAPI': 'vfio-pci'},
+                               }
+                     }
+        self.assertEqual(
+            expected,
+            drvr._get_mdev_capabilities_for_dev("pci_0000_06_00_1"))
 
     @mock.patch.object(host.Host, 'device_lookup_by_name')
     @mock.patch.object(host.Host, 'list_mediated_devices')
