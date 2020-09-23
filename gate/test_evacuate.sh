@@ -76,7 +76,6 @@ do
 done
 
 echo "Stopping libvirt on the localhost before evacuating to trigger failure"
-sudo systemctl stop libvirt-bin
 sudo systemctl stop libvirtd
 
 # Now force the evacuation to *this* host; we have to force to bypass the
@@ -111,7 +110,6 @@ evacuate_and_wait_for_error evacuate-test
 evacuate_and_wait_for_error evacuate-bfv-test
 
 echo "Now restart libvirt and perform a successful evacuation"
-sudo systemctl start libvirt-bin
 sudo systemctl start libvirtd
 sleep 10
 
