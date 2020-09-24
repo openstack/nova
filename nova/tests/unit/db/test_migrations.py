@@ -163,7 +163,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.INIT_VERSION + 1,
         ]
 
-        kilo_placeholders = list(range(281, 291))
         liberty_placeholders = list(range(303, 313))
         mitaka_placeholders = list(range(320, 330))
         newton_placeholders = list(range(335, 345))
@@ -179,7 +178,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         victoria_placeholders = list(range(413, 418))
 
         return (special +
-                kilo_placeholders +
                 liberty_placeholders +
                 mitaka_placeholders +
                 newton_placeholders +
@@ -207,10 +205,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             # The base migration can do whatever it likes
             self.INIT_VERSION + 1,
 
-            # 292 drops completely orphaned tables with no users, so
-            # it can be done without affecting anything.
-            292,
-
             # 346 Drops column scheduled_at from instances table since it
             # is no longer used. The field value is always NULL so
             # it does not affect anything.
@@ -225,64 +219,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         with nova_fixtures.BannedDBSchemaOperations(banned):
             super(NovaMigrationsCheckers, self).migrate_up(version, with_data)
 
-    def test_walk_versions(self):
-        self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_291(self, engine, data):
-        # NOTE(danms): This is a dummy migration that just does a consistency
-        # check
-        pass
-
-    def _check_292(self, engine, data):
-        self.assertTableNotExists(engine, 'iscsi_targets')
-        self.assertTableNotExists(engine, 'volumes')
-        self.assertTableNotExists(engine, 'shadow_iscsi_targets')
-        self.assertTableNotExists(engine, 'shadow_volumes')
-
-    def _pre_upgrade_293(self, engine):
-        migrations = oslodbutils.get_table(engine, 'migrations')
-        fake_migration = {}
-        migrations.insert().execute(fake_migration)
-
-    def _check_293(self, engine, data):
-        self.assertColumnExists(engine, 'migrations', 'migration_type')
-        self.assertColumnExists(engine, 'shadow_migrations', 'migration_type')
-        migrations = oslodbutils.get_table(engine, 'migrations')
-        fake_migration = migrations.select().execute().first()
-        self.assertIsNone(fake_migration.migration_type)
-        self.assertFalse(fake_migration.hidden)
-
-    def _check_294(self, engine, data):
-        self.assertColumnExists(engine, 'services', 'last_seen_up')
-        self.assertColumnExists(engine, 'shadow_services', 'last_seen_up')
-
-        services = oslodbutils.get_table(engine, 'services')
-        shadow_services = oslodbutils.get_table(
-                engine, 'shadow_services')
-        self.assertIsInstance(services.c.last_seen_up.type,
-                              sqlalchemy.types.DateTime)
-        self.assertIsInstance(shadow_services.c.last_seen_up.type,
-                              sqlalchemy.types.DateTime)
-
-    def _pre_upgrade_295(self, engine):
-        self.assertIndexNotExists(engine, 'virtual_interfaces',
-                                  'virtual_interfaces_uuid_idx')
-
-    def _check_295(self, engine, data):
-        self.assertIndexMembers(engine, 'virtual_interfaces',
-                                'virtual_interfaces_uuid_idx', ['uuid'])
-
-    def _check_296(self, engine, data):
-        pass
-
-    def _check_297(self, engine, data):
-        self.assertColumnExists(engine, 'services', 'forced_down')
-
-    def _check_298(self, engine, data):
-        # NOTE(nic): This is a MySQL-specific migration, and is a no-op from
-        # the point-of-view of unit tests, since they use SQLite
-        pass
-
     def filter_metadata_diff(self, diff):
         # Overriding the parent method to decide on certain attributes
         # that maybe present in the DB but not in the models.py
@@ -292,37 +228,24 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             # DB at a later release.
             # NOTE(Luyao) The vpmems column was added to the schema in train,
             # and removed from the model in train.
-            column_whitelist = {'instances': ['internal_id'],
-                                'instance_extra': ['vpmems']}
+            column_whitelist = {
+                'instances': ['internal_id'],
+                'instance_extra': ['vpmems'],
+            }
 
             if element[0] != 'remove_column':
                 return False
 
             table_name, column = element[2], element[3]
-            return (table_name in column_whitelist and
-                    column.name in column_whitelist[table_name])
+            return (
+                table_name in column_whitelist and
+                column.name in column_whitelist[table_name]
+            )
 
-        return [
-            element
-            for element in diff
-            if not removed_column(element)
-        ]
+        return [element for element in diff if not removed_column(element)]
 
-    def _check_299(self, engine, data):
-        self.assertColumnExists(engine, 'services', 'version')
-
-    def _check_300(self, engine, data):
-        self.assertColumnExists(engine, 'instance_extra', 'migration_context')
-
-    def _check_301(self, engine, data):
-        self.assertColumnExists(engine, 'compute_nodes',
-                                'cpu_allocation_ratio')
-        self.assertColumnExists(engine, 'compute_nodes',
-                                'ram_allocation_ratio')
-
-    def _check_302(self, engine, data):
-        self.assertIndexMembers(engine, 'instance_system_metadata',
-                                'instance_uuid', ['instance_uuid'])
+    def test_walk_versions(self):
+        self.walk_versions(snake_walk=False, downgrade=False)
 
     def _check_313(self, engine, data):
 

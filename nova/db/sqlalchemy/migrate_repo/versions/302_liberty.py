@@ -93,6 +93,14 @@ def _create_shadow_tables(migrate_engine):
                     column_copy = Column(
                         column.name, enum, nullable=False,
                         server_default=keypair.KEYPAIR_TYPE_SSH)
+                elif (
+                    table_name == 'migrations' and
+                    column.name == 'migration_type'
+                ):
+                    enum = dialects.postgresql.ENUM(
+                        'migration', 'resize', 'live-migration', 'evacuation',
+                        name='migration_type', create_type=False)
+                    column_copy = Column(column.name, enum, nullable=True)
 
             if column_copy is None:
                 column_copy = column.copy()
@@ -285,6 +293,8 @@ def upgrade(migrate_engine):
         Column('stats', Text, default='{}'),
         Column('numa_topology', Text, nullable=True),
         Column('host', String(255), nullable=True),
+        Column('ram_allocation_ratio', Float, nullable=True),
+        Column('cpu_allocation_ratio', Float, nullable=True),
         UniqueConstraint(
             'host', 'hypervisor_hostname', 'deleted',
             name='uniq_compute_nodes0host0hypervisor_hostname0deleted',
@@ -662,21 +672,9 @@ def upgrade(migrate_engine):
         Column('pci_requests', Text, nullable=True),
         Column('flavor', Text, nullable=True),
         Column('vcpu_model', Text, nullable=True),
+        Column('migration_context', Text, nullable=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
-    )
-
-    iscsi_targets = Table('iscsi_targets', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('id', Integer, primary_key=True, nullable=False),
-        Column('target_num', Integer),
-        Column('host', String(length=255)),
-        Column('volume_id', String(length=36), nullable=True),
-        Column('deleted', Integer),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
     )
 
     key_pairs = Table('key_pairs', meta,
@@ -714,6 +712,15 @@ def upgrade(migrate_engine):
         Column('source_node', String(length=255)),
         Column('dest_node', String(length=255)),
         Column('deleted', Integer),
+        Column(
+            'migration_type',
+            Enum(
+                'migration', 'resize', 'live-migration', 'evacuation',
+                name='migration_type'),
+            nullable=True),
+        # NOTE(stephenfin): This was originally added by sqlalchemy-migrate
+        # which did not generate the constraints
+        Column('hidden', Boolean(create_constraint=False), default=False),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -965,6 +972,11 @@ def upgrade(migrate_engine):
         Column('disabled', Boolean),
         Column('deleted', Integer),
         Column('disabled_reason', String(length=255)),
+        Column('last_seen_up', DateTime, nullable=True),
+        # NOTE(stephenfin): This was originally added by sqlalchemy-migrate
+        # which did not generate the constraints
+        Column('forced_down', Boolean(create_constraint=False), default=False),
+        Column('version', Integer, default=0),
         UniqueConstraint(
             'host', 'topic', 'deleted',
             name='uniq_services0host0topic0deleted'),
@@ -1063,36 +1075,6 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    volumes = Table('volumes', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('id', String(length=36), primary_key=True, nullable=False),
-        Column('ec2_id', String(length=255)),
-        Column('user_id', String(length=255)),
-        Column('project_id', String(length=255)),
-        Column('host', String(length=255)),
-        Column('size', Integer),
-        Column('availability_zone', String(length=255)),
-        Column('mountpoint', String(length=255)),
-        Column('status', String(length=255)),
-        Column('attach_status', String(length=255)),
-        Column('scheduled_at', DateTime),
-        Column('launched_at', DateTime),
-        Column('terminated_at', DateTime),
-        Column('display_name', String(length=255)),
-        Column('display_description', String(length=255)),
-        Column('provider_location', String(length=256)),
-        Column('provider_auth', String(length=256)),
-        Column('snapshot_id', String(length=36)),
-        Column('volume_type_id', Integer),
-        Column('instance_uuid', String(length=36)),
-        Column('attach_time', DateTime),
-        Column('deleted', String(length=36)),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
     volume_usage_cache = Table('volume_usage_cache', meta,
         Column('created_at', DateTime(timezone=False)),
         Column('updated_at', DateTime(timezone=False)),
@@ -1120,7 +1102,7 @@ def upgrade(migrate_engine):
 
     # create all tables
     tables = [instances, aggregates, console_pools, instance_types,
-              security_groups, snapshots, volumes,
+              security_groups, snapshots,
               # those that are children and others later
               agent_builds, aggregate_hosts, aggregate_metadata,
               block_device_mapping, bw_usage_cache, cells,
@@ -1131,7 +1113,7 @@ def upgrade(migrate_engine):
               instance_type_extra_specs, instance_type_projects,
               instance_actions, instance_actions_events, instance_extra,
               groups, group_policy, group_member,
-              iscsi_targets, key_pairs, migrations, networks,
+              key_pairs, migrations, networks,
               pci_devices, provider_fw_rules, quota_classes, quota_usages,
               quotas, project_user_quotas,
               reservations, s3_images, security_group_instance_association,
@@ -1264,16 +1246,13 @@ def upgrade(migrate_engine):
         Index('instance_metadata_instance_uuid_idx',
               instance_metadata.c.instance_uuid),
 
+        # instance_system_metadata
+        Index('instance_uuid', instance_system_metadata.c.instance_uuid),
+
         # instance_type_extra_specs
         Index('instance_type_extra_specs_instance_type_id_key_idx',
               instance_type_extra_specs.c.instance_type_id,
               instance_type_extra_specs.c.key),
-
-        # iscsi_targets
-        Index('iscsi_targets_volume_id_fkey', iscsi_targets.c.volume_id),
-        Index('iscsi_targets_host_volume_id_deleted_idx',
-              iscsi_targets.c.host, iscsi_targets.c.volume_id,
-              iscsi_targets.c.deleted),
 
         # migrations
         Index('migrations_by_host_nodes_and_status_idx',
@@ -1333,9 +1312,8 @@ def upgrade(migrate_engine):
               virtual_interfaces.c.instance_uuid),
         Index('virtual_interfaces_network_id_idx',
               virtual_interfaces.c.network_id),
-
-        # volumes
-        Index('volumes_instance_uuid_idx', volumes.c.instance_uuid),
+        Index('virtual_interfaces_uuid_idx',
+              virtual_interfaces.c.uuid),
     ]
 
     # MySQL specific indexes
@@ -1353,7 +1331,6 @@ def upgrade(migrate_engine):
         mysql_pre_indexes = [
             Index(
                 'instance_type_id', instance_type_projects.c.instance_type_id),
-            Index('instance_uuid', instance_system_metadata.c.instance_uuid),
             Index('usage_id', reservations.c.usage_id),
             Index(
                 'security_group_id',
@@ -1392,11 +1369,6 @@ def upgrade(migrate_engine):
             [instance_type_projects.c.instance_type_id],
             [instance_types.c.id],
             'instance_type_projects_ibfk_1',
-        ],
-        [
-            [iscsi_targets.c.volume_id],
-            [volumes.c.id],
-            'iscsi_targets_volume_id_fkey',
         ],
         [
             [reservations.c.usage_id],
@@ -1538,3 +1510,13 @@ def upgrade(migrate_engine):
         'user_id', 'name', 'deleted', table=key_pairs,
         name='uniq_key_pairs0user_id0name0deleted',
     ).create()
+
+    # 298_mysql_extra_specs_binary_collation; we should update the shadow table
+    # also
+    if migrate_engine.name == 'mysql':
+        # Use binary collation for extra specs table
+        migrate_engine.execute(
+            'ALTER TABLE instance_type_extra_specs '
+            'CONVERT TO CHARACTER SET utf8 '
+            'COLLATE utf8_bin'
+        )
