@@ -24,7 +24,7 @@ def upgrade(migrate_engine):
 
     # Note: Since we are altering name field, this constraint on name needs to
     # first be dropped before we can alter name. We then re-create the same
-    # constraint. It was first added in 216_havana.py so no need to remove
+    # constraint. It was first added in 234_icehouse so no need to remove
     # constraint on downgrade.
     UniqueConstraint('user_id', 'name', 'deleted', table=key_pairs,
                      name='uniq_key_pairs0user_id0name0deleted').drop()

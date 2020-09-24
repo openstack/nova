@@ -53,7 +53,6 @@ from nova.db import migration
 from nova.db.sqlalchemy import migrate_repo
 from nova.db.sqlalchemy import migration as sa_migration
 from nova.db.sqlalchemy import models
-from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -164,11 +163,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def _skippable_migrations(self):
         special = [
-            216,  # Havana
+            234,  # Icehouse
             272,  # NOOP migration due to revert
         ]
 
-        havana_placeholders = list(range(217, 227))
         icehouse_placeholders = list(range(235, 244))
         juno_placeholders = list(range(255, 265))
         kilo_placeholders = list(range(281, 291))
@@ -187,7 +185,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         victoria_placeholders = list(range(413, 418))
 
         return (special +
-                havana_placeholders +
                 icehouse_placeholders +
                 juno_placeholders +
                 kilo_placeholders +
@@ -252,78 +249,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_227(self, engine, data):
-        table = oslodbutils.get_table(engine, 'project_user_quotas')
-
-        # Insert fake_quotas with the longest resource name.
-        fake_quotas = {'id': 5,
-                       'project_id': 'fake_project',
-                       'user_id': 'fake_user',
-                       'resource': 'injected_file_content_bytes',
-                       'hard_limit': 10}
-        table.insert().execute(fake_quotas)
-
-        # Check we can get the longest resource name.
-        quota = table.select(table.c.id == 5).execute().first()
-        self.assertEqual(quota['resource'], 'injected_file_content_bytes')
-
-    def _check_228(self, engine, data):
-        self.assertColumnExists(engine, 'compute_nodes', 'metrics')
-
-        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
-        self.assertIsInstance(compute_nodes.c.metrics.type,
-                              sqlalchemy.types.Text)
-
-    def _check_229(self, engine, data):
-        self.assertColumnExists(engine, 'compute_nodes', 'extra_resources')
-
-        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
-        self.assertIsInstance(compute_nodes.c.extra_resources.type,
-                              sqlalchemy.types.Text)
-
-    def _check_230(self, engine, data):
-        for table_name in ['instance_actions_events',
-                           'shadow_instance_actions_events']:
-            self.assertColumnExists(engine, table_name, 'host')
-            self.assertColumnExists(engine, table_name, 'details')
-
-        action_events = oslodbutils.get_table(engine,
-                                              'instance_actions_events')
-        self.assertIsInstance(action_events.c.host.type,
-                              sqlalchemy.types.String)
-        self.assertIsInstance(action_events.c.details.type,
-                              sqlalchemy.types.Text)
-
-    def _check_231(self, engine, data):
-        self.assertColumnExists(engine, 'instances', 'ephemeral_key_uuid')
-
-        instances = oslodbutils.get_table(engine, 'instances')
-        self.assertIsInstance(instances.c.ephemeral_key_uuid.type,
-                              sqlalchemy.types.String)
-        self.assertTrue(db_utils.check_shadow_table(engine, 'instances'))
-
-    def _check_232(self, engine, data):
-        table_names = ['compute_node_stats', 'compute_nodes',
-                       'instance_actions', 'instance_actions_events',
-                       'instance_faults', 'migrations']
-        for table_name in table_names:
-            self.assertTableNotExists(engine, 'dump_' + table_name)
-
-    def _check_233(self, engine, data):
-        self.assertColumnExists(engine, 'compute_nodes', 'stats')
-
-        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
-        self.assertIsInstance(compute_nodes.c.stats.type,
-                              sqlalchemy.types.Text)
-
-        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
-                          oslodbutils.get_table, engine, 'compute_node_stats')
-
-    def _check_234(self, engine, data):
-        self.assertIndexMembers(engine, 'reservations',
-                                'reservations_deleted_expire_idx',
-                                ['deleted', 'expire'])
 
     def _check_244(self, engine, data):
         volume_usage_cache = oslodbutils.get_table(
