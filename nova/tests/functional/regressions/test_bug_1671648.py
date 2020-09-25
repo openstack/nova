@@ -135,16 +135,3 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
 
         # Assert that we retried.
         self.assertEqual(2, self.attempts)
-
-
-class TestRetryBetweenComputeNodeBuildsNoAllocations(
-        TestRetryBetweenComputeNodeBuilds):
-    """Tests the reschedule scenario using a scheduler driver which does
-    not use Placement.
-    """
-    def setUp(self):
-        super(TestRetryBetweenComputeNodeBuildsNoAllocations, self).setUp()
-        # We need to mock the FilterScheduler to not use Placement so that
-        # allocations won't be created during scheduling.
-        self.scheduler_service.manager.driver.USES_ALLOCATION_CANDIDATES = \
-            False

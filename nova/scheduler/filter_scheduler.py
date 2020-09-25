@@ -169,18 +169,15 @@ class FilterScheduler(driver.Scheduler):
         num_alts = (CONF.scheduler.max_attempts - 1
                     if return_alternates else 0)
 
-        if (instance_uuids is None or
-                not self.USES_ALLOCATION_CANDIDATES or
-                alloc_reqs_by_rp_uuid is None):
-            # We still support external scheduler drivers that don't use the
-            # placement API (and set USES_ALLOCATION_CANDIDATE = False) and
-            # therefore we skip all the claiming logic for those scheduler
-            # drivers. Also, if there was a problem communicating with the
+        if instance_uuids is None or alloc_reqs_by_rp_uuid is None:
+            # If there was a problem communicating with the
             # placement API, alloc_reqs_by_rp_uuid will be None, so we skip
             # claiming in that case as well. In the case where instance_uuids
             # is None, that indicates an older conductor, so we need to return
             # the objects without alternates. They will be converted back to
             # the older dict format representing HostState objects.
+            # TODO(stephenfin): Remove this when we bump scheduler the RPC API
+            # version to 5.0
             return self._legacy_find_hosts(context, num_instances, spec_obj,
                                            hosts, num_alts,
                                            instance_uuids=instance_uuids)
@@ -310,9 +307,11 @@ class FilterScheduler(driver.Scheduler):
 
     def _legacy_find_hosts(self, context, num_instances, spec_obj, hosts,
                            num_alts, instance_uuids=None):
-        """Some schedulers do not do claiming, or we can sometimes not be able
-        to if the Placement service is not reachable. Additionally, we may be
-        working with older conductors that don't pass in instance_uuids.
+        """Find hosts without invoking placement.
+
+        We may not be able to claim if the Placement service is not reachable.
+        Additionally, we may be working with older conductors that don't pass
+        in instance_uuids.
         """
         # The list of hosts selected for each instance
         selected_hosts = []
@@ -476,10 +475,6 @@ class FilterScheduler(driver.Scheduler):
 
     def _get_all_host_states(self, context, spec_obj, provider_summaries):
         """Template method, so a subclass can implement caching."""
-        # NOTE(jaypipes): provider_summaries being None is treated differently
-        # from an empty dict. provider_summaries is None when we want to grab
-        # all compute nodes, for instance when using a scheduler driver that
-        # sets USES_ALLOCATION_CANDIDATES=False.
         # The provider_summaries variable will be an empty dict when the
         # Placement API found no providers that match the requested
         # constraints, which in turn makes compute_uuids an empty list and

@@ -278,28 +278,24 @@ class TestNovaManagePlacementHealAllocations(
         self.flavor = self.api.get_flavors()[0]
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
-        # We need to mock the FilterScheduler to not use Placement so that
-        # allocations won't be created during scheduling and then we can heal
-        # them in the CLI.
-        self.scheduler_service.manager.driver.USES_ALLOCATION_CANDIDATES = \
-            False
 
-    def _boot_and_assert_no_allocations(self, flavor, hostname,
-                                        volume_backed=False):
-        """Creates a server on the given host and asserts neither have usage
+    def _boot_and_remove_allocations(
+        self, flavor, hostname, volume_backed=False,
+    ):
+        """Creates a server on the given host and remove all allocations.
 
         :param flavor: the flavor used to create the server
         :param hostname: the host on which to create the server
         :param volume_backed: True if the server should be volume-backed and
             as a result not have any DISK_GB allocation
         :returns: two-item tuple of the server and the compute node resource
-                  provider uuid
+            provider UUID
         """
         server_req = self._build_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=flavor['id'],
-            networks='none')
-        server_req['availability_zone'] = 'nova:%s' % hostname
+            networks='none',
+            az=f'nova:{hostname}')
         if volume_backed:
             vol_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
             server_req['block_device_mapping_v2'] = [{
@@ -314,6 +310,9 @@ class TestNovaManagePlacementHealAllocations(
 
         # Verify that our source host is what the server ended up on
         self.assertEqual(hostname, server['OS-EXT-SRV-ATTR:host'])
+
+        # Delete the server's allocations
+        self._delete_server_allocations(server['id'])
 
         # Check that the compute node resource provider has no allocations.
         rp_uuid = self._get_provider_uuid_by_host(hostname)
@@ -351,9 +350,9 @@ class TestNovaManagePlacementHealAllocations(
           both instances now have allocations against their respective compute
           node resource providers.
         """
-        server1, rp_uuid1 = self._boot_and_assert_no_allocations(
+        server1, rp_uuid1 = self._boot_and_remove_allocations(
             self.flavor, 'cell1')
-        server2, rp_uuid2 = self._boot_and_assert_no_allocations(
+        server2, rp_uuid2 = self._boot_and_remove_allocations(
             self.flavor, 'cell2')
 
         # heal server1 and server2 in separate calls
@@ -383,9 +382,9 @@ class TestNovaManagePlacementHealAllocations(
         servers = []  # This is really a list of 2-item tuples.
         for x in range(2):
             servers.append(
-                self._boot_and_assert_no_allocations(self.flavor, 'cell1'))
+                self._boot_and_remove_allocations(self.flavor, 'cell1'))
         servers.append(
-            self._boot_and_assert_no_allocations(self.flavor, 'cell2'))
+            self._boot_and_remove_allocations(self.flavor, 'cell2'))
         result = self.cli.heal_allocations(max_count=10, verbose=True)
         self.assertEqual(0, result, self.output.getvalue())
         self.assertIn('Processed 3 instances.', self.output.getvalue())
@@ -399,10 +398,10 @@ class TestNovaManagePlacementHealAllocations(
         """
         servers = []  # This is really a list of 2-item tuples.
         servers.append(
-            self._boot_and_assert_no_allocations(self.flavor, 'cell1'))
+            self._boot_and_remove_allocations(self.flavor, 'cell1'))
         for x in range(2):
             servers.append(
-                self._boot_and_assert_no_allocations(self.flavor, 'cell2'))
+                self._boot_and_remove_allocations(self.flavor, 'cell2'))
         result = self.cli.heal_allocations(max_count=2, verbose=True)
         self.assertEqual(1, result, self.output.getvalue())
         self.assertIn('Max count reached. Processed 2 instances.',
@@ -426,9 +425,9 @@ class TestNovaManagePlacementHealAllocations(
         servers = []  # This is really a list of 2-item tuples.
         for x in range(2):
             servers.append(
-                self._boot_and_assert_no_allocations(self.flavor, 'cell1'))
+                self._boot_and_remove_allocations(self.flavor, 'cell1'))
         servers.append(
-            self._boot_and_assert_no_allocations(self.flavor, 'cell2'))
+            self._boot_and_remove_allocations(self.flavor, 'cell2'))
         result = self.cli.heal_allocations(verbose=True)
         self.assertEqual(0, result, self.output.getvalue())
         self.assertIn('Processed 3 instances.', self.output.getvalue())
@@ -439,7 +438,7 @@ class TestNovaManagePlacementHealAllocations(
         """Tests the scenario that an instance with no allocations is shelved
         so heal_allocations skips it (since the instance is not on a host).
         """
-        server, rp_uuid = self._boot_and_assert_no_allocations(
+        server, rp_uuid = self._boot_and_remove_allocations(
             self.flavor, 'cell1')
         self.api.post_server_action(server['id'], {'shelve': None})
         # The server status goes to SHELVED_OFFLOADED before the host/node
@@ -461,7 +460,7 @@ class TestNovaManagePlacementHealAllocations(
         """Tests the case that heal_allocations skips over an instance which
         is undergoing a task state transition (in this case pausing).
         """
-        server, rp_uuid = self._boot_and_assert_no_allocations(
+        server, rp_uuid = self._boot_and_remove_allocations(
             self.flavor, 'cell1')
 
         def fake_pause_instance(_self, ctxt, instance, *a, **kw):
@@ -487,9 +486,9 @@ class TestNovaManagePlacementHealAllocations(
         to make sure deleted servers are filtered out.
         """
         # Create a server that we'll leave alive
-        self._boot_and_assert_no_allocations(self.flavor, 'cell1')
+        self._boot_and_remove_allocations(self.flavor, 'cell1')
         # and another that we'll delete
-        server, _ = self._boot_and_assert_no_allocations(self.flavor, 'cell1')
+        server, _ = self._boot_and_remove_allocations(self.flavor, 'cell1')
         self._delete_server(server)
         result = self.cli.heal_allocations(verbose=True)
         self.assertEqual(0, result, self.output.getvalue())
@@ -505,7 +504,7 @@ class TestNovaManagePlacementHealAllocations(
         out-of-band and then run our heal routine to see they get updated with
         the instance project and user information.
         """
-        server, rp_uuid = self._boot_and_assert_no_allocations(
+        server, rp_uuid = self._boot_and_remove_allocations(
             self.flavor, 'cell1')
         # Now we'll create allocations using microversion < 1.8 to so that
         # placement creates the consumer record with the config-based project
@@ -558,7 +557,7 @@ class TestNovaManagePlacementHealAllocations(
     def test_heal_allocations_dry_run(self):
         """Tests to make sure the --dry-run option does not commit changes."""
         # Create a server with no allocations.
-        server, rp_uuid = self._boot_and_assert_no_allocations(
+        server, rp_uuid = self._boot_and_remove_allocations(
             self.flavor, 'cell1')
         result = self.cli.heal_allocations(verbose=True, dry_run=True)
         # Nothing changed so the return code should be 4.
@@ -574,10 +573,10 @@ class TestNovaManagePlacementHealAllocations(
         instance even though there are two which require processing.
         """
         # Create one that we won't process.
-        self._boot_and_assert_no_allocations(
+        self._boot_and_remove_allocations(
             self.flavor, 'cell1')
         # Create another that we will process specifically.
-        server, rp_uuid = self._boot_and_assert_no_allocations(
+        server, rp_uuid = self._boot_and_remove_allocations(
             self.flavor, 'cell1', volume_backed=True)
         # First do a dry run to make sure two instances need processing.
         result = self.cli.heal_allocations(
@@ -633,10 +632,10 @@ class TestNovaManagePlacementHealAllocations(
         cell even though there are two which require processing.
         """
         # Create one that we won't process.
-        server1, rp_uuid1 = self._boot_and_assert_no_allocations(
+        server1, rp_uuid1 = self._boot_and_remove_allocations(
             self.flavor, 'cell1')
         # Create another that we will process specifically.
-        server2, rp_uuid2 = self._boot_and_assert_no_allocations(
+        server2, rp_uuid2 = self._boot_and_remove_allocations(
             self.flavor, 'cell2')
 
         # Get Cell_id of cell2
@@ -683,7 +682,7 @@ class TestNovaManagePlacementHealAllocations(
            You should get rc=4 back since nothing changed.
         """
         # 1. Create server that we will forcefully heal specifically.
-        server, rp_uuid = self._boot_and_assert_no_allocations(
+        server, rp_uuid = self._boot_and_remove_allocations(
             self.flavor, 'cell1', volume_backed=True)
 
         # 2. heal allocations without forcing them

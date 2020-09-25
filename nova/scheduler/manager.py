@@ -133,7 +133,7 @@ class SchedulerManager(manager.Manager):
         is_rebuild = utils.request_is_rebuild(spec_obj)
         alloc_reqs_by_rp_uuid, provider_summaries, allocation_request_version \
             = None, None, None
-        if self.driver.USES_ALLOCATION_CANDIDATES and not is_rebuild:
+        if not is_rebuild:
             # Only process the Placement request spec filters when Placement
             # is used.
             try:

@@ -787,6 +787,9 @@ class PlacementInstanceHelperMixin(InstanceHelperMixin, PlacementHelperMixin):
             '/allocations/%s' % server_uuid
         ).body['allocations']
 
+    def _delete_server_allocations(self, server_uuid):
+        self.placement.delete(f'/allocations/{server_uuid}')
+
     def _wait_for_server_allocations(self, consumer_id, max_retries=20):
         retry_count = 0
         while True:
