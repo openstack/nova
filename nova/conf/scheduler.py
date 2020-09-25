@@ -25,8 +25,6 @@ scheduler_opts = [
     cfg.IntOpt("max_attempts",
         default=3,
         min=1,
-        deprecated_name="scheduler_max_attempts",
-        deprecated_group="DEFAULT",
         help="""
 The maximum number of schedule attempts.
 
@@ -245,8 +243,6 @@ filter_scheduler_opts = [
     cfg.IntOpt("host_subset_size",
         default=1,
         min=1,
-        deprecated_name="scheduler_host_subset_size",
-        deprecated_group="DEFAULT",
         help="""
 Size of subset of best hosts selected by scheduler.
 
@@ -267,7 +263,6 @@ Possible values:
     cfg.IntOpt("max_io_ops_per_host",
         default=8,
         min=0,
-        deprecated_group="DEFAULT",
         help="""
 The number of instances that can be actively performing IO on a host.
 
@@ -289,7 +284,6 @@ Related options:
     cfg.IntOpt("max_instances_per_host",
         default=50,
         min=1,
-        deprecated_group="DEFAULT",
         help="""
 Maximum number of instances that can exist on a host.
 
@@ -312,8 +306,6 @@ Related options:
 """),
     cfg.BoolOpt("track_instance_changes",
         default=True,
-        deprecated_name="scheduler_tracks_instance_changes",
-        deprecated_group="DEFAULT",
         help="""
 Enable querying of individual hosts for instance information.
 
@@ -341,8 +333,6 @@ Related options:
 """),
     cfg.MultiStrOpt("available_filters",
         default=["nova.scheduler.filters.all_filters"],
-        deprecated_name="scheduler_available_filters",
-        deprecated_group="DEFAULT",
         help="""
 Filters that the scheduler can use.
 
@@ -373,8 +363,6 @@ Related options:
             "ServerGroupAntiAffinityFilter",
             "ServerGroupAffinityFilter",
         ],
-        deprecated_name="scheduler_default_filters",
-        deprecated_group="DEFAULT",
         help="""
 Filters that the scheduler will use.
 
@@ -398,8 +386,6 @@ Related options:
 """),
     cfg.ListOpt("weight_classes",
         default=["nova.scheduler.weights.all_weighers"],
-        deprecated_name="scheduler_weight_classes",
-        deprecated_group="DEFAULT",
         help="""
 Weighers that the scheduler will use.
 
@@ -418,7 +404,6 @@ Possible values:
 """),
     cfg.FloatOpt("ram_weight_multiplier",
         default=1.0,
-        deprecated_group="DEFAULT",
         help="""
 RAM weight multipler ratio.
 
@@ -465,7 +450,6 @@ Related options:
 """),
     cfg.FloatOpt("disk_weight_multiplier",
         default=1.0,
-        deprecated_group="DEFAULT",
         help="""
 Disk weight multipler ratio.
 
@@ -482,7 +466,6 @@ Possible values:
 """),
     cfg.FloatOpt("io_ops_weight_multiplier",
         default=-1.0,
-        deprecated_group="DEFAULT",
         help="""
 IO operations weight multipler ratio.
 
@@ -659,7 +642,6 @@ Possible values:
     # TODO(mikal): replace this option with something involving host aggregates
     cfg.ListOpt("isolated_images",
         default=[],
-        deprecated_group="DEFAULT",
         help="""
 List of UUIDs for images that can only be run on certain hosts.
 
@@ -681,7 +663,6 @@ Related options:
 """),
     cfg.ListOpt("isolated_hosts",
         default=[],
-        deprecated_group="DEFAULT",
         help="""
 List of hosts that can only run certain images.
 
@@ -703,7 +684,6 @@ Related options:
     cfg.BoolOpt(
         "restrict_isolated_hosts_to_isolated_images",
         default=True,
-        deprecated_group="DEFAULT",
         help="""
 Prevent non-isolated images from being built on isolated hosts.
 
@@ -722,7 +702,6 @@ Related options:
     # properties
     cfg.StrOpt(
         "aggregate_image_properties_isolation_namespace",
-        deprecated_group="DEFAULT",
         help="""
 Image property namespace for use in the host aggregate.
 
@@ -747,7 +726,6 @@ Related options:
     cfg.StrOpt(
         "aggregate_image_properties_isolation_separator",
         default=".",
-        deprecated_group="DEFAULT",
         help="""
 Separator character(s) for image property namespace and name.
 
