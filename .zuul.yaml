@@ -95,13 +95,16 @@
 #    description: |
 #      Run tempest live migration tests against ceph ephemeral storage and
 #      cinder volumes.
-#
-#- job:
-#    name: nova-multinode-evacuate
-#    description: |
-#       Verifiy the evacuation of instances with local qcow2 ephemeral disks
-#       from down compute hosts.
-#
+
+- job:
+    name: nova-evacuate
+    parent: tempest-multinode-full-py3
+    description: |
+       Verifiy the evacuation of instances with local qcow2 ephemeral disks
+       and attached iSCSI/LVM volumes from down compute hosts.
+    irrelevant-files: *dsvm-irrelevant-files
+    run: playbooks/nova-evacuate/run.yaml
+
 #- job:
 #    name: nova-multinode-evacuate-ceph
 #    description: |
@@ -440,6 +443,8 @@
         - nova-grenade-multinode
         - nova-live-migration
         - nova-multinode-live-migration:
+            voting: false
+        - nova-evacuate:
             voting: false
         - nova-lvm
         - nova-multi-cell
