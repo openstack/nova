@@ -261,7 +261,7 @@ reviews:
 -  Where do I start? What should I review?
 
    -  There are various tools, but a good place to start is:
-      https://etherpad.openstack.org/p/nova-runways-victoria
+      https://etherpad.openstack.org/p/nova-runways-wallaby
    -  Depending on the time in the cycle, it's worth looking at
       NeedsCodeReview blueprints:
       https://blueprints.launchpad.net/nova/
@@ -323,7 +323,7 @@ becoming a member of nova-core.
 How to do great nova-spec reviews?
 ==================================
 
-https://specs.openstack.org/openstack/nova-specs/specs/victoria/template.html
+https://specs.openstack.org/openstack/nova-specs/specs/wallaby/template.html
 
 :doc:`/contributor/blueprints`.
 
