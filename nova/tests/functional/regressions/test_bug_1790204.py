@@ -17,10 +17,11 @@ from nova.tests.functional import integrated_helpers
 
 
 class ResizeSameHostDoubledAllocations(
-        integrated_helpers.ProviderUsageBaseTestCase):
+    integrated_helpers.ProviderUsageBaseTestCase,
+):
     """Regression test for bug 1790204 introduced in Pike.
 
-    Since Pike, the FilterScheduler uses Placement to "claim" resources
+    Since Pike, the scheduler uses Placement to "claim" resources
     via allocations during scheduling. During a move operation, the
     scheduler will claim resources on the selected destination resource
     provider (compute node). For a same-host resize, this means claiming

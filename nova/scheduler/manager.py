@@ -33,7 +33,7 @@ from nova import objects
 from nova.objects import host_mapping as host_mapping_obj
 from nova import quota
 from nova.scheduler.client import report
-from nova.scheduler import filter_scheduler
+from nova.scheduler import driver
 from nova.scheduler import request_filter
 from nova.scheduler import utils
 
@@ -56,7 +56,7 @@ class SchedulerManager(manager.Manager):
 
     def __init__(self, *args, **kwargs):
         self.placement_client = report.SchedulerReportClient()
-        self.driver = filter_scheduler.FilterScheduler()
+        self.driver = driver.SchedulerDriver()
 
         super(SchedulerManager, self).__init__(
             service_name='scheduler', *args, **kwargs

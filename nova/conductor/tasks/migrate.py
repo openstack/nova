@@ -60,10 +60,12 @@ def replace_allocation_with_migration(context, instance, migration):
         context, instance.uuid)['allocations']
     root_alloc = orig_alloc.get(source_cn.uuid, {}).get('resources', {})
     if not root_alloc:
-        LOG.debug('Unable to find existing allocations for instance on '
-                  'source compute node: %s. This is normal if you are not '
-                  'using the FilterScheduler.', source_cn.uuid,
-                  instance=instance)
+        # TODO(stephenfin): This was a valid code path when there was support
+        # for multiple schedulers, but it should probably be an error now
+        LOG.debug(
+            'Unable to find existing allocations for instance on '
+            'source compute node: %s',
+            source_cn.uuid, instance=instance)
         return None, None
 
     # FIXME(gibi): This method is flawed in that it does not handle allocations

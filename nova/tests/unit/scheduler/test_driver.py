@@ -12,9 +12,6 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-"""
-Tests For Filter Scheduler.
-"""
 
 import mock
 from oslo_serialization import jsonutils
@@ -23,7 +20,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from nova import context
 from nova import exception
 from nova import objects
-from nova.scheduler import filter_scheduler
+from nova.scheduler import driver as scheduler_driver
 from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
@@ -51,8 +48,8 @@ fake_selection = objects.Selection(service_host="fake_host",
         allocation_request_version=fake_alloc_version)
 
 
-class FilterSchedulerTestCase(test.NoDBTestCase):
-    """Test case for Filter Scheduler."""
+class SchedulerTestCase(test.NoDBTestCase):
+    """Test case for scheduler driver."""
 
     @mock.patch.object(host_manager.HostManager, '_init_instance_info',
                        new=mock.Mock())
@@ -63,20 +60,19 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
     @mock.patch('nova.scheduler.client.query.SchedulerQueryClient',
                 autospec=True)
     def setUp(self, mock_sch_query, mock_sch_report):
-        super(FilterSchedulerTestCase, self).setUp()
+        super().setUp()
 
-        self.driver = filter_scheduler.FilterScheduler()
+        self.driver = scheduler_driver.SchedulerDriver()
         self.context = context.RequestContext('fake_user', 'fake_project')
         self.topic = 'fake_topic'
         self.servicegroup_api = servicegroup.API()
 
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_all_host_states')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_sorted_hosts')
-    def test_schedule_placement_bad_comms(self, mock_get_hosts,
-            mock_get_all_states, mock_claim):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    def test_schedule_placement_bad_comms(
+        self, mock_get_hosts, mock_get_all_states, mock_claim,
+    ):
         """If there was a problem communicating with the Placement service,
         alloc_reqs_by_rp_uuid will be None and we need to avoid trying to claim
         in the Placement API.
@@ -138,12 +134,11 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
                          spec_obj.obj_what_changed())
 
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_all_host_states')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_sorted_hosts')
-    def test_schedule_old_conductor(self, mock_get_hosts,
-            mock_get_all_states, mock_claim):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    def test_schedule_old_conductor(
+        self, mock_get_hosts, mock_get_all_states, mock_claim,
+    ):
         """Old conductor can call scheduler without the instance_uuids
         parameter. When this happens, we need to ensure we do not attempt to
         claim resources in the placement API since obviously we need instance
@@ -196,12 +191,11 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(host_state.instances))
 
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_all_host_states')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_sorted_hosts')
-    def _test_schedule_successful_claim(self, mock_get_hosts,
-            mock_get_all_states, mock_claim, num_instances=1):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    def _test_schedule_successful_claim(
+        self, mock_get_hosts, mock_get_all_states, mock_claim, num_instances=1,
+    ):
         spec_obj = objects.RequestSpec(
             num_instances=num_instances,
             flavor=objects.Flavor(memory_mb=512,
@@ -263,15 +257,13 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         """
         self._test_schedule_successful_claim(num_instances=3)
 
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_cleanup_allocations')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._cleanup_allocations')
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_all_host_states')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_sorted_hosts')
-    def test_schedule_unsuccessful_claim(self, mock_get_hosts,
-            mock_get_all_states, mock_claim, mock_cleanup):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    def test_schedule_unsuccessful_claim(
+        self, mock_get_hosts, mock_get_all_states, mock_claim, mock_cleanup,
+    ):
         """Tests that we return an empty list if we are unable to successfully
         claim resources for the instance
         """
@@ -319,15 +311,13 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         # Ensure that we have consumed the resources on the chosen host states
         self.assertFalse(host_state.consume_from_request.called)
 
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_cleanup_allocations')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._cleanup_allocations')
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_all_host_states')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_sorted_hosts')
-    def test_schedule_not_all_instance_clean_claimed(self, mock_get_hosts,
-            mock_get_all_states, mock_claim, mock_cleanup):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    def test_schedule_not_all_instance_clean_claimed(
+        self, mock_get_hosts, mock_get_all_states, mock_claim, mock_cleanup,
+    ):
         """Tests that we clean up previously-allocated instances if not all
         instances could be scheduled
         """
@@ -373,12 +363,11 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         mock_cleanup.assert_called_once_with(ctx, [uuids.instance1])
 
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_all_host_states')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_sorted_hosts')
-    def test_selection_alloc_requests_for_alts(self, mock_get_hosts,
-            mock_get_all_states, mock_claim):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    def test_selection_alloc_requests_for_alts(
+        self, mock_get_hosts, mock_get_all_states, mock_claim,
+    ):
         spec_obj = objects.RequestSpec(
             num_instances=1,
             flavor=objects.Flavor(memory_mb=512,
@@ -439,12 +428,11 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         self.assertEqual(expected_selection, selected_hosts)
 
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_all_host_states')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_sorted_hosts')
-    def test_selection_alloc_requests_no_alts(self, mock_get_hosts,
-            mock_get_all_states, mock_claim):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    def test_selection_alloc_requests_no_alts(
+        self, mock_get_hosts, mock_get_all_states, mock_claim,
+    ):
         spec_obj = objects.RequestSpec(
             num_instances=1,
             flavor=objects.Flavor(memory_mb=512,
@@ -501,12 +489,11 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         self.assertEqual(expected_selection, selected_hosts)
 
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_all_host_states')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_sorted_hosts')
-    def test_schedule_instance_group(self, mock_get_hosts,
-            mock_get_all_states, mock_claim):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    def test_schedule_instance_group(
+        self, mock_get_hosts, mock_get_all_states, mock_claim,
+    ):
         """Test that since the request spec object contains an instance group
         object, that upon choosing a host in the primary schedule loop,
         that we update the request spec's instance group information
@@ -599,7 +586,7 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(spec_obj.obj_what_changed()),
                          spec_obj.obj_what_changed())
 
-    @mock.patch('nova.scheduler.filter_scheduler.LOG.debug')
+    @mock.patch('nova.scheduler.driver.LOG.debug')
     @mock.patch('random.choice', side_effect=lambda x: x[1])
     @mock.patch('nova.scheduler.host_manager.HostManager.get_weighed_hosts')
     @mock.patch('nova.scheduler.host_manager.HostManager.get_filtered_hosts')
@@ -786,8 +773,7 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         self.assertEqual(['host', 'node'],
                          filter_properties['retry']['hosts'][0])
 
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_schedule')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._schedule')
     def test_select_destinations_match_num_instances(self, mock_schedule):
         """Tests that the select_destinations() method returns the list of
         hosts from the _schedule() method when the number of returned hosts
@@ -819,8 +805,7 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
             mock.sentinel.p_sums, mock.sentinel.ar_version, False)
         self.assertEqual([[fake_selection]], dests)
 
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_schedule')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._schedule')
     def test_select_destinations_for_move_ops(self, mock_schedule):
         """Tests that the select_destinations() method verifies the number of
         hosts returned from the _schedule() method against the number of
@@ -855,12 +840,11 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         self.assertEqual([[fake_selection]], dests)
 
     @mock.patch('nova.scheduler.utils.claim_resources', return_value=True)
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_all_host_states')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_get_sorted_hosts')
-    def test_schedule_fewer_num_instances(self, mock_get_hosts,
-            mock_get_all_states, mock_claim):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    def test_schedule_fewer_num_instances(
+        self, mock_get_hosts, mock_get_all_states, mock_claim,
+    ):
         """Tests that the _schedule() method properly handles
         resetting host state objects and raising NoValidHost when there are not
         enough hosts available.
@@ -896,12 +880,12 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
 
     @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
-                "_get_sorted_hosts")
-    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
-                "_get_all_host_states")
-    def _test_alternates_returned(self, mock_get_all_hosts, mock_sorted,
-            mock_claim, mock_consume, num_instances=2, num_alternates=2):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    def _test_alternates_returned(
+        self, mock_get_all_hosts, mock_sorted, mock_claim, mock_consume,
+        num_instances=2, num_alternates=2,
+    ):
         all_host_states = []
         alloc_reqs = {}
         for num in range(10):
@@ -959,12 +943,11 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
 
     @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
-                "_get_sorted_hosts")
-    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
-                "_get_all_host_states")
-    def test_alternates_same_cell(self, mock_get_all_hosts, mock_sorted,
-            mock_claim, mock_consume):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    def test_alternates_same_cell(
+        self, mock_get_all_hosts, mock_sorted, mock_claim, mock_consume,
+    ):
         """Tests getting alternates plus claims where the hosts are spread
         across two cells.
         """
@@ -1016,12 +999,12 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
 
     @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
     @mock.patch('nova.scheduler.utils.claim_resources')
-    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
-                "_get_sorted_hosts")
-    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
-                "_get_all_host_states")
-    def _test_not_enough_alternates(self, mock_get_all_hosts, mock_sorted,
-            mock_claim, mock_consume, num_hosts, max_attempts):
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_sorted_hosts')
+    @mock.patch('nova.scheduler.driver.SchedulerDriver._get_all_host_states')
+    def _test_not_enough_alternates(
+        self, mock_get_all_hosts, mock_sorted, mock_claim, mock_consume,
+        num_hosts, max_attempts,
+    ):
         all_host_states = []
         alloc_reqs = {}
         for num in range(num_hosts):
@@ -1072,9 +1055,10 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         self._test_not_enough_alternates(num_hosts=20, max_attempts=5)
 
     @mock.patch('nova.compute.utils.notify_about_scheduler_action')
-    @mock.patch.object(filter_scheduler.FilterScheduler, '_schedule')
-    def test_select_destinations_notifications(self, mock_schedule,
-            mock_notify):
+    @mock.patch.object(scheduler_driver.SchedulerDriver, '_schedule')
+    def test_select_destinations_notifications(
+        self, mock_schedule, mock_notify,
+    ):
         mock_schedule.return_value = ([[mock.Mock()]], [[mock.Mock()]])
 
         with mock.patch.object(self.driver.notifier, 'info') as mock_info:

@@ -24,7 +24,7 @@ CONF = conf.CONF
 
 
 class CrossCellWeigherTestCase(test.NoDBTestCase):
-    """Tests for the FilterScheduler CrossCellWeigher."""
+    """Tests for the CrossCellWeigher."""
 
     def setUp(self):
         super(CrossCellWeigherTestCase, self).setUp()
