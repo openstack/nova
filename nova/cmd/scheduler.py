@@ -27,7 +27,7 @@ import nova.conf
 from nova.conf import remote_debug
 from nova import config
 from nova import objects
-from nova.scheduler import rpcapi as scheduler_rpcapi
+from nova.scheduler import rpcapi
 from nova import service
 from nova import version
 
@@ -44,13 +44,11 @@ def main():
 
     gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
 
-    server = service.Service.create(binary='nova-scheduler',
-                                    topic=scheduler_rpcapi.RPC_TOPIC)
+    server = service.Service.create(
+        binary='nova-scheduler', topic=rpcapi.RPC_TOPIC)
+
     # Determine the number of workers; if not specified in config, default
-    # to ncpu for the FilterScheduler and 1 for everything else.
-    workers = CONF.scheduler.workers
-    if not workers:
-        workers = (processutils.get_worker_count()
-                   if CONF.scheduler.driver == 'filter_scheduler' else 1)
+    # to number of CPUs
+    workers = CONF.scheduler.workers or processutils.get_worker_count()
     service.serve(server, workers=workers)
     service.wait()

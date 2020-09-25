@@ -25,7 +25,6 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_service import periodic_task
-from stevedore import driver
 
 import nova.conf
 from nova import exception
@@ -34,6 +33,7 @@ from nova import objects
 from nova.objects import host_mapping as host_mapping_obj
 from nova import quota
 from nova.scheduler.client import report
+from nova.scheduler import filter_scheduler
 from nova.scheduler import request_filter
 from nova.scheduler import utils
 
@@ -56,11 +56,7 @@ class SchedulerManager(manager.Manager):
 
     def __init__(self, *args, **kwargs):
         self.placement_client = report.SchedulerReportClient()
-        self.driver = driver.DriverManager(
-            'nova.scheduler.driver',
-            CONF.scheduler.driver,
-            invoke_on_load=True
-        ).driver
+        self.driver = filter_scheduler.FilterScheduler()
 
         super(SchedulerManager, self).__init__(
             service_name='scheduler', *args, **kwargs
