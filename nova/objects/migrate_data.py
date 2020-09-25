@@ -241,10 +241,10 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         'bdms': fields.ListOfObjectsField('LibvirtLiveMigrateBDMInfo'),
         'target_connect_addr': fields.StringField(nullable=True),
         'supported_perf_events': fields.ListOfStringsField(),
+        # TODO(lyarwood): No longer used, drop in version 2.0
         'src_supports_native_luks': fields.BooleanField(),
         'dst_wants_file_backed_memory': fields.BooleanField(),
-        # file_backed_memory_discard is ignored unless
-        # dst_wants_file_backed_memory is set
+        # TODO(lyarwood): No longer used, drop in version 2.0
         'file_backed_memory_discard': fields.BooleanField(),
         # TODO(artom) (src|dst)_supports_numa_live_migration are only used as
         # flags to indicate that the compute host is new enough to perform a
