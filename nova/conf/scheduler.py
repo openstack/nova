@@ -18,8 +18,8 @@ from oslo_config import cfg
 from nova.virt import arch
 
 
-scheduler_group = cfg.OptGroup(name="scheduler",
-                               title="Scheduler configuration")
+scheduler_group = cfg.OptGroup(
+    name="scheduler", title="Scheduler configuration")
 
 scheduler_opts = [
     cfg.IntOpt("max_attempts",
@@ -28,20 +28,22 @@ scheduler_opts = [
         deprecated_name="scheduler_max_attempts",
         deprecated_group="DEFAULT",
         help="""
+The maximum number of schedule attempts.
+
 This is the maximum number of attempts that will be made for a given instance
 build/move operation. It limits the number of alternate hosts returned by the
-scheduler. When that list of hosts is exhausted, a MaxRetriesExceeded
+scheduler. When that list of hosts is exhausted, a ``MaxRetriesExceeded``
 exception is raised and the instance is set to an error state.
 
 Possible values:
 
 * A positive integer, where the integer corresponds to the max number of
   attempts that can be made when building or moving an instance.
-        """),
+"""),
     cfg.IntOpt("discover_hosts_in_cells_interval",
-               default=-1,
-               min=-1,
-               help="""
+        default=-1,
+        min=-1,
+        help="""
 Periodic task interval.
 
 This value controls how often (in seconds) the scheduler should attempt
@@ -53,11 +55,19 @@ enabled, where others may prefer to manually discover hosts when one
 is added to avoid any overhead from constantly checking. If enabled,
 every time this runs, we will select any unmapped hosts out of each
 cell database on every run.
+
+Possible values:
+
+* An integer, where the integer corresponds to periodic task interval in
+  seconds. 0 uses the default interval (60 seconds). A negative value disables
+  periodic tasks.
 """),
     cfg.IntOpt("max_placement_results",
-               default=1000,
-               min=1,
-               help="""
+        default=1000,
+        min=1,
+        help="""
+The maximum number of placement results to request.
+
 This setting determines the maximum limit on results received from the
 placement service during a scheduling operation. It effectively limits
 the number of hosts that may be considered for scheduling requests that
@@ -70,35 +80,51 @@ and weighing process. Large deployments may need to set this lower than the
 total number of hosts available to limit memory consumption, network traffic,
 etc. of the scheduler.
 
-This option is only used by the FilterScheduler; if you use a different
-scheduler, this option has no effect.
+Possible values:
+
+* An integer, where the integer corresponds to the number of placement results
+  to return.
 """),
     cfg.IntOpt("workers",
         min=0,
         help="""
-Number of workers for the nova-scheduler service. The default will be the
-number of CPUs available if using the "filter_scheduler" scheduler driver,
-otherwise the default will be 1.
+Number of workers for the nova-scheduler service.
+
+Defaults to the number of CPUs available.
+
+Possible values:
+
+* An integer, where the integer corresponds to the number of worker processes.
 """),
     cfg.BoolOpt("limit_tenants_to_placement_aggregate",
-                default=False,
-                help="""
+        default=False,
+        help="""
+Restrict tenants to specific placement aggregates.
+
 This setting causes the scheduler to look up a host aggregate with the
-metadata key of `filter_tenant_id` set to the project of an incoming
+metadata key of ``filter_tenant_id`` set to the project of an incoming
 request, and request results from placement be limited to that aggregate.
 Multiple tenants may be added to a single aggregate by appending a serial
-number to the key, such as `filter_tenant_id:123`.
+number to the key, such as ``filter_tenant_id:123``.
 
 The matching aggregate UUID must be mirrored in placement for proper
 operation. If no host aggregate with the tenant id is found, or that
 aggregate does not match one in placement, the result will be the same
 as not finding any suitable hosts for the request.
 
-See also the placement_aggregate_required_for_tenants option.
+Possible values:
+
+- A boolean value.
+
+Related options:
+
+- ``[scheduler] placement_aggregate_required_for_tenants``
 """),
     cfg.BoolOpt("placement_aggregate_required_for_tenants",
-                default=False,
-                help="""
+        default=False,
+        help="""
+Require a placement aggregate association for all tenants.
+
 This setting, when limit_tenants_to_placement_aggregate=True, will control
 whether or not a tenant with no aggregate affinity will be allowed to schedule
 to any available node. If aggregates are used to limit some tenants but
@@ -106,11 +132,19 @@ not all, then this should be False. If all tenants should be confined via
 aggregate, then this should be True to prevent them from receiving unrestricted
 scheduling to any available node.
 
-See also the limit_tenants_to_placement_aggregate option.
+Possible values:
+
+- A boolean value.
+
+Related options:
+
+- ``[scheduler] placement_aggregate_required_for_tenants``
 """),
     cfg.BoolOpt("query_placement_for_availability_zone",
-                default=False,
-                help="""
+        default=False,
+        help="""
+Use placement to determine availability zones.
+
 This setting causes the scheduler to look up a host aggregate with the
 metadata key of `availability_zone` set to the value provided by an
 incoming request, and request results from placement be limited to that
@@ -123,16 +157,32 @@ be the same as not finding any suitable hosts.
 
 Note that if you enable this flag, you can disable the (less efficient)
 AvailabilityZoneFilter in the scheduler.
+
+Possible values:
+
+- A boolean value.
+
+Related options:
+
+- ``[filter_scheduler] enabled_filters``
 """),
     cfg.BoolOpt("query_placement_for_image_type_support",
-                default=False,
-                help="""
+        default=False,
+        help="""
+Use placement to determine host support for the instance's image type.
+
 This setting causes the scheduler to ask placement only for compute
 hosts that support the ``disk_format`` of the image used in the request.
+
+Possible values:
+
+- A boolean value.
 """),
     cfg.BoolOpt("enable_isolated_aggregate_filtering",
-                default=False,
-                help="""
+        default=False,
+        help="""
+Restrict use of aggregates to instances with matching metadata.
+
 This setting allows the scheduler to restrict hosts in aggregates based on
 matching required traits in the aggregate metadata and the instance
 flavor/image. If an aggregate is configured with a property with key
@@ -140,21 +190,35 @@ flavor/image. If an aggregate is configured with a property with key
 and/or image metadata must also contain ``trait:$TRAIT_NAME=required`` to be
 eligible to be scheduled to hosts in that aggregate. More technical details
 at https://docs.openstack.org/nova/latest/reference/isolate-aggregates.html
+
+Possible values:
+
+- A boolean value.
 """),
     cfg.BoolOpt("image_metadata_prefilter",
-                default=False,
-                help="""
+        default=False,
+        help="""
+Use placement to filter hosts based on image metadata.
+
 This setting causes the scheduler to transform well known image metadata
 properties into placement required traits to filter host based on image
 metadata. This feature requires host support and is currently supported by the
 following compute drivers:
 
 - ``libvirt.LibvirtDriver`` (since Ussuri (21.0.0))
+
+Possible values:
+
+- A boolean value.
+
+Related options:
+
+- ``[compute] compute_driver``
 """),
 ]
 
-filter_scheduler_group = cfg.OptGroup(name="filter_scheduler",
-                           title="Filter scheduler options")
+filter_scheduler_group = cfg.OptGroup(
+    name="filter_scheduler", title="Filter scheduler options")
 
 filter_scheduler_opts = [
     cfg.IntOpt("host_subset_size",
@@ -175,16 +239,13 @@ hosts that best fit the request, the chance of a conflict is reduced. However,
 the higher you set this value, the less optimal the chosen host may be for a
 given request.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
 Possible values:
 
-* An integer, where the integer corresponds to the size of a host subset. Any
-  integer is valid, although any value less than 1 will be treated as 1
+* An integer, where the integer corresponds to the size of a host subset.
 """),
     cfg.IntOpt("max_io_ops_per_host",
         default=8,
+        min=0,
         deprecated_group="DEFAULT",
         help="""
 The number of instances that can be actively performing IO on a host.
@@ -192,14 +253,17 @@ The number of instances that can be actively performing IO on a host.
 Instances performing IO includes those in the following states: build, resize,
 snapshot, migrate, rescue, unshelve.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'io_ops_filter' filter is enabled.
+Note that this setting only affects scheduling if the ``IoOpsFilter`` filter is
+enabled.
 
 Possible values:
 
 * An integer, where the integer corresponds to the max number of instances
   that can be actively performing IO on any given host.
+
+Related options:
+
+- ``[filter_scheduler] enabled_filters``
 """),
     cfg.IntOpt("max_instances_per_host",
         default=50,
@@ -213,15 +277,17 @@ to the maximum number of instances you want to allow. The NumInstancesFilter
 and AggregateNumInstancesFilter will reject any host that has at least as many
 instances as this option's value.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the ``NumInstancesFilter`` or
+Note that this setting only affects scheduling if the ``NumInstancesFilter`` or
 ``AggregateNumInstancesFilter`` filter is enabled.
 
 Possible values:
 
 * An integer, where the integer corresponds to the max instances that can be
   scheduled on a host.
+
+Related options:
+
+- ``[filter_scheduler] enabled_filters``
 """),
     cfg.BoolOpt("track_instance_changes",
         default=True,
@@ -240,13 +306,17 @@ this option will improve performance. It may also be disabled when the tracking
 overhead proves too heavy, although this will cause classes requiring host
 usage data to query the database on each request instead.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
+.. note::
 
-NOTE: In a multi-cell (v2) setup where the cell MQ is separated from the
-top-level, computes cannot directly communicate with the scheduler. Thus,
-this option cannot be enabled in that scenario. See also the
-[workarounds]/disable_group_policy_check_upcall option.
+   In a multi-cell (v2) setup where the cell MQ is separated from the
+   top-level, computes cannot directly communicate with the scheduler. Thus,
+   this option cannot be enabled in that scenario. See also the
+   ``[workarounds] disable_group_policy_check_upcall`` option.
+
+Related options:
+
+- ``[filter_scheduler] enabled_filters``
+- ``[workarounds] disable_group_policy_check_upcall``
 """),
     cfg.MultiStrOpt("available_filters",
         default=["nova.scheduler.filters.all_filters"],
@@ -256,13 +326,11 @@ this option cannot be enabled in that scenario. See also the
 Filters that the scheduler can use.
 
 An unordered list of the filter classes the nova scheduler may apply.  Only the
-filters specified in the 'enabled_filters' option will be used, but
-any filter appearing in that option must also be included in this list.
+filters specified in the ``[filter_scheduler] enabled_filters`` option will be
+used, but any filter appearing in that option must also be included in this
+list.
 
 By default, this is set to all filters that are included with nova.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
 
 Possible values:
 
@@ -271,20 +339,20 @@ Possible values:
 
 Related options:
 
-* enabled_filters
+* ``[filter_scheduler] enabled_filters``
 """),
     cfg.ListOpt("enabled_filters",
         # NOTE(artom) If we change the defaults here, we should also update
         # Tempest's scheduler_enabled_filters to keep the default values in
         # sync.
         default=[
-          "AvailabilityZoneFilter",
-          "ComputeFilter",
-          "ComputeCapabilitiesFilter",
-          "ImagePropertiesFilter",
-          "ServerGroupAntiAffinityFilter",
-          "ServerGroupAffinityFilter",
-          ],
+            "AvailabilityZoneFilter",
+            "ComputeFilter",
+            "ComputeCapabilitiesFilter",
+            "ImagePropertiesFilter",
+            "ServerGroupAntiAffinityFilter",
+            "ServerGroupAffinityFilter",
+        ],
         deprecated_name="scheduler_default_filters",
         deprecated_group="DEFAULT",
         help="""
@@ -295,8 +363,9 @@ hosts. These filters will be applied in the order they are listed so
 place your most restrictive filters first to make the filtering process more
 efficient.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
+All of the filters in this option *must* be present in the ``[scheduler_filter]
+available_filter`` option, or a ``SchedulerHostFilterNotFound`` exception will
+be raised.
 
 Possible values:
 
@@ -305,9 +374,7 @@ Possible values:
 
 Related options:
 
-* All of the filters in this option *must* be present in the
-  'available_filters' option, or a SchedulerHostFilterNotFound
-  exception will be raised.
+- ``[filter_scheduler] available_filters``
 """),
     cfg.ListOpt("weight_classes",
         default=["nova.scheduler.weights.all_weighers"],
@@ -320,12 +387,9 @@ Only hosts which pass the filters are weighed. The weight for any host starts
 at 0, and the weighers order these hosts by adding to or subtracting from the
 weight assigned by the previous weigher. Weights may become negative. An
 instance will be scheduled to one of the N most-weighted hosts, where N is
-'scheduler_host_subset_size'.
+``[filter_scheduler] host_subset_size``.
 
 By default, this is set to all weighers that are included with Nova.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
 
 Possible values:
 
@@ -347,26 +411,8 @@ negative values will tend to fill up (stack) hosts as much as possible before
 scheduling to a less-used host. The absolute value, whether positive or
 negative, controls how strong the RAM weigher is relative to other weighers.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'ram' weigher is enabled.
-
-Possible values:
-
-* An integer or float value, where the value corresponds to the multipler
-  ratio for this weigher.
-"""),
-    cfg.FloatOpt("cpu_weight_multiplier",
-         default=1.0,
-         help="""
-CPU weight multiplier ratio.
-
-Multiplier used for weighting free vCPUs. Negative numbers indicate stacking
-rather than spreading.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'cpu' weigher is enabled.
+Note that this setting only affects scheduling if the ``RAMWeigher`` weigher is
+enabled.
 
 Possible values:
 
@@ -375,9 +421,27 @@ Possible values:
 
 Related options:
 
-* ``filter_scheduler.weight_classes``: This weigher must be added to list of
-  enabled weight classes if the ``weight_classes`` setting is set to a
-  non-default value.
+* ``[filter_scheduler] weight_classes``
+"""),
+    cfg.FloatOpt("cpu_weight_multiplier",
+        default=1.0,
+        help="""
+CPU weight multiplier ratio.
+
+Multiplier used for weighting free vCPUs. Negative numbers indicate stacking
+rather than spreading.
+
+Note that this setting only affects scheduling if the ``CPUWeigher`` weigher is
+enabled.
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multipler
+  ratio for this weigher.
+
+Related options:
+
+* ``[filter_scheduler] weight_classes``
 """),
     cfg.FloatOpt("disk_weight_multiplier",
         default=1.0,
@@ -388,9 +452,8 @@ Disk weight multipler ratio.
 Multiplier used for weighing free disk space. Negative numbers mean to
 stack vs spread.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'disk' weigher is enabled.
+Note that this setting only affects scheduling if the ``DiskWeigher`` weigher
+is enabled.
 
 Possible values:
 
@@ -412,14 +475,17 @@ negative values will tend to distribute the workload across more hosts. The
 absolute value, whether positive or negative, controls how strong the io_ops
 weigher is relative to other weighers.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'io_ops' weigher is enabled.
+Note that this setting only affects scheduling if the ``IoOpsWeigher`` weigher
+is enabled.
 
 Possible values:
 
 * An integer or float value, where the value corresponds to the multipler
   ratio for this weigher.
+
+Related options:
+
+* ``[filter_scheduler] weight_classes``
 """),
     cfg.FloatOpt("pci_weight_multiplier",
         default=1.0,
@@ -429,15 +495,19 @@ PCI device affinity weight multiplier.
 
 The PCI device affinity weighter computes a weighting based on the number of
 PCI devices on the host and the number of PCI devices requested by the
-instance. The ``NUMATopologyFilter`` filter must be enabled for this to have
-any significance. For more information, refer to the filter documentation:
+instance.
 
-    https://docs.openstack.org/nova/latest/user/filter-scheduler.html
+Note that this setting only affects scheduling if the ``PCIWeigher`` weigher
+and ``NUMATopologyFilter`` filter are enabled.
 
 Possible values:
 
 * A positive integer or float value, where the value corresponds to the
   multiplier ratio for this weigher.
+
+Related options:
+
+* ``[filter_scheduler] weight_classes``
 """),
     cfg.FloatOpt("soft_affinity_weight_multiplier",
         default=1.0,
@@ -445,10 +515,17 @@ Possible values:
         help="""
 Multiplier used for weighing hosts for group soft-affinity.
 
+Note that this setting only affects scheduling if the
+``ServerGroupSoftAffinityWeigher`` weigher is enabled.
+
 Possible values:
 
 * A non-negative integer or float value, where the value corresponds to
   weight multiplier for hosts with group soft affinity.
+
+Related options:
+
+* ``[filter_scheduler] weight_classes``
 """),
     cfg.FloatOpt(
         "soft_anti_affinity_weight_multiplier",
@@ -457,10 +534,17 @@ Possible values:
         help="""
 Multiplier used for weighing hosts for group soft-anti-affinity.
 
+Note that this setting only affects scheduling if the
+``ServerGroupSoftAntiAffinityWeigher`` weigher is enabled.
+
 Possible values:
 
 * A non-negative integer or float value, where the value corresponds to
   weight multiplier for hosts with group soft anti-affinity.
+
+Related options:
+
+* ``[filter_scheduler] weight_classes``
 """),
     cfg.FloatOpt(
         "build_failure_weight_multiplier",
@@ -477,8 +561,8 @@ set to some high value to offset weight given by other enabled weighers
 due to available resources. To disable weighing compute hosts by the
 number of recent failures, set this to zero.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
+Note that this setting only affects scheduling if the ``BuildFailureWeigher``
+weigher is enabled.
 
 Possible values:
 
@@ -487,8 +571,9 @@ Possible values:
 
 Related options:
 
-* [compute]/consecutive_build_service_disable_threshold - Must be nonzero
+* ``[compute] consecutive_build_service_disable_threshold`` - Must be nonzero
   for a compute to report data considered by this weigher.
+* ``[filter_scheduler] weight_classes``
 """),
     cfg.FloatOpt(
         "cross_cell_move_weight_multiplier",
@@ -502,14 +587,13 @@ By default, when moving an instance, the scheduler will prefer hosts within
 the same cell since cross-cell move operations can be slower and riskier due to
 the complicated nature of cross-cell migrations.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Similarly, if your cloud is
-not configured to support cross-cell migrations, then this option has no
-effect.
+Note that this setting only affects scheduling if the ``CrossCellWeigher``
+weigher is enabled.  If your cloud is not configured to support cross-cell
+migrations, then this option has no effect.
 
 The value of this configuration option can be overridden per host aggregate
 by setting the aggregate metadata key with the same name
-(cross_cell_move_weight_multiplier).
+(``cross_cell_move_weight_multiplier``).
 
 Possible values:
 
@@ -518,6 +602,10 @@ Possible values:
   hosts within the same cell in which the instance is currently running.
   Negative values mean the weigher will prefer hosts in *other* cells from
   which the instance is currently running.
+
+Related options:
+
+* ``[filter_scheduler] weight_classes``
 """),
     cfg.BoolOpt(
         "shuffle_best_same_weighed_hosts",
@@ -525,14 +613,13 @@ Possible values:
         help="""
 Enable spreading the instances between hosts with the same best weight.
 
-Enabling it is beneficial for cases when host_subset_size is 1
-(default), but there is a large number of hosts with same maximal weight.
-This scenario is common in Ironic deployments where there are typically many
-baremetal nodes with identical weights returned to the scheduler.
-In such case enabling this option will reduce contention and chances for
-rescheduling events.
-At the same time it will make the instance packing (even in unweighed case)
-less dense.
+Enabling it is beneficial for cases when ``[filter_scheduler]
+host_subset_size`` is 1 (default), but there is a large number of hosts with
+same maximal weight.  This scenario is common in Ironic deployments where there
+are typically many baremetal nodes with identical weights returned to the
+scheduler.  In such case enabling this option will reduce contention and
+chances for rescheduling events.  At the same time it will make the instance
+packing (even in unweighed case) less dense.
 """),
     cfg.StrOpt(
         "image_properties_default_architecture",
@@ -540,10 +627,10 @@ less dense.
         help="""
 The default architecture to be used when using the image properties filter.
 
-When using the ImagePropertiesFilter, it is possible that you want to define
-a default architecture to make the user experience easier and avoid having
-something like x86_64 images landing on aarch64 compute nodes because the
-user did not specify the 'hw_architecture' property in Glance.
+When using the ``ImagePropertiesFilter``, it is possible that you want to
+define a default architecture to make the user experience easier and avoid
+having something like x86_64 images landing on AARCH64 compute nodes because
+the user did not specify the ``hw_architecture`` property in Glance.
 
 Possible values:
 
@@ -559,9 +646,8 @@ List of UUIDs for images that can only be run on certain hosts.
 If there is a need to restrict some images to only run on certain designated
 hosts, list those image UUIDs here.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'IsolatedHostsFilter' filter is enabled.
+Note that this setting only affects scheduling if the ``IsolatedHostsFilter``
+filter is enabled.
 
 Possible values:
 
@@ -570,8 +656,8 @@ Possible values:
 
 Related options:
 
-* scheduler/isolated_hosts
-* scheduler/restrict_isolated_hosts_to_isolated_images
+* ``[filter_scheduler] isolated_hosts``
+* ``[filter_scheduler] restrict_isolated_hosts_to_isolated_images``
 """),
     cfg.ListOpt("isolated_hosts",
         default=[],
@@ -582,9 +668,8 @@ List of hosts that can only run certain images.
 If there is a need to restrict some images to only run on certain designated
 hosts, list those host names here.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'IsolatedHostsFilter' filter is enabled.
+Note that this setting only affects scheduling if the ``IsolatedHostsFilter``
+filter is enabled.
 
 Possible values:
 
@@ -592,8 +677,8 @@ Possible values:
 
 Related options:
 
-* scheduler/isolated_images
-* scheduler/restrict_isolated_hosts_to_isolated_images
+* ``[filter_scheduler] isolated_images``
+* ``[filter_scheduler] restrict_isolated_hosts_to_isolated_images``
 """),
     cfg.BoolOpt(
         "restrict_isolated_hosts_to_isolated_images",
@@ -602,17 +687,19 @@ Related options:
         help="""
 Prevent non-isolated images from being built on isolated hosts.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'IsolatedHostsFilter' filter is enabled. Even
-then, this option doesn't affect the behavior of requests for isolated images,
-which will *always* be restricted to isolated hosts.
+Note that this setting only affects scheduling if the ``IsolatedHostsFilter``
+filter is enabled. Even then, this option doesn't affect the behavior of
+requests for isolated images, which will *always* be restricted to isolated
+hosts.
 
 Related options:
 
-* scheduler/isolated_images
-* scheduler/isolated_hosts
+* ``[filter_scheduler] isolated_images``
+* ``[filter_scheduler] isolated_hosts``
 """),
+    # TODO(stephenfin): Consider deprecating these next two options: they're
+    # effectively useless now that we don't support arbitrary image metadata
+    # properties
     cfg.StrOpt(
         "aggregate_image_properties_isolation_namespace",
         deprecated_group="DEFAULT",
@@ -626,10 +713,8 @@ option. If the host is part of an aggregate with such a metadata key, the image
 in the request spec must have the value of that metadata in its properties in
 order for the scheduler to consider the host as acceptable.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'aggregate_image_properties_isolation' filter is
-enabled.
+Note that this setting only affects scheduling if the
+``AggregateImagePropertiesIsolation`` filter is enabled.
 
 Possible values:
 
@@ -637,7 +722,7 @@ Possible values:
 
 Related options:
 
-* aggregate_image_properties_isolation_separator
+* ``[filter_scheduler] aggregate_image_properties_isolation_separator``
 """),
     cfg.StrOpt(
         "aggregate_image_properties_isolation_separator",
@@ -651,10 +736,8 @@ metadata keys are prefixed with the namespace defined in the
 aggregate_image_properties_isolation_namespace configuration option plus a
 separator. This option defines the separator to be used.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'aggregate_image_properties_isolation' filter
-is enabled.
+Note that this setting only affects scheduling if the
+``AggregateImagePropertiesIsolation`` filter is enabled.
 
 Possible values:
 
@@ -663,37 +746,39 @@ Possible values:
 
 Related options:
 
-* aggregate_image_properties_isolation_namespace
+* ``[filter_scheduler] aggregate_image_properties_isolation_namespace``
 """)]
 
-metrics_group = cfg.OptGroup(name="metrics",
-                             title="Metrics parameters",
-                             help="""
+metrics_group = cfg.OptGroup(
+    name="metrics",
+    title="Metrics parameters",
+    help="""
 Configuration options for metrics
 
 Options under this group allow to adjust how values assigned to metrics are
 calculated.
 """)
 
+# TODO(stephenfin): This entire feature could probably be removed. It's not
+# tested and likely doesn't work with most drivers now.
 metrics_weight_opts = [
-     cfg.FloatOpt("weight_multiplier",
-            default=1.0,
-            help="""
+    cfg.FloatOpt("weight_multiplier",
+        default=1.0,
+        help="""
+Multiplier used for weighing hosts based on reported metrics.
+
 When using metrics to weight the suitability of a host, you can use this option
 to change how the calculated weight influences the weight assigned to a host as
 follows:
 
-* >1.0: increases the effect of the metric on overall weight
-* 1.0: no change to the calculated weight
-* >0.0,<1.0: reduces the effect of the metric on overall weight
-* 0.0: the metric value is ignored, and the value of the
-  'weight_of_unavailable' option is returned instead
-* >-1.0,<0.0: the effect is reduced and reversed
-* -1.0: the effect is reversed
-* <-1.0: the effect is increased proportionally and reversed
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
+* ``>1.0``: increases the effect of the metric on overall weight
+* ``1.0``: no change to the calculated weight
+* ``>0.0,<1.0``: reduces the effect of the metric on overall weight
+* ``0.0``: the metric value is ignored, and the value of the
+  ``[metrics] weight_of_unavailable`` option is returned instead
+* ``>-1.0,<0.0``: the effect is reduced and reversed
+* ``-1.0``: the effect is reversed
+* ``<-1.0``: the effect is increased proportionally and reversed
 
 Possible values:
 
@@ -702,19 +787,23 @@ Possible values:
 
 Related options:
 
-* weight_of_unavailable
+* ``[filter_scheduler] weight_classes``
+* ``[metrics] weight_of_unavailable``
 """),
-     cfg.ListOpt("weight_setting",
-            default=[],
-            help="""
+    cfg.ListOpt("weight_setting",
+        default=[],
+        help="""
+Mapping of metric to weight modifier.
+
 This setting specifies the metrics to be weighed and the relative ratios for
 each metric. This should be a single string value, consisting of a series of
-one or more 'name=ratio' pairs, separated by commas, where 'name' is the name
-of the metric to be weighed, and 'ratio' is the relative weight for that
+one or more 'name=ratio' pairs, separated by commas, where ``name`` is the name
+of the metric to be weighed, and ``ratio`` is the relative weight for that
 metric.
 
 Note that if the ratio is set to 0, the metric value is ignored, and instead
-the weight will be set to the value of the 'weight_of_unavailable' option.
+the weight will be set to the value of the ``[metrics] weight_of_unavailable``
+option.
 
 As an example, let's consider the case where this option is set to:
 
@@ -724,53 +813,49 @@ The final weight will be:
 
     ``(name1.value * 1.0) + (name2.value * -1.3)``
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
 Possible values:
 
 * A list of zero or more key/value pairs separated by commas, where the key is
   a string representing the name of a metric and the value is a numeric weight
   for that metric. If any value is set to 0, the value is ignored and the
-  weight will be set to the value of the 'weight_of_unavailable' option.
+  weight will be set to the value of the ``[metrics] weight_of_unavailable``
+  option.
 
 Related options:
 
-* weight_of_unavailable
+* ``[metrics] weight_of_unavailable``
 """),
     cfg.BoolOpt("required",
-            default=True,
-            help="""
+        default=True,
+        help="""
+Whether metrics are required.
+
 This setting determines how any unavailable metrics are treated. If this option
 is set to True, any hosts for which a metric is unavailable will raise an
 exception, so it is recommended to also use the MetricFilter to filter out
 those hosts before weighing.
 
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
 Possible values:
 
-* True or False, where False ensures any metric being unavailable for a host
-  will set the host weight to 'weight_of_unavailable'.
+* A boolean value, where False ensures any metric being unavailable for a host
+  will set the host weight to ``[metrics] weight_of_unavailable``.
 
 Related options:
 
-* weight_of_unavailable
+* ``[metrics] weight_of_unavailable``
 """),
     cfg.FloatOpt("weight_of_unavailable",
-            default=float(-10000.0),
-            help="""
+        default=float(-10000.0),
+        help="""
+Default weight for unavailable metrics.
+
 When any of the following conditions are met, this value will be used in place
 of any actual metric value:
 
-* One of the metrics named in 'weight_setting' is not available for a host,
-  and the value of 'required' is False
-* The ratio specified for a metric in 'weight_setting' is 0
-* The 'weight_multiplier' option is set to 0
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
+- One of the metrics named in ``[metrics] weight_setting`` is not available for
+  a host, and the value of ``required`` is ``False``.
+- The ratio specified for a metric in ``[metrics] weight_setting`` is 0.
+- The ``[metrics] weight_multiplier`` option is set to 0.
 
 Possible values:
 
@@ -779,9 +864,9 @@ Possible values:
 
 Related options:
 
-* weight_setting
-* required
-* weight_multiplier
+* ``[metrics] weight_setting``
+* ``[metrics] required``
+* ``[metrics] weight_multiplier``
 """),
 ]
 
@@ -798,6 +883,8 @@ def register_opts(conf):
 
 
 def list_opts():
-    return {scheduler_group: scheduler_opts,
-            filter_scheduler_group: filter_scheduler_opts,
-            metrics_group: metrics_weight_opts}
+    return {
+        scheduler_group: scheduler_opts,
+        filter_scheduler_group: filter_scheduler_opts,
+        metrics_group: metrics_weight_opts,
+    }
