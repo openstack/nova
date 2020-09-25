@@ -1173,29 +1173,11 @@ class TestAPI(TestAPIBase):
     def test_refresh_neutron_extensions_cache(self):
         mocked_client = mock.create_autospec(client.Client)
         mocked_client.list_extensions.return_value = {
-            'extensions': [{'alias': constants.QOS_QUEUE}]}
+            'extensions': [{'alias': constants.DNS_INTEGRATION}]}
         self.api._refresh_neutron_extensions_cache(mocked_client)
         self.assertEqual(
-            {constants.QOS_QUEUE: {'alias': constants.QOS_QUEUE}},
+            {constants.DNS_INTEGRATION: {'alias': constants.DNS_INTEGRATION}},
             self.api.extensions)
-        mocked_client.list_extensions.assert_called_once_with()
-
-    @mock.patch.object(neutronapi, 'get_client')
-    def test_populate_neutron_extension_values_rxtx_factor(
-            self, mock_get_client):
-        mocked_client = mock.create_autospec(client.Client)
-        mock_get_client.return_value = mocked_client
-        mocked_client.list_extensions.return_value = {
-            'extensions': [{'alias': constants.QOS_QUEUE}]}
-        flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
-        flavor['rxtx_factor'] = 1
-        instance = objects.Instance(system_metadata={})
-        instance.flavor = flavor
-        port_req_body = {'port': {}}
-        self.api._populate_neutron_extension_values(self.context, instance,
-                                                    None, port_req_body)
-        self.assertEqual(1, port_req_body['port']['rxtx_factor'])
-        mock_get_client.assert_called_once_with(self.context)
         mocked_client.list_extensions.assert_called_once_with()
 
     def test_allocate_for_instance_1(self):

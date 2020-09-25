@@ -40,7 +40,6 @@ RESOURCE_REQUEST_GROUPS = 'port-resource-request-groups'
 # Third-party extensions
 
 VNIC_INDEX = 'vnic-index'  # this is provided by the vmware_nsx project
-QOS_QUEUE = 'qos-queue'  # TODO(stephenfin): what defines this? Xen?
 
 # Search fields
 

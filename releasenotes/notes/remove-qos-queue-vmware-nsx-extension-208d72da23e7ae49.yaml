@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    Support for the ``qos-queue`` extension provided by the vmware-nsx neutron
+    plugin for the VMWare NSX Manager has been removed. This extension was
+    removed from the vmware-nsx project when support for NSX-MH was removed in
+    15.0.0.
