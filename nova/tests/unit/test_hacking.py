@@ -897,7 +897,7 @@ class HackingTestCase(test.NoDBTestCase):
             expected_errors=errors, filename="nova/tests/unit/test_context.py")
         # Check no errors in other than 'nova/tests' directory.
         self._assert_has_no_errors(
-            code, checks.nonexistent_assertion_methods_and_attributes,
+            code, checks.useless_assertion,
             filename="nova/compute/api.py")
         code = """
                    self.assertIsNone(None_test_var, "Fails")
