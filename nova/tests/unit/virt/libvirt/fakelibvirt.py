@@ -61,6 +61,10 @@ VIR_DOMAIN_XML_INACTIVE = 2
 VIR_DOMAIN_XML_UPDATE_CPU = 4
 VIR_DOMAIN_XML_MIGRATABLE = 8
 
+VIR_DOMAIN_BLOCK_COPY_SHALLOW = 1
+VIR_DOMAIN_BLOCK_COPY_REUSE_EXT = 2
+VIR_DOMAIN_BLOCK_COPY_TRANSIENT_JOB = 4
+
 VIR_DOMAIN_BLOCK_REBASE_SHALLOW = 1
 VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT = 2
 VIR_DOMAIN_BLOCK_REBASE_COPY = 8
@@ -1345,6 +1349,9 @@ class Domain(object):
                     'valid only with non-null base',
                     error_code=VIR_ERR_INVALID_ARG,
                     error_domain=VIR_FROM_QEMU)
+        return 0
+
+    def blockCopy(self, disk, base, flags=0):
         return 0
 
     def blockCommit(self, disk, base, top, flags):

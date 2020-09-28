@@ -101,7 +101,6 @@ import nova.privsep.utils
 from nova.storage import rbd_utils
 from nova import utils
 from nova import version
-from nova.virt import arch
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt.disk import api as disk_api
@@ -219,15 +218,15 @@ patch_tpool_proxy()
 # versions. Over time, this will become a common min version
 # for all architectures/hypervisors, as this value rises to
 # meet them.
-MIN_LIBVIRT_VERSION = (5, 0, 0)
-MIN_QEMU_VERSION = (4, 0, 0)
+MIN_LIBVIRT_VERSION = (6, 0, 0)
+MIN_QEMU_VERSION = (4, 2, 0)
 # TODO(berrange): Re-evaluate this at start of each release cycle
 # to decide if we want to plan a future min version bump.
 # MIN_LIBVIRT_VERSION can be updated to match this after
 # NEXT_MIN_LIBVIRT_VERSION  has been at a higher value for
 # one cycle
-NEXT_MIN_LIBVIRT_VERSION = (6, 0, 0)
-NEXT_MIN_QEMU_VERSION = (4, 2, 0)
+NEXT_MIN_LIBVIRT_VERSION = (7, 0, 0)
+NEXT_MIN_QEMU_VERSION = (5, 2, 0)
 
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
@@ -245,15 +244,6 @@ ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
-
-# -blockdev support (replacing -drive)
-MIN_LIBVIRT_BLOCKDEV = (6, 0, 0)
-MIN_QEMU_BLOCKDEV = (4, 2, 0)
-
-# Virtual TPM (vTPM) support
-MIN_LIBVIRT_VTPM = (5, 6, 0)
-
-MIN_LIBVIRT_S390X_CPU_COMPARE = (5, 9, 0)
 
 
 class LibvirtDriver(driver.ComputeDriver):
@@ -741,14 +731,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 "vTPM support requires '[libvirt] virt_type' of 'qemu' or "
                 "'kvm'; found '%s'.")
             raise exception.InvalidConfiguration(msg % CONF.libvirt.virt_type)
-
-        if not self._host.has_min_version(lv_ver=MIN_LIBVIRT_VTPM):
-            msg = _(
-                'vTPM support requires Libvirt version %(libvirt)s or '
-                'greater.')
-            raise exception.InvalidConfiguration(msg % {
-                'libvirt': libvirt_utils.version_to_string(MIN_LIBVIRT_VTPM),
-            })
 
         # These executables need to be installed for libvirt to make use of
         # emulated TPM.
@@ -1888,23 +1870,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.delete_configuration(support_uefi)
 
             try:
-                # NOTE(lyarwood): Use virDomainBlockCopy from libvirt >= 6.0.0
-                # and QEMU >= 4.2.0 with -blockdev domains allowing QEMU to
-                # copy to remote disks.
-                if self._host.has_min_version(lv_ver=MIN_LIBVIRT_BLOCKDEV,
-                                              hv_ver=MIN_QEMU_BLOCKDEV):
-                    dev.copy(conf.to_xml(), reuse_ext=True)
-                else:
-                    # TODO(lyarwood): Remove the following use of
-                    # virDomainBlockRebase once MIN_LIBVIRT_VERSION hits >=
-                    # 6.0.0 and MIN_QEMU_VERSION hits >= 4.2.0.
-                    # Start copy with VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT flag to
-                    # allow writing to existing external volume file. Use
-                    # VIR_DOMAIN_BLOCK_REBASE_COPY_DEV if it's a block device
-                    # to make sure XML is generated correctly (bug 1691195)
-                    copy_dev = conf.source_type == 'block'
-                    dev.rebase(conf.source_path, copy=True, reuse_ext=True,
-                               copy_dev=copy_dev)
+                dev.copy(conf.to_xml(), reuse_ext=True)
+
                 while not dev.is_job_complete():
                     time.sleep(0.5)
 
@@ -1964,14 +1931,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # eventually do this for us.
         self._connect_volume(context, new_connection_info, instance)
         conf = self._get_volume_config(new_connection_info, disk_info)
-        if (not conf.source_path and not
-            self._host.has_min_version(lv_ver=MIN_LIBVIRT_BLOCKDEV,
-                                       hv_ver=MIN_QEMU_BLOCKDEV)):
-            self._disconnect_volume(context, new_connection_info, instance)
-            raise NotImplementedError(_("Swap only supports host devices and "
-                                        "files with Libvirt < 6.0.0 or QEMU "
-                                        "< 4.2.0"))
-
         hw_firmware_type = instance.image_meta.properties.get(
             'hw_firmware_type')
 
@@ -8797,18 +8756,6 @@ class LibvirtDriver(driver.ComputeDriver):
             cpu = guest_cpu
         else:
             cpu = self._vcpu_model_to_cpu_config(guest_cpu)
-
-        # s390x doesn't support cpu model in host info, so compare
-        # cpu info will raise an error anyway, thus have to avoid check
-        # see bug 1854126 for more info
-        if (
-            cpu.arch in (arch.S390X, arch.S390) and
-            not self._host.has_min_version(MIN_LIBVIRT_S390X_CPU_COMPARE)
-        ):
-            LOG.debug("on s390x platform, the min libvirt version "
-                      "support cpu model compare is %s",
-                      MIN_LIBVIRT_S390X_CPU_COMPARE)
-            return
 
         u = ("http://libvirt.org/html/libvirt-libvirt-host.html#"
              "virCPUCompareResult")

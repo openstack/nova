@@ -19,7 +19,6 @@ from castellan.common.objects import passphrase
 from castellan.key_manager import key_manager
 from oslo_log import log as logging
 from oslo_utils import uuidutils
-from oslo_utils import versionutils
 
 import nova.conf
 from nova import context as nova_context
@@ -28,7 +27,6 @@ from nova import exception
 from nova import objects
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
-from nova.virt.libvirt import driver
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -137,10 +135,7 @@ class VTPMServersTest(base.ServersTestBase):
 
     # TODO(stephenfin): This should be moved to the base class
     def start_compute(self, hostname='compute1'):
-        libvirt_version = versionutils.convert_version_to_int(
-            driver.MIN_LIBVIRT_VTPM)
-        fake_connection = self._get_connection(
-            libvirt_version=libvirt_version, hostname=hostname)
+        fake_connection = self._get_connection(hostname=hostname)
 
         # This is fun. Firstly we need to do a global'ish mock so we can
         # actually start the service.

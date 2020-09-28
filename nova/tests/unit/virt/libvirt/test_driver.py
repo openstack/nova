@@ -1625,18 +1625,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         )
         mock_getgrnam.assert_called_with('admins')
 
-    @mock.patch.object(host.Host, 'has_min_version')
     @mock.patch('shutil.which')
     @mock.patch('pwd.getpwnam')
     @mock.patch('grp.getgrnam')
     def test__check_vtpm_support(
-        self, mock_getgrnam, mock_getpwnam, mock_which, mock_version,
+        self, mock_getgrnam, mock_getpwnam, mock_which
     ):
         """Test checking for vTPM support when everything is configured
         correctly.
         """
         self.flags(swtpm_enabled=True, virt_type='kvm', group='libvirt')
-        mock_version.return_value = True
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host('dummyhost')
@@ -1644,7 +1642,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_which.assert_has_calls(
             [mock.call('swtpm_setup'), mock.call().__bool__()],
         )
-        mock_version.assert_called_with(lv_ver=(5, 6, 0))
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_check_cpu_set_configuration__no_configuration(self, mock_log):
@@ -10811,26 +10808,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         ret = conn._compare_cpu(None, None, instance)
         self.assertIsNone(ret)
 
-    def test_compare_cpu_virt_platform_s390x(self):
-        _fake_s390xcpu_info = {
-            "arch": "s390x",
-            "model": "test_model",
-            "vendor": "test_vendor",
-            "topology": {
-                "sockets": 1,
-                "cores": 8,
-                "threads": 16
-            },
-            "features": ["feature1", "feature2"]
-        }
-
-        instance = objects.Instance(**self.test_instance)
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        ret = conn._compare_cpu(None,
-                                jsonutils.dumps(_fake_s390xcpu_info),
-                                instance)
-        self.assertIsNone(ret)
-
     @mock.patch.object(host.Host, 'compare_cpu')
     @mock.patch.object(nova.virt.libvirt, 'config')
     def test_compare_cpu_invalid_cpuinfo_raises(self, mock_vconfig,
@@ -19432,11 +19409,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(NotImplementedError, drvr.swap_volume, self.context,
                             {}, {}, None, None, None)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
     @mock.patch('nova.virt.libvirt.host.Host.write_instance_config')
-    def test_swap_volume_copy(self, mock_write_instance_config,
-                              mock_libvirt_ver, mock_qemu_ver):
+    def test_swap_volume_copy(self, mock_write_instance_config):
         """Assert the happy path of calling virDomainBlockCopy to swap"""
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
@@ -19448,10 +19422,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             target_dev=mock.sentinel.target_dev,
             source_path=None)
 
-        mock_libvirt_ver.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_BLOCKDEV)
-        mock_qemu_ver.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_QEMU_BLOCKDEV)
         mock_dev.is_job_complete.return_value = True
         mock_guest.get_block_device.return_value = mock_dev
         mock_guest.get_xml_desc.side_effect = [
@@ -19480,11 +19450,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_write_instance_config.assert_called_once_with(
             mock.sentinel.new_xml_desc)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
     @mock.patch('nova.virt.libvirt.host.Host.write_instance_config')
-    def test_swap_volume_copy_failure(self, mock_write_instance_config,
-                                      mock_libvirt_ver, mock_qemu_ver):
+    def test_swap_volume_copy_failure(self, mock_write_instance_config):
         """Assert that exception.VolumeRebaseFailed is raised on failure"""
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
@@ -19496,10 +19463,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             target_dev=mock.sentinel.target_dev,
             source_path=None)
 
-        mock_libvirt_ver.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_BLOCKDEV)
-        mock_qemu_ver.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_QEMU_BLOCKDEV)
         mock_dev.copy.side_effect = test.TestingException()
         mock_guest.get_block_device.return_value = mock_dev
         mock_guest.get_xml_desc.side_effect = [
@@ -19519,105 +19482,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # Assert the new domain XML is written to disk on success
         mock_write_instance_config.assert_called_once_with(
             mock.sentinel.original_xml_desc)
-
-    @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete',
-                return_value=True)
-    def _test_swap_volume_rebase(self, mock_is_job_complete, source_type,
-                                 resize=False, fail=False):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        hw_firmware_type = image_meta.properties.get(
-            'hw_firmware_type')
-
-        mock_dom = mock.MagicMock()
-        guest = libvirt_guest.Guest(mock_dom)
-
-        with mock.patch.object(drvr._conn, 'defineXML',
-                               create=True) as mock_define:
-            srcfile = "/first/path"
-            dstfile = "/second/path"
-            orig_xml = str(mock.sentinel.orig_xml)
-            new_xml = str(mock.sentinel.new_xml)
-
-            mock_dom.XMLDesc.return_value = orig_xml
-            mock_dom.isPersistent.return_value = True
-
-            def fake_rebase_success(*args, **kwargs):
-                # Make sure the XML is set after the rebase so we know
-                # get_xml_desc was called after the update.
-                mock_dom.XMLDesc.return_value = new_xml
-
-            if not fail:
-                mock_dom.blockRebase.side_effect = fake_rebase_success
-                # If the swap succeeds, make sure we use the new XML to
-                # redefine the domain.
-                expected_xml = new_xml
-            else:
-                if resize:
-                    mock_dom.blockResize.side_effect = test.TestingException()
-                    expected_exception = test.TestingException
-                else:
-                    mock_dom.blockRebase.side_effect = test.TestingException()
-                    expected_exception = exception.VolumeRebaseFailed
-                # If the swap fails, make sure we use the original domain XML
-                # to redefine the domain.
-                expected_xml = orig_xml
-
-            # Run the swap volume code.
-            mock_conf = mock.MagicMock(source_type=source_type,
-                                       source_path=dstfile)
-            if not fail:
-                drvr._swap_volume(guest, srcfile, mock_conf, 1,
-                                  hw_firmware_type)
-            else:
-                self.assertRaises(expected_exception, drvr._swap_volume, guest,
-                                  srcfile, mock_conf, 1, hw_firmware_type)
-
-            # Verify we read the original persistent config.
-            expected_call_count = 1
-            expected_calls = [mock.call(
-                flags=(fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
-                       fakelibvirt.VIR_DOMAIN_XML_SECURE))]
-            if not fail:
-                # Verify we read the updated live config.
-                expected_call_count = 2
-                expected_calls.append(
-                    mock.call(flags=fakelibvirt.VIR_DOMAIN_XML_SECURE))
-            self.assertEqual(expected_call_count, mock_dom.XMLDesc.call_count)
-            mock_dom.XMLDesc.assert_has_calls(expected_calls)
-
-            # Verify we called with the correct flags.
-            expected_flags = (fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
-                              fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT)
-            if source_type == 'block':
-                expected_flags = (expected_flags |
-                                  fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY_DEV)
-            mock_dom.blockRebase.assert_called_once_with(srcfile, dstfile, 0,
-                                                         flags=expected_flags)
-
-            # Verify we defined the expected XML.
-            mock_define.assert_called_once_with(expected_xml)
-
-            # Verify we called resize with the correct args.
-            if resize:
-                mock_dom.blockResize.assert_called_once_with(
-                    srcfile, 1 * units.Gi, flags=1)
-
-    def test_swap_volume_rebase_file(self):
-        self._test_swap_volume_rebase('file')
-
-    def test_swap_volume_rebase_block(self):
-        """If the swapped volume is type="block", make sure that we give
-        libvirt the correct VIR_DOMAIN_BLOCK_REBASE_COPY_DEV flag to ensure the
-        correct type="block" XML is generated (bug 1691195)
-        """
-        self._test_swap_volume_rebase('block')
-
-    def test_swap_volume_rebase_fail(self):
-        self._test_swap_volume_rebase('block', fail=True)
-
-    def test_swap_volume_rebase_resize_fail(self):
-        self._test_swap_volume_rebase('file', resize=True, fail=True)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._swap_volume')
@@ -19669,99 +19533,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                   old_connection_info,
                                                   instance)
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._swap_volume')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_config')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
-    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
-    def test_swap_volume_without_device_path_blocked(self, get_guest,
-            connect_volume, get_volume_config, swap_volume, disconnect_volume):
-        """Assert that NotImplementedError is raised when swap_volume is called
-           without a source_path prior to MIN_LIBVIRT_BLOCKDEV.
-        """
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        instance = objects.Instance(**self.test_instance)
-        old_connection_info = {'driver_volume_type': 'rbd',
-                               'serial': 'old-volume-id',
-                               'data': {'access_mode': 'rw'}}
-        new_connection_info = {'driver_volume_type': 'rbd',
-                               'serial': 'new-volume-id',
-                               'data': {'access_mode': 'rw'}}
-
-        mock_guest = mock.MagicMock()
-        mock_guest.get_disk.return_value = True
-        get_guest.return_value = mock_guest
-        get_volume_config.return_value = mock.MagicMock(source_path=None)
-
-        self.assertRaises(NotImplementedError, conn.swap_volume, self.context,
-                          old_connection_info, new_connection_info, instance,
-                          '/dev/vdb', 1)
-
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._swap_volume')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_config')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
-    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
-    def test_swap_volume_blockdev_without_device_path(self, get_guest,
-            connect_volume, get_volume_config, swap_volume, disconnect_volume,
-            lib_version, qemu_version):
-        """Assert that swap_volume correctly calls down to _swap_volume when
-           source_path isn't provided after MIN_LIBVIRT_BLOCKDEV.
-        """
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        lib_version.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_BLOCKDEV)
-        qemu_version.return_value = versionutils.convert_version_to_int(
-            libvirt_driver.MIN_QEMU_BLOCKDEV)
-        instance = objects.Instance(**self.test_instance)
-        old_connection_info = {'driver_volume_type': 'rbd',
-                               'serial': 'old-volume-id',
-                               'data': {'access_mode': 'rw'}}
-        new_connection_info = {'driver_volume_type': 'rbd',
-                               'serial': 'new-volume-id',
-                               'data': {'access_mode': 'rw'}}
-        mock_dom = mock.MagicMock()
-        guest = libvirt_guest.Guest(mock_dom)
-        mock_dom.XMLDesc.return_value = """<domain>
-          <devices>
-            <disk type='file'>
-                <source file='/fake-old-volume'/>
-                <target dev='vdb' bus='virtio'/>
-            </disk>
-          </devices>
-        </domain>
-        """
-        mock_dom.name.return_value = 'inst'
-        mock_dom.UUIDString.return_value = 'uuid'
-        get_guest.return_value = guest
-        conf = mock.MagicMock(source_path='/fake-new-volume')
-        get_volume_config.return_value = conf
-
-        conn.swap_volume(self.context, old_connection_info,
-                         new_connection_info, instance, '/dev/vdb', 1)
-
-        get_guest.assert_called_once_with(instance)
-        connect_volume.assert_called_once_with(self.context,
-                                               new_connection_info, instance)
-
-        swap_volume.assert_called_once_with(guest, 'vdb', conf, 1, None)
-        disconnect_volume.assert_called_once_with(self.context,
-                                                  old_connection_info,
-                                                  instance)
-
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
-    @mock.patch('nova.virt.libvirt.guest.BlockDevice.rebase')
+    @mock.patch('nova.virt.libvirt.guest.BlockDevice.copy')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_config')
     @mock.patch('nova.virt.libvirt.guest.Guest.get_disk')
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
     @mock.patch('nova.virt.libvirt.host.Host.write_instance_config')
-    def test_swap_volume_disconnect_new_volume_on_rebase_error(self,
+    def test_swap_volume_disconnect_new_volume_on_copy_error(self,
             write_config, get_guest, get_disk, get_volume_config,
-            connect_volume, disconnect_volume, rebase, get_volume_encryption):
+            connect_volume, disconnect_volume, copy, get_volume_encryption):
         """Assert that disconnect_volume is called for the new volume if an
            error is encountered while rebasing
         """
@@ -19772,7 +19554,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         get_volume_encryption.return_value = {}
         exc = fakelibvirt.make_libvirtError(fakelibvirt.libvirtError,
               'internal error', error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
-        rebase.side_effect = exc
+        copy.side_effect = exc
 
         self.assertRaises(exception.VolumeRebaseFailed, conn.swap_volume,
                           self.context, mock.sentinel.old_connection_info,
