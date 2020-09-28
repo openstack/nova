@@ -7314,9 +7314,33 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def swap_volume(self, context, old_volume_id, new_volume_id, instance,
                     new_attachment_id):
-        """Swap volume for an instance."""
-        context = context.elevated()
+        """Replace the old volume with the new volume within the active server
 
+        :param context: User request context
+        :param old_volume_id: Original volume id
+        :param new_volume_id: New volume id being swapped to
+        :param instance: Instance with original_volume_id attached
+        :param new_attachment_id: ID of the new attachment for new_volume_id
+        """
+        @utils.synchronized(instance.uuid)
+        def _do_locked_swap_volume(context, old_volume_id, new_volume_id,
+                                   instance, new_attachment_id):
+            self._do_swap_volume(context, old_volume_id, new_volume_id,
+                                 instance, new_attachment_id)
+        _do_locked_swap_volume(context, old_volume_id, new_volume_id, instance,
+                               new_attachment_id)
+
+    def _do_swap_volume(self, context, old_volume_id, new_volume_id,
+                        instance, new_attachment_id):
+        """Replace the old volume with the new volume within the active server
+
+        :param context: User request context
+        :param old_volume_id: Original volume id
+        :param new_volume_id: New volume id being swapped to
+        :param instance: Instance with original_volume_id attached
+        :param new_attachment_id: ID of the new attachment for new_volume_id
+        """
+        context = context.elevated()
         compute_utils.notify_about_volume_swap(
             context, instance, self.host,
             fields.NotificationPhase.START,
