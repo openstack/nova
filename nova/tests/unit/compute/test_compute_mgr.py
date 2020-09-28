@@ -5161,18 +5161,21 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         node = uuidutils.generate_uuid()  # ironic node uuid
         instance = fake_instance.fake_instance_obj(self.context, node=node)
         instance.migration_context = None
+        migration = objects.Migration(status='accepted')
         with test.nested(
             mock.patch.object(self.compute, '_get_compute_info'),
             mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
             mock.patch.object(objects.Instance, 'save'),
-            mock.patch.object(self.compute, '_set_migration_status'),
-        ) as (mock_get, mock_rebuild, mock_save, mock_set):
-            self.compute.rebuild_instance(self.context, instance, None, None,
-                                          None, None, None, None, False,
-                                          False, False, None, None, {}, None)
+            mock.patch.object(migration, 'save'),
+        ) as (mock_get, mock_rebuild, mock_save, mock_migration_save):
+            self.compute.rebuild_instance(
+                self.context, instance, None, None,
+                None, None, None, None, False,
+                False, False, migration, None, {}, None)
             self.assertFalse(mock_get.called)
             self.assertEqual(node, instance.node)
-            mock_set.assert_called_once_with(None, 'done')
+            self.assertEqual('done', migration.status)
+            mock_migration_save.assert_called_once_with()
 
     def test_rebuild_node_updated_if_recreate(self):
         dead_node = uuidutils.generate_uuid()
@@ -5185,16 +5188,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         with test.nested(
             mock.patch.object(self.compute, '_get_compute_info'),
             mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
-            mock.patch.object(objects.Instance, 'save'),
-            mock.patch.object(self.compute, '_set_migration_status'),
-        ) as (mock_get, mock_rebuild, mock_save, mock_set):
+        ) as (mock_get, mock_rebuild):
             mock_get.return_value.hypervisor_hostname = 'new-node'
-            self.compute.rebuild_instance(self.context, instance, None, None,
-                                          None, None, None, None, True,
-                                          False, False, None, None, {}, None)
+            self.compute.rebuild_instance(
+                self.context, instance, None, None, None, None, None,
+                None, True, False, False, mock.sentinel.migration, None, {},
+                None)
             mock_get.assert_called_once_with(mock.ANY, self.compute.host)
-            self.assertEqual('new-node', instance.node)
-            mock_set.assert_called_once_with(None, 'done')
+            mock_rt.finish_evacuation.assert_called_once_with(
+                instance, 'new-node', mock.sentinel.migration)
             # Make sure the rebuild_claim was called with the proper image_meta
             # from the instance.
             mock_rt.rebuild_claim.assert_called_once()
