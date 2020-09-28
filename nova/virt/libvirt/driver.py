@@ -251,8 +251,6 @@ LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 MIN_LIBVIRT_BLOCKDEV = (6, 0, 0)
 MIN_QEMU_BLOCKDEV = (4, 2, 0)
 
-MIN_LIBVIRT_VIR_ERR_DEVICE_MISSING = (4, 1, 0)
-
 # Virtual TPM (vTPM) support
 MIN_LIBVIRT_VTPM = (5, 6, 0)
 
@@ -2022,11 +2020,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # detaching any attached encryptors or disconnecting the underlying
             # volume in _disconnect_volume. Otherwise, the encryptor or volume
             # driver may report that the volume is still in use.
-            supports_device_missing = self._host.has_min_version(
-               MIN_LIBVIRT_VIR_ERR_DEVICE_MISSING)
             wait_for_detach = guest.detach_device_with_retry(
-                guest.get_disk, disk_dev, live=live,
-                supports_device_missing_error_code=supports_device_missing)
+                guest.get_disk, disk_dev, live=live)
             wait_for_detach()
 
         except exception.InstanceNotFound:
@@ -2227,12 +2222,9 @@ class LibvirtDriver(driver.ComputeDriver):
             live = state in (power_state.RUNNING, power_state.PAUSED)
             # Now we are going to loop until the interface is detached or we
             # timeout.
-            supports_device_missing = self._host.has_min_version(
-               MIN_LIBVIRT_VIR_ERR_DEVICE_MISSING)
             wait_for_detach = guest.detach_device_with_retry(
                 guest.get_interface_by_cfg, cfg, live=live,
-                alternative_device_name=self.vif_driver.get_vif_devname(vif),
-                supports_device_missing_error_code=supports_device_missing)
+                alternative_device_name=self.vif_driver.get_vif_devname(vif))
             wait_for_detach()
         except exception.DeviceDetachFailed:
             # We failed to detach the device even with the retry loop, so let's
