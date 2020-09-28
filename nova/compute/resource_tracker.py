@@ -1970,3 +1970,21 @@ class ResourceTracker(object):
         """
         self.pci_tracker.free_instance_claims(context, instance)
         self.pci_tracker.save(context)
+
+    @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
+    def finish_evacuation(self, instance, node, migration):
+        instance.apply_migration_context()
+        # NOTE (ndipanov): This save will now update the host and node
+        # attributes making sure that next RT pass is consistent since
+        # it will be based on the instance and not the migration DB
+        # entry.
+        instance.host = self.host
+        instance.node = node
+        instance.save()
+        instance.drop_migration_context()
+
+        # NOTE (ndipanov): Mark the migration as done only after we
+        # mark the instance as belonging to this host.
+        if migration:
+            migration.status = 'done'
+            migration.save()
