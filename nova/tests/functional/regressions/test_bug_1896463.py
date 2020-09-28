@@ -221,13 +221,4 @@ class TestEvacuateResourceTrackerRace(
             server, {'OS-EXT-SRV-ATTR:host': 'host2', 'status': 'ACTIVE'})
 
         self._assert_pci_device_allocated(server['id'], self.compute1_id)
-
-        # This is bug #1896463 as the PCI allocation was deleted by the racing
-        # _update_available_resource periodic task.
-        self._assert_pci_device_allocated(
-            server['id'], self.compute2_id, num=0)
-
-        # FIXME(gibi): When this bug is fixed (or if you remove the sleeps
-        # above to avoid the race condition) then we expect that the PCI
-        # allocation exists on the destination host too.
-        # self._assert_pci_device_allocated(server['id'], self.compute2_id)
+        self._assert_pci_device_allocated(server['id'], self.compute2_id)
