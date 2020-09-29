@@ -249,12 +249,6 @@ VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
-
-# If the host has this libvirt version, then we skip the retry loop of
-# instance destroy() call, as libvirt itself increased the wait time
-# before the SIGKILL signal takes effect.
-MIN_LIBVIRT_BETTER_SIGKILL_HANDLING = (4, 7, 0)
-
 # Persistent Memory (PMEM/NVDIMM) Device Support
 MIN_LIBVIRT_PMEM_SUPPORT = (5, 0, 0)
 MIN_QEMU_PMEM_SUPPORT = (3, 1, 0)
@@ -1181,7 +1175,7 @@ class LibvirtDriver(driver.ComputeDriver):
                   instance=instance)
         disk_api.teardown_container(container_dir, rootfs_dev)
 
-    def _destroy(self, instance, attempt=1):
+    def _destroy(self, instance):
         try:
             guest = self._host.get_guest(instance)
             if CONF.serial_console.enabled:
@@ -1233,52 +1227,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     reason = _("operation time out")
                     raise exception.InstancePowerOffFailure(reason=reason)
                 elif errcode == libvirt.VIR_ERR_SYSTEM_ERROR:
-                    if e.get_int1() == errno.EBUSY:
-                        # NOTE(danpb): When libvirt kills a process it sends it
-                        # SIGTERM first and waits 10 seconds. If it hasn't gone
-                        # it sends SIGKILL and waits another 5 seconds. If it
-                        # still hasn't gone then you get this EBUSY error.
-                        # Usually when a QEMU process fails to go away upon
-                        # SIGKILL it is because it is stuck in an
-                        # uninterruptible kernel sleep waiting on I/O from
-                        # some non-responsive server.
-                        # Given the CPU load of the gate tests though, it is
-                        # conceivable that the 15 second timeout is too short,
-                        # particularly if the VM running tempest has a high
-                        # steal time from the cloud host. ie 15 wallclock
-                        # seconds may have passed, but the VM might have only
-                        # have a few seconds of scheduled run time.
-                        #
-                        # TODO(kchamart): Once MIN_LIBVIRT_VERSION
-                        # reaches v4.7.0, (a) rewrite the above note,
-                        # and (b) remove the following code that retries
-                        # _destroy() API call (which gives SIGKILL 30
-                        # seconds to take effect) -- because from v4.7.0
-                        # onwards, libvirt _automatically_ increases the
-                        # timeout to 30 seconds.  This was added in the
-                        # following libvirt commits:
-                        #
-                        #   - 9a4e4b942 (process: wait longer 5->30s on
-                        #     hard shutdown)
-                        #
-                        #   - be2ca0444 (process: wait longer on kill
-                        #     per assigned Hostdev)
-                        with excutils.save_and_reraise_exception() as ctxt:
-                            if not self._host.has_min_version(
-                                    MIN_LIBVIRT_BETTER_SIGKILL_HANDLING):
-                                LOG.warning('Error from libvirt during '
-                                            'destroy. Code=%(errcode)s '
-                                            'Error=%(e)s; attempt '
-                                            '%(attempt)d of 6 ',
-                                            {'errcode': errcode, 'e': e,
-                                             'attempt': attempt},
-                                            instance=instance)
-                                # Try up to 6 times before giving up.
-                                if attempt < 6:
-                                    ctxt.reraise = False
-                                    self._destroy(instance, attempt + 1)
-                                    return
-
+                    with excutils.save_and_reraise_exception():
+                        LOG.warning("Cannot destroy instance, general system"
+                                    "call failure", instance=instance)
                 if not is_okay:
                     with excutils.save_and_reraise_exception():
                         LOG.error('Error from libvirt during destroy. '

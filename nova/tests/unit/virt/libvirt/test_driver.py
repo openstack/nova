@@ -16839,68 +16839,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertRaises(fakelibvirt.libvirtError, conn._destroy,
                               instance)
 
-    @mock.patch.object(
-        fakelibvirt.Connection, 'getLibVersion',
-        return_value=versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_BETTER_SIGKILL_HANDLING) - 1)
-    def test_private_destroy_ebusy_timeout(self, mock_get_ver):
-        # Tests that _destroy will retry 6 times to destroy the guest when an
-        # EBUSY is raised, but eventually times out and raises the libvirtError
-        ex = fakelibvirt.make_libvirtError(
-                fakelibvirt.libvirtError,
-                ("Failed to terminate process 26425 with SIGKILL: "
-                 "Device or resource busy"),
-                error_code=fakelibvirt.VIR_ERR_SYSTEM_ERROR,
-                int1=errno.EBUSY)
-
-        mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
-        mock_guest.poweroff = mock.Mock(side_effect=ex)
-
-        instance = objects.Instance(**self.test_instance)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        with mock.patch.object(drvr._host, 'get_guest',
-                               return_value=mock_guest):
-            self.assertRaises(fakelibvirt.libvirtError, drvr._destroy,
-                              instance)
-
-        self.assertEqual(6, mock_guest.poweroff.call_count)
-
-    @mock.patch.object(
-        fakelibvirt.Connection, 'getLibVersion',
-        return_value=versionutils.convert_version_to_int(
-            libvirt_driver.MIN_LIBVIRT_BETTER_SIGKILL_HANDLING) - 1)
-    def test_private_destroy_ebusy_multiple_attempt_ok(self, mock_get_ver):
-        # Tests that the _destroy attempt loop is broken when EBUSY is no
-        # longer raised.
-        ex = fakelibvirt.make_libvirtError(
-                fakelibvirt.libvirtError,
-                ("Failed to terminate process 26425 with SIGKILL: "
-                 "Device or resource busy"),
-                error_code=fakelibvirt.VIR_ERR_SYSTEM_ERROR,
-                int1=errno.EBUSY)
-
-        mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
-        mock_guest.poweroff = mock.Mock(side_effect=[ex, None])
-
-        inst_info = hardware.InstanceInfo(power_state.SHUTDOWN, internal_id=1)
-        instance = objects.Instance(**self.test_instance)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        with mock.patch.object(drvr._host, 'get_guest',
-                               return_value=mock_guest):
-            with mock.patch.object(drvr, 'get_info', return_value=inst_info):
-                drvr._destroy(instance)
-
-        self.assertEqual(2, mock_guest.poweroff.call_count)
-
     @mock.patch.object(libvirt_driver.LOG, 'warning')
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_BETTER_SIGKILL_HANDLING))
-    def test_min_libvirt_better_sigkill_handling_warning(self,
-                                                 mock_warning,
-                                                 mock_get_libversion):
+    def test_VIR_ERR_SYSTEM_ERROR_during_destroy(self, mock_warning):
         ex = fakelibvirt.make_libvirtError(
                 fakelibvirt.libvirtError,
                 ("Failed to terminate process 26425 with SIGKILL: "
