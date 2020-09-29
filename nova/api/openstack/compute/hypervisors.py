@@ -49,56 +49,84 @@ class HypervisorsController(wsgi.Controller):
         self.host_api = compute.HostAPI()
         self.servicegroup_api = servicegroup.API()
 
-    def _view_hypervisor(self, hypervisor, service, detail, req, servers=None,
-                         with_servers=False, **kwargs):
+    def _view_hypervisor(
+        self, hypervisor, service, detail, req, servers=None,
+        with_servers=False,
+    ):
         alive = self.servicegroup_api.service_is_up(service)
         # The 2.53 microversion returns the compute node uuid rather than id.
         uuid_for_id = api_version_request.is_supported(
             req, min_version=UUID_FOR_ID_MIN_VERSION)
+
         hyp_dict = {
             'id': hypervisor.uuid if uuid_for_id else hypervisor.id,
             'hypervisor_hostname': hypervisor.hypervisor_hostname,
             'state': 'up' if alive else 'down',
-            'status': ('disabled' if service.disabled
-                       else 'enabled'),
-            }
+            'status': 'disabled' if service.disabled else 'enabled',
+        }
 
         if detail:
-            for field in ('vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
-                          'memory_mb_used', 'local_gb_used',
-                          'hypervisor_type', 'hypervisor_version',
-                          'free_ram_mb', 'free_disk_gb', 'current_workload',
-                          'running_vms', 'disk_available_least', 'host_ip'):
+            for field in (
+                'hypervisor_type', 'hypervisor_version', 'host_ip',
+            ):
                 hyp_dict[field] = getattr(hypervisor, field)
 
-            service_id = service.uuid if uuid_for_id else service.id
             hyp_dict['service'] = {
-                'id': service_id,
+                'id': service.uuid if uuid_for_id else service.id,
                 'host': hypervisor.host,
                 'disabled_reason': service.disabled_reason,
-                }
+            }
 
-            if api_version_request.is_supported(req, min_version='2.28'):
+        # The 2.88 microversion removed these fields, so only add them on older
+        # microversions
+        if detail and api_version_request.is_supported(
+            req, max_version='2.87',
+        ):
+            for field in (
+                'vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
+                'memory_mb_used', 'local_gb_used', 'free_ram_mb',
+                'free_disk_gb', 'current_workload', 'running_vms',
+                'disk_available_least',
+            ):
+                hyp_dict[field] = getattr(hypervisor, field)
+
+            if api_version_request.is_supported(req, max_version='2.27'):
+                hyp_dict['cpu_info'] = hypervisor.cpu_info
+            else:
                 if hypervisor.cpu_info:
                     hyp_dict['cpu_info'] = jsonutils.loads(hypervisor.cpu_info)
                 else:
                     hyp_dict['cpu_info'] = {}
-            else:
-                hyp_dict['cpu_info'] = hypervisor.cpu_info
+
+        # The 2.88 microversion also *added* the 'uptime' field to the response
+        if detail and api_version_request.is_supported(
+            req, min_version='2.88',
+        ):
+            try:
+                hyp_dict['uptime'] = self.host_api.get_host_uptime(
+                    req.environ['nova.context'], hypervisor.host)
+            except (
+                NotImplementedError,
+                exception.ComputeServiceUnavailable,
+                exception.HostMappingNotFound,
+                exception.HostNotFound,
+            ):
+                # Not all virt drivers support this, and it's not generally
+                # possible to get uptime for a down host
+                hyp_dict['uptime'] = None
 
         if servers:
-            hyp_dict['servers'] = [dict(name=serv['name'], uuid=serv['uuid'])
-                                   for serv in servers]
+            hyp_dict['servers'] = [
+                {'name': serv['name'], 'uuid': serv['uuid']}
+                for serv in servers
+            ]
         # The 2.75 microversion adds 'servers' field always in response.
         # Empty list if there are no servers on hypervisors and it is
         # requested in request.
         elif with_servers and api_version_request.is_supported(
-                req, min_version='2.75'):
+            req, min_version='2.75',
+        ):
             hyp_dict['servers'] = []
-
-        # Add any additional info
-        if kwargs:
-            hyp_dict.update(kwargs)
 
         return hyp_dict
 
@@ -184,10 +212,11 @@ class HypervisorsController(wsgi.Controller):
                           'be manually cleaned up.', hyp.host)
                 continue
 
-            hypervisors_list.append(
-                self._view_hypervisor(
-                    hyp, service, detail, req, servers=instances,
-                    with_servers=with_servers))
+            hypervisor = self._view_hypervisor(
+                hyp, service, detail, req, servers=instances,
+                with_servers=with_servers,
+            )
+            hypervisors_list.append(hypervisor)
 
         hypervisors_dict = dict(hypervisors=hypervisors_list)
         if links:
@@ -339,11 +368,21 @@ class HypervisorsController(wsgi.Controller):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
 
-        return dict(hypervisor=self._view_hypervisor(
-            hyp, service, True, req, instances, with_servers))
+        return {
+            'hypervisor': self._view_hypervisor(
+                hyp, service, detail=True, req=req, servers=instances,
+                with_servers=with_servers,
+            ),
+        }
 
+    @wsgi.Controller.api_version('2.1', '2.87')
     @wsgi.expected_errors((400, 404, 501))
     def uptime(self, req, id):
+        """Prior to microversion 2.88, you could retrieve a special version of
+        the hypervisor detail view that included uptime. Starting in 2.88, this
+        field is now included in the standard detail view, making this API
+        unnecessary.
+        """
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME % 'uptime', target={})
 
@@ -383,8 +422,10 @@ class HypervisorsController(wsgi.Controller):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
 
-        return dict(hypervisor=self._view_hypervisor(hyp, service, False, req,
-                                                     uptime=uptime))
+        hypervisor = self._view_hypervisor(hyp, service, False, req)
+        hypervisor['uptime'] = uptime
+
+        return {'hypervisor': hypervisor}
 
     @wsgi.Controller.api_version('2.1', '2.52')
     @wsgi.expected_errors(404)
@@ -469,8 +510,13 @@ class HypervisorsController(wsgi.Controller):
 
         return {'hypervisors': hypervisors}
 
+    @wsgi.Controller.api_version('2.1', '2.87')
     @wsgi.expected_errors(())
     def statistics(self, req):
+        """Prior to microversion 2.88, you could get statistics for the
+        hypervisor. Most of these are now accessible from placement and the few
+        that aren't as misleading and frequently misunderstood.
+        """
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME % 'statistics', target={})
         stats = self.host_api.compute_node_statistics(context)

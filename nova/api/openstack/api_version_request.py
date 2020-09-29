@@ -236,6 +236,10 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              ``PUT /flavors/{flavor_id}/os-extra_specs/{id}`` APIs.
     * 2.87 - Adds support for rescuing boot from volume instances when the
              compute host reports the COMPUTE_BFV_RESCUE capability trait.
+    * 2.88 - Drop statistics-style fields from the ``/os-hypervisors/detail``
+             and ``/os-hypervisors/{hypervisor_id}`` APIs, and remove the
+             ``/os-hypervisors/statistics`` and
+             ``/os-hypervisors/{hypervisor_id}/uptime`` APIs entirely.
 """
 
 # The minimum and maximum versions of the API supported
@@ -244,7 +248,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = '2.1'
-_MAX_API_VERSION = '2.87'
+_MAX_API_VERSION = '2.88'
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal
