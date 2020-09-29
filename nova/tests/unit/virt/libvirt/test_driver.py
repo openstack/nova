@@ -1814,8 +1814,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
                          libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED))
 
-    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
-    def test_live_migration_with_native_tls(self, host):
+    def test_live_migration_with_native_tls(self):
         self.flags(live_migration_with_native_tls=True, group='libvirt')
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
