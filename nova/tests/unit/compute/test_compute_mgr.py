@@ -963,6 +963,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_error_interrupted.assert_called_once_with(
             self.context, {active_instance.uuid, evacuating_instance.uuid})
 
+    def test_init_host_disk_devices_configuration_failure(self):
+        self.flags(max_disk_devices_to_attach=0, group='compute')
+        self.assertRaises(exception.InvalidConfiguration,
+                          self.compute.init_host)
+
     @mock.patch.object(objects.InstanceList, 'get_by_host',
                        new=mock.Mock())
     @mock.patch('nova.compute.manager.ComputeManager.'
