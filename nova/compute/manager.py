@@ -1394,6 +1394,13 @@ class ComputeManager(manager.Manager):
                 eventlet.semaphore.BoundedSemaphore(
                     CONF.compute.max_concurrent_disk_ops)
 
+        if CONF.compute.max_disk_devices_to_attach == 0:
+            msg = _('[compute]max_disk_devices_to_attach has been set to 0, '
+                    'which will prevent instances from being able to boot. '
+                    'Set -1 for unlimited or set >= 1 to limit the maximum '
+                    'number of disk devices.')
+            raise exception.InvalidConfiguration(msg)
+
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()
         instances = objects.InstanceList.get_by_host(
