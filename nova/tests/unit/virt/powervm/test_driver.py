@@ -64,8 +64,8 @@ class TestPowerVMDriver(test.NoDBTestCase):
     def test_driver_capabilities(self):
         """Test the driver capabilities."""
         # check that the driver reports all capabilities
-        self.assertEqual(set(ComputeDriver.capabilities),
-                         set(self.drv.capabilities))
+        self.assertTrue((set(ComputeDriver.capabilities) >=
+                         set(self.drv.capabilities)))
         # check the values for each capability
         self.assertFalse(self.drv.capabilities['has_imagecache'])
         self.assertFalse(self.drv.capabilities['supports_evacuate'])
