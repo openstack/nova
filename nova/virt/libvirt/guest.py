@@ -367,8 +367,8 @@ class Guest(object):
         return devs
 
     def detach_device_with_retry(self, get_device_conf_func, device, live,
-                                 max_retry_count=7, inc_sleep_time=2,
-                                 max_sleep_time=30,
+                                 max_retry_count=7, inc_sleep_time=10,
+                                 max_sleep_time=60,
                                  alternative_device_name=None,
                                  supports_device_missing_error_code=False):
         """Detaches a device from the guest. After the initial detach request,
