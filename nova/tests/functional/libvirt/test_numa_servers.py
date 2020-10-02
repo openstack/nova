@@ -72,8 +72,9 @@ class NUMAServersTest(NUMAServersTestBase):
         # Validate the quota usage
         if filter_called_on_error and end_status == 'ACTIVE':
             quota_details = self.api.get_quota_detail()
-            expected_core_usages = expected_usage.get(
-                'VCPU', expected_usage.get('PCPU', 0))
+            expected_core_usages = (
+                expected_usage.get('VCPU', 0) + expected_usage.get('PCPU', 0)
+            )
             self.assertEqual(expected_core_usages,
                              quota_details['cores']['in_use'])
 
@@ -193,8 +194,8 @@ class NUMAServersTest(NUMAServersTestBase):
 
         self._run_build_test(flavor_id, end_status='ERROR')
 
-    def test_create_server_with_legacy_pinning_policy(self):
-        """Create a server using the legacy 'hw:cpu_policy' extra spec.
+    def test_create_server_with_dedicated_policy(self):
+        """Create a server using the 'hw:cpu_policy=dedicated' extra spec.
 
         This should pass and result in a guest NUMA topology with pinned CPUs.
         """
@@ -221,7 +222,63 @@ class NUMAServersTest(NUMAServersTestBase):
         self.assertEqual(1, len(inst.numa_topology.cells))
         self.assertEqual(5, inst.numa_topology.cells[0].cpu_topology.cores)
 
-    def test_create_server_with_legacy_pinning_policy_old_configuration(self):
+    def test_create_server_with_mixed_policy(self):
+        """Create a server using the 'hw:cpu_policy=mixed' extra spec.
+
+        This should pass and result in a guest NUMA topology with a mixture of
+        pinned and unpinned CPUs.
+        """
+
+        # configure the flags so we 2 shared, 2 dedicated CPUs on one node and
+        # 1 shared and 3 dedicated on the other; the guest will request the
+        # latter so it should always land on the second NUMA node
+        self.flags(
+            cpu_dedicated_set='2-3,5-7', cpu_shared_set='0,1,4',
+            group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=4, cpu_threads=1,
+            kB_mem=15740000)
+        self.start_compute(host_info=host_info, hostname='compute1')
+
+        # sanity check the created host topology object; this is really just a
+        # test of the fakelibvirt module
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, 'compute1',
+            ).numa_topology
+        )
+        self.assertEqual(2, len(host_numa.cells))
+        self.assertEqual({0, 1}, host_numa.cells[0].cpuset)
+        self.assertEqual({2, 3}, host_numa.cells[0].pcpuset)
+        self.assertEqual({4}, host_numa.cells[1].cpuset)
+        self.assertEqual({5, 6, 7}, host_numa.cells[1].pcpuset)
+
+        # create a flavor with 1 shared and 3 dedicated CPUs so that we can
+        # validate that both come from the same host NUMA node
+        extra_spec = {
+            'hw:cpu_policy': 'mixed',
+            'hw:cpu_dedicated_mask': '^0',
+        }
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+        expected_usage = {
+            'DISK_GB': 20, 'MEMORY_MB': 2048, 'PCPU': 3, 'VCPU': 1,
+        }
+
+        server = self._run_build_test(flavor_id, expected_usage=expected_usage)
+
+        # sanity check the instance topology
+        inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
+        self.assertEqual(1, len(inst.numa_topology.cells))
+        self.assertEqual(4, inst.numa_topology.cells[0].cpu_topology.cores)
+        self.assertEqual({0}, inst.numa_topology.cells[0].cpuset)
+        self.assertEqual({1, 2, 3}, inst.numa_topology.cells[0].pcpuset)
+        self.assertEqual(
+            {5, 6, 7}, set(inst.numa_topology.cells[0].cpu_pinning.values()),
+        )
+
+    def test_create_server_with_dedicated_policy_old_configuration(self):
         """Create a server using the legacy extra spec and configuration.
 
         This should pass and result in a guest NUMA topology with pinned CPUs,
@@ -286,7 +343,7 @@ class NUMAServersTest(NUMAServersTestBase):
         )
         self.assertEqual({0, 1, 2, 3}, host_numa.cells[0].pinned_cpus)
 
-    def test_create_server_with_legacy_pinning_policy_fails(self):
+    def test_create_server_with_dedicated_policy_fails(self):
         """Create a pinned instance on a host with no PCPUs.
 
         This should fail because we're translating the extra spec and the host
@@ -309,7 +366,7 @@ class NUMAServersTest(NUMAServersTestBase):
         flavor_id = self._create_flavor(vcpu=5, extra_spec=extra_spec)
         self._run_build_test(flavor_id, end_status='ERROR')
 
-    def test_create_server_with_legacy_pinning_policy_quota_fails(self):
+    def test_create_server_with_dedicated_policy_quota_fails(self):
         """Create a pinned instance on a host with PCPUs but not enough quota.
 
         This should fail because the quota request should fail.
