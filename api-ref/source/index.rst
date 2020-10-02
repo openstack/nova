@@ -37,7 +37,6 @@ the `API guide <https://docs.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-flavor-extra-specs.inc
 .. include:: os-keypairs.inc
 .. include:: limits.inc
-.. include:: os-agents.inc
 .. include:: os-aggregates.inc
 .. include:: os-assisted-volume-snapshots.inc
 .. include:: os-availability-zone.inc
@@ -90,3 +89,4 @@ Compute API in the past, but no longer exist.
 .. include:: os-cells.inc
 .. include:: os-consoles.inc
 .. include:: os-security-group-default-rules.inc
+.. include:: os-agents.inc
