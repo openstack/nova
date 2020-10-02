@@ -361,6 +361,12 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     config_spec.numCPUs = int(instance.vcpus)
     if extra_specs.cores_per_socket:
         config_spec.numCoresPerSocket = int(extra_specs.cores_per_socket)
+    # NOTE(jkulik): this only works with 6.7 and newer
+    if int(instance.vcpus) > 128:
+        flags = client_factory.create('ns0:VirtualMachineFlagInfo')
+        flags.vvtdEnabled = True
+        flags.virtualMmuUsage = 'automatic'
+        config_spec.flags = flags
     config_spec.memoryMB = int(instance.memory_mb)
 
     # Configure cpu information
@@ -508,6 +514,15 @@ def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
     # so we need to deconfigure it on VMs created before the patch adding
     # `memoryAllocation` support on resize.
     resize_spec.memoryReservationLockedToMax = False
+
+    if extra_specs.cores_per_socket:
+        resize_spec.numCoresPerSocket = int(extra_specs.cores_per_socket)
+    # NOTE(jkulik): this only works with 6.7 and newer
+    if int(vcpus) > 128:
+        flags = client_factory.create('ns0:VirtualMachineFlagInfo')
+        flags.vvtdEnabled = True
+        flags.virtualMmuUsage = 'automatic'
+        resize_spec.flags = flags
 
     extra_config = []
     # big VMs need to prefer HT threads to stay in NUMA nodes
