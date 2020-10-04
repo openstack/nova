@@ -34,8 +34,13 @@
 - name: Stop libvirtd on "{{ inventory_hostname }}"
   become: true
   systemd:
-    name: libvirtd
+    name: "{{ item }}"
     state: stopped
+  with_items:
+    - libvirtd.service
+    - libvirtd.socket
+    - libvirtd-admin.socket
+    - libvirtd-ro.socket
 
 - name: Run negative evacuate tests
   become: true
@@ -47,8 +52,13 @@
 - name: Start libvirtd on "{{ inventory_hostname }}"
   become: true
   systemd:
-    name: libvirtd
+    name: "{{ item }}"
     state: started
+  with_items:
+    - libvirtd.service
+    - libvirtd.socket
+    - libvirtd-admin.socket
+    - libvirtd-ro.socket
 
 - name: Run evacuate tests
   become: true
