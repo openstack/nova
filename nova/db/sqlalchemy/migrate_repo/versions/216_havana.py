@@ -64,17 +64,21 @@ def _create_shadow_tables(migrate_engine):
             #                 sqlite.
             if isinstance(column.type, NullType):
                 column_copy = Column(column.name, BigInteger(), default=0)
+
             if table_name == 'instances' and column.name == 'locked_by':
-                enum = Enum('owner', 'admin',
-                            name='shadow_instances0locked_by')
+                enum = Enum(
+                    'owner', 'admin', name='shadow_instances0locked_by',
+                )
                 column_copy = Column(column.name, enum)
             else:
                 column_copy = column.copy()
+
             columns.append(column_copy)
 
-        shadow_table_name = 'shadow_' + table_name
-        shadow_table = Table(shadow_table_name, meta, *columns,
-                             mysql_engine='InnoDB')
+        shadow_table = Table(
+            'shadow_' + table_name, meta, *columns, mysql_engine='InnoDB',
+        )
+
         try:
             shadow_table.create()
         except Exception:
@@ -299,10 +303,6 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    consoles_instance_uuid_column_args = ['instance_uuid', String(length=36)]
-    consoles_instance_uuid_column_args.append(
-        ForeignKey('instances.uuid', name='consoles_instance_uuid_fkey'))
-
     consoles = Table('consoles', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -312,7 +312,9 @@ def upgrade(migrate_engine):
         Column('password', String(length=255)),
         Column('port', Integer),
         Column('pool_id', Integer, ForeignKey('console_pools.id')),
-        Column(*consoles_instance_uuid_column_args),
+        Column(
+            'instance_uuid', String(length=36),
+            ForeignKey('instances.uuid', name='consoles_instance_uuid_fkey')),
         Column('deleted', Integer),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
@@ -533,7 +535,6 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    inst_lock_enum = Enum('owner', 'admin', name='instances0locked_by')
     instances = Table('instances', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -585,8 +586,11 @@ def upgrade(migrate_engine):
         Column('cell_name', String(length=255)),
         Column('node', String(length=255)),
         Column('deleted', Integer),
-        Column('locked_by', inst_lock_enum),
+        Column(
+            'locked_by', Enum('owner', 'admin', name='instances0locked_by')),
         Column('cleaned', Integer, default=0),
+        Index('project_id', 'project_id'),
+        Index('uuid', 'uuid', unique=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -705,7 +709,6 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    pci_devices_uc_name = 'uniq_pci_devices0compute_node_id0address0deleted'
     pci_devices = Table('pci_devices', meta,
         Column('created_at', DateTime(timezone=False)),
         Column('updated_at', DateTime(timezone=False)),
@@ -726,9 +729,9 @@ def upgrade(migrate_engine):
               'compute_node_id', 'deleted'),
         Index('ix_pci_devices_instance_uuid_deleted',
               'instance_uuid', 'deleted'),
-        UniqueConstraint('compute_node_id',
-                        'address', 'deleted',
-                        name=pci_devices_uc_name),
+        UniqueConstraint(
+            'compute_node_id', 'address', 'deleted',
+            name='uniq_pci_devices0compute_node_id0address0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8')
 
@@ -788,29 +791,23 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    uniq_name = "uniq_project_user_quotas0user_id0project_id0resource0deleted"
     project_user_quotas = Table('project_user_quotas', meta,
-                        Column('id', Integer, primary_key=True,
-                               nullable=False),
-                        Column('created_at', DateTime),
-                        Column('updated_at', DateTime),
-                        Column('deleted_at', DateTime),
-                        Column('deleted', Integer),
-                        Column('user_id',
-                               String(length=255),
-                               nullable=False),
-                        Column('project_id',
-                               String(length=255),
-                               nullable=False),
-                        Column('resource',
-                               String(length=255),
-                               nullable=False),
-                        Column('hard_limit', Integer, nullable=True),
-                        UniqueConstraint('user_id', 'project_id', 'resource',
-                                         'deleted', name=uniq_name),
-                        mysql_engine='InnoDB',
-                        mysql_charset='utf8',
-                        )
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('deleted_at', DateTime),
+        Column('deleted', Integer),
+        Column('user_id', String(length=255), nullable=False),
+        Column('project_id', String(length=255), nullable=False),
+        Column('resource', String(length=255), nullable=False),
+        Column('hard_limit', Integer, nullable=True),
+        UniqueConstraint(
+            'user_id', 'project_id', 'resource', 'deleted',
+            name='uniq_project_user_quotas0user_id0project_id0resource0'
+            'deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
 
     reservations = Table('reservations', meta,
         Column('created_at', DateTime),
@@ -1017,36 +1014,32 @@ def upgrade(migrate_engine):
     )
 
     volume_usage_cache = Table('volume_usage_cache', meta,
-            Column('created_at', DateTime(timezone=False)),
-            Column('updated_at', DateTime(timezone=False)),
-            Column('deleted_at', DateTime(timezone=False)),
-            Column('id', Integer(), primary_key=True, nullable=False),
-            Column('volume_id', String(36), nullable=False),
-            Column('tot_last_refreshed', DateTime(timezone=False)),
-            Column('tot_reads', BigInteger(), default=0),
-            Column('tot_read_bytes', BigInteger(), default=0),
-            Column('tot_writes', BigInteger(), default=0),
-            Column('tot_write_bytes', BigInteger(), default=0),
-            Column('curr_last_refreshed', DateTime(timezone=False)),
-            Column('curr_reads', BigInteger(), default=0),
-            Column('curr_read_bytes', BigInteger(), default=0),
-            Column('curr_writes', BigInteger(), default=0),
-            Column('curr_write_bytes', BigInteger(), default=0),
-            Column('deleted', Integer),
-            Column("instance_uuid", String(length=36)),
-            Column("project_id", String(length=36)),
-            Column("user_id", String(length=36)),
-            Column("availability_zone", String(length=255)),
-            mysql_engine='InnoDB',
-            mysql_charset='utf8'
+        Column('created_at', DateTime(timezone=False)),
+        Column('updated_at', DateTime(timezone=False)),
+        Column('deleted_at', DateTime(timezone=False)),
+        Column('id', Integer(), primary_key=True, nullable=False),
+        Column('volume_id', String(36), nullable=False),
+        Column('tot_last_refreshed', DateTime(timezone=False)),
+        Column('tot_reads', BigInteger(), default=0),
+        Column('tot_read_bytes', BigInteger(), default=0),
+        Column('tot_writes', BigInteger(), default=0),
+        Column('tot_write_bytes', BigInteger(), default=0),
+        Column('curr_last_refreshed', DateTime(timezone=False)),
+        Column('curr_reads', BigInteger(), default=0),
+        Column('curr_read_bytes', BigInteger(), default=0),
+        Column('curr_writes', BigInteger(), default=0),
+        Column('curr_write_bytes', BigInteger(), default=0),
+        Column('deleted', Integer),
+        Column('instance_uuid', String(length=36)),
+        Column('project_id', String(length=36)),
+        Column('user_id', String(length=36)),
+        Column('availability_zone', String(length=255)),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
     )
 
-    instances.create()
-    Index('project_id', instances.c.project_id).create()
-    Index('uuid', instances.c.uuid, unique=True).create()
-
     # create all tables
-    tables = [aggregates, console_pools, instance_types,
+    tables = [instances, aggregates, console_pools, instance_types,
               security_groups, snapshots, volumes,
               # those that are children and others later
               agent_builds, aggregate_hosts, aggregate_metadata,
@@ -1182,7 +1175,7 @@ def upgrade(migrate_engine):
         Index('network_id', virtual_interfaces.c.network_id),
         Index('network_id', fixed_ips.c.network_id),
         Index('fixed_ips_virtual_interface_id_fkey',
-                  fixed_ips.c.virtual_interface_id),
+              fixed_ips.c.virtual_interface_id),
         Index('address', fixed_ips.c.address),
         Index('fixed_ips_instance_uuid_fkey', fixed_ips.c.instance_uuid),
         Index('instance_uuid', instance_system_metadata.c.instance_uuid),
@@ -1192,7 +1185,6 @@ def upgrade(migrate_engine):
         Index('virtual_interfaces_instance_uuid_fkey',
               virtual_interfaces.c.instance_uuid),
         Index('volume_id', block_device_mapping.c.volume_id),
-
         Index('security_group_id',
               security_group_instance_association.c.security_group_id),
     ]
@@ -1213,7 +1205,6 @@ def upgrade(migrate_engine):
         # block_device_mapping
         Index('block_device_mapping_instance_uuid_idx',
               block_device_mapping.c.instance_uuid),
-
         Index('block_device_mapping_instance_uuid_device_name_idx',
               block_device_mapping.c.instance_uuid,
               block_device_mapping.c.device_name),
@@ -1228,7 +1219,6 @@ def upgrade(migrate_engine):
              'block_device_mapping_instance_uuid_virtual_name_device_name_idx',
              block_device_mapping.c.instance_uuid,
              block_device_mapping.c.device_name),
-
         Index('block_device_mapping_instance_uuid_volume_id_idx',
               block_device_mapping.c.instance_uuid,
               block_device_mapping.c.volume_id),
@@ -1237,6 +1227,7 @@ def upgrade(migrate_engine):
         Index('bw_usage_cache_uuid_start_period_idx',
               bw_usage_cache.c.uuid, bw_usage_cache.c.start_period),
 
+        # certificates
         Index('certificates_project_id_deleted_idx',
               certificates.c.project_id, certificates.c.deleted),
         Index('certificates_user_id_deleted_idx', certificates.c.user_id,
@@ -1258,22 +1249,17 @@ def upgrade(migrate_engine):
 
         # fixed_ips
         Index('fixed_ips_host_idx', fixed_ips.c.host),
-
         Index('fixed_ips_network_id_host_deleted_idx', fixed_ips.c.network_id,
               fixed_ips.c.host, fixed_ips.c.deleted),
-
         Index('fixed_ips_address_reserved_network_id_deleted_idx',
               fixed_ips.c.address, fixed_ips.c.reserved,
               fixed_ips.c.network_id, fixed_ips.c.deleted),
-
         Index('fixed_ips_deleted_allocated_idx', fixed_ips.c.address,
               fixed_ips.c.deleted, fixed_ips.c.allocated),
 
         # floating_ips
         Index('floating_ips_host_idx', floating_ips.c.host),
-
         Index('floating_ips_project_id_idx', floating_ips.c.project_id),
-
         Index('floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
               floating_ips.c.pool, floating_ips.c.deleted,
               floating_ips.c.fixed_ip_id, floating_ips.c.project_id),
@@ -1294,23 +1280,18 @@ def upgrade(migrate_engine):
         Index('instances_terminated_at_launched_at_idx',
               instances.c.terminated_at,
               instances.c.launched_at),
-
         Index('instances_task_state_updated_at_idx',
               instances.c.task_state,
               instances.c.updated_at),
-
         Index('instances_host_deleted_idx', instances.c.host,
               instances.c.deleted),
-
         Index('instances_uuid_deleted_idx', instances.c.uuid,
               instances.c.deleted),
-
         Index('instances_host_node_deleted_idx', instances.c.host,
               instances.c.node, instances.c.deleted),
-
         Index('instances_host_deleted_cleaned_idx',
-                          instances.c.host, instances.c.deleted,
-                          instances.c.cleaned),
+              instances.c.host, instances.c.deleted,
+              instances.c.cleaned),
 
         # instance_actions
         Index('instance_uuid_idx', instance_actions.c.instance_uuid),
@@ -1336,7 +1317,6 @@ def upgrade(migrate_engine):
 
         # iscsi_targets
         Index('iscsi_targets_host_idx', iscsi_targets.c.host),
-
         Index('iscsi_targets_host_volume_id_deleted_idx',
               iscsi_targets.c.host, iscsi_targets.c.volume_id,
               iscsi_targets.c.deleted),
@@ -1346,25 +1326,19 @@ def upgrade(migrate_engine):
               migrations.c.deleted, migrations.c.source_compute,
               migrations.c.dest_compute, migrations.c.source_node,
               migrations.c.dest_node, migrations.c.status),
-
         Index('migrations_instance_uuid_and_status_idx',
               migrations.c.deleted, migrations.c.instance_uuid,
               migrations.c.status),
 
         # networks
         Index('networks_host_idx', networks.c.host),
-
         Index('networks_cidr_v6_idx', networks.c.cidr_v6),
-
         Index('networks_bridge_deleted_idx', networks.c.bridge,
               networks.c.deleted),
-
         Index('networks_project_id_deleted_idx', networks.c.project_id,
               networks.c.deleted),
-
         Index('networks_uuid_project_id_deleted_idx',
               networks.c.uuid, networks.c.project_id, networks.c.deleted),
-
         Index('networks_vlan_deleted_idx', networks.c.vlan,
               networks.c.deleted),
 
@@ -1400,7 +1374,6 @@ def upgrade(migrate_engine):
 
         # volumes
         Index('volumes_instance_uuid_idx', volumes.c.instance_uuid),
-
     ]
 
     # MySQL specific indexes
@@ -1446,78 +1419,100 @@ def upgrade(migrate_engine):
 
     # Common foreign keys
     fkeys = [
-
-              [[instance_type_projects.c.instance_type_id],
-                  [instance_types.c.id],
-                  'instance_type_projects_ibfk_1'],
-              [[iscsi_targets.c.volume_id],
-                  [volumes.c.id],
-                  'iscsi_targets_volume_id_fkey'],
-              [[reservations.c.usage_id],
-                  [quota_usages.c.id],
-                  'reservations_ibfk_1'],
-              [[security_group_instance_association.c.security_group_id],
-                  [security_groups.c.id],
-                  'security_group_instance_association_ibfk_1'],
-              [[compute_node_stats.c.compute_node_id],
-                  [compute_nodes.c.id],
-                  'fk_compute_node_stats_compute_node_id'],
-              [[compute_nodes.c.service_id],
-                  [services.c.id],
-                  'fk_compute_nodes_service_id'],
-
-            ]
-
-    secgroup_instance_association_instance_uuid_fkey = (
-                'security_group_instance_association_instance_uuid_fkey')
-    fkeys.extend(
-            [
-
-              [[fixed_ips.c.instance_uuid],
-                  [instances.c.uuid],
-                  'fixed_ips_instance_uuid_fkey'],
-              [[block_device_mapping.c.instance_uuid],
-                  [instances.c.uuid],
-                  'block_device_mapping_instance_uuid_fkey'],
-              [[instance_info_caches.c.instance_uuid],
-                  [instances.c.uuid],
-                  'instance_info_caches_instance_uuid_fkey'],
-              [[instance_metadata.c.instance_uuid],
-                  [instances.c.uuid],
-                  'instance_metadata_instance_uuid_fkey'],
-              [[instance_system_metadata.c.instance_uuid],
-                  [instances.c.uuid],
-                  'instance_system_metadata_ibfk_1'],
-              [[security_group_instance_association.c.instance_uuid],
-                  [instances.c.uuid],
-                  secgroup_instance_association_instance_uuid_fkey],
-              [[virtual_interfaces.c.instance_uuid],
-                  [instances.c.uuid],
-                  'virtual_interfaces_instance_uuid_fkey'],
-              [[instance_actions.c.instance_uuid],
-                  [instances.c.uuid],
-                  'fk_instance_actions_instance_uuid'],
-              [[instance_faults.c.instance_uuid],
-                  [instances.c.uuid],
-                  'fk_instance_faults_instance_uuid'],
-              [[migrations.c.instance_uuid],
-                  [instances.c.uuid],
-                  'fk_migrations_instance_uuid']
-
-            ])
+        [
+            [instance_type_projects.c.instance_type_id],
+            [instance_types.c.id],
+            'instance_type_projects_ibfk_1',
+        ],
+        [
+            [iscsi_targets.c.volume_id],
+            [volumes.c.id],
+            'iscsi_targets_volume_id_fkey',
+        ],
+        [
+            [reservations.c.usage_id],
+            [quota_usages.c.id],
+            'reservations_ibfk_1',
+        ],
+        [
+            [security_group_instance_association.c.security_group_id],
+            [security_groups.c.id],
+            'security_group_instance_association_ibfk_1',
+        ],
+        [
+            [compute_node_stats.c.compute_node_id],
+            [compute_nodes.c.id],
+            'fk_compute_node_stats_compute_node_id',
+        ],
+        [
+            [compute_nodes.c.service_id],
+            [services.c.id],
+            'fk_compute_nodes_service_id',
+        ],
+        [
+            [fixed_ips.c.instance_uuid],
+            [instances.c.uuid],
+            'fixed_ips_instance_uuid_fkey',
+        ],
+        [
+            [block_device_mapping.c.instance_uuid],
+            [instances.c.uuid],
+            'block_device_mapping_instance_uuid_fkey',
+        ],
+        [
+            [instance_info_caches.c.instance_uuid],
+            [instances.c.uuid],
+            'instance_info_caches_instance_uuid_fkey',
+        ],
+        [
+            [instance_metadata.c.instance_uuid],
+            [instances.c.uuid],
+            'instance_metadata_instance_uuid_fkey',
+        ],
+        [
+            [instance_system_metadata.c.instance_uuid],
+            [instances.c.uuid],
+            'instance_system_metadata_ibfk_1',
+        ],
+        [
+            [security_group_instance_association.c.instance_uuid],
+            [instances.c.uuid],
+            'security_group_instance_association_instance_uuid_fkey',
+        ],
+        [
+            [virtual_interfaces.c.instance_uuid],
+            [instances.c.uuid],
+            'virtual_interfaces_instance_uuid_fkey',
+        ],
+        [
+            [instance_actions.c.instance_uuid],
+            [instances.c.uuid],
+            'fk_instance_actions_instance_uuid',
+        ],
+        [
+            [instance_faults.c.instance_uuid],
+            [instances.c.uuid],
+            'fk_instance_faults_instance_uuid',
+        ],
+        [
+            [migrations.c.instance_uuid],
+            [instances.c.uuid],
+            'fk_migrations_instance_uuid',
+        ]
+    ]
 
     for fkey_pair in fkeys:
         if migrate_engine.name == 'mysql':
             # For MySQL we name our fkeys explicitly
             # so they match Havana
-            fkey = ForeignKeyConstraint(columns=fkey_pair[0],
-                                   refcolumns=fkey_pair[1],
-                                   name=fkey_pair[2])
+            fkey = ForeignKeyConstraint(
+                columns=fkey_pair[0], refcolumns=fkey_pair[1],
+                name=fkey_pair[2])
             fkey.create()
         elif migrate_engine.name == 'postgresql':
             # PostgreSQL names things like it wants (correct and compatible!)
-            fkey = ForeignKeyConstraint(columns=fkey_pair[0],
-                                   refcolumns=fkey_pair[1])
+            fkey = ForeignKeyConstraint(
+                columns=fkey_pair[0], refcolumns=fkey_pair[1])
             fkey.create()
 
     if migrate_engine.name == 'mysql':
