@@ -130,6 +130,9 @@ def upgrade(migrate_engine):
         Column('url', String(length=255)),
         Column('md5hash', String(length=255)),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'hypervisor', 'os', 'architecture', 'deleted',
+            name='uniq_agent_builds0hypervisor0os0architecture0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -140,9 +143,13 @@ def upgrade(migrate_engine):
         Column('deleted_at', DateTime),
         Column('id', Integer, primary_key=True, nullable=False),
         Column('host', String(length=255)),
-        Column('aggregate_id', Integer, ForeignKey('aggregates.id'),
-              nullable=False),
+        Column(
+            'aggregate_id', Integer, ForeignKey('aggregates.id'),
+            nullable=False),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'host', 'aggregate_id', 'deleted',
+            name='uniq_aggregate_hosts0host0aggregate_id0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -152,11 +159,15 @@ def upgrade(migrate_engine):
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
         Column('id', Integer, primary_key=True, nullable=False),
-        Column('aggregate_id', Integer, ForeignKey('aggregates.id'),
-              nullable=False),
+        Column(
+            'aggregate_id', Integer, ForeignKey('aggregates.id'),
+            nullable=False),
         Column('key', String(length=255), nullable=False),
         Column('value', String(length=255), nullable=False),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'aggregate_id', 'key', 'deleted',
+            name='uniq_aggregate_metadata0aggregate_id0key0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -227,6 +238,9 @@ def upgrade(migrate_engine):
         Column('is_parent', Boolean),
         Column('deleted', Integer),
         Column('transport_url', String(length=255), nullable=False),
+        UniqueConstraint(
+            'name', 'deleted',
+            name='uniq_cells0name0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -299,6 +313,9 @@ def upgrade(migrate_engine):
         Column('host', String(length=255)),
         Column('compute_host', String(length=255)),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'host', 'console_type', 'compute_host', 'deleted',
+            name='uniq_console_pools0host0console_type0compute_host0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -347,6 +364,9 @@ def upgrade(migrate_engine):
         Column('host', String(length=255)),
         Column('instance_uuid', String(length=36)),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'address', 'deleted',
+            name='uniq_fixed_ips0address0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -364,6 +384,9 @@ def upgrade(migrate_engine):
         Column('pool', String(length=255)),
         Column('interface', String(length=255)),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'address', 'deleted',
+            name='uniq_floating_ips0address0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -402,6 +425,9 @@ def upgrade(migrate_engine):
         Column('network_info', MediumText()),
         Column('instance_uuid', String(length=36), nullable=False),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'instance_uuid',
+            name='uniq_instance_info_caches0instance_uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -498,6 +524,10 @@ def upgrade(migrate_engine):
         Column('key', String(length=255)),
         Column('value', String(length=255)),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'instance_type_id', 'key', 'deleted',
+            name='uniq_instance_type_extra_specs0instance_type_id0key0deleted'
+        ),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -510,6 +540,10 @@ def upgrade(migrate_engine):
         Column('instance_type_id', Integer, nullable=False),
         Column('project_id', String(length=255)),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'instance_type_id', 'project_id', 'deleted',
+            name='uniq_instance_type_projects0instance_type_id0project_id'
+            '0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -531,6 +565,12 @@ def upgrade(migrate_engine):
         Column('disabled', Boolean),
         Column('is_public', Boolean),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'name', 'deleted',
+            name='uniq_instance_types0name0deleted'),
+        UniqueConstraint(
+            'flavorid', 'deleted',
+            name='uniq_instance_types0flavorid0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -652,6 +692,9 @@ def upgrade(migrate_engine):
         Column('fingerprint', String(length=255)),
         Column('public_key', MediumText()),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'user_id', 'name', 'deleted',
+            name='uniq_key_pairs0user_id0name0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -705,6 +748,7 @@ def upgrade(migrate_engine):
         Column('priority', Integer),
         Column('rxtx_base', Integer),
         Column('deleted', Integer),
+        UniqueConstraint('vlan', 'deleted', name='uniq_networks0vlan0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -787,6 +831,9 @@ def upgrade(migrate_engine):
         Column('resource', String(length=255), nullable=False),
         Column('hard_limit', Integer),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'project_id', 'resource', 'deleted',
+            name='uniq_quotas0project_id0resource0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -876,6 +923,9 @@ def upgrade(migrate_engine):
         Column('user_id', String(length=255)),
         Column('project_id', String(length=255)),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'project_id', 'name', 'deleted',
+            name='uniq_security_groups0project_id0name0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -906,6 +956,12 @@ def upgrade(migrate_engine):
         Column('disabled', Boolean),
         Column('deleted', Integer),
         Column('disabled_reason', String(length=255)),
+        UniqueConstraint(
+            'host', 'topic', 'deleted',
+            name='uniq_services0host0topic0deleted'),
+        UniqueConstraint(
+            'host', 'binary', 'deleted',
+            name='uniq_services0host0binary0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -954,6 +1010,10 @@ def upgrade(migrate_engine):
         Column('task_items', Integer),
         Column('errors', Integer),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'task_name', 'host', 'period_beginning', 'period_ending',
+            name='uniq_task_log0task_name0host0period_beginning0period_ending',
+        ),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -968,6 +1028,9 @@ def upgrade(migrate_engine):
         Column('uuid', String(length=36)),
         Column('instance_uuid', String(length=36), nullable=True),
         Column('deleted', Integer),
+        UniqueConstraint(
+            'address', 'deleted',
+            name='uniq_virtual_interfaces0address0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -1068,104 +1131,6 @@ def upgrade(migrate_engine):
             LOG.info(repr(table))
             LOG.exception('Exception while creating table.')
             raise
-
-    # task log unique constraint
-    task_log_uc = "uniq_task_log0task_name0host0period_beginning0period_ending"
-    task_log_cols = ('task_name', 'host', 'period_beginning', 'period_ending')
-    uc = UniqueConstraint(*task_log_cols, table=task_log, name=task_log_uc)
-    uc.create()
-
-    # networks unique constraint
-    UniqueConstraint('vlan', 'deleted', table=networks,
-                     name='uniq_networks0vlan0deleted').create()
-
-    # instance_type_name constraint
-    UniqueConstraint('name', 'deleted', table=instance_types,
-                     name='uniq_instance_types0name0deleted').create()
-
-    # flavorid unique constraint
-    UniqueConstraint('flavorid', 'deleted', table=instance_types,
-                     name='uniq_instance_types0flavorid0deleted').create()
-
-    # keypair constraint
-    UniqueConstraint('user_id', 'name', 'deleted', table=key_pairs,
-                     name='uniq_key_pairs0user_id0name0deleted').create()
-
-    # instance_type_projects constraint
-    inst_type_uc_name = 'uniq_instance_type_projects0instance_type_id0' + \
-                        'project_id0deleted'
-    UniqueConstraint('instance_type_id', 'project_id', 'deleted',
-                     table=instance_type_projects,
-                     name=inst_type_uc_name).create()
-
-    # floating_ips unique constraint
-    UniqueConstraint('address', 'deleted',
-                     table=floating_ips,
-                     name='uniq_floating_ips0address0deleted').create()
-
-    # instance_info_caches
-    UniqueConstraint('instance_uuid',
-                     table=instance_info_caches,
-                     name='uniq_instance_info_caches0instance_uuid').create()
-
-    UniqueConstraint('address', 'deleted',
-                     table=virtual_interfaces,
-                     name='uniq_virtual_interfaces0address0deleted').create()
-
-    # cells
-    UniqueConstraint('name', 'deleted',
-                     table=cells,
-                     name='uniq_cells0name0deleted').create()
-
-    # security_groups
-    uc = UniqueConstraint('project_id', 'name', 'deleted',
-                     table=security_groups,
-                     name='uniq_security_groups0project_id0name0deleted')
-    uc.create()
-
-    # quotas
-    UniqueConstraint('project_id', 'resource', 'deleted',
-                     table=quotas,
-                     name='uniq_quotas0project_id0resource0deleted').create()
-
-    # fixed_ips
-    UniqueConstraint('address', 'deleted',
-                     table=fixed_ips,
-                     name='uniq_fixed_ips0address0deleted').create()
-
-    # services
-    UniqueConstraint('host', 'topic', 'deleted',
-                     table=services,
-                     name='uniq_services0host0topic0deleted').create()
-    UniqueConstraint('host', 'binary', 'deleted',
-                     table=services,
-                     name='uniq_services0host0binary0deleted').create()
-
-    # agent_builds
-    uc_name = 'uniq_agent_builds0hypervisor0os0architecture0deleted'
-    UniqueConstraint('hypervisor', 'os', 'architecture', 'deleted',
-                     table=agent_builds,
-                     name=uc_name).create()
-
-    uc_name = 'uniq_console_pools0host0console_type0compute_host0deleted'
-    UniqueConstraint('host', 'console_type', 'compute_host', 'deleted',
-                     table=console_pools,
-                     name=uc_name).create()
-
-    uc_name = 'uniq_aggregate_hosts0host0aggregate_id0deleted'
-    UniqueConstraint('host', 'aggregate_id', 'deleted',
-                     table=aggregate_hosts,
-                     name=uc_name).create()
-
-    uc_name = 'uniq_aggregate_metadata0aggregate_id0key0deleted'
-    UniqueConstraint('aggregate_id', 'key', 'deleted',
-                     table=aggregate_metadata,
-                     name=uc_name).create()
-
-    uc_name = 'uniq_instance_type_extra_specs0instance_type_id0key0deleted'
-    UniqueConstraint('instance_type_id', 'key', 'deleted',
-                     table=instance_type_extra_specs,
-                     name=uc_name).create()
 
     # created first (to preserve ordering for schema diffs)
     mysql_pre_indexes = [
