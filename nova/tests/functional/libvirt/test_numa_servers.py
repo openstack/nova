@@ -70,7 +70,10 @@ class NUMAServersTest(NUMAServersTestBase):
             expected_state=end_status)
 
         # Validate the quota usage
-        if filter_called_on_error and end_status == 'ACTIVE':
+        if (
+            filter_called_on_error and expected_usage and
+            end_status == 'ACTIVE'
+        ):
             quota_details = self.api.get_quota_detail()
             expected_core_usages = (
                 expected_usage.get('VCPU', 0) + expected_usage.get('PCPU', 0)
@@ -277,6 +280,54 @@ class NUMAServersTest(NUMAServersTestBase):
         self.assertEqual(
             {5, 6, 7}, set(inst.numa_topology.cells[0].cpu_pinning.values()),
         )
+
+    def test_create_server_with_mixed_policy_fails(self):
+        """Create a server using the 'hw:cpu_policy=mixed' extra spec on a host
+        with insufficient shared cores on one node and dedicated cores on the
+        other.
+
+        This should fail since both shared and dedicated instance cores should
+        come from the same host node.
+        """
+        # configure the flags so we mark all cores on one node as shared and
+        # all cores on the other as dedicated; the guest shouldn't be able to
+        # schedule to this unless using a multi-node topology itself
+        self.flags(
+            cpu_dedicated_set='4-7', cpu_shared_set='0-3',
+            group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=4, cpu_threads=1,
+            kB_mem=15740000)
+        self.start_compute(host_info=host_info, hostname='compute1')
+
+        # sanity check the created host topology object; this is really just a
+        # test of the fakelibvirt module
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, 'compute1',
+            ).numa_topology
+        )
+        self.assertEqual(2, len(host_numa.cells))
+        self.assertEqual({0, 1, 2, 3}, host_numa.cells[0].cpuset)
+        self.assertEqual(set(), host_numa.cells[0].pcpuset)
+        self.assertEqual(set(), host_numa.cells[1].cpuset)
+        self.assertEqual({4, 5, 6, 7}, host_numa.cells[1].pcpuset)
+
+        # create a flavor with 1 shared and 3 dedicated CPUs so that we can
+        # validate that it isn't schedulable
+        extra_spec = {
+            'hw:cpu_policy': 'mixed',
+            'hw:cpu_dedicated_mask': '^0',
+        }
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+
+        # FIXME(stephenfin): This is bug #1898272. In real life, this
+        # configuration will result in a libvirt traceback due to attempting to
+        # pin the single shared instance vCPU to an empty set
+        # self._run_build_test(flavor_id, end_status='ERROR')
+        self._run_build_test(flavor_id)
 
     def test_create_server_with_dedicated_policy_old_configuration(self):
         """Create a server using the legacy extra spec and configuration.
