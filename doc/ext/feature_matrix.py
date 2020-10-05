@@ -22,7 +22,6 @@ It is used via a single directive in the .rst file
 
 import configparser
 import re
-import sys
 
 from docutils import nodes
 from docutils.parsers import rst
@@ -158,16 +157,12 @@ class FeatureMatrixDirective(rst.Directive):
         :returns: Matrix instance
         """
 
-        # SafeConfigParser was deprecated in Python 3.2
-        if sys.version_info >= (3, 2):
-            cfg = configparser.ConfigParser()
-        else:
-            cfg = configparser.SafeConfigParser()
+        cfg = configparser.ConfigParser()
         env = self.state.document.settings.env
         filename = self.arguments[0]
         rel_fpath, fpath = env.relfn2path(filename)
         with open(fpath) as fp:
-            cfg.readfp(fp)
+            cfg.read_file(fp)
 
         # This ensures that the docs are rebuilt whenever the
         # .ini file changes

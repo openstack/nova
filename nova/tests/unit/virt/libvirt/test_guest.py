@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import sys
-
 import mock
 from oslo_service import fixture as service_fixture
 from oslo_utils import encodeutils
@@ -27,10 +25,6 @@ from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
-
-
-if sys.version_info > (3,):
-    long = int
 
 
 class GuestTestCase(test.NoDBTestCase):
