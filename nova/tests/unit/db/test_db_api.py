@@ -6224,13 +6224,12 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Verify the insertions into shadow is same as deletions from main
         self.assertEqual(len(shadow_rows), len(rows) - len(main_rows))
 
-    def _check_sqlite_version_less_than_3_7(self):
+    def test_archive_deleted_rows_for_migrations(self):
+        # migrations.instance_uuid depends on instances.uuid
+
         # SQLite doesn't enforce foreign key constraints without a pragma.
         self.enforce_fk_constraints(engine=self.engine)
 
-    def test_archive_deleted_rows_for_migrations(self):
-        # migrations.instance_uuid depends on instances.uuid
-        self._check_sqlite_version_less_than_3_7()
         instance_uuid = uuidsentinel.instance
         ins_stmt = self.instances.insert().values(
                         uuid=instance_uuid,
