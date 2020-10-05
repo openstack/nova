@@ -163,7 +163,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.INIT_VERSION + 1,
         ]
 
-        liberty_placeholders = list(range(303, 313))
         mitaka_placeholders = list(range(320, 330))
         newton_placeholders = list(range(335, 345))
         ocata_placeholders = list(range(348, 358))
@@ -178,7 +177,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         victoria_placeholders = list(range(413, 418))
 
         return (special +
-                liberty_placeholders +
                 mitaka_placeholders +
                 newton_placeholders +
                 ocata_placeholders +
@@ -246,89 +244,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_313(self, engine, data):
-
-        self.assertColumnExists(engine, 'pci_devices', 'parent_addr')
-        self.assertColumnExists(engine, 'shadow_pci_devices', 'parent_addr')
-        pci_devices = oslodbutils.get_table(engine, 'pci_devices')
-        shadow_pci_devices = oslodbutils.get_table(
-            engine, 'shadow_pci_devices')
-        self.assertIsInstance(pci_devices.c.parent_addr.type,
-                              sqlalchemy.types.String)
-        self.assertTrue(pci_devices.c.parent_addr.nullable)
-        self.assertIsInstance(shadow_pci_devices.c.parent_addr.type,
-                              sqlalchemy.types.String)
-        self.assertTrue(shadow_pci_devices.c.parent_addr.nullable)
-        self.assertIndexMembers(engine, 'pci_devices',
-                        'ix_pci_devices_compute_node_id_parent_addr_deleted',
-                        ['compute_node_id', 'parent_addr', 'deleted'])
-
-    def _check_314(self, engine, data):
-        self.assertColumnExists(engine, 'inventories', 'resource_class_id')
-        self.assertColumnExists(engine, 'allocations', 'resource_class_id')
-
-        self.assertColumnExists(engine, 'resource_providers', 'id')
-        self.assertColumnExists(engine, 'resource_providers', 'uuid')
-
-        self.assertColumnExists(engine, 'compute_nodes', 'uuid')
-        self.assertColumnExists(engine, 'shadow_compute_nodes', 'uuid')
-
-        self.assertIndexMembers(engine, 'allocations',
-                        'allocations_resource_provider_class_id_idx',
-                        ['resource_provider_id', 'resource_class_id'])
-
-    def _check_315(self, engine, data):
-        self.assertColumnExists(engine, 'migrations',
-                                'memory_total')
-        self.assertColumnExists(engine, 'migrations',
-                                'memory_processed')
-        self.assertColumnExists(engine, 'migrations',
-                                'memory_remaining')
-        self.assertColumnExists(engine, 'migrations',
-                                'disk_total')
-        self.assertColumnExists(engine, 'migrations',
-                                'disk_processed')
-        self.assertColumnExists(engine, 'migrations',
-                                'disk_remaining')
-
-    def _check_316(self, engine, data):
-        self.assertColumnExists(engine, 'compute_nodes',
-                                'disk_allocation_ratio')
-
-    def _check_317(self, engine, data):
-        self.assertColumnExists(engine, 'aggregates', 'uuid')
-        self.assertColumnExists(engine, 'shadow_aggregates', 'uuid')
-
-    def _check_318(self, engine, data):
-        self.assertColumnExists(engine, 'resource_providers', 'name')
-        self.assertColumnExists(engine, 'resource_providers', 'generation')
-        self.assertColumnExists(engine, 'resource_providers', 'can_host')
-        self.assertIndexMembers(engine, 'resource_providers',
-                                'resource_providers_name_idx',
-                                ['name'])
-
-        self.assertColumnExists(engine, 'resource_provider_aggregates',
-                                'resource_provider_id')
-        self.assertColumnExists(engine, 'resource_provider_aggregates',
-                                'aggregate_id')
-
-        self.assertIndexMembers(engine, 'resource_provider_aggregates',
-            'resource_provider_aggregates_aggregate_id_idx',
-            ['aggregate_id'])
-
-        self.assertIndexMembers(engine, 'resource_provider_aggregates',
-            'resource_provider_aggregates_aggregate_id_idx',
-            ['aggregate_id'])
-
-        self.assertIndexMembers(engine, 'inventories',
-            'inventories_resource_provider_resource_class_idx',
-            ['resource_provider_id', 'resource_class_id'])
-
-    def _check_319(self, engine, data):
-        self.assertIndexMembers(engine, 'instances',
-                                'instances_deleted_created_at_idx',
-                                ['deleted', 'created_at'])
 
     def _check_330(self, engine, data):
         # Just a sanity-check migration

@@ -58,7 +58,13 @@ def _create_shadow_tables(migrate_engine):
 
     for table_name in table_names:
         # Skip tables that are not soft-deletable
-        if table_name in ('tags', ):
+        if table_name in (
+            'tags',
+            'resource_providers',
+            'inventories',
+            'allocations',
+            'resource_provider_aggregates',
+        ):
             continue
 
         table = Table(table_name, meta, autoload=True)
@@ -184,8 +190,25 @@ def upgrade(migrate_engine):
         Column('id', Integer, primary_key=True, nullable=False),
         Column('name', String(length=255)),
         Column('deleted', Integer),
+        Column('uuid', String(36)),
+        Index('aggregate_uuid_idx', 'uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
+    )
+
+    allocations = Table('allocations', meta,
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('resource_provider_id', Integer, nullable=False),
+        Column('consumer_id', String(36), nullable=False),
+        Column('resource_class_id', Integer, nullable=False),
+        Column('used', Integer, nullable=False),
+        Index(
+            'allocations_resource_provider_class_used_idx',
+            'resource_provider_id', 'resource_class_id', 'used'),
+        Index('allocations_consumer_id_idx', 'consumer_id'),
+        Index('allocations_resource_class_id_idx', 'resource_class_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1',
     )
 
     block_device_mapping = Table('block_device_mapping', meta,
@@ -295,6 +318,8 @@ def upgrade(migrate_engine):
         Column('host', String(255), nullable=True),
         Column('ram_allocation_ratio', Float, nullable=True),
         Column('cpu_allocation_ratio', Float, nullable=True),
+        Column('uuid', String(36), nullable=True),
+        Column('disk_allocation_ratio', Float, nullable=True),
         UniqueConstraint(
             'host', 'hypervisor_hostname', 'deleted',
             name='uniq_compute_nodes0host0hypervisor_hostname0deleted',
@@ -677,6 +702,30 @@ def upgrade(migrate_engine):
         mysql_charset='utf8',
     )
 
+    inventories = Table('inventories', meta,
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('resource_provider_id', Integer, nullable=False),
+        Column('resource_class_id', Integer, nullable=False),
+        Column('total', Integer, nullable=False),
+        Column('reserved', Integer, nullable=False),
+        Column('min_unit', Integer, nullable=False),
+        Column('max_unit', Integer, nullable=False),
+        Column('step_size', Integer, nullable=False),
+        Column('allocation_ratio', Float, nullable=False),
+        Index(
+            'inventories_resource_provider_id_idx', 'resource_provider_id'),
+        Index(
+            'inventories_resource_class_id_idx', 'resource_class_id'),
+        Index(
+            'inventories_resource_provider_resource_class_idx',
+            'resource_provider_id', 'resource_class_id'),
+        UniqueConstraint(
+            'resource_provider_id', 'resource_class_id',
+            name='uniq_inventories0resource_provider_resource_class'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1',
+    )
+
     key_pairs = Table('key_pairs', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -721,6 +770,12 @@ def upgrade(migrate_engine):
         # NOTE(stephenfin): This was originally added by sqlalchemy-migrate
         # which did not generate the constraints
         Column('hidden', Boolean(create_constraint=False), default=False),
+        Column('memory_total', BigInteger, nullable=True),
+        Column('memory_processed', BigInteger, nullable=True),
+        Column('memory_remaining', BigInteger, nullable=True),
+        Column('disk_total', BigInteger, nullable=True),
+        Column('disk_processed', BigInteger, nullable=True),
+        Column('disk_remaining', BigInteger, nullable=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -785,6 +840,7 @@ def upgrade(migrate_engine):
         Column('instance_uuid', String(36), nullable=True),
         Column('request_id', String(36), nullable=True),
         Column('numa_node', Integer, default=None),
+        Column('parent_addr', String(12), nullable=True),
         Index('ix_pci_devices_instance_uuid_deleted',
               'instance_uuid', 'deleted'),
         Index('ix_pci_devices_compute_node_id_deleted',
@@ -887,6 +943,29 @@ def upgrade(migrate_engine):
         Column('user_id', String(length=255)),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
+    )
+
+    resource_providers = Table('resource_providers', meta,
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('uuid', String(36), nullable=False),
+        Column('name', Unicode(200), nullable=True),
+        Column('generation', Integer, default=0),
+        Column('can_host', Integer, default=0),
+        UniqueConstraint('uuid', name='uniq_resource_providers0uuid'),
+        UniqueConstraint('name', name='uniq_resource_providers0name'),
+        Index('resource_providers_name_idx', 'name'),
+        Index('resource_providers_uuid_idx', 'uuid'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1',
+    )
+
+    resource_provider_aggregates = Table('resource_provider_aggregates', meta,
+        Column(
+            'resource_provider_id', Integer, primary_key=True, nullable=False),
+        Column('aggregate_id', Integer, primary_key=True, nullable=False),
+        Index('resource_provider_aggregates_aggregate_id_idx', 'aggregate_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1',
     )
 
     s3_images = Table('s3_images', meta,
@@ -1121,7 +1200,9 @@ def upgrade(migrate_engine):
               services, snapshot_id_mappings, tags, task_log,
               virtual_interfaces,
               volume_id_mappings,
-              volume_usage_cache]
+              volume_usage_cache,
+              resource_providers, inventories, allocations,
+              resource_provider_aggregates]
 
     for table in tables:
         try:
@@ -1225,6 +1306,8 @@ def upgrade(migrate_engine):
               instances.c.cleaned),
         Index('instances_project_id_deleted_idx',
               instances.c.project_id, instances.c.deleted),
+        Index('instances_deleted_created_at_idx',
+              instances.c.deleted, instances.c.created_at),
 
         # instance_actions
         Index('instance_uuid_idx', instance_actions.c.instance_uuid),
@@ -1274,6 +1357,11 @@ def upgrade(migrate_engine):
               networks.c.uuid, networks.c.project_id, networks.c.deleted),
         Index('networks_vlan_deleted_idx', networks.c.vlan,
               networks.c.deleted),
+
+        Index('ix_pci_devices_compute_node_id_parent_addr_deleted',
+              pci_devices.c.compute_node_id,
+              pci_devices.c.parent_addr,
+              pci_devices.c.deleted),
 
         # project_user_quotas
         Index('project_user_quotas_project_id_deleted_idx',
@@ -1465,6 +1553,13 @@ def upgrade(migrate_engine):
         migrate_engine.execute(
             'ALTER DATABASE `%s` DEFAULT CHARACTER SET utf8' %
             migrate_engine.url.database)
+
+        # NOTE(cdent): The resource_providers table is defined as latin1 to be
+        # more efficient. Now we need the name column to be UTF8. We modify it
+        # here otherwise the declarative handling in sqlalchemy gets confused.
+        migrate_engine.execute(
+            'ALTER TABLE resource_providers MODIFY name '
+            'VARCHAR(200) CHARACTER SET utf8')
 
     _create_shadow_tables(migrate_engine)
 
