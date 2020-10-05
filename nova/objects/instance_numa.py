@@ -48,8 +48,9 @@ class InstanceNUMACell(base.NovaEphemeralObject,
             if primitive['cpu_policy'] == obj_fields.CPUAllocationPolicy.MIXED:
                 raise exception.ObjectActionError(
                     action='obj_make_compatible',
-                    reason=_('mixed instance is not supported in version %s') %
-                           target_version)
+                    reason=_(
+                        '%s policy is not supported in version %s'
+                    ) % (primitive['cpu_policy'], target_version))
 
         # NOTE(huaqiang): Since version 1.5, 'cpuset' is modified to track the
         # unpinned CPUs only, with pinned CPUs tracked via 'pcpuset' instead.
