@@ -185,11 +185,8 @@ fi
 echo "Deleting allocations in placement for the server"
 openstack resource provider allocation delete ${server_id}
 
-# NOTE(gibi) disable this step until the bug
-# https://bugs.launchpad.net/neutron/+bug/1894825 in fixed and a new
-# neutron-lib version is released
-# echo "Deleting allocation key from the binding:profile of the bandwidth aware port"
-# openstack port unset --binding-profile allocation port-normal-qos
+echo "Deleting allocation key from the binding:profile of the bandwidth aware port"
+openstack port unset --binding-profile allocation port-normal-qos
 
 # Make sure the allocations are gone.
 allocations=$(openstack resource provider allocation show ${server_id} \
@@ -199,15 +196,12 @@ if [[ "$allocations" != "" ]]; then
     exit 2
 fi
 
-# NOTE(gibi) disable this step until the bug
-# https://bugs.launchpad.net/neutron/+bug/1894825 in fixed and a new
-# neutron-lib version is released
 # Make sure that the binding:profile.allocation key is gone
-# null_rp_uuid=$(get_binding_profile_value port-normal-qos "allocation")
-# if [[ "$null_rp_uuid" != "" ]]; then
-#    echo "Binding profile not updated for the bandwidth aware port."
-#    exit 2
-# fi
+null_rp_uuid=$(get_binding_profile_value port-normal-qos "allocation")
+if [[ "$null_rp_uuid" != "" ]]; then
+    echo "Binding profile not updated for the bandwidth aware port."
+    exit 2
+fi
 
 # Make sure our extra key in the binding:profile is still there
 my_key=$(get_binding_profile_value port-normal-qos "my_key")
@@ -238,16 +232,12 @@ if [[ "$allocations" == "" ]]; then
     exit 2
 fi
 
-# NOTE(gibi) disable this step until the bug
-# https://bugs.launchpad.net/neutron/+bug/1894825 in fixed and a new
-# neutron-lib version is released
-
 # Make sure that the allocations contains bandwidth as well
-# bandwidth_allocations=$(echo "$allocations" |  grep NET_BW_EGR_KILOBIT_PER_SEC)
-# if [[ "$bandwidth_allocations" == "" ]]; then
-#     echo "Failed to heal port allocations."
-#     exit 2
-# fi
+bandwidth_allocations=$(echo "$allocations" |  grep NET_BW_EGR_KILOBIT_PER_SEC)
+if [[ "$bandwidth_allocations" == "" ]]; then
+    echo "Failed to heal port allocations."
+    exit 2
+fi
 
 # Make sure that the binding:profile.allocation key healed back
 healed_rp_uuid=$(get_binding_profile_value port-normal-qos "allocation")
