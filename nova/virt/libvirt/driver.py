@@ -249,10 +249,6 @@ VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
-# Persistent Memory (PMEM/NVDIMM) Device Support
-MIN_LIBVIRT_PMEM_SUPPORT = (5, 0, 0)
-MIN_QEMU_PMEM_SUPPORT = (3, 1, 0)
-
 # -blockdev support (replacing -drive)
 MIN_LIBVIRT_BLOCKDEV = (6, 0, 0)
 MIN_QEMU_BLOCKDEV = (4, 2, 0)
@@ -412,17 +408,6 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         if not vpmem_conf:
             return {}, {}
-
-        if not self._host.has_min_version(lv_ver=MIN_LIBVIRT_PMEM_SUPPORT,
-                                          hv_ver=MIN_QEMU_PMEM_SUPPORT):
-            raise exception.InvalidConfiguration(
-                _('Nova requires QEMU version %(qemu)s or greater '
-                  'and Libvirt version %(libvirt)s or greater '
-                  'for NVDIMM (Persistent Memory) support.') % {
-                'qemu': libvirt_utils.version_to_string(
-                    MIN_QEMU_PMEM_SUPPORT),
-                'libvirt': libvirt_utils.version_to_string(
-                    MIN_LIBVIRT_PMEM_SUPPORT)})
 
         # vpmem keyed by name {name: objects.LibvirtVPMEMDevice,...}
         vpmems_by_name: ty.Dict[str, 'objects.LibvirtVPMEMDevice'] = {}
