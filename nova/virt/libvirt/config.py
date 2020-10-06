@@ -674,11 +674,13 @@ class LibvirtConfigCPUFeature(LibvirtConfigObject):
                                                       **kwargs)
 
         self.name = name
+        self.policy = "require"
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigCPUFeature, self).parse_dom(xmldoc)
 
         self.name = xmldoc.get("name")
+        self.policy = xmldoc.get("policy", "require")
 
     def format_dom(self):
         ft = super(LibvirtConfigCPUFeature, self).format_dom()
@@ -730,7 +732,8 @@ class LibvirtConfigCPU(LibvirtConfigObject):
             elif c.tag == "feature":
                 f = LibvirtConfigCPUFeature()
                 f.parse_dom(c)
-                self.add_feature(f)
+                if f.policy != "disable":
+                    self.add_feature(f)
 
     def format_dom(self):
         cpu = super(LibvirtConfigCPU, self).format_dom()
@@ -753,7 +756,8 @@ class LibvirtConfigCPU(LibvirtConfigObject):
 
         # sorting the features to allow more predictable tests
         for f in sorted(self.features, key=lambda x: x.name):
-            cpu.append(f.format_dom())
+            if f.policy != "disable":
+                cpu.append(f.format_dom())
 
         return cpu
 
