@@ -11,6 +11,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 import copy
 
 from nova.api.validation import parameter_types
@@ -27,15 +28,18 @@ create = {
                 'name': parameter_types.name,
                 'policies': {
                     # This allows only a single item and it must be one of the
-                    # enumerated values. So this is really just a single string
-                    # value, but for legacy reasons is an array. We could
-                    # probably change the type from array to string with a
-                    # microversion at some point but it's very low priority.
+                    # enumerated values. It's changed to a single string value
+                    # in 2.64.
                     'type': 'array',
-                    'items': [{
-                        'type': 'string',
-                        'enum': ['anti-affinity', 'affinity']}],
+                    'items': [
+                        {
+                            'type': 'string',
+                            'enum': ['anti-affinity', 'affinity'],
+                        },
+                    ],
                     'uniqueItems': True,
+                    'minItems': 1,
+                    'maxItems': 1,
                     'additionalItems': False,
                 }
             },
