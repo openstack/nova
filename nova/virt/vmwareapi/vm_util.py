@@ -242,9 +242,9 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
         config_spec.firmware = extra_specs.firmware
 
     devices = []
-    for vif_info in vif_infos:
+    for i, vif_info in enumerate(vif_infos):
         vif_spec = _create_vif_spec(client_factory, vif_info,
-                                    extra_specs.vif_limits)
+                                    extra_specs.vif_limits, i)
         devices.append(vif_spec)
 
     serial_port_spec = create_serial_port_spec(client_factory)
@@ -416,7 +416,7 @@ def convert_vif_model(name):
     return name
 
 
-def _create_vif_spec(client_factory, vif_info, vif_limits=None):
+def _create_vif_spec(client_factory, vif_info, vif_limits=None, offset=0):
     """Builds a config spec for the addition of a new network
     adapter to the VM.
     """
@@ -478,7 +478,7 @@ def _create_vif_spec(client_factory, vif_info, vif_limits=None):
     # The Server assigns a Key to the device. Here we pass a -ve temporary key.
     # -ve because actual keys are +ve numbers and we don't
     # want a clash with the key that server might associate with the device
-    net_device.key = -47
+    net_device.key = -47 - offset
     net_device.addressType = "manual"
     net_device.macAddress = mac_address
     net_device.wakeOnLanEnabled = True
