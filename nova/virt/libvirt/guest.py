@@ -155,9 +155,8 @@ class Guest(object):
             return self._domain.createWithFlags(flags)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error('Error launching a defined domain '
-                          'with XML: %s',
-                          self._encoded_xml, errors='ignore')
+                LOG.exception('Error launching a defined domain with XML: %s',
+                              self._encoded_xml, errors='ignore')
 
     def poweroff(self):
         """Stops a running guest."""
