@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    A new image metadata property, ``hw_input_bus``, has been added. This
+    allows you to specify the bus used for input devices - a pointer and
+    keyboard - which are attached to the instance when graphics are enabled
+    on compute nodes using the libvirt virt driver. Two values are currently
+    accepted: ``usb`` and ``virtio``. This image metadata property effectively
+    replaced the ``hw_pointer_model`` image metadata property, which is
+    nontheless retained for backwards compatibility purposes.

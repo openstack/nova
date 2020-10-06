@@ -5796,25 +5796,38 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             cfg = self._get_guest_config_with_graphics()
 
-            self.assertEqual(len(cfg.devices), 9)
+            if guestarch != fields.Architecture.AARCH64:
+                self.assertEqual(len(cfg.devices), 9)
+            else:
+                # AArch64 adds a keyboard by default
+                self.assertEqual(len(cfg.devices), 10)
+
+            devices = iter(cfg.devices)
+
             self.assertIsInstance(
-                cfg.devices[0], vconfig.LibvirtConfigGuestDisk)
+                next(devices), vconfig.LibvirtConfigGuestDisk)
             self.assertIsInstance(
-                cfg.devices[1], vconfig.LibvirtConfigGuestDisk)
+                next(devices), vconfig.LibvirtConfigGuestDisk)
             self.assertIsInstance(
-                cfg.devices[2], vconfig.LibvirtConfigGuestSerial)
+                next(devices), vconfig.LibvirtConfigGuestSerial)
             self.assertIsInstance(
-                cfg.devices[3], vconfig.LibvirtConfigGuestChannel)
+                next(devices), vconfig.LibvirtConfigGuestChannel)
             self.assertIsInstance(
-                cfg.devices[4], vconfig.LibvirtConfigGuestGraphics)
+                next(devices), vconfig.LibvirtConfigGuestGraphics)
             self.assertIsInstance(
-                cfg.devices[5], vconfig.LibvirtConfigGuestVideo)
+                next(devices), vconfig.LibvirtConfigGuestVideo)
+
+            if guestarch == fields.Architecture.AARCH64:
+                # AArch64 adds a keyboard by default
+                self.assertIsInstance(
+                    next(devices), vconfig.LibvirtConfigGuestInput)
+
             self.assertIsInstance(
-                cfg.devices[6], vconfig.LibvirtConfigGuestRng)
+                next(devices), vconfig.LibvirtConfigGuestRng)
             self.assertIsInstance(
-                cfg.devices[7], vconfig.LibvirtConfigGuestUSBHostController)
+                next(devices), vconfig.LibvirtConfigGuestUSBHostController)
             self.assertIsInstance(
-                cfg.devices[8], vconfig.LibvirtConfigMemoryBalloon)
+                next(devices), vconfig.LibvirtConfigMemoryBalloon)
 
             self.assertEqual(cfg.devices[3].target_name, "com.redhat.spice.0")
             self.assertEqual(cfg.devices[3].type, 'spicevmc')
@@ -6400,6 +6413,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         dev = self._test_guest_add_pointer_device(image_meta)
         self.assertIsNotNone(dev)
 
+        image_meta = {'properties': {'hw_input_bus': 'usb'}}
+
+        dev = self._test_guest_add_pointer_device(image_meta)
+        self.assertEqual('tablet', dev.type)
+        self.assertEqual('usb', dev.bus)
+
+        image_meta = {'properties': {'hw_input_bus': 'virtio'}}
+
+        dev = self._test_guest_add_pointer_device(image_meta)
+        self.assertEqual('tablet', dev.type)
+        self.assertEqual('virtio', dev.bus)
+
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_guest_add_pointer_device__fail_with_spice_agent(self, mock_warn):
         self.flags(enabled=False, group='vnc')
@@ -6436,6 +6461,48 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'USB tablet requested for guests on non-HVM host',
             str(mock_warn.call_args[0]),
         )
+
+    def _test_guest_add_keyboard_device(self, image_meta, arch=None):
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '',
+            arch or fields.Architecture.X86_64)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest = vconfig.LibvirtConfigGuest()
+        guest.os_type = fields.VMMode.HVM
+        image_meta = objects.ImageMeta.from_dict({'properties': image_meta})
+        return drvr._guest_add_keyboard_device(guest, image_meta)
+
+    def test_guest_add_keyboard_device(self):
+        props = {}
+
+        dev = self._test_guest_add_keyboard_device(props)
+        self.assertIsNone(dev)
+
+        props = {'hw_input_bus': 'usb'}
+
+        dev = self._test_guest_add_keyboard_device(props)
+        self.assertEqual('usb', dev.bus)
+        self.assertEqual('keyboard', dev.type)
+
+        props = {'hw_input_bus': 'virtio'}
+
+        dev = self._test_guest_add_keyboard_device(props)
+        self.assertEqual('virtio', dev.bus)
+        self.assertEqual('keyboard', dev.type)
+
+        props = {'hw_architecture': fields.Architecture.AARCH64}
+
+        dev = self._test_guest_add_keyboard_device(props)
+        self.assertEqual('usb', dev.bus)
+        self.assertEqual('keyboard', dev.type)
+
+        props = {}
+
+        dev = self._test_guest_add_keyboard_device(
+            props, arch=fields.Architecture.AARCH64)
+        self.assertEqual('usb', dev.bus)
+        self.assertEqual('keyboard', dev.type)
 
     def test_get_guest_config_with_watchdog_action_flavor(self):
         self.flags(virt_type='kvm', group='libvirt')

@@ -465,6 +465,14 @@ class ImageSignatureKeyType(BaseNovaEnum):
     )
 
 
+class InputBus(BaseNovaEnum):
+
+    USB = 'usb'
+    VIRTIO = 'virtio'
+
+    ALL = (USB, VIRTIO)
+
+
 class MigrationType(BaseNovaEnum):
 
     MIGRATION = 'migration'  # cold migration
@@ -793,7 +801,7 @@ class PointerModelType(BaseNovaEnum):
 
     USBTABLET = "usbtablet"
 
-    ALL = (USBTABLET)
+    ALL = (USBTABLET,)
 
 
 class NotificationPriority(BaseNovaEnum):
@@ -1234,6 +1242,10 @@ class ImageSignatureHashTypeField(BaseEnumField):
 
 class ImageSignatureKeyTypeField(BaseEnumField):
     AUTO_TYPE = ImageSignatureKeyType()
+
+
+class InputBusField(BaseEnumField):
+    AUTO_TYPE = InputBus()
 
 
 class MigrationTypeField(BaseEnumField):

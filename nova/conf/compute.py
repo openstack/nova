@@ -296,8 +296,8 @@ Generic property to specify the pointer type.
 Input devices allow interaction with a graphical framebuffer. For
 example to provide a graphic tablet for absolute cursor movement.
 
-If set, the 'hw_pointer_model' image property takes precedence over
-this configuration option.
+If set, either the ``hw_input_bus`` or ``hw_pointer_model`` image metadata
+properties will take precedence over this configuration option.
 
 Related options:
 

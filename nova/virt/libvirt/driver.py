@@ -6197,17 +6197,6 @@ class LibvirtDriver(driver.ComputeDriver):
             return True
         return False
 
-    def _guest_add_usb_host_keyboard(self, guest):
-        """Add USB Host controller and keyboard for graphical console use.
-
-        Add USB keyboard as PS/2 support may not be present on non-x86
-        architectures.
-        """
-        keyboard = vconfig.LibvirtConfigGuestInput()
-        keyboard.type = "keyboard"
-        keyboard.bus = "usb"
-        guest.add_device(keyboard)
-
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
                           context=None, mdevs=None, accel_info=None):
@@ -6307,14 +6296,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._add_video_driver(guest, image_meta, flavor)
 
             self._guest_add_pointer_device(guest, image_meta)
-
-            # We want video == we want graphical console. Some architectures
-            # do not have input devices attached in default configuration.
-            # Let then add USB Host controller and USB keyboard.
-            # x86(-64) and ppc64 have usb host controller and keyboard
-            # s390x does not support USB
-            if caps.host.cpu.arch == fields.Architecture.AARCH64:
-                self._guest_add_usb_host_keyboard(guest)
+            self._guest_add_keyboard_device(guest, image_meta)
 
         # Some features are only supported 'qemu' and 'kvm' hypervisor
         if virt_type in ('qemu', 'kvm'):
@@ -6568,11 +6550,25 @@ class LibvirtDriver(driver.ComputeDriver):
         return add_video_driver
 
     def _guest_add_pointer_device(self, guest, image_meta):
+        """Build the pointer device to add to the instance.
+
+        The configuration is determined by examining the 'hw_input_bus' image
+        metadata property, the 'hw_pointer_model' image metadata property, and
+        the '[DEFAULT] pointer_model' config option in that order.
+        """
+        pointer_bus = image_meta.properties.get('hw_input_bus')
         pointer_model = image_meta.properties.get('hw_pointer_model')
 
-        # If the user hasn't requested anything and the host config says to use
-        # something other than a USB tablet, there's nothing to do
-        if pointer_model is None and CONF.pointer_model in (None, 'ps2mouse'):
+        if pointer_bus:
+            pointer_model = 'tablet'
+            pointer_bus = pointer_bus
+        elif pointer_model or CONF.pointer_model == 'usbtablet':
+            # Handle the legacy 'hw_pointer_model' image metadata property
+            pointer_model = 'tablet'
+            pointer_bus = 'usb'
+        else:
+            # If the user hasn't requested anything and the host config says to
+            # use something other than a USB tablet, there's nothing to do
             return
 
         # For backward compatibility, we don't want to error out if the host
@@ -6599,12 +6595,37 @@ class LibvirtDriver(driver.ComputeDriver):
                 'configuration.')
             return
 
-        tablet = vconfig.LibvirtConfigGuestInput()
-        tablet.type = 'tablet'
-        tablet.bus = 'usb'
-        guest.add_device(tablet)
+        pointer = vconfig.LibvirtConfigGuestInput()
+        pointer.type = pointer_model
+        pointer.bus = pointer_bus
+        guest.add_device(pointer)
+
         # returned for unit testing purposes
-        return tablet
+        return pointer
+
+    def _guest_add_keyboard_device(self, guest, image_meta):
+        """Add keyboard for graphical console use."""
+        bus = image_meta.properties.get('hw_input_bus')
+
+        if not bus:
+            # AArch64 doesn't provide a default keyboard so we explicitly add
+            # one; for everything else we rely on default (e.g. for x86,
+            # libvirt will automatically add a PS2 keyboard)
+            # TODO(stephenfin): We might want to do this for other non-x86
+            # architectures
+            arch = libvirt_utils.get_arch(image_meta)
+            if arch != fields.Architecture.AARCH64:
+                return None
+
+            bus = 'usb'
+
+        keyboard = vconfig.LibvirtConfigGuestInput()
+        keyboard.type = 'keyboard'
+        keyboard.bus = bus
+        guest.add_device(keyboard)
+
+        # returned for unit testing purposes
+        return keyboard
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,
                        image_meta, rescue=None,
