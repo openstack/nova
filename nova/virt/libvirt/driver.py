@@ -6108,14 +6108,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._create_consoles(virt_type, guest, instance, flavor, image_meta)
 
-        pointer = self._get_guest_pointer_model(guest.os_type, image_meta)
-        if pointer:
-            guest.add_device(pointer)
-
         self._guest_add_spice_channel(guest)
 
         if self._guest_add_video_device(guest):
             self._add_video_driver(guest, image_meta, flavor)
+
+            self._guest_add_pointer_device(guest, image_meta)
 
             # We want video == we want graphical console. Some architectures
             # do not have input devices attached in default configuration.
@@ -6376,50 +6374,43 @@ class LibvirtDriver(driver.ComputeDriver):
             add_video_driver = True
         return add_video_driver
 
-    def _get_guest_pointer_model(self, os_type, image_meta):
-        pointer_model = image_meta.properties.get(
-            'hw_pointer_model', CONF.pointer_model)
+    def _guest_add_pointer_device(self, guest, image_meta):
+        pointer_model = image_meta.properties.get('hw_pointer_model')
 
-        if pointer_model == "usbtablet":
-            # We want a tablet if VNC is enabled, or SPICE is enabled and
-            # the SPICE agent is disabled. If the SPICE agent is enabled
-            # it provides a paravirt mouse which drastically reduces
-            # overhead (by eliminating USB polling).
-            if CONF.vnc.enabled or (
-                    CONF.spice.enabled and not CONF.spice.agent_enabled):
-                return self._get_guest_usb_tablet(os_type)
-            else:
-                if CONF.pointer_model:
-                    # For backward compatibility We don't want to break
-                    # process of booting an instance if host is configured
-                    # to use USB tablet without VNC or SPICE and SPICE
-                    # agent disable.
-                    LOG.warning('USB tablet requested for guests by host '
-                                'configuration. In order to accept this '
-                                'request VNC should be enabled or SPICE '
-                                'and SPICE agent disabled on host.')
-                else:
-                    raise exception.UnsupportedPointerModelRequested(
-                        model="usbtablet")
+        # If the user hasn't requested anything and the host config says to use
+        # something other than a USB tablet, there's nothing to do
+        if pointer_model is None and CONF.pointer_model in (None, 'ps2mouse'):
+            return
 
-    def _get_guest_usb_tablet(self, os_type):
-        tablet = None
-        if os_type == fields.VMMode.HVM:
-            tablet = vconfig.LibvirtConfigGuestInput()
-            tablet.type = "tablet"
-            tablet.bus = "usb"
-        else:
-            if CONF.pointer_model:
-                # For backward compatibility We don't want to break
-                # process of booting an instance if virtual machine mode
-                # is not configured as HVM.
-                LOG.warning(
-                    'USB tablet requested for guests by host configuration. '
-                    'In order to accept this request the machine mode should '
-                    'be configured as HVM.')
-            else:
-                raise exception.UnsupportedPointerModelRequested(
-                    model="usbtablet")
+        # For backward compatibility, we don't want to error out if the host
+        # configuration requests a USB tablet but the virtual machine mode is
+        # not configured as HVM.
+        if guest.os_type != fields.VMMode.HVM:
+            LOG.warning(
+                'USB tablet requested for guests on non-HVM host; '
+                'in order to accept this request the machine mode should '
+                'be configured as HVM.')
+            return
+
+        # Ditto for using a USB tablet when the SPICE agent is enabled, since
+        # that has a paravirt mouse builtin which drastically reduces overhead;
+        # this only applies if VNC is not also enabled though, since that still
+        # needs the device
+        if (
+            CONF.spice.enabled and CONF.spice.agent_enabled and
+            not CONF.vnc.enabled
+        ):
+            LOG.warning(
+                'USB tablet requested for guests but the SPICE agent is '
+                'enabled; ignoring request in favour of default '
+                'configuration.')
+            return
+
+        tablet = vconfig.LibvirtConfigGuestInput()
+        tablet.type = 'tablet'
+        tablet.bus = 'usb'
+        guest.add_device(tablet)
+        # returned for unit testing purposes
         return tablet
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,
