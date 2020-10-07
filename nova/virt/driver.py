@@ -134,6 +134,20 @@ CAPABILITY_TRAITS_MAP = {
 }
 
 
+def _check_image_type_exclude_list(capability, supported):
+    """Enforce the exclusion list on image_type capabilites.
+
+    :param capability: The supports_image_type_foo capability being checked
+    :param supported: The flag indicating whether the virt driver *can*
+                      support the given image type.
+    :returns: True if the virt driver *can* support the image type and
+              if it is not listed in the config to be excluded.
+    """
+    image_type = capability.replace('supports_image_type_', '')
+    return (supported and
+            image_type not in CONF.compute.image_type_exclude_list)
+
+
 class ComputeDriver(object):
     """Base class for compute drivers.
 
@@ -1113,6 +1127,10 @@ class ComputeDriver(object):
         """
         traits = {}
         for capability, supported in self.capabilities.items():
+            if capability.startswith('supports_image_type_'):
+                supported = _check_image_type_exclude_list(capability,
+                                                           supported)
+
             if capability in CAPABILITY_TRAITS_MAP:
                 traits[CAPABILITY_TRAITS_MAP[capability]] = supported
 
