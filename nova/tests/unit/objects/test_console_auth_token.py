@@ -30,7 +30,7 @@ from nova.tests.unit.objects import test_objects
 class _TestConsoleAuthToken(object):
 
     @mock.patch('nova.db.main.api.console_auth_token_create')
-    def _test_authorize(self, console_type, mock_create):
+    def _test_authorize(self, console_type, mock_create, base_url=None):
         # the expires time is calculated from the current time and
         # a ttl value in the object. Fix the current time so we can
         # test expires is calculated correctly as expected
@@ -38,13 +38,17 @@ class _TestConsoleAuthToken(object):
         timeutils.set_time_override()
         ttl = 10
         expires = timeutils.utcnow_ts() + ttl
+        if not base_url:
+            base_url = fakes.fake_token_dict['access_url_base']
 
         db_dict = copy.deepcopy(fakes.fake_token_dict)
         db_dict['expires'] = expires
         db_dict['console_type'] = console_type
+        db_dict['access_url_base'] = base_url
         mock_create.return_value = db_dict
 
         create_dict = copy.deepcopy(fakes.fake_token_dict)
+        create_dict['access_url_base'] = base_url
         create_dict['expires'] = expires
         create_dict['console_type'] = console_type
         del create_dict['id']
@@ -54,6 +58,7 @@ class _TestConsoleAuthToken(object):
         expected = copy.deepcopy(fakes.fake_token_dict)
         del expected['token_hash']
         del expected['expires']
+        expected['access_url_base'] = base_url
         expected['token'] = fakes.fake_token
         expected['console_type'] = console_type
 
@@ -64,7 +69,7 @@ class _TestConsoleAuthToken(object):
             port=fakes.fake_token_dict['port'],
             internal_access_path=fakes.fake_token_dict['internal_access_path'],
             instance_uuid=fakes.fake_token_dict['instance_uuid'],
-            access_url_base=fakes.fake_token_dict['access_url_base'],
+            access_url_base=base_url,
         )
         with mock.patch('uuid.uuid4', return_value=fakes.fake_token):
             token = obj.authorize(ttl)
@@ -75,14 +80,14 @@ class _TestConsoleAuthToken(object):
 
         url = obj.access_url
         if console_type != 'novnc':
-            expected_url = '%s?token=%s' % (
-                fakes.fake_token_dict['access_url_base'],
-                fakes.fake_token)
+            expected_url = '%s?token=%s' % (base_url, fakes.fake_token)
         else:
-            path = urlparse.urlencode({'path': '?token=%s' % fakes.fake_token})
-            expected_url = '%s?%s' % (
-                fakes.fake_token_dict['access_url_base'],
-                path)
+            if 'path=' in base_url:
+                expected_url = base_url + urlparse.quote('?token=%s' % token)
+            else:
+                path = urlparse.urlencode({'path': '?token=%s' %
+                                                   fakes.fake_token})
+                expected_url = '%s?%s' % (base_url, path)
         self.assertEqual(expected_url, url)
 
     def test_authorize(self):
@@ -90,6 +95,10 @@ class _TestConsoleAuthToken(object):
 
     def test_authorize_novnc(self):
         self._test_authorize('novnc')
+
+    def test_authorize_novnc_with_path_in_base_url(self):
+        url = fakes.fake_token_dict['access_url_base'] + '?path=fake-path'
+        self._test_authorize('novnc', base_url=url)
 
     @mock.patch('nova.db.main.api.console_auth_token_create')
     def test_authorize_duplicate_token(self, mock_create):
