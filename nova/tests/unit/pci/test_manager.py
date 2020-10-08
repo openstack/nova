@@ -22,7 +22,6 @@ from oslo_utils.fixture import uuidsentinel
 import nova
 from nova.compute import vm_states
 from nova import context
-from nova import exception
 from nova import objects
 from nova.objects import fields
 from nova.pci import manager
@@ -237,7 +236,9 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
         self.assertEqual(2, len(tracker.pci_devs))
 
-    def test_update_devices_from_hypervisor_resources_32bit_domain(self):
+    @mock.patch("nova.pci.manager.LOG.debug")
+    def test_update_devices_from_hypervisor_resources_32bit_domain(
+            self, mock_debug):
         self.flags(
             group='pci',
             passthrough_whitelist=[
@@ -261,17 +262,13 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         fake_pci_devs_json = jsonutils.dumps(fake_pci_devs)
         tracker = manager.PciDevTracker(self.fake_context)
         # We expect that the device with 32bit PCI domain is ignored
-        # tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
-        # self.assertEqual(0, len(tracker.pci_devs))
-        #
-        # This is the bug 1897528
-        ex = self.assertRaises(
-            exception.PciConfigInvalidWhitelist,
-            tracker.update_devices_from_hypervisor_resources,
-            fake_pci_devs_json)
-        self.assertEqual(
-            'Invalid PCI devices Whitelist config: property domain (10000) is '
-            'greater than the maximum allowable value (FFFF).', str(ex))
+        tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
+        self.assertEqual(0, len(tracker.pci_devs))
+        mock_debug.assert_called_once_with(
+            'Skipping PCI device %s reported by the hypervisor: %s',
+            {'address': '10000:00:02.0', 'parent_addr': None},
+            'The property domain (10000) is greater than the maximum '
+            'allowable value (FFFF).')
 
     def test_set_hvdev_new_dev(self):
         fake_pci_3 = dict(fake_pci, address='0000:00:00.4', vendor_id='v2')

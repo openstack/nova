@@ -37,6 +37,18 @@ devices with potentially different capabilities.
      supported until the 14.0.0 Newton release, see
      `bug 1512800 <https://bugs.launchpad.net/nova/+bug/1512880>`_ for details.
 
+.. note::
+
+   Nova only supports PCI addresses where the fields are restricted to the
+   following maximum value:
+
+   * domain - 0xFFFF
+   * bus - 0xFF
+   * slot - 0x1F
+   * function - 0x7
+
+   Nova will ignore PCI devices reported by the hypervisor if the address is
+   outside of these ranges.
 
 Configure host (Compute)
 ------------------------
