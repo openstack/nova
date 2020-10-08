@@ -7518,68 +7518,36 @@ class ComputeManager(manager.Manager):
         self,
         context: nova.context.RequestContext,
         instance: 'objects.Instance',
-        requested_networks: 'objects.NetworkRequestsList'
+        pci_reqs: 'objects.InstancePCIRequests',
     ) -> ty.Optional['objects.PciDevice']:
-        """Claim PCI device if the requested interface needs it
-
-        If a PCI device is claimed then the requested_networks is updated
-        with the pci request id and the pci_requests and pci_devices fields
-        of the instance is also updated accordingly.
+        """Claim PCI devices if there are PCI requests
 
         :param context: nova.context.RequestContext
         :param instance: the objects.Instance to where the interface is being
             attached
-        :param requested_networks: the objects.NetworkRequestList describing
-            the requested interface. The requested_networks.objects list shall
-            have a single item.
+        :param pci_reqs: A InstancePCIRequests object describing the
+            needed PCI devices
         :raises InterfaceAttachPciClaimFailed: if the PCI device claim fails
-        :raises InterfaceAttachFailed: if more than one interface is requested
         :returns: An objects.PciDevice describing the claimed PCI device for
             the interface or None if no device is requested
         """
 
-        if len(requested_networks) != 1:
-            LOG.warning(
-                "Interface attach only supports one interface per attach "
-                "request", instance=instance)
-            raise exception.InterfaceAttachFailed(instance_uuid=instance.uuid)
-
-        requested_network = requested_networks[0]
-
-        pci_numa_affinity_policy = hardware.get_pci_numa_policy_constraint(
-            instance.flavor, instance.image_meta)
-        pci_reqs = objects.InstancePCIRequests(
-            requests=[], instance_uuid=instance.uuid)
-        self.network_api.create_resource_requests(
-            context, requested_networks, pci_reqs,
-            affinity_policy=pci_numa_affinity_policy)
-
         if not pci_reqs.requests:
-            # The requested port does not require a PCI device so nothing to do
             return None
-
-        if len(pci_reqs.requests) > 1:
-            LOG.warning(
-                "Interface attach only supports one interface per attach "
-                "request", instance=instance)
-            raise exception.InterfaceAttachFailed(instance_uuid=instance.uuid)
-
-        pci_req = pci_reqs.requests[0]
 
         devices = self.rt.claim_pci_devices(
             context, pci_reqs, instance.numa_topology)
 
         if not devices:
             LOG.info('Failed to claim PCI devices during interface attach '
-                     'for PCI request %s', pci_req, instance=instance)
+                     'for PCI request %s', pci_reqs, instance=instance)
             raise exception.InterfaceAttachPciClaimFailed(
                 instance_uuid=instance.uuid)
 
+        # NOTE(gibi): We assume that maximum one PCI devices is attached per
+        # interface attach request.
         device = devices[0]
-
-        # Update the requested network with the pci request id
-        requested_network.pci_request_id = pci_req.request_id
-        instance.add_pci_device_and_request(device, pci_req)
+        instance.pci_devices.objects.append(device)
 
         return device
 
@@ -7643,8 +7611,35 @@ class ComputeManager(manager.Manager):
             ]
         )
 
-        pci_device = self._claim_pci_device_for_interface_attach(
-            context, instance, requested_networks)
+        if len(requested_networks) != 1:
+            LOG.warning(
+                "Interface attach only supports one interface per attach "
+                "request", instance=instance)
+            raise exception.InterfaceAttachFailed(instance_uuid=instance.uuid)
+
+        pci_numa_affinity_policy = hardware.get_pci_numa_policy_constraint(
+            instance.flavor, instance.image_meta)
+        pci_reqs = objects.InstancePCIRequests(
+            requests=[], instance_uuid=instance.uuid)
+        self.network_api.create_resource_requests(
+            context, requested_networks, pci_reqs,
+            affinity_policy=pci_numa_affinity_policy)
+
+        # We only support one port per attach request so we at most have one
+        # pci request
+        pci_req = None
+        if pci_reqs.requests:
+            pci_req = pci_reqs.requests[0]
+            requested_networks[0].pci_request_id = pci_req.request_id
+            instance.pci_requests.requests.append(pci_req)
+
+        try:
+            pci_device = self._claim_pci_device_for_interface_attach(
+                context, instance, pci_reqs)
+        except exception.InterfaceAttachPciClaimFailed:
+            with excutils.save_and_reraise_exception():
+                if pci_req:
+                    instance.pci_requests.requests.remove(pci_req)
 
         network_info = self.network_api.allocate_for_instance(
             context,
