@@ -22,6 +22,7 @@ from oslo_utils.fixture import uuidsentinel
 import nova
 from nova.compute import vm_states
 from nova import context
+from nova import exception
 from nova import objects
 from nova.objects import fields
 from nova.pci import manager
@@ -235,6 +236,42 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         tracker = manager.PciDevTracker(self.fake_context)
         tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
         self.assertEqual(2, len(tracker.pci_devs))
+
+    def test_update_devices_from_hypervisor_resources_32bit_domain(self):
+        self.flags(
+            group='pci',
+            passthrough_whitelist=[
+                '{"product_id":"2032", "vendor_id":"8086"}'])
+        # There are systems where 32 bit PCI domain is used. See bug 1897528
+        # for example. While nova (and qemu) does not support assigning such
+        # devices but the existence of such device in the system should not
+        # lead to an error.
+        fake_pci = {
+            'compute_node_id': 1,
+            'address': '10000:00:02.0',
+            'product_id': '2032',
+            'vendor_id': '8086',
+            'request_id': None,
+            'status': fields.PciDeviceStatus.AVAILABLE,
+            'dev_type': fields.PciDeviceType.STANDARD,
+            'parent_addr': None,
+            'numa_node': 0}
+
+        fake_pci_devs = [fake_pci]
+        fake_pci_devs_json = jsonutils.dumps(fake_pci_devs)
+        tracker = manager.PciDevTracker(self.fake_context)
+        # We expect that the device with 32bit PCI domain is ignored
+        # tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
+        # self.assertEqual(0, len(tracker.pci_devs))
+        #
+        # This is the bug 1897528
+        ex = self.assertRaises(
+            exception.PciConfigInvalidWhitelist,
+            tracker.update_devices_from_hypervisor_resources,
+            fake_pci_devs_json)
+        self.assertEqual(
+            'Invalid PCI devices Whitelist config: property domain (10000) is '
+            'greater than the maximum allowable value (FFFF).', str(ex))
 
     def test_set_hvdev_new_dev(self):
         fake_pci_3 = dict(fake_pci, address='0000:00:00.4', vendor_id='v2')
