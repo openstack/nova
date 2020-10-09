@@ -5898,21 +5898,34 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
             self.neutron.port_with_resource_request[
                 constants.RESOURCE_REQUEST])
 
-    def test_interface_attach_with_port_resource_request(self):
+    def test_interface_attach_with_resource_request_old_compute(self):
         # create a server
         server = self._create_server(
             flavor=self.flavor,
             networks=[{'port': self.neutron.port_1['id']}])
         self._wait_for_state_change(server, 'ACTIVE')
 
-        # try to add a port with resource request
-        post = {
-            'interfaceAttachment': {
-                'port_id': self.neutron.port_with_resource_request['id']
-        }}
-        ex = self.assertRaises(client.OpenStackApiException,
-                               self.api.attach_interface,
-                               server['id'], post)
+        # simulate that the compute the instance is running on is older than
+        # when support is added for attach, older than service version 55
+        orig_get_service = objects.Service.get_by_host_and_binary
+
+        def fake_get_service(context, host, binary):
+            service = orig_get_service(context, host, binary)
+            service.version = 54
+            return service
+
+        with mock.patch(
+            'nova.objects.Service.get_by_host_and_binary',
+            side_effect=fake_get_service
+        ):
+            # try to add a port with resource request
+            post = {
+                'interfaceAttachment': {
+                    'port_id': self.neutron.port_with_resource_request['id']
+                }}
+            ex = self.assertRaises(
+                client.OpenStackApiException, self.api.attach_interface,
+                server['id'], post)
         self.assertEqual(400, ex.response.status_code)
         self.assertIn('Attaching interfaces with QoS policy is '
                       'not supported for instance',
@@ -6130,6 +6143,301 @@ class PortResourceRequestBasedSchedulingTest(
         self.assertEqual(
             self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
             sriov_binding['allocation'])
+
+    def test_interface_attach_with_resource_request(self):
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(server, 'ACTIVE')
+
+        # start a second compute to show that resources are only allocated from
+        # the compute the instance currently runs on
+        self.compute2 = self._start_compute('host2')
+        self.compute2_rp_uuid = self._get_provider_uuid_by_host('host2')
+        self._create_networking_rp_tree('host2', self.compute2_rp_uuid)
+        self.compute2_service_id = self.admin_api.get_services(
+            host='host2', binary='nova-compute')[0]['id']
+
+        # attach an OVS port with resource request
+        ovs_port = self.neutron.port_with_resource_request
+        post = {
+            'interfaceAttachment': {
+                'port_id': ovs_port['id']
+        }}
+        self.api.attach_interface(server['id'], post)
+
+        ovs_port = self.neutron.show_port(ovs_port['id'])['port']
+        allocations = self.placement.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect one set of allocations for the compute resources on the
+        # compute RP and one set for the networking resources on the OVS
+        # bridge RP.
+        self.assertEqual(2, len(allocations))
+
+        self.assertComputeAllocationMatchesFlavor(
+            allocations, self.compute1_rp_uuid, self.flavor)
+        ovs_allocations = allocations[
+            self.ovs_bridge_rp_per_host[self.compute1_rp_uuid]]['resources']
+        self.assertPortMatchesAllocation(ovs_port, ovs_allocations)
+
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding for the port having resource
+        # request
+        ovs_binding = ovs_port['binding:profile']
+        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
+                         ovs_binding['allocation'])
+
+        # now attach an SRIOV port
+        sriov_port = self.neutron.port_with_sriov_resource_request
+        post = {
+            'interfaceAttachment': {
+                'port_id': sriov_port['id']
+        }}
+        self.api.attach_interface(server['id'], post)
+
+        ovs_port = self.neutron.show_port(ovs_port['id'])['port']
+        sriov_port = self.neutron.show_port(sriov_port['id'])['port']
+
+        allocations = self.placement.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect one set of allocations for the compute resources on the
+        # compute RP and one set each for the networking resources on the OVS
+        # bridge RP and on the SRIOV PF RP.
+        self.assertEqual(3, len(allocations))
+
+        self.assertComputeAllocationMatchesFlavor(
+            allocations, self.compute1_rp_uuid, self.flavor)
+
+        ovs_allocations = allocations[
+            self.ovs_bridge_rp_per_host[self.compute1_rp_uuid]]['resources']
+        sriov_allocations = allocations[
+            self.sriov_dev_rp_per_host[
+                self.compute1_rp_uuid][self.PF2]]['resources']
+
+        self.assertPortMatchesAllocation(ovs_port, ovs_allocations)
+        self.assertPortMatchesAllocation(sriov_port, sriov_allocations)
+
+        # We expect that only the RP uuid of the networking RP having the port
+        # allocation is sent in the port binding for the port having resource
+        # request
+        ovs_binding = ovs_port['binding:profile']
+        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
+                         ovs_binding['allocation'])
+        sriov_binding = sriov_port['binding:profile']
+        self.assertEqual(
+            self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
+            sriov_binding['allocation'])
+
+    def test_interface_attach_with_resource_request_no_candidates(self):
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(server, 'ACTIVE')
+
+        # attach an OVS port with too big resource request
+        ovs_port = self.neutron.port_with_resource_request
+        resources = self.neutron._ports[
+            ovs_port['id']]['resource_request']['resources']
+        resources['NET_BW_IGR_KILOBIT_PER_SEC'] = 1000000
+
+        post = {
+            'interfaceAttachment': {
+                'port_id': ovs_port['id']
+        }}
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.attach_interface,
+            server['id'], post)
+
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Failed to allocate additional resources', str(ex))
+
+    def test_interface_attach_with_resource_request_pci_claim_fails(self):
+        # boot a server with a single SRIOV port that has no resource request
+        sriov_port = self.neutron.sriov_port
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': sriov_port['id']}])
+
+        self._wait_for_state_change(server, 'ACTIVE')
+        sriov_port = self.neutron.show_port(sriov_port['id'])['port']
+        sriov_binding = sriov_port['binding:profile']
+
+        # We expect that this consume the last available VF from the PF2
+        self.assertEqual(
+            fake.FakeDriverWithPciResources.PCI_ADDR_PF2_VF1,
+            sriov_binding['pci_slot'])
+
+        # Now attach a second port to this server that has resource request
+        # At this point PF2 has available bandwidth but no available VF
+        # and PF3 has available VF but no available bandwidth so we expect
+        # the attach to fail.
+        sriov_port_with_res_req = self.neutron.port_with_sriov_resource_request
+        post = {
+            'interfaceAttachment': {
+                'port_id': sriov_port_with_res_req['id']
+        }}
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.attach_interface,
+            server['id'], post)
+
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Failed to claim PCI device', str(ex))
+
+        sriov_port_with_res_req = self.neutron.show_port(
+            sriov_port_with_res_req['id'])['port']
+
+        allocations = self.placement.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect only one allocations that is on the compute RP as the
+        # allocation made towards the PF2 RP has been rolled back when the PCI
+        # claim failed
+        self.assertEqual([self.compute1_rp_uuid], list(allocations))
+        self.assertComputeAllocationMatchesFlavor(
+            allocations, self.compute1_rp_uuid, self.flavor)
+
+        # We expect that the port binding is not updated with any RP uuid as
+        # the attach failed.
+        sriov_binding = sriov_port_with_res_req['binding:profile']
+        self.assertNotIn('allocation', sriov_binding)
+
+    def test_interface_attach_sriov_with_qos_pci_update_fails(self):
+        # Update the name of the network device RP of PF2 on host2 to something
+        # unexpected. This will cause
+        # update_pci_request_spec_with_allocated_interface_name() to raise
+        # when the sriov interface is attached.
+        rsp = self.placement.put(
+            '/resource_providers/%s'
+            % self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
+            {"name": "invalid-device-rp-name"})
+        self.assertEqual(200, rsp.status)
+
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(server, 'ACTIVE')
+
+        sriov_port = self.neutron.port_with_sriov_resource_request
+        post = {
+            'interfaceAttachment': {
+                'port_id': sriov_port['id']
+        }}
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.attach_interface,
+            server['id'], post)
+
+        self.assertEqual(500, ex.response.status_code)
+        self.assertIn('UnexpectedResourceProviderNameForPCIRequest', str(ex))
+
+        sriov_port = self.neutron.show_port(sriov_port['id'])['port']
+
+        allocations = self.placement.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # We expect only one allocations that is on the compute RP as the
+        # allocation made towards the PF2 RP has been rolled back when the PCI
+        # update failed
+        self.assertEqual([self.compute1_rp_uuid], list(allocations))
+        self.assertComputeAllocationMatchesFlavor(
+            allocations, self.compute1_rp_uuid, self.flavor)
+
+        # We expect that the port binding is not updated with any RP uuid as
+        # the attach failed.
+        sriov_binding = sriov_port['binding:profile']
+        self.assertNotIn('allocation', sriov_binding)
+
+    def test_interface_attach_sriov_with_qos_pci_update_fails_cleanup_fails(
+        self
+    ):
+        # Update the name of the network device RP of PF2 on host2 to something
+        # unexpected. This will cause
+        # update_pci_request_spec_with_allocated_interface_name() to raise
+        # when the sriov interface is attached.
+        rsp = self.placement.put(
+            '/resource_providers/%s'
+            % self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
+            {"name": "invalid-device-rp-name"})
+        self.assertEqual(200, rsp.status)
+
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self._wait_for_state_change(server, 'ACTIVE')
+
+        sriov_port = self.neutron.port_with_sriov_resource_request
+        post = {
+            'interfaceAttachment': {
+                'port_id': sriov_port['id']
+        }}
+
+        orig_put = adapter.Adapter.put
+
+        conflict_rsp = fake_requests.FakeResponse(
+            409,
+            jsonutils.dumps(
+                {'errors': [
+                    {'code': 'placement.concurrent_update',
+                     'detail': 'consumer generation conflict'}]}))
+
+        self.adapter_put_call_count = 0
+
+        def fake_put(_self, url, **kwargs):
+            self.adapter_put_call_count += 1
+            if self.adapter_put_call_count == 1:
+                # allocation update to add the port resource request
+                return orig_put(_self, url, **kwargs)
+            else:
+                # cleanup calls to remove the port resource allocation
+                return conflict_rsp
+
+        # this mock makes sure that the placement cleanup will fail with
+        # conflict
+        with mock.patch('keystoneauth1.adapter.Adapter.put', new=fake_put):
+            ex = self.assertRaises(
+                client.OpenStackApiException, self.api.attach_interface,
+                server['id'], post)
+
+            self.assertEqual(500, ex.response.status_code)
+            self.assertIn('AllocationUpdateFailed', str(ex))
+            # we have a proper log about the leak
+            PF_rp_uuid = self.sriov_dev_rp_per_host[
+                self.compute1_rp_uuid][self.PF2]
+            self.assertIn(
+                "nova.exception.AllocationUpdateFailed: Failed to update "
+                "allocations for consumer %s. Error: Cannot remove "
+                "resources {'%s': "
+                "{'resources': {'NET_BW_EGR_KILOBIT_PER_SEC': 10000, "
+                "'NET_BW_IGR_KILOBIT_PER_SEC': 10000}}} from the allocation "
+                "due to multiple successive generation conflicts in "
+                "placement." % (server['id'], PF_rp_uuid),
+                self.stdlog.logger.output)
+
+            # assert that we retried the cleanup multiple times
+            self.assertEqual(5, self.adapter_put_call_count)
+
+        sriov_port = self.neutron.show_port(sriov_port['id'])['port']
+
+        allocations = self.placement.get(
+            '/allocations/%s' % server['id']).body['allocations']
+
+        # As the cleanup failed we leaked allocation in placement
+        self.assertEqual(2, len(allocations))
+        self.assertComputeAllocationMatchesFlavor(
+            allocations, self.compute1_rp_uuid, self.flavor)
+
+        sriov_allocations = allocations[
+            self.sriov_dev_rp_per_host[
+                self.compute1_rp_uuid][self.PF2]]['resources']
+
+        # this is the leaked allocation in placement
+        self.assertPortMatchesAllocation(sriov_port, sriov_allocations)
+
+        # We expect that the port binding is not updated with any RP uuid as
+        # the attach failed.
+        sriov_binding = sriov_port['binding:profile']
+        self.assertNotIn('allocation', sriov_binding)
 
     def test_interface_detach_with_port_with_bandwidth_request(self):
         port = self.neutron.port_with_resource_request

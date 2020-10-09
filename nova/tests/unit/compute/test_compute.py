@@ -65,6 +65,7 @@ from nova.objects import instance as instance_obj
 from nova.objects import migrate_data as migrate_data_obj
 from nova.policies import base as base_policy
 from nova.policies import servers as servers_policy
+from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.compute import eventlet_utils
@@ -10151,6 +10152,7 @@ class ComputeAPITestCase(BaseTestCase):
                 "_claim_pci_device_for_interface_attach",
                 return_value=None)
         ) as (cap, mock_lock, mock_create_resource_req, mock_claim_pci):
+            mock_create_resource_req.return_value = (None, [])
             vif = self.compute.attach_interface(self.context,
                                                 instance,
                                                 network_id,
@@ -10160,7 +10162,7 @@ class ComputeAPITestCase(BaseTestCase):
         mock_allocate.assert_called_once_with(
             self.context, instance,
             test.MatchType(objects.NetworkRequestList),
-            bind_host_id='fake-mini')
+            bind_host_id='fake-mini', resource_provider_mapping=None)
         network_requests = mock_allocate.mock_calls[0][1][2]
         self.assertEqual(1, len(network_requests.objects))
         network_request = network_requests[0]
@@ -10183,6 +10185,79 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual([], pci_reqs.requests)
 
         return nwinfo, port_id
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    def test_attach_interface_with_qos(self, mock_notify):
+        instance = self._create_fake_instance_obj()
+        nwinfo = [fake_network_cache_model.new_vif()]
+        network_id = nwinfo[0]['network']['id']
+        port_id = nwinfo[0]['id']
+        req_ip = '1.2.3.4'
+        lock_name = 'interface-%s-%s' % (instance.uuid, port_id)
+        mock_allocate = mock.Mock(return_value=nwinfo)
+        self.compute.network_api.allocate_for_instance = mock_allocate
+
+        with test.nested(
+            mock.patch.dict(self.compute.driver.capabilities,
+                             supports_attach_interface=True),
+            mock.patch('oslo_concurrency.lockutils.lock'),
+            mock.patch("nova.network.neutron.API.create_resource_requests"),
+            mock.patch.object(
+                self.compute,
+                "_claim_pci_device_for_interface_attach",
+                return_value=None),
+            mock.patch.object(
+                self.compute, '_allocate_port_resource_for_instance'),
+        ) as (cap, mock_lock, mock_create_resource_req, mock_claim_pci,
+              mock_allocate_res
+        ):
+            request_groups = [objects.RequestGroup]
+            mock_create_resource_req.return_value = (None, request_groups)
+            mock_allocate_res.return_value = (
+                mock.sentinel.provider_mappings, mock.sentinel.resources)
+            vif = self.compute.attach_interface(
+                self.context, instance, network_id, port_id, req_ip, None)
+
+        # check that the vif created based on the port we are attaching
+        self.assertEqual(vif['id'], port_id)
+
+        # ensure that we are passing the proper network request including the
+        # provider mapping to the neutron code path
+        mock_allocate.assert_called_once_with(
+            self.context, instance,
+            test.MatchType(objects.NetworkRequestList),
+            bind_host_id='fake-mini',
+            resource_provider_mapping=mock.sentinel.provider_mappings)
+        network_requests = mock_allocate.mock_calls[0][1][2]
+        self.assertEqual(1, len(network_requests.objects))
+        network_request = network_requests[0]
+        self.assertEqual(network_id, network_request.network_id)
+        self.assertEqual(port_id, network_request.port_id)
+        self.assertEqual(req_ip, str(network_request.address))
+
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, self.compute.host,
+                      action='interface_attach', phase='start'),
+            mock.call(self.context, instance, self.compute.host,
+                      action='interface_attach', phase='end')])
+
+        mock_lock.assert_called_once_with(lock_name, mock.ANY, mock.ANY,
+                mock.ANY, delay=mock.ANY, do_log=mock.ANY, fair=mock.ANY,
+                semaphores=mock.ANY)
+
+        # as this is an OVS port we don't call the pci claim but with an empty
+        # request
+        mock_claim_pci.assert_called_once_with(
+            self.context, instance,
+            test.MatchType(objects.InstancePCIRequests))
+        pci_reqs = mock_claim_pci.mock_calls[0][1][2]
+        self.assertEqual(instance.uuid, pci_reqs.instance_uuid)
+        self.assertEqual([], pci_reqs.requests)
+
+        # as this port has resource request we need to call
+        # _allocate_port_resource_for_instance for it
+        mock_allocate_res.assert_called_once_with(
+            self.context, instance, pci_reqs, request_groups)
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_attach_sriov_interface(self, mock_notify):
@@ -10218,6 +10293,8 @@ class ComputeAPITestCase(BaseTestCase):
                                     pci_requests=None, affinity_policy=None):
                 # Simulate that the requested port is an SRIOV port
                 pci_requests.requests.append(pci_req)
+                # without resource request
+                return None, []
 
             mock_create_resource_req.side_effect = create_resource_req
 
@@ -10228,7 +10305,7 @@ class ComputeAPITestCase(BaseTestCase):
         mock_allocate.assert_called_once_with(
             self.context, instance,
             test.MatchType(objects.NetworkRequestList),
-            bind_host_id='fake-mini')
+            bind_host_id='fake-mini', resource_provider_mapping=None)
         network_requests = mock_allocate.mock_calls[0][1][2]
         self.assertEqual(1, len(network_requests.objects))
         network_request = network_requests[0]
@@ -10255,6 +10332,100 @@ class ComputeAPITestCase(BaseTestCase):
         return nwinfo, port_id
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    def test_attach_sriov_interface_with_qos(self, mock_notify):
+        instance = self._create_fake_instance_obj()
+        instance.pci_requests = objects.InstancePCIRequests(requests=[])
+        instance.pci_devices = objects.PciDeviceList(objects=[])
+        instance.numa_topology = objects.InstanceNUMATopology()
+
+        nwinfo = [fake_network_cache_model.new_vif()]
+        network_id = nwinfo[0]['network']['id']
+        port_id = nwinfo[0]['id']
+        req_ip = '1.2.3.4'
+        mock_allocate = mock.Mock(return_value=nwinfo)
+        self.compute.network_api.allocate_for_instance = mock_allocate
+
+        with test.nested(
+            mock.patch.dict(self.compute.driver.capabilities,
+                            supports_attach_interface=True),
+            mock.patch.object(self.compute.network_api,
+                              'create_resource_requests'),
+            mock.patch.object(self.compute.rt, 'claim_pci_devices'),
+            mock.patch.object(self.compute.rt,
+                              'allocate_pci_devices_for_instance'),
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(
+                self.compute, '_allocate_port_resource_for_instance')
+        ) as (mock_capabilities, mock_create_resource_req, mock_claim_pci,
+              mock_allocate_pci, mock_save, mock_allocate_res):
+
+            pci_req = objects.InstancePCIRequest(request_id=uuids.pci_req)
+            pci_device = objects.PciDevice(request_id=pci_req.request_id)
+            mock_claim_pci.return_value = [pci_device]
+
+            request_groups = [objects.RequestGroup()]
+
+            def create_resource_req(context, requested_networks,
+                                    pci_requests=None, affinity_policy=None):
+                # Simulate that the requested port is an SRIOV port
+                pci_requests.requests.append(pci_req)
+                # with resource request
+                return None, request_groups
+
+            mock_create_resource_req.side_effect = create_resource_req
+
+            mock_allocate_res.return_value = (
+                mock.sentinel.provider_mappings, mock.sentinel.resources)
+
+            vif = self.compute.attach_interface(
+                self.context, instance, network_id, port_id, req_ip, None)
+
+        self.assertEqual(vif['id'], port_id)
+
+        # ensure that we are passing the proper network request including the
+        # provider mapping to the neutron code path
+        mock_allocate.assert_called_once_with(
+            self.context, instance,
+            test.MatchType(objects.NetworkRequestList),
+            bind_host_id='fake-mini',
+            resource_provider_mapping=mock.sentinel.provider_mappings)
+        network_requests = mock_allocate.mock_calls[0][1][2]
+        self.assertEqual(1, len(network_requests.objects))
+        network_request = network_requests[0]
+        self.assertEqual(network_id, network_request.network_id)
+        self.assertEqual(port_id, network_request.port_id)
+        self.assertEqual(req_ip, str(network_request.address))
+
+        # ensure we gathered the resource request from neutron
+        mock_create_resource_req.assert_called_once_with(
+            self.context, network_requests,
+            test.MatchType(objects.InstancePCIRequests),
+            affinity_policy=None)
+
+        # this is an SR-IOV port so we need to call pci claim with a
+        # non empty PCI request
+        mock_claim_pci.assert_called_once_with(
+            self.context, test.MatchType(objects.InstancePCIRequests),
+            instance.numa_topology)
+        pci_reqs = mock_claim_pci.mock_calls[0][1][1]
+        self.assertEqual([pci_req], pci_reqs.requests)
+
+        # after the pci claim we also need to allocate that pci to the instace
+        mock_allocate_pci.assert_called_once_with(self.context, instance)
+        # and as this changes the instance we have to save it.
+        mock_save.assert_called_once_with()
+
+        # both the pci request and the pci device should be up to date in the
+        # instance after the allocation
+        self.assertIn(pci_req, instance.pci_requests.requests)
+        self.assertIn(pci_device, instance.pci_devices.objects)
+
+        # ensure that we called _allocate_port_resource_for_instance as it has
+        # resource reques
+        mock_allocate_res.assert_called_once_with(
+            self.context, instance, pci_reqs, request_groups)
+
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_interface_tagged_attach(self, mock_notify):
         instance = self._create_fake_instance_obj()
         nwinfo = [fake_network_cache_model.new_vif()]
@@ -10273,6 +10444,7 @@ class ComputeAPITestCase(BaseTestCase):
                               '_claim_pci_device_for_interface_attach',
                               return_value=None)
         ) as (mock_capabilities, mock_create_resource_req, mock_claim_pci):
+            mock_create_resource_req.return_value = (None, [])
             vif = self.compute.attach_interface(self.context,
                                                 instance,
                                                 network_id,
@@ -10282,7 +10454,7 @@ class ComputeAPITestCase(BaseTestCase):
         mock_allocate.assert_called_once_with(
             self.context, instance,
             test.MatchType(objects.NetworkRequestList),
-            bind_host_id='fake-mini')
+            bind_host_id='fake-mini', resource_provider_mapping=None)
         network_requests = mock_allocate.mock_calls[0][1][2]
         self.assertEqual(1, len(network_requests.objects))
         network_request = network_requests[0]
@@ -10330,6 +10502,7 @@ class ComputeAPITestCase(BaseTestCase):
         network_id = nwinfo[0]['network']['id']
         port_id = nwinfo[0]['id']
         req_ip = '1.2.3.4'
+        instance.pci_requests = objects.InstancePCIRequests(requests=[])
 
         with test.nested(
             mock.patch.object(compute_utils, 'notify_about_instance_action'),
@@ -10347,6 +10520,7 @@ class ComputeAPITestCase(BaseTestCase):
         ) as (mock_notify, mock_attach, mock_allocate, mock_deallocate,
               mock_dict, mock_create_resource_req, mock_claim_pci):
 
+            mock_create_resource_req.return_value = (None, [])
             mock_allocate.return_value = nwinfo
             mock_attach.side_effect = exception.NovaException("attach_failed")
             self.assertRaises(exception.InterfaceAttachFailed,
@@ -10355,7 +10529,7 @@ class ComputeAPITestCase(BaseTestCase):
             mock_allocate.assert_called_once_with(
                 self.context, instance,
                 test.MatchType(objects.NetworkRequestList),
-                bind_host_id='fake-host')
+                bind_host_id='fake-host', resource_provider_mapping=None)
             network_requests = mock_allocate.mock_calls[0][1][2]
             self.assertEqual(1, len(network_requests.objects))
             network_request = network_requests[0]
@@ -10424,6 +10598,7 @@ class ComputeAPITestCase(BaseTestCase):
                                     pci_requests=None, affinity_policy=None):
                 # Simulate that the requested port is an SRIOV port
                 pci_requests.requests.append(pci_req)
+                return None, []
 
             mock_create_resource_req.side_effect = create_resource_req
             mock_allocate.return_value = nwinfo
@@ -10436,7 +10611,7 @@ class ComputeAPITestCase(BaseTestCase):
             mock_allocate.assert_called_once_with(
                 self.context, instance,
                 test.MatchType(objects.NetworkRequestList),
-                bind_host_id='fake-host')
+                bind_host_id='fake-host', resource_provider_mapping=None)
             network_requests = mock_allocate.mock_calls[0][1][2]
             self.assertEqual(1, len(network_requests.objects))
             network_request = network_requests[0]
@@ -10480,17 +10655,29 @@ class ComputeAPITestCase(BaseTestCase):
                               'create_resource_requests'),
             mock.patch.object(self.compute.rt, 'claim_pci_devices',
                               return_value=[]),
+            mock.patch.object(
+                self.compute, '_allocate_port_resource_for_instance'),
+            mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_resources_from_instance_allocation')
         ) as (
-                mock_capabilities, mock_create_resource_req, mock_claim_pci):
+                mock_capabilities, mock_create_resource_req, mock_claim_pci,
+                mock_allocate_res, mock_remove_res
+        ):
 
             pci_req = objects.InstancePCIRequest(request_id=uuids.pci_req)
+
+            request_groups = [objects.RequestGroup()]
 
             def create_resource_req(context, requested_networks,
                                     pci_requests=None, affinity_policy=None):
                 # Simulate that the requested port is an SRIOV port
                 pci_requests.requests.append(pci_req)
+                return None, request_groups
 
             mock_create_resource_req.side_effect = create_resource_req
+            mock_allocate_res.return_value = (
+                mock.sentinel.provider_mappings, mock.sentinel.resources)
 
             ex = self.assertRaises(
                 messaging.ExpectedException, self.compute.attach_interface,
@@ -10509,6 +10696,228 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual([pci_req], pci_reqs.requests)
 
             self.assertNotIn(pci_req, instance.pci_requests.requests)
+
+            mock_allocate_res.assert_called_once_with(
+                self.context, instance, pci_reqs, request_groups)
+            mock_remove_res.assert_called_once_with(
+                self.context, instance.uuid, mock.sentinel.resources)
+
+    def test__allocate_port_resource_for_instance(self):
+        instance = self._create_fake_instance_obj()
+        pci_reqs = objects.InstancePCIRequests(requests=[])
+        request_groups = [
+            objects.RequestGroup(
+                resources={"CUSTOM_FOO": 13},
+                requester_id=uuids.requester_id)
+            ]
+
+        with test.nested(
+            mock.patch.object(objects.ComputeNode, 'get_by_nodename'),
+            mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocation_candidates'),
+            mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'add_resources_to_instance_allocation'),
+            mock.patch(
+                'nova.compute.utils.'
+                'update_pci_request_spec_with_allocated_interface_name'),
+        ) as (
+            mock_get_nodename, mock_get_alloc_candidates, mock_add_res,
+            mock_update_pci
+        ):
+            mock_get_nodename.return_value = objects.ComputeNode(
+                uuid=uuids.compute_node)
+            alloc_reqs = [
+                {
+                    'allocations': mock.sentinel.resources,
+                    'mappings': mock.sentinel.provider_mappings,
+                }
+            ]
+            mock_get_alloc_candidates.return_value = (
+                alloc_reqs, mock.sentinel.provider_sums, mock.sentinel.version)
+
+            res = self.compute._allocate_port_resource_for_instance(
+                self.context, instance, pci_reqs, request_groups)
+            provider_mappings, resources = res
+
+            self.assertEqual(
+                mock.sentinel.provider_mappings, provider_mappings)
+            self.assertEqual(
+                mock.sentinel.resources, resources)
+            mock_get_nodename.assert_called_once_with(
+                self.context, instance.node)
+            mock_get_alloc_candidates.assert_called_once_with(
+                self.context, test.MatchType(scheduler_utils.ResourceRequest))
+            resource_request = mock_get_alloc_candidates.mock_calls[0][1][1]
+            actual_rg = resource_request.get_request_group(
+                request_groups[0].requester_id)
+            self.assertEqual(request_groups[0], actual_rg)
+            self.assertEqual(uuids.compute_node, actual_rg.in_tree)
+            mock_add_res.assert_called_once_with(
+                self.context, instance.uuid, mock.sentinel.resources)
+            mock_update_pci.assert_called_once_with(
+                self.context, self.compute.reportclient,
+                pci_reqs.requests, mock.sentinel.provider_mappings)
+
+    def test__allocate_port_resource_for_instance_no_candidate(self):
+        instance = self._create_fake_instance_obj()
+        pci_reqs = objects.InstancePCIRequests(requests=[])
+        request_groups = [
+            objects.RequestGroup(
+                resources={"CUSTOM_FOO": 13},
+                requester_id=uuids.requester_id)
+            ]
+
+        with test.nested(
+            mock.patch.object(objects.ComputeNode, 'get_by_nodename'),
+            mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocation_candidates'),
+            mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'add_resources_to_instance_allocation',
+                new=mock.NonCallableMock()),
+            mock.patch(
+                'nova.compute.utils.'
+                'update_pci_request_spec_with_allocated_interface_name',
+                new=mock.NonCallableMock()),
+        ) as (
+            mock_get_nodename, mock_get_alloc_candidates, mock_add_res,
+            mock_update_pci
+        ):
+            mock_get_nodename.return_value = objects.ComputeNode(
+                uuid=uuids.compute_node)
+            mock_get_alloc_candidates.return_value = (None, None, None)
+
+            self.assertRaises(
+                exception.InterfaceAttachResourceAllocationFailed,
+                self.compute._allocate_port_resource_for_instance,
+                self.context, instance, pci_reqs, request_groups)
+
+            mock_get_nodename.assert_called_once_with(
+                self.context, instance.node)
+            mock_get_alloc_candidates.assert_called_once_with(
+                self.context, test.MatchType(scheduler_utils.ResourceRequest))
+
+    def test__allocate_port_resource_for_instance_fails_to_extend_alloc(self):
+        instance = self._create_fake_instance_obj()
+        pci_reqs = objects.InstancePCIRequests(requests=[])
+        request_groups = [
+            objects.RequestGroup(
+                resources={"CUSTOM_FOO": 13},
+                requester_id=uuids.requester_id)
+            ]
+
+        with test.nested(
+            mock.patch.object(objects.ComputeNode, 'get_by_nodename'),
+            mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocation_candidates'),
+            mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'add_resources_to_instance_allocation'),
+            mock.patch(
+                'nova.compute.utils.'
+                'update_pci_request_spec_with_allocated_interface_name',
+                new=mock.NonCallableMock),
+        ) as (
+            mock_get_nodename, mock_get_alloc_candidates, mock_add_res,
+            mock_update_pci
+        ):
+            mock_get_nodename.return_value = objects.ComputeNode(
+                uuid=uuids.compute_node)
+            alloc_reqs = [
+                {
+                    'allocations': mock.sentinel.resources,
+                    'mappings': mock.sentinel.provider_mappings,
+                }
+            ]
+            mock_get_alloc_candidates.return_value = (
+                alloc_reqs, mock.sentinel.provider_sums, mock.sentinel.version)
+
+            mock_add_res.side_effect = exception.AllocationUpdateFailed(
+                consumer_uuid=instance.uuid, error='test')
+
+            self.assertRaises(
+                exception.InterfaceAttachResourceAllocationFailed,
+                self.compute._allocate_port_resource_for_instance,
+                self.context, instance, pci_reqs, request_groups)
+
+            mock_get_nodename.assert_called_once_with(
+                self.context, instance.node)
+            mock_get_alloc_candidates.assert_called_once_with(
+                self.context, test.MatchType(scheduler_utils.ResourceRequest))
+            resource_request = mock_get_alloc_candidates.mock_calls[0][1][1]
+            actual_rg = resource_request.get_request_group(
+                request_groups[0].requester_id)
+            self.assertEqual(request_groups[0], actual_rg)
+            self.assertEqual(uuids.compute_node, actual_rg.in_tree)
+            mock_add_res.assert_called_once_with(
+                self.context, instance.uuid, mock.sentinel.resources)
+
+    def test__allocate_port_resource_for_instance_fails_to_update_pci(self):
+        instance = self._create_fake_instance_obj()
+        pci_reqs = objects.InstancePCIRequests(requests=[])
+        request_groups = [
+            objects.RequestGroup(
+                resources={"CUSTOM_FOO": 13},
+                requester_id=uuids.requester_id)
+            ]
+
+        with test.nested(
+            mock.patch.object(objects.ComputeNode, 'get_by_nodename'),
+            mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocation_candidates'),
+            mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'add_resources_to_instance_allocation'),
+            mock.patch(
+                'nova.compute.utils.'
+                'update_pci_request_spec_with_allocated_interface_name'),
+            mock.patch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_resources_from_instance_allocation'),
+        ) as (
+            mock_get_nodename, mock_get_alloc_candidates, mock_add_res,
+            mock_update_pci, mock_remove_res
+        ):
+            mock_get_nodename.return_value = objects.ComputeNode(
+                uuid=uuids.compute_node)
+            alloc_reqs = [
+                {
+                    'allocations': mock.sentinel.resources,
+                    'mappings': mock.sentinel.provider_mappings,
+                }
+            ]
+            mock_get_alloc_candidates.return_value = (
+                alloc_reqs, mock.sentinel.provider_sums, mock.sentinel.version)
+            mock_update_pci.side_effect = (
+                exception.AmbiguousResourceProviderForPCIRequest(
+                    providers=[], requester="requester"))
+
+            self.assertRaises(
+                exception.AmbiguousResourceProviderForPCIRequest,
+                self.compute._allocate_port_resource_for_instance,
+                self.context, instance, pci_reqs, request_groups)
+
+            mock_get_nodename.assert_called_once_with(
+                self.context, instance.node)
+            mock_get_alloc_candidates.assert_called_once_with(
+                self.context, test.MatchType(scheduler_utils.ResourceRequest))
+            resource_request = mock_get_alloc_candidates.mock_calls[0][1][1]
+            actual_rg = resource_request.get_request_group(
+                request_groups[0].requester_id)
+            self.assertEqual(request_groups[0], actual_rg)
+            self.assertEqual(uuids.compute_node, actual_rg.in_tree)
+            mock_add_res.assert_called_once_with(
+                self.context, instance.uuid, mock.sentinel.resources)
+            mock_update_pci.assert_called_once_with(
+                self.context, self.compute.reportclient,
+                pci_reqs.requests, mock.sentinel.provider_mappings)
+            mock_remove_res.assert_called_once_with(
+                self.context, instance.uuid, mock.sentinel.resources)
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_detach_interface(self, mock_notify):

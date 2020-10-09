@@ -175,7 +175,8 @@ class InterfaceAttachmentController(wsgi.Controller):
                 exception.SecurityGroupCannotBeApplied,
                 exception.NetworkInterfaceTaggedAttachNotSupported,
                 exception.NetworksWithQoSPolicyNotSupported,
-                exception.InterfaceAttachPciClaimFailed) as e:
+                exception.InterfaceAttachPciClaimFailed,
+                exception.InterfaceAttachResourceAllocationFailed) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except (exception.InstanceIsLocked,
                 exception.FixedIpAlreadyInUse,

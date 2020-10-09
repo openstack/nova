@@ -4976,14 +4976,17 @@ class API(base.Base):
             context, instance, instance_actions.ATTACH_INTERFACE)
 
         # NOTE(gibi): Checking if the requested port has resource request as
-        # such ports are currently not supported as they would at least
-        # need resource allocation manipulation in placement but might also
-        # need a new scheduling if resource on this host is not available.
+        # such ports are only supported if the compute service version is >= 55
+        # TODO(gibi): Remove this check in X as there we can be sure that all
+        # computes are new enough
         if port_id:
             port = self.network_api.show_port(context, port_id)
             if port['port'].get(constants.RESOURCE_REQUEST):
-                raise exception.AttachInterfaceWithQoSPolicyNotSupported(
-                    instance_uuid=instance.uuid)
+                svc = objects.Service.get_by_host_and_binary(
+                    context, instance.host, 'nova-compute')
+                if svc.version < 55:
+                    raise exception.AttachInterfaceWithQoSPolicyNotSupported(
+                        instance_uuid=instance.uuid)
 
         return self.compute_rpcapi.attach_interface(context,
             instance=instance, network_id=network_id, port_id=port_id,

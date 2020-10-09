@@ -192,6 +192,17 @@ class ResourceRequest(object):
 
         return res_req
 
+    @classmethod
+    def from_request_group(
+        cls,
+        request_group: 'objects.RequestGroup',
+    ) -> 'ResourceRequest':
+        """Create a new instance of ResourceRequest from a RequestGroup."""
+        res_req = cls()
+        res_req._add_request_group(request_group)
+        res_req.strip_zeros()
+        return res_req
+
     def _process_requested_resources(self, request_spec):
         requested_resources = (request_spec.requested_resources
                                if 'requested_resources' in request_spec and

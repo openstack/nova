@@ -1339,6 +1339,11 @@ class InterfaceAttachPciClaimFailed(Invalid):
                 "interface attach")
 
 
+class InterfaceAttachResourceAllocationFailed(Invalid):
+    msg_fmt = _("Failed to allocate additional resources to %(instance_uuid)s "
+                "during interface attach")
+
+
 class InterfaceDetachFailed(Invalid):
     msg_fmt = _("Failed to detach network adapter device from "
                 "%(instance_uuid)s")
