@@ -1413,7 +1413,10 @@ class LibvirtDriver(driver.ComputeDriver):
             instance.system_metadata['clean_attempts'] = str(attempts + 1)
             if success:
                 instance.cleaned = True
-            instance.save()
+            try:
+                instance.save()
+            except exception.InstanceNotFound:
+                pass
 
         if cleanup_instance_disks:
             crypto.delete_vtpm_secret(context, instance)

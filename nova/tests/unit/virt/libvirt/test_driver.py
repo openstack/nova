@@ -19655,6 +19655,30 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_delete_vtpm.assert_called_once_with('ctxt', fake_inst)
         mock_undefine.assert_called_once_with(fake_inst)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    @mock.patch('nova.crypto.delete_vtpm_secret')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.delete_instance_files')
+    @mock.patch('nova.virt.driver.block_device_info_get_mapping')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._unplug_vifs')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vpmems',
+                new=mock.Mock(return_value=None))
+    def test_cleanup_instance_marked_deleted(
+        self, mock_unplug, mock_get_mapping, mock_delete_files,
+        mock_delete_vtpm, mock_undefine,
+    ):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        fake_inst = objects.Instance(**self.test_instance)
+
+        fake_inst.vm_state = vm_states.DELETED
+        fake_inst.deleted = True
+
+        with mock.patch.object(fake_inst, 'save') as instance_save:
+            instance_save.side_effect = exception.InstanceNotFound(
+                instance_id=uuids.instance)
+            drvr.cleanup('ctxt', fake_inst, 'netinfo')
+        mock_delete_vtpm.assert_called_once_with('ctxt', fake_inst)
+        mock_undefine.assert_called_once_with(fake_inst)
+
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
                        return_value=True)
     @mock.patch.object(objects.Instance, 'save')
