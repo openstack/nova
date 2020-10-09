@@ -1655,8 +1655,6 @@ class SchedulerReportClient(object):
         :raises: keystoneauth1.exceptions.base.ClientException on failure to
             communicate with the placement API
         """
-        # TODO(gibi): Refactor remove_resources_from_instance_allocation() to
-        # also take the same structure for the resources parameter
         if not resources:
             # nothing to do
             return
@@ -1716,30 +1714,39 @@ class SchedulerReportClient(object):
         return True
 
     def remove_resources_from_instance_allocation(
-            self, context, consumer_uuid, resources):
+        self,
+        context: nova_context.RequestContext,
+        consumer_uuid: str,
+        resources: ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]]
+    ) -> None:
         """Removes certain resources from the current allocation of the
         consumer.
 
         :param context: the request context
         :param consumer_uuid: the uuid of the consumer to update
-        :param resources: a dict of resources. E.g.:
-                              {
-                                  <rp_uuid>: {
-                                      <resource class>: amount
-                                      <other resource class>: amount
-                                  }
-                                  <other_ rp_uuid>: {
-                                      <other resource class>: amount
-                                  }
-                              }
+        :param resources: a dict of resources in allocation request format
+             E.g.:
+            {
+                <rp_uuid>: {
+                    'resources': {
+                        <resource class>: amount,
+                        <other resource class>: amount
+                    }
+                }
+                <other_ rp_uuid>: {
+                    'resources': {
+                        <other resource class>: amount
+                    }
+                }
+            }
         :raises AllocationUpdateFailed: if the requested resource cannot be
-                removed from the current allocation (e.g. rp is missing from
-                the allocation) or there was multiple generation conflict and
-                we run out of retires.
+            removed from the current allocation (e.g. rp is missing from
+            the allocation) or there was multiple generation conflict and
+            we run out of retires.
         :raises ConsumerAllocationRetrievalFailed: If the current allocation
-                cannot be read from placement.
+            cannot be read from placement.
         :raises: keystoneauth1.exceptions.base.ClientException on failure to
-                 communicate with the placement API
+            communicate with the placement API
         """
 
         # NOTE(gibi): It is just a small wrapper to raise instead of return
@@ -1755,7 +1762,11 @@ class SchedulerReportClient(object):
 
     @retries
     def _remove_resources_from_instance_allocation(
-            self, context, consumer_uuid, resources):
+        self,
+        context: nova_context.RequestContext,
+        consumer_uuid: str,
+        resources: ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]]
+    ) -> bool:
         if not resources:
             # Nothing to remove so do not query or update allocation in
             # placement.
@@ -1778,7 +1789,7 @@ class SchedulerReportClient(object):
         try:
             for rp_uuid, resources_to_remove in resources.items():
                 allocation_on_rp = current_allocs['allocations'][rp_uuid]
-                for rc, value in resources_to_remove.items():
+                for rc, value in resources_to_remove['resources'].items():
                     allocation_on_rp['resources'][rc] -= value
 
                     if allocation_on_rp['resources'][rc] < 0:

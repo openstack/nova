@@ -5213,7 +5213,9 @@ class TestAPI(TestAPIBase):
         self.assertEqual(
             {
                 uuids.rp1: {
-                    'NET_BW_EGR_KILOBIT_PER_SEC': 1000
+                    "resources": {
+                        'NET_BW_EGR_KILOBIT_PER_SEC': 1000
+                    }
                 }
             },
             port_allocation)
