@@ -1622,6 +1622,99 @@ class SchedulerReportClient(object):
                 raise Retry('claim_resources', reason)
         return r.status_code == 204
 
+    def add_resources_to_instance_allocation(
+        self,
+        context: nova_context.RequestContext,
+        consumer_uuid: str,
+        resources: ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]],
+    ) -> None:
+        """Adds certain resources to the current allocation of the
+        consumer.
+
+        :param context: the request context
+        :param consumer_uuid: the uuid of the consumer to update
+        :param resources: a dict of resources in the format of allocation
+            request. E.g.:
+            {
+                <rp_uuid>: {
+                    'resources': {
+                        <resource class>: amount,
+                        <other resource class>: amount
+                    }
+                }
+                <other_ rp_uuid>: {
+                    'resources': {
+                        <other resource class>: amount
+                    }
+                }
+            }
+        :raises AllocationUpdateFailed: if there was multiple generation
+            conflict and we run out of retires.
+        :raises ConsumerAllocationRetrievalFailed: If the current allocation
+            cannot be read from placement.
+        :raises: keystoneauth1.exceptions.base.ClientException on failure to
+            communicate with the placement API
+        """
+        # TODO(gibi): Refactor remove_resources_from_instance_allocation() to
+        # also take the same structure for the resources parameter
+        if not resources:
+            # nothing to do
+            return
+
+        # This either raises on error, or returns fails if we run out of
+        # retries due to conflict. Convert that return value to an exception
+        # too.
+        if not self._add_resources_to_instance_allocation(
+            context, consumer_uuid, resources):
+
+            error_reason = _(
+                "Cannot add resources %s to the allocation due to multiple "
+                "successive generation conflicts in placement.")
+            raise exception.AllocationUpdateFailed(
+                consumer_uuid=consumer_uuid,
+                error=error_reason % resources)
+
+    @retries
+    def _add_resources_to_instance_allocation(
+        self,
+        context: nova_context.RequestContext,
+        consumer_uuid: str,
+        resources: ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]],
+    ) -> bool:
+
+        current_allocs = self.get_allocs_for_consumer(context, consumer_uuid)
+
+        for rp_uuid in resources:
+            if rp_uuid not in current_allocs['allocations']:
+                current_allocs['allocations'][rp_uuid] = {'resources': {}}
+
+            alloc_on_rp = current_allocs['allocations'][rp_uuid]['resources']
+            for rc, amount in resources[rp_uuid]['resources'].items():
+                if rc in alloc_on_rp:
+                    alloc_on_rp[rc] += amount
+                else:
+                    alloc_on_rp[rc] = amount
+
+        r = self._put_allocations(context, consumer_uuid, current_allocs)
+
+        if r.status_code != 204:
+            err = r.json()['errors'][0]
+            if err['code'] == 'placement.concurrent_update':
+                reason = (
+                    "another process changed the resource providers or the "
+                    "consumer involved in our attempt to update allocations "
+                    "for consumer %s so we cannot add resources %s to the "
+                    "current allocation %s" %
+                    (consumer_uuid, resources, current_allocs))
+
+                raise Retry(
+                    '_add_resources_to_instance_allocation', reason)
+
+            raise exception.AllocationUpdateFailed(
+                consumer_uuid=consumer_uuid, error=err['detail'])
+
+        return True
+
     def remove_resources_from_instance_allocation(
             self, context, consumer_uuid, resources):
         """Removes certain resources from the current allocation of the

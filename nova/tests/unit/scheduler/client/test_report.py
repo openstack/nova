@@ -3821,6 +3821,304 @@ class TestAllocations(SchedulerReportClientTestCase):
 
         mock_put.assert_has_calls([put_call] * 4)
 
+    def _test_add_res_to_alloc(
+        self, current_allocations, resources_to_add, updated_allocations):
+
+        with test.nested(
+            mock.patch.object(self.client, 'get'),
+            mock.patch.object(self.client, 'put'),
+        ) as (mock_get, mock_put):
+            mock_get.return_value = fake_requests.FakeResponse(
+                200, content=jsonutils.dumps(current_allocations))
+            mock_put.return_value = fake_requests.FakeResponse(204)
+
+            self.client.add_resources_to_instance_allocation(
+                self.context, uuids.consumer_uuid, resources_to_add)
+
+            mock_get.assert_called_once_with(
+                '/allocations/%s' % uuids.consumer_uuid, version='1.28',
+                global_request_id=self.context.global_id)
+            mock_put.assert_called_once_with(
+                '/allocations/%s' % uuids.consumer_uuid, updated_allocations,
+                version='1.28', global_request_id=self.context.global_id)
+
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.put")
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
+    def test_add_res_to_alloc_empty_addition(self, mock_get, mock_put):
+        self.client.add_resources_to_instance_allocation(
+            self.context, uuids.consumer_uuid, {})
+
+        mock_get.assert_not_called()
+        mock_put.assert_not_called()
+
+    def test_add_res_to_alloc(self):
+        current_allocation = {
+            "allocations": {
+                uuids.rp1: {
+                    "generation": 42,
+                    "resources": {
+                        'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                    },
+                },
+            },
+            "consumer_generation": 2,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id,
+        }
+        addition = {
+            uuids.rp1: {
+                "resources": {
+                    "FOO": 1,  # existing RP but new resource class
+                    "NET_BW_EGR_KILOBIT_PER_SEC": 100,  # existing PR and rc
+                },
+            },
+            uuids.rp2: {  # new RP
+                "resources": {
+                    "BAR": 1,
+                },
+            },
+        }
+        expected_allocation = {
+            "allocations": {
+                uuids.rp1: {
+                    "generation": 42,
+                    "resources": {
+                        "FOO": 1,
+                        "NET_BW_EGR_KILOBIT_PER_SEC": 200 + 100,
+                    },
+                },
+                uuids.rp2: {
+                    "resources": {
+                        "BAR": 1,
+                    },
+                },
+            },
+            "consumer_generation": 2,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id,
+        }
+
+        self._test_add_res_to_alloc(
+            current_allocation, addition, expected_allocation)
+
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
+    def test_add_res_to_alloc_failed_to_get_alloc(self, mock_get):
+        mock_get.side_effect = ks_exc.EndpointNotFound()
+        addition = {
+            uuids.rp1: {
+                "resources": {
+                    "NET_BW_EGR_KILOBIT_PER_SEC": 200,
+                    "NET_BW_IGR_KILOBIT_PER_SEC": 200,
+                }
+            }
+        }
+
+        self.assertRaises(
+            ks_exc.ClientException,
+            self.client.add_resources_to_instance_allocation,
+            self.context, uuids.consumer_uuid, addition)
+
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.put")
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
+    def test_add_res_to_alloc_failed_to_put_alloc_non_conflict(
+        self, mock_get, mock_put):
+
+        current_allocations = {
+            "allocations": {
+                uuids.rp1: {
+                    "generation": 42,
+                    "resources": {
+                        'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                    },
+                },
+            },
+            "consumer_generation": 2,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id,
+        }
+        mock_get.side_effect = [
+            fake_requests.FakeResponse(
+                200, content=jsonutils.dumps(current_allocations)),
+        ]
+        addition = {
+            uuids.rp1: {
+                "resources": {
+                    "NET_BW_EGR_KILOBIT_PER_SEC": 200,
+                    "NET_BW_IGR_KILOBIT_PER_SEC": 200,
+                }
+            }
+        }
+        mock_put.side_effect = [
+            fake_requests.FakeResponse(
+                404,
+                content=jsonutils.dumps(
+                    {'errors': [
+                        {'code': 'placement.undefined_code', 'detail': ''}]}))
+            ]
+
+        self.assertRaises(
+            exception.AllocationUpdateFailed,
+            self.client.add_resources_to_instance_allocation,
+            self.context, uuids.consumer_uuid, addition)
+
+    @mock.patch('time.sleep', new=mock.Mock())
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.put")
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
+    def test_add_res_to_alloc_retry_succeed(self, mock_get, mock_put):
+        current_allocations = {
+            "allocations": {
+                uuids.rp1: {
+                    "generation": 42,
+                    "resources": {
+                        'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                    },
+                },
+            },
+            "consumer_generation": 2,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id,
+        }
+        current_allocations_2 = copy.deepcopy(current_allocations)
+        current_allocations_2['consumer_generation'] = 3
+        addition = {
+            uuids.rp1: {
+                "resources": {
+                    "NET_BW_EGR_KILOBIT_PER_SEC": 100,
+                }
+            }
+        }
+        updated_allocations = {
+            "allocations": {
+                uuids.rp1: {
+                    "generation": 42,
+                    "resources": {
+                        'NET_BW_EGR_KILOBIT_PER_SEC': 200 + 100,
+                    },
+                },
+            },
+            "consumer_generation": 2,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id,
+        }
+        updated_allocations_2 = copy.deepcopy(updated_allocations)
+        updated_allocations_2['consumer_generation'] = 3
+        mock_get.side_effect = [
+            fake_requests.FakeResponse(
+                200, content=jsonutils.dumps(current_allocations)),
+            fake_requests.FakeResponse(
+                200, content=jsonutils.dumps(current_allocations_2))
+        ]
+
+        mock_put.side_effect = [
+            fake_requests.FakeResponse(
+                status_code=409,
+                content=jsonutils.dumps(
+                    {'errors': [{'code': 'placement.concurrent_update',
+                                 'detail': ''}]})),
+            fake_requests.FakeResponse(
+                status_code=204)
+        ]
+
+        self.client.add_resources_to_instance_allocation(
+            self.context, uuids.consumer_uuid, addition)
+
+        self.assertEqual(
+            [
+                mock.call(
+                    '/allocations/%s' % uuids.consumer_uuid,
+                    version='1.28',
+                    global_request_id=self.context.global_id),
+                mock.call(
+                    '/allocations/%s' % uuids.consumer_uuid,
+                    version='1.28',
+                    global_request_id=self.context.global_id)
+            ],
+            mock_get.mock_calls)
+
+        self.assertEqual(
+            [
+                mock.call(
+                    '/allocations/%s' % uuids.consumer_uuid,
+                    updated_allocations, version='1.28',
+                    global_request_id=self.context.global_id),
+                mock.call(
+                    '/allocations/%s' % uuids.consumer_uuid,
+                    updated_allocations_2, version='1.28',
+                    global_request_id=self.context.global_id),
+            ],
+            mock_put.mock_calls)
+
+    @mock.patch('time.sleep', new=mock.Mock())
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.put")
+    @mock.patch("nova.scheduler.client.report.SchedulerReportClient.get")
+    def test_add_res_to_alloc_run_out_of_retries(self, mock_get, mock_put):
+        current_allocations = {
+            "allocations": {
+                uuids.rp1: {
+                    "generation": 42,
+                    "resources": {
+                        'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                    },
+                },
+            },
+            "consumer_generation": 2,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id,
+        }
+        addition = {
+            uuids.rp1: {
+                "resources": {
+                    "NET_BW_EGR_KILOBIT_PER_SEC": 100,
+                }
+            }
+        }
+        updated_allocations = {
+            "allocations": {
+                uuids.rp1: {
+                    "generation": 42,
+                    "resources": {
+                        'NET_BW_EGR_KILOBIT_PER_SEC': 200 + 100,
+                    },
+                },
+            },
+            "consumer_generation": 2,
+            "project_id": uuids.project_id,
+            "user_id": uuids.user_id,
+        }
+
+        get_rsp = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps(current_allocations))
+
+        mock_get.side_effect = [get_rsp] * 4
+
+        put_rsp = fake_requests.FakeResponse(
+            status_code=409,
+            content=jsonutils.dumps(
+                    {'errors': [{'code': 'placement.concurrent_update',
+                                 'detail': ''}]}))
+
+        mock_put.side_effect = [put_rsp] * 4
+
+        ex = self.assertRaises(
+            exception.AllocationUpdateFailed,
+            self.client.add_resources_to_instance_allocation,
+            self.context, uuids.consumer_uuid, addition)
+        self.assertIn(
+            'due to multiple successive generation conflicts',
+            str(ex))
+
+        get_call = mock.call(
+            '/allocations/%s' % uuids.consumer_uuid, version='1.28',
+            global_request_id=self.context.global_id)
+
+        mock_get.assert_has_calls([get_call] * 4)
+
+        put_call = mock.call(
+            '/allocations/%s' % uuids.consumer_uuid, updated_allocations,
+            version='1.28', global_request_id=self.context.global_id)
+
+        mock_put.assert_has_calls([put_call] * 4)
+
 
 class TestResourceClass(SchedulerReportClientTestCase):
     def setUp(self):
