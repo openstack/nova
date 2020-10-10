@@ -5448,7 +5448,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.RequestedVRamTooHigh(req_vram=video_ram,
                                                  max_vram=max_vram)
         if max_vram and video_ram:
-            video.vram = video_ram * units.Mi / units.Ki
+            video.vram = video_ram * units.Mi // units.Ki
         guest.add_device(video)
 
         # NOTE(sean-k-mooney): return the video device we added
