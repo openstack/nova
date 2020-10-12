@@ -1613,8 +1613,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                         counts[t_name] = counts.get(t_name, 0) + instance_count
                     else:
                         counts['instances'] += instance_count
-                        counts['cores'] += cores
-                        counts['ram'] += ram
+                        counts['cores'] += int(cores)
+                        counts['ram'] += int(ram)
 
             return counts
 
