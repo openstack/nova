@@ -207,6 +207,19 @@ class DesignerTestCase(test.NoDBTestCase):
         self.assertEqual(512, conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
 
+    def test_set_vif_host_backend_vhostuser_config_tapname(self):
+        conf = config.LibvirtConfigGuestInterface()
+        designer.set_vif_host_backend_vhostuser_config(conf, 'fake-mode',
+                                                       'fake-path', None, None,
+                                                       'fake-tap')
+        self.assertEqual('vhostuser', conf.net_type)
+        self.assertEqual('unix', conf.vhostuser_type)
+        self.assertEqual('fake-mode', conf.vhostuser_mode)
+        self.assertEqual('fake-path', conf.vhostuser_path)
+        self.assertIsNone(conf.vhost_rx_queue_size)
+        self.assertIsNone(conf.vhost_tx_queue_size)
+        self.assertEqual('fake-tap', conf.target_dev)
+
     def test_set_vif_mtu_config(self):
         conf = config.LibvirtConfigGuestInterface()
         designer.set_vif_mtu_config(conf, 9000)
