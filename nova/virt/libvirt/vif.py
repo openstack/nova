@@ -462,7 +462,7 @@ class LibvirtGenericVIFDriver(object):
 
         designer.set_vif_host_backend_vhostuser_config(
             conf, vif.mode, vif.path, CONF.libvirt.rx_queue_size,
-            CONF.libvirt.tx_queue_size)
+            CONF.libvirt.tx_queue_size, vif.vif_name)
 
     def _set_config_VIFHostDevice(self, instance, vif, conf):
         if vif.dev_type == osv_fields.VIFHostDeviceDevType.ETHERNET:
