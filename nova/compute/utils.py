@@ -1477,13 +1477,13 @@ def notify_about_instance_delete(notifier, context, instance,
 
 
 def update_pci_request_spec_with_allocated_interface_name(
-        context, report_client, instance, provider_mapping):
+        context, report_client, pci_requests, provider_mapping):
     """Update the instance's PCI request based on the request group -
     resource provider mapping and the device RP name from placement.
 
     :param context: the request context
     :param report_client: a SchedulerReportClient instance
-    :param instance: an Instance object to be updated
+    :param pci_requests: A list of InstancePCIRequest objects to be updated
     :param provider_mapping: the request group - resource provider mapping
         in the form returned by the RequestSpec.get_request_group_mapping()
         call.
@@ -1494,14 +1494,14 @@ def update_pci_request_spec_with_allocated_interface_name(
         have a well formatted name so we cannot parse the parent interface
         name out of it.
     """
-    if not instance.pci_requests:
+    if not pci_requests:
         return
 
     def needs_update(pci_request, mapping):
         return (pci_request.requester_id and
                 pci_request.requester_id in mapping)
 
-    for pci_request in instance.pci_requests.requests:
+    for pci_request in pci_requests:
         if needs_update(pci_request, provider_mapping):
 
             provider_uuids = provider_mapping[pci_request.requester_id]

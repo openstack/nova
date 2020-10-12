@@ -683,6 +683,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             mock_fill_provider_mapping, mock_update_pci_req):
         resource_req = [objects.RequestGroup(requester_id=uuids.port_id)]
         self.mock_get_res_req.return_value = resource_req
+        self.instance.pci_requests = objects.InstancePCIRequests(requests=[])
 
         self.assertEqual(("host1", "node1", fake_limits1),
                          self.task._find_destination())
@@ -709,8 +710,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         mock_fill_provider_mapping.assert_called_once_with(
             self.task.request_spec, fake_selection1)
         mock_update_pci_req.assert_called_once_with(
-            self.context, self.task.report_client, self.instance,
-            {uuids.port_id: []})
+            self.context, self.task.report_client, [], {uuids.port_id: []})
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
                        side_effect=exception.InstanceMappingNotFound(

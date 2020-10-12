@@ -641,7 +641,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             filter_properties={}, node='fake-node', request_spec=request_spec)
 
         mock_update_pci.assert_called_once_with(
-            self.context, self.compute.reportclient, instance,
+            self.context, self.compute.reportclient, [],
             {uuids.port_1: [uuids.rp1]})
         mock_setup_network.assert_called_once_with(
             self.context, instance, self.compute.host,
@@ -670,7 +670,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             filter_properties={}, node='fake-node', request_spec=request_spec)
 
         mock_update_pci.assert_called_once_with(
-            self.context, self.compute.reportclient, instance,
+            self.context, self.compute.reportclient, [],
             {uuids.port_1: [uuids.rp1]})
 
     @mock.patch.object(objects.InstanceList, 'get_by_filters')
