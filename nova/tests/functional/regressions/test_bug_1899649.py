@@ -92,19 +92,9 @@ class TestVolAttachmentsAfterFailureToScheduleOrBuild(base.ServersTestBase):
         self._assert_failure_and_volume_attachments(server)
 
     def test_failure_to_build_with_az_and_host(self):
-        # Assert that a volume attachments does not remain after a failure to
+        # Assert that a volume attachments remain after a failure to
         # build and reschedule by providing an availability_zone *and* host,
         # skipping the scheduler. This is bug #1899649.
         self.server['availability_zone'] = 'nova:compute1'
         server = self.admin_api.post_server({'server': self.server})
-
-        # Assert the server ends up in an ERROR state
-        self._wait_for_state_change(server, 'ERROR')
-
-        # FIXME(lyarwood): A single volume attachment should be present for the
-        # instance at this stage as the volume *can* otherwise be marked as
-        # available within Cinder if it isn't multi-attached.
-        attachments = self.cinder.volume_to_attachment.get(self.volume_id)
-        self.assertEqual(0, len(attachments))
-        self.assertNotIn(
-            self.volume_id, self.cinder.volume_ids_for_instance(server['id']))
+        self._assert_failure_and_volume_attachments(server)

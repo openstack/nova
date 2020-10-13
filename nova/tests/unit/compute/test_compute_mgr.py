@@ -6873,14 +6873,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(manager.ComputeManager,
                        '_nil_out_instance_obj_host_and_node')
-    @mock.patch.object(manager.ComputeManager, '_cleanup_volumes')
     @mock.patch.object(manager.ComputeManager, '_cleanup_allocated_networks')
     @mock.patch.object(manager.ComputeManager, '_set_instance_obj_error_state')
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
     def test_rescheduled_exception_without_retry(self,
-            mock_build_run, mock_add, mock_set, mock_clean_net, mock_clean_vol,
-            mock_nil, mock_save, mock_start, mock_finish):
+            mock_build_run, mock_add, mock_set, mock_clean_net, mock_nil,
+            mock_save, mock_start, mock_finish):
         self._do_build_instance_update(mock_save)
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
@@ -6916,9 +6915,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.accel_uuids)
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
-        mock_clean_vol.assert_called_once_with(self.context,
-                self.instance, self.block_device_mapping,
-                raise_exc=False)
         mock_add.assert_called_once_with(self.context, self.instance,
                 mock.ANY, mock.ANY, fault_message=mock.ANY)
         mock_nil.assert_called_once_with(self.instance)
