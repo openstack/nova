@@ -127,6 +127,8 @@ mock_attribute_re = re.compile(r"[\.\(](retrun_value)[,=\s]")
 # Regex for useless assertions
 useless_assertion_re = re.compile(
     r"\.((assertIsNone)\(None|(assertTrue)\((True|\d+|'.+'|\".+\")),")
+# Regex for misuse of assert_has_calls
+mock_assert_has_calls_re = re.compile(r"\.assert_has_calls\s?=")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -922,3 +924,18 @@ def useless_assertion(logical_line, filename):
         match = useless_assertion_re.search(logical_line)
         if match:
             yield (0, msg % (match.group(2) or match.group(3)))
+
+
+@core.flake8ext
+def check_assert_has_calls(logical_line, filename):
+    """Check misuse of assert_has_calls.
+
+    Not correct: mock_method.assert_has_calls = [mock.call(0)]
+    Correct:     mock_method.assert_has_calls([mock.call(0)])
+
+    N366
+    """
+    msg = "N366: The assert_has_calls is a method rather than a variable."
+    if ('nova/tests/' in filename and
+            mock_assert_has_calls_re.search(logical_line)):
+        yield (0, msg)

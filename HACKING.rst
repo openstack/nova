@@ -67,6 +67,7 @@ Nova Specific Commandments
 - [N363] Disallow ``(not_a_tuple)`` because you meant ``(a_tuple_of_one,)``.
 - [N364] Check non-existent mock assertion methods and attributes.
 - [N365] Check misuse of assertTrue/assertIsNone.
+- [N366] The assert_has_calls is a method rather than a variable.
 
 Creating Unit Tests
 -------------------
