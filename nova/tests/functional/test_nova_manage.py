@@ -1713,11 +1713,8 @@ class TestNovaManagePlacementAudit(
         self.admin_api.put_service(source_service_id, {'forced_down': 'true'})
 
         # evacuate the instance to the target
-        post = {'evacuate': {"host": dest_hostname}}
-        self.admin_api.post_server_action(server['id'], post)
-        self._wait_for_server_parameter(server,
-                                        {'OS-EXT-SRV-ATTR:host': dest_hostname,
-                                         'status': 'ACTIVE'})
+        self._evacuate_server(
+            server, {'host': dest_hostname}, expected_host=dest_hostname)
 
         # Now the instance is gone, we can delete the compute service
         self.admin_api.api_delete('/os-services/%s' % source_service_id)

@@ -2045,8 +2045,11 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         fake_notifier.reset()
 
         # Initiate evacuation
-        post = {'evacuate': {}}
-        self.api.post_server_action(server['id'], post)
+        # There is no other host to evacuate to so the rebuild should put the
+        # VM to ERROR state, but it should remain on source compute
+        server = self._evacuate_server(
+            server, expected_state='ERROR', expected_host=source_hostname,
+            expected_migration_status='error')
 
         # NOTE(elod.illes): Should be changed to non-polling solution when
         # patch https://review.opendev.org/#/c/482629/ gets merged:
@@ -2055,13 +2058,6 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._wait_for_notification_event_type('compute_task.rebuild_server')
 
         self._run_periodics()
-
-        # There is no other host to evacuate to so the rebuild should put the
-        # VM to ERROR state, but it should remain on source compute
-        expected_params = {'OS-EXT-SRV-ATTR:host': source_hostname,
-                           'status': 'ERROR'}
-        server = self._wait_for_server_parameter(server,
-                                                 expected_params)
 
         # Check migrations
         migrations = self.api.get_migrations()
@@ -2140,13 +2136,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             source_compute_id, {'forced_down': 'true'})
 
         # evacuate the server
-        post = {'evacuate': {}}
-        self.api.post_server_action(
-            server['id'], post)
-        expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
-                           'status': 'ACTIVE'}
-        server = self._wait_for_server_parameter(server,
-                                                 expected_params)
+        server = self._evacuate_server(server, expected_host=dest_hostname)
 
         # Expect to have allocation and usages on both computes as the
         # source compute is still down
@@ -2398,11 +2388,11 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         with mock.patch('nova.compute.claims.MoveClaim', fake_move_claim):
             # evacuate the server
-            self.api.post_server_action(server['id'], {'evacuate': {}})
             # the migration will fail on the dest node and the instance will
             # stay ACTIVE and task_state will be set to None.
-            server = self._wait_for_server_parameter(
-                server, {'status': 'ACTIVE', 'OS-EXT-STS:task_state': None})
+            server = self._evacuate_server(
+                server, expected_task_state=None,
+                expected_migration_status='failed')
 
         # Run the periodics to show those don't modify allocations.
         self._run_periodics()
@@ -2474,10 +2464,11 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         with mock.patch.object(
                 self.compute2.driver, 'rebuild', fake_rebuild):
             # evacuate the server
-            self.api.post_server_action(server['id'], {'evacuate': {}})
             # the migration will fail on the dest node and the instance will
             # go into error state
-            server = self._wait_for_state_change(server, 'ERROR')
+            server = self._evacuate_server(
+                server, expected_state='ERROR',
+                expected_migration_status='failed')
 
         # Run the periodics to show those don't modify allocations.
         self._run_periodics()
@@ -7162,14 +7153,8 @@ class ServerMoveWithPortResourceRequestTest(
         self.admin_api.put_service(
             self.compute1_service_id, {'forced_down': 'true'})
 
-        req = {'evacuate': {}}
-        if host:
-            req['evacuate']['host'] = host
-
-        self.api.post_server_action(server['id'], req)
-        self._wait_for_server_parameter(server,
-            {'OS-EXT-SRV-ATTR:host': 'host2',
-             'status': 'ACTIVE'})
+        self._evacuate_server(
+            server, {'host': host} if host else {}, expected_host='host2')
 
         self._check_allocation_during_evacuate(
             server, self.flavor_with_group_policy, self.compute1_rp_uuid,
@@ -7212,16 +7197,11 @@ class ServerMoveWithPortResourceRequestTest(
                 'nova.compute.resource_tracker.ResourceTracker.rebuild_claim',
                 side_effect=exception.ComputeResourcesUnavailable(
                     reason='test evacuate failure')):
-            req = {'evacuate': {}}
-            self.api.post_server_action(server['id'], req)
             # Evacuate does not have reschedule loop so evacuate expected to
             # simply fail and the server remains on the source host
-            server = self._wait_for_server_parameter(server,
-                {'OS-EXT-SRV-ATTR:host': 'host1',
-                 'status': 'ACTIVE',
-                 'OS-EXT-STS:task_state': None})
-
-        self._wait_for_migration_status(server, ['failed'])
+            server = self._evacuate_server(
+                server, expected_host='host1', expected_task_state=None,
+                expected_migration_status='failed')
 
         # As evacuation failed the resource allocation should be untouched
         self._check_allocation(
@@ -7267,12 +7247,9 @@ class ServerMoveWithPortResourceRequestTest(
 
         # The compute manager on host2 will raise from
         # update_pci_request_spec_with_allocated_interface_name
-        self.api.post_server_action(server['id'], {'evacuate': {}})
-        server = self._wait_for_server_parameter(server,
-            {'OS-EXT-SRV-ATTR:host': 'host1',
-             'OS-EXT-STS:task_state': None,
-             'status': 'ERROR'})
-        self._wait_for_migration_status(server, ['failed'])
+        server = self._evacuate_server(
+            server, expected_host='host1', expected_state='ERROR',
+            expected_task_state=None, expected_migration_status='failed')
 
         self.assertIn(
             'does not have a properly formatted name',
@@ -8179,7 +8156,7 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
         compute_to_stop, compute_to_evacuate = self._test_evacuate(
             self.server, self.NUM_HOSTS)
-        self._evacuate_server(self.server, compute_to_evacuate.host)
+        self._evacuate_server(self.server, {'host': compute_to_evacuate.host})
         compute_to_stop.start()
         self.server = self.api.get_server(self.server['id'])
         arqs_new = self.cyborg.fake_get_arqs_for_instance(self.server['id'])

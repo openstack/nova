@@ -142,11 +142,9 @@ class NonPersistentFieldNotResetTest(
         # Its status becomes 'ACTIVE'.
         # If requested_destination is not reset, a status of the server
         # becomes 'ERROR' because the target host is down.
-        self.api.post_server_action(
-            server['id'], {'evacuate': {'host': target_host}})
-        expected_params = {'OS-EXT-SRV-ATTR:host': original_host,
-                           'status': 'ERROR'}
-        server = self._wait_for_server_parameter(server, expected_params)
+        server = self._evacuate_server(
+            server, {'host': target_host}, expected_host=original_host,
+            expected_state='ERROR', expected_migration_status='error')
 
         # Make sure 'is_bfv' is set.
         reqspec = objects.RequestSpec.get_by_instance_uuid(self.ctxt,

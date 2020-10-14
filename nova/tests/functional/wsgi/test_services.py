@@ -143,12 +143,9 @@ class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
         host1.stop()
         # Start another host and trigger the server evacuate to that host.
         self._start_compute('host2')
-        self.admin_api.post_server_action(server['id'], {'evacuate': {}})
         # The host does not change until after the status is changed to ACTIVE
         # so wait for both parameters.
-        self._wait_for_server_parameter(server, {
-            'status': 'ACTIVE',
-            'OS-EXT-SRV-ATTR:host': 'host2'})
+        self._evacuate_server(server, expected_host='host2')
         # Delete the compute service for host1 and check the related
         # placement resources for that host.
         self.admin_api.api_delete('/os-services/%s' % service['id'])

@@ -52,12 +52,7 @@ class TestEvacuateDeleteServerRestartOriginalCompute(
             source_compute_id, {'forced_down': 'true'})
 
         # evacuate the server
-        post = {'evacuate': {}}
-        self.api.post_server_action(
-            server['id'], post)
-        expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
-                           'status': 'ACTIVE'}
-        server = self._wait_for_server_parameter(server, expected_params)
+        server = self._evacuate_server(server, expected_host=dest_hostname)
 
         # Expect to have allocation and usages on both computes as the
         # source compute is still down

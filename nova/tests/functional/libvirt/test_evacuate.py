@@ -514,20 +514,17 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
     def _evacuate_with_failure(self, server, compute1):
         # Perform an evacuation during which we experience a failure on the
         # destination host
-        instance_uuid = server['id']
 
         with mock.patch.object(compute1.driver, 'plug_vifs') as plug_vifs:
             plug_vifs.side_effect = test.TestingException
 
-            self.api.post_server_action(instance_uuid,
-                                        {'evacuate': {'host': 'compute1'}})
+            server = self._evacuate_server(
+                server, {'host': 'compute1'}, expected_state='ERROR',
+                expected_task_state=None, expected_migration_status='failed')
 
             # Wait for the rebuild to start, then complete
             fake_notifier.wait_for_versioned_notifications(
                     'instance.rebuild.start')
-            self._wait_for_migration_status(server, ['failed'])
-            server = self._wait_for_server_parameter(
-                server, {'OS-EXT-STS:task_state': None})
 
             # Meta-test
             plug_vifs.assert_called()

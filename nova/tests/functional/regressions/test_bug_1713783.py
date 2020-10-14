@@ -96,13 +96,10 @@ class FailedEvacuateStateTests(test.TestCase,
         fake_notifier.reset()
 
         # Initiate evacuation
-        post = {'evacuate': {}}
-        self.api.post_server_action(server['id'], post)
-
+        self._evacuate_server(
+            server, expected_state='ERROR', expected_host=self.hostname,
+            expected_migration_status='error')
         self._wait_for_notification_event_type('compute_task.rebuild_server')
-
-        server = self._wait_for_state_change(server, 'ERROR')
-        self.assertEqual(self.hostname, server['OS-EXT-SRV-ATTR:host'])
 
         # Check migrations
         migrations = self.api.get_migrations()
