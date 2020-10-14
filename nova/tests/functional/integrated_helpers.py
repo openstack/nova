@@ -489,8 +489,7 @@ class InstanceHelperMixin:
         """Evacuate a server."""
         self.api.post_server_action(server['id'], {'evacuate': {}})
         self._wait_for_server_parameter(
-            self.server, {'OS-EXT-SRV-ATTR:host': host,
-                          'status': expected_state})
+            server, {'OS-EXT-SRV-ATTR:host': host, 'status': expected_state})
 
 
 class PlacementHelperMixin:
