@@ -2007,19 +2007,6 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.assert_hypervisor_usage(
             dest_rp_uuid, self.flavor2, volume_backed=False)
 
-    def _wait_for_notification_event_type(self, event_type, max_retries=50):
-        retry_counter = 0
-        while True:
-            if len(fake_notifier.NOTIFICATIONS) > 0:
-                for notification in fake_notifier.NOTIFICATIONS:
-                    if notification.event_type == event_type:
-                        return
-            if retry_counter == max_retries:
-                self.fail('Wait for notification event type (%s) failed'
-                          % event_type)
-            retry_counter += 1
-            time.sleep(0.1)
-
     def test_evacuate_with_no_compute(self):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
@@ -2041,10 +2028,6 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'true'})
 
-        # Initialize fake_notifier
-        fake_notifier.stub_notifier(self)
-        fake_notifier.reset()
-
         # Initiate evacuation
         # There is no other host to evacuate to so the rebuild should put the
         # VM to ERROR state, but it should remain on source compute
@@ -2052,12 +2035,8 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             server, expected_state='ERROR', expected_host=source_hostname,
             expected_migration_status='error')
 
-        # NOTE(elod.illes): Should be changed to non-polling solution when
-        # patch https://review.opendev.org/#/c/482629/ gets merged:
-        # fake_notifier.wait_for_versioned_notifications(
-        #     'compute_task.rebuild_server')
-        self._wait_for_notification_event_type('compute_task.rebuild_server')
-
+        fake_notifier.wait_for_versioned_notifications(
+            'compute_task.rebuild_server.error')
         self._run_periodics()
 
         # Check migrations
