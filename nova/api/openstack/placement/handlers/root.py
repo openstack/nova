@@ -32,6 +32,18 @@ def home(req):
         'id': 'v%s' % min_version,
         'max_version': max_version,
         'min_version': min_version,
+        # for now there is only ever one version, so it must be CURRENT
+        'status': 'CURRENT',
+        'links': [{
+            # Point back to this same URL as the root of this version.
+            # NOTE(cdent): We explicitly want this to be a relative-URL
+            # representation of "this same URL", otherwise placement needs
+            # to keep track of proxy addresses and the like, which we have
+            # avoided thus far, in order to construct full URLs. Placement
+            # is much easier to scale if we never track that stuff.
+            'rel': 'self',
+            'href': '',
+        }],
     }
     version_json = jsonutils.dumps({'versions': [version_data]})
     req.response.body = encodeutils.to_utf8(version_json)
