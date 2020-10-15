@@ -24190,6 +24190,20 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           libvirt_driver.LibvirtDriver,
                           fake.FakeVirtAPI(), False)
 
+    @mock.patch.object(nova.conf.devices, 'register_dynamic_opts')
+    def test_get_supported_vgpu_types_registering_dynamic_opts(self, rdo):
+        self.flags(enabled_vgpu_types=['nvidia-11', 'nvidia-12'],
+                   group='devices')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._get_supported_vgpu_types()
+
+        # Okay below is confusing, but remember, ._get_supported_vgpu_types()
+        # is first called by the LibvirtDriver object creation, so when
+        # calling the above drvr._get_supported_vgpu_types() method, it will
+        # be the second time that register_dynamic_opts() will be called.
+        rdo.assert_has_calls([mock.call(CONF), mock.call(CONF)])
+
     def test_get_vgpu_type_per_pgpu(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         device = 'pci_0000_84_00_0'
