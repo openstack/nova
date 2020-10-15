@@ -6894,6 +6894,11 @@ class LibvirtDriver(driver.ComputeDriver):
         if not CONF.devices.enabled_vgpu_types:
             return []
 
+        # Make sure we register all the types as the compute service could
+        # be calling this method before init_host()
+        if len(CONF.devices.enabled_vgpu_types) > 1:
+            nova.conf.devices.register_dynamic_opts(CONF)
+
         for vgpu_type in CONF.devices.enabled_vgpu_types:
             group = getattr(CONF, 'vgpu_%s' % vgpu_type, None)
             if group is None or not group.device_addresses:
