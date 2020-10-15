@@ -19,7 +19,6 @@ from oslo_utils import timeutils
 from nova import exception
 from nova.objects import aggregate
 from nova import test
-from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_objects
 
 
@@ -141,7 +140,6 @@ class _TestAggregateObject(object):
                                  mock_notify,
                                  mock_api_metadata_add,
                                  mock_api_metadata_delete):
-        fake_notifier.NOTIFICATIONS = []
         agg = aggregate.Aggregate()
         agg._context = self.context
         agg.id = 123
@@ -150,12 +148,12 @@ class _TestAggregateObject(object):
         mock_obj_from_primitive.return_value = agg
 
         agg.update_metadata({'todelete': None, 'toadd': 'myval'})
-        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(2, len(self.notifier.notifications))
+        msg = self.notifier.notifications[0]
         self.assertEqual('aggregate.updatemetadata.start', msg.event_type)
         self.assertEqual({'todelete': None, 'toadd': 'myval'},
                          msg.payload['meta_data'])
-        msg = fake_notifier.NOTIFICATIONS[1]
+        msg = self.notifier.notifications[1]
         self.assertEqual('aggregate.updatemetadata.end', msg.event_type)
         mock_notify.assert_has_calls([
             mock.call(context=self.context, aggregate=agg,

@@ -21,7 +21,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
-from nova.tests.unit import fake_notifier
 
 
 LOG = logging.getLogger(__name__)
@@ -64,8 +63,8 @@ class FailedEvacuateStateTests(test.TestCase,
     def _wait_for_notification_event_type(self, event_type, max_retries=10):
         retry_counter = 0
         while True:
-            if len(fake_notifier.NOTIFICATIONS) > 0:
-                for notification in fake_notifier.NOTIFICATIONS:
+            if len(self.notifier.notifications) > 0:
+                for notification in self.notifier.notifications:
                     if notification.event_type == event_type:
                         return
             if retry_counter == max_retries:

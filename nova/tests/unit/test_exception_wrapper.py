@@ -20,7 +20,6 @@ from nova import context as nova_context
 from nova import exception_wrapper
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.unit import fake_notifier
 
 
 def bad_function_exception(self, context, extra, blah="a", boo="b", zoo=None):
@@ -67,7 +66,7 @@ class WrapExceptionTestCase(test.NoDBTestCase):
         wrapped = exception_wrapper.wrap_exception(
             service='compute', binary='nova-compute')
         self.assertEqual(99, wrapped(good_function)(1, 2))
-        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.notifications))
         self.assertEqual(0, len(self.notifier.versioned_notifications))
 
     def test_wrap_exception_unknown_module(self):
@@ -88,8 +87,8 @@ class WrapExceptionTestCase(test.NoDBTestCase):
         self.assertRaises(test.TestingException,
                           wrapped(bad_function_exception), 1, ctxt, 3, zoo=3)
 
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        notification = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(1, len(self.notifier.notifications))
+        notification = self.notifier.notifications[0]
         self.assertEqual('bad_function_exception', notification.event_type)
         self.assertEqual(ctxt, notification.context)
         self.assertEqual(3, notification.payload['args']['extra'])

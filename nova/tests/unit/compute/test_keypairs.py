@@ -25,7 +25,6 @@ from nova.objects import keypair as keypair_obj
 from nova import quota
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_crypto
-from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_keypair
 from nova.tests.unit import utils as test_utils
 
@@ -82,9 +81,9 @@ class KeypairAPITestCase(test_compute.BaseTestCase):
         self.stub_out("nova.db.api.key_pair_get", db_key_pair_get)
 
     def _check_notifications(self, action='create', key_name='foo'):
-        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(2, len(self.notifier.notifications))
 
-        n1 = fake_notifier.NOTIFICATIONS[0]
+        n1 = self.notifier.notifications[0]
         self.assertEqual('INFO', n1.priority)
         self.assertEqual('keypair.%s.start' % action, n1.event_type)
         self.assertEqual('api.%s' % CONF.host, n1.publisher_id)
@@ -92,7 +91,7 @@ class KeypairAPITestCase(test_compute.BaseTestCase):
         self.assertEqual('fake', n1.payload['tenant_id'])
         self.assertEqual(key_name, n1.payload['key_name'])
 
-        n2 = fake_notifier.NOTIFICATIONS[1]
+        n2 = self.notifier.notifications[1]
         self.assertEqual('INFO', n2.priority)
         self.assertEqual('keypair.%s.end' % action, n2.event_type)
         self.assertEqual('api.%s' % CONF.host, n2.publisher_id)

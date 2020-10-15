@@ -14,7 +14,6 @@ import time
 
 from nova import exception
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 
 
 class BuildRescheduleClaimFailsTestCase(
@@ -29,12 +28,12 @@ class BuildRescheduleClaimFailsTestCase(
 
     def _wait_for_unversioned_notification(self, event_type):
         for x in range(20):  # wait up to 10 seconds
-            for notification in fake_notifier.NOTIFICATIONS:
+            for notification in self.notifier.notifications:
                 if notification.event_type == event_type:
                     return notification
             time.sleep(.5)
         self.fail('Timed out waiting for unversioned notification %s. Got: %s'
-                  % (event_type, fake_notifier.NOTIFICATIONS))
+                  % (event_type, self.notifier.notifications))
 
     def test_build_reschedule_alt_host_alloc_fails(self):
         # Start two compute services so we have one alternate host.

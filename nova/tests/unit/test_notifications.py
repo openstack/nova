@@ -34,7 +34,6 @@ from nova.objects import base as obj_base
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import fake_network
-from nova.tests.unit import fake_notifier
 
 
 CONF = cfg.CONF
@@ -105,7 +104,7 @@ class NotificationsTestCase(test.TestCase):
                 verify_states=True)
 
         notifications.send_update(self.context, old, self.instance)
-        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.notifications))
         self.assertEqual(0, len(self.notifier.versioned_notifications))
 
     def test_task_notif(self):
@@ -126,7 +125,7 @@ class NotificationsTestCase(test.TestCase):
                 old_vm_state, new_vm_state, old_task_state, new_task_state,
                 verify_states=True)
 
-        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.notifications))
         self.assertEqual(0, len(self.notifier.versioned_notifications))
 
         # ok now enable task state notifications and re-try
@@ -134,7 +133,7 @@ class NotificationsTestCase(test.TestCase):
                    group='notifications')
 
         notifications.send_update(self.context, old, self.instance)
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.notifications))
         self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         self.assertEqual(
@@ -153,7 +152,7 @@ class NotificationsTestCase(test.TestCase):
                 old_vm_state, new_vm_state, old_task_state, new_task_state,
                 service="compute", host=None, verify_states=True)
 
-        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.notifications))
         self.assertEqual(0, len(self.notifier.versioned_notifications))
 
     def test_send_on_vm_change(self):
@@ -163,9 +162,9 @@ class NotificationsTestCase(test.TestCase):
         self.instance.vm_state = vm_states.ACTIVE
         notifications.send_update(self.context, old, self.instance)
 
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.notifications))
         # service name should default to 'compute'
-        notif = fake_notifier.NOTIFICATIONS[0]
+        notif = self.notifier.notifications[0]
         self.assertEqual('compute.testhost', notif.publisher_id)
 
         self.assertEqual(1, len(self.notifier.versioned_notifications))
@@ -184,7 +183,7 @@ class NotificationsTestCase(test.TestCase):
         self.instance.task_state = task_states.SPAWNING
         notifications.send_update(self.context, old, self.instance)
 
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.notifications))
         self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
                 'instance.update',
@@ -195,7 +194,7 @@ class NotificationsTestCase(test.TestCase):
         notifications.send_update_with_states(self.context, self.instance,
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
                 task_states.SPAWNING, verify_states=True)
-        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.notifications))
         self.assertEqual(0, len(self.notifier.versioned_notifications))
 
     def test_vm_update_with_states(self):
@@ -210,7 +209,7 @@ class NotificationsTestCase(test.TestCase):
 
     def _verify_notification(self, expected_state=vm_states.ACTIVE,
                              expected_new_task_state=task_states.SPAWNING):
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.notifications))
         self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
                 'instance.update',
@@ -220,7 +219,7 @@ class NotificationsTestCase(test.TestCase):
         display_name = self.instance.display_name
         hostname = self.instance.hostname
         node = self.instance.node
-        payload = fake_notifier.NOTIFICATIONS[0].payload
+        payload = self.notifier.notifications[0].payload
         self.assertEqual(vm_states.BUILDING, payload["old_state"])
         self.assertEqual(expected_state, payload["state"])
         self.assertEqual(task_states.SPAWNING, payload["old_task_state"])
@@ -283,11 +282,11 @@ class NotificationsTestCase(test.TestCase):
         notifications.send_update_with_states(self.context, self.instance,
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
                 None)
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.notifications))
         self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         # service name should default to 'compute'
-        notif = fake_notifier.NOTIFICATIONS[0]
+        notif = self.notifier.notifications[0]
         self.assertEqual('compute.testhost', notif.publisher_id)
 
         # in the versioned notification it defaults to nova-compute
@@ -298,11 +297,11 @@ class NotificationsTestCase(test.TestCase):
         notifications.send_update_with_states(self.context, self.instance,
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
                 None, service="nova-compute")
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.notifications))
         self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         # service name should default to 'compute'
-        notif = fake_notifier.NOTIFICATIONS[0]
+        notif = self.notifier.notifications[0]
         self.assertEqual('nova-compute.testhost', notif.publisher_id)
 
         notif = self.notifier.versioned_notifications[0]
@@ -312,11 +311,11 @@ class NotificationsTestCase(test.TestCase):
         notifications.send_update_with_states(self.context, self.instance,
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
                 None, host="someotherhost")
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.notifications))
         self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         # service name should default to 'compute'
-        notif = fake_notifier.NOTIFICATIONS[0]
+        notif = self.notifier.notifications[0]
         self.assertEqual('compute.someotherhost', notif.publisher_id)
 
         notif = self.notifier.versioned_notifications[0]
@@ -397,8 +396,8 @@ class NotificationsTestCase(test.TestCase):
 
     def test_send_access_ip_update(self):
         notifications.send_update(self.context, self.instance, self.instance)
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        notif = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(1, len(self.notifier.notifications))
+        notif = self.notifier.notifications[0]
         payload = notif.payload
         access_ip_v4 = str(self.instance.access_ip_v4)
         access_ip_v6 = str(self.instance.access_ip_v6)
@@ -410,14 +409,14 @@ class NotificationsTestCase(test.TestCase):
         param = {"display_name": "new_display_name"}
         new_name_inst = self._wrapped_create(params=param)
         notifications.send_update(self.context, self.instance, new_name_inst)
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.notifications))
         self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         old_display_name = self.instance.display_name
         new_display_name = new_name_inst.display_name
 
         for payload in [
-            fake_notifier.NOTIFICATIONS[0].payload,
+            self.notifier.notifications[0].payload,
             self.notifier.versioned_notifications[0][
                 'payload']['nova_object.data']]:
 
@@ -468,7 +467,7 @@ class NotificationsTestCase(test.TestCase):
                        fail_sending)
 
         notifications.send_update(self.context, self.instance, self.instance)
-        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.notifications))
 
     @mock.patch.object(notifications.LOG, 'exception')
     def test_fail_sending_update_instance_not_found(self, mock_log_exception):
@@ -480,7 +479,7 @@ class NotificationsTestCase(test.TestCase):
                                side_effect=notfound):
             notifications.send_update(
                 self.context, self.instance, self.instance)
-        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.notifications))
         self.assertEqual(0, mock_log_exception.call_count)
 
     @mock.patch.object(notifications.LOG, 'exception')
@@ -496,7 +495,7 @@ class NotificationsTestCase(test.TestCase):
                 self.context, self.instance,
                 vm_states.BUILDING, vm_states.ERROR,
                 task_states.NETWORKING, new_task_state=None)
-        self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.notifications))
         self.assertEqual(0, mock_log_exception.call_count)
 
     def _decorated_function(self, arg1, arg2):

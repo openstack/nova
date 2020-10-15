@@ -37,3 +37,7 @@ class NotificationFixture(fixtures.Fixture):
     @property
     def versioned_notifications(self):
         return fake_notifier.VERSIONED_NOTIFICATIONS
+
+    @property
+    def notifications(self):
+        return fake_notifier.NOTIFICATIONS

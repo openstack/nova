@@ -48,7 +48,6 @@ from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_crypto
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
-from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.objects import test_flavor
 
@@ -385,8 +384,8 @@ class UsageInfoTestCase(test.TestCase):
         instance.save()
         compute_utils.notify_usage_exists(
             rpc.get_notifier('compute'), self.context, instance, 'fake-host')
-        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
-        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.notifications), 1)
+        msg = self.notifier.notifications[0]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'compute.instance.exists')
         payload = msg.payload
@@ -450,7 +449,7 @@ class UsageInfoTestCase(test.TestCase):
         self.compute.terminate_instance(self.context, instance, [])
         compute_utils.notify_usage_exists(
             rpc.get_notifier('compute'), self.context, instance, 'fake-host')
-        msg = fake_notifier.NOTIFICATIONS[-1]
+        msg = self.notifier.notifications[-1]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'compute.instance.exists')
         payload = msg.payload
@@ -814,7 +813,7 @@ class UsageInfoTestCase(test.TestCase):
         self.compute.terminate_instance(self.context, instance, [])
         compute_utils.notify_usage_exists(
             rpc.get_notifier('compute'), self.context, instance, 'fake-host')
-        msg = fake_notifier.NOTIFICATIONS[-1]
+        msg = self.notifier.notifications[-1]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'compute.instance.exists')
         payload = msg.payload
@@ -887,8 +886,8 @@ class UsageInfoTestCase(test.TestCase):
             rpc.get_notifier('compute'),
             self.context, instance, 'create.start',
             extra_usage_info=extra_usage_info)
-        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
-        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.notifications), 1)
+        msg = self.notifier.notifications[0]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'compute.instance.create.start')
         payload = msg.payload
@@ -916,8 +915,8 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_aggregate_update(self.context,
                                                     "create.end",
                                                     aggregate_payload)
-        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
-        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.notifications), 1)
+        msg = self.notifier.notifications[0]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'aggregate.create.end')
         payload = msg.payload
@@ -929,8 +928,8 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_aggregate_update(self.context,
                                                     "create.start",
                                                     aggregate_payload)
-        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
-        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.notifications), 1)
+        msg = self.notifier.notifications[0]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'aggregate.create.start')
         payload = msg.payload
@@ -942,7 +941,7 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_aggregate_update(self.context,
                                                     "create.start",
                                                     aggregate_payload)
-        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 0)
+        self.assertEqual(len(self.notifier.notifications), 0)
 
 
 class ComputeUtilsGetValFromSysMetadata(test.NoDBTestCase):
