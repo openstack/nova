@@ -13,16 +13,31 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova import config
-from nova.consoleauth import rpcapi as consoleauth_rpcapi
+from nova.console.websocketproxy import NovaProxyRequestHandlerBase
 from nova import context
+from nova import exception
 
 STATIC_FILES_EXT = ('.js', '.css', '.html', '.ico', '.png', '.gif')
 
 
-class NovaShellInaBoxProxy(object):
-    """Class that injects token validation routine into proxy logic.
-    """
+class NovaShellInaBoxProxy(NovaProxyRequestHandlerBase):
+    """Class that injects token validation routine into proxy logic."""
+
+    def __init__(self):
+        self._compute_rpcapi = None
+
+    @property
+    def compute_rpcapi(self):
+        # This is copied from NovaProxyRequestHandler, just to avoid
+        # extending that class (because it inherits
+        # websockify.ProxyRequestHandler in addition and we don't need that).
+        # For upgrades we should have a look again if anything changed there,
+        # that we might need to also include here.
+        if not self._compute_rpcapi:
+            self._compute_rpcapi = compute_rpcapi.ComputeAPI()
+        return self._compute_rpcapi
 
     def path_includes_static_files(self):
         """Returns True if requested path includes static files.
@@ -43,9 +58,10 @@ class NovaShellInaBoxProxy(object):
             else:
                 # Validate the token
                 ctxt = context.get_admin_context()
-                rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
-
-                if not rpcapi.check_token(ctxt, token=self.token):
+                try:
+                    super(NovaShellInaBoxProxy, self)._get_connect_info(
+                        ctxt, self.token)
+                except exception.InvalidToken:
                     # Token not valid
                     flow.response.status_code = 403
                     flow.response.content = ("The token has expired "

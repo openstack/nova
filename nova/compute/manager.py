@@ -55,7 +55,6 @@ from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
-from oslo_utils import uuidutils
 
 from nova.accelerator import cyborg
 from nova import block_device
@@ -6952,35 +6951,31 @@ class ComputeManager(manager.Manager):
         if not CONF.serial_console.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
 
+        if console_type == 'serial':
+            base_url = CONF.serial_console.base_url
+        elif console_type == 'shellinabox':
+            base_url = CONF.shellinabox.base_url
+        else:
+            raise exception.ConsoleTypeInvalid(console_type=console_type)
+
         context = context.elevated()
 
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
             console = self.driver.get_serial_console(context, instance)
-            if console_type == 'serial':
-                console_auth = objects.ConsoleAuthToken(
-                    context=context,
-                    console_type=console_type,
-                    host=console.host,
-                    port=console.port,
-                    internal_access_path=console.internal_access_path,
-                    instance_uuid=instance.uuid,
-                    access_url_base=CONF.serial_console.base_url,
-                )
-                console_auth.authorize(CONF.consoleauth.token_ttl)
-                connect_info = console.get_connection_info(
-                    console_auth.token, console_auth.access_url)
-            elif console_type == 'shellinabox':
-                token = uuidutils.generate_uuid()
-                # token and internal url for shellinabox
-                access_url = '%s%s?token=%s' % (
-                    CONF.shellinabox.base_url,
-                    console.internal_access_path,
-                    token)
-                connect_info = console.get_connection_info(token, access_url)
-            else:
-                raise exception.ConsoleTypeInvalid(console_type=console_type)
+            console_auth = objects.ConsoleAuthToken(
+                context=context,
+                console_type=console_type,
+                host=console.host,
+                port=console.port,
+                internal_access_path=console.internal_access_path,
+                instance_uuid=instance.uuid,
+                access_url_base=base_url,
+            )
+            console_auth.authorize(CONF.consoleauth.token_ttl)
+            connect_info = console.get_connection_info(
+                console_auth.token, console_auth.access_url)
 
         except exception.InstanceNotFound:
             if instance.vm_state != vm_states.BUILDING:

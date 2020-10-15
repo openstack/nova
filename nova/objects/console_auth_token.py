@@ -91,6 +91,10 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
                 qparams = {'path': '?token=%s' % self.token}
                 return '%s?%s' % (self.access_url_base,
                                   urlparse.urlencode(qparams))
+            elif self.console_type == 'shellinabox':
+                return '%s%s?token=%s' % (self.access_url_base,
+                                          self.internal_access_path,
+                                          self.token)
             else:
                 return '%s?token=%s' % (self.access_url_base, self.token)
 
