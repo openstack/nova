@@ -15,15 +15,14 @@
 from nova import context
 from nova import exception_wrapper
 from nova import test
-from nova.tests.unit import fake_notifier
+from nova.tests import fixtures
 
 
-class FakeVersionedNotifierTestCase(test.NoDBTestCase):
+class TestNotificationFixture(test.NoDBTestCase):
     def setUp(self):
-        super(FakeVersionedNotifierTestCase, self).setUp()
+        super(TestNotificationFixture, self).setUp()
 
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.notifier = self.useFixture(fixtures.NotificationFixture(self))
 
         self.context = context.RequestContext()
 
@@ -39,7 +38,7 @@ class FakeVersionedNotifierTestCase(test.NoDBTestCase):
         # Wait for a single notification which we emitted first
         self._generate_exception_notification()
 
-        notifications = fake_notifier.wait_for_versioned_notifications(
+        notifications = self.notifier.wait_for_versioned_notifications(
                 'compute.exception')
         self.assertEqual(1, len(notifications))
 
@@ -47,7 +46,7 @@ class FakeVersionedNotifierTestCase(test.NoDBTestCase):
         # Wait for a single notification which is never sent
         self.assertRaises(
             AssertionError,
-            fake_notifier.wait_for_versioned_notifications,
+            self.notifier.wait_for_versioned_notifications,
             'compute.exception', timeout=0.1)
 
     def test_wait_for_versioned_notifications_n(self):
@@ -55,7 +54,7 @@ class FakeVersionedNotifierTestCase(test.NoDBTestCase):
         self._generate_exception_notification()
         self._generate_exception_notification()
 
-        notifications = fake_notifier.wait_for_versioned_notifications(
+        notifications = self.notifier.wait_for_versioned_notifications(
                 'compute.exception', 2)
         self.assertEqual(2, len(notifications))
 
@@ -65,7 +64,7 @@ class FakeVersionedNotifierTestCase(test.NoDBTestCase):
 
         self.assertRaises(
             AssertionError,
-            fake_notifier.wait_for_versioned_notifications,
+            self.notifier.wait_for_versioned_notifications,
             'compute.exception', 2, timeout=0.1)
 
     def test_wait_for_versioned_notifications_too_many(self):
@@ -73,6 +72,6 @@ class FakeVersionedNotifierTestCase(test.NoDBTestCase):
         self._generate_exception_notification()
         self._generate_exception_notification()
 
-        notifications = fake_notifier.wait_for_versioned_notifications(
+        notifications = self.notifier.wait_for_versioned_notifications(
                 'compute.exception')
         self.assertEqual(2, len(notifications))
