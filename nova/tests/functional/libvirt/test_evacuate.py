@@ -31,7 +31,6 @@ from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
-from nova.tests.unit import fake_notifier
 from nova.virt.libvirt import config as libvirt_config
 
 CONF = conf.CONF
@@ -431,8 +430,8 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
         # force_down and evacuate without onSharedStorage
         self.api.microversion = '2.14'
 
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.notifier = self.useFixture(
+            nova_fixtures.NotificationFixture(self))
 
         self.useFixture(nova_fixtures.LibvirtFixture())
 
@@ -523,7 +522,7 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
                 expected_task_state=None, expected_migration_status='failed')
 
             # Wait for the rebuild to start, then complete
-            fake_notifier.wait_for_versioned_notifications(
+            self.notifier.wait_for_versioned_notifications(
                     'instance.rebuild.start')
 
             # Meta-test

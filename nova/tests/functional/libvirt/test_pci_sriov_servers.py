@@ -35,7 +35,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
-from nova.tests.unit import fake_notifier
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -711,14 +710,14 @@ class SRIOVAttachDetachTest(_PCIServersTestBase):
 
     def _detach_port(self, instance_uuid, port_id):
         self.api.detach_interface(instance_uuid, port_id)
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.interface_detach.end')
 
     def _attach_port(self, instance_uuid, port_id):
         self.api.attach_interface(
             instance_uuid,
             {'interfaceAttachment': {'port_id': port_id}})
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.interface_attach.end')
 
     def _test_detach_attach(self, first_port_id, second_port_id):

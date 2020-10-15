@@ -8284,8 +8284,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
     def setUp(self):
         super(ComputeManagerMigrationTestCase, self).setUp()
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.notifier = self.useFixture(fixtures.NotificationFixture(self))
         self.flags(compute_driver='fake.SameHostColdMigrateDriver')
         self.compute = manager.ComputeManager()
         self.context = context.RequestContext(fakes.FAKE_USER_ID,
@@ -10899,10 +10898,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # There would really be three notifications but because we mocked out
         # _send_prep_resize_notifications there is just the one error
         # notification from the wrap_exception decorator.
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
             'compute.%s' % fields.NotificationAction.EXCEPTION,
-            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+            self.notifier.versioned_notifications[0]['event_type'])
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocs_for_consumer')
@@ -10948,10 +10947,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # There would really be three notifications but because we mocked out
         # _send_prep_resize_notifications there is just the one error
         # notification from the wrap_exception decorator.
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
             'compute.%s' % fields.NotificationAction.EXCEPTION,
-            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+            self.notifier.versioned_notifications[0]['event_type'])
 
     def test_snapshot_for_resize(self):
         """Happy path test for _snapshot_for_resize."""
@@ -11139,10 +11138,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         add_fault.assert_called_once_with(
             self.context, self.instance, wrapped_exc, mock.ANY)
         # Assert wrap_exception is called.
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
             'compute.%s' % fields.NotificationAction.EXCEPTION,
-            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+            self.notifier.versioned_notifications[0]['event_type'])
         # Assert errors_out_migration is called.
         self.assertEqual('error', self.migration.status)
         self.migration.save.assert_called_once_with()
@@ -11174,10 +11173,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         add_fault.assert_called_once_with(
             self.context, self.instance, ex, mock.ANY)
         # Assert wrap_exception is called.
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
             'compute.%s' % fields.NotificationAction.EXCEPTION,
-            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+            self.notifier.versioned_notifications[0]['event_type'])
         # Assert errors_out_migration is called.
         self.assertEqual('error', self.migration.status)
         self.migration.save.assert_called_once_with()
@@ -11515,10 +11514,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertEqual('error', self.migration.status)
         self.migration.save.assert_called_once_with()
         # Assert wrap_exception is called.
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
             'compute.%s' % fields.NotificationAction.EXCEPTION,
-            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+            self.notifier.versioned_notifications[0]['event_type'])
 
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.compute.manager.ComputeManager.'
@@ -11553,10 +11552,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertEqual('error', self.migration.status)
         self.migration.save.assert_called_once_with()
         # Assert wrap_exception is called.
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
             'compute.%s' % fields.NotificationAction.EXCEPTION,
-            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+            self.notifier.versioned_notifications[0]['event_type'])
 
     @mock.patch('nova.objects.Instance.get_bdms')
     @mock.patch('nova.compute.manager.ComputeManager.'
@@ -11712,10 +11711,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertEqual('error', self.migration.status)
         self.migration.save.assert_called_once_with()
         # Assert wrap_exception is called.
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
             'compute.%s' % fields.NotificationAction.EXCEPTION,
-            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+            self.notifier.versioned_notifications[0]['event_type'])
         # clear_events_for_instance should not have been called.
         mock_clear_events.assert_not_called()
 
@@ -11847,10 +11846,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         mock_add_fault.assert_called_once_with(
             self.context, self.instance, error, test.MatchType(tuple))
         # wrap_exception should have sent an error notification.
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
             'compute.%s' % fields.NotificationAction.EXCEPTION,
-            fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+            self.notifier.versioned_notifications[0]['event_type'])
 
         # Now run it again but _finish_revert_snapshot_based_resize_at_source
         # will pass and _update_scheduler_instance_info will fail but not be

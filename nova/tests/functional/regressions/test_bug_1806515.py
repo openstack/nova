@@ -13,7 +13,6 @@
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 
 
 class ShowErrorServerWithTags(test.TestCase,
@@ -40,8 +39,6 @@ class ShowErrorServerWithTags(test.TestCase,
         self.image_id = self.api.get_images()[0]['id']
 
         self.api.microversion = 'latest'
-
-        self.addCleanup(fake_notifier.reset)
 
     def _create_error_server(self):
         server = self.api.post_server({

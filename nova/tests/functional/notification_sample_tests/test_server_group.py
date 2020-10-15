@@ -12,7 +12,6 @@
 from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
-from nova.tests.unit import fake_notifier
 
 
 class TestServerGroupNotificationSample(
@@ -31,20 +30,20 @@ class TestServerGroupNotificationSample(
         }
         group = self.api.post_server_groups(group_req)
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'server_group-create',
             replacements={'uuid': group['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])
 
-        fake_notifier.reset()
+        self.notifier.reset()
         self.api.delete_server_group(group['id'])
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'server_group-delete',
             replacements={'uuid': group['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])
 
     def test_server_group_add_member(self):
         group_req = {
@@ -53,7 +52,7 @@ class TestServerGroupNotificationSample(
             "rules": {"max_server_per_host": 3}
         }
         group = self.api.post_server_groups(group_req)
-        fake_notifier.reset()
+        self.notifier.reset()
 
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]},
@@ -66,9 +65,9 @@ class TestServerGroupNotificationSample(
         # 4: instance.create.end
         # 5: instance.update
         #    (Due to adding server tags in the '_boot_a_server' method.)
-        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(6, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'server_group-add_member',
             replacements={'uuid': group['id'],
                           'members': [server['id']]},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])

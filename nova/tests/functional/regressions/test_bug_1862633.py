@@ -16,7 +16,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 
 
 class UnshelveNeutronErrorTest(
@@ -34,8 +33,8 @@ class UnshelveNeutronErrorTest(
         self.api = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1')).admin_api
         self.api.microversion = 'latest'
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.notifier = self.useFixture(
+            nova_fixtures.NotificationFixture(self))
 
         self.start_service('conductor')
         self.start_service('scheduler')
@@ -73,7 +72,7 @@ class UnshelveNeutronErrorTest(
                 reason='test')
             req = {'unshelve': None}
             self.api.post_server_action(server['id'], req)
-            fake_notifier.wait_for_versioned_notifications(
+            self.notifier.wait_for_versioned_notifications(
                 'instance.unshelve.start')
             self._wait_for_server_parameter(
                 server,

@@ -43,6 +43,7 @@ from nova.objects import fields
 from nova import rpc
 from nova.scheduler.client import report
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_crypto
 from nova.tests.unit import fake_instance
@@ -360,8 +361,7 @@ class UsageInfoTestCase(test.TestCase):
 
         super(UsageInfoTestCase, self).setUp()
 
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.notifier = self.useFixture(fixtures.NotificationFixture(self))
 
         self.flags(compute_driver='fake.FakeDriver')
         self.compute = manager.ComputeManager()
@@ -417,8 +417,8 @@ class UsageInfoTestCase(test.TestCase):
 
         compute_utils.notify_usage_exists(
             rpc.get_notifier('compute'), self.context, instance, 'fake-host')
-        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
-        msg = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.versioned_notifications), 1)
+        msg = self.notifier.versioned_notifications[0]
         self.assertEqual(msg['priority'], 'INFO')
         self.assertEqual(msg['event_type'], 'instance.exists')
         payload = msg['payload']['nova_object.data']
@@ -493,8 +493,8 @@ class UsageInfoTestCase(test.TestCase):
             phase='start',
             bdms=bdms)
 
-        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.versioned_notifications), 1)
+        notification = self.notifier.versioned_notifications[0]
 
         self.assertEqual(notification['priority'], 'INFO')
         self.assertEqual(notification['event_type'], 'instance.delete.start')
@@ -539,8 +539,8 @@ class UsageInfoTestCase(test.TestCase):
             host='fake-compute',
             phase='start')
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
+        notification = self.notifier.versioned_notifications[0]
 
         self.assertEqual('INFO', notification['priority'])
         self.assertEqual('instance.create.start', notification['event_type'])
@@ -582,8 +582,8 @@ class UsageInfoTestCase(test.TestCase):
             host='fake-compute',
             phase='start')
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
+        notification = self.notifier.versioned_notifications[0]
 
         self.assertEqual('INFO', notification['priority'])
         self.assertEqual('instance.create.start', notification['event_type'])
@@ -621,8 +621,8 @@ class UsageInfoTestCase(test.TestCase):
             host='fake-compute',
             phase='start')
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
+        notification = self.notifier.versioned_notifications[0]
 
         self.assertEqual('INFO', notification['priority'])
         self.assertEqual('instance.create.start', notification['event_type'])
@@ -656,8 +656,8 @@ class UsageInfoTestCase(test.TestCase):
             fields.NotificationPhase.START,
             uuids.old_volume_id, uuids.new_volume_id)
 
-        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.versioned_notifications), 1)
+        notification = self.notifier.versioned_notifications[0]
 
         self.assertEqual('INFO', notification['priority'])
         self.assertEqual('instance.%s.%s' %
@@ -697,8 +697,8 @@ class UsageInfoTestCase(test.TestCase):
                 fields.NotificationPhase.ERROR,
                 uuids.old_volume_id, uuids.new_volume_id, ex)
 
-        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.versioned_notifications), 1)
+        notification = self.notifier.versioned_notifications[0]
 
         self.assertEqual('ERROR', notification['priority'])
         self.assertEqual('instance.%s.%s' %
@@ -748,8 +748,8 @@ class UsageInfoTestCase(test.TestCase):
             uuids.rescue_image_ref,
             phase='start')
 
-        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.versioned_notifications), 1)
+        notification = self.notifier.versioned_notifications[0]
 
         self.assertEqual(notification['priority'], 'INFO')
         self.assertEqual(notification['event_type'], 'instance.rescue.start')
@@ -781,8 +781,8 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_resize_prep_instance(
             self.context, instance, 'fake-compute', 'start', new_flavor)
 
-        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.versioned_notifications), 1)
+        notification = self.notifier.versioned_notifications[0]
 
         self.assertEqual(notification['priority'], 'INFO')
         self.assertEqual(notification['event_type'],
@@ -854,8 +854,8 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_volume_usage(self.context, vol_usage,
                                                 'fake-compute')
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
+        notification = self.notifier.versioned_notifications[0]
 
         self.assertEqual('INFO', notification['priority'])
         self.assertEqual('volume.usage', notification['event_type'])
@@ -1235,8 +1235,7 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
 class ServerGroupTestCase(test.TestCase):
     def setUp(self):
         super(ServerGroupTestCase, self).setUp()
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.notifier = self.useFixture(fixtures.NotificationFixture(self))
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
@@ -1253,8 +1252,8 @@ class ServerGroupTestCase(test.TestCase):
     def test_notify_about_server_group_action(self):
         compute_utils.notify_about_server_group_action(self.context,
                                                        self.group, 'create')
-        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.versioned_notifications), 1)
+        notification = self.notifier.versioned_notifications[0]
         expected = {'priority': 'INFO',
                     'event_type': u'server_group.create',
                     'publisher_id': u'nova-api:fake-mini',
@@ -1285,8 +1284,8 @@ class ServerGroupTestCase(test.TestCase):
             self.context, uuids.server_group)
         mock_get_by_uuid.assert_called_once_with(self.context,
                                                  uuids.server_group)
-        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(len(self.notifier.versioned_notifications), 1)
+        notification = self.notifier.versioned_notifications[0]
         expected = {'priority': 'INFO',
                     'event_type': u'server_group.add_member',
                     'publisher_id': u'nova-api:fake-mini',

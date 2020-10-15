@@ -91,8 +91,8 @@ class FailedEvacuateStateTests(test.TestCase,
             host=self.hostname, binary='nova-compute')[0]['id']
         self.api.put_service(compute_id, {'forced_down': 'true'})
 
-        fake_notifier.stub_notifier(self)
-        fake_notifier.reset()
+        self.notifier = self.useFixture(
+            nova_fixtures.NotificationFixture(self))
 
         # Initiate evacuation
         self._evacuate_server(

@@ -20,6 +20,7 @@ from .glance import GlanceFixture  # noqa: F401
 from .libvirt import LibvirtFixture  # noqa: F401
 from .libvirt_imagebackend import LibvirtImageBackendFixture  # noqa: F401
 from .neutron import NeutronFixture  # noqa: F401
+from .notifications import NotificationFixture  # noqa: F401
 from .nova import *  # noqa: F401, F403
 from .os_brick import OSBrickFixture  # noqa: F401
 from .policy import OverridePolicyFixture  # noqa: F401

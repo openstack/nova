@@ -32,7 +32,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 from nova.virt import driver as virt_driver
 
 
@@ -703,8 +702,6 @@ class TestProviderConfig(integrated_helpers.ProviderUsageBaseTestCase):
         self.api = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1')).admin_api
         self.api.microversion = 'latest'
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
         self.start_service('conductor')
         # start nova-compute that will not have the additional trait.
         self._start_compute("fake-host-1")

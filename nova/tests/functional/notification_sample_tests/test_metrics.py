@@ -16,7 +16,6 @@ import nova.conf
 from nova import context
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
-from nova.tests.unit import fake_notifier
 
 
 CONF = nova.conf.CONF
@@ -35,8 +34,8 @@ class TestMetricsNotificationSample(
         self.compute.manager.update_available_resource(
             context.get_admin_context())
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'metrics-update',
             replacements={'host_ip': CONF.my_ip},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])

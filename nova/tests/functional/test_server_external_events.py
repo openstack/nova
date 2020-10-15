@@ -14,7 +14,6 @@ from nova.compute import instance_actions
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 
 
 class ServerExternalEventsTestV276(
@@ -64,9 +63,9 @@ class ServerExternalEventsTestV276(
         self.assertIn('compute_power_update', events_by_name)
         self.assertEqual('Success', detail['events'][0]['result'])
         # Test if notifications were emitted.
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.power_off.start')
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.power_off.end')
 
         # Checking POWER_ON
@@ -90,7 +89,7 @@ class ServerExternalEventsTestV276(
         self.assertIn('compute_power_update', events_by_name)
         self.assertEqual('Success', detail['events'][0]['result'])
         # Test if notifications were emitted.
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.power_on.start')
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.power_on.end')

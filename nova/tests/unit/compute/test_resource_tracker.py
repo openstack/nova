@@ -39,6 +39,7 @@ from nova.objects import pci_device
 from nova.pci import manager as pci_manager
 from nova.scheduler.client import report
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
@@ -3796,8 +3797,7 @@ class ComputeMonitorTestCase(BaseTestCase):
 
     @mock.patch('nova.compute.utils.notify_about_metrics_update')
     def test_get_host_metrics(self, mock_notify):
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.useFixture(fixtures.NotificationFixture(self))
 
         class FakeCPUMonitor(monitor_base.MonitorBase):
 

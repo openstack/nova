@@ -11,7 +11,6 @@
 #    under the License.
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
-from nova.tests.unit import fake_notifier
 
 
 class TestAggregateNotificationSample(
@@ -28,34 +27,34 @@ class TestAggregateNotificationSample(
                 "availability_zone": "nova"}}
         aggregate = self.admin_api.post_aggregate(aggregate_req)
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'aggregate-create-start',
             replacements={
                 'uuid': aggregate['uuid']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])
         self._verify_notification(
             'aggregate-create-end',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=self.notifier.versioned_notifications[1])
 
         self.admin_api.delete_aggregate(aggregate['id'])
 
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'aggregate-delete-start',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=self.notifier.versioned_notifications[2])
         self._verify_notification(
             'aggregate-delete-end',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            actual=self.notifier.versioned_notifications[3])
 
     def test_aggregate_add_remove_host(self):
         aggregate_req = {
@@ -64,7 +63,7 @@ class TestAggregateNotificationSample(
                 "availability_zone": "nova"}}
         aggregate = self.admin_api.post_aggregate(aggregate_req)
 
-        fake_notifier.reset()
+        self.notifier.reset()
 
         add_host_req = {
             "add_host": {
@@ -73,19 +72,19 @@ class TestAggregateNotificationSample(
         }
         self.admin_api.post_aggregate_action(aggregate['id'], add_host_req)
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'aggregate-add_host-start',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])
         self._verify_notification(
             'aggregate-add_host-end',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=self.notifier.versioned_notifications[1])
 
         remove_host_req = {
             "remove_host": {
@@ -94,19 +93,19 @@ class TestAggregateNotificationSample(
         }
         self.admin_api.post_aggregate_action(aggregate['id'], remove_host_req)
 
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'aggregate-remove_host-start',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=self.notifier.versioned_notifications[2])
         self._verify_notification(
             'aggregate-remove_host-end',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            actual=self.notifier.versioned_notifications[3])
 
         self.admin_api.delete_aggregate(aggregate['id'])
 
@@ -124,22 +123,22 @@ class TestAggregateNotificationSample(
                 }
             }
         }
-        fake_notifier.reset()
+        self.notifier.reset()
         self.admin_api.post_aggregate_action(aggregate['id'], set_metadata_req)
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'aggregate-update_metadata-start',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])
         self._verify_notification(
             'aggregate-update_metadata-end',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=self.notifier.versioned_notifications[1])
 
     def test_aggregate_updateprops(self):
         aggregate_req = {
@@ -157,19 +156,19 @@ class TestAggregateNotificationSample(
         # 1. aggregate-create-end
         # 2. aggregate-update_prop-start
         # 3. aggregate-update_prop-end
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'aggregate-update_prop-start',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=self.notifier.versioned_notifications[2])
         self._verify_notification(
             'aggregate-update_prop-end',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-                actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+                actual=self.notifier.versioned_notifications[3])
 
     def test_aggregate_cache_images(self):
         aggregate_req = {
@@ -184,7 +183,7 @@ class TestAggregateNotificationSample(
         }
         self.admin_api.post_aggregate_action(aggregate['id'], add_host_req)
 
-        fake_notifier.reset()
+        self.notifier.reset()
 
         cache_images_req = {
             'cache': [
@@ -195,26 +194,26 @@ class TestAggregateNotificationSample(
                                 cache_images_req)
         # Since the operation is asynchronous we have to wait for the end
         # notification.
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'aggregate.cache_images.end')
 
-        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
-                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        self.assertEqual(3, len(self.notifier.versioned_notifications),
+                         self.notifier.versioned_notifications)
         self._verify_notification(
             'aggregate-cache_images-start',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])
         self._verify_notification(
             'aggregate-cache_images-progress',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=self.notifier.versioned_notifications[1])
         self._verify_notification(
             'aggregate-cache_images-end',
             replacements={
                 'uuid': aggregate['uuid'],
                 'id': aggregate['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=self.notifier.versioned_notifications[2])

@@ -138,8 +138,7 @@ class _BaseTestCase(object):
         self.project_id = fakes.FAKE_PROJECT_ID
         self.context = FakeContext(self.user_id, self.project_id)
 
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.useFixture(fixtures.NotificationFixture(self))
 
         self.stub_out('nova.rpc.RequestContextSerializer.deserialize_context',
                       lambda *args, **kwargs: self.context)

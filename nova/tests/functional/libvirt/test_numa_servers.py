@@ -27,7 +27,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
-from nova.tests.unit import fake_notifier
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -1251,9 +1250,6 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
         # save references to first two images for server create and rebuild
         self.image_ref_0 = images[0]['id']
         self.image_ref_1 = images[1]['id']
-
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
 
     def _create_active_server(self, server_args=None):
         basic_server = {

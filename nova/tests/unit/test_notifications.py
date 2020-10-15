@@ -32,6 +32,7 @@ from nova.notifications import base as notifications
 from nova import objects
 from nova.objects import base as obj_base
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 
@@ -46,8 +47,7 @@ class NotificationsTestCase(test.TestCase):
         self.fixture = self.useFixture(o_fixture.ClearRequestContext())
 
         self.net_info = fake_network.fake_get_instance_nw_info(self)
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.notifier = self.useFixture(fixtures.NotificationFixture(self))
 
         self.flags(host='testhost')
         self.flags(notify_on_state_change="vm_and_task_state",
@@ -106,7 +106,7 @@ class NotificationsTestCase(test.TestCase):
 
         notifications.send_update(self.context, old, self.instance)
         self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.versioned_notifications))
 
     def test_task_notif(self):
 
@@ -127,7 +127,7 @@ class NotificationsTestCase(test.TestCase):
                 verify_states=True)
 
         self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.versioned_notifications))
 
         # ok now enable task state notifications and re-try
         self.flags(notify_on_state_change="vm_and_task_state",
@@ -135,11 +135,11 @@ class NotificationsTestCase(test.TestCase):
 
         notifications.send_update(self.context, old, self.instance)
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         self.assertEqual(
                 'instance.update',
-                fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+                self.notifier.versioned_notifications[0]['event_type'])
 
     def test_send_no_notif(self):
 
@@ -154,7 +154,7 @@ class NotificationsTestCase(test.TestCase):
                 service="compute", host=None, verify_states=True)
 
         self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.versioned_notifications))
 
     def test_send_on_vm_change(self):
         old = obj_base.obj_to_primitive(self.instance)
@@ -168,13 +168,13 @@ class NotificationsTestCase(test.TestCase):
         notif = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual('compute.testhost', notif.publisher_id)
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
                 'nova-compute:testhost',
-                fake_notifier.VERSIONED_NOTIFICATIONS[0]['publisher_id'])
+                self.notifier.versioned_notifications[0]['publisher_id'])
         self.assertEqual(
                 'instance.update',
-                fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+                self.notifier.versioned_notifications[0]['event_type'])
 
     def test_send_on_task_change(self):
 
@@ -185,10 +185,10 @@ class NotificationsTestCase(test.TestCase):
         notifications.send_update(self.context, old, self.instance)
 
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
                 'instance.update',
-                fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+                self.notifier.versioned_notifications[0]['event_type'])
 
     def test_no_update_with_states(self):
 
@@ -196,7 +196,7 @@ class NotificationsTestCase(test.TestCase):
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
                 task_states.SPAWNING, verify_states=True)
         self.assertEqual(0, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(0, len(self.notifier.versioned_notifications))
 
     def test_vm_update_with_states(self):
         fake_net_info = fake_network.fake_get_instance_nw_info(self)
@@ -211,10 +211,10 @@ class NotificationsTestCase(test.TestCase):
     def _verify_notification(self, expected_state=vm_states.ACTIVE,
                              expected_new_task_state=task_states.SPAWNING):
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self.assertEqual(
                 'instance.update',
-                fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type'])
+                self.notifier.versioned_notifications[0]['event_type'])
         access_ip_v4 = str(self.instance.access_ip_v4)
         access_ip_v6 = str(self.instance.access_ip_v6)
         display_name = self.instance.display_name
@@ -235,7 +235,7 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual("2017-02-02T16:45:00.000000",
                          payload["audit_period_ending"])
 
-        payload = fake_notifier.VERSIONED_NOTIFICATIONS[0][
+        payload = self.notifier.versioned_notifications[0][
             'payload']['nova_object.data']
         state_update = payload['state_update']['nova_object.data']
         self.assertEqual(vm_states.BUILDING, state_update['old_state'])
@@ -284,14 +284,14 @@ class NotificationsTestCase(test.TestCase):
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
                 None)
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         # service name should default to 'compute'
         notif = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual('compute.testhost', notif.publisher_id)
 
         # in the versioned notification it defaults to nova-compute
-        notif = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        notif = self.notifier.versioned_notifications[0]
         self.assertEqual('nova-compute:testhost', notif['publisher_id'])
 
     def test_update_with_service_name(self):
@@ -299,13 +299,13 @@ class NotificationsTestCase(test.TestCase):
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
                 None, service="nova-compute")
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         # service name should default to 'compute'
         notif = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual('nova-compute.testhost', notif.publisher_id)
 
-        notif = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        notif = self.notifier.versioned_notifications[0]
         self.assertEqual('nova-compute:testhost', notif['publisher_id'])
 
     def test_update_with_host_name(self):
@@ -313,13 +313,13 @@ class NotificationsTestCase(test.TestCase):
                 vm_states.BUILDING, vm_states.BUILDING, task_states.SPAWNING,
                 None, host="someotherhost")
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         # service name should default to 'compute'
         notif = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual('compute.someotherhost', notif.publisher_id)
 
-        notif = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        notif = self.notifier.versioned_notifications[0]
         self.assertEqual('nova-compute:someotherhost', notif['publisher_id'])
 
     def test_payload_has_fixed_ip_labels(self):
@@ -411,14 +411,14 @@ class NotificationsTestCase(test.TestCase):
         new_name_inst = self._wrapped_create(params=param)
         notifications.send_update(self.context, self.instance, new_name_inst)
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         old_display_name = self.instance.display_name
         new_display_name = new_name_inst.display_name
 
         for payload in [
             fake_notifier.NOTIFICATIONS[0].payload,
-            fake_notifier.VERSIONED_NOTIFICATIONS[0][
+            self.notifier.versioned_notifications[0][
                 'payload']['nova_object.data']]:
 
             self.assertEqual(payload["old_display_name"], old_display_name)
@@ -428,24 +428,24 @@ class NotificationsTestCase(test.TestCase):
         objects.TagList.create(self.context,
                                self.instance.uuid, [u'tag1', u'tag2'])
         notifications.send_update(self.context, self.instance, self.instance)
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         self.assertEqual([u'tag1', u'tag2'],
-                         fake_notifier.VERSIONED_NOTIFICATIONS[0]
+                         self.notifier.versioned_notifications[0]
                          ['payload']['nova_object.data']['tags'])
 
     def test_send_versioned_action_initiator_update(self):
         notifications.send_update(self.context, self.instance, self.instance)
         action_initiator_user = self.context.user_id
         action_initiator_project = self.context.project_id
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
 
         self.assertEqual(action_initiator_user,
-                         fake_notifier.VERSIONED_NOTIFICATIONS[0]
+                         self.notifier.versioned_notifications[0]
                          ['payload']['nova_object.data']
                          ['action_initiator_user'])
         self.assertEqual(action_initiator_project,
-                         fake_notifier.VERSIONED_NOTIFICATIONS[0]
+                         self.notifier.versioned_notifications[0]
                          ['payload']['nova_object.data']
                          ['action_initiator_project'])
 

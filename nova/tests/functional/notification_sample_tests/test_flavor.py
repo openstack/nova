@@ -12,7 +12,6 @@
 
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
-from nova.tests.unit import fake_notifier
 
 
 class TestFlavorNotificationSample(
@@ -48,7 +47,7 @@ class TestFlavorNotificationSample(
         self.admin_api.api_delete(
             'flavors/a22d5517-147c-4147-a0d1-e698df5cd4e3')
         self._verify_notification(
-            'flavor-delete', actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            'flavor-delete', actual=self.notifier.versioned_notifications[1])
 
     def test_flavor_update(self):
         body = {
@@ -84,7 +83,7 @@ class TestFlavorNotificationSample(
             body)
 
         self._verify_notification(
-            'flavor-update', actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            'flavor-update', actual=self.notifier.versioned_notifications[2])
 
 
 class TestFlavorNotificationSamplev2_55(
@@ -110,11 +109,11 @@ class TestFlavorNotificationSamplev2_55(
         flavor = self.admin_api.api_post('flavors', body).body['flavor']
         # Check the notification; should be the same as the sample where there
         # is no description set.
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'flavor-create',
             replacements={'is_public': False},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])
 
         # Update and set the flavor description.
         self.admin_api.api_put(
@@ -122,10 +121,10 @@ class TestFlavorNotificationSamplev2_55(
             {'flavor': {'description': 'test description'}}).body['flavor']
 
         # Assert the notifications, one for create and one for update.
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'flavor-update',
             replacements={'description': 'test description',
                           'extra_specs': {},
                           'projects': []},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=self.notifier.versioned_notifications[1])
