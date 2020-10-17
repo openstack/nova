@@ -1124,8 +1124,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         i_meta = instance_metadata.InstanceMetadata(instance,
             content=files, extra_md=extra_md, network_info=network_info,
-            network_metadata=self._get_network_metadata(node, network_info),
-            request_context=context)
+            network_metadata=self._get_network_metadata(node, network_info))
 
         with tempfile.NamedTemporaryFile() as uncompressed:
             with configdrive.ConfigDriveBuilder(instance_md=i_meta) as cdb:

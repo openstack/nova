@@ -90,8 +90,7 @@ def _create_config_drive(context, instance_path, instance,
     inst_md = instance_metadata.InstanceMetadata(instance,
                                                  content=injected_files,
                                                  extra_md=extra_md,
-                                                 network_info=network_info,
-                                                 request_context=context)
+                                                 network_info=network_info)
 
     configdrive_iso = os.path.join(instance_path, 'cfgdrive.iso')
     LOG.debug('Creating config drive at %s', configdrive_iso,

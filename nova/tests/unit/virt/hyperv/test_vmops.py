@@ -986,8 +986,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock_InstanceMetadata.assert_called_once_with(
                 mock_instance, content=[mock.sentinel.FILE],
                 extra_md={'admin_pass': mock.sentinel.PASSWORD},
-                network_info=mock.sentinel.NET_INFO,
-                request_context=self.context)
+                network_info=mock.sentinel.NET_INFO)
             mock_get_configdrive_path.assert_has_calls(
                 expected_get_configdrive_path_calls)
             mock_ConfigDriveBuilder.assert_called_with(

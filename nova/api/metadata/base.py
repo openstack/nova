@@ -112,8 +112,7 @@ class InstanceMetadata(object):
     """Instance metadata."""
 
     def __init__(self, instance, address=None, content=None, extra_md=None,
-                 network_info=None, network_metadata=None,
-                 request_context=None):
+                 network_info=None, network_metadata=None):
         """Creation of this object should basically cover all time consuming
         collection.  Methods after that should not cause time delays due to
         network operations or lengthy cpu operations.
@@ -207,12 +206,9 @@ class InstanceMetadata(object):
         # contain the admin password for the instance, and we shouldn't
         # pass that to external services.
         self.vendordata_providers = {
-            'StaticJSON': vendordata_json.JsonFileVendorData(
-                instance=instance, address=address,
-                extra_md=extra_md, network_info=network_info),
+            'StaticJSON': vendordata_json.JsonFileVendorData(),
             'DynamicJSON': vendordata_dynamic.DynamicVendorData(
-                instance=instance, address=address,
-                network_info=network_info, context=request_context)
+                instance=instance)
         }
 
     def _route_configuration(self):

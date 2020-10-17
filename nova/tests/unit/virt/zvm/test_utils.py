@@ -124,8 +124,7 @@ class TestZVMUtils(test.NoDBTestCase):
         mock_instance_metadata.assert_called_once_with('instance',
                                                 content='injected_files',
                                                 extra_md=extra_md,
-                                                network_info='network_info',
-                                                request_context='context')
+                                                network_info='network_info')
         make_drive.assert_called_once_with('/instance_path/cfgdrive.iso')
 
     def test_create_config_drive_invalid_format(self):

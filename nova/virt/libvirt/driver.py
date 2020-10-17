@@ -4245,8 +4245,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 inst_md = instance_metadata.InstanceMetadata(
                     instance, content=injection_info.files, extra_md=extra_md,
-                    network_info=injection_info.network_info,
-                    request_context=context)
+                    network_info=injection_info.network_info)
 
                 cdb = configdrive.ConfigDriveBuilder(instance_md=inst_md)
                 with cdb:
