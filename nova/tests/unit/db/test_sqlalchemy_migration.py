@@ -25,7 +25,6 @@ import sqlalchemy
 from nova import context
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import migration
-from nova.db.sqlalchemy import models
 from nova import exception
 from nova import objects
 from nova import test
@@ -232,55 +231,6 @@ class TestGetEngine(test.NoDBTestCase):
             engine = migration.get_engine('api')
             self.assertEqual('api_engine', engine)
             mock_get_engine.assert_called_once_with()
-
-
-class TestNewtonCheck(test.TestCase):
-    def setUp(self):
-        super(TestNewtonCheck, self).setUp()
-        self.useFixture(nova_fixtures.Database(version=329))
-        self.context = context.get_admin_context()
-        self.migration = importlib.import_module(
-            'nova.db.sqlalchemy.migrate_repo.versions.'
-            '330_enforce_mitaka_online_migrations')
-        self.engine = db_api.get_engine()
-
-    def setup_pci_device(self, dev_type):
-        # NOTE(jaypipes): We cannot use db_api.pci_device_update() here because
-        # newer models of PciDevice contain fields (uuid) that are not present
-        # in the older Newton DB schema and pci_device_update() uses the
-        # SQLAlchemy ORM model_query().update() form which will produce an
-        # UPDATE SQL statement that contains those new fields, resulting in an
-        # OperationalError about table pci_devices has no such column uuid.
-        engine = db_api.get_engine()
-        tbl = models.PciDevice.__table__
-        with engine.connect() as conn:
-            ins_stmt = tbl.insert().values(
-                address='foo:bar',
-                compute_node_id=1,
-                parent_addr=None,
-                vendor_id='123',
-                product_id='456',
-                dev_type=dev_type,
-                label='foobar',
-                status='whatisthis?',
-            )
-            conn.execute(ins_stmt)
-
-    def test_pci_device_type_vf_not_migrated(self):
-        self.setup_pci_device('type-VF')
-        # type-VF devices should have a parent_addr
-        self.assertRaises(exception.ValidationError,
-                          self.migration.upgrade, self.engine)
-
-    def test_pci_device_type_pf_not_migrated(self):
-        self.setup_pci_device('type-PF')
-        # blocker should not block on type-PF devices
-        self.migration.upgrade(self.engine)
-
-    def test_pci_device_type_pci_not_migrated(self):
-        self.setup_pci_device('type-PCI')
-        # blocker should not block on type-PCI devices
-        self.migration.upgrade(self.engine)
 
 
 class TestOcataCheck(test.TestCase):
