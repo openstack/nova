@@ -163,7 +163,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.INIT_VERSION + 1,
         ]
 
-        newton_placeholders = list(range(335, 345))
         ocata_placeholders = list(range(348, 358))
         pike_placeholders = list(range(363, 373))
         queens_placeholders = list(range(379, 389))
@@ -176,7 +175,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         victoria_placeholders = list(range(413, 418))
 
         return (special +
-                newton_placeholders +
                 ocata_placeholders +
                 pike_placeholders +
                 queens_placeholders +
@@ -200,11 +198,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         exceptions = [
             # The base migration can do whatever it likes
             self.INIT_VERSION + 1,
-
-            # 346 Drops column scheduled_at from instances table since it
-            # is no longer used. The field value is always NULL so
-            # it does not affect anything.
-            346,
         ]
         # Reviewers: DO NOT ALLOW THINGS TO BE ADDED HERE
 
@@ -242,22 +235,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_345(self, engine, data):
-        # NOTE(danms): Just a sanity-check migration
-        pass
-
-    def _check_346(self, engine, data):
-        self.assertColumnNotExists(engine, 'instances', 'scheduled_at')
-        self.assertColumnNotExists(engine, 'shadow_instances', 'scheduled_at')
-
-    def _check_347(self, engine, data):
-        self.assertIndexMembers(engine, 'instances',
-                                'instances_project_id_idx',
-                                ['project_id'])
-        self.assertIndexMembers(engine, 'instances',
-                                'instances_updated_at_project_id_idx',
-                                ['updated_at', 'project_id'])
 
     def _check_358(self, engine, data):
         self.assertColumnExists(engine, 'block_device_mapping',

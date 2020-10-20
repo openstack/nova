@@ -633,7 +633,6 @@ def upgrade(migrate_engine):
         Column('host', String(length=255)),
         Column('user_data', MediumText()),
         Column('reservation_id', String(length=255)),
-        Column('scheduled_at', DateTime),
         Column('launched_at', DateTime),
         Column('terminated_at', DateTime),
         Column('display_name', String(length=255)),
@@ -1334,6 +1333,9 @@ def upgrade(migrate_engine):
               instances.c.project_id, instances.c.deleted),
         Index('instances_deleted_created_at_idx',
               instances.c.deleted, instances.c.created_at),
+        Index('instances_project_id_idx', instances.c.project_id),
+        Index('instances_updated_at_project_id_idx',
+              instances.c.updated_at, instances.c.project_id),
 
         # instance_actions
         Index('instance_uuid_idx', instance_actions.c.instance_uuid),
