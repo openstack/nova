@@ -163,11 +163,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def _skippable_migrations(self):
         special = [
-            234,  # Icehouse
+            254,  # Juno
             272,  # NOOP migration due to revert
         ]
 
-        icehouse_placeholders = list(range(235, 244))
         juno_placeholders = list(range(255, 265))
         kilo_placeholders = list(range(281, 291))
         liberty_placeholders = list(range(303, 313))
@@ -185,7 +184,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         victoria_placeholders = list(range(413, 418))
 
         return (special +
-                icehouse_placeholders +
                 juno_placeholders +
                 kilo_placeholders +
                 liberty_placeholders +
@@ -249,106 +247,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_244(self, engine, data):
-        volume_usage_cache = oslodbutils.get_table(
-            engine, 'volume_usage_cache')
-        self.assertEqual(64, volume_usage_cache.c.user_id.type.length)
-
-    def _pre_upgrade_245(self, engine):
-        # create a fake network
-        networks = oslodbutils.get_table(engine, 'networks')
-        fake_network = {'id': 1}
-        networks.insert().execute(fake_network)
-
-    def _check_245(self, engine, data):
-        networks = oslodbutils.get_table(engine, 'networks')
-        network = networks.select(networks.c.id == 1).execute().first()
-        # mtu should default to None
-        self.assertIsNone(network.mtu)
-        # dhcp_server should default to None
-        self.assertIsNone(network.dhcp_server)
-        # enable dhcp should default to true
-        self.assertTrue(network.enable_dhcp)
-        # share address should default to false
-        self.assertFalse(network.share_address)
-
-    def _check_246(self, engine, data):
-        pci_devices = oslodbutils.get_table(engine, 'pci_devices')
-        self.assertEqual(1, len([fk for fk in pci_devices.foreign_keys
-                                 if fk.parent.name == 'compute_node_id']))
-
-    def _check_247(self, engine, data):
-        quota_usages = oslodbutils.get_table(engine, 'quota_usages')
-        self.assertFalse(quota_usages.c.resource.nullable)
-
-        pci_devices = oslodbutils.get_table(engine, 'pci_devices')
-        self.assertTrue(pci_devices.c.deleted.nullable)
-        self.assertFalse(pci_devices.c.product_id.nullable)
-        self.assertFalse(pci_devices.c.vendor_id.nullable)
-        self.assertFalse(pci_devices.c.dev_type.nullable)
-
-    def _check_248(self, engine, data):
-        self.assertIndexMembers(engine, 'reservations',
-                                'reservations_deleted_expire_idx',
-                                ['deleted', 'expire'])
-
-    def _check_249(self, engine, data):
-        # Assert that only one index exists that covers columns
-        # instance_uuid and device_name
-        bdm = oslodbutils.get_table(engine, 'block_device_mapping')
-        self.assertEqual(1, len([i for i in bdm.indexes
-                                 if [c.name for c in i.columns] ==
-                                    ['instance_uuid', 'device_name']]))
-
-    def _check_250(self, engine, data):
-        self.assertTableNotExists(engine, 'instance_group_metadata')
-        self.assertTableNotExists(engine, 'shadow_instance_group_metadata')
-
-    def _check_251(self, engine, data):
-        self.assertColumnExists(engine, 'compute_nodes', 'numa_topology')
-        self.assertColumnExists(engine, 'shadow_compute_nodes',
-                                'numa_topology')
-
-        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
-        shadow_compute_nodes = oslodbutils.get_table(engine,
-                                                     'shadow_compute_nodes')
-        self.assertIsInstance(compute_nodes.c.numa_topology.type,
-                              sqlalchemy.types.Text)
-        self.assertIsInstance(shadow_compute_nodes.c.numa_topology.type,
-                              sqlalchemy.types.Text)
-
-    def _check_252(self, engine, data):
-        oslodbutils.get_table(engine, 'instance_extra')
-        oslodbutils.get_table(engine, 'shadow_instance_extra')
-        self.assertIndexMembers(engine, 'instance_extra',
-                                'instance_extra_idx',
-                                ['instance_uuid'])
-
-    def _check_253(self, engine, data):
-        self.assertColumnExists(engine, 'instance_extra', 'pci_requests')
-        self.assertColumnExists(
-            engine, 'shadow_instance_extra', 'pci_requests')
-        instance_extra = oslodbutils.get_table(engine, 'instance_extra')
-        shadow_instance_extra = oslodbutils.get_table(engine,
-                                                      'shadow_instance_extra')
-        self.assertIsInstance(instance_extra.c.pci_requests.type,
-                              sqlalchemy.types.Text)
-        self.assertIsInstance(shadow_instance_extra.c.pci_requests.type,
-                              sqlalchemy.types.Text)
-
-    def _check_254(self, engine, data):
-        self.assertColumnExists(engine, 'pci_devices', 'request_id')
-        self.assertColumnExists(
-            engine, 'shadow_pci_devices', 'request_id')
-
-        pci_devices = oslodbutils.get_table(engine, 'pci_devices')
-        shadow_pci_devices = oslodbutils.get_table(
-            engine, 'shadow_pci_devices')
-        self.assertIsInstance(pci_devices.c.request_id.type,
-                              sqlalchemy.types.String)
-        self.assertIsInstance(shadow_pci_devices.c.request_id.type,
-                              sqlalchemy.types.String)
 
     def _check_265(self, engine, data):
         # Assert that only one index exists that covers columns
