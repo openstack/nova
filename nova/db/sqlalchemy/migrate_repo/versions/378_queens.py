@@ -235,6 +235,8 @@ def upgrade(migrate_engine):
         Column('image_id', String(length=36), nullable=True),
         Column('tag', String(255)),
         Column('attachment_id', String(36), nullable=True),
+        Column('uuid', String(36), nullable=True),
+        UniqueConstraint('uuid', name='uniq_block_device_mapping0uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -344,9 +346,13 @@ def upgrade(migrate_engine):
         Column('internal_access_path', String(255)),
         Column('instance_uuid', String(36), nullable=False),
         Column('expires', Integer, nullable=False),
+        Column('access_url_base', String(255), nullable=True),
         Index('console_auth_tokens_instance_uuid_idx', 'instance_uuid'),
         Index('console_auth_tokens_host_expires_idx', 'host', 'expires'),
         Index('console_auth_tokens_token_hash_idx', 'token_hash'),
+        Index(
+            'console_auth_tokens_token_hash_instance_uuid_idx',
+            'token_hash', 'instance_uuid'),
         UniqueConstraint(
             'token_hash', name='uniq_console_auth_tokens0token_hash'),
         mysql_engine='InnoDB',
@@ -802,6 +808,8 @@ def upgrade(migrate_engine):
         Column('disk_total', BigInteger, nullable=True),
         Column('disk_processed', BigInteger, nullable=True),
         Column('disk_remaining', BigInteger, nullable=True),
+        Column('uuid', String(36)),
+        Index('migrations_uuid', 'uuid', unique=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -1346,6 +1354,9 @@ def upgrade(migrate_engine):
         # instance_actions
         Index('instance_uuid_idx', instance_actions.c.instance_uuid),
         Index('request_id_idx', instance_actions.c.request_id),
+        Index(
+            'instance_actions_instance_uuid_updated_at_idx',
+            instance_actions.c.instance_uuid, instance_actions.c.updated_at),
 
         # instance_extra
         Index('instance_extra_idx', instance_extra.c.instance_uuid),
@@ -1379,6 +1390,7 @@ def upgrade(migrate_engine):
         Index('migrations_instance_uuid_and_status_idx',
               migrations.c.deleted, migrations.c.instance_uuid,
               migrations.c.status),
+        Index('migrations_updated_at_idx', migrations.c.updated_at),
 
         # networks
         Index('networks_host_idx', networks.c.host),
@@ -1621,8 +1633,8 @@ def upgrade(migrate_engine):
     # 252_add_instance_extra_table; we don't create indexes for shadow tables
     # in general and these should be removed
 
-    shadow_table = Table('shadow_instance_extra', meta, autoload=True)
-    idx = Index('shadow_instance_extra_idx', shadow_table.c.instance_uuid)
+    table = Table('shadow_instance_extra', meta, autoload=True)
+    idx = Index('shadow_instance_extra_idx', table.c.instance_uuid)
     idx.create(migrate_engine)
 
     # 280_add_nullable_false_to_keypairs_name; this should apply to the shadow
@@ -1643,6 +1655,7 @@ def upgrade(migrate_engine):
 
     # 298_mysql_extra_specs_binary_collation; we should update the shadow table
     # also
+
     if migrate_engine.name == 'mysql':
         # Use binary collation for extra specs table
         migrate_engine.execute(
@@ -1650,3 +1663,9 @@ def upgrade(migrate_engine):
             'CONVERT TO CHARACTER SET utf8 '
             'COLLATE utf8_bin'
         )
+
+    # 373_migration_uuid; we should't create indexes for shadow tables
+
+    table = Table('shadow_migrations', meta, autoload=True)
+    idx = Index('shadow_migrations_uuid', table.c.uuid, unique=True)
+    idx.create(migrate_engine)
