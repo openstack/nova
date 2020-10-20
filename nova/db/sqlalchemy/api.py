@@ -49,6 +49,7 @@ from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
 from sqlalchemy.orm import joinedload_all
 from sqlalchemy.orm import noload
+from sqlalchemy.orm import subqueryload
 from sqlalchemy.orm import undefer
 from sqlalchemy.schema import Table
 from sqlalchemy import sql
@@ -1930,13 +1931,27 @@ def _build_instance_get(context, columns_to_join=None):
             continue
         if 'extra.' in column:
             query = query.options(undefer(column))
+        elif column in ['metadata', 'system_metadata']:
+            # NOTE(melwitt): We use subqueryload() instead of joinedload() for
+            # metadata and system_metadata because of the one-to-many
+            # relationship of the data. Directly joining these columns can
+            # result in a large number of additional rows being queried if an
+            # instance has a large number of (system_)metadata items, resulting
+            # in a large data transfer. Instead, the subqueryload() will
+            # perform additional queries to obtain metadata and system_metadata
+            # for the instance.
+            query = query.options(subqueryload(column))
         else:
             query = query.options(joinedload(column))
     # NOTE(alaski) Stop lazy loading of columns not needed.
     for col in ['metadata', 'system_metadata']:
         if col not in columns_to_join:
             query = query.options(noload(col))
-    return query
+    # NOTE(melwitt): We need to use order_by(<unique column>) so that the
+    # additional queries emitted by subqueryload() include the same ordering as
+    # used by the parent query.
+    # https://docs.sqlalchemy.org/en/13/orm/loading_relationships.html#the-importance-of-ordering
+    return query.order_by(models.Instance.id)
 
 
 def _instances_fill_metadata(context, instances, manual_joins=None):

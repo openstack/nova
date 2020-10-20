@@ -1943,6 +1943,14 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             sys_meta = utils.metadata_to_dict(inst['system_metadata'])
             self.assertEqual(sys_meta, self.sample_data['system_metadata'])
 
+    def test_instance_get_with_meta(self):
+        inst_id = self.create_instance_with_args().id
+        inst = db.instance_get(self.ctxt, inst_id)
+        meta = utils.metadata_to_dict(inst['metadata'])
+        self.assertEqual(meta, self.sample_data['metadata'])
+        sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+        self.assertEqual(sys_meta, self.sample_data['system_metadata'])
+
     def test_instance_update(self):
         instance = self.create_instance_with_args()
         metadata = {'host': 'bar', 'key2': 'wuff'}
