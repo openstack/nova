@@ -163,7 +163,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.INIT_VERSION + 1,
         ]
 
-        ocata_placeholders = list(range(348, 358))
         pike_placeholders = list(range(363, 373))
         queens_placeholders = list(range(379, 389))
         # We forgot to add the rocky placeholder. We've also switched to 5
@@ -175,7 +174,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         victoria_placeholders = list(range(413, 418))
 
         return (special +
-                ocata_placeholders +
                 pike_placeholders +
                 queens_placeholders +
                 stein_placeholders +
@@ -235,26 +233,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_358(self, engine, data):
-        self.assertColumnExists(engine, 'block_device_mapping',
-                                'attachment_id')
-
-    def _check_359(self, engine, data):
-        self.assertColumnExists(engine, 'services', 'uuid')
-        self.assertIndexMembers(engine, 'services', 'services_uuid_idx',
-                                ['uuid'])
-
-    def _check_360(self, engine, data):
-        self.assertColumnExists(engine, 'compute_nodes', 'mapped')
-        self.assertColumnExists(engine, 'shadow_compute_nodes', 'mapped')
-
-    def _check_361(self, engine, data):
-        self.assertIndexMembers(engine, 'compute_nodes',
-                                'compute_nodes_uuid_idx', ['uuid'])
-
-    def _check_362(self, engine, data):
-        self.assertColumnExists(engine, 'pci_devices', 'uuid')
 
     def _check_373(self, engine, data):
         self.assertColumnExists(engine, 'migrations', 'uuid')
