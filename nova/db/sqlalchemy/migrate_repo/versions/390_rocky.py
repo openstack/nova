@@ -730,6 +730,7 @@ def upgrade(migrate_engine):
         Column('migration_context', Text, nullable=True),
         Column('keypairs', Text, nullable=True),
         Column('device_metadata', Text, nullable=True),
+        Column('trusted_certs', Text, nullable=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -1257,6 +1258,7 @@ def upgrade(migrate_engine):
 
         # aggregate_metadata
         Index('aggregate_metadata_key_idx', aggregate_metadata.c.key),
+        Index('aggregate_metadata_value_idx', aggregate_metadata.c.value),
 
         # agent_builds
         Index('agent_builds_hypervisor_os_arch_idx',
