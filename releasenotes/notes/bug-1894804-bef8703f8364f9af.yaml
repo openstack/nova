@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    `bug 1882521`_ has now been resolved by increasing the incremental
+    and max sleep times between device detach attempts. This works around some
+    undefined QEMU behaviour documented in `bug 1894804`_ where overlapping
+    ``device_del`` requests would cancel the initial call leading to a
+    situation where the device was never detached fully.
+
+    .. _bug 1882521: https://bugs.launchpad.net/nova/+bug/1882521
+    .. _bug 1894804: https://bugs.launchpad.net/qemu/+bug/1894804
