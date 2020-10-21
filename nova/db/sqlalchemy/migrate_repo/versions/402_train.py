@@ -675,6 +675,13 @@ def upgrade(migrate_engine):
             'locked_by', Enum('owner', 'admin', name='instances0locked_by')),
         Column('cleaned', Integer, default=0),
         Column('ephemeral_key_uuid', String(36)),
+        # NOTE(danms): This column originally included default=False. We
+        # discovered in bug #1862205 that this will attempt to rewrite
+        # the entire instances table with that value, which can time out
+        # for large data sets (and does not even abort).
+        # NOTE(stephenfin): This was originally added by sqlalchemy-migrate
+        # which did not generate the constraints
+        Column('hidden', Boolean(create_constraint=False)),
         Index('uuid', 'uuid', unique=True),
         UniqueConstraint('uuid', name='uniq_instances0uuid'),
         mysql_engine='InnoDB',
@@ -732,6 +739,8 @@ def upgrade(migrate_engine):
         Column('keypairs', Text, nullable=True),
         Column('device_metadata', Text, nullable=True),
         Column('trusted_certs', Text, nullable=True),
+        Column('vpmems', Text, nullable=True),
+        Column('resources', Text, nullable=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -811,6 +820,13 @@ def upgrade(migrate_engine):
         Column('disk_processed', BigInteger, nullable=True),
         Column('disk_remaining', BigInteger, nullable=True),
         Column('uuid', String(36)),
+        # NOTE(stephenfin): This was originally added by sqlalchemy-migrate
+        # which did not generate the constraints
+        Column(
+            'cross_cell_move', Boolean(create_constraint=False),
+            default=False),
+        Column('user_id', String(255), nullable=True),
+        Column('project_id', String(255), nullable=True),
         Index('migrations_uuid', 'uuid', unique=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8'

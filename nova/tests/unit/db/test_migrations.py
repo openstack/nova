@@ -162,13 +162,11 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.INIT_VERSION + 1,
         ]
 
-        stein_placeholders = list(range(392, 397))
         train_placeholders = list(range(403, 408))
         ussuri_placeholders = list(range(408, 413))
         victoria_placeholders = list(range(413, 418))
 
         return (special +
-                stein_placeholders +
                 train_placeholders +
                 ussuri_placeholders +
                 victoria_placeholders)
@@ -225,36 +223,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_397(self, engine, data):
-        for prefix in ('', 'shadow_'):
-            self.assertColumnExists(
-                engine, '%smigrations' % prefix, 'cross_cell_move')
-
-    def _check_398(self, engine, data):
-        self.assertColumnExists(engine, 'instance_extra', 'vpmems')
-        self.assertColumnExists(engine, 'shadow_instance_extra', 'vpmems')
-
-    def _check_399(self, engine, data):
-        for prefix in ('', 'shadow_'):
-            self.assertColumnExists(
-                engine, '%sinstances' % prefix, 'hidden')
-
-    def _check_400(self, engine, data):
-        # NOTE(mriedem): This is a dummy migration that just does a consistency
-        # check. The actual test for 400 is in TestServicesUUIDCheck.
-        pass
-
-    def _check_401(self, engine, data):
-        for prefix in ('', 'shadow_'):
-            self.assertColumnExists(
-                engine, '%smigrations' % prefix, 'user_id')
-            self.assertColumnExists(
-                engine, '%smigrations' % prefix, 'project_id')
-
-    def _check_402(self, engine, data):
-        self.assertColumnExists(engine, 'instance_extra', 'resources')
-        self.assertColumnExists(engine, 'shadow_instance_extra', 'resources')
 
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
