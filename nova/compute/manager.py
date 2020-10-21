@@ -1578,7 +1578,7 @@ class ComputeManager(manager.Manager):
     # TODO(stephenfin): Remove this once we bump the compute API to v6.0
     @wrap_exception()
     def get_console_pool_info(self, context, console_type):
-        return self.driver.get_console_pool_info(console_type)
+        raise NotImplementedError()
 
     # TODO(stephenfin): Remove this as it's nova-network only
     @wrap_exception()

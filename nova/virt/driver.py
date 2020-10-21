@@ -459,12 +459,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
-    # should be removed.
-    def get_console_pool_info(self, console_type):
-        # TODO(Vek): Need to pass context in for access to auth_token
-        raise NotImplementedError()
-
     def get_console_output(self, context, instance):
         """Get console output for an instance
 
