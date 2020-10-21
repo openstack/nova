@@ -162,9 +162,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.INIT_VERSION + 1,
         ]
 
-        # We forgot to add the rocky placeholder. We've also switched to 5
-        # placeholders per cycle since the rate of DB changes has dropped
-        # significantly
         stein_placeholders = list(range(392, 397))
         train_placeholders = list(range(403, 408))
         ussuri_placeholders = list(range(408, 413))
@@ -228,11 +225,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_391(self, engine, data):
-        self.assertColumnExists(engine, 'block_device_mapping', 'volume_type')
-        self.assertColumnExists(engine, 'shadow_block_device_mapping',
-                                'volume_type')
 
     def _check_397(self, engine, data):
         for prefix in ('', 'shadow_'):

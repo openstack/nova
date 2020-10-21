@@ -29,7 +29,7 @@ from nova import exception
 from nova.i18n import _
 
 INIT_VERSION = {}
-INIT_VERSION['main'] = 389
+INIT_VERSION['main'] = 390
 INIT_VERSION['api'] = 0
 _REPOSITORY = {}
 
