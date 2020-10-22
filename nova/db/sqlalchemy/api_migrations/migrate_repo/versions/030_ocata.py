@@ -174,7 +174,7 @@ def upgrade(migrate_engine):
             'locked_by',
             Enum('owner', 'admin', name='build_requests0locked_by')),
         Column('instance_uuid', String(length=36)),
-        Column('instance', Text()),
+        Column('instance', MediumText()),
         Column('block_device_mappings', MediumText()),
         UniqueConstraint(
             'instance_uuid', name='uniq_build_requests0instance_uuid'),
@@ -199,6 +199,16 @@ def upgrade(migrate_engine):
             'user_id', 'name', name='uniq_key_pairs0user_id0name'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
+    )
+
+    resource_classes = Table('resource_classes', meta,
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('name', String(length=255), nullable=False),
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        UniqueConstraint('name', name='uniq_resource_classes0name'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1'
     )
 
     nameargs = {}
@@ -277,6 +287,16 @@ def upgrade(migrate_engine):
         Column('aggregate_id', Integer, primary_key=True, nullable=False),
         Index(
             'resource_provider_aggregates_aggregate_id_idx', 'aggregate_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1'
+    )
+
+    placement_aggregates = Table('placement_aggregates', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('uuid', String(length=36), index=True),
+        UniqueConstraint('uuid', name='uniq_placement_aggregates0uuid'),
         mysql_engine='InnoDB',
         mysql_charset='latin1'
     )
@@ -365,6 +385,87 @@ def upgrade(migrate_engine):
         mysql_charset='utf8',
     )
 
+    quota_classes = Table('quota_classes', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('class_name', String(length=255)),
+        Column('resource', String(length=255)),
+        Column('hard_limit', Integer),
+        Index('quota_classes_class_name_idx', 'class_name'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    quota_usages = Table('quota_usages', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('project_id', String(length=255)),
+        Column('resource', String(length=255), nullable=False),
+        Column('in_use', Integer, nullable=False),
+        Column('reserved', Integer, nullable=False),
+        Column('until_refresh', Integer),
+        Column('user_id', String(length=255)),
+        Index('quota_usages_project_id_idx', 'project_id'),
+        Index('quota_usages_user_id_idx', 'user_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    quotas = Table('quotas', meta,
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('project_id', String(length=255)),
+        Column('resource', String(length=255), nullable=False),
+        Column('hard_limit', Integer),
+        UniqueConstraint(
+            'project_id', 'resource', name='uniq_quotas0project_id0resource'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    project_user_quotas = Table('project_user_quotas', meta,
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('user_id', String(length=255), nullable=False),
+        Column('project_id', String(length=255), nullable=False),
+        Column('resource', String(length=255), nullable=False),
+        Column('hard_limit', Integer, nullable=True),
+        UniqueConstraint(
+            'user_id', 'project_id', 'resource',
+            name='uniq_project_user_quotas0user_id0project_id0resource'),
+        Index(
+            'project_user_quotas_project_id_idx', 'project_id'),
+        Index(
+            'project_user_quotas_user_id_idx', 'user_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    reservations = Table('reservations', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('uuid', String(length=36), nullable=False),
+        Column(
+            'usage_id', Integer, ForeignKey('quota_usages.id'),
+            nullable=False),
+        Column('project_id', String(length=255)),
+        Column('resource', String(length=255)),
+        Column('delta', Integer, nullable=False),
+        Column('expire', DateTime),
+        Column('user_id', String(length=255)),
+        Index('reservations_project_id_idx', 'project_id'),
+        Index('reservations_uuid_idx', 'uuid'),
+        Index('reservations_expire_idx', 'expire'),
+        Index('reservations_user_id_idx', 'user_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
     tables = [
         cell_mappings,
         host_mappings,
@@ -375,16 +476,23 @@ def upgrade(migrate_engine):
         request_specs,
         build_requests,
         keypairs,
+        resource_classes,
         resource_providers,
         inventories,
         allocations,
         resource_provider_aggregates,
+        placement_aggregates,
         aggregates,
         aggregate_hosts,
         aggregate_metadata,
         groups,
         group_policy,
         group_member,
+        quota_classes,
+        quota_usages,
+        quotas,
+        project_user_quotas,
+        reservations,
     ]
     for table in tables:
         table.create(checkfirst=True)
