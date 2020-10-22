@@ -149,9 +149,8 @@ class TestDbVersion(test.NoDBTestCase):
                 metadata), mock.patch.object(migration,
                         'db_version_control') as mock_version_control:
             migration.db_version(database)
-            mock_version_control.assert_called_once_with(0,
-                                                         database,
-                                                         context=None)
+            mock_version_control.assert_called_once_with(
+                migration.INIT_VERSION['api'], database, context=None)
             db_version_calls = [mock.call('engine', 'repo')] * 2
             self.assertEqual(db_version_calls, mock_db_version.call_args_list)
         engine_calls = [mock.call(database, context=None)] * 3
@@ -175,9 +174,8 @@ class TestDbVersion(test.NoDBTestCase):
             # racing to initialise with another process.
             mock_version_control.side_effect = test.TestingException
             migration.db_version(database)
-            mock_version_control.assert_called_once_with(0,
-                                                         database,
-                                                         context=None)
+            mock_version_control.assert_called_once_with(
+                migration.INIT_VERSION['api'], database, context=None)
             db_version_calls = [mock.call('engine', 'repo')] * 2
             self.assertEqual(db_version_calls, mock_db_version.call_args_list)
         engine_calls = [mock.call(database, context=None)] * 3
