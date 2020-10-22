@@ -1762,14 +1762,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     def _test_init_instance_cleans_image_states(self, instance):
         with mock.patch.object(instance, 'save') as save:
             self.compute._get_power_state = mock.Mock()
-            self.compute.driver.post_interrupted_snapshot_cleanup = mock.Mock()
             instance.info_cache = None
             instance.power_state = power_state.RUNNING
             instance.host = self.compute.host
             self.compute._init_instance(self.context, instance)
             save.assert_called_once_with()
-            self.compute.driver.post_interrupted_snapshot_cleanup.\
-                    assert_called_once_with(self.context, instance)
         self.assertIsNone(instance.task_state)
 
     @mock.patch('nova.compute.manager.ComputeManager._get_power_state',
