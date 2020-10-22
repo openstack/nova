@@ -67,7 +67,9 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     # Version 1.18: Added attachment_id
     # Version 1.19: Added uuid
     # Version 1.20: Added volume_type
-    VERSION = '1.20'
+    # Version 1.21: Added encrypted, encryption_secret_uuid, encryption_format
+    #               and encryption_options
+    VERSION = '1.21'
 
     fields = {
         'id': fields.IntegerField(),
@@ -93,10 +95,20 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         'attachment_id': fields.UUIDField(nullable=True),
         # volume_type field can be a volume type name or ID(UUID).
         'volume_type': fields.StringField(nullable=True),
+        'encrypted': fields.BooleanField(default=False),
+        'encryption_secret_uuid': fields.UUIDField(nullable=True),
+        'encryption_format': fields.BlockDeviceEncryptionFormatTypeField(
+            nullable=True),
+        'encryption_options': fields.StringField(nullable=True),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 21):
+            primitive.pop('encrypted', None)
+            primitive.pop('encryption_secret_uuid', None)
+            primitive.pop('encryption_format', None)
+            primitive.pop('encryption_options', None)
         if target_version < (1, 20) and 'volume_type' in primitive:
             del primitive['volume_type']
         if target_version < (1, 19) and 'uuid' in primitive:
@@ -312,22 +324,29 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         return block_device.BlockDeviceDict(self).get_image_mapping()
 
     def obj_load_attr(self, attrname):
-        if attrname not in BLOCK_DEVICE_OPTIONAL_ATTRS:
-            raise exception.ObjectActionError(
-                action='obj_load_attr',
-                reason='attribute %s not lazy-loadable' % attrname)
         if not self._context:
             raise exception.OrphanedObjectError(method='obj_load_attr',
                                                 objtype=self.obj_name())
-
-        LOG.debug("Lazy-loading '%(attr)s' on %(name)s using uuid %(uuid)s",
-                  {'attr': attrname,
-                   'name': self.obj_name(),
-                   'uuid': self.instance_uuid,
-                   })
-        self.instance = objects.Instance.get_by_uuid(self._context,
-                                                     self.instance_uuid)
-        self.obj_reset_changes(fields=['instance'])
+        if attrname == 'encrypted':
+            # We attempt to load this if we're creating a BDM object during an
+            # attach volume request, for example. Use the default in that case.
+            self.obj_set_defaults(attrname)
+        elif attrname not in BLOCK_DEVICE_OPTIONAL_ATTRS:
+            raise exception.ObjectActionError(
+                action='obj_load_attr',
+                reason='attribute %s not lazy-loadable' % attrname)
+        else:
+            LOG.debug(
+                "Lazy-loading '%(attr)s' on %(name)s using uuid %(uuid)s",
+                {
+                    'attr': attrname,
+                    'name': self.obj_name(),
+                    'uuid': self.instance_uuid,
+                }
+            )
+            self.instance = objects.Instance.get_by_uuid(self._context,
+                                                         self.instance_uuid)
+            self.obj_reset_changes(fields=['instance'])
 
 
 @base.NovaObjectRegistry.register
