@@ -172,7 +172,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         return self.engine
 
     def _skippable_migrations(self):
-        ocata_placeholders = list(range(31, 41))
         pike_placeholders = list(range(45, 50))
         queens_placeholders = list(range(53, 58))
         # We forgot to add the rocky placeholders
@@ -183,8 +182,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         special_cases = [
             self.INIT_VERSION + 1,  # initial change
         ]
-        return (ocata_placeholders +
-                pike_placeholders +
+        return (pike_placeholders +
                 queens_placeholders +
                 stein_placeholders +
                 train_placeholders +
@@ -222,64 +220,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def assertTableNotExists(self, engine, table_name):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
                 db_utils.get_table, engine, table_name)
-
-    def _check_041(self, engine, data):
-        self.assertColumnExists(engine, 'traits', 'id')
-        self.assertUniqueConstraintExists(engine, 'traits', ['name'])
-
-        self.assertColumnExists(engine, 'resource_provider_traits', 'trait_id')
-        self.assertColumnExists(engine, 'resource_provider_traits',
-                                'resource_provider_id')
-        self.assertIndexExists(
-            engine, 'resource_provider_traits',
-            'resource_provider_traits_resource_provider_trait_idx')
-
-        inspector = reflection.Inspector.from_engine(engine)
-        self.assertEqual(
-            2, len(inspector.get_foreign_keys('resource_provider_traits')))
-        for fk in inspector.get_foreign_keys('resource_provider_traits'):
-            if 'traits' == fk['referred_table']:
-                self.assertEqual(['id'], fk['referred_columns'])
-                self.assertEqual(['trait_id'], fk['constrained_columns'])
-            elif 'resource_providers' == fk['referred_table']:
-                self.assertEqual(['id'], fk['referred_columns'])
-                self.assertEqual(['resource_provider_id'],
-                                 fk['constrained_columns'])
-
-    def _check_042(self, engine, data):
-        self.assertColumnExists(engine, 'build_requests', 'tags')
-
-    def _check_043(self, engine, data):
-        for column in ['created_at', 'updated_at', 'id', 'uuid', 'project_id',
-                       'user_id']:
-            self.assertColumnExists(engine, 'consumers', column)
-
-        self.assertIndexExists(engine, 'consumers',
-                               'consumers_project_id_uuid_idx')
-        self.assertIndexExists(engine, 'consumers',
-                               'consumers_project_id_user_id_uuid_idx')
-        self.assertUniqueConstraintExists(engine, 'consumers', ['uuid'])
-
-    def _check_044(self, engine, data):
-        for column in ['created_at', 'updated_at', 'id', 'external_id']:
-            self.assertColumnExists(engine, 'projects', column)
-            self.assertColumnExists(engine, 'users', column)
-
-        self.assertUniqueConstraintExists(engine, 'projects', ['external_id'])
-        self.assertUniqueConstraintExists(engine, 'users', ['external_id'])
-
-        # We needed to drop and recreate columns and indexes on consumers, so
-        # check that worked out properly
-        self.assertColumnExists(engine, 'consumers', 'project_id')
-        self.assertColumnExists(engine, 'consumers', 'user_id')
-        self.assertIndexExists(
-            engine, 'consumers',
-            'consumers_project_id_uuid_idx',
-        )
-        self.assertIndexExists(
-            engine, 'consumers',
-            'consumers_project_id_user_id_uuid_idx',
-        )
 
     def _check_050(self, engine, data):
         self.assertColumnExists(engine, 'flavors', 'description')
