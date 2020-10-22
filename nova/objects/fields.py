@@ -260,6 +260,14 @@ class BlockDeviceType(BaseNovaEnum):
     ALL = (CDROM, DISK, FLOPPY, FS, LUN)
 
 
+class BlockDeviceEncryptionFormatType(BaseNovaEnum):
+    PLAIN = 'plain'
+    LUKS = 'luks'
+    LUKSv2 = 'luksv2'
+
+    ALL = (PLAIN, LUKS, LUKSv2)
+
+
 class ConfigDrivePolicy(BaseNovaEnum):
     OPTIONAL = "optional"
     MANDATORY = "mandatory"
@@ -1195,6 +1203,10 @@ class BlockDeviceSourceTypeField(BaseEnumField):
 
 class BlockDeviceTypeField(BaseEnumField):
     AUTO_TYPE = BlockDeviceType()
+
+
+class BlockDeviceEncryptionFormatTypeField(BaseEnumField):
+    AUTO_TYPE = BlockDeviceEncryptionFormatType()
 
 
 class ConfigDrivePolicyField(BaseEnumField):

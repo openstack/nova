@@ -349,6 +349,34 @@ class TestImageMetaProps(test.NoDBTestCase):
             self.assertRaises(exception.ObjectActionError,
                               obj.obj_to_primitive, '1.0')
 
+    def test_obj_make_compatible_hw_ephemeral_encryption(self):
+        """Check 'hw_ephemeral_encryption(_format)' compatibility."""
+        # assert that 'hw_ephemeral_encryption' and
+        # 'hw_ephemeral_encryption_format' is supported
+        # on a suitably new version
+        new_fields = (
+            'hw_ephemeral_encryption',
+            'hw_ephemeral_encryption_format'
+        )
+        eph_format = objects.fields.BlockDeviceEncryptionFormatType.LUKS
+        obj = objects.ImageMetaProps(
+            hw_ephemeral_encryption='yes',
+            hw_ephemeral_encryption_format=eph_format,
+        )
+        primitive = obj.obj_to_primitive('1.32')
+        for field in new_fields:
+            self.assertIn(field, primitive['nova_object.data'])
+        self.assertTrue(
+            primitive['nova_object.data']['hw_ephemeral_encryption'])
+        self.assertEqual(
+            eph_format,
+            primitive['nova_object.data']['hw_ephemeral_encryption_format'])
+
+        # and is absent on older versions
+        primitive = obj.obj_to_primitive('1.31')
+        for field in new_fields:
+            self.assertNotIn(field, primitive['nova_object.data'])
+
     def test_obj_make_compatible_hw_emulation(self):
         """Check 'hw_emulation_architecture' compatibility."""
         # assert that 'hw_emulation_architecture' is supported
