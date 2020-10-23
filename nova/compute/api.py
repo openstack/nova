@@ -267,23 +267,6 @@ def reject_vtpm_instances(operation):
     return outer
 
 
-def _diff_dict(orig, new):
-    """Return a dict describing how to change orig to new.  The keys
-    correspond to values that have changed; the value will be a list
-    of one or two elements.  The first element of the list will be
-    either '+' or '-', indicating whether the key was updated or
-    deleted; if the key was updated, the list will contain a second
-    element, giving the updated value.
-    """
-    # Figure out what keys went away
-    result = {k: ['-'] for k in set(orig.keys()) - set(new.keys())}
-    # Compute the updates
-    for key, value in new.items():
-        if key not in orig or value != orig[key]:
-            result[key] = ['+', value]
-    return result
-
-
 def load_cells():
     global CELLS
     if not CELLS:
@@ -5004,9 +4987,6 @@ class API(base.Base):
     def delete_instance_metadata(self, context, instance, key):
         """Delete the given metadata item from an instance."""
         instance.delete_metadata_key(key)
-        self.compute_rpcapi.change_instance_metadata(context,
-                                                     instance=instance,
-                                                     diff={key: ['-']})
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
@@ -5020,7 +5000,6 @@ class API(base.Base):
         `metadata` argument will be deleted.
 
         """
-        orig = dict(instance.metadata)
         if delete:
             _metadata = metadata
         else:
@@ -5030,10 +5009,7 @@ class API(base.Base):
         self._check_metadata_properties_quota(context, _metadata)
         instance.metadata = _metadata
         instance.save()
-        diff = _diff_dict(orig, instance.metadata)
-        self.compute_rpcapi.change_instance_metadata(context,
-                                                     instance=instance,
-                                                     diff=diff)
+
         return _metadata
 
     @block_accelerators()

@@ -554,13 +554,6 @@ class ComputeAPI(object):
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'attach_volume', instance=instance, bdm=bdm)
 
-    def change_instance_metadata(self, ctxt, instance, diff):
-        version = '5.0'
-        cctxt = self.router.client(ctxt).prepare(
-                server=_compute_host(None, instance), version=version)
-        cctxt.cast(ctxt, 'change_instance_metadata',
-                   instance=instance, diff=diff)
-
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
                                            block_migration, disk_over_commit,
                                            migration, limits):

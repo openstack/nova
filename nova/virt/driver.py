@@ -1362,21 +1362,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    # TODO(stephenfin): This was only implemented (properly) for XenAPI and
-    # should be removed.
-    def change_instance_metadata(self, context, instance, diff):
-        """Applies a diff to the instance metadata.
-
-        This is an optional driver method which is used to publish
-        changes to the instance's metadata to the hypervisor.  If the
-        hypervisor has no means of publishing the instance metadata to
-        the instance, then this method should not be implemented.
-
-        :param context: security context
-        :param instance: nova.objects.instance.Instance
-        """
-        pass
-
     def inject_network_info(self, instance, nw_info):
         """inject network info for specified instance."""
         # TODO(Vek): Need to pass context in for access to auth_token

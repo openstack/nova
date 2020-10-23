@@ -9457,15 +9457,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(len(instances), 3)
 
     def test_instance_metadata(self):
-        meta_changes = [None]
         self.flags(notify_on_state_change='vm_state', group='notifications')
-
-        def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
-                                          instance_uuid=None):
-            meta_changes[0] = diff
-        self.stub_out('nova.compute.rpcapi.ComputeAPI.'
-                      'change_instance_metadata',
-                      fake_change_instance_metadata)
 
         _context = context.get_admin_context()
         instance = self._create_fake_instance_obj({'metadata':
@@ -9478,7 +9470,6 @@ class ComputeAPITestCase(BaseTestCase):
                                                   {'key2': 'value2'})
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, {'key1': 'value1', 'key2': 'value2'})
-        self.assertEqual(meta_changes, [{'key2': ['+', 'value2']}])
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
         msg = fake_notifier.NOTIFICATIONS[0]
@@ -9487,15 +9478,10 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(payload['metadata'], metadata)
 
         new_metadata = {'key2': 'bah', 'key3': 'value3'}
-        self.compute_api.update_instance_metadata(_context, instance,
-                                                  new_metadata, delete=True)
+        self.compute_api.update_instance_metadata(
+            _context, instance, new_metadata, delete=True)
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, new_metadata)
-        self.assertEqual(meta_changes, [{
-                    'key1': ['-'],
-                    'key2': ['+', 'bah'],
-                    'key3': ['+', 'value3'],
-                    }])
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[1]
@@ -9506,7 +9492,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.delete_instance_metadata(_context, instance, 'key2')
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, {'key3': 'value3'})
-        self.assertEqual(meta_changes, [{'key2': ['-']}])
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 3)
         msg = fake_notifier.NOTIFICATIONS[2]
@@ -9515,13 +9500,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(payload['metadata'], {'key3': 'value3'})
 
     def test_disallow_metadata_changes_during_building(self):
-        def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
-                                          instance_uuid=None):
-            pass
-        self.stub_out('nova.compute.rpcapi.ComputeAPI.'
-                      'change_instance_metadata',
-                       fake_change_instance_metadata)
-
         instance = self._create_fake_instance_obj(
             {'vm_state': vm_states.BUILDING})
 

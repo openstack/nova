@@ -7634,35 +7634,3 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             exception.MixedInstanceNotSupportByComputeService,
             self.compute_api._check_compute_service_for_mixed_instance,
             fake_numa_topo)
-
-
-class DiffDictTestCase(test.NoDBTestCase):
-    """Unit tests for _diff_dict()."""
-
-    def test_no_change(self):
-        old = dict(a=1, b=2, c=3)
-        new = dict(a=1, b=2, c=3)
-        diff = compute_api._diff_dict(old, new)
-
-        self.assertEqual(diff, {})
-
-    def test_new_key(self):
-        old = dict(a=1, b=2, c=3)
-        new = dict(a=1, b=2, c=3, d=4)
-        diff = compute_api._diff_dict(old, new)
-
-        self.assertEqual(diff, dict(d=['+', 4]))
-
-    def test_changed_key(self):
-        old = dict(a=1, b=2, c=3)
-        new = dict(a=1, b=4, c=3)
-        diff = compute_api._diff_dict(old, new)
-
-        self.assertEqual(diff, dict(b=['+', 4]))
-
-    def test_removed_key(self):
-        old = dict(a=1, b=2, c=3)
-        new = dict(a=1, c=3)
-        diff = compute_api._diff_dict(old, new)
-
-        self.assertEqual(diff, dict(b=['-']))
