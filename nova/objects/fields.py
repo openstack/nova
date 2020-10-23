@@ -339,6 +339,8 @@ class DiskBus(BaseNovaEnum):
 
     # NOTE(aspiers): If you change this, don't forget to update the
     # docs and metadata for hw_*_bus in glance.
+    # NOTE(lyarwood): Also update the possible values in the api-ref for the
+    # block_device_mapping_v2.disk_bus parameter.
     FDC = "fdc"
     IDE = "ide"
     SATA = "sata"
