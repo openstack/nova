@@ -25,6 +25,7 @@ from sqlalchemy import MetaData
 from sqlalchemy import String
 from sqlalchemy import Table
 from sqlalchemy import Text
+from sqlalchemy import text
 from sqlalchemy import Unicode
 
 from nova.db.sqlalchemy.api_models import MediumText
@@ -49,6 +50,9 @@ def upgrade(migrate_engine):
         Column('name', String(length=255)),
         Column('transport_url', Text()),
         Column('database_connection', Text()),
+        # NOTE(stephenfin): These were originally added by sqlalchemy-migrate
+        # which did not generate the constraints
+        Column('disabled', Boolean(create_constraint=False), default=False),
         UniqueConstraint('uuid', name='uniq_cell_mappings0uuid'),
         Index('uuid_idx', 'uuid'),
         mysql_engine='InnoDB',
@@ -77,6 +81,11 @@ def upgrade(migrate_engine):
         Column('instance_uuid', String(length=36), nullable=False),
         Column('cell_id', Integer, nullable=True),
         Column('project_id', String(length=255), nullable=False),
+        # NOTE(stephenfin): These were originally added by sqlalchemy-migrate
+        # which did not generate the constraints
+        Column(
+            'queued_for_delete', Boolean(create_constraint=False),
+            default=False),
         UniqueConstraint(
             'instance_uuid', name='uniq_instance_mappings0instance_uuid'),
         Index('instance_uuid_idx', 'instance_uuid'),
@@ -336,6 +345,9 @@ def upgrade(migrate_engine):
         Column('uuid', String(length=36), nullable=False),
         Column('project_id', Integer, nullable=False),
         Column('user_id', Integer, nullable=False),
+        Column(
+            'generation', Integer, default=0, server_default=text('0'),
+            nullable=False),
         Index('consumers_project_id_uuid_idx', 'project_id', 'uuid'),
         Index(
             'consumers_project_id_user_id_uuid_idx', 'project_id', 'user_id',
@@ -453,6 +465,7 @@ def upgrade(migrate_engine):
         Column(
             'group_id', Integer, ForeignKey('instance_groups.id'),
             nullable=False),
+        Column('rules', Text),
         Index('instance_group_policy_policy_idx', 'policy'),
         mysql_engine='InnoDB',
         mysql_charset='utf8',

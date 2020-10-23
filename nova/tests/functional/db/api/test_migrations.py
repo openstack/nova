@@ -45,7 +45,6 @@ from nova.db.sqlalchemy.api_migrations import migrate_repo
 from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import migration as sa_migration
 from nova import test
-from nova.test import uuids
 from nova.tests import fixtures as nova_fixtures
 
 
@@ -171,7 +170,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         return self.engine
 
     def _skippable_migrations(self):
-        queens_placeholders = list(range(53, 58))
         # We forgot to add the rocky placeholders
         stein_placeholders = list(range(63, 68))
         train_placeholders = list(range(68, 73))
@@ -180,8 +178,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         special_cases = [
             self.INIT_VERSION + 1,  # initial change
         ]
-        return (queens_placeholders +
-                stein_placeholders +
+        return (stein_placeholders +
                 train_placeholders +
                 ussuri_placeholders +
                 victoria_placeholders +
@@ -217,40 +214,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def assertTableNotExists(self, engine, table_name):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
                 db_utils.get_table, engine, table_name)
-
-    def _check_058(self, engine, data):
-        self.assertColumnExists(engine, 'cell_mappings', 'disabled')
-
-    def _pre_upgrade_059(self, engine):
-        # Add a fake consumers table record to verify that generation is
-        # added with a default value of 0.
-        projects = db_utils.get_table(engine, 'projects')
-        project_id = projects.insert().execute(
-            dict(external_id=uuids.project_external_id)
-        ).inserted_primary_key[0]
-        users = db_utils.get_table(engine, 'users')
-        user_id = users.insert().execute(
-            dict(external_id=uuids.user_external_id)
-        ).inserted_primary_key[0]
-        consumers = db_utils.get_table(engine, 'consumers')
-        fake_consumer = dict(
-            uuid=uuids.consumer_uuid, project_id=project_id, user_id=user_id)
-        consumers.insert().execute(fake_consumer)
-
-    def _check_059(self, engine, data):
-        self.assertColumnExists(engine, "consumers", "generation")
-        # Assert we have one existing entry and it's generation value is 0.
-        consumers = db_utils.get_table(engine, 'consumers')
-        result = consumers.select().execute().fetchall()
-        self.assertEqual(1, len(result))
-        self.assertEqual(0, result[0]['generation'])
-
-    def _check_060(self, engine, data):
-        self.assertColumnExists(engine, 'instance_group_policy', 'rules')
-
-    def _check_061(self, engine, data):
-        self.assertColumnExists(engine, 'instance_mappings',
-            'queued_for_delete')
 
     def _check_062(self, engine, data):
         self.assertColumnExists(engine, 'instance_mappings', 'user_id')
