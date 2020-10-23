@@ -35,9 +35,6 @@ import mock
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
-from oslo_db.sqlalchemy import utils as db_utils
-import sqlalchemy
-from sqlalchemy.engine import reflection
 import testtools
 
 from nova.db import migration
@@ -170,7 +167,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         return self.engine
 
     def _skippable_migrations(self):
-        # We forgot to add the rocky placeholders
         stein_placeholders = list(range(63, 68))
         train_placeholders = list(range(68, 73))
         ussuri_placeholders = list(range(73, 78))
@@ -195,30 +191,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def assertColumnExists(self, engine, table_name, column):
-        self.assertTrue(db_utils.column_exists(engine, table_name, column),
-                'Column %s.%s does not exist' % (table_name, column))
-
-    def assertIndexExists(self, engine, table_name, index):
-        self.assertTrue(db_utils.index_exists(engine, table_name, index),
-                        'Index %s on table %s does not exist' %
-                        (index, table_name))
-
-    def assertUniqueConstraintExists(self, engine, table_name, columns):
-        inspector = reflection.Inspector.from_engine(engine)
-        constrs = inspector.get_unique_constraints(table_name)
-        constr_columns = [constr['column_names'] for constr in constrs]
-        self.assertIn(columns, constr_columns)
-
-    def assertTableNotExists(self, engine, table_name):
-        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
-                db_utils.get_table, engine, table_name)
-
-    def _check_062(self, engine, data):
-        self.assertColumnExists(engine, 'instance_mappings', 'user_id')
-        self.assertIndexExists(engine, 'instance_mappings',
-                               'instance_mappings_user_id_project_id_idx')
 
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
