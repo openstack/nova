@@ -102,6 +102,7 @@ def upgrade(migrate_engine):
         Column('ephemeral_gb', Integer),
         Column('disabled', Boolean),
         Column('is_public', Boolean),
+        Column('description', Text()),
         UniqueConstraint('flavorid', name='uniq_flavors0flavorid'),
         UniqueConstraint('name', name='uniq_flavors0name'),
         mysql_engine='InnoDB',
@@ -143,7 +144,7 @@ def upgrade(migrate_engine):
         Column('updated_at', DateTime),
         Column('id', Integer, primary_key=True, nullable=False),
         Column('instance_uuid', String(36), nullable=False),
-        Column('spec', Text, nullable=False),
+        Column('spec', MediumText(), nullable=False),
         UniqueConstraint(
             'instance_uuid', name='uniq_request_specs0instance_uuid'),
         Index('request_spec_instance_uuid_idx', 'instance_uuid'),
@@ -249,10 +250,19 @@ def upgrade(migrate_engine):
         Column('name', Unicode(200, **nameargs), nullable=True),
         Column('generation', Integer, default=0),
         Column('can_host', Integer, default=0),
+        Column(
+            'root_provider_id', Integer,
+            ForeignKey('resource_providers.id')),
+        Column(
+            'parent_provider_id', Integer,
+            ForeignKey('resource_providers.id')),
         UniqueConstraint('uuid', name='uniq_resource_providers0uuid'),
         UniqueConstraint('name', name='uniq_resource_providers0name'),
         Index('resource_providers_name_idx', 'name'),
         Index('resource_providers_uuid_idx', 'uuid'),
+        Index('resource_providers_root_provider_id_idx', 'root_provider_id'),
+        Index(
+            'resource_providers_parent_provider_id_idx', 'parent_provider_id'),
         mysql_engine='InnoDB',
         mysql_charset='latin1'
     )
