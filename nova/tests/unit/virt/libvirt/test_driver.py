@@ -21041,6 +21041,54 @@ class TestUpdateProviderTree(test.NoDBTestCase):
         for trait in ['HW_CPU_X86_AVX512F', 'HW_CPU_X86_BMI']:
             self.assertIn(trait, self.pt.data(self.cn_rp['uuid']).traits)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_gpu_inventories')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_get_cpu_feature_traits',
+                new=mock.Mock(return_value=cpu_traits))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
+                new=mock.Mock(return_value={'total': 0}))
+    @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
+                new=mock.Mock(return_value=0))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_pcpu_available',
+                new=mock.Mock(return_value=range(0)))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_available',
+                new=mock.Mock(return_value=range(0)))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_update_provider_tree_for_pcpu',
+                new=mock.Mock())
+    def test_update_provider_tree_zero_total(self, mock_gpu_invs):
+        # Verify that we omit various resources from inventory when there are
+        # zero total quantity of those resources. Placement does not allow
+        # inventory updates with total=0 as they fail API schema validation.
+
+        # Use total=0 for vgpus.
+        gpu_inventory_dicts = {
+            'pci_0000_06_00_0': {'total': 0,
+                                 'max_unit': 16,
+                                 'min_unit': 1,
+                                 'step_size': 1,
+                                 'reserved': 0,
+                                 'allocation_ratio': 1.0,
+                                },
+        }
+        mock_gpu_invs.return_value = gpu_inventory_dicts
+        # Use an empty list for vpmems.
+        self.driver._vpmems_by_rc = {'CUSTOM_PMEM_NAMESPACE_4GB': []}
+        # Before we update_provider_tree, we have 2 providers from setUp():
+        # self.cn_rp and self.shared_rp and they are both empty {}.
+        self.assertEqual(2, len(self.pt.get_provider_uuids()))
+        # Update the provider tree.
+        self.driver.update_provider_tree(self.pt, self.cn_rp['name'])
+        # After we update_provider_tree, we should still have 2 providers
+        # because VGPU has total=0 and we would skip adding a child provider
+        # for it.
+        self.assertEqual(2, len(self.pt.get_provider_uuids()))
+        # All providers should have an empty dict because (1) we never updated
+        # the self.shared_rp provider and (2) the other 2 providers have zero
+        # for resource totals.
+        for uuid in self.pt.get_provider_uuids():
+            self.assertEqual({}, self.pt.data(uuid).inventory)
+
     def test_update_provider_tree_with_vgpus(self):
         pci_devices = ['pci_0000_06_00_0', 'pci_0000_07_00_0']
         gpu_inventory_dicts = {
