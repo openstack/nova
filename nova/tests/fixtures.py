@@ -2616,11 +2616,16 @@ class CinderFixture(fixtures.Fixture):
                             _attachment['connector'].get('host')))
             attachment['connector'] = connector
             LOG.info('Updating volume attachment: %s', attachment_id)
-            attachment_ref = {'driver_volume_type': 'fake_type',
-                              'id': attachment_id,
-                              'connection_info': {'data':
-                                                  {'foo': 'bar',
-                                                   'target_lun': '1'}}}
+            attachment_ref = {
+                'id': attachment_id,
+                'connection_info': {
+                    'driver_volume_type': 'fake',
+                    'data': {
+                        'foo': 'bar',
+                        'target_lun': '1'
+                    }
+                }
+            }
             if attachment_id == self.SWAP_ERR_ATTACH_ID:
                 # This intentionally triggers a TypeError for the
                 # instance.volume_swap.error versioned notification tests.
