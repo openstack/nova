@@ -1456,9 +1456,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 # this would be unset
                 continue
 
-            disk_dev = vol['mount_device']
-            if disk_dev is not None:
-                disk_dev = disk_dev.rpartition("/")[2]
             try:
                 self._disconnect_volume(context, connection_info, instance)
             except Exception as exc:
