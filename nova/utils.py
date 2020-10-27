@@ -78,6 +78,11 @@ SM_SKIP_KEYS = (
     'img_mappings', 'img_block_device_mapping',
 )
 
+# Custom resource for reservable memory
+MEMORY_RESERVABLE_MB_RESOURCE = 'CUSTOM_MEMORY_RESERVABLE_MB'
+MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY = \
+    'resources:' + MEMORY_RESERVABLE_MB_RESOURCE
+
 _FILE_CACHE = {}
 
 _SERVICE_TYPES = service_types.ServiceTypes()
