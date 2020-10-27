@@ -127,15 +127,15 @@ class Host(object):
     @staticmethod
     def _get_libvirt_proxy_classes(libvirt_module):
         """Return a tuple for tpool.Proxy's autowrap argument containing all
-        classes defined by the libvirt module except libvirtError.
+        public vir* classes defined by the libvirt module.
         """
 
         # Get a list of (name, class) tuples of libvirt classes
         classes = inspect.getmembers(libvirt_module, inspect.isclass)
 
-        # Return a list of just the classes, filtering out libvirtError because
-        # we don't need to proxy that
-        return tuple([cls[1] for cls in classes if cls[0] != 'libvirtError'])
+        # Return a list of just the vir* classes, filtering out libvirtError
+        # and any private globals pointing at private internal classes.
+        return tuple([cls[1] for cls in classes if cls[0].startswith("vir")])
 
     def _wrap_libvirt_proxy(self, obj):
         """Return an object wrapped in a tpool.Proxy using autowrap appropriate
