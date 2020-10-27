@@ -142,7 +142,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                           'free': num_hosts * 4096 -
                                                   num_hosts * 512,
                                           'max_mem_mb_per_host': 4096,
-                                          'reserved_memory_mb': 0}}
+                                          'reserved_memory_mb': 0,
+                                          'vm_reservable_memory_ratio': 1.0}}
             self.assertEqual(expected_stats, result)
 
     def test_get_stats_from_cluster_hosts_connected_and_active(self):
@@ -197,13 +198,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 'vcpus': 2}}
 
         expected = {'cpu': {'vcpus': 2 * 16,
-                                  'max_vcpus_per_host': 14,  # by host2 counts
-                                  'reserved_vcpus': 4 + 2},  # both hosts
-                          'mem': {'total': 2 * 4096,
-                                  'free': 2 * 4096 -
-                                          2 * 512,
-                                  'max_mem_mb_per_host': 4096 - 256,    # host1
-                                  'reserved_memory_mb': 512 + 256}}     # both
+                            'max_vcpus_per_host': 14,  # by host2 counts
+                            'reserved_vcpus': 4 + 2},  # both hosts
+                    'mem': {'total': 2 * 4096,
+                            'free': 2 * 4096 -
+                                    2 * 512,
+                            'max_mem_mb_per_host': 4096 - 256,  # host1
+                            'reserved_memory_mb': 512 + 256,    # both
+                            'vm_reservable_memory_ratio': 1.0}}
         self._test_get_stats_from_cluster(expected_stats=expected)
 
     def test_get_host_reservations_empty(self):

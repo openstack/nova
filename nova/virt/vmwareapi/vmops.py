@@ -356,6 +356,15 @@ class VMwareVMOps(object):
         if CONF.vmware.reserve_all_memory \
                 or utils.is_big_vm(int(flavor.memory_mb), flavor):
             extra_specs.memory_limits.reservation = int(flavor.memory_mb)
+        else:
+            try:
+                memory_reserved_mb = int(flavor.extra_specs[
+                    utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY])
+                if memory_reserved_mb > 0:
+                    extra_specs.memory_limits.reservation = min(
+                        int(flavor.memory_mb), memory_reserved_mb)
+            except (ValueError, KeyError):
+                pass
         extra_specs.cpu_limits.validate()
         extra_specs.memory_limits.validate()
         extra_specs.disk_io_limits.validate()

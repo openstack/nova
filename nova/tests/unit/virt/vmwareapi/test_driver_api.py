@@ -41,6 +41,7 @@ from nova.compute import provider_tree
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
+import nova.utils
 
 from nova import context
 from nova import exception
@@ -2232,6 +2233,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 'step_size': 1,
                 'allocation_ratio': 1.0,
             },
+            nova.utils.MEMORY_RESERVABLE_MB_RESOURCE: {
+                'total': 2048 - 512,  # 512 CONF.reserved_host_memory_mb
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 1024,
+                'step_size': 1,
+            }
         }
         inventory = self.pt.data(self.node_name).inventory
         self.assertEqual(expected, inventory)

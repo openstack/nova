@@ -116,6 +116,36 @@ is hot-created.
 For big VMs as determined by the `bigvm_mb` setting, this setting is not used.
 Big VMs always reserve all their memory.
 """),
+    cfg.IntOpt('memory_reservation_cluster_hosts_max_fail',
+                default=0,
+                min=0,
+                help="""
+Allow reserving instance memory while at least n hypervisors of memory remain
+unreserved in the cluster. This is a safety margin so a certain number of
+cluster hypervisors are allowed to fail. If more memory would be reserved and
+all the anticipated HV failures occurred, existing VMs with reserved memory
+would no longer be able to start.
+
+This setting applies to VMs with flavors which have a nonzero extra_spec
+"resources:CUSTOM_MEMORY_RESERVABLE_MB" set.
+
+The default value of 0 also leads to this setting being ignored and falling
+back on `memory_reservation_max_ratio_fallback`.
+"""),
+    cfg.FloatOpt('memory_reservation_max_ratio_fallback',
+        default=1.0,
+        help="""
+Allow reserving instance memory up to a maximum ratio in the cluster. This is a
+safety margin so a certain ratio of cluster hypervisors are allowed to fail. If
+more memory than that would be reserved and all the anticipated HV failures
+occurred, existing VMs with reserved memory would no longer be able to start.
+
+This setting applies to VMs with flavors which have a nonzero extra_spec
+"resources:CUSTOM_MEMORY_RESERVABLE_MB" set.
+
+This is a fallback when the `memory_reservation_cluster_hosts_max_fail` config
+is set to 0.
+"""),
     cfg.StrOpt('hostgroup_reservations_json_file',
         help="""
 Specifies the path to a JSON file containing vcpus and memory reservations per

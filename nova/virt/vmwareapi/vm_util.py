@@ -1471,13 +1471,32 @@ def get_stats_from_cluster(session, cluster):
                                              threads - reserved['vcpus'])
                     max_mem_mb_per_host = max(max_mem_mb_per_host,
                                               mem_mb - reserved['memory_mb'])
+            # NOTE (jakobk): For the total amount of hosts it doesn't matter
+            # whether the host is in MM or unreachable, because the count is
+            # used to calculate safety margins for resource allocations, and MM
+            # or otherwise unreachable hosts is precisely what that is supposed
+            # to guard against.
+            total_hypervisor_count = len(result.objects)
+
+            # Calculate VM-reservable memory as a ratio of total available
+            # memory, depending on either the configured tolerance for failed
+            # hypervisors or a single configurable ratio.
+            max_fail_hvs = \
+                CONF.vmware.memory_reservation_cluster_hosts_max_fail
+            if max_fail_hvs and total_hypervisor_count:
+                vm_reservable_memory_ratio = \
+                    (1 - max_fail_hvs / total_hypervisor_count)
+            else:
+                vm_reservable_memory_ratio = \
+                    CONF.vmware.memory_reservation_max_ratio_fallback
     stats = {'cpu': {'vcpus': vcpus,
                      'max_vcpus_per_host': max_vcpus_per_host,
                      'reserved_vcpus': reserved_vcpus},
              'mem': {'total': total_mem_mb,
                      'free': total_mem_mb - used_mem_mb,
                      'max_mem_mb_per_host': max_mem_mb_per_host,
-                     'reserved_memory_mb': reserved_memory_mb}}
+                     'reserved_memory_mb': reserved_memory_mb,
+                     'vm_reservable_memory_ratio': vm_reservable_memory_ratio}}
     return stats
 
 

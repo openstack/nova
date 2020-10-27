@@ -1136,6 +1136,44 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                   'vm-ref',
                                                   operation='remove')
 
+    def test_reserve_all_memory_for_memory_reserved_flavor(self):
+        self.flags(group='vmware', reserve_all_memory=False)
+        self._instance.flavor.extra_specs.update({
+            utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY:
+                self._instance.flavor.memory_mb})
+        specs = self._vmops._get_extra_specs(self._instance.flavor,
+                                             self._image_meta)
+        self.assertEqual(specs.memory_limits.reservation,
+                         self._instance.flavor.memory_mb)
+
+    def test_reserve_no_memory_for_memory_unreserved_flavor(self):
+        self.flags(group='vmware', reserve_all_memory=False)
+        self._instance.flavor.extra_specs.pop(
+            utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY, None)
+        specs = self._vmops._get_extra_specs(self._instance.flavor,
+                                             self._image_meta)
+        self.assertIsNone(specs.memory_limits.reservation)
+
+    def test_global_reserve_all_memory_overrides_flavor_setting(self):
+        self.flags(group='vmware', reserve_all_memory=True)
+        self._instance.flavor.extra_specs.update({
+            utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY:
+                self._instance.flavor.memory_mb // 2})
+        specs = self._vmops._get_extra_specs(self._instance.flavor,
+                                             self._image_meta)
+        self.assertEqual(specs.memory_limits.reservation,
+                         self._instance.flavor.memory_mb)  # ie NOT memory_mb/2
+
+    def test_reserve_max_flavor_memory_for_memory_reserved_flavor(self):
+        self.flags(group='vmware', reserve_all_memory=False)
+        self._instance.flavor.extra_specs.update({
+            utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY:
+                self._instance.flavor.memory_mb + 1000})
+        specs = self._vmops._get_extra_specs(self._instance.flavor,
+                                             self._image_meta)
+        self.assertEqual(specs.memory_limits.reservation,
+                         self._instance.flavor.memory_mb)
+
     @mock.patch.object(vmops.VMwareVMOps, '_extend_virtual_disk')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(ds_util, 'disk_move')
