@@ -7,4 +7,8 @@
         create: True
         mode: 0777
         block: |
-          echo $'{"copy_image": "\'public\':%(visibility)s"}' > /etc/glance/policy.json
+          # This policy is default to admin only in glance. Override
+          # here to allow everyone and every type of image (private
+          # or public) to copy. This way we will be able to test copy
+          # image via non-admin as well as on private images.
+          echo $'{"copy_image": ""}' > /etc/glance/policy.json
