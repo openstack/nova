@@ -42,6 +42,7 @@ def get_engine(database='main', context=None):
 
 
 def db_sync(version=None, database='main', context=None):
+    """Migrate the database to `version` or the most recent version."""
     if version is not None:
         try:
             version = int(version)
@@ -59,6 +60,7 @@ def db_sync(version=None, database='main', context=None):
 
 
 def db_version(database='main', context=None):
+    """Display the current database version."""
     repository = _find_migrate_repo(database)
 
     # NOTE(mdbooth): This is a crude workaround for races in _db_version. The 2
@@ -117,6 +119,7 @@ def _db_version(repository, database, context):
 
 
 def db_initial_version(database='main'):
+    """The starting version for the database."""
     return INIT_VERSION[database]
 
 
