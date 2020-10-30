@@ -53,7 +53,7 @@ from nova import conductor
 import nova.conf
 from nova import context as nova_context
 from nova import crypto
-from nova.db import base
+from nova.db import api as db
 from nova.db.sqlalchemy import api as db_api
 from nova import exception
 from nova import exception_wrapper
@@ -334,11 +334,10 @@ def block_accelerators(until_service=None):
 
 
 @profiler.trace_cls("compute_api")
-class API(base.Base):
+class API:
     """API for interacting with the compute manager."""
 
-    def __init__(self, image_api=None, network_api=None, volume_api=None,
-                 **kwargs):
+    def __init__(self, image_api=None, network_api=None, volume_api=None):
         self.image_api = image_api or glance.API()
         self.network_api = network_api or neutron.API()
         self.volume_api = volume_api or cinder.API()
@@ -352,7 +351,6 @@ class API(base.Base):
             self.key_manager = key_manager.API()
         # Help us to record host in EventReporter
         self.host = CONF.host
-        super(API, self).__init__(**kwargs)
 
     def _record_action_start(self, context, instance, action):
         objects.InstanceAction.action_start(context, instance.uuid,
@@ -5087,7 +5085,7 @@ class API(base.Base):
 
     def get_instance_metadata(self, context, instance):
         """Get all metadata associated with an instance."""
-        return self.db.instance_metadata_get(context, instance.uuid)
+        return db.instance_metadata_get(context, instance.uuid)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
@@ -5718,13 +5716,12 @@ def _find_service_in_cell(context, service_id=None, service_host=None):
         raise exception.NotFound()
 
 
-class HostAPI(base.Base):
+class HostAPI:
     """Sub-set of the Compute Manager API for managing host operations."""
 
     def __init__(self, rpcapi=None, servicegroup_api=None):
         self.rpcapi = rpcapi or compute_rpcapi.ComputeAPI()
         self.servicegroup_api = servicegroup_api or servicegroup.API()
-        super(HostAPI, self).__init__()
 
     def _assert_host_exists(self, context, host_name, must_be_up=False):
         """Raise HostNotFound if compute host doesn't exist."""
@@ -5968,11 +5965,9 @@ class HostAPI(base.Base):
         """Return the task logs within a given range, optionally
         filtering by host and/or state.
         """
-        return self.db.task_log_get_all(context, task_name,
-                                        period_beginning,
-                                        period_ending,
-                                        host=host,
-                                        state=state)
+        return db.task_log_get_all(
+            context, task_name, period_beginning, period_ending, host=host,
+            state=state)
 
     def compute_node_get(self, context, compute_id):
         """Return compute node entry for particular integer ID or UUID."""
@@ -6063,7 +6058,7 @@ class HostAPI(base.Base):
             if cell.uuid == objects.CellMapping.CELL0_UUID:
                 continue
             with nova_context.target_cell(context, cell) as cctxt:
-                cell_stats.append(self.db.compute_node_statistics(cctxt))
+                cell_stats.append(db.compute_node_statistics(cctxt))
 
         if cell_stats:
             keys = cell_stats[0].keys()
@@ -6073,7 +6068,7 @@ class HostAPI(base.Base):
             return {}
 
 
-class InstanceActionAPI(base.Base):
+class InstanceActionAPI:
     """Sub-set of the Compute Manager API for managing instance actions."""
 
     def actions_get(self, context, instance, limit=None, marker=None,
@@ -6090,13 +6085,13 @@ class InstanceActionAPI(base.Base):
             context, action_id)
 
 
-class AggregateAPI(base.Base):
+class AggregateAPI:
     """Sub-set of the Compute Manager API for managing host aggregates."""
-    def __init__(self, **kwargs):
+
+    def __init__(self):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.query_client = query.SchedulerQueryClient()
         self._placement_client = None  # Lazy-load on first access.
-        super(AggregateAPI, self).__init__(**kwargs)
 
     @property
     def placement_client(self):
@@ -6380,14 +6375,13 @@ class AggregateAPI(base.Base):
         return aggregate
 
 
-class KeypairAPI(base.Base):
+class KeypairAPI:
     """Subset of the Compute Manager API for managing key pairs."""
 
     wrap_exception = functools.partial(
         exception_wrapper.wrap_exception, service='api', binary='nova-api')
 
     def __init__(self):
-        super().__init__()
         self.notifier = rpc.get_notifier('api')
 
     def _notify(self, context, event_suffix, keypair_name):
