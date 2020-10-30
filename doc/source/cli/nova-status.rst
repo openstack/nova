@@ -143,6 +143,10 @@ Upgrade
 
   * Checks for the policy files is not JSON-formatted.
 
+  **23.0.0 (Wallaby)**
+
+  * Checks for computes older than the previous major release
+
 See Also
 ========
 
