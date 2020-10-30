@@ -32,7 +32,7 @@ if [ $checked -eq 0 ]; then
         echo "Checked $checked cherry-pick hashes: OK"
         exit 0
     else
-        if ! git show --format='%B' --quiet | grep -qi 'stable.*only'; then
+        if ! git show --format='%B' --quiet $commit_hash | grep -qi 'stable.*only'; then
             echo 'Stable branch requires either cherry-pick -x headers or [stable-only] tag!'
             exit 1
         fi
