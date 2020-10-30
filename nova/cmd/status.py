@@ -411,6 +411,17 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         policy.reset()
         return status
 
+    def _check_old_computes(self):
+        # warn if there are computes in the system older than the previous
+        # major release
+        try:
+            utils.raise_if_old_compute()
+        except exception.TooOldComputeService as e:
+            return upgradecheck.Result(
+                upgradecheck.Code.WARNING, six.text_type(e))
+
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
+
     # The format of the check functions is to return an upgradecheck.Result
     # object with the appropriate upgradecheck.Code and details set. If the
     # check hits warnings or failures then those should be stored in the
@@ -429,6 +440,8 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         (_('Cinder API'), _check_cinder),
         # Added in Ussuri
         (_('Policy Scope-based Defaults'), _check_policy),
+        # Backported from Wallaby
+        (_('Older than N-1 computes'), _check_old_computes)
     )
 
 
