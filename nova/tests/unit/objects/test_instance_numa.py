@@ -179,10 +179,23 @@ class _TestInstanceNUMACell(object):
         topo_obj = objects.InstanceNUMACell(
             cpuset=set(), pcpuset=set([0, 1]),
             cpuset_reserved=set([1, 2]),
-            cpu_policy=fields.CPUAllocationPolicy.DEDICATED)
+            cpu_policy=fields.CPUAllocationPolicy.MIXED,
+        )
         versions = ovo_base.obj_tree_get_versions('InstanceNUMACell')
         data = lambda x: x['nova_object.data']
 
+        primitive = data(topo_obj.obj_to_primitive(
+            target_version='1.6', version_manifest=versions))
+        self.assertEqual(
+            fields.CPUAllocationPolicy.MIXED, primitive['cpu_policy'])
+
+        self.assertRaises(
+            exception.ObjectActionError,
+            topo_obj.obj_to_primitive,
+            target_version='1.5', version_manifest=versions)
+
+        # set this to something compatible with <  1.6 so we can keep testing
+        topo_obj.cpu_policy = fields.CPUAllocationPolicy.DEDICATED
         primitive = data(topo_obj.obj_to_primitive(
             target_version='1.5', version_manifest=versions))
         self.assertIn('pcpuset', primitive)
