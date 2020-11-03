@@ -19,10 +19,12 @@ from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_base
+from oslo_db.sqlalchemy import test_fixtures as db_fixtures
 import sqlalchemy as sa
 
 import nova
 from nova import context
+from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import migration as sa_migration
 from nova import exception
@@ -3044,6 +3046,10 @@ class TestTransactionIsolation(test_base.MySQLOpportunisticTestCase):
         # to read/write to our test MySQL database.
         self.test_context_manager = enginefacade.transaction_context()
         self.test_context_manager.patch_factory(self.enginefacade)
+        # We need to patch our global API database transaction context manager
+        # in order to have it read/write to our test MySQL database too.
+        self.useFixture(db_fixtures.ReplaceEngineFacadeFixture(
+            db_api.api_context_manager, self.test_context_manager))
 
         self.ctx = context.RequestContext('fake-user', 'fake-project')
 
@@ -3077,9 +3083,6 @@ class TestTransactionIsolation(test_base.MySQLOpportunisticTestCase):
 
         # Now run the lookup table method to test the behavior of the scenario.
         with self.test_context_manager.writer.using(self.ctx):
-            # FIXME(melwitt): Because of the bug, we expect IndexError to be
-            # raised when we call _ensure_lookup_table_entry.
-            self.assertRaises(
-                IndexError, rp_obj._ensure_lookup_table_entry,
+            rp_obj._ensure_lookup_table_entry(
                 self.ctx, api_models.Project.__table__,
                 uuidsentinel.external_id)

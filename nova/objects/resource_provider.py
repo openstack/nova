@@ -1911,7 +1911,13 @@ def _ensure_lookup_table_entry(ctx, tbl, external_id):
         except db_exc.DBDuplicateEntry:
             # Another thread added it just before us, so just read the
             # internal ID that that thread created...
-            res = ctx.session.execute(sel).fetchall()
+            # NOTE(melwitt): We need to use a separate transaction to read
+            # back the external_id written by another thread. REPEATABLE_READ
+            # is the default isolation level for InnoDB, so reads from within
+            # the same transaction will be consistent in such a case.
+            # https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html
+            with db_api.api_context_manager.reader.independent.using(ctx):
+                res = ctx.session.execute(sel).fetchall()
 
     return res[0][0]
 
