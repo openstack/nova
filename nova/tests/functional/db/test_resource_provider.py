@@ -11,20 +11,30 @@
 #    under the License.
 
 
+import fixtures as base_fixtures
 import functools
 import mock
 import os_traits
+from oslo_config import cfg
 from oslo_db import exception as db_exc
+from oslo_db.sqlalchemy import enginefacade
+from oslo_db.sqlalchemy import test_base
 import sqlalchemy as sa
 
 import nova
 from nova import context
+from nova.db.sqlalchemy import api_models
+from nova.db.sqlalchemy import migration as sa_migration
 from nova import exception
 from nova.objects import fields
 from nova.objects import resource_provider as rp_obj
 from nova import test
 from nova.tests import fixtures
+from nova.tests.unit import conf_fixture
+from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel
+
+CONF = cfg.CONF
 
 DISK_INVENTORY = dict(
     total=200,
@@ -2998,3 +3008,78 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         )
         got_ids = [rp.id for rp in got_rps]
         self.assertEqual([cn1.id], got_ids)
+
+
+class TestTransactionIsolation(test_base.MySQLOpportunisticTestCase):
+    """Test behavior that cannot be reproduced in a sqlite environment.
+
+    Issues around parallel transactions can't be reproduced in sqlite because
+    sqlite does no transaction isolation, so a read in transaction A is always
+    able to pick up a change that was written by transaction B in parallel.
+
+    In MySQL, this is however not the case. A read in transaction A will be
+    consistent by default because of the default isolation level
+    REPEATABLE_READ, so a change written by transaction B in parallel will not
+    be readable by transaction A:
+    https://dev.mysql.com/doc/refman/8.0/en/innodb-transaction-isolation-levels.html
+
+    This class is for testing issues involving transaction isolation.
+    """
+    def setUp(self):
+        # Prevent spewing of all migration log output by setting up our own
+        # logging fixture before calling oslo.db's base test case setUp().
+        self.useFixture(fixtures.StandardLogging())
+        super(TestTransactionIsolation, self).setUp()
+        # Run migrations to apply the API database schema to our database.
+        with mock.patch.object(sa_migration, 'get_engine',
+                               return_value=self.engine):
+            sa_migration.db_sync(database='api')
+        # This is needed because the RealPolicyFixture needs to set a policy
+        # config option.
+        self.useFixture(conf_fixture.ConfFixture(CONF))
+        # This is needed because RequestContext loads policy rules.
+        self.useFixture(policy_fixture.RealPolicyFixture())
+        # We need to create a new transaction context manager and patch it
+        # with the factory created by this test class. This will enable us
+        # to read/write to our test MySQL database.
+        self.test_context_manager = enginefacade.transaction_context()
+        self.test_context_manager.patch_factory(self.enginefacade)
+
+        self.ctx = context.RequestContext('fake-user', 'fake-project')
+
+    def test_ensure_lookup_table_entry(self):
+        # What we aim to do here is simulate the scenario where we begin the
+        # lookup of a table entry for our external_id and find it doesn't
+        # exist, then another thread writes a record for that external_id after
+        # we've read no rows, then we try to write a new table entry for the
+        # external_id the other thread has just written. We get
+        # DBDuplicateEntry and then try to read the record again to proceed.
+
+        # We will simulate another thread racing with us by mocking the table
+        # insert method and writing the record in a separate (independent)
+        # transaction. Then we just return the real insert method call result.
+        # Then, our "thread" (original transaction) will try to write a record
+        # with the same external_id and fail with DBDuplicateEntry.
+        real_insert = api_models.Project.__table__.insert
+
+        def fake_insert(*args, **kwargs):
+            ins_stmt = real_insert(*args, **kwargs).values(
+                external_id=uuidsentinel.external_id)
+            # Write the Project table record with external_id in a separate
+            # transaction, simulating another thread doing it.
+            with self.test_context_manager.writer.independent.using(self.ctx):
+                self.ctx.session.execute(ins_stmt)
+            return real_insert(*args, **kwargs)
+
+        self.useFixture(base_fixtures.MonkeyPatch(
+            'nova.db.sqlalchemy.api_models.Project.__table__.insert',
+            fake_insert))
+
+        # Now run the lookup table method to test the behavior of the scenario.
+        with self.test_context_manager.writer.using(self.ctx):
+            # FIXME(melwitt): Because of the bug, we expect IndexError to be
+            # raised when we call _ensure_lookup_table_entry.
+            self.assertRaises(
+                IndexError, rp_obj._ensure_lookup_table_entry,
+                self.ctx, api_models.Project.__table__,
+                uuidsentinel.external_id)
