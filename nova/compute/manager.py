@@ -6399,7 +6399,7 @@ class ComputeManager(manager.Manager):
         instance.system_metadata['shelved_host'] = self.host
         instance.vm_state = vm_states.SHELVED
         instance.task_state = None
-        if CONF.shelved_offload_time == 0:
+        if offload:
             instance.task_state = task_states.SHELVING_OFFLOADING
         instance.power_state = self._get_power_state(instance)
         instance.save(expected_task_state=[
