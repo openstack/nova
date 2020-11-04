@@ -1,0 +1,9 @@
+---
+issues:
+  - |
+    The dnspython 2.0.0 package is incompatible with even the latest eventlet
+    package version. This makes nova-novncproxy service to fail if the version
+    of the dnspython package is equal or greater than 2.0.0. See `eventlet
+    issue 619`_ for more details
+
+    .. _eventlet issue 619: https://github.com/eventlet/eventlet/issues/619
