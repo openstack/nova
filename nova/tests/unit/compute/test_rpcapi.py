@@ -134,9 +134,18 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         if timeout:
             prepare_extra_kwargs['timeout'] = timeout
 
-        expected_kwargs = kwargs.copy()
+        # NOTE(sbauza): If expected args are provided, we need to use them
+        # for the expected kwargs and just add the needed _return_value that
+        # is passed by kwargs.
         if expected_args:
-            expected_kwargs.update(expected_args)
+            expected_kwargs = expected_args.copy()
+            if '_return_value' in kwargs:
+                # Copy the existing return value
+                expected_kwargs['_return_value'] = kwargs['_return_value']
+        # NOTE(sbauza) : No expected args were provided so let's just use the
+        # kwargs as also the expected args.
+        else:
+            expected_kwargs = kwargs.copy()
         if 'host_param' in expected_kwargs:
             expected_kwargs['host'] = expected_kwargs.pop('host_param')
         else:
@@ -157,7 +166,10 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         elif 'prepare_server' in kwargs:
             # This is the "server" kwarg to the prepare() method so remove it
             # from both kwargs that go to the actual RPC method call.
-            expected_kwargs.pop('prepare_server')
+            # NOTE(sbauza): If we copy expected args from the provided kwargs,
+            # sometimes we don't have a prepare_server argument in them hence
+            # the default None value.
+            expected_kwargs.pop('prepare_server', None)
             host = kwargs.pop('prepare_server')
         else:
             host = kwargs['instance']['host']
@@ -191,31 +203,48 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                                  **prepare_extra_kwargs)
             rpc_mock.assert_called_once_with(ctxt, method, **expected_kwargs)
 
-    def test_add_aggregate_host(self):
-        self._test_compute_api('add_aggregate_host', 'cast',
-                aggregate={'id': 'fake_id'}, host_param='host', host='host',
-                slave_info={})
-
     def test_add_fixed_ip_to_instance(self):
         self._test_compute_api('add_fixed_ip_to_instance', 'cast',
                 instance=self.fake_instance_obj, network_id='id',
-                version='5.0')
+                version='6.0')
 
     def test_attach_interface(self):
         self._test_compute_api('attach_interface', 'call',
                 instance=self.fake_instance_obj, network_id='id',
-                port_id='id2', version='5.0', requested_ip='192.168.1.50',
+                port_id='id2', version='6.0', requested_ip='192.168.1.50',
                 tag='foo')
 
     def test_attach_volume(self):
         self._test_compute_api('attach_volume', 'cast',
                 instance=self.fake_instance_obj, bdm=self.fake_volume_bdm,
-                version='5.0')
+                version='6.0')
 
     def test_check_instance_shared_storage(self):
+        expected_args = {'data': 'foo'}
         self._test_compute_api('check_instance_shared_storage', 'call',
+                expected_args,
                 instance=self.fake_instance_obj, data='foo',
-                version='5.0')
+                version='6.0')
+
+    def test_check_instance_shared_storage_old_compute(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        rpcapi.router.client.return_value = mock_client
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        rpcapi.check_instance_shared_storage(
+            ctxt, instance=self.fake_instance_obj, data='foo')
+
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('6.0')])
+        mock_client.prepare.assert_called_with(
+            server=self.fake_instance_obj.host, version='5.0')
+        mock_cctx.call.assert_called_with(
+            ctxt, 'check_instance_shared_storage',
+            instance=self.fake_instance_obj, data='foo')
 
     def test_confirm_resize_cast(self):
         self._test_compute_api('confirm_resize', 'cast',
@@ -229,19 +258,19 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_detach_interface(self):
         self._test_compute_api('detach_interface', 'cast',
-                version='5.0', instance=self.fake_instance_obj,
+                version='6.0', instance=self.fake_instance_obj,
                 port_id='fake_id')
 
     def test_detach_volume(self):
         self._test_compute_api('detach_volume', 'cast',
                 instance=self.fake_instance_obj, volume_id='id',
-                attachment_id='fake_id', version='5.0')
+                attachment_id='fake_id', version='6.0')
 
     def test_finish_resize(self):
         self._test_compute_api('finish_resize', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'foo'},
                 image='image', disk_info='disk_info', host='host',
-                request_spec=self.fake_request_spec_obj, version='5.2')
+                request_spec=self.fake_request_spec_obj, version='6.0')
 
     def test_finish_resize_old_compute(self):
         ctxt = context.RequestContext('fake_user', 'fake_project')
@@ -260,7 +289,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             disk_info='disk_info', host='host',
             request_spec=self.fake_request_spec_obj)
 
-        mock_client.can_send_version.assert_called_once_with('5.2')
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('5.2')])
         mock_client.prepare.assert_called_with(
             server='host', version='5.0')
         mock_cctx.cast.assert_called_with(
@@ -272,7 +302,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('finish_revert_resize', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
                 host='host', request_spec=self.fake_request_spec_obj,
-                version='5.2')
+                version='6.0')
 
     def test_finish_revert_resize_old_compute(self):
         ctxt = context.RequestContext('fake_user', 'fake_project')
@@ -290,7 +320,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             migration=mock.sentinel.migration, host='host',
             request_spec=self.fake_request_spec_obj)
 
-        mock_client.can_send_version.assert_called_once_with('5.2')
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('5.2')])
         mock_client.prepare.assert_called_with(
             server='host', version='5.0')
         mock_cctx.cast.assert_called_with(
@@ -300,54 +331,47 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_get_console_output(self):
         self._test_compute_api('get_console_output', 'call',
                 instance=self.fake_instance_obj, tail_length='tl',
-                version='5.0')
-
-    def test_get_console_pool_info(self):
-        self._test_compute_api('get_console_pool_info', 'call',
-                console_type='type', host='host')
-
-    def test_get_console_topic(self):
-        self._test_compute_api('get_console_topic', 'call', host='host')
+                version='6.0')
 
     def test_get_diagnostics(self):
         self._test_compute_api('get_diagnostics', 'call',
-                instance=self.fake_instance_obj, version='5.0')
+                instance=self.fake_instance_obj, version='6.0')
 
     def test_get_instance_diagnostics(self):
         expected_args = {'instance': self.fake_instance_obj}
         self._test_compute_api('get_instance_diagnostics', 'call',
                 expected_args, instance=self.fake_instance_obj,
-                version='5.0')
+                version='6.0')
 
     def test_get_vnc_console(self):
         self._test_compute_api('get_vnc_console', 'call',
                 instance=self.fake_instance_obj, console_type='type',
-                version='5.0')
+                version='6.0')
 
     def test_get_spice_console(self):
         self._test_compute_api('get_spice_console', 'call',
                 instance=self.fake_instance_obj, console_type='type',
-                version='5.0')
+                version='6.0')
 
     def test_get_rdp_console(self):
         self._test_compute_api('get_rdp_console', 'call',
                 instance=self.fake_instance_obj, console_type='type',
-                version='5.0')
+                version='6.0')
 
     def test_get_serial_console(self):
         self._test_compute_api('get_serial_console', 'call',
                 instance=self.fake_instance_obj, console_type='serial',
-                version='5.0')
+                version='6.0')
 
     def test_get_mks_console(self):
         self._test_compute_api('get_mks_console', 'call',
                 instance=self.fake_instance_obj, console_type='webmks',
-                version='5.0')
+                version='6.0')
 
     def test_validate_console_port(self):
         self._test_compute_api('validate_console_port', 'call',
                 instance=self.fake_instance_obj, port="5900",
-                console_type="novnc", version='5.0')
+                console_type="novnc", version='6.0')
 
     def test_host_maintenance_mode(self):
         self._test_compute_api('host_maintenance_mode', 'call',
@@ -366,14 +390,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, dest='dest',
                 block_migration='blockity_block', host='tsoh',
                 migration='migration',
-                migrate_data={}, version='5.0')
+                migrate_data={}, version='6.0')
 
     def test_live_migration_force_complete(self):
         migration = migration_obj.Migration()
         migration.id = 1
         migration.source_compute = 'fake'
         ctxt = context.RequestContext('fake_user', 'fake_project')
-        version = '5.0'
+        version = '6.0'
         rpcapi = compute_rpcapi.ComputeAPI()
         rpcapi.router.client = mock.Mock()
         mock_client = mock.MagicMock()
@@ -392,13 +416,13 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_live_migration_abort(self):
         self._test_compute_api('live_migration_abort', 'cast',
                 instance=self.fake_instance_obj,
-                migration_id='1', version='5.0')
+                migration_id='1', version='6.0')
 
     def test_post_live_migration_at_destination(self):
         self.flags(long_rpc_timeout=1234)
         self._test_compute_api('post_live_migration_at_destination', 'call',
                 instance=self.fake_instance_obj,
-                block_migration='block_migration', host='host', version='5.0',
+                block_migration='block_migration', host='host', version='6.0',
                 timeout=1234, call_monitor_timeout=60)
 
     def test_pause_instance(self):
@@ -413,18 +437,20 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('swap_volume', 'cast',
                 instance=self.fake_instance_obj, old_volume_id='oldid',
                 new_volume_id='newid', new_attachment_id=uuids.attachment_id,
-                version='5.0')
+                version='6.0')
 
     def test_restore_instance(self):
         self._test_compute_api('restore_instance', 'cast',
-                instance=self.fake_instance_obj, version='5.0')
+                instance=self.fake_instance_obj, version='6.0')
 
     def test_pre_live_migration(self):
         self.flags(long_rpc_timeout=1234)
+        expected_args = {'instance': self.fake_instance_obj,
+                         'disk': 'disk', 'host': 'host', 'migrate_data': None}
         self._test_compute_api('pre_live_migration', 'call',
-                instance=self.fake_instance_obj,
+                expected_args, instance=self.fake_instance_obj,
                 block_migration='block_migration', disk='disk', host='host',
-                migrate_data=None, version='5.0',
+                migrate_data=None, version='6.0',
                 call_monitor_timeout=60, timeout=1234)
 
     def test_supports_numa_live_migration(self):
@@ -439,7 +465,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         mock_client.can_send_version.return_value = True
         self.assertTrue(rpcapi.supports_numa_live_migration(ctxt))
         mock_client.can_send_version.assert_has_calls(
-            [mock.call('5.3'), mock.call('5.3')])
+            [mock.call('6.0'), mock.call('5.3'),
+             mock.call('6.0'), mock.call('6.0')])
 
     def test_check_can_live_migrate_destination(self):
         self.flags(long_rpc_timeout=1234)
@@ -448,7 +475,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                destination='dest',
                                block_migration=False,
                                disk_over_commit=False,
-                               version='5.3', call_monitor_timeout=60,
+                               version='6.0', call_monitor_timeout=60,
                                migration='migration',
                                limits='limits',
                                timeout=1234)
@@ -472,6 +499,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             migration='migration',
             limits='limits')
 
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('5.3')])
         mock_client.prepare.assert_called_with(server='dest', version='5.0',
                                                call_monitor_timeout=mock.ANY,
                                                timeout=mock.ANY)
@@ -483,34 +512,73 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_drop_move_claim_at_destination(self):
         self._test_compute_api('drop_move_claim_at_destination', 'call',
                                instance=self.fake_instance_obj, host='host',
-                               version='5.3', _return_value=None)
+                               version='6.0', _return_value=None)
 
     def test_prep_resize(self):
         self._test_compute_api('prep_resize', 'cast',
                 instance=self.fake_instance_obj,
-                instance_type=self.fake_flavor_obj,
+                flavor=self.fake_flavor_obj,
                 image='fake_image', host='host',
                 request_spec='fake_spec',
                 filter_properties={'fakeprop': 'fakeval'},
                 migration='migration',
                 node='node', clean_shutdown=True, host_list=None,
-                version='5.1')
+                version='6.0')
+
+    def test_prep_resize_old_compute(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        rpcapi.router.client.return_value = mock_client
+        # So we expect that the messages is backported therefore the
+        # request_spec is dropped
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        request_spec = objects.RequestSpec()
+        rpcapi.prep_resize(
+            ctxt, instance=self.fake_instance_obj,
+            flavor=self.fake_flavor_obj,
+            image='fake_image', host='host',
+            request_spec=request_spec,
+            filter_properties={'fakeprop': 'fakeval'},
+            migration='migration',
+            node='node', clean_shutdown=True, host_list=None)
+
+        mock_client.can_send_version.assert_has_calls([
+            mock.call('6.0'), mock.call('5.1'),
+        ])
+        mock_client.prepare.assert_called_with(
+            server='host', version='5.0')
+        # we should call with a dict for request_spec and an instance_type
+        # parameter instead of flavor
+        mock_cctx.cast.assert_called_with(
+            ctxt, 'prep_resize', instance=self.fake_instance_obj,
+            instance_type=self.fake_flavor_obj,
+            image='fake_image',
+            request_spec=request_spec.to_legacy_request_spec_dict(),
+            filter_properties={'fakeprop': 'fakeval'},
+            migration='migration',
+            node='node', clean_shutdown=True, host_list=None)
 
     def test_prep_snapshot_based_resize_at_dest(self):
         """Tests happy path for prep_snapshot_based_resize_at_dest rpc call"""
+        expected_args = {'instance': self.fake_instance_obj,
+                        'flavor': self.fake_flavor_obj,
+                        'nodename': 'node',
+                        'migration': migration_obj.Migration(),
+                        'limits': {},
+                        'destination': 'dest'}
         self.flags(long_rpc_timeout=1234)
         self._test_compute_api(
             'prep_snapshot_based_resize_at_dest', 'call',
+            expected_args,
             # compute method kwargs
-            instance=self.fake_instance_obj,
-            flavor=self.fake_flavor_obj,
-            nodename='node',
-            migration=migration_obj.Migration(),
-            limits={},
+            **expected_args,
             request_spec=objects.RequestSpec(),
-            destination='dest',
             # client.prepare kwargs
-            version='5.5', call_monitor_timeout=60, timeout=1234,
+            version='6.0', call_monitor_timeout=60, timeout=1234,
             # assert the expected return value
             _return_value=mock.sentinel.migration_context)
 
@@ -535,6 +603,39 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             destination='dest')
         self.assertIn('Compute too old', str(ex))
 
+    def test_prep_snapshot_based_resize_at_dest_6_0_non_compat(self):
+        """Tests when the destination compute service is not compatible with
+        the 6.0 RPC API version.
+        """
+        self.flags(long_rpc_timeout=1234)
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        rpcapi.router.client.return_value = mock_client
+        mock_client.can_send_version.side_effect = [False, False, True]
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        expected_args = {'instance': self.fake_instance_obj,
+                        'flavor': self.fake_flavor_obj,
+                        'nodename': 'node',
+                        'migration': migration_obj.Migration(),
+                        'limits': {},
+                        'request_spec': objects.RequestSpec()}
+        rpcapi.prep_snapshot_based_resize_at_dest(
+            self.context,
+            **expected_args,
+            destination='dest')
+
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('6.0'),
+                                                       mock.call('5.5')])
+        mock_client.prepare.assert_called_with(
+            server='dest', version='5.5',
+            call_monitor_timeout=60, timeout=1234)
+        mock_cctx.call.assert_called_with(
+            self.context, 'prep_snapshot_based_resize_at_dest',
+            **expected_args)
+
     def test_prep_snapshot_based_resize_at_source(self):
         """Tests happy path for prep_snapshot_based_resize_at_source rpc call
         """
@@ -546,7 +647,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             migration=migration_obj.Migration(),
             snapshot_id=uuids.snapshot_id,
             # client.prepare kwargs
-            version='5.6', call_monitor_timeout=60, timeout=1234)
+            version='6.0', call_monitor_timeout=60, timeout=1234)
 
     @mock.patch('nova.rpc.ClientRouter.client')
     def test_prep_snapshot_based_resize_at_source_old_compute(
@@ -567,16 +668,19 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_finish_snapshot_based_resize_at_dest(self):
         """Tests happy path for finish_snapshot_based_resize_at_dest."""
+        expected_args = {'instance': self.fake_instance_obj,
+                         'migration': migration_obj.Migration(
+                            dest_compute='dest'),
+                         'snapshot_id': uuids.snapshot_id}
         self.flags(long_rpc_timeout=1234)
         self._test_compute_api(
             'finish_snapshot_based_resize_at_dest', 'call',
+            expected_args,
             # compute method kwargs
-            instance=self.fake_instance_obj,
-            migration=migration_obj.Migration(dest_compute='dest'),
-            snapshot_id=uuids.snapshot_id,
+            **expected_args,
             request_spec=objects.RequestSpec(),
             # client.prepare kwargs
-            version='5.7', prepare_server='dest',
+            version='6.0', prepare_server='dest',
             call_monitor_timeout=60, timeout=1234)
 
     @mock.patch('nova.rpc.ClientRouter.client')
@@ -596,6 +700,37 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             request_spec=objects.RequestSpec())
         self.assertIn('Compute too old', str(ex))
 
+    def test_finish_snapshot_based_resize_at_dest_6_0_non_compat(self):
+        """Tests when the destination compute service is not compatible with
+        the 6.0 RPC API version.
+        """
+        self.flags(long_rpc_timeout=1234)
+        rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        rpcapi.router.client.return_value = mock_client
+        mock_client.can_send_version.side_effect = [False, False, True]
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        expected_args = {'instance': self.fake_instance_obj,
+                        'migration': migration_obj.Migration(
+                            dest_compute='dest'),
+                        'snapshot_id': uuids.snapshot_id,
+                        'request_spec': objects.RequestSpec()}
+        rpcapi.finish_snapshot_based_resize_at_dest(
+            self.context,
+            **expected_args)
+
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('6.0'),
+                                                       mock.call('5.7')])
+        mock_client.prepare.assert_called_with(
+            server='dest', version='5.7',
+            call_monitor_timeout=60, timeout=1234)
+        mock_cctx.call.assert_called_with(
+            self.context, 'finish_snapshot_based_resize_at_dest',
+            **expected_args)
+
     def test_confirm_snapshot_based_resize_at_source(self):
         """Tests happy path for confirm_snapshot_based_resize_at_source."""
         self.flags(long_rpc_timeout=1234)
@@ -605,7 +740,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             instance=self.fake_instance_obj,
             migration=migration_obj.Migration(source_compute='source'),
             # client.prepare kwargs
-            version='5.8', prepare_server='source',
+            version='6.0', prepare_server='source',
             call_monitor_timeout=60, timeout=1234)
 
     @mock.patch('nova.rpc.ClientRouter.client')
@@ -632,7 +767,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             instance=self.fake_instance_obj,
             migration=migration_obj.Migration(dest_compute='dest'),
             # client.prepare kwargs
-            version='5.9', prepare_server='dest',
+            version='6.0', prepare_server='dest',
             call_monitor_timeout=60, timeout=1234)
 
     @mock.patch('nova.rpc.ClientRouter.client')
@@ -660,7 +795,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             instance=self.fake_instance_obj,
             migration=migration_obj.Migration(source_compute='source'),
             # client.prepare kwargs
-            version='5.10', prepare_server='source',
+            version='6.0', prepare_server='source',
             call_monitor_timeout=60, timeout=1234)
 
     @mock.patch('nova.rpc.ClientRouter.client')
@@ -698,7 +833,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             bdms=[], instance=self.fake_instance_obj, host='new_host',
             orig_sys_metadata=None, recreate=True, on_shared_storage=True,
             preserve_ephemeral=True, migration=None, node=None,
-            limits=None, request_spec=None, accel_uuids=[], version='5.12')
+            limits=None, request_spec=None, accel_uuids=[], version='6.0')
 
     def test_rebuild_instance_old_rpcapi(self):
         # With rpcapi < 5.12, accel_uuids must be dropped in the client call.
@@ -730,7 +865,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             accel_uuids=['938af7f9-f136-4e5a-bdbe-3b6feab54311'],
             node=None, host=None, **rebuild_args)
 
-        mock_client.can_send_version.assert_called_once_with('5.12')
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('5.12')])
         mock_client.prepare.assert_called_with(
                 server=self.fake_instance_obj.host, version='5.0')
         mock_cctx.cast.assert_called_with(  # No accel_uuids
@@ -743,44 +879,32 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('reserve_block_device_name', 'call',
                 instance=self.fake_instance_obj, device='device',
                 volume_id='id', disk_bus='ide', device_type='cdrom',
-                tag='foo', multiattach=True, version='5.0',
+                tag='foo', multiattach=True, version='6.0',
                 timeout=1234, call_monitor_timeout=60,
                 _return_value=objects_block_dev.BlockDeviceMapping())
-
-    # TODO(stephenfin): Remove this since it's nova-network only
-    def test_refresh_instance_security_rules(self):
-        expected_args = {'instance': self.fake_instance_obj}
-        self._test_compute_api('refresh_instance_security_rules', 'cast',
-                expected_args, host='fake_host',
-                instance=self.fake_instance_obj, version='5.0')
-
-    def test_remove_aggregate_host(self):
-        self._test_compute_api('remove_aggregate_host', 'cast',
-                aggregate={'id': 'fake_id'}, host_param='host', host='host',
-                slave_info={})
 
     def test_remove_fixed_ip_from_instance(self):
         self._test_compute_api('remove_fixed_ip_from_instance', 'cast',
                 instance=self.fake_instance_obj, address='addr',
-                version='5.0')
+                version='6.0')
 
     def test_remove_volume_connection(self):
         self._test_compute_api('remove_volume_connection', 'call',
                 instance=self.fake_instance_obj, volume_id='id', host='host',
-                version='5.0')
+                version='6.0')
 
     def test_rescue_instance(self):
         self._test_compute_api('rescue_instance', 'cast',
             instance=self.fake_instance_obj, rescue_password='pw',
             rescue_image_ref='fake_image_ref',
-            clean_shutdown=True, version='5.0')
+            clean_shutdown=True, version='6.0')
 
     def test_resize_instance(self):
         self._test_compute_api('resize_instance', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
-                image='image', instance_type=self.fake_flavor_obj,
+                image='image', flavor=self.fake_flavor_obj,
                 clean_shutdown=True, request_spec=self.fake_request_spec_obj,
-                version='5.2')
+                version='6.0')
 
     def test_resize_instance_old_compute(self):
         ctxt = context.RequestContext('fake_user', 'fake_project')
@@ -796,10 +920,11 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         rpcapi.resize_instance(
             ctxt, instance=self.fake_instance_obj,
             migration=mock.sentinel.migration, image='image',
-            instance_type='instance_type', clean_shutdown=True,
+            flavor='instance_type', clean_shutdown=True,
             request_spec=self.fake_request_spec_obj)
 
-        mock_client.can_send_version.assert_called_once_with('5.2')
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('5.2')])
         mock_client.prepare.assert_called_with(
             server=self.fake_instance_obj.host, version='5.0')
         mock_cctx.cast.assert_called_with(
@@ -815,7 +940,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('revert_resize', 'cast',
                 instance=self.fake_instance_obj, migration={'id': 'fake_id'},
                 host='host', request_spec=self.fake_request_spec_obj,
-                version='5.2')
+                version='6.0')
 
     def test_revert_resize_old_compute(self):
         ctxt = context.RequestContext('fake_user', 'fake_project')
@@ -833,7 +958,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             migration=mock.sentinel.migration, host='host',
             request_spec=self.fake_request_spec_obj)
 
-        mock_client.can_send_version.assert_called_once_with('5.2')
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('5.2')])
         mock_client.prepare.assert_called_with(
             server='host', version='5.0')
         mock_cctx.cast.assert_called_with(
@@ -843,7 +969,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_set_admin_password(self):
         self._test_compute_api('set_admin_password', 'call',
                 instance=self.fake_instance_obj, new_pass='pw',
-                version='5.0')
+                version='6.0')
 
     def test_set_host_enabled(self):
         self.flags(long_rpc_timeout=600, rpc_response_timeout=120)
@@ -870,12 +996,12 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_stop_instance_cast(self):
         self._test_compute_api('stop_instance', 'cast',
                 instance=self.fake_instance_obj,
-                clean_shutdown=True, version='5.0')
+                clean_shutdown=True, version='6.0')
 
     def test_stop_instance_call(self):
         self._test_compute_api('stop_instance', 'call',
                 instance=self.fake_instance_obj,
-                clean_shutdown=True, version='5.0')
+                clean_shutdown=True, version='6.0')
 
     def test_suspend_instance(self):
         self._test_compute_api('suspend_instance', 'cast',
@@ -884,7 +1010,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_terminate_instance(self):
         self._test_compute_api('terminate_instance', 'cast',
                 instance=self.fake_instance_obj, bdms=[],
-                version='5.0')
+                version='6.0')
 
     def test_unpause_instance(self):
         self._test_compute_api('unpause_instance', 'cast',
@@ -892,12 +1018,12 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_unrescue_instance(self):
         self._test_compute_api('unrescue_instance', 'cast',
-                instance=self.fake_instance_obj, version='5.0')
+                instance=self.fake_instance_obj, version='6.0')
 
     def test_shelve_instance(self):
         self._test_compute_api('shelve_instance', 'cast',
                 instance=self.fake_instance_obj, image_id='image_id',
-                clean_shutdown=True, accel_uuids=None, version='5.13')
+                clean_shutdown=True, accel_uuids=None, version='6.0')
 
     def test_shelve_instance_old_rpcapi(self):
         # With rpcapi < 5.13, accel_uuids must be dropped in the client call.
@@ -915,7 +1041,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 accel_uuids=[],
                 image_id='image_id', clean_shutdown=True)
 
-        mock_client.can_send_version.assert_called_once_with('5.13')
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('5.13')])
         mock_client.prepare.assert_called_with(
                 server=self.fake_instance_obj.host, version='5.0')
         mock_cctx.cast.assert_called_with(  # No accel_uuids
@@ -926,7 +1053,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_shelve_offload_instance(self):
         self._test_compute_api('shelve_offload_instance', 'cast',
                 instance=self.fake_instance_obj,
-                clean_shutdown=True, accel_uuids=None, version='5.13')
+                clean_shutdown=True, accel_uuids=None, version='6.0')
 
     def test_shelve_offload_instance_old_rpcapi(self):
         # With rpcapi < 5.13, accel_uuids must be dropped in the client call.
@@ -944,7 +1071,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 accel_uuids=['938af7f9-f136-4e5a-bdbe-3b6feab54311'],
                 clean_shutdown=True,)
 
-        mock_client.can_send_version.assert_called_once_with('5.13')
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('5.13')])
         mock_client.prepare.assert_called_with(
                 server=self.fake_instance_obj.host, version='5.0')
         mock_cctx.cast.assert_called_with(  # No accel_uuids
@@ -957,13 +1085,13 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, host='host', image='image',
                 filter_properties={'fakeprop': 'fakeval'}, node='node',
                 request_spec=self.fake_request_spec_obj, accel_uuids=None,
-                version='5.13')
+                version='6.0')
 
     def test_cache_image(self):
         self._test_compute_api('cache_images', 'call',
                                host='host', image_ids=['image'],
                                call_monitor_timeout=60, timeout=1800,
-                               version='5.4')
+                               version='6.0')
 
     def test_cache_image_pinned(self):
         ctxt = context.RequestContext('fake_user', 'fake_project')
@@ -992,6 +1120,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             image='image')
 
         mock_client.can_send_version.assert_has_calls([
+            mock.call('6.0'),
             mock.call('5.13'),
             mock.call('5.2'),
         ])
@@ -1004,18 +1133,18 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_volume_snapshot_create(self):
         self._test_compute_api('volume_snapshot_create', 'cast',
                 instance=self.fake_instance_obj, volume_id='fake_id',
-                create_info={}, version='5.0')
+                create_info={}, version='6.0')
 
     def test_volume_snapshot_delete(self):
         self._test_compute_api('volume_snapshot_delete', 'cast',
                 instance=self.fake_instance_obj, volume_id='fake_id',
-                snapshot_id='fake_id2', delete_info={}, version='5.0')
+                snapshot_id='fake_id2', delete_info={}, version='6.0')
 
     def test_external_instance_event(self):
         self._test_compute_api('external_instance_event', 'cast',
                                instances=[self.fake_instance_obj],
                                events=['event'],
-                               version='5.0')
+                               version='6.0')
 
     def test_build_and_run_instance(self):
         # With rpcapi 5.11, when a list of accel_uuids is passed as a param,
@@ -1029,7 +1158,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 admin_password='passwd', injected_files=None,
                 requested_networks=['network1'], security_groups=None,
                 block_device_mapping=None, node='node', limits=[],
-                host_list=None, accel_uuids=accel_uuids, version='5.11')
+                host_list=None, accel_uuids=accel_uuids, version='6.0')
 
     def test_build_and_run_instance_old_rpcapi(self):
         # With rpcapi < 5.11, accel_uuids must be dropped in the client call.
@@ -1049,7 +1178,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 filter_properties={},
                 accel_uuids=['938af7f9-f136-4e5a-bdbe-3b6feab54311'])
 
-        mock_client.can_send_version.assert_called_once_with('5.11')
+        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+                                                       mock.call('5.11')])
         mock_client.prepare.assert_called_with(
                 server='host', version='5.0')
         mock_cctx.cast.assert_called_with(  # No accel_uuids
@@ -1063,15 +1193,15 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_quiesce_instance(self):
         self._test_compute_api('quiesce_instance', 'call',
-                instance=self.fake_instance_obj, version='5.0')
+                instance=self.fake_instance_obj, version='6.0')
 
     def test_unquiesce_instance(self):
         self._test_compute_api('unquiesce_instance', 'cast',
-                instance=self.fake_instance_obj, mapping=None, version='5.0')
+                instance=self.fake_instance_obj, mapping=None, version='6.0')
 
     def test_trigger_crash_dump(self):
         self._test_compute_api('trigger_crash_dump', 'cast',
-                instance=self.fake_instance_obj, version='5.0')
+                instance=self.fake_instance_obj, version='6.0')
 
     @mock.patch('nova.compute.rpcapi.LOG')
     @mock.patch('nova.objects.Service.get_minimum_version')

@@ -242,7 +242,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.stub_out('nova.objects.Instance.save', stub_instance_save)
         self.compute.shelve_offload_instance(self.context, instance,
-                                             clean_shutdown=clean_shutdown)
+                                             clean_shutdown=clean_shutdown,
+                                             accel_uuids=[])
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini',
                       action='shelve_offload', phase='start',
@@ -509,7 +510,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             mock_save.side_effect = check_save
             self.compute.unshelve_instance(self.context, instance, image=None,
                     filter_properties=filter_properties, node=node,
-                    request_spec=objects.RequestSpec())
+                    request_spec=objects.RequestSpec(), accel_uuids=[])
 
         mock_notify_instance_action.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini',
@@ -604,7 +605,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                               self.compute.unshelve_instance,
                               self.context, instance, image=None,
                               filter_properties=filter_properties, node=node,
-                              request_spec=objects.RequestSpec())
+                              request_spec=objects.RequestSpec(),
+                              accel_uuids=[])
 
         mock_notify_instance_action.assert_called_once_with(
             self.context, instance, 'fake-mini', action='unshelve',
@@ -638,7 +640,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.compute.unshelve_instance(
             self.context, instance, image=None,
-            filter_properties={}, node='fake-node', request_spec=request_spec)
+            filter_properties={}, node='fake-node', request_spec=request_spec,
+            accel_uuids=[])
 
         mock_update_pci.assert_called_once_with(
             self.context, self.compute.reportclient, [],
@@ -667,7 +670,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.assertRaises(
             exception.UnexpectedResourceProviderNameForPCIRequest,
             self.compute.unshelve_instance, self.context, instance, image=None,
-            filter_properties={}, node='fake-node', request_spec=request_spec)
+            filter_properties={}, node='fake-node', request_spec=request_spec,
+            accel_uuids=[])
 
         mock_update_pci.assert_called_once_with(
             self.context, self.compute.reportclient, [],
@@ -724,7 +728,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         data = []
 
-        def fake_soi(context, instance, **kwargs):
+        def fake_soi(context, instance, accel_uuids, **kwargs):
             data.append(instance.uuid)
 
         with mock.patch.object(self.compute, 'shelve_offload_instance') as soi:
@@ -753,7 +757,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         data = []
 
-        def fake_soi(context, instance, **kwargs):
+        def fake_soi(context, instance, accel_uuids, **kwargs):
             data.append(instance.uuid)
 
         with mock.patch.object(self.compute, 'shelve_offload_instance') as soi:

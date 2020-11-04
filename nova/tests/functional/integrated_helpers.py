@@ -86,7 +86,7 @@ class StubComputeRPCAPI(compute_rpcapi.ComputeAPI):
     @property
     def router(self):
         with lockutils.lock('compute-rpcapi-router'):
-            target = messaging.Target(topic='compute', version='5.0')
+            target = messaging.Target(topic='compute', version='6.0')
             version_cap = self.version
             serializer = objects_base.NovaObjectSerializer()
             rpc.get_client(target, version_cap, serializer)
