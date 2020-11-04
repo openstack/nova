@@ -9,7 +9,6 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import cast_as_call
 
@@ -39,14 +38,7 @@ class ComputeVersion5xPinnedRpcTests(integrated_helpers._IntegratedTestBase):
         }})
 
     def test_rebuild_instance_5_0(self):
-        e = self.assertRaises(client.OpenStackApiException,
-            self._test_rebuild_instance_with_compute_rpc_pin, '5.0')
-        self.assertEqual(500, e.response.status_code)
-        # NOTE(sbauza): It provides a TypeError because of 'accel_uuids'
-        # parameter missing
-        # TypeError: rebuild_instance() missing 1 required positional argument:
-        #            'accel_uuids'
-        self.assertIn('TypeError', e.response.text)
+        self._test_rebuild_instance_with_compute_rpc_pin('5.0')
 
     def test_rebuild_instance_5_12(self):
         self._test_rebuild_instance_with_compute_rpc_pin('5.12')
