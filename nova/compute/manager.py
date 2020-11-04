@@ -3320,7 +3320,8 @@ class ComputeManager(manager.Manager):
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate, on_shared_storage,
                          preserve_ephemeral, migration,
-                         scheduled_node, limits, request_spec, accel_uuids):
+                         scheduled_node, limits, request_spec,
+                         accel_uuids=None):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -3351,7 +3352,8 @@ class ComputeManager(manager.Manager):
         :param limits: Overcommit limits set by the scheduler. If a host was
                        specified by the user, this will be None
         :param request_spec: a RequestSpec object used to schedule the instance
-        :param accel_uuids: a list of cyborg ARQ uuids.
+        :param accel_uuids: a list of cyborg ARQ uuids or None if the RPC API
+                            is <=5.11
 
         """
         # recreate=True means the instance is being evacuated from a failed
