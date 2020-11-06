@@ -1338,9 +1338,11 @@ class TestRBDDownload(test.NoDBTestCase):
         self.pool_name = "images"
         self.snapshot_name = "snap"
 
+    @mock.patch('nova.storage.rbd_utils.RBDDriver._check_for_import_failure',
+                new=mock.Mock())
     @mock.patch.object(rbd_utils.RBDDriver, 'export_image')
-    @mock.patch.object(rbd_utils, 'rbd')
-    def test_rbd_download_success(self, mock_rbd, mock_export_image):
+    @mock.patch.object(rbd_utils, 'rbd', new=mock.Mock())
+    def test_rbd_download_success(self, mock_export_image):
         client = mock.MagicMock()
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageServiceV2(client)
@@ -1367,9 +1369,11 @@ class TestRBDDownload(test.NoDBTestCase):
             exception.InvalidParameterValue, service.rbd_download, ctx,
             wrong_url_parts, mock.sentinel.dst_path)
 
+    @mock.patch('nova.storage.rbd_utils.RBDDriver._check_for_import_failure',
+                new=mock.Mock())
     @mock.patch('nova.storage.rbd_utils.RBDDriver.export_image')
-    @mock.patch.object(rbd_utils, 'rbd')
-    def test_rbd_download_export_failure(self, mock_rbd, mock_export_image):
+    @mock.patch.object(rbd_utils, 'rbd', new=mock.Mock())
+    def test_rbd_download_export_failure(self, mock_export_image):
         client = mock.MagicMock()
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageServiceV2(client)
