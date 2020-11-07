@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    A ``[compute]image_type_exclusion_list`` configuration option was
+    added to remove supported image types from being advertised by a
+    compute node as supported. This is to be used in conjunction with
+    ``[scheduler]query_placement_for_image_type_support`` to prevent
+    instances from booting on a compute node with a given image type,
+    even if the underlying hypervisor supports it.

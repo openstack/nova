@@ -980,6 +980,27 @@ Additional documentation is available here:
   https://docs.openstack.org/nova/latest/admin/managing-resource-providers.html
 
 """),
+    cfg.ListOpt('image_type_exclude_list',
+                default=[],
+                help="""
+A list of image formats that should not be advertised as supported by this
+compute node.
+
+In some situations, it may be desirable to have a compute node
+refuse to support an expensive or complex image format. This factors into
+the decisions made by the scheduler about which compute node to select when
+booted with a given image.
+
+Possible values:
+
+* Any glance image ``disk_format`` name (i.e. ``raw``, ``qcow2``, etc)
+
+Related options:
+
+* ``[scheduler]query_placement_for_image_type_support`` - enables
+  filtering computes based on supported image types, which is required
+  to be enabled for this to take effect.
+"""),
 ]
 
 interval_opts = [

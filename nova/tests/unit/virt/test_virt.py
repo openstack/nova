@@ -16,11 +16,13 @@
 import io
 
 import mock
+import os_traits
 import six
 
 from nova import test
 from nova.virt.disk import api as disk_api
 from nova.virt import driver
+from nova.virt import fake
 
 PROC_MOUNTS_CONTENTS = """rootfs / rootfs rw 0 0
 sysfs /sys sysfs rw,nosuid,nodev,noexec,relatime 0 0
@@ -88,6 +90,18 @@ class TestVirtDriver(test.NoDBTestCase):
                                                 'swap_size': 0}))
         self.assertTrue(driver.swap_is_usable({'device_name': '/dev/sdb',
                                                 'swap_size': 1}))
+
+    def test_image_type_exclude_list(self):
+        fake_driver = fake.FakeDriver(None)
+
+        traits = fake_driver.capabilities_as_traits()
+        self.assertTrue(traits[os_traits.COMPUTE_IMAGE_TYPE_RAW])
+        self.assertFalse(traits[os_traits.COMPUTE_IMAGE_TYPE_VHD])
+
+        self.flags(image_type_exclude_list='raw', group='compute')
+        traits = fake_driver.capabilities_as_traits()
+        self.assertFalse(traits[os_traits.COMPUTE_IMAGE_TYPE_RAW])
+        self.assertFalse(traits[os_traits.COMPUTE_IMAGE_TYPE_VHD])
 
 
 class FakeMount(object):

@@ -291,11 +291,6 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_image_type_aki": True,
             "supports_image_type_ari": True,
             "supports_image_type_ami": True,
-            # FIXME(danms): I can see a future where people might want to
-            # configure certain compute nodes to not allow giant raw images
-            # to be booted (like nodes that are across a WAN). Thus, at some
-            # point we may want to be able to _not_ expose "supports raw" on
-            # some nodes by policy. Until then, raw is always supported.
             "supports_image_type_raw": True,
             "supports_image_type_iso": True,
             # NOTE(danms): Certain backends do not work with complex image
