@@ -42,7 +42,8 @@ class TestRequestLogMiddleware(testtools.TestCase):
         # this is the minimal set of magic mocks needed to convince
         # the API service it can start on it's own without a database.
         mocks = ['nova.objects.Service.get_by_host_and_binary',
-                 'nova.objects.Service.create']
+                 'nova.objects.Service.create',
+                 'nova.utils.raise_if_old_compute']
         self.stdlog = fixtures.StandardLogging()
         self.useFixture(self.stdlog)
         for m in mocks:

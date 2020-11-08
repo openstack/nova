@@ -268,6 +268,14 @@ class ServiceTestCase(test.NoDBTestCase):
             serv.reset()
             mock_reset.assert_called_once_with()
 
+    @mock.patch('nova.utils.raise_if_old_compute')
+    def test_old_compute_version_is_checked(self, mock_check_old):
+        service.Service.create(
+            self.host, self.binary, self.topic,
+            'nova.tests.unit.test_service.FakeManager')
+
+        mock_check_old.assert_called_once_with()
+
 
 class TestWSGIService(test.NoDBTestCase):
 
