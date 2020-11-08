@@ -6216,7 +6216,6 @@ class AggregateAPI(base.Base):
                         "nova-manage placement sync_aggregates.",
                         node_name, err)
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
-        # NOTE(jogo): Send message to host to support resource pools
         aggregate_payload.update({'name': aggregate.name})
         compute_utils.notify_about_aggregate_update(context,
                                                     "addhost.end",
