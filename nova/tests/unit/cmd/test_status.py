@@ -44,6 +44,7 @@ from nova import exception
 # NOTE(mriedem): We only use objects as a convenience to populate the database
 # in the tests, we don't use them in the actual CLI.
 from nova import objects
+from nova.objects import service
 from nova import policy
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -667,3 +668,32 @@ class TestUpgradeCheckPolicyJSON(test.NoDBTestCase):
             jsonutils.dump(self.data, fh)
         self.assertEqual(upgradecheck.Code.FAILURE,
                          self.cmd._check_policy_json().code)
+
+
+class TestUpgradeCheckOldCompute(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestUpgradeCheckOldCompute, self).setUp()
+        self.cmd = status.UpgradeCommands()
+
+    def test_no_compute(self):
+        self.assertEqual(
+            upgradecheck.Code.SUCCESS, self.cmd._check_old_computes().code)
+
+    def test_only_new_compute(self):
+        last_supported_version = service.SERVICE_VERSION_ALIASES[
+            service.OLDEST_SUPPORTED_SERVICE_VERSION]
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=last_supported_version):
+            self.assertEqual(
+                upgradecheck.Code.SUCCESS, self.cmd._check_old_computes().code)
+
+    def test_old_compute(self):
+        too_old = service.SERVICE_VERSION_ALIASES[
+            service.OLDEST_SUPPORTED_SERVICE_VERSION] - 1
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=too_old):
+            result = self.cmd._check_old_computes()
+            self.assertEqual(upgradecheck.Code.WARNING, result.code)
