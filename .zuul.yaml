@@ -2,6 +2,34 @@
 # for job naming conventions.
 
 - job:
+    name: nova-dsvm-multinode-base
+    parent: legacy-dsvm-base-multinode
+    description: |
+      Base job for multinode nova devstack/tempest jobs.
+      Will setup firewall rules on all the nodes allowing them to talk to
+      each other.
+    timeout: 10800
+    required-projects:
+      - openstack/devstack-gate
+      - openstack/nova
+      - openstack/tempest
+    irrelevant-files: &dsvm-irrelevant-files
+      - ^api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/policies/.*$
+      - ^nova/tests/.*$
+      - ^nova/test.py$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tools/.*$
+      - ^tox.ini$
+
+- job:
     name: nova-tox-functional-py38
     parent: openstack-tox-functional-py38
     description: |
@@ -34,21 +62,7 @@
     description: |
       Run tempest live migration tests against local qcow2 ephemeral storage
       and shared LVM/iSCSI cinder volumes.
-    irrelevant-files: &dsvm-irrelevant-files
-      - ^api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/policies/.*$
-      - ^nova/tests/.*$
-      - ^nova/test.py$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tools/.*$
-      - ^tox.ini$
+    irrelevant-files: *dsvm-irrelevant-files
     vars:
       tox_envlist: all
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
