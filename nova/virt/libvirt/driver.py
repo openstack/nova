@@ -73,7 +73,6 @@ from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 import six
-from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
 from nova.api.metadata import password
@@ -5830,7 +5829,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_serial_consoles(self, guest_cfg, num_ports, char_dev_cls,
                                 log_path):
-        for port in six.moves.range(num_ports):
+        for port in range(num_ports):
             console = char_dev_cls()
             console.port = port
             console.type = "tcp"
@@ -7404,7 +7403,7 @@ class LibvirtDriver(driver.ComputeDriver):
             parent_device, supported_types)
 
         chosen_mdevs = []
-        for c in six.moves.range(vgpus_asked):
+        for c in range(vgpus_asked):
             chosen_mdev = None
             if mdevs_available:
                 # Take the first available mdev
@@ -9677,7 +9676,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.serial_console.enabled:
             num_ports = hardware.get_number_of_serial_ports(
                 instance.flavor, instance.image_meta)
-            for port in six.moves.range(num_ports):
+            for port in range(num_ports):
                 migrate_data.serial_listen_ports.append(
                     serial_console.acquire_port(
                         migrate_data.serial_listen_addr))

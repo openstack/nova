@@ -16,7 +16,6 @@
 
 import mock
 import os
-import six
 import tempfile
 
 from nova import exception
@@ -35,8 +34,7 @@ class FileTestCase(test.NoDBTestCase):
     @mock.patch('os.path.exists', return_value=True)
     def test_readfile(self, mock_exists):
         mock_open = mock.mock_open(read_data='hello world')
-        with mock.patch.object(six.moves.builtins, 'open',
-                               new=mock_open):
+        with mock.patch('builtins.open', new=mock_open):
             self.assertEqual('hello world',
                              nova.privsep.path.readfile('/fake/path'))
 
@@ -49,8 +47,7 @@ class FileTestCase(test.NoDBTestCase):
     @mock.patch('os.path.exists', return_value=True)
     def test_write(self, mock_exists):
         mock_open = mock.mock_open()
-        with mock.patch.object(six.moves.builtins, 'open',
-                               new=mock_open):
+        with mock.patch('builtins.open', new=mock_open):
             nova.privsep.path.writefile('/fake/path/file', 'w', 'foo')
 
         handle = mock_open()

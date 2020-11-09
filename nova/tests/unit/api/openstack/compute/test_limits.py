@@ -17,11 +17,12 @@
 Tests dealing with HTTP rate-limiting.
 """
 
+from http import client as httplib
+from io import StringIO
+
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
-from six.moves import http_client as httplib
-from six.moves import StringIO
 
 from nova.api.openstack.compute import limits as limits_v21
 from nova.api.openstack.compute import views

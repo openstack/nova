@@ -17,12 +17,12 @@
 import collections
 import re
 import sys
+from urllib import parse
 
 import os_resource_classes as orc
 import os_traits
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
-from six.moves.urllib import parse
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils

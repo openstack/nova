@@ -17,6 +17,7 @@
 """Matcher classes to be used inside of the testtools assertThat framework."""
 
 import copy
+import io
 import pprint
 
 from lxml import etree
@@ -411,7 +412,7 @@ class XMLMatches(object):
         if isinstance(text_or_bytes, six.text_type):
             text_or_bytes = text_or_bytes.encode("utf-8")
         parser = etree.XMLParser(encoding="UTF-8")
-        return etree.parse(six.BytesIO(text_or_bytes), parser)
+        return etree.parse(io.BytesIO(text_or_bytes), parser)
 
     def __init__(self, expected, allow_mixed_nodes=False,
                  skip_empty_text_nodes=True, skip_values=('DONTCARE',)):

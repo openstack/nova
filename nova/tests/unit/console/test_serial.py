@@ -17,7 +17,6 @@
 import socket
 
 import mock
-import six.moves
 
 from nova.console import serial
 from nova import exception
@@ -74,10 +73,10 @@ class SerialTestCase(test.NoDBTestCase):
             port_range='%d:%d' % (start, stop),
             group='serial_console')
 
-        for port in six.moves.range(start, stop):
+        for port in range(start, stop):
             self.assertEqual(port, serial.acquire_port('127.0.0.1'))
 
-        for port in six.moves.range(start, stop):
+        for port in range(start, stop):
             self.assertEqual(port, serial.acquire_port('127.0.0.2'))
 
         self.assertEqual(10, len(serial.ALLOCATED_PORTS))

@@ -15,11 +15,11 @@
 
 import collections
 import datetime
+from urllib import parse as urlparse
 
 import iso8601
 from oslo_utils import timeutils
 import six
-import six.moves.urllib.parse as urlparse
 from webob import exc
 
 from nova.api.openstack import common

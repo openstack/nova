@@ -26,6 +26,7 @@ import functools
 import re
 import sys
 import traceback
+from urllib import parse as urlparse
 
 from dateutil import parser as dateutil_parser
 from keystoneauth1 import exceptions as ks_exc
@@ -40,7 +41,6 @@ from oslo_utils import encodeutils
 from oslo_utils import uuidutils
 import prettytable
 import six
-import six.moves.urllib.parse as urlparse
 from sqlalchemy.engine import url as sqla_url
 
 from nova.cmd import common as cmd_common

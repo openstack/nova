@@ -20,10 +20,9 @@ It is used via a single directive in the .rst file
 
 """
 
+import configparser
 import re
 import sys
-
-from six.moves import configparser
 
 from docutils import nodes
 from docutils.parsers import rst

@@ -16,6 +16,7 @@
 Tests for Crypto module.
 """
 
+import io
 import os
 
 from castellan.common import exception as castellan_exception
@@ -25,7 +26,6 @@ import mock
 from oslo_concurrency import processutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import paramiko
-import six
 
 from nova import context as nova_context
 from nova import crypto
@@ -210,7 +210,7 @@ class KeyPairTest(test.NoDBTestCase):
         self.assertEqual(bits, pkey.key_size)
 
     def test_generate_key_pair_mocked_private_key(self):
-        keyin = six.StringIO()
+        keyin = io.StringIO()
         keyin.write(self.rsa_prv)
         keyin.seek(0)
         key = paramiko.RSAKey.from_private_key(keyin)

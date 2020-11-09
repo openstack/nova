@@ -20,11 +20,12 @@ Unit tests for the nova-status CLI interfaces.
 # nova/tests/functional/test_nova_status.py. Those tests use the external
 # PlacementFixture, which is only available in functioanl tests.
 
+from io import StringIO
+import os
+import tempfile
+
 import fixtures
 import mock
-import os
-from six.moves import StringIO
-import tempfile
 import yaml
 
 from keystoneauth1 import exceptions as ks_exc

@@ -24,6 +24,7 @@ inline callbacks.
 import nova.monkey_patch  # noqa
 
 import abc
+import builtins
 import collections
 import contextlib
 import copy
@@ -50,7 +51,6 @@ from oslo_versionedobjects import fixture as ovo_fixture
 from oslotest import base
 from oslotest import mock_fixture
 import six
-from six.moves import builtins
 import testtools
 
 from nova.compute import rpcapi as compute_rpcapi
@@ -903,7 +903,7 @@ def patch_open(patched_path, read_data):
     selective patching based on the path.  In this case something like
     like this may be more appropriate:
 
-        @mock.patch(six.moves.builtins, 'open')
+        @mock.patch('builtins.open')
         def test_my_code(self, mock_open):
             ...
             mock_open.assert_called_once_with(path)
@@ -916,6 +916,6 @@ def patch_open(patched_path, read_data):
             return m(patched_path)
         return real_open(path, *args, **kwargs)
 
-    with mock.patch.object(builtins, 'open') as mock_open:
+    with mock.patch('builtins.open') as mock_open:
         mock_open.side_effect = selective_fake_open
         yield m

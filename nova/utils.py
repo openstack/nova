@@ -46,7 +46,6 @@ from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 import six
-from six.moves import range
 
 import nova.conf
 from nova import exception

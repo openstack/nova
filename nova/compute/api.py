@@ -35,7 +35,6 @@ from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 import six
-from six.moves import range
 
 from nova.accelerator import cyborg
 from nova import availability_zones

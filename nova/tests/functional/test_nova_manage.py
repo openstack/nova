@@ -10,13 +10,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import collections
+from io import StringIO
 import mock
 
 import fixtures
 from neutronclient.common import exceptions as neutron_client_exc
 import os_resource_classes as orc
 from oslo_utils.fixture import uuidsentinel
-from six.moves import StringIO
 
 from nova.cmd import manage
 from nova import config

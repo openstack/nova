@@ -13,9 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_utils import strutils
+from urllib import parse as urlparse
 
-import six.moves.urllib.parse as urlparse
+from oslo_utils import strutils
 import webob
 
 from nova.api.openstack.api_version_request \

@@ -15,11 +15,11 @@
 
 import copy
 import mock
+import urllib.parse as urlparse
 
 from oslo_db.exception import DBDuplicateEntry
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
-import six.moves.urllib.parse as urlparse
 
 from nova import exception
 from nova.objects import console_auth_token as token_obj

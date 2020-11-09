@@ -17,9 +17,10 @@
     Unit tests for the nova-policy-check CLI interfaces.
 """
 
+from io import StringIO
+
 import fixtures
 import mock
-from six.moves import StringIO
 
 from nova.cmd import policy
 import nova.conf

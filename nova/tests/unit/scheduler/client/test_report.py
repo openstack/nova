@@ -11,6 +11,7 @@
 #    under the License.
 import copy
 import time
+from urllib import parse
 
 import fixtures
 from keystoneauth1 import exceptions as ks_exc
@@ -19,7 +20,6 @@ import os_resource_classes as orc
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 import six
-from six.moves.urllib import parse
 
 import nova.conf
 from nova import context

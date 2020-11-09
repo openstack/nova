@@ -12,11 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from io import StringIO
+
 import fixtures
 import mock
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
-from six.moves import StringIO
 
 from nova.cmd import baseproxy
 from nova import config

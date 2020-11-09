@@ -25,6 +25,7 @@ import gzip
 import shutil
 import tempfile
 import time
+from urllib import parse as urlparse
 
 from openstack import exceptions as sdk_exc
 from oslo_log import log as logging
@@ -33,7 +34,6 @@ from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import importutils
 import six
-import six.moves.urllib.parse as urlparse
 from tooz import hashring as hash_ring
 
 from nova.api.metadata import base as instance_metadata

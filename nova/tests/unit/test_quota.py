@@ -17,7 +17,6 @@
 import ddt
 import mock
 from oslo_db.sqlalchemy import enginefacade
-from six.moves import range
 
 from nova.compute import api as compute
 import nova.conf

@@ -13,12 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import importlib
 import inspect
 import os
 
 from oslo_utils import importutils
 import osprofiler.opts as profiler
-import six.moves as six
 
 from nova import conf
 from nova import test
@@ -44,7 +44,7 @@ class TestProfiler(test.NoDBTestCase):
         # reinitialize the metaclass after enabling osprofiler
         profiler.set_defaults(conf.CONF)
         self.flags(enabled=True, group='profiler')
-        six.reload_module(importutils.import_module('nova.manager'))
+        importlib.reload(importutils.import_module('nova.manager'))
 
         classes = [
             'nova.compute.api.API',
@@ -64,7 +64,7 @@ class TestProfiler(test.NoDBTestCase):
         for clsname in classes:
             # give the metaclass and trace_cls() decorator a chance to patch
             # methods of the classes above
-            six.reload_module(
+            importlib.reload(
                 importutils.import_module(clsname.rsplit('.', 1)[0]))
             cls = importutils.import_class(clsname)
 

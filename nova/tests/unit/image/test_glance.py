@@ -16,6 +16,7 @@
 
 import copy
 import datetime
+from io import StringIO
 import urllib.parse as urlparse
 
 import cryptography
@@ -27,8 +28,6 @@ from glanceclient.v2 import schemas
 from keystoneauth1 import loading as ks_loading
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
-from six.moves import StringIO
 import testtools
 
 import nova.conf
@@ -556,7 +555,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     default of not allowing direct URI transfers is set.
     """
 
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_no_data_no_dest_path_v2(self, show_mock, open_mock):
         client = mock.MagicMock()
@@ -572,7 +571,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
             ctx, 2, 'data', args=(mock.sentinel.image_id,))
         self.assertEqual(mock.sentinel.image_chunks, res)
 
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_data_no_dest_path_v2(self, show_mock, open_mock):
         client = mock.MagicMock()
@@ -596,7 +595,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         )
         self.assertFalse(data.close.called)
 
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
     def test_download_no_data_dest_path_v2(self, fsync_mock, show_mock,
@@ -625,7 +624,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         )
         writer.close.assert_called_once_with()
 
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_data_dest_path_v2(self, show_mock, open_mock):
         # NOTE(jaypipes): This really shouldn't be allowed, but because of the
@@ -654,7 +653,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         )
         self.assertFalse(data.close.called)
 
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_data_dest_path_write_fails_v2(
             self, show_mock, open_mock):
@@ -675,7 +674,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         self.assertRaises(FakeDiskException, service.download, ctx,
                           mock.sentinel.image_id, data=Exceptionator())
 
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_no_returned_image_data_v2(
             self, show_mock, open_mock):
@@ -691,7 +690,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     # TODO(stephenfin): Drop this test since it's not possible to run in
     # production
     @mock.patch('os.path.getsize', return_value=1)
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_direct_file_uri_v2(
@@ -727,7 +726,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
     @mock.patch('glanceclient.common.utils.IterableWithLength')
     @mock.patch('os.path.getsize', return_value=1)
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_verifier')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
@@ -820,7 +819,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         ctx = mock.sentinel.ctx
         writer = mock.MagicMock()
 
-        with mock.patch.object(six.moves.builtins, 'open') as open_mock:
+        with mock.patch('builtins.open') as open_mock:
             open_mock.return_value = writer
             service = glance.GlanceImageServiceV2(client)
             res = service.download(ctx, mock.sentinel.image_id,
@@ -873,7 +872,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         ctx = mock.sentinel.ctx
         writer = mock.MagicMock()
 
-        with mock.patch.object(six.moves.builtins, 'open') as open_mock:
+        with mock.patch('builtins.open') as open_mock:
             open_mock.return_value = writer
             service = glance.GlanceImageServiceV2(client)
             res = service.download(ctx, mock.sentinel.image_id,
@@ -966,7 +965,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
         msg = ('Image signature verification succeeded for image %s')
         mock_log.info.assert_called_once_with(msg, image_id)
 
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('cursive.signature_utils.get_verifier')
@@ -1051,7 +1050,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
                                context=None, image_id=None,
                                data=None, dst_path=None)
 
-    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch('cursive.signature_utils.get_verifier')
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')

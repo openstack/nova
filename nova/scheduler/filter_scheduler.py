@@ -22,7 +22,6 @@ Weighing Functions.
 import random
 
 from oslo_log import log as logging
-from six.moves import range
 
 from nova.compute import utils as compute_utils
 import nova.conf

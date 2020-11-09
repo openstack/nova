@@ -14,6 +14,7 @@
 #    under the License.
 
 import datetime
+from io import StringIO
 import sys
 import warnings
 
@@ -24,7 +25,6 @@ from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
-from six.moves import StringIO
 
 from nova.cmd import manage
 from nova import conf

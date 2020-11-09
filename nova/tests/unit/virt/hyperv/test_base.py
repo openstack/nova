@@ -16,7 +16,6 @@
 
 import mock
 from os_win import utilsfactory
-from six.moves import builtins
 
 from nova import test
 
@@ -26,8 +25,8 @@ class HyperVBaseTestCase(test.NoDBTestCase):
         super(HyperVBaseTestCase, self).setUp()
 
         self._mock_wmi = mock.MagicMock()
-        wmi_patcher = mock.patch.object(builtins, 'wmi', create=True,
-                                        new=self._mock_wmi)
+        wmi_patcher = mock.patch('builtins.wmi', create=True,
+                                 new=self._mock_wmi)
         platform_patcher = mock.patch('sys.platform', 'win32')
         utilsfactory_patcher = mock.patch.object(utilsfactory, '_get_class')
 

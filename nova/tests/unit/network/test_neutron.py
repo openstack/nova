@@ -32,7 +32,6 @@ from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import requests_mock
 import six
-from six.moves import range
 
 from nova import context
 from nova.db.sqlalchemy import api as db_api

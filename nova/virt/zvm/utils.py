@@ -13,9 +13,10 @@
 #    under the License.
 
 import os
+from urllib import parse as urlparse
+
 from oslo_log import log as logging
 import six
-import six.moves.urllib.parse as urlparse
 from zvmconnector import connector
 
 from oslo_utils import fileutils

@@ -17,7 +17,6 @@
 import socket
 
 from oslo_log import log as logging
-import six.moves
 
 import nova.conf
 from nova import exception
@@ -45,7 +44,7 @@ def acquire_port(host):
 
     start, stop = _get_port_range()
 
-    for port in six.moves.range(start, stop):
+    for port in range(start, stop):
         if (host, port) in ALLOCATED_PORTS:
             continue
         try:

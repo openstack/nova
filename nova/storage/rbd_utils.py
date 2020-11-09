@@ -14,8 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import urllib
+
 from eventlet import tpool
-from six.moves import urllib
 
 from oslo_concurrency import processutils
 from oslo_log import log as logging

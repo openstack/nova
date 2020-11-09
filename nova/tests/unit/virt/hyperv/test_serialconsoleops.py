@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-from six.moves import builtins
 
 from nova import exception
 from nova.tests.unit.virt.hyperv import test_base
@@ -89,7 +88,7 @@ class SerialConsoleOpsTestCase(test_base.HyperVBaseTestCase):
                           self._serialops.get_serial_console,
                           mock.sentinel.instance_name)
 
-    @mock.patch.object(builtins, 'open')
+    @mock.patch('builtins.open')
     @mock.patch("os.path.exists")
     def test_get_console_output_exception(self, fake_path_exists, fake_open):
         self._serialops._pathutils.get_vm_console_log_paths.return_value = [

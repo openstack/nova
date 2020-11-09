@@ -37,7 +37,6 @@ from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
-from six.moves import range
 from sqlalchemy import Column
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.exc import OperationalError

@@ -24,7 +24,6 @@ library to work with nova.
 import fnmatch
 
 from oslo_serialization import jsonutils
-from six.moves import range
 
 
 class Store(object):

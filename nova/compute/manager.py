@@ -55,7 +55,6 @@ from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
 import six
-from six.moves import range
 
 from nova.accelerator import cyborg
 from nova import block_device

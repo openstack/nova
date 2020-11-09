@@ -20,7 +20,6 @@ from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import routes
 import six
-from six.moves import range
 import webob.dec
 
 from nova.api import auth as api_auth
