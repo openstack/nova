@@ -5350,10 +5350,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_default_with_virtio_scsi_bus(self):
         self._test_get_guest_config_with_virtio_scsi_bus()
 
+    @mock.patch.object(rbd_utils.RBDDriver, '_check_for_import_failure',
+                       new=mock.Mock())
     @mock.patch.object(rbd_utils.RBDDriver, 'get_mon_addrs')
-    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rbd', new=mock.Mock())
     def test_get_guest_config_rbd_with_virtio_scsi_bus(
-            self, mock_rdb, mock_get_mon_addrs):
+            self, mock_get_mon_addrs):
         self.flags(images_type='rbd', group='libvirt')
         mock_get_mon_addrs.return_value = ("host", 9876)
         self._test_get_guest_config_with_virtio_scsi_bus()

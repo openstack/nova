@@ -29,31 +29,18 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 
+try:
+    import rados
+    import rbd
+except ImportError:
+    rados = None
+    rbd = None
 
 CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
 RESIZE_SNAPSHOT_NAME = 'nova-resize'
-
-# NOTE(lyarwood): Log exceptions if we fail to import rbd or rados in order to
-# provide context later if we end up attempting to use the RbdDriver and
-# raising RuntimeError
-try:
-    import rados
-except ImportError:
-    rados = None
-    LOG.exception(
-        "Unable to import the rados module, this can be ignored if Ceph is "
-        "not used within this environment")
-
-try:
-    import rbd
-except ImportError:
-    rbd = None
-    LOG.exception(
-        "Unable to import the rbd module, this can be ignored if Ceph is not "
-        "used within this environment")
 
 
 class RbdProxy(object):
@@ -137,14 +124,34 @@ class RBDDriver(object):
 
     def __init__(self, pool=None, user=None, ceph_conf=None,
                  connect_timeout=None):
-        if rbd is None:
-            raise RuntimeError(_('rbd python libraries not found'))
+
+        # NOTE(lyarwood): Ensure the rbd and rados modules have been imported
+        # correctly before continuing, this is done in a seperate private
+        # method to allow us to skip this check in unit tests etc.
+        self._check_for_import_failure()
 
         self.pool = pool or CONF.libvirt.images_rbd_pool
         self.rbd_user = user or CONF.libvirt.rbd_user
         self.rbd_connect_timeout = (
             connect_timeout or CONF.libvirt.rbd_connect_timeout)
         self.ceph_conf = ceph_conf or CONF.libvirt.images_rbd_ceph_conf
+
+    def _check_for_import_failure(self):
+        # NOTE(lyarwood): If the original import of the required rbd or rados
+        # modules failed then repeat the imports at runtime within this driver
+        # to log the full exception in order to provide context to anyone
+        # debugging the failure in the logs.
+        global rados, rbd
+        if rbd is None or rados is None:
+            try:
+                # NOTE(lyarwood): noqa is required on both imports here as they
+                # are unused (F401) even if successful.
+                import rados  # noqa: F401
+                import rbd  # noqa: F401
+            except ImportError:
+                LOG.exception("Unable to import the rados or rbd modules")
+
+            raise RuntimeError(_('rbd python libraries not found'))
 
     def _connect_to_rados(self, pool=None):
         client = rados.Rados(rados_id=self.rbd_user,
