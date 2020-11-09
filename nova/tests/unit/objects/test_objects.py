@@ -956,11 +956,11 @@ class TestObjectSerializer(_BaseTestCase):
         thing = {'key': obj}
         primitive = ser.serialize_entity(self.context, thing)
         self.assertEqual(1, len(primitive))
-        for item in six.itervalues(primitive):
+        for item in primitive.values():
             self.assertNotIsInstance(item, base.NovaObject)
         thing2 = ser.deserialize_entity(self.context, primitive)
         self.assertEqual(1, len(thing2))
-        for item in six.itervalues(thing2):
+        for item in thing2.values():
             self.assertIsInstance(item, MyObj)
 
         # object-action updates dict case

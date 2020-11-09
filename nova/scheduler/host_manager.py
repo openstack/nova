@@ -29,7 +29,6 @@ except ImportError:
 import iso8601
 from oslo_log import log as logging
 from oslo_utils import timeutils
-import six
 
 import nova.conf
 from nova import context as context_module
@@ -600,7 +599,7 @@ class HostManager(object):
                     return name_to_cls_map.values()
                 else:
                     return []
-            hosts = six.itervalues(name_to_cls_map)
+            hosts = name_to_cls_map.values()
 
         return self.filter_handler.get_filtered_objects(self.enabled_filters,
                 hosts, spec_obj, index)

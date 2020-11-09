@@ -129,7 +129,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         def fake_get_actions(context, uuid, limit=None, marker=None,
                              filters=None):
             actions = []
-            for act in six.itervalues(self.fake_actions[uuid]):
+            for act in self.fake_actions[uuid].values():
                 action = models.InstanceAction()
                 action.update(act)
                 actions.append(action)

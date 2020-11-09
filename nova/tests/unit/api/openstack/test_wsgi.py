@@ -12,7 +12,6 @@
 
 import mock
 from oslo_serialization import jsonutils
-import six
 import testscenarios
 import webob
 
@@ -747,7 +746,7 @@ class ResourceTest(MicroversionedTest):
         req = webob.Request.blank('/tests')
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
-        for val in six.itervalues(response.headers):
+        for val in response.headers.values():
             # All headers must be utf8
             self.assertThat(val, matchers.EncodedByUTF8())
         self.assertEqual('1', response.headers['x-header1'])

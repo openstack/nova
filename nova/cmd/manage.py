@@ -2584,8 +2584,7 @@ class PlacementCommands(object):
             raise
 
         # Verify every allocations for each consumer UUID
-        for consumer_uuid, consumer_resources in six.iteritems(
-                pallocs.allocations):
+        for consumer_uuid, consumer_resources in pallocs.allocations.items():
             consumer_allocs = consumer_resources['resources']
             if any(rc in NOVA_RCS
                    for rc in consumer_allocs):

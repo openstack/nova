@@ -549,7 +549,7 @@ class TestCase(base.BaseTestCase):
                 self.assertEqual(
                     expected_keys, observed_keys,
                     'path: %s. Dict keys are not equal' % path)
-                for key in list(six.iterkeys(expected)):
+                for key in expected:
                     inner(expected[key], observed[key], path + '.%s' % key)
             elif (isinstance(expected, (list, tuple, set)) and
                       isinstance(observed, (list, tuple, set))):

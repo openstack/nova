@@ -16,7 +16,6 @@
 """The hosts admin extension."""
 
 from oslo_log import log as logging
-import six
 import webob.exc
 
 from nova.api.openstack import common
@@ -287,6 +286,6 @@ class HostController(wsgi.Controller):
                                                                   instances))
         by_proj_resources = self._get_resources_by_project(host_name,
                                                            instances)
-        for resource in six.itervalues(by_proj_resources):
+        for resource in by_proj_resources.values():
             resources.append({'resource': resource})
         return {'host': resources}
