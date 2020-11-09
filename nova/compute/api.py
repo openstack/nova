@@ -130,7 +130,7 @@ def check_instance_state(vm_state=None, task_state=(None,),
         task_state = set(task_state)
 
     def outer(f):
-        @six.wraps(f)
+        @functools.wraps(f)
         def inner(self, context, instance, *args, **kw):
             if vm_state is not None and instance.vm_state not in vm_state:
                 raise exception.InstanceInvalidState(
@@ -170,7 +170,7 @@ def reject_instance_state(vm_state=None, task_state=None):
     task_state = _set_or_none(task_state)
 
     def outer(f):
-        @six.wraps(f)
+        @functools.wraps(f)
         def inner(self, context, instance, *args, **kw):
             _InstanceInvalidState = functools.partial(
                 exception.InstanceInvalidState,
@@ -202,7 +202,7 @@ def check_instance_host(check_is_up=False):
         compute service status is not UP or MAINTENANCE
     """
     def outer(function):
-        @six.wraps(function)
+        @functools.wraps(function)
         def wrapped(self, context, instance, *args, **kwargs):
             if not instance.host:
                 raise exception.InstanceNotReady(instance_id=instance.uuid)
@@ -221,7 +221,7 @@ def check_instance_host(check_is_up=False):
 
 
 def check_instance_lock(function):
-    @six.wraps(function)
+    @functools.wraps(function)
     def inner(self, context, instance, *args, **kwargs):
         if instance.locked and not context.is_admin:
             raise exception.InstanceIsLocked(instance_uuid=instance.uuid)

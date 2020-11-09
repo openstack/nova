@@ -71,7 +71,7 @@ def validate_args(fn, *args, **kwargs):
     num_defaults = len(argspec.defaults or [])
     required_args = argspec.args[:len(argspec.args) - num_defaults]
 
-    if six.get_method_self(fn) is not None:
+    if fn.__self__ is not None:
         required_args.pop(0)
 
     missing = [arg for arg in required_args if arg not in kwargs]

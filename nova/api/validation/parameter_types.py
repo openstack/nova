@@ -20,8 +20,6 @@ import functools
 import re
 import unicodedata
 
-import six
-
 from nova.i18n import _
 from nova.objects import tag
 
@@ -94,7 +92,7 @@ def _is_printable(char):
 
 def _get_all_chars():
     for i in range(0xFFFF):
-        yield six.unichr(i)
+        yield chr(i)
 
 
 # build a regex that matches all printable characters. This allows
