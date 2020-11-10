@@ -104,6 +104,32 @@ class PciDeviceStats(object):
             pool['parent_ifname'] = dev.extra_info['parent_ifname']
         return pool
 
+    def _get_pool_with_device_type_mismatch(self, dev):
+        """Check for device type mismatch in the pools for a given device.
+
+        Return (pool, device) if device type does not match or a single None
+        if the device type matches.
+        """
+        for pool in self.pools:
+            for device in pool['devices']:
+                if device.address == dev.address:
+                    if dev.dev_type != pool["dev_type"]:
+                        return pool, device
+                    return None
+
+        return None
+
+    def update_device(self, dev):
+        """Update a device to its matching pool."""
+        pool_device_info = self._get_pool_with_device_type_mismatch(dev)
+        if pool_device_info is None:
+            return
+
+        pool, device = pool_device_info
+        pool['devices'].remove(device)
+        self._decrease_pool_count(self.pools, pool)
+        self.add_device(dev)
+
     def add_device(self, dev):
         """Add a device to its matching pool."""
         dev_pool = self._create_pool_keys_from_dev(dev)
