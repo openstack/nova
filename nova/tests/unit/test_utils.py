@@ -1267,3 +1267,30 @@ class TestOldComputeCheck(test.NoDBTestCase):
         self.assertIn('system', str(ex))
         mock_get_min_service.assert_called_once_with(
             mock.ANY, ['nova-compute'])
+
+    @mock.patch.object(utils.LOG, 'warning')
+    @mock.patch('nova.objects.service.Service.get_minimum_version')
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells')
+    def test_api_db_is_configured_but_the_service_cannot_access_db(
+            self, mock_get_all, mock_get, mock_warn):
+        # This is the case when the nova-compute service is wrongly configured
+        # with db credentials but nova-compute is never allowed to access the
+        # db directly.
+        mock_get_all.side_effect = exception.DBNotAllowed(
+            binary='nova-compute')
+
+        oldest = service_obj.SERVICE_VERSION_ALIASES[
+            service_obj.OLDEST_SUPPORTED_SERVICE_VERSION]
+        mock_get.return_value = oldest - 1
+
+        ex = self.assertRaises(
+            exception.TooOldComputeService, utils.raise_if_old_compute)
+
+        self.assertIn('cell', str(ex))
+        mock_get_all.assert_called_once_with(mock.ANY, ['nova-compute'])
+        mock_get.assert_called_once_with(mock.ANY, 'nova-compute')
+        mock_warn.assert_called_once_with(
+            'This service is configured for access to the API database but is '
+            'not allowed to directly access the database. You should run this '
+            'service without the [api_database]/connection config option. The '
+            'service version check will only query the local cell.')

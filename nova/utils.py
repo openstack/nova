@@ -1063,8 +1063,25 @@ def raise_if_old_compute():
 
     if CONF.api_database.connection is not None:
         scope = 'system'
-        current_service_version = service.get_minimum_version_all_cells(
-            ctxt, ['nova-compute'])
+        try:
+            current_service_version = service.get_minimum_version_all_cells(
+                ctxt, ['nova-compute'])
+        except exception.DBNotAllowed:
+            # This most likely means we are in a nova-compute service
+            # configured which is configured with a connection to the API
+            # database. We should not be attempting to "get out" of our cell to
+            # look at the minimum versions of nova-compute services in other
+            # cells, so DBNotAllowed was raised. Leave a warning message
+            # and fall back to only querying computes in our cell.
+            LOG.warning(
+                'This service is configured for access to the API database '
+                'but is not allowed to directly access the database. You '
+                'should run this service without the '
+                '[api_database]/connection config option. The service version '
+                'check will only query the local cell.')
+            scope = 'cell'
+            current_service_version = service.Service.get_minimum_version(
+                ctxt, 'nova-compute')
     else:
         scope = 'cell'
         # We in a cell so target our query to the current cell only
