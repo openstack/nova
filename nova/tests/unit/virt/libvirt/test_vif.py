@@ -556,6 +556,12 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         pci_slot_want = vif['profile']['pci_slot']
         self.assertEqual(pci_slot, pci_slot_want)
 
+    def _assertQueueSizeEquals(self, node, rx_want, tx_want):
+        rx_queue_size = node.find("driver").get("rx_queue_size")
+        tx_queue_size = node.find("driver").get("tx_queue_size")
+        self.assertEqual(rx_queue_size, rx_want)
+        self.assertEqual(tx_queue_size, tx_want)
+
     def _assertXmlEqual(self, expectedXmlstr, actualXmlstr):
         if not isinstance(actualXmlstr, six.string_types):
             actualXmlstr = etree.tostring(actualXmlstr, encoding='unicode',
@@ -1296,24 +1302,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.flags(tx_queue_size=1024, group='libvirt')
         d = vif.LibvirtGenericVIFDriver()
         xml = self._get_instance_xml(d, self.vif_vhostuser)
-        self._assertXmlEqual("""
-         <domain type="qemu">
-          <uuid>fake-uuid</uuid>
-          <name>fake-name</name>
-          <memory>102400</memory>
-          <vcpu>4</vcpu>
-          <os>
-           <type>None</type>
-          </os>
-          <devices>
-           <interface type="vhostuser">
-            <mac address="ca:fe:de:ad:be:ef"/>
-            <model type="virtio"/>
-            <driver rx_queue_size="512" tx_queue_size="1024"/>
-            <source mode="client" path="/tmp/vif-xxx-yyy-zzz" type="unix"/>
-           </interface>
-          </devices>
-        </domain>""", xml)
+        node = self._get_node(xml)
+        self._assertQueueSizeEquals(node, "512", "1024")
 
     def test_vhostuser_driver_no_path(self):
         d = vif.LibvirtGenericVIFDriver()
@@ -1554,6 +1544,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
              <model type="virtio"/>
              <source mode="client"
               path="/var/run/openvswitch/vhudc065497-3c" type="unix"/>
+             <target dev="vhudc065497-3c"/>
             </interface>"""
 
         self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
@@ -1591,6 +1582,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
              <model type="virtio"/>
              <source mode="client"
               path="/var/run/openvswitch/vhudc065497-3c" type="unix"/>
+             <target dev="nicdc065497-3c"/>
             </interface>"""
 
         self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
