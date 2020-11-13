@@ -657,6 +657,21 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_virtio_multiqueue_in_kernel_4(self, mock_uname):
         self._test_virtio_multiqueue(10, '10')
 
+    @mock.patch('os.uname', return_value=('Linux', '', '2.6.32-21-generic'))
+    def test_virtio_multiqueue_in_kernel_2_max_queues(self, mock_uname):
+        self.flags(max_queues=2, group='libvirt')
+        self._test_virtio_multiqueue(10, '2')
+
+    @mock.patch('os.uname', return_value=('Linux', '', '3.19.0-47-generic'))
+    def test_virtio_multiqueue_in_kernel_3_max_queues(self, mock_uname):
+        self.flags(max_queues=2, group='libvirt')
+        self._test_virtio_multiqueue(10, '2')
+
+    @mock.patch('os.uname', return_value=('Linux', '', '4.2.0-35-generic'))
+    def test_virtio_multiqueue_in_kernel_4_max_queues(self, mock_uname):
+        self.flags(max_queues=2, group='libvirt')
+        self._test_virtio_multiqueue(10, '2')
+
     def test_vhostuser_os_vif_multiqueue(self):
         d = vif.LibvirtGenericVIFDriver()
         hostimpl = host.Host("qemu:///system")
