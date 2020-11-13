@@ -945,7 +945,7 @@ here.
 
    .. code-block:: console
 
-     $ openstack resource provider inventory set --resource VCPU:allocation_ratio=1.0 815a5634-86fb-4e1e-8824-8a631fee3e06
+     $ openstack resource provider inventory set --resource VCPU:allocation_ratio=1.0 --amend 815a5634-86fb-4e1e-8824-8a631fee3e06
 
 3. When the deployer wants to **always** use the placement API to set
    allocation ratios, then the deployer should ensure that
