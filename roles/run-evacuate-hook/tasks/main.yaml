@@ -36,11 +36,18 @@
   systemd:
     name: "{{ item }}"
     state: stopped
+    enabled: no
   with_items:
     - libvirtd.service
     - libvirtd.socket
     - libvirtd-admin.socket
     - libvirtd-ro.socket
+    - virtlogd.service
+    - virtlogd-admin.socket
+    - virtlogd.socket
+    - virtlockd.service
+    - virtlockd-admin.socket
+    - virtlockd.socket
 
 - name: Run negative evacuate tests
   become: true
@@ -54,11 +61,18 @@
   systemd:
     name: "{{ item }}"
     state: started
+    enabled: yes
   with_items:
     - libvirtd.service
     - libvirtd.socket
     - libvirtd-admin.socket
     - libvirtd-ro.socket
+    - virtlogd.service
+    - virtlogd-admin.socket
+    - virtlogd.socket
+    - virtlockd.service
+    - virtlockd-admin.socket
+    - virtlockd.socket
 
 - name: Run evacuate tests
   become: true
