@@ -247,6 +247,27 @@ class InstanceHelperMixin:
         self.assertIn(error_in_tb, event['traceback'])
         return event
 
+    def _assert_build_request_success(self, server_request):
+        server = self.api.post_server({'server': server_request})
+        self._wait_for_state_change(server, 'ACTIVE')
+        return server['id']
+
+    def _assert_build_request_schedule_failure(self, server_request):
+        server = self.api.post_server({'server': server_request})
+        self._wait_for_state_change(server, 'ERROR')
+
+    def _assert_bad_build_request_error(self, server_request):
+        ex = self.assertRaises(
+            api_client.OpenStackApiException, self.api.post_server,
+            {'server': server_request})
+        self.assertEqual(400, ex.response.status_code)
+
+    def _assert_build_request_error(self, server_request):
+        ex = self.assertRaises(
+            api_client.OpenStackApiException, self.api.post_server,
+            {'server': server_request})
+        self.assertEqual(500, ex.response.status_code)
+
     def _wait_for_migration_status(self, server, expected_statuses):
         """Waits for a migration record with the given statuses to be found
         for the given server, else the test fails. The migration record, if

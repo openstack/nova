@@ -217,6 +217,124 @@
             "progress": 100,
             "status": "ACTIVE",
             "updated": "2011-01-01T01:02:03Z"
+        },
+        {
+            "created": "2011-01-01T01:02:03Z",
+            "id": "%(eph_encryption_id)s",
+            "links": [
+                {
+                    "href": "%(versioned_compute_endpoint)s/images/%(eph_encryption_id)s",
+                    "rel": "self"
+                },
+                {
+                    "href": "%(compute_endpoint)s/images/%(eph_encryption_id)s",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/%(eph_encryption_id)s",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "metadata": {
+                "hw_ephemeral_encryption": "True"
+            },
+            "minDisk": 0,
+            "minRam": 0,
+            "name": "fakeimage123456",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
+            "progress": 100,
+            "status": "ACTIVE",
+            "updated": "2011-01-01T01:02:03Z"
+        },
+        {
+            "created": "2011-01-01T01:02:03Z",
+            "id": "%(eph_encryption_disabled_id)s",
+            "links": [
+                {
+                    "href": "%(versioned_compute_endpoint)s/images/%(eph_encryption_disabled_id)s",
+                    "rel": "self"
+                },
+                {
+                    "href": "%(compute_endpoint)s/images/%(eph_encryption_disabled_id)s",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/%(eph_encryption_disabled_id)s",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "metadata": {
+                "hw_ephemeral_encryption": "False"
+            },
+            "minDisk": 0,
+            "minRam": 0,
+            "name": "fakeimage123456",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
+            "progress": 100,
+            "status": "ACTIVE",
+            "updated": "2011-01-01T01:02:03Z"
+        },
+        {
+            "created": "2011-01-01T01:02:03Z",
+            "id": "%(eph_encryption_luks_id)s",
+            "links": [
+                {
+                    "href": "%(versioned_compute_endpoint)s/images/%(eph_encryption_luks_id)s",
+                    "rel": "self"
+                },
+                {
+                    "href": "%(compute_endpoint)s/images/%(eph_encryption_luks_id)s",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/%(eph_encryption_luks_id)s",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "metadata": {
+                "hw_ephemeral_encryption": "True",
+                "hw_ephemeral_encryption_format": "luks"
+            },
+            "minDisk": 0,
+            "minRam": 0,
+            "name": "fakeimage123456",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
+            "progress": 100,
+            "status": "ACTIVE",
+            "updated": "2011-01-01T01:02:03Z"
+        },
+        {
+            "created": "2011-01-01T01:02:03Z",
+            "id": "%(eph_encryption_plain_id)s",
+            "links": [
+                {
+                    "href": "%(versioned_compute_endpoint)s/images/%(eph_encryption_plain_id)s",
+                    "rel": "self"
+                },
+                {
+                    "href": "%(compute_endpoint)s/images/%(eph_encryption_plain_id)s",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/%(eph_encryption_plain_id)s",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "metadata": {
+                "hw_ephemeral_encryption": "True",
+                "hw_ephemeral_encryption_format": "plain"
+            },
+            "minDisk": 0,
+            "minRam": 0,
+            "name": "fakeimage123456",
+            "OS-EXT-IMG-SIZE:size": %(int)s,
+            "progress": 100,
+            "status": "ACTIVE",
+            "updated": "2011-01-01T01:02:03Z"
         }
     ]
 }

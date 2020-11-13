@@ -19,10 +19,29 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 class ImagesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = 'images'
 
+    def generalize_subs(self, subs, vanilla_regexes):
+        """Give the test a chance to modify subs after the server response
+        was verified, and before the on-disk doc/api_samples file is checked.
+        """
+        # When comparing the template to the sample we just care that the image
+        # IDs are UUIDs.
+        subs['eph_encryption_id'] = vanilla_regexes['uuid']
+        subs['eph_encryption_disabled_id'] = vanilla_regexes['uuid']
+        subs['eph_encryption_luks_id'] = vanilla_regexes['uuid']
+        subs['eph_encryption_plain_id'] = vanilla_regexes['uuid']
+        return subs
+
     def test_images_list(self):
         # Get api sample of images get list request.
         response = self._do_get('images')
-        self._verify_response('images-list-get-resp', {}, response, 200)
+        subs = {
+            'eph_encryption_id': self.glance.eph_encryption['id'],
+            'eph_encryption_disabled_id':
+                self.glance.eph_encryption_disabled['id'],
+            'eph_encryption_luks_id': self.glance.eph_encryption_luks['id'],
+            'eph_encryption_plain_id': self.glance.eph_encryption_plain['id'],
+        }
+        self._verify_response('images-list-get-resp', subs, response, 200)
 
     def test_image_get(self):
         # Get api sample of one single image details request.
@@ -34,7 +53,14 @@ class ImagesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_images_details(self):
         # Get api sample of all images details request.
         response = self._do_get('images/detail')
-        self._verify_response('images-details-get-resp', {}, response, 200)
+        subs = {
+            'eph_encryption_id': self.glance.eph_encryption['id'],
+            'eph_encryption_disabled_id':
+                self.glance.eph_encryption_disabled['id'],
+            'eph_encryption_luks_id': self.glance.eph_encryption_luks['id'],
+            'eph_encryption_plain_id': self.glance.eph_encryption_plain['id'],
+        }
+        self._verify_response('images-details-get-resp', subs, response, 200)
 
     def test_image_metadata_get(self):
         # Get api sample of an image metadata request.

@@ -132,6 +132,82 @@
                 }
             ],
             "name": "fakeimage123456"
+        },
+        {
+            "id": "%(eph_encryption_id)s",
+            "links": [
+                {
+                    "href": "%(versioned_compute_endpoint)s/images/%(eph_encryption_id)s",
+                    "rel": "self"
+                },
+                {
+                    "href": "%(compute_endpoint)s/images/%(eph_encryption_id)s",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/%(eph_encryption_id)s",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "name": "fakeimage123456"
+        },
+        {
+            "id": "%(eph_encryption_disabled_id)s",
+            "links": [
+                {
+                    "href": "%(versioned_compute_endpoint)s/images/%(eph_encryption_disabled_id)s",
+                    "rel": "self"
+                },
+                {
+                    "href": "%(compute_endpoint)s/images/%(eph_encryption_disabled_id)s",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/%(eph_encryption_disabled_id)s",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "name": "fakeimage123456"
+        },
+        {
+            "id": "%(eph_encryption_luks_id)s",
+            "links": [
+                {
+                    "href": "%(versioned_compute_endpoint)s/images/%(eph_encryption_luks_id)s",
+                    "rel": "self"
+                },
+                {
+                    "href": "%(compute_endpoint)s/images/%(eph_encryption_luks_id)s",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/%(eph_encryption_luks_id)s",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "name": "fakeimage123456"
+        },
+        {
+            "id": "%(eph_encryption_plain_id)s",
+            "links": [
+                {
+                    "href": "%(versioned_compute_endpoint)s/images/%(eph_encryption_plain_id)s",
+                    "rel": "self"
+                },
+                {
+                    "href": "%(compute_endpoint)s/images/%(eph_encryption_plain_id)s",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/%(eph_encryption_plain_id)s",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "name": "fakeimage123456"
         }
     ]
 }

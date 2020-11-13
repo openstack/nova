@@ -612,3 +612,90 @@ class TestRequestFilter(test.NoDBTestCase):
         mock_get_aggs_network.assert_has_calls([
             mock.call(self.context, mock.ANY, mock.ANY, uuids.net1),
             mock.call(self.context, mock.ANY, mock.ANY, uuids.net2)])
+
+    def test_ephemeral_encryption_filter_no_encryption(self):
+        # First ensure that ephemeral_encryption_filter is included
+        self.assertIn(request_filter.ephemeral_encryption_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+        reqspec = objects.RequestSpec(
+            flavor=objects.Flavor(extra_specs={}),
+            image=objects.ImageMeta(
+                properties=objects.ImageMetaProps()))
+
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+        # Assert that the filter returns false and doesn't update the reqspec
+        self.assertFalse(
+            request_filter.ephemeral_encryption_filter(self.context, reqspec))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+    def test_ephemeral_encryption_filter_encryption_disabled(self):
+        # First ensure that ephemeral_encryption_filter is included
+        self.assertIn(request_filter.ephemeral_encryption_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+        reqspec = objects.RequestSpec(
+            flavor=objects.Flavor(extra_specs={}),
+            image=objects.ImageMeta(
+                properties=objects.ImageMetaProps(
+                    hw_ephemeral_encryption=False)))
+        self.assertFalse(
+            request_filter.ephemeral_encryption_filter(
+                self.context, reqspec))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+        reqspec = objects.RequestSpec(
+            flavor=objects.Flavor(extra_specs={
+                'hw:ephemeral_encryption': 'False'}),
+            image=objects.ImageMeta(
+                properties=objects.ImageMetaProps()))
+        self.assertFalse(
+            request_filter.ephemeral_encryption_filter(
+                self.context, reqspec))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+    def test_ephemeral_encryption_filter_encryption_no_format(self):
+        # First ensure that ephemeral_encryption_filter is included
+        self.assertIn(request_filter.ephemeral_encryption_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+        reqspec = objects.RequestSpec(
+            flavor=objects.Flavor(extra_specs={
+                'hw:ephemeral_encryption': 'True'}),
+            image=objects.ImageMeta(
+                properties=objects.ImageMetaProps()))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+        self.assertTrue(
+            request_filter.ephemeral_encryption_filter(self.context, reqspec))
+        self.assertEqual(
+            {ot.COMPUTE_EPHEMERAL_ENCRYPTION}, reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+
+    def test_ephemeral_encryption_filter_encryption_and_format(self):
+        # First ensure that ephemeral_encryption_filter is included
+        self.assertIn(request_filter.ephemeral_encryption_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+
+        reqspec = objects.RequestSpec(
+            flavor=objects.Flavor(
+                extra_specs={
+                    'hw:ephemeral_encryption': 'True',
+                    'hw:ephemeral_encryption_format': 'luks'
+                }),
+            image=objects.ImageMeta(
+                properties=objects.ImageMetaProps()))
+        self.assertEqual(set(), reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
+        self.assertTrue(
+            request_filter.ephemeral_encryption_filter(self.context, reqspec))
+        self.assertEqual(
+            {ot.COMPUTE_EPHEMERAL_ENCRYPTION,
+             ot.COMPUTE_EPHEMERAL_ENCRYPTION_LUKS},
+            reqspec.root_required)
+        self.assertEqual(set(), reqspec.root_forbidden)
