@@ -800,6 +800,8 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], {'revertResize': None})
         server = self._wait_for_state_change(server, 'ACTIVE')
         self._wait_for_migration_status(server, ['reverted'])
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.resize_revert.end')
         self.assert_volume_is_detached(server['id'], uuids.fake_volume_id)
         # Delete the server and make sure we did not leak anything.
         self.delete_server_and_assert_cleanup(server)
@@ -1070,6 +1072,8 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(4, server['OS-EXT-STS:power_state'],
                          "Unexpected power state after revertResize.")
         self._wait_for_migration_status(server, ['reverted'])
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.resize_revert.end')
 
         # Now try cold-migrating to cell2 to make sure there is no
         # duplicate entry error in the DB.
