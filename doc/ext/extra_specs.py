@@ -81,11 +81,11 @@ class ExtraSpecDirective(sphinx_directives.ObjectDescription):
         cached_options[sig] = self.env.docname
 
 
-def _indent(text):
+def _indent(text, count=1):
     if not text:
         return text
 
-    padding = ' ' * 4
+    padding = ' ' * (4 * count)
     return padding + text
 
 
@@ -133,10 +133,9 @@ def _format_validator_help(
     if validator.deprecated:
         yield _indent('.. warning::')
         yield _indent(
-            'This extra spec has been deprecated and should not be used.'
+            'This extra spec has been deprecated and should not be used.', 2
         )
-
-    yield ''
+        yield ''
 
 
 class ExtraSpecGroupDirective(rst.Directive):
