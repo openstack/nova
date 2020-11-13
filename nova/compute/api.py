@@ -1581,6 +1581,42 @@ class API:
 
         return objects.InstanceGroup.get_by_uuid(context, group_hint)
 
+    def _update_ephemeral_encryption_bdms(
+        self,
+        flavor: 'objects.Flavor',
+        image_meta_dict: ty.Dict[str, ty.Any],
+        block_device_mapping: 'objects.BlockDeviceMappingList',
+    ) -> None:
+        """Update local BlockDeviceMappings when ephemeral encryption requested
+
+        Enable ephemeral encryption in all local BlockDeviceMappings
+        when requested in the flavor or image. Also optionally set the format
+        and options if also provided.
+
+        :param flavor: The instance flavor for the request
+        :param image_meta_dict: The image metadata for the request
+        :block_device_mapping: The current block_device_mapping for the request
+        """
+        image_meta = _get_image_meta_obj(image_meta_dict)
+        if not hardware.get_ephemeral_encryption_constraint(
+                flavor, image_meta):
+            return
+
+        # NOTE(lyarwood): Attempt to find the format in the flavor and image,
+        # if one isn't found then the compute will need to provide and save a
+        # default format during a the initial build.
+        eph_format = hardware.get_ephemeral_encryption_format(
+            flavor, image_meta)
+
+        # NOTE(lyarwood): The term ephemeral is overloaded in the codebase,
+        # what it actually means in the context of ephemeral encryption is
+        # anything local to the compute host so use the is_local property.
+        # TODO(lyarwood): Add .get_local_devices() to BlockDeviceMappingList
+        for bdm in [b for b in block_device_mapping if b.is_local]:
+            bdm.encrypted = True
+            if eph_format:
+                bdm.encryption_format = eph_format
+
     def _create_instance(self, context, flavor,
                image_href, kernel_id, ramdisk_id,
                min_count, max_count,
@@ -1658,9 +1694,16 @@ class API:
                       'max_net_count': max_net_count})
             max_count = max_net_count
 
+        # _check_and_transform_bdm transforms block_device_mapping from API
+        # bdms (dicts) to a BlockDeviceMappingList.
         block_device_mapping = self._check_and_transform_bdm(context,
             base_options, flavor, boot_meta, min_count, max_count,
             block_device_mapping, legacy_bdm)
+
+        # Update any local BlockDeviceMapping objects if ephemeral encryption
+        # has been requested though flavor extra specs or image properties
+        self._update_ephemeral_encryption_bdms(
+            flavor, boot_meta, block_device_mapping)
 
         # We can't do this check earlier because we need bdms from all sources
         # to have been merged in order to get the root bdm.
