@@ -320,6 +320,11 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     def is_image(self):
         return self.source_type == fields.BlockDeviceSourceType.IMAGE
 
+    @property
+    def is_local(self):
+        return (self.destination_type ==
+                    fields.BlockDeviceDestinationType.LOCAL)
+
     def get_image_mapping(self):
         return block_device.BlockDeviceDict(self).get_image_mapping()
 

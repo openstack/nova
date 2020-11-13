@@ -251,6 +251,14 @@ class _TestBlockDeviceMappingObject(object):
                                          destination_type='local')
         self.assertFalse(bdm.is_volume)
 
+    def test_is_local(self):
+        self.assertTrue(
+            objects.BlockDeviceMapping(
+                context=self.context, destination_type='local').is_local)
+        self.assertFalse(
+            objects.BlockDeviceMapping(
+                context=self.context, destination_type='volume').is_local)
+
     def test_obj_load_attr_not_instance(self):
         """Tests that lazy-loading something other than the instance field
         results in an error.
