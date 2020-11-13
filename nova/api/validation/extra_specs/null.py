@@ -17,19 +17,23 @@
 from nova.api.validation.extra_specs import base
 
 
-# TODO(stephenfin): These should be moved to a namespace
 EXTRA_SPEC_VALIDATORS = [
     base.ExtraSpecValidator(
         name='hide_hypervisor_id',
         description=(
             'Determine whether the hypervisor ID should be hidden from the '
-            'guest. Only supported by the libvirt driver.'
+            'guest. Only supported by the libvirt driver. This extra spec is '
+            'not compatible with the AggregateInstanceExtraSpecsFilter '
+            'scheduler filter. The ``hw:hide_hypervisor_id`` extra spec '
+            'should be used instead.'
         ),
         value={
             'type': bool,
             'description': 'Whether to hide the hypervisor ID.',
         },
+        deprecated=True,
     ),
+    # TODO(stephenfin): This should be moved to a namespace
     base.ExtraSpecValidator(
         name='group_policy',
         description=(

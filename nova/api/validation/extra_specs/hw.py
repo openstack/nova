@@ -42,6 +42,20 @@ realtime_validators = [
     ),
 ]
 
+hide_hypervisor_id_validator = [
+    base.ExtraSpecValidator(
+        name='hw:hide_hypervisor_id',
+        description=(
+            'Determine whether the hypervisor ID should be hidden from the '
+            'guest. Only supported by the libvirt driver.'
+        ),
+        value={
+            'type': bool,
+            'description': 'Whether to hide the hypervisor ID.',
+        },
+    )
+]
+
 cpu_policy_validators = [
     base.ExtraSpecValidator(
         name='hw:cpu_policy',
@@ -362,6 +376,7 @@ feature_flag_validators = [
 def register():
     return (
         realtime_validators +
+        hide_hypervisor_id_validator +
         cpu_policy_validators +
         hugepage_validators +
         numa_validators +

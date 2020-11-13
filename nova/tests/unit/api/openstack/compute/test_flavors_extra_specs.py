@@ -297,6 +297,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
     def test_create_valid_specs(self, mock_flavor_extra_specs):
         valid_specs = {
             'hide_hypervisor_id': 'true',
+            'hw:hide_hypervisor_id': 'true',
             'hw:numa_nodes': '1',
             'hw:numa_cpus.0': '0-3,8-9,11,10',
             'resources:VCPU': '4',
