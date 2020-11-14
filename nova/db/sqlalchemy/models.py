@@ -1209,6 +1209,8 @@ class Aggregate(BASE, NovaBase, models.SoftDeleteMixin):
         return self.metadetails['availability_zone']
 
 
+# TODO(stephenfin): Remove this in the W release or later, once we're sure we
+# won't want it back (it's for a XenAPI-only feature)
 class AgentBuild(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents an agent build."""
     __tablename__ = 'agent_builds'
