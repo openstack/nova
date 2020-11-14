@@ -1,0 +1,11 @@
+---
+
+fixes:
+  - |
+    When upgrading compute services from Ussuri to Victoria each by one, the
+    Compute RPC API was pinning to 5.11 (either automatically or by using
+    the specific rpc version in the option) but when rebuilding an instance,
+    a TypeError was raised as an argument was not provided. This error is
+    fixed by `bug 1902925`_.
+
+    .. _bug 1902925: https://bugs.launchpad.net/nova/+bug/1902925/
