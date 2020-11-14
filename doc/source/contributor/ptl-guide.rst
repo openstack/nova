@@ -290,6 +290,10 @@ Immediately after RC
 
   * Example: https://wiki.openstack.org/wiki/Nova/Train_Release_Schedule
 
+* Update the contributor guide for the new cycle
+
+  * Example: https://review.opendev.org/#/c/754427/
+
 Miscellaneous Notes
 -------------------
 
