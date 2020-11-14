@@ -1387,8 +1387,9 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
         self.assertIn(fakelibvirt.virNodeDevice, proxy_classes)
         self.assertIn(fakelibvirt.virSecret, proxy_classes)
 
-        # Assert that we filtered out libvirtError
+        # Assert that we filtered out libvirtError and any private classes
         self.assertNotIn(fakelibvirt.libvirtError, proxy_classes)
+        self.assertNotIn(fakelibvirt._EventAddHandleFunc, proxy_classes)
 
     def test_tpool_get_connection(self):
         # Test that Host.get_connection() returns a tpool.Proxy

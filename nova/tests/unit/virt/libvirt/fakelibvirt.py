@@ -1852,6 +1852,16 @@ virConnect = Connection
 virSecret = Secret
 
 
+# A private libvirt-python class and global only provided here for testing to
+# ensure it's not returned by libvirt.host.Host.get_libvirt_proxy_classes.
+class FakeHandler(object):
+    def __init__(self):
+        pass
+
+
+_EventAddHandleFunc = FakeHandler
+
+
 class FakeLibvirtFixture(fixtures.Fixture):
     """Performs global setup/stubbing for all libvirt tests.
     """
