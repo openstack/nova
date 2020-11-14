@@ -16,9 +16,6 @@
 from oslo_config import cfg
 from oslo_db import options as oslo_db_options
 
-from nova.conf import paths
-
-_DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 _ENRICHED = False
 
 
@@ -110,7 +107,6 @@ def enrich_help_text(alt_db_opts):
 
 
 def register_opts(conf):
-    oslo_db_options.set_defaults(conf, connection=_DEFAULT_SQL_CONNECTION)
     conf.register_opts(api_db_opts, group=api_db_group)
 
 
