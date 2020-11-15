@@ -1274,21 +1274,3 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_create_image,
                           self.req, FAKE_UUID, body=body)
-
-    @mock.patch('nova.objects.Service.get_by_host_and_binary')
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request', return_value=True)
-    def test_resize_with_bandwidth_from_old_compute_not_supported(
-            self, mock_has_res_req, mock_get_service):
-        body = dict(resize=dict(flavorRef="http://localhost/3"))
-        mock_get_service.return_value = objects.Service()
-        mock_get_service.return_value.version = 38
-
-        self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller._action_resize,
-                          self.req, FAKE_UUID, body=body)
-
-        mock_has_res_req.assert_called_once_with(
-            FAKE_UUID, self.controller.network_api)
-        mock_get_service.assert_called_once_with(
-            self.req.environ['nova.context'], 'fake_host', 'nova-compute')

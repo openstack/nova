@@ -92,8 +92,6 @@ INVALID_FLAVOR_IMAGE_EXCEPTIONS = (
     exception.InvalidMixedInstanceDedicatedMask,
 )
 
-MIN_COMPUTE_MOVE_BANDWIDTH = 39
-
 
 class ServersController(wsgi.Controller):
     """The Server API base controller class for the OpenStack API."""
@@ -945,18 +943,6 @@ class ServersController(wsgi.Controller):
         context.can(server_policies.SERVERS % 'resize',
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
-
-        if common.instance_has_port_with_resource_request(
-                instance_id, self.network_api):
-            # TODO(gibi): Remove when nova only supports compute newer than
-            # Train
-            source_service = objects.Service.get_by_host_and_binary(
-                context, instance.host, 'nova-compute')
-            if source_service.version < MIN_COMPUTE_MOVE_BANDWIDTH:
-                msg = _("The resize action on a server with ports having "
-                        "resource requests, like a port with a QoS "
-                        "minimum bandwidth policy, is not yet supported.")
-                raise exc.HTTPConflict(explanation=msg)
 
         try:
             self.compute_api.resize(context, instance, flavor_id,

@@ -227,106 +227,6 @@ class MigrationTask(base.TaskBase):
                       instance=self.instance)
         return same_cell
 
-    def _support_resource_request(self, selection):
-        """Returns true if the host is new enough to support resource request
-        during migration and that the RPC API version is not pinned during
-        rolling upgrade.
-        """
-        svc = objects.Service.get_by_host_and_binary(
-            self.context, selection.service_host, 'nova-compute')
-        return (svc.version >= 39 and
-                self.compute_rpcapi.supports_resize_with_qos_port(
-                    self.context))
-
-    # TODO(gibi): Remove this compat code when nova doesn't need to support
-    # Train computes any more.
-    def _get_host_supporting_request(self, selection_list):
-        """Return the first compute selection from the selection_list where
-        the service is new enough to support resource request during migration
-        and the resources claimed successfully.
-
-        :param selection_list: a list of Selection objects returned by the
-            scheduler
-        :return: A two tuple. The first item is a Selection object
-            representing the host that supports the request. The second item
-            is a list of Selection objects representing the remaining alternate
-            hosts.
-        :raises MaxRetriesExceeded: if none of the hosts in the selection_list
-            is new enough to support the request or we cannot claim resource
-            on any of the hosts that are new enough.
-        """
-
-        if not self.request_spec.requested_resources:
-            return selection_list[0], selection_list[1:]
-
-        # Scheduler allocated resources on the first host. So check if the
-        # first host is new enough
-        if self._support_resource_request(selection_list[0]):
-            return selection_list[0], selection_list[1:]
-
-        # First host is old, so we need to use an alternate. Therefore we have
-        # to remove the allocation from the first host.
-        self.reportclient.delete_allocation_for_instance(
-            self.context, self.instance.uuid)
-        LOG.debug(
-            'Scheduler returned host %(host)s as a possible migration target '
-            'but that host is not new enough to support the migration with '
-            'resource request %(request)s or the compute RPC is pinned to '
-            'less than 5.2. Trying alternate hosts.',
-            {'host': selection_list[0].service_host,
-             'request': self.request_spec.requested_resources},
-            instance=self.instance)
-
-        alternates = selection_list[1:]
-
-        for i, selection in enumerate(alternates):
-            if self._support_resource_request(selection):
-                # this host is new enough so we need to try to claim resources
-                # on it
-                if selection.allocation_request:
-                    alloc_req = jsonutils.loads(
-                        selection.allocation_request)
-                    resource_claimed = scheduler_utils.claim_resources(
-                        self.context, self.reportclient, self.request_spec,
-                        self.instance.uuid, alloc_req,
-                        selection.allocation_request_version)
-
-                    if not resource_claimed:
-                        LOG.debug(
-                            'Scheduler returned alternate host %(host)s as a '
-                            'possible migration target but resource claim '
-                            'failed on that host. Trying another alternate.',
-                            {'host': selection.service_host},
-                            instance=self.instance)
-                    else:
-                        return selection, alternates[i + 1:]
-
-                else:
-                    # Some deployments use different schedulers that do not
-                    # use Placement, so they will not have an
-                    # allocation_request to claim with. For those cases,
-                    # there is no concept of claiming, so just assume that
-                    # the resources are available.
-                    return selection, alternates[i + 1:]
-
-            else:
-                LOG.debug(
-                    'Scheduler returned alternate host %(host)s as a possible '
-                    'migration target but that host is not new enough to '
-                    'support the migration with resource request %(request)s '
-                    'or the compute RPC is pinned to less than 5.2. '
-                    'Trying another alternate.',
-                    {'host': selection.service_host,
-                     'request': self.request_spec.requested_resources},
-                    instance=self.instance)
-
-        # if we reach this point then none of the hosts was new enough for the
-        # request or we failed to claim resources on every alternate
-        reason = ("Exhausted all hosts available during compute service level "
-                  "check for instance %(instance_uuid)s." %
-                  {"instance_uuid": self.instance.uuid})
-        raise exception.MaxRetriesExceeded(reason=reason)
-
     def _execute(self):
         # NOTE(sbauza): Force_hosts/nodes needs to be reset if we want to make
         # sure that the next destination is not forced to be the original host.
@@ -436,8 +336,8 @@ class MigrationTask(base.TaskBase):
         # just need the first returned element.
         selection_list = selection_lists[0]
 
-        selection, self.host_list = self._get_host_supporting_request(
-            selection_list)
+        # Scheduler allocated resources on the first host so try that first
+        selection, self.host_list = selection_list[0], selection_list[1:]
 
         scheduler_utils.fill_provider_mapping(self.request_spec, selection)
         return selection
@@ -452,17 +352,6 @@ class MigrationTask(base.TaskBase):
         selection = None
         while self.host_list and not host_available:
             selection = self.host_list.pop(0)
-            if (self.request_spec.requested_resources and not
-                    self._support_resource_request(selection)):
-                LOG.debug(
-                    'Scheduler returned alternate host %(host)s as a possible '
-                    'migration target for re-schedule but that host is not '
-                    'new enough to support the migration with resource '
-                    'request %(request)s. Trying another alternate.',
-                    {'host': selection.service_host,
-                     'request': self.request_spec.requested_resources},
-                    instance=self.instance)
-                continue
             if selection.allocation_request:
                 alloc_req = jsonutils.loads(selection.allocation_request)
             else:

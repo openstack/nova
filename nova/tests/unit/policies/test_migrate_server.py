@@ -62,9 +62,7 @@ class MigrateServerPolicyTest(base.BasePolicyTest):
         ]
 
     @mock.patch('nova.compute.api.API.resize')
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request', return_value=False)
-    def test_migrate_server_policy(self, mock_port, mock_resize):
+    def test_migrate_server_policy(self, mock_resize):
         rule_name = ms_policies.POLICY_ROOT % 'migrate'
         self.common_policy_check(self.admin_authorized_contexts,
                                  self.admin_unauthorized_contexts,
@@ -73,9 +71,7 @@ class MigrateServerPolicyTest(base.BasePolicyTest):
                                  body={'migrate': None})
 
     @mock.patch('nova.compute.api.API.live_migrate')
-    @mock.patch('nova.api.openstack.common.'
-                'instance_has_port_with_resource_request', return_value=False)
-    def test_migrate_live_server_policy(self, mock_port, mock_live_migrate):
+    def test_migrate_live_server_policy(self, mock_live_migrate):
         rule_name = ms_policies.POLICY_ROOT % 'migrate_live'
         body = {'os-migrateLive': {
                  'host': 'hostname',
