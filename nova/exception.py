@@ -2541,7 +2541,7 @@ class PMEMNamespaceConfigInvalid(NovaException):
                 "please check your conf file. ")
 
 
-class GetPMEMNamespaceFailed(NovaException):
+class GetPMEMNamespacesFailed(NovaException):
     msg_fmt = _("Get PMEM namespaces on host failed: %(reason)s.")
 
 
