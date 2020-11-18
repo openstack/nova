@@ -1202,7 +1202,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     raise exception.InstancePowerOffFailure(reason=reason)
                 elif errcode == libvirt.VIR_ERR_SYSTEM_ERROR:
                     with excutils.save_and_reraise_exception():
-                        LOG.warning("Cannot destroy instance, general system"
+                        LOG.warning("Cannot destroy instance, general system "
                                     "call failure", instance=instance)
                 if not is_okay:
                     with excutils.save_and_reraise_exception():
