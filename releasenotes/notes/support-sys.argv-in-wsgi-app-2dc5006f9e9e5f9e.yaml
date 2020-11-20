@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Now nova-api and nova-api-metadata WSGI services support command line
+    arguments similarly to other nova services. For example these services
+    now support specifying mutliple config files via --config-file parameter.
+    Please note that passing command line arguments to WSGI apps depends on
+    the given WSGI runner. For example uwsgi supports this via the --pyargv
+    parameter of the uwsgi binary.

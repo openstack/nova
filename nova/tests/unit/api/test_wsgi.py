@@ -19,11 +19,16 @@
 Test WSGI basics and provide some helper functions for other WSGI tests.
 """
 
+import sys
+
+import mock
 import routes
 import webob
 
+from nova.api.openstack import wsgi_app
 from nova.api import wsgi
 from nova import test
+from nova import utils
 
 
 class Test(test.NoDBTestCase):
@@ -49,3 +54,15 @@ class Test(test.NoDBTestCase):
         self.assertEqual(result.body, "Router result")
         result = webob.Request.blank('/bad').get_response(Router())
         self.assertNotEqual(result.body, "Router result")
+
+    @mock.patch('nova.api.openstack.wsgi_app._setup_service', new=mock.Mock())
+    @mock.patch('paste.deploy.loadapp', new=mock.Mock())
+    def test_init_application_passes_sys_argv_to_config(self):
+
+        with utils.temporary_mutation(sys, argv=mock.sentinel.argv):
+            with mock.patch('nova.config.parse_args') as mock_parse_args:
+                wsgi_app.init_application('test-app')
+                mock_parse_args.assert_called_once_with(
+                    mock.sentinel.argv,
+                    default_config_files=[
+                        '/etc/nova/api-paste.ini', '/etc/nova/nova.conf'])

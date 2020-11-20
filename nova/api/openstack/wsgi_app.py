@@ -12,6 +12,7 @@
 """WSGI application initialization for Nova APIs."""
 
 import os
+import sys
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -76,7 +77,9 @@ def error_application(exc, name):
 
 def init_application(name):
     conf_files = _get_config_files()
-    config.parse_args([], default_config_files=conf_files)
+    # NOTE(gibi): sys.argv is set by the wsgi runner e.g. uwsgi sets it based
+    # on the --pyargv parameter of the uwsgi binary
+    config.parse_args(sys.argv, default_config_files=conf_files)
 
     logging.setup(CONF, "nova")
 
