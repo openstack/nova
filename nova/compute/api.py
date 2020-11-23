@@ -590,7 +590,12 @@ class API(base.Base):
             return
 
         image_properties = image.get('properties', {})
-        if image_properties.get('cinder_encryption_key_id'):
+        # NOTE(lyarwood) Skip this check when image_id is None indicating that
+        # the instance is booting from a volume that was itself initially
+        # created from an image. As such we don't care if
+        # cinder_encryption_key_id was against the original image as we are now
+        # booting from an encrypted volume.
+        if image_properties.get('cinder_encryption_key_id') and image_id:
             reason = _('Direct booting of an image uploaded from an '
                        'encrypted volume is unsupported.')
             raise exception.ImageUnacceptable(image_id=image_id,
