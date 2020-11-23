@@ -213,10 +213,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, bdm=self.fake_volume_bdm,
                 version='5.0')
 
-    def test_change_instance_metadata(self):
-        self._test_compute_api('change_instance_metadata', 'cast',
-                instance=self.fake_instance_obj, diff={}, version='5.0')
-
     def test_check_instance_shared_storage(self):
         self._test_compute_api('check_instance_shared_storage', 'call',
                 instance=self.fake_instance_obj, data='foo',

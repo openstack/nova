@@ -4220,13 +4220,11 @@ class ComputeManager(manager.Manager):
             self.host, action=fields.NotificationAction.UNRESCUE,
             phase=fields.NotificationPhase.END)
 
+    # TODO(stephenfin): Remove this once we bump the compute API to v6.0
     @wrap_exception()
     @wrap_instance_fault
     def change_instance_metadata(self, context, diff, instance):
-        """Update the metadata published to the instance."""
-        LOG.debug("Changing instance metadata according to %r",
-                  diff, instance=instance)
-        self.driver.change_instance_metadata(context, instance, diff)
+        raise NotImplementedError()
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
