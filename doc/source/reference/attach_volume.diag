@@ -1,0 +1,34 @@
+seqdiag {
+        user; nova-api; nova-conductor; nova-compute; libvirt-driver; os-brick; cinder-api;
+        edge_length = 300;
+        span_height = 16;
+        activation = none;
+        default_note_color = white;
+        user ->  nova-api [label = "POST /servers/{server_id}/os-volume_attachments"];
+                 nova-api -> nova-compute [label = "RPC call reserve_block_device_name"];
+                             nova-compute -> nova-compute [label = "instance.uuid lock"];
+                             nova-compute ->> nova-conductor [label = "bdm.create"];
+                             nova-compute <<- nova-conductor [label = "return BlockDeviceMapping"];
+                             nova-compute -> libvirt-driver [label = "get_device_name_for_instance"];
+                             nova-compute <- libvirt-driver [label = "Return get_device_name_for_instance"];
+                 nova-api <- nova-compute [label = "Return reserve_block_device_name"];
+                 nova-api -> cinder-api [label = "POST /v3/{project_id}/attachments"];
+                 nova-api <- cinder-api [label = "Return HTTP 200 (without connection_info)"];
+                 nova-api ->> nova-compute [label = "RPC cast attach_volume"];
+        user <-  nova-api [label = "Return HTTP 200 (includes device_name)"];
+                             nova-compute -> nova-compute [label = "instance.uuid lock"];
+                             nova-compute -> os-brick [label = "cinder_backend.uuid lock"];
+                             nova-compute -> cinder-api [label = "PUT /v3/{project_id}/attachments/{attachment_id}"];
+                             nova-compute <- cinder-api [label = "Return HTTP 200 (includes connection_info)"];
+                             nova-compute -> libvirt-driver [label = "attach_volume"];
+                                             libvirt-driver -> os-brick [label = "connect_volume"];
+                                                               os-brick -> os-brick [label = "connect_volume lock"];
+                                             libvirt-driver <- os-brick;
+                                             libvirt-driver -> libvirt-driver [label = "guest.attach_device"];
+                                             libvirt-driver -> libvirt-driver [label = "_build_device_metadata"];
+                                             libvirt-driver ->> nova-conductor [label = "instance.save"];
+                             nova-compute <- libvirt-driver [label = "Return attach_volume"];
+                             nova-compute ->> nova-conductor [label = "bdm.save"];
+                             nova-compute -> cinder-api [label = "POST /v3/{project_id}/attachments/{attachment_id}/action (os-complete)"];
+                             nova-compute <- cinder-api [label = "Return HTTP 200"];
+}
