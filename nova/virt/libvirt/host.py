@@ -793,13 +793,17 @@ class Host(object):
                 xml_str = self._caps.host.cpu.to_xml()
                 if isinstance(xml_str, bytes):
                     xml_str = xml_str.decode('utf-8')
-                features = self.get_connection().baselineCPU(
-                    [xml_str],
-                    libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
-                if features:
-                    cpu = vconfig.LibvirtConfigCPU()
-                    cpu.parse_str(features)
-                    self._caps.host.cpu.features = cpu.features
+                # NOTE(kevinz): The baseline CPU info on Aarch64 will not
+                # include any features. So on Aarch64, we use the original
+                # features from LibvirtConfigCaps.
+                if self._caps.host.cpu.arch != fields.Architecture.AARCH64:
+                    features = self.get_connection().baselineCPU(
+                        [xml_str],
+                        libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
+                    if features:
+                        cpu = vconfig.LibvirtConfigCPU()
+                        cpu.parse_str(features)
+                        self._caps.host.cpu.features = cpu.features
             except libvirt.libvirtError as ex:
                 error_code = ex.get_error_code()
                 if error_code == libvirt.VIR_ERR_NO_SUPPORT:

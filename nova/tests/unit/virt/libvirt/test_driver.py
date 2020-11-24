@@ -11020,20 +11020,47 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 instance)
         self.assertIsNone(ret)
 
-    @mock.patch.object(host.Host, 'compare_cpu')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_AARCH64_CPU_COMPARE) - 1
+                       )
     @mock.patch.object(nova.virt.libvirt, 'config')
     def test_compare_cpu_aarch64_skip_comparison(self,
                                                  mock_vconfig,
-                                                 mock_compare):
+                                                 mock_get_libversion):
         instance = objects.Instance(**self.test_instance)
-        skip_comparison_exc = fakelibvirt.make_libvirtError(
-                fakelibvirt.libvirtError,
-                'Host CPU compatibility check does not make '
-                'sense on AArch64; skip CPU comparison')
-        mock_compare.side_effect = skip_comparison_exc
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         ret = conn._compare_cpu(None, jsonutils.dumps(_fake_cpu_info_aarch64),
                 instance)
+        self.assertIsNone(ret)
+
+    @mock.patch.object(host.Host, 'get_capabilities')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_LIBVIRT_AARCH64_CPU_COMPARE))
+    @mock.patch.object(host.Host, 'compare_cpu')
+    def test_compare_cpu_host_aarch64(self,
+                                      mock_compare,
+                                      mock_get_libversion,
+                                      mock_caps):
+        instance = objects.Instance(**self.test_instance)
+        mock_compare.return_value = 6
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = fields.Architecture.AARCH64
+        caps.host.topology = fakelibvirt.NUMATopology()
+
+        mock_caps.return_value = caps
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ret = conn._compare_cpu(None,
+                                jsonutils.dumps(_fake_cpu_info_aarch64),
+                                instance)
+        mock_compare.assert_called_once_with(caps.host.cpu.to_xml())
         self.assertIsNone(ret)
 
     @mock.patch.object(host.Host, 'compare_cpu')
