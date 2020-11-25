@@ -57,14 +57,9 @@ class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase):
         host2.stop()
         self.api.force_down_service('host2', 'nova-compute', forced_down=True)
         # Now try to evacuate the server back to the original source compute.
-        req = {'evacuate': {'onSharedStorage': False}}
-        self.api.post_server_action(server['id'], req)
-        server = self._wait_for_state_change(server, 'ACTIVE')
-        # The evacuate flow in the compute manager is annoying in that it
-        # sets the instance status to ACTIVE before updating the host, so we
-        # have to wait for the migration record to be 'done' to avoid a race.
-        self._wait_for_migration_status(server, ['done'])
-        self.assertEqual(self.compute.host, server['OS-EXT-SRV-ATTR:host'])
+        server = self._evacuate_server(
+            server, {'onSharedStorage': 'False'},
+            expected_host=self.compute.host, expected_migration_status='done')
 
         # Assert the RequestSpec.ignore_hosts field is not populated.
         reqspec = objects.RequestSpec.get_by_instance_uuid(

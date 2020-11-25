@@ -64,8 +64,6 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase):
         # Now evacuate the server which should send it to host3 since it is
         # in the same cell as host1, even though host2 in cell2 is weighed
         # higher than host3.
-        req = {'evacuate': {'onSharedStorage': False}}
-        self.api.post_server_action(server['id'], req)
-        self._wait_for_migration_status(server, ['done'])
-        server = self._wait_for_state_change(server, 'ACTIVE')
-        self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
+        self._evacuate_server(
+            server, {'onSharedStorage': 'False'}, expected_host='host3',
+            expected_migration_status='done')

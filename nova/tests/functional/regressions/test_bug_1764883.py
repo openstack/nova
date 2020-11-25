@@ -97,12 +97,9 @@ class TestEvacuationWithSourceReturningDuringRebuild(
         self.computes.get(self.source_compute).stop()
         self.api.force_down_service(self.source_compute, 'nova-compute', True)
 
-        # Start evacuating the instance from the source_host
-        self.api.post_server_action(server['id'], {'evacuate': {}})
-
-        # Wait for the instance to go into an ACTIVE state
-        self._wait_for_state_change(server, 'ACTIVE')
-        server = self.api.get_server(server['id'])
+        # Evacuate the instance from the source_host
+        server = self._evacuate_server(
+            server, expected_migration_status='done')
         host = server['OS-EXT-SRV-ATTR:host']
         migrations = self.api.get_migrations()
 

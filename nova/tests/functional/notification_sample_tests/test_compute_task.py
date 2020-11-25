@@ -69,9 +69,9 @@ class TestComputeTaskNotificationSample(
 
         # NOTE(takashin): The rebuild action and the evacuate action shares
         # same code path. So the 'evacuate' action is used for this test.
-        post = {'evacuate': {}}
+        self._evacuate_server(
+            server, expected_state='ERROR', expected_migration_status='error')
 
-        self.admin_api.post_server_action(server['id'], post)
         self._wait_for_notification('compute_task.rebuild_server.error')
         # 0. instance.evacuate
         # 1. scheduler.select_destinations.start
