@@ -1,0 +1,13 @@
+---
+fixes:
+  - |
+    The libvirt virt driver will no longer attempt to fetch volume
+    encryption metadata or the associated secret key when attaching ``LUKSv1``
+    encrypted volumes if a libvirt secret already exists on the host.
+
+    This resolves `bug 1905701`_ where instances with ``LUKSv1`` encrypted
+    volumes could not be restarted automatically by the ``nova-compute``
+    service after a host reboot when the
+    ``[DEFAULT]/resume_guests_state_on_host_boot`` configurable was enabled.
+
+    .. _bug 1905701: https://launchpad.net/bugs/1905701
