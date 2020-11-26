@@ -9962,6 +9962,18 @@ class LibvirtDriver(driver.ComputeDriver):
         except Exception as ex:
             LOG.warning("Error monitoring migration: %(ex)s",
                         {"ex": ex}, instance=instance, exc_info=True)
+            # NOTE(aarents): Ensure job is aborted if still running before
+            # raising the exception so this would avoid the migration to be
+            # done and the libvirt guest to be resumed on the target while
+            # the instance record would still related to the source host.
+            try:
+                # If migration is running in post-copy mode and guest
+                # already running on dest host, libvirt will refuse to
+                # cancel migration job.
+                self.live_migration_abort(instance)
+            except libvirt.libvirtError:
+                LOG.warning("Error occured when trying to abort live ",
+                            "migration job, ignoring it.", instance=instance)
             raise
         finally:
             LOG.debug("Live migration monitoring is all done",
