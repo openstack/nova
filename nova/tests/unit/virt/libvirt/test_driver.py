@@ -8447,9 +8447,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # assert that no warning is thrown
         mock_warn.assert_not_called()
 
-    @mock.patch.object(libvirt_driver.LOG, 'warning')
-    def test_get_guest_cpu_config_host_passthrough_with_extra_flags(self,
-            mock_warn):
+    def test_get_guest_cpu_config_host_passthrough_with_extra_flags(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -8460,9 +8458,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
                                             image_meta)
-        conf = drvr._get_guest_config(instance_ref,
-                                      _fake_network_info(self),
-                                      image_meta, disk_info)
+        with mock.patch.object(libvirt_driver.LOG, 'warning') as mock_warn:
+            conf = drvr._get_guest_config(instance_ref,
+                                          _fake_network_info(self),
+                                          image_meta, disk_info)
+            # We have lifted the restriction for 'host-passthrough' as well;
+            # so here too, assert that no warning is thrown
+            mock_warn.assert_not_called()
+
         features = [feature.name for feature in conf.cpu.features]
         self.assertIsInstance(conf.cpu,
                               vconfig.LibvirtConfigGuestCPU)
@@ -8471,9 +8474,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
-        # We have lifted the restriction for 'host-passthrough' as well;
-        # so here too, assert that no warning is thrown
-        mock_warn.assert_not_called()
 
     def test_get_guest_cpu_topology(self):
         instance_ref = objects.Instance(**self.test_instance)
