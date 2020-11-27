@@ -379,11 +379,7 @@
       # NOTE(danms): These tests create an empty non-raw image, which nova
       # will refuse because we set never_download_image_if_on_rbd in this job.
       # Just skip these tests for this case.
-      # FIXME(lyarwood): test_attach_scsi_disk_with_config_drive attempts to
-      # delete an image that has been cloned by nova ahead of the instance
-      # being removed. Skip this test until it is reworked to remove the server
-      # ahead of the image.
-      tempest_black_regex: .*encrypted_cinder_volumes.*|.*test_attach_scsi_disk_with_config_drive
+      tempest_black_regex: .*encrypted_cinder_volumes.*
       devstack_localrc:
         GLANCE_STANDALONE: True
         GLANCE_USE_IMPORT_WORKFLOW: True
