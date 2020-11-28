@@ -43,6 +43,7 @@ import oslo_messaging as messaging
 from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
+from oslo_utils.secretutils import md5
 from oslo_utils import strutils
 from oslo_utils import timeutils
 import six
@@ -785,7 +786,7 @@ def get_hash_str(base_str):
     """
     if isinstance(base_str, six.text_type):
         base_str = base_str.encode('utf-8')
-    return hashlib.md5(base_str).hexdigest()
+    return md5(base_str, usedforsecurity=False).hexdigest()
 
 
 def get_sha256_str(base_str):
