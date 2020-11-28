@@ -28,6 +28,7 @@ from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova.policies import aggregates as aggr_policies
+from nova import utils
 
 
 def _get_context(req):
@@ -85,11 +86,17 @@ class AggregateController(wsgi.Controller):
 
         return agg
 
-    @wsgi.expected_errors(404)
+    @wsgi.expected_errors((400, 404))
     def show(self, req, id):
         """Shows the details of an aggregate, hosts and metadata included."""
         context = _get_context(req)
         context.can(aggr_policies.POLICY_ROOT % 'show')
+
+        try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
         try:
             aggregate = self.api.get_aggregate(context, id)
         except exception.AggregateNotFound as e:
@@ -106,6 +113,11 @@ class AggregateController(wsgi.Controller):
         updates = body["aggregate"]
         if 'name' in updates:
             updates['name'] = common.normalize_name(updates['name'])
+
+        try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         try:
             aggregate = self.api.update_aggregate(context, id, updates)
@@ -126,6 +138,12 @@ class AggregateController(wsgi.Controller):
         """Removes an aggregate by id."""
         context = _get_context(req)
         context.can(aggr_policies.POLICY_ROOT % 'delete')
+
+        try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
         try:
             self.api.delete_aggregate(context, id)
         except exception.AggregateNotFound as e:
@@ -136,7 +154,7 @@ class AggregateController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 202
     # for representing async API as this API just accepts the request and
     # request hypervisor driver to complete the same in async mode.
-    @wsgi.expected_errors((404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('add_host')
     @validation.schema(aggregates.add_host)
     def _add_host(self, req, id, body):
@@ -145,6 +163,12 @@ class AggregateController(wsgi.Controller):
 
         context = _get_context(req)
         context.can(aggr_policies.POLICY_ROOT % 'add_host')
+
+        try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
         try:
             aggregate = self.api.add_host_to_aggregate(context, id, host)
         except (exception.AggregateNotFound,
@@ -159,7 +183,7 @@ class AggregateController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 202
     # for representing async API as this API just accepts the request and
     # request hypervisor driver to complete the same in async mode.
-    @wsgi.expected_errors((404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('remove_host')
     @validation.schema(aggregates.remove_host)
     def _remove_host(self, req, id, body):
@@ -168,6 +192,12 @@ class AggregateController(wsgi.Controller):
 
         context = _get_context(req)
         context.can(aggr_policies.POLICY_ROOT % 'remove_host')
+
+        try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+
         try:
             aggregate = self.api.remove_host_from_aggregate(context, id, host)
         except (exception.AggregateNotFound, exception.AggregateHostNotFound,
@@ -188,6 +218,11 @@ class AggregateController(wsgi.Controller):
         """Replaces the aggregate's existing metadata with new metadata."""
         context = _get_context(req)
         context.can(aggr_policies.POLICY_ROOT % 'set_metadata')
+
+        try:
+            utils.validate_integer(id, 'id')
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         metadata = body["set_metadata"]["metadata"]
         try:
