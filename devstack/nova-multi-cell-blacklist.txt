@@ -4,3 +4,6 @@
 # Exclude tempest.scenario.test_network tests since they are slow and
 # only test advanced neutron features, unrelated to multi-cell testing.
 ^tempest.scenario.test_network
+
+# Skip until bug 1906428 is resolved
+tempest.scenario.test_shelve_instance.TestShelveInstance.test_cold_migrate_unshelved_instance
