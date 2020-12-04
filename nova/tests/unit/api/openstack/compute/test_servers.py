@@ -3587,7 +3587,6 @@ class ServersControllerRebuildTestV263(ControllerTest):
     @mock.patch('nova.compute.api.API.get')
     def _rebuild_server(self, mock_get, certs=None,
                         conf_enabled=True, conf_certs=None):
-        fakes.stub_out_trusted_certs(self, certs=certs)
         ctx = self.req.environ['nova.context']
         mock_get.return_value = fakes.stub_instance_obj(ctx,
             vm_state=vm_states.ACTIVE, trusted_certs=certs,
