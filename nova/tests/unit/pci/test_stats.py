@@ -150,6 +150,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
                          set(['v1', 'v2', 'v3']))
 
     def test_apply_requests(self):
+        self.assertEqual(len(self.pci_stats.pools), 3)
         self.pci_stats.apply_requests(pci_requests)
         self.assertEqual(len(self.pci_stats.pools), 2)
         self.assertEqual(self.pci_stats.pools[0]['vendor_id'], 'v1')
