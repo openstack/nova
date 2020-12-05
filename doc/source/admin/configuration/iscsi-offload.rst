@@ -9,8 +9,8 @@ desired. Once an open-iscsi interface is configured, the iface name
 parameter for use.  All iSCSI sessions will be bound to this iSCSI interface.
 
 Currently supported transports (``iface.transport_name``) are ``be2iscsi``,
-``bnx2i``, ``cxgb3i``, ``cxgb4i``, ``qla4xxx``, ``ocs``.  Configuration changes
-are required on the compute node only.
+``bnx2i``, ``cxgb3i``, ``cxgb4i``, ``qla4xxx``, ``ocs``, ``tcp``. Configuration
+changes are required on the compute node only.
 
 iSER is supported using the separate iSER LibvirtISERVolumeDriver and will be
 rejected if used via the ``iscsi_iface`` parameter.
