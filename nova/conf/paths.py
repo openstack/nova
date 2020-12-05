@@ -16,7 +16,6 @@
 #    under the License.
 
 import os
-import sys
 
 from oslo_config import cfg
 
@@ -41,20 +40,6 @@ Related options:
 
 * ``state_path``
 """),
-    cfg.StrOpt('bindir',
-        default=os.path.join(sys.prefix, 'local', 'bin'),
-        help="""
-The directory where the Nova binaries are installed.
-
-This option is only relevant if the networking capabilities from Nova are
-used (see services below). Nova's networking capabilities are targeted to
-be fully replaced by Neutron in the future. It is very unlikely that you need
-to change this option from its default value.
-
-Possible values:
-
-* The full path to a directory.
-"""),
 
     cfg.StrOpt('state_path',
         default='$pybasedir',
@@ -78,11 +63,6 @@ Possible values:
 def basedir_def(*args):
     """Return an uninterpolated path relative to $pybasedir."""
     return os.path.join('$pybasedir', *args)
-
-
-def bindir_def(*args):
-    """Return an uninterpolated path relative to $bindir."""
-    return os.path.join('$bindir', *args)
 
 
 def state_path_def(*args):

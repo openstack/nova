@@ -1,0 +1,5 @@
+---
+other:
+  - |
+    Remove the old config option ``bindir`` since it was used for
+    *nova-network* which had been removed.
