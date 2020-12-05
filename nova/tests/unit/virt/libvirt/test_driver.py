@@ -9119,6 +9119,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                       'encryption_key_id': uuids.encryption_key_id}
         instance = mock.sentinel.instance
 
+        # Mock out find_secret so we don't skip ahead
+        drvr._host.find_secret.return_value = None
+
         # Mock out the encryptors
         mock_encryptor = mock.Mock()
         mock_get_volume_encryptor.return_value = mock_encryptor
@@ -10178,6 +10181,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_encryptor.assert_not_called()
         crt_scrt.assert_called_once_with(
             'volume', uuids.serial, password=key)
+
+    @mock.patch.object(key_manager, 'API')
+    def test_attach_encryptor_secret_exists(self, mock_key_manager_api):
+        connection_info = {'data': {'volume_id': uuids.volume_id}}
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with test.nested(
+            mock.patch.object(drvr, '_get_volume_encryption'),
+            mock.patch.object(drvr._host, 'find_secret')
+        ) as (mock_get_volume_encryption, mock_find_secret):
+            drvr._attach_encryptor(self.context, connection_info, None)
+
+        # Assert we called find_secret and nothing else
+        mock_find_secret.assert_called_once_with('volume', uuids.volume_id)
+        mock_get_volume_encryption.assert_not_called()
+        mock_key_manager_api.assert_not_called()
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')

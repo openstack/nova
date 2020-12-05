@@ -1715,6 +1715,17 @@ class LibvirtDriver(driver.ComputeDriver):
         to determine if an attempt to attach the encryptor should be made.
 
         """
+        # NOTE(lyarwood): Skip any attempt to fetch encryption metadata or the
+        # actual passphrase from the key manager if a libvirt secert already
+        # exists locally for the volume. This suggests that the instance was
+        # only powered off or the underlying host rebooted.
+        volume_id = driver_block_device.get_volume_id(connection_info)
+        if self._host.find_secret('volume', volume_id):
+            LOG.debug("A libvirt secret for volume %s has been found on the "
+                      "host, skipping any attempt to create another or attach "
+                      "an os-brick encryptor.", volume_id)
+            return
+
         if encryption is None:
             encryption = self._get_volume_encryption(context, connection_info)
 
@@ -1746,7 +1757,6 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(lyarwood): Store the passphrase as a libvirt secret locally
             # on the compute node. This secret is used later when generating
             # the volume config.
-            volume_id = driver_block_device.get_volume_id(connection_info)
             self._host.create_secret('volume', volume_id, password=passphrase)
         elif encryption:
             encryptor = self._get_volume_encryptor(connection_info,
