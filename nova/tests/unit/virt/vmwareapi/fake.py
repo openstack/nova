@@ -186,10 +186,10 @@ class ObjectContent(object):
     def __init__(self, obj_ref, prop_list=None, missing_list=None):
         self.obj = obj_ref
 
-        if not isinstance(prop_list, collections.Iterable):
+        if not isinstance(prop_list, collections.abc.Iterable):
             prop_list = []
 
-        if not isinstance(missing_list, collections.Iterable):
+        if not isinstance(missing_list, collections.abc.Iterable):
             missing_list = []
 
         # propSet is the name your Python code will need to
