@@ -75,14 +75,6 @@ class AdminActionsPolicyTest(base.BasePolicyTest):
                                      self.controller._inject_network_info,
                                      self.req, self.instance.uuid, body={})
 
-    def test_reset_network_policy(self):
-        rule_name = "os_compute_api:os-admin-actions:reset_network"
-        with mock.patch.object(self.controller.compute_api, "reset_network"):
-            self.common_policy_check(self.admin_authorized_contexts,
-                                     self.admin_unauthorized_contexts,
-                                     rule_name, self.controller._reset_network,
-                                     self.req, self.instance.uuid, body={})
-
 
 class AdminActionsScopeTypePolicyTest(AdminActionsPolicyTest):
     """Test Admin Actions APIs policies with system scope enabled.

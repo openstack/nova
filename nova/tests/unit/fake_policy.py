@@ -51,7 +51,6 @@ policy_data = """
     "os_compute_api:servers:migrations:show": "",
     "os_compute_api:servers:migrations:delete": "",
     "os_compute_api:os-admin-actions:inject_network_info": "",
-    "os_compute_api:os-admin-actions:reset_network": "",
     "os_compute_api:os-admin-actions:reset_state": "",
     "os_compute_api:os-admin-password": "",
     "os_compute_api:os-aggregates:set_metadata": "",

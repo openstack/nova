@@ -34,19 +34,11 @@ class AdminActionsController(wsgi.Controller):
         super(AdminActionsController, self).__init__()
         self.compute_api = compute.API()
 
-    @wsgi.response(202)
-    @wsgi.expected_errors((404, 409))
+    @wsgi.expected_errors(410)
     @wsgi.action('resetNetwork')
     def _reset_network(self, req, id, body):
-        """Permit admins to reset networking on a server."""
-        context = req.environ['nova.context']
-        instance = common.get_instance(self.compute_api, context, id)
-        context.can(aa_policies.POLICY_ROOT % 'reset_network',
-                    target={'project_id': instance.project_id})
-        try:
-            self.compute_api.reset_network(context, instance)
-        except exception.InstanceIsLocked as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
+        """(Removed) Permit admins to reset networking on a server."""
+        raise exc.HTTPGone()
 
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))

@@ -29,20 +29,18 @@ class AdminActionsTestV21(admin_only_action_common.CommonTests):
                       lambda *a, **k: self.controller)
 
     def test_actions(self):
-        actions = ['_reset_network', '_inject_network_info']
-        method_translations = {'_reset_network': 'reset_network',
-                               '_inject_network_info': 'inject_network_info'}
+        actions = ['_inject_network_info']
+        method_translations = {'_inject_network_info': 'inject_network_info'}
 
         self._test_actions(actions, method_translations)
 
     def test_actions_with_non_existed_instance(self):
-        actions = ['_reset_network', '_inject_network_info']
+        actions = ['_inject_network_info']
         self._test_actions_with_non_existed_instance(actions)
 
     def test_actions_with_locked_instance(self):
-        actions = ['_reset_network', '_inject_network_info']
-        method_translations = {'_reset_network': 'reset_network',
-                               '_inject_network_info': 'inject_network_info'}
+        actions = ['_inject_network_info']
+        method_translations = {'_inject_network_info': 'inject_network_info'}
 
-        self._test_actions_with_locked_instance(actions,
-            method_translations=method_translations)
+        self._test_actions_with_locked_instance(
+            actions, method_translations=method_translations)

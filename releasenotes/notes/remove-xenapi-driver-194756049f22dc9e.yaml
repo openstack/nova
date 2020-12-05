@@ -12,6 +12,7 @@ upgrade:
     * ``POST /os-agents``
     * ``PUT /os-agents/{agent_id}``
     * ``DELETE /os-agents/{agent_id}``
+    * ``POST /servers/{server_id}/action (resetNetwork)``
 
     The ``XenAPI`` specific policies have been removed:
 
@@ -20,6 +21,7 @@ upgrade:
     * ``os_compute_api:os-agents:create``
     * ``os_compute_api:os-agents:update``
     * ``os_compute_api:os-agents:delete``
+    * ``os_compute_api:os-admin-actions:reset_network``
 
     The ``XenAPI`` specific configuration options have been removed.
 

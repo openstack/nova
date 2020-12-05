@@ -5136,27 +5136,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         do_test()
 
-    def test_reset_network_driver_not_implemented(self):
-        instance = fake_instance.fake_instance_obj(self.context)
-
-        @mock.patch.object(self.compute.driver, 'reset_network',
-                           side_effect=NotImplementedError())
-        @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
-        def do_test(mock_add_fault, mock_reset):
-            self.assertRaises(messaging.ExpectedException,
-                              self.compute.reset_network,
-                              self.context,
-                              instance)
-
-            self.compute = utils.ExceptionHelper(self.compute)
-
-            self.assertRaises(NotImplementedError,
-                              self.compute.reset_network,
-                              self.context,
-                              instance)
-
-        do_test()
-
     @mock.patch.object(manager.ComputeManager, '_set_migration_status')
     @mock.patch.object(manager.ComputeManager,
                        '_do_rebuild_instance_with_claim')

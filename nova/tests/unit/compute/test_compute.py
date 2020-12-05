@@ -3360,26 +3360,6 @@ class ComputeTestCase(BaseTestCase,
         self.assertTrue(called['inject'])
         self.compute.terminate_instance(self.context, instance, [])
 
-    def test_reset_network(self):
-        # Ensure we can reset networking on an instance.
-        called = {'count': 0}
-
-        def fake_driver_reset_network(self, instance):
-            called['count'] += 1
-
-        self.stub_out('nova.virt.fake.FakeDriver.reset_network',
-                       fake_driver_reset_network)
-
-        instance = self._create_fake_instance_obj()
-        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
-                                            block_device_mapping=[])
-
-        self.compute.reset_network(self.context, instance)
-
-        self.assertEqual(called['count'], 1)
-
-        self.compute.terminate_instance(self.context, instance, [])
-
     def _get_snapshotting_instance(self):
         # Ensure instance can be snapshotted.
         instance = self._create_fake_instance_obj()
@@ -4250,10 +4230,8 @@ class ComputeTestCase(BaseTestCase,
         def dummy(*args, **kwargs):
             pass
 
-        self.stub_out('nova.compute.manager.ComputeManager.'
-                       'inject_network_info', dummy)
-        self.stub_out('nova.compute.manager.ComputeManager.'
-                       'reset_network', dummy)
+        self.stub_out(
+            'nova.compute.manager.ComputeManager.inject_network_info', dummy)
 
         instance = self._create_fake_instance_obj()
 
@@ -4270,10 +4248,8 @@ class ComputeTestCase(BaseTestCase,
         def dummy(*args, **kwargs):
             pass
 
-        self.stub_out('nova.compute.manager.ComputeManager.'
-                       'inject_network_info', dummy)
-        self.stub_out('nova.compute.manager.ComputeManager.'
-                       'reset_network', dummy)
+        self.stub_out(
+            'nova.compute.manager.ComputeManager.inject_network_info', dummy)
 
         instance = self._create_fake_instance_obj()
 
@@ -11212,13 +11188,6 @@ class ComputeAPITestCase(BaseTestCase):
                 instance, {}, {}, {}, block_device_mapping=[])
         instance = self.compute_api.get(self.context, instance['uuid'])
         self.compute_api.inject_network_info(self.context, instance)
-
-    def test_reset_network(self):
-        instance = self._create_fake_instance_obj()
-        self.compute.build_and_run_instance(self.context,
-                instance, {}, {}, {}, block_device_mapping=[])
-        instance = self.compute_api.get(self.context, instance['uuid'])
-        self.compute_api.reset_network(self.context, instance)
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.context.RequestContext.elevated')

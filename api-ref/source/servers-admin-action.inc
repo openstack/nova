@@ -170,16 +170,19 @@ Response
 If successful, this method does not return content in the response body.
 
 
-Reset Networking On A Server (resetNetwork Action)
-==================================================
+Reset Networking On A Server (resetNetwork Action) (DEPRECATED)
+===============================================================
 
 .. rest_method:: POST /servers/{server_id}/action
 
 Resets networking on a server.
 
-.. note::
+.. warning::
 
-    No longer supported by any in-tree virt driver.
+   This action was only supported by the XenAPI virt driver, which was
+   deprecated in the 20.0.0 (Train) release and removed in the 22.0.0
+   (Victoria) release.  This action should be avoided in new applications. It
+   was removed in the 23.0.0 (Wallaby) release.
 
 Specify the ``resetNetwork`` action in the request body.
 
@@ -190,7 +193,7 @@ through the ``policy.json`` file.
 Normal response codes: 202
 
 Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
-conflict(409)
+conflict(409), gone(410)
 
 Request
 -------
