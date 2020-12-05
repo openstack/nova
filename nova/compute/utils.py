@@ -356,9 +356,6 @@ def notify_usage_exists(notifier, context, instance_ref, host,
 
     audit_start, audit_end = notifications.audit_period_bounds(current_period)
 
-    bw = notifications.bandwidth_usage(context, instance_ref, audit_start,
-            ignore_missing_network_data)
-
     if system_metadata is None:
         system_metadata = utils.instance_sys_meta(instance_ref)
 
@@ -367,7 +364,7 @@ def notify_usage_exists(notifier, context, instance_ref, host,
 
     extra_info = dict(audit_period_beginning=str(audit_start),
                       audit_period_ending=str(audit_end),
-                      bandwidth=bw, image_meta=image_meta)
+                      bandwidth={}, image_meta=image_meta)
 
     if extra_usage_info:
         extra_info.update(extra_usage_info)
@@ -379,17 +376,11 @@ def notify_usage_exists(notifier, context, instance_ref, host,
             audit_period_beginning=audit_start,
             audit_period_ending=audit_end)
 
-    bandwidth = [instance_notification.BandwidthPayload(
-                    network_name=label,
-                    in_bytes=b['bw_in'],
-                    out_bytes=b['bw_out'])
-                 for label, b in bw.items()]
-
     payload = instance_notification.InstanceExistsPayload(
         context=context,
         instance=instance_ref,
         audit_period=audit_period,
-        bandwidth=bandwidth)
+        bandwidth=[])
 
     notification = instance_notification.InstanceExistsNotification(
         context=context,

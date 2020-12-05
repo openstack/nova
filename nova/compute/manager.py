@@ -542,7 +542,6 @@ class ComputeManager(manager.Manager):
         self.volume_api = cinder.API()
         self.image_api = glance.API()
         self._last_bw_usage_poll = 0.0
-        self._bw_usage_supported = True
         self.compute_api = compute.API()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.compute_task_api = conductor.ComputeTaskAPI()
@@ -9387,86 +9386,6 @@ class ComputeManager(manager.Manager):
             'Instance usage audit ran for host %s, %s instances in %s seconds.'
             % (self.host, num_instances, time.time() - start_time))
         task_log.end_task()
-
-    @periodic_task.periodic_task(spacing=CONF.bandwidth_poll_interval)
-    def _poll_bandwidth_usage(self, context):
-
-        if not self._bw_usage_supported:
-            return
-
-        prev_time, start_time = utils.last_completed_audit_period()
-
-        curr_time = time.time()
-        if (curr_time - self._last_bw_usage_poll >
-                CONF.bandwidth_poll_interval):
-            self._last_bw_usage_poll = curr_time
-            LOG.info("Updating bandwidth usage cache")
-
-            instances = objects.InstanceList.get_by_host(context,
-                                                              self.host,
-                                                              use_slave=True)
-            try:
-                bw_counters = self.driver.get_all_bw_counters(instances)
-            except NotImplementedError:
-                # NOTE(mdragon): Not all hypervisors have bandwidth polling
-                # implemented yet.  If they don't it doesn't break anything,
-                # they just don't get the info in the usage events.
-                # NOTE(PhilDay): Record that its not supported so we can
-                # skip fast on future calls rather than waste effort getting
-                # the list of instances.
-                LOG.info("Bandwidth usage not supported by %(driver)s.",
-                         {'driver': CONF.compute_driver})
-                self._bw_usage_supported = False
-                return
-
-            refreshed = timeutils.utcnow()
-            for bw_ctr in bw_counters:
-                # Allow switching of greenthreads between queries.
-                greenthread.sleep(0)
-                bw_in = 0
-                bw_out = 0
-                last_ctr_in = None
-                last_ctr_out = None
-                usage = objects.BandwidthUsage.get_by_instance_uuid_and_mac(
-                    context, bw_ctr['uuid'], bw_ctr['mac_address'],
-                    start_period=start_time, use_slave=True)
-                if usage:
-                    bw_in = usage.bw_in
-                    bw_out = usage.bw_out
-                    last_ctr_in = usage.last_ctr_in
-                    last_ctr_out = usage.last_ctr_out
-                else:
-                    usage = (objects.BandwidthUsage.
-                             get_by_instance_uuid_and_mac(
-                        context, bw_ctr['uuid'], bw_ctr['mac_address'],
-                        start_period=prev_time, use_slave=True))
-                    if usage:
-                        last_ctr_in = usage.last_ctr_in
-                        last_ctr_out = usage.last_ctr_out
-
-                if last_ctr_in is not None:
-                    if bw_ctr['bw_in'] < last_ctr_in:
-                        # counter rollover
-                        bw_in += bw_ctr['bw_in']
-                    else:
-                        bw_in += (bw_ctr['bw_in'] - last_ctr_in)
-
-                if last_ctr_out is not None:
-                    if bw_ctr['bw_out'] < last_ctr_out:
-                        # counter rollover
-                        bw_out += bw_ctr['bw_out']
-                    else:
-                        bw_out += (bw_ctr['bw_out'] - last_ctr_out)
-
-                objects.BandwidthUsage(context=context).create(
-                                              bw_ctr['uuid'],
-                                              bw_ctr['mac_address'],
-                                              bw_in,
-                                              bw_out,
-                                              bw_ctr['bw_in'],
-                                              bw_ctr['bw_out'],
-                                              start_period=start_time,
-                                              last_refreshed=refreshed)
 
     def _get_host_volume_bdms(self, context, use_slave=False):
         """Return all block device mappings on a compute host."""

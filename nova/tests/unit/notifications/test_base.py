@@ -63,14 +63,12 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
                                              mock.sentinel.host,
                                              mock.sentinel.service)
 
-    @mock.patch.object(base, 'bandwidth_usage')
     @mock.patch.object(base, '_compute_states_payload')
     @mock.patch('nova.rpc.get_notifier')
     @mock.patch.object(base, 'info_from_instance')
-    def test_send_legacy_instance_update_notification(self, mock_info,
-                                                      mock_get_notifier,
-                                                      mock_states,
-                                                      mock_bw):
+    def test_send_legacy_instance_update_notification(
+        self, mock_info, mock_get_notifier, mock_states,
+    ):
         """Tests the case that versioned notifications are disabled and
         assert that this does not prevent sending the unversioned
         instance.update notification.
@@ -132,25 +130,3 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
                                 populate_image_ref_url=False)
 
         mock_gen_image_url.assert_not_called()
-
-
-class TestBandwidthUsage(test.NoDBTestCase):
-    @mock.patch('nova.context.RequestContext.elevated')
-    @mock.patch('nova.network.neutron.API')
-    @mock.patch('nova.objects.BandwidthUsageList.get_by_uuids')
-    def test_context_elevated(self, mock_get_bw_usage, mock_nw_api,
-                              mock_elevated):
-        context = nova_context.RequestContext('fake', 'fake')
-        # We need this to not be a NovaObject so the old school
-        # get_instance_nw_info will run.
-        instance = {'uuid': uuids.instance}
-        audit_start = 'fake'
-
-        base.bandwidth_usage(context, instance, audit_start)
-
-        network_api = mock_nw_api.return_value
-        network_api.get_instance_nw_info.assert_called_once_with(
-            mock_elevated.return_value, instance)
-        mock_get_bw_usage.assert_called_once_with(
-            mock_elevated.return_value, [uuids.instance], audit_start)
-        mock_elevated.assert_called_once_with(read_deleted='yes')

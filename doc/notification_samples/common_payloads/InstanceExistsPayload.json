@@ -2,9 +2,7 @@
     "$ref": "InstancePayload.json",
     "nova_object.data":{
         "audit_period": {"$ref": "AuditPeriodPayload.json#"},
-        "bandwidth": [
-            {"$ref": "BandwidthPayload.json#"}
-        ]
+        "bandwidth": []
     },
     "nova_object.name":"InstanceExistsPayload",
     "nova_object.namespace":"nova",

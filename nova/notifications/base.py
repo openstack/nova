@@ -29,12 +29,8 @@ import nova.conf
 import nova.context
 from nova import exception
 from nova.image import glance
-from nova.network import model as network_model
-from nova.network import neutron
 from nova.notifications.objects import base as notification_base
 from nova.notifications.objects import instance as instance_notification
-from nova import objects
-from nova.objects import base as obj_base
 from nova.objects import fields
 from nova import rpc
 from nova import utils
@@ -194,8 +190,8 @@ def send_instance_update_notification(context, instance, old_vm_state=None,
     payload["audit_period_ending"] = null_safe_isotime(audit_end)
 
     # add bw usage info:
-    bw = bandwidth_usage(context, instance, audit_start)
-    payload["bandwidth"] = bw
+    # TODO(stephenfin): Remove this, the feature is dead
+    payload["bandwidth"] = {}
 
     # add old display name if it is changed
     if old_display_name:
@@ -223,14 +219,11 @@ def _send_versioned_instance_update(context, instance, payload, host, service):
         new_task_state=payload.get('new_task_state'))
 
     audit_period = instance_notification.AuditPeriodPayload(
-            audit_period_beginning=payload.get('audit_period_beginning'),
-            audit_period_ending=payload.get('audit_period_ending'))
+        audit_period_beginning=payload.get('audit_period_beginning'),
+        audit_period_ending=payload.get('audit_period_ending'))
 
-    bandwidth = [instance_notification.BandwidthPayload(
-                    network_name=label,
-                    in_bytes=bw['bw_in'],
-                    out_bytes=bw['bw_out'])
-                 for label, bw in payload['bandwidth'].items()]
+    # TODO(stephenfin): Remove this, the feature is dead
+    bandwidth = []
 
     versioned_payload = instance_notification.InstanceUpdatePayload(
         context=context,
@@ -269,62 +262,6 @@ def audit_period_bounds(current_period=False):
         audit_end = end
 
     return (audit_start, audit_end)
-
-
-def bandwidth_usage(context, instance_ref, audit_start,
-        ignore_missing_network_data=True):
-    """Get bandwidth usage information for the instance for the
-    specified audit period.
-    """
-    admin_context = context.elevated(read_deleted='yes')
-
-    def _get_nwinfo_old_skool():
-        """Support for getting network info without objects."""
-        if (instance_ref.get('info_cache') and
-                instance_ref['info_cache'].get('network_info') is not None):
-            cached_info = instance_ref['info_cache']['network_info']
-            if isinstance(cached_info, network_model.NetworkInfo):
-                return cached_info
-            return network_model.NetworkInfo.hydrate(cached_info)
-        try:
-            return neutron.API().get_instance_nw_info(admin_context,
-                                                      instance_ref)
-        except Exception:
-            try:
-                with excutils.save_and_reraise_exception():
-                    LOG.exception('Failed to get nw_info',
-                                  instance=instance_ref)
-            except Exception:
-                if ignore_missing_network_data:
-                    return
-                raise
-
-    # FIXME(comstud): Temporary as we transition to objects.
-    if isinstance(instance_ref, obj_base.NovaObject):
-        nw_info = instance_ref.info_cache.network_info
-        if nw_info is None:
-            nw_info = network_model.NetworkInfo()
-    else:
-        nw_info = _get_nwinfo_old_skool()
-
-    macs = [vif['address'] for vif in nw_info]
-    uuids = [instance_ref["uuid"]]
-
-    bw_usages = objects.BandwidthUsageList.get_by_uuids(admin_context, uuids,
-                                                        audit_start)
-    bw = {}
-
-    for b in bw_usages:
-        if b.mac in macs:
-            label = 'net-name-not-found-%s' % b.mac
-            for vif in nw_info:
-                if vif['address'] == b.mac:
-                    label = vif['network']['label']
-                    break
-
-            bw[label] = dict(bw_in=b.bw_in, bw_out=b.bw_out)
-
-    return bw
 
 
 def image_meta(system_metadata):

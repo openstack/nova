@@ -22,11 +22,9 @@ import fixtures as std_fixtures
 from itertools import chain
 import operator
 import sys
-import time
-
-import ddt
 
 from castellan import key_manager
+import ddt
 import mock
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_log import log as logging
@@ -752,39 +750,6 @@ class ComputeVolumeTestCase(BaseTestCase):
 
     def test_boot_image_no_metadata(self):
         self.test_boot_image_metadata(metadata=False)
-
-    @mock.patch.object(time, 'time')
-    @mock.patch.object(objects.InstanceList, 'get_by_host')
-    @mock.patch.object(utils, 'last_completed_audit_period')
-    @mock.patch.object(fake.FakeDriver, 'get_all_bw_counters')
-    def test_poll_bandwidth_usage_not_implemented(self, mock_get_counter,
-                                    mock_last, mock_get_host, mock_time):
-        ctxt = context.get_admin_context()
-
-        # Following methods will be called
-        # Note - time called two more times from Log
-        mock_last.return_value = (0, 0)
-        mock_time.side_effect = (10, 20, 21)
-
-        mock_get_host.return_value = []
-        mock_get_counter.side_effect = NotImplementedError
-
-        self.flags(bandwidth_poll_interval=1)
-        # The first call will catch a NotImplementedError,
-        # then LOG.info something below:
-        self.compute._poll_bandwidth_usage(ctxt)
-        self.assertIn('Bandwidth usage not supported '
-                      'by %s' % CONF.compute_driver,
-                      self.stdlog.logger.output)
-
-        # A second call won't call the stubs again as the bandwidth
-        # poll is now disabled
-        self.compute._poll_bandwidth_usage(ctxt)
-
-        mock_get_counter.assert_called_once_with([])
-        mock_last.assert_called_once_with()
-        mock_get_host.assert_called_once_with(ctxt, 'fake-mini',
-                                              use_slave=True)
 
     @mock.patch.object(objects.InstanceList, 'get_by_host')
     @mock.patch.object(objects.BlockDeviceMappingList,

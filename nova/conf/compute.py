@@ -1004,20 +1004,6 @@ Related options:
 ]
 
 interval_opts = [
-    cfg.IntOpt('bandwidth_poll_interval',
-        default=600,
-        help="""
-Interval to pull network bandwidth usage info.
-
-Not supported on all hypervisors. If a hypervisor doesn't support bandwidth
-usage, it will not get the info in the usage events.
-
-Possible values:
-
-* 0: Will run at the default periodic interval.
-* Any value < 0: Disables the option.
-* Any positive integer in seconds.
-"""),
     cfg.IntOpt('sync_power_state_interval',
         default=600,
         help="""

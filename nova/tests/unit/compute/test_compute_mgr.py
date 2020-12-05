@@ -73,7 +73,6 @@ from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests.unit.objects import test_instance_numa
-from nova import utils
 from nova.virt.block_device import DriverVolumeBlockDevice as driver_bdm_volume
 from nova.virt import driver as virt_driver
 from nova.virt import event as virtevent
@@ -5536,41 +5535,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 accel_uuids=[])
         self.assertIn('Trusted image certificates provided on host',
                       six.text_type(ex))
-
-    @mock.patch.object(utils, 'last_completed_audit_period',
-            return_value=(0, 0))
-    @mock.patch.object(time, 'time', side_effect=[10, 20, 21])
-    @mock.patch.object(objects.InstanceList, 'get_by_host', return_value=[])
-    @mock.patch.object(objects.BandwidthUsage, 'get_by_instance_uuid_and_mac')
-    @mock.patch.object(db, 'bw_usage_update')
-    def test_poll_bandwidth_usage(self, bw_usage_update, get_by_uuid_mac,
-            get_by_host, time, last_completed_audit):
-        bw_counters = [{'uuid': uuids.instance, 'mac_address': 'fake-mac',
-                        'bw_in': 1, 'bw_out': 2}]
-        usage = objects.BandwidthUsage()
-        usage.bw_in = 3
-        usage.bw_out = 4
-        usage.last_ctr_in = 0
-        usage.last_ctr_out = 0
-        self.flags(bandwidth_poll_interval=1)
-        get_by_uuid_mac.return_value = usage
-        _time = timeutils.utcnow()
-        bw_usage_update.return_value = {'uuid': uuids.instance, 'mac': '',
-                'start_period': _time, 'last_refreshed': _time, 'bw_in': 0,
-                'bw_out': 0, 'last_ctr_in': 0, 'last_ctr_out': 0, 'deleted': 0,
-                'created_at': _time, 'updated_at': _time, 'deleted_at': _time}
-        with mock.patch.object(self.compute.driver,
-                'get_all_bw_counters', return_value=bw_counters):
-            self.compute._poll_bandwidth_usage(self.context)
-            get_by_uuid_mac.assert_called_once_with(self.context,
-                    uuids.instance, 'fake-mac',
-                    start_period=0, use_slave=True)
-            # NOTE(sdague): bw_usage_update happens at some time in
-            # the future, so what last_refreshed is irrelevant.
-            bw_usage_update.assert_called_once_with(self.context,
-                    uuids.instance,
-                    'fake-mac', 0, 4, 6, 1, 2,
-                    last_refreshed=mock.ANY)
 
     def test_reverts_task_state_instance_not_found(self):
         # Tests that the reverts_task_state decorator in the compute manager
