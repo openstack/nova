@@ -235,13 +235,27 @@ class PciDeviceStats(object):
                 return
 
     @staticmethod
-    def _filter_pools_for_spec(pools, request_specs):
-        return [pool for pool in pools
-                if utils.pci_device_prop_match(pool, request_specs)]
+    def _filter_pools_for_spec(pools, request):
+        """Filter out pools that don't match the request's device spec.
+
+        Exclude pools that do not match the specified ``vendor_id``,
+        ``product_id`` and/or ``device_type`` field, or any of the other
+        arbitrary tags such as ``physical_network``, specified in the request.
+
+        :param pools: A list of PCI device pool dicts
+        :param request: An InstancePCIRequest object describing the type,
+            quantity and required NUMA affinity of device(s) we want.
+        :returns: A list of pools that can be used to support the request if
+            this is possible.
+        """
+        request_specs = request.spec
+        return [
+            pool for pool in pools
+            if utils.pci_device_prop_match(pool, request_specs)
+        ]
 
     @classmethod
-    def _filter_pools_for_numa_cells(cls, pools, numa_cells, numa_policy,
-            requested_count):
+    def _filter_pools_for_numa_cells(cls, pools, request, numa_cells):
         """Filter out pools with the wrong NUMA affinity, if required.
 
         Exclude pools that do not have *suitable* PCI NUMA affinity.
@@ -252,18 +266,24 @@ class PciDeviceStats(object):
         we will still attempt to provide it if possible.
 
         :param pools: A list of PCI device pool dicts
+        :param request: An InstancePCIRequest object describing the type,
+            quantity and required NUMA affinity of device(s) we want.
         :param numa_cells: A list of InstanceNUMACell objects whose ``id``
             corresponds to the ``id`` of host NUMACells.
-        :param numa_policy: The PCI NUMA affinity policy to apply.
-        :param requested_count: The number of PCI devices requested.
         :returns: A list of pools that can, together, provide at least
             ``requested_count`` PCI devices with the level of NUMA affinity
             required by ``numa_policy``, else all pools that can satisfy this
             policy even if it's not enough.
         """
-        # NOTE(stephenfin): We may wish to change the default policy at a later
-        # date
-        requested_policy = numa_policy or fields.PCINUMAAffinityPolicy.LEGACY
+        if not numa_cells:
+            return pools
+
+        # we default to the 'legacy' policy for...of course...legacy reasons
+        requested_policy = fields.PCINUMAAffinityPolicy.LEGACY
+        if 'numa_policy' in request:
+            requested_policy = request.numa_policy or requested_policy
+
+        requested_count = request.count
         numa_cell_ids = [cell.id for cell in numa_cells]
 
         # filter out pools which numa_node is not included in numa_cell_ids
@@ -305,10 +325,18 @@ class PciDeviceStats(object):
             pools, key=lambda pool: pool.get('numa_node') not in numa_cell_ids)
 
     @classmethod
-    def _filter_non_requested_pfs(cls, pools, request):
-        # Remove SRIOV_PFs from pools, unless it has been explicitly requested
-        # This is especially needed in cases where PFs and VFs have the same
-        # product_id.
+    def _filter_pools_for_unrequested_pfs(cls, pools, request):
+        """Filter out pools with PFs, unless these are required.
+
+        This is necessary in cases where PFs and VFs have the same product_id
+        and generally useful elsewhere.
+
+        :param pools: A list of PCI device pool dicts
+        :param request: An InstancePCIRequest object describing the type,
+            quantity and required NUMA affinity of device(s) we want.
+        :returns: A list of pools that can be used to support the request if
+            this is possible.
+        """
         if all(
             spec.get('dev_type') != fields.PciDeviceType.SRIOV_PF
             for spec in request.spec
@@ -331,7 +359,7 @@ class PciDeviceStats(object):
 
         :param pools: A list of PCI device pool dicts
         :param request: An InstancePCIRequest object describing the type,
-            quantity and required NUMA affinity of device(s) we want..
+            quantity and required NUMA affinity of device(s) we want.
         :param numa_cells: A list of InstanceNUMACell objects whose ``id``
             corresponds to the ``id`` of host NUMACell objects.
         :returns: A list of pools that can be used to support the request if
@@ -343,22 +371,16 @@ class PciDeviceStats(object):
 
         # Firstly, let's exclude all devices that don't match our spec (e.g.
         # they've got different PCI IDs or something)
-        pools = cls._filter_pools_for_spec(pools, request.spec)
+        pools = cls._filter_pools_for_spec(pools, request)
 
         # Next, let's exclude all devices that aren't on the correct NUMA node
         # *assuming* we have devices and care about that, as determined by
         # policy
-        if numa_cells:
-            numa_policy = None
-            if 'numa_policy' in request:
-                numa_policy = request.numa_policy
-
-            pools = cls._filter_pools_for_numa_cells(
-                pools, numa_cells, numa_policy, request.count)
+        pools = cls._filter_pools_for_numa_cells(pools, request, numa_cells)
 
         # Finally, if we're not requesting PFs then we should not use these.
         # Exclude them.
-        pools = cls._filter_non_requested_pfs(pools, request)
+        pools = cls._filter_pools_for_unrequested_pfs(pools, request)
 
         # Do we still have enough devices left?
         if sum([pool['count'] for pool in pools]) < request.count:
