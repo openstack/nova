@@ -185,6 +185,11 @@ Week following milestone 3
     weeks), then the only likely candidates will be low-risk things that are
     almost done
 
+* Mark the max microversion for the release in the
+  :doc:`/reference/api-microversion-history`:
+
+  * Example: https://review.opendev.org/c/openstack/nova/+/719313
+
 A few weeks before RC
 ---------------------
 
