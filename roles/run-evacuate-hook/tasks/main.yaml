@@ -1,0 +1,82 @@
+- name: Setup resources and mark the subnode as forced down
+  become: true
+  become_user: stack
+  shell: "/opt/stack/nova/roles/run-evacuate-hook/files/setup_evacuate_resources.sh"
+  environment:
+    SUBNODE_HOSTNAME: "{{ hostvars['compute1']['ansible_hostname'] }}"
+
+- name: Fence subnode by stopping q-agt and n-cpu
+  delegate_to: compute1
+  become: true
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+  with_items:
+    - devstack@q-agt
+    - devstack@n-cpu
+
+- name: Register running domains on subnode
+  delegate_to: compute1
+  become: true
+  virt:
+    command: list_vms
+    state: running
+  register: subnode_vms
+
+- name: Destroy running domains on subnode
+  delegate_to: compute1
+  become: true
+  virt:
+    name: "{{ item }}"
+    state: destroyed
+  with_items: "{{ subnode_vms.list_vms }}"
+
+- name: Stop libvirtd on "{{ inventory_hostname }}"
+  become: true
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  with_items:
+    - libvirtd.service
+    - libvirtd.socket
+    - libvirtd-admin.socket
+    - libvirtd-ro.socket
+    - virtlogd.service
+    - virtlogd-admin.socket
+    - virtlogd.socket
+    - virtlockd.service
+    - virtlockd-admin.socket
+    - virtlockd.socket
+
+- name: Run negative evacuate tests
+  become: true
+  become_user: stack
+  shell: "/opt/stack/nova/roles/run-evacuate-hook/files/test_negative_evacuate.sh"
+  environment:
+    CONTROLLER_HOSTNAME: "{{ hostvars['controller']['ansible_hostname'] }}"
+
+- name: Start libvirtd on "{{ inventory_hostname }}"
+  become: true
+  systemd:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  with_items:
+    - libvirtd.service
+    - libvirtd.socket
+    - libvirtd-admin.socket
+    - libvirtd-ro.socket
+    - virtlogd.service
+    - virtlogd-admin.socket
+    - virtlogd.socket
+    - virtlockd.service
+    - virtlockd-admin.socket
+    - virtlockd.socket
+
+- name: Run evacuate tests
+  become: true
+  become_user: stack
+  shell: "/opt/stack/nova/roles/run-evacuate-hook/files/test_evacuate.sh"
+  environment:
+    CONTROLLER_HOSTNAME: "{{ hostvars['controller']['ansible_hostname'] }}"
