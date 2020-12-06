@@ -371,19 +371,52 @@ class PciDeviceStats(object):
 
         # Firstly, let's exclude all devices that don't match our spec (e.g.
         # they've got different PCI IDs or something)
+        before_count = sum([pool['count'] for pool in pools])
         pools = cls._filter_pools_for_spec(pools, request)
+        after_count = sum([pool['count'] for pool in pools])
+
+        if after_count < before_count:
+            LOG.debug(
+                'Dropped %d devices due to mismatched PCI attribute(s)',
+                before_count - after_count
+            )
+
+        if after_count < request.count:
+            LOG.debug('Not enough PCI devices left to satify request')
+            return None
 
         # Next, let's exclude all devices that aren't on the correct NUMA node
         # *assuming* we have devices and care about that, as determined by
         # policy
+        before_count = after_count
         pools = cls._filter_pools_for_numa_cells(pools, request, numa_cells)
+        after_count = sum([pool['count'] for pool in pools])
+
+        if after_count < before_count:
+            LOG.debug(
+                'Dropped %d devices as they are on the wrong NUMA node(s)',
+                before_count - after_count
+            )
+
+        if after_count < request.count:
+            LOG.debug('Not enough PCI devices left to satify request')
+            return None
 
         # Finally, if we're not requesting PFs then we should not use these.
         # Exclude them.
+        before_count = after_count
         pools = cls._filter_pools_for_unrequested_pfs(pools, request)
+        after_count = sum([pool['count'] for pool in pools])
 
-        # Do we still have enough devices left?
-        if sum([pool['count'] for pool in pools]) < request.count:
+        if after_count < before_count:
+            LOG.debug(
+                'Dropped %d devices as they are PFs which we have not '
+                'requested',
+                before_count - after_count
+            )
+
+        if after_count < request.count:
+            LOG.debug('Not enough PCI devices left to satify request')
             return None
 
         return pools
