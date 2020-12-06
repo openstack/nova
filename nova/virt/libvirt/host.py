@@ -51,6 +51,7 @@ import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova.objects import fields
 from nova import rpc
 from nova import utils
 from nova.virt import event as virtevent
@@ -1272,6 +1273,10 @@ class Host(object):
 
     def _set_amd_sev_support(self):
         self._supports_amd_sev = False
+
+        caps = self.get_capabilities()
+        if caps.host.cpu.arch != fields.Architecture.X86_64:
+            return
 
         if not self._kernel_supports_amd_sev():
             LOG.info("kernel doesn't support AMD SEV")
