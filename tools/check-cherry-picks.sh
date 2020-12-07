@@ -4,6 +4,11 @@
 # to verify that they're all on either master or stable/ branches
 #
 
+# Allow this script to be disabled by a simple env var
+if [ ${DISABLE_CHERRY_PICK_CHECK:-0} -eq 1 ]; then
+    exit 0
+fi
+
 commit_hash=""
 
 # Check if the patch is a merge patch by counting the number of parents.
