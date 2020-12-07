@@ -341,7 +341,8 @@ class VMwareVMOps(object):
             extra_specs.firmware = 'efi'
         elif hw_firmware_type == fields.FirmwareType.BIOS:
             extra_specs.firmware = 'bios'
-        hw_version = flavor.extra_specs.get('vmware:hw_version')
+        hw_version = flavor.extra_specs.get('vmware:hw_version',
+                                            CONF.vmware.default_hw_version)
         hv_enabled = flavor.extra_specs.get('vmware:hv_enabled')
         extra_specs.hv_enabled = hv_enabled
         extra_specs.hw_version = hw_version

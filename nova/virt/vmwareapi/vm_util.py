@@ -113,7 +113,7 @@ class ExtraSpecs(object):
         self.memory_limits = memory_limits or Limits()
         self.disk_io_limits = disk_io_limits or Limits()
         self.vif_limits = vif_limits or Limits()
-        self.hw_version = hw_version
+        self.hw_version = hw_version or CONF.vmware.default_hw_version
         self.storage_policy = storage_policy
         self.cores_per_socket = cores_per_socket
         self.hv_enabled = hv_enabled

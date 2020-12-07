@@ -2505,6 +2505,8 @@ class VMwareVMOpsTestCase(test.TestCase):
                          actual.cpu_limits.shares_level)
         self.assertEqual(expected.cpu_limits.shares_share,
                          actual.cpu_limits.shares_share)
+        self.assertEqual(expected.hw_version,
+                         actual.hw_version)
 
     def _validate_flavor_extra_specs(self, flavor_extra_specs, expected):
         # Validate that the extra specs are parsed correctly
@@ -2671,6 +2673,19 @@ class VMwareVMOpsTestCase(test.TestCase):
         extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)
         self.assertRaises(exception.InvalidInput,
             self._validate_flavor_extra_specs, flavor_extra_specs, extra_specs)
+
+    def test_extra_specs_hw_version_override(self):
+        CONF.set_override('default_hw_version', 'vmx-13',
+                          'vmware')
+        flavor_extra_specs = {'vmware:hw_version': 'vmx-14'}
+        extra_specs = vm_util.ExtraSpecs(hw_version='vmx-14')
+        self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
+
+    def test_extra_specs_hw_version_override_empty(self):
+        CONF.set_override('default_hw_version', 'vmx-13',
+                          'vmware')
+        extra_specs = vm_util.ExtraSpecs(hw_version='vmx-13')
+        self._validate_flavor_extra_specs({}, extra_specs)
 
     def _make_vm_config_info(self, is_iso=False, is_sparse_disk=False,
                              vsphere_location=None):

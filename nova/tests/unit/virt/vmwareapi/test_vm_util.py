@@ -25,6 +25,7 @@ from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
 from oslo_vmware import vim_util as vutil
 
+import nova.conf
 from nova import exception
 from nova.network import model as network_model
 from nova import test
@@ -34,6 +35,8 @@ from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import session as vmware_session
 from nova.virt.vmwareapi import vm_util
+
+CONF = nova.conf.CONF
 
 
 class partialObject(object):
@@ -1058,6 +1061,22 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.tools.beforeGuestReboot = True
         expected.tools.beforeGuestShutdown = True
         expected.tools.beforeGuestStandby = True
+        self.assertEqual(expected, result)
+
+    def test_get_vm_create_spec_with_default_hw_version(self):
+        CONF.set_override('default_hw_version', 'vmx-13',
+                          'vmware')
+        extra_specs = vm_util.ExtraSpecs()
+        fake_factory = fake.FakeFactory()
+        result = vm_util.get_vm_create_spec(fake_factory,
+                                            self._instance,
+                                            'fake-datastore', [],
+                                            extra_specs)
+
+        expected = self._create_vm_config_spec()
+        expected.memoryReservationLockedToMax = False
+        expected.version = 'vmx-13'
+
         self.assertEqual(expected, result)
 
     def test_create_vm(self):
