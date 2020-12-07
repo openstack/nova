@@ -381,6 +381,19 @@ All VMs in the cluster have to be in a VM group that has a rule specifying a
 must-not-run-on-hostgroup rule for this hostgroup. Putting a host in this
 hostgroup will then result in the host getting freed up by DRS.
 """),
+    cfg.StrOpt('default_hw_version',
+               default=None,
+               help="""
+Set a default hardware version for VMs, that can be overridden in flavors
+
+This version is especially useful in multi-cluster environments where clusters
+get upgraded individually but movement of VMs is necessary between them
+nonetheless. It is recommend to set this to the highest version supported by
+all clusters in the environment.
+
+Example: "vmx-13" for vSphere 6.5.
+Versions can be looked up here: https://kb.vmware.com/s/article/1003746
+"""),
 ]
 
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +

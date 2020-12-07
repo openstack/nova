@@ -1208,6 +1208,21 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.tools.beforeGuestStandby = True
         self.assertEqual(expected, result)
 
+    def test_get_vm_create_spec_with_default_hw_version(self):
+        CONF.set_override('default_hw_version', 'vmx-13',
+                          'vmware')
+        extra_specs = vm_util.ExtraSpecs()
+        fake_factory = fake.FakeFactory()
+        result = vm_util.get_vm_create_spec(fake_factory,
+                                            self._instance,
+                                            'fake-datastore', [],
+                                            extra_specs)
+
+        expected = self._create_vm_config_spec()
+        expected.version = 'vmx-13'
+
+        self.assertEqual(expected, result)
+
     def test_create_vm(self):
 
         def fake_call_method(module, method, *args, **kwargs):
