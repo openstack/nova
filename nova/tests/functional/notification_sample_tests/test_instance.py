@@ -253,15 +253,13 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                                                binary='nova-compute')
         service_id = services[0]['id']
         self.admin_api.put_service(service_id, {'forced_down': True})
-        evacuate = {
-            'evacuate': {
-                'host': 'compute',
-            }
+
+        post_args = {
+            "host": "compute"
         }
 
-        self.admin_api.post_server_action(server['id'], evacuate)
-        self._wait_for_state_change(server, expected_status='REBUILD')
-        self._wait_for_state_change(server, expected_status='ACTIVE')
+        self._evacuate_server(
+            server, extra_post_args=post_args, expected_host='compute')
 
         notifications = self._get_notifications('instance.evacuate')
         self.assertEqual(1, len(notifications),
