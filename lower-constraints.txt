@@ -27,14 +27,14 @@ eventlet==0.20.0
 extras==1.0.0
 fasteners==0.14.1
 fixtures==3.0.0
-flake8==2.5.5
+flake8==2.6.0
 future==0.16.0
 futurist==1.8.0
 gabbi==1.35.0
 gitdb2==2.0.3
 GitPython==2.1.8
 greenlet==0.4.10
-hacking==0.12.0
+hacking==1.1.0
 idna==2.6
 iso8601==0.1.11
 Jinja2==2.10
@@ -149,7 +149,7 @@ SQLAlchemy==1.2.19
 sqlalchemy-migrate==0.11.0
 sqlparse==0.2.4
 statsd==3.2.2
-stestr==1.0.0
+stestr==2.0.0
 stevedore==1.20.0
 suds-jurko==0.6
 taskflow==2.16.0
