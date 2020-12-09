@@ -274,13 +274,6 @@
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
-        - openstack-tox-lower-constraints:
-            # NOTE(elod.illes): with the introduction of the new dependency
-            # resolver in pip 20.3, the lower-constraints jobs start to fail
-            # as the constraint handling is now working as it should, thus
-            # revealing issues. Setting this to non-voting until the way
-            # forward is decided.
-            voting: false
         - grenade-py3:
             irrelevant-files: *dsvm-irrelevant-files
     gate:
@@ -294,13 +287,6 @@
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
-        - openstack-tox-lower-constraints:
-            # NOTE(elod.illes): with the introduction of the new dependency
-            # resolver in pip 20.3, the lower-constraints jobs start to fail
-            # as the constraint handling is now working as it should, thus
-            # revealing issues. Setting this to non-voting until the way
-            # forward is decided.
-            voting: false
         - grenade-py3:
             irrelevant-files: *dsvm-irrelevant-files
     experimental:
