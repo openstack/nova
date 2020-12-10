@@ -7,3 +7,9 @@
 
 # Skip until bug 1906428 is resolved
 tempest.scenario.test_shelve_instance.TestShelveInstance.test_cold_migrate_unshelved_instance
+
+# Also exlude resize and migrate tests with qos ports as qos is currently
+# not supported in cross cell resize case . See
+# https://bugs.launchpad.net/nova/+bug/1907511 for details
+test_migrate_with_qos_min_bw_allocation
+test_resize_with_qos_min_bw_allocation

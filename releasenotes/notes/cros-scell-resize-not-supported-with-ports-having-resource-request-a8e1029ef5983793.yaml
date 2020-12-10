@@ -1,0 +1,7 @@
+---
+issues:
+  - |
+    When the tempest test coverage was added for resize and cold migrate
+    with neutron ports having QoS minimum bandwidth policy rules we
+    discovered that the cross cell resize code path cannot handle such ports.
+    See bug https://bugs.launchpad.net/nova/+bug/1907522 for details.
