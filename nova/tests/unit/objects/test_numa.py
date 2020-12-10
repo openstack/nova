@@ -342,6 +342,7 @@ class _TestNUMACell(object):
             physnets=set(['foo', 'bar']), tunneled=True)
         cell = objects.NUMACell(
             id=0,
+            socket=0,
             cpuset=set([1, 2]),
             pcpuset=set([3, 4]),
             memory=32,
@@ -351,10 +352,14 @@ class _TestNUMACell(object):
             network_metadata=network_metadata)
 
         versions = ovo_base.obj_tree_get_versions('NUMACell')
+        primitive = cell.obj_to_primitive(target_version='1.5',
+                                          version_manifest=versions)
+        self.assertIn('socket', primitive['nova_object.data'])
 
         primitive = cell.obj_to_primitive(target_version='1.4',
                                           version_manifest=versions)
         self.assertIn('pcpuset', primitive['nova_object.data'])
+        self.assertNotIn('socket', primitive['nova_object.data'])
 
         primitive = cell.obj_to_primitive(target_version='1.3',
                                           version_manifest=versions)

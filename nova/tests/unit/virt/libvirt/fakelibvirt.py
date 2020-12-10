@@ -608,15 +608,16 @@ class NUMATopology(vconfig.LibvirtConfigCapsNUMATopology):
         super(NUMATopology, self).__init__(**kwargs)
 
         cpu_count = 0
-        for cell_count in range(cpu_nodes):
-            cell = vconfig.LibvirtConfigCapsNUMACell()
-            cell.id = cell_count
-            cell.memory = kb_mem // cpu_nodes
-            for socket_count in range(cpu_sockets):
+        cell_count = 0
+        for socket_count in range(cpu_sockets):
+            for cell_num in range(cpu_nodes):
+                cell = vconfig.LibvirtConfigCapsNUMACell()
+                cell.id = cell_count
+                cell.memory = kb_mem // (cpu_nodes * cpu_sockets)
                 for cpu_num in range(cpu_cores * cpu_threads):
                     cpu = vconfig.LibvirtConfigCapsNUMACPU()
                     cpu.id = cpu_count
-                    cpu.socket_id = cell_count
+                    cpu.socket_id = socket_count
                     cpu.core_id = cpu_num // cpu_threads
                     cpu.siblings = set([cpu_threads *
                                        (cpu_count // cpu_threads) + thread
@@ -625,13 +626,15 @@ class NUMATopology(vconfig.LibvirtConfigCapsNUMATopology):
 
                     cpu_count += 1
 
-            # If no mempages are provided, use only the default 4K pages
-            if mempages:
-                cell.mempages = mempages[cell_count]
-            else:
-                cell.mempages = create_mempages([(4, cell.memory // 4)])
+                # If no mempages are provided, use only the default 4K pages
+                if mempages:
+                    cell.mempages = mempages[cell_count]
+                else:
+                    cell.mempages = create_mempages([(4, cell.memory // 4)])
 
-            self.cells.append(cell)
+                self.cells.append(cell)
+
+                cell_count += 1
 
 
 def create_mempages(mappings):

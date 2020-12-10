@@ -390,10 +390,9 @@ class FakeLibvirtTests(test.NoDBTestCase):
 </topology>
 """
         host_topology = libvirt.NUMATopology(
-            cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2,
+            cpu_nodes=1, cpu_sockets=2, cpu_cores=2, cpu_threads=2,
             kb_mem=15740000)
-        self.assertEqual(host_topology.to_xml(),
-                         topology)
+        self.assertEqual(topology, host_topology.to_xml())
 
     def test_pci_devices_generation(self):
         def _cmp_pci_dev_addr(dev_xml, cmp_addr):
