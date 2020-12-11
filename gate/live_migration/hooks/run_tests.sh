@@ -26,7 +26,8 @@ STACK_USER=${STACK_USER:-stack}
 
 echo '1. test with all local storage (use default for volumes)'
 echo 'NOTE: test_volume_backed_live_migration is skipped due to https://bugs.launchpad.net/nova/+bug/1524898'
-run_tempest "block migration test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
+echo 'NOTE: test_live_block_migration_paused is skipped due to https://bugs.launchpad.net/nova/+bug/1901739'
+run_tempest "block migration test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration|test_live_block_migration_paused))"
 
 # TODO(mriedem): Run $BASE/new/nova/gate/test_evacuate.sh for local storage
 

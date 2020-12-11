@@ -29,7 +29,8 @@ As of 20.0.0 (Train), nova supports cold migrating and resizing servers with
 neutron ports having resource requests if both the source and destination
 compute services are upgraded to 20.0.0 (Train) and the
 ``[upgrade_levels]/compute`` configuration does not prevent the computes from
-using the latest RPC version.
+using the latest RPC version. However cross cell resize and cross cell migrate
+operations are still not supported with such ports.
 
 As of 21.0.0 (Ussuri), nova supports evacuating, live migrating and unshelving
 servers with neutron ports having resource requests.
