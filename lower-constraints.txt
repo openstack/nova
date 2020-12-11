@@ -1,5 +1,5 @@
 alembic==0.9.8
-amqp==2.2.2
+amqp==2.5.0
 appdirs==1.4.3
 asn1crypto==0.24.0
 attrs==17.4.0
@@ -21,7 +21,7 @@ debtcollector==1.19.0
 decorator==3.4.0
 deprecation==2.0
 dogpile.cache==0.6.5
-enum34==1.0.4
+enum34==1.1.8
 enum-compat==0.0.2
 eventlet==0.20.0
 extras==1.0.0
@@ -34,7 +34,7 @@ gabbi==1.35.0
 gitdb2==2.0.3
 GitPython==2.1.8
 greenlet==0.4.10
-hacking==2.0
+hacking==3.0.1
 idna==2.6
 iso8601==0.1.11
 Jinja2==2.10
@@ -46,7 +46,7 @@ jsonpointer==2.0
 jsonschema==2.6.0
 keystoneauth1==3.16.0
 keystonemiddleware==4.20.0
-kombu==4.1.0
+kombu==4.6.1
 linecache2==1.0.0
 lxml==3.4.1
 Mako==1.0.7
@@ -75,7 +75,7 @@ osc-lib==1.10.0
 oslo.cache==1.26.0
 oslo.concurrency==3.29.0
 oslo.config==6.1.0
-oslo.context==2.21.0
+oslo.context==2.22.0
 oslo.db==4.44.0
 oslo.i18n==3.15.3
 oslo.log==3.36.0
@@ -148,7 +148,7 @@ SQLAlchemy==1.2.19
 sqlalchemy-migrate==0.13.0
 sqlparse==0.2.4
 statsd==3.2.2
-stestr==1.0.0
+stestr==2.0.0
 stevedore==1.20.0
 suds-jurko==0.6
 taskflow==2.16.0

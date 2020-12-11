@@ -4,3 +4,9 @@
 # Exclude tempest.scenario.test_network tests since they are slow and
 # only test advanced neutron features, unrelated to multi-cell testing.
 ^tempest.scenario.test_network
+
+# Also exlude resize and migrate tests with qos ports as qos is currently
+# not supported in cross cell resize case . See
+# https://bugs.launchpad.net/nova/+bug/1907511 for details
+test_migrate_with_qos_min_bw_allocation
+test_resize_with_qos_min_bw_allocation
