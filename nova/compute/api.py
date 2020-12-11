@@ -3813,6 +3813,8 @@ class API(base.Base):
         :param instance: Instance object being resized
         :returns: True if cross-cell resize is allowed, False otherwise
         """
+        # TODO(gibi): do not allow cross cell migration if the instance has
+        # neutron ports with resource request. See bug 1907522.
         # First check to see if the requesting project/user is allowed by
         # policy to perform cross-cell resize.
         allowed = context.can(
