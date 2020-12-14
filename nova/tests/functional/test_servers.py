@@ -8333,35 +8333,40 @@ class CrossCellResizeWithQoSPort(PortResourceRequestBasedSchedulingTestBase):
             # host is in a different cell and while cross cell migration is
             # enabled it is not supported for neutron ports with resource
             # request.
-            # FIXME(gibi): We expect this to fail with NoValidHost.
-            # Unfortunately it fails by not finding the target compute service
-            # in the same cell the source service. This is bug 1907511. If
-            # there would be a standalone fix for 1907511 then the next failure
-            # would be 1907522. Our coming fix will fix both bug with a same
-            # fix.
             self.api.post_server_action(server['id'], {'migrate': None})
             self._wait_for_migration_status(server, ['error'])
-            self._wait_for_action_fail_completion(
+            self._wait_for_server_parameter(
+                server,
+                {'status': 'ACTIVE', 'OS-EXT-SRV-ATTR:host': 'host1'})
+            event = self._wait_for_action_fail_completion(
                 server, 'migrate', 'conductor_migrate_server')
-            # This is the root case
             self.assertIn(
+                'exception.NoValidHost', event['traceback'])
+            log = self.stdlog.logger.output
+            self.assertIn(
+                'Request is allowed by policy to perform cross-cell resize '
+                'but the instance has ports with resource request and '
+                'cross-cell resize is not supported with such ports.',
+                log)
+            self.assertNotIn(
+                'nova.exception.PortBindingFailed: Binding failed for port',
+                log)
+            self.assertNotIn(
                 "AttributeError: 'NoneType' object has no attribute 'version'",
-                self.stdlog.logger.output)
+                log)
 
         # Now start a new compute in the same cell as the instance and retry
         # the migration.
-        #
-        # This should work after the fallback to same cell resize is
-        # implemented
-        #
-        # self._start_compute('host3', cell_name='cell1')
-        #
-        # with mock.patch(
-        #         'nova.network.neutron.API._create_port_binding',
-        #         side_effect=spy_on_create_binding, autospec=True
-        # ):
-        #     server = self._migrate_server(server)
-        #     self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
+        self._start_compute('host3', cell_name='cell1')
+        self.compute3_rp_uuid = self._get_provider_uuid_by_host('host3')
+        self._create_networking_rp_tree('host3', self.compute3_rp_uuid)
+
+        with mock.patch(
+                'nova.network.neutron.API._create_port_binding',
+                side_effect=spy_on_create_binding, autospec=True
+        ):
+            server = self._migrate_server(server)
+            self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
 
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)
