@@ -237,7 +237,8 @@ These are known to not yet be supported in the code:
 
 * Instances with ports attached that have
   :doc:`bandwidth-aware </admin/ports-with-resource-requests>` resource
-  provider allocations.
+  provider allocations. Nova falls back to same-cell resize if the server has
+  such ports.
 * Rescheduling to alternative hosts within the same target cell in case the
   primary selected host fails the ``prep_snapshot_based_resize_at_dest`` call.
 
