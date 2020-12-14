@@ -4338,6 +4338,7 @@ class API:
                 host=node.host, node=node.hypervisor_hostname,
                 allow_cross_cell_move=allow_cross_cell_resize)
 
+        scheduler_hint['_nova_check_type'] = ['resize']
         # Asynchronously RPC cast to conductor so the response is not blocked
         # during scheduling. If something fails the user can find out via
         # instance actions.

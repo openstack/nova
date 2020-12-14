@@ -390,6 +390,23 @@ Related options:
 
 * ``[filter_scheduler] weight_classes``
 """),
+    cfg.FloatOpt("resize_reserved_ram_percent",
+        default=10.0,
+        help="""
+The reserved memory for resize.
+
+When spawning an instance, hosts having already passed a certain threshold
+should not be considered, as the remaining RAM should be reserved for instances
+resizing on this host.
+
+This option is only used by the FilterScheduler and its subclasses;
+if you use a different scheduler, this option has no effect.
+
+Possible values:
+
+* An integer or float value between 1-100, where the value corresponds to
+  the percent of RAM to be unallocated.
+"""),
     cfg.FloatOpt("cpu_weight_multiplier",
         default=1.0,
         help="""

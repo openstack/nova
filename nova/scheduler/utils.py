@@ -1232,6 +1232,19 @@ def request_is_rebuild(spec_obj):
     return check_type == ['rebuild']
 
 
+def request_is_resize(spec_obj):
+    """Returns True if request is for a resize.
+
+    :param spec_obj: An objects.RequestSpec to examine (or None).
+    """
+    if not spec_obj:
+        return False
+    if 'scheduler_hints' not in spec_obj:
+        return False
+    check_type = spec_obj.scheduler_hints.get('_nova_check_type')
+    return check_type == ['resize']
+
+
 def claim_resources(ctx, client, spec_obj, instance_uuid, alloc_req,
         allocation_request_version=None):
     """Given an instance UUID (representing the consumer of resources) and the
