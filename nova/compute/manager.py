@@ -5902,7 +5902,9 @@ class ComputeManager(manager.Manager):
         other generic error handling.
         """
         # Figure out the image metadata to use when spawning the guest.
+        origin_image_ref = instance.image_ref
         if snapshot_id:
+            instance.image_ref = snapshot_id
             image_meta = objects.ImageMeta.from_image_ref(
                 ctxt, self.image_api, snapshot_id)
         else:
@@ -5940,6 +5942,7 @@ class ComputeManager(manager.Manager):
         # If we spawned from a temporary snapshot image we can delete that now,
         # similar to how unshelve works.
         if snapshot_id:
+            instance.image_ref = origin_image_ref
             compute_utils.delete_image(
                 ctxt, instance, self.image_api, snapshot_id)
 

@@ -23164,22 +23164,25 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_try_fetch_image_cache')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_rebase_with_qemu_img')
-    def _test_unshelve_qcow2_rebase_image_during_create(self,
-            mock_rebase, mock_fetch, original_image_in_glance=True):
+    def _test_qcow2_rebase_image_during_create(self,
+            mock_rebase, mock_fetch, image_ref, base_image_ref, vm_state=None,
+            task_state=None, original_image_in_glance=True,
+            rebase_expected=True):
         self.flags(images_type='qcow2', group='libvirt')
 
-        # Original image ref from where instance was created, before SHELVE
-        # occurs, base_root_fname is related backing file name.
-        base_image_ref = 'base_image_ref'
-        base_root_fname = imagecache.get_cache_fname(base_image_ref)
-        # Snapshot image ref created during SHELVE.
-        shelved_image_ref = 'shelved_image_ref'
-        shelved_root_fname = imagecache.get_cache_fname(shelved_image_ref)
+        # base_image_ref: original image ref from where instance was created,
+        #                 stored in system_metadata at instance creation.
+        # image_ref:      current instance.image_ref used in unshelve/resize)
+        # vm_state:       current vm_state
 
-        # Instance state during unshelve spawn().
+        base_image_root_fname = imagecache.get_cache_fname(base_image_ref)
+        image_root_fname = imagecache.get_cache_fname(image_ref)
+
+        # Instance state during _create_and_inject_local_root call.
         inst_params = {
-                'image_ref': shelved_image_ref,
-                'vm_state': vm_states.SHELVED_OFFLOADED,
+                'image_ref': image_ref,
+                'vm_state': vm_state,
+                'task_state': task_state,
                 'system_metadata': {'image_base_image_ref': base_image_ref}
             }
 
@@ -23193,7 +23196,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             # We expect final backing file is original image, not shelved one.
             expected_backing_file = os.path.join(
                     imagecache.ImageCacheManager().cache_dir,
-                    base_root_fname)
+                    base_image_root_fname)
         else:
             # None means rebase will merge backing file into disk(flatten).
             expected_backing_file = None
@@ -23205,36 +23208,81 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr._create_and_inject_local_root(
             self.context, instance, False, '', disk_images, None, None)
 
-        mock_fetch.assert_has_calls([
+        mock_fetch_calls = [
             mock.call(test.MatchType(nova.virt.libvirt.imagebackend.Qcow2),
                       libvirt_utils.fetch_image,
-                      self.context, shelved_root_fname, shelved_image_ref,
-                      instance, instance.root_gb * units.Gi, None),
+                      self.context, image_root_fname, image_ref,
+                      instance, instance.root_gb * units.Gi, None)
+                ]
+
+        if rebase_expected:
+            # if we rebase we must expect a 2nd fetch call, to cache the
+            # original backing file.
+            mock_fetch_calls.append(
             mock.call(test.MatchType(nova.virt.libvirt.imagebackend.Qcow2),
                       libvirt_utils.fetch_image,
-                      self.context, base_root_fname, base_image_ref,
-                      instance, None)])
-        mock_rebase.assert_called_once_with(disk_path, expected_backing_file)
+                      self.context, base_image_root_fname, base_image_ref,
+                      instance, None))
+
+            mock_rebase.assert_called_once_with(disk_path,
+                                                expected_backing_file)
+        else:
+            mock_rebase.assert_not_called()
+
+        mock_fetch.assert_has_calls(mock_fetch_calls)
 
     def test_unshelve_qcow2_rebase_image_during_create(self):
         # Original image is present in Glance. In that case the 2nd
         # fetch succeeds and we rebase instance disk to original image backing
         # file, instance is back to nominal state: after unshelve,
         # instance.image_ref will match current backing file.
-        self._test_unshelve_qcow2_rebase_image_during_create()
+        self._test_qcow2_rebase_image_during_create(
+                image_ref='snapshot_id_of_shelved_instance',
+                base_image_ref='original_image_id',
+                vm_state=vm_states.SHELVED_OFFLOADED,
+                rebase_expected=True)
 
     def test_unshelve_qcow2_rebase_image_during_create_notfound(self):
         # Original image is no longer available in Glance, so 2nd fetch
         # will failed (HTTP 404). In that case qemu-img rebase will merge
         # backing file into disk, removing backing file dependency.
-        self._test_unshelve_qcow2_rebase_image_during_create(
-                original_image_in_glance=False)
+        self._test_qcow2_rebase_image_during_create(
+                image_ref='snapshot_id_of_shelved_instance',
+                base_image_ref='original_image_id',
+                vm_state=vm_states.SHELVED_OFFLOADED,
+                original_image_in_glance=False,
+                rebase_expected=True)
 
-    @mock.patch('nova.virt.libvirt.driver.imagebackend')
+    def test_cross_cell_resize_qcow2_rebase_image_during_create(self):
+        self._test_qcow2_rebase_image_during_create(
+                image_ref='snapshot_id_of_resized_instance',
+                base_image_ref='original_image_id',
+                task_state=task_states.RESIZE_FINISH,
+                rebase_expected=True)
+
+    def test_cross_cell_resize_qcow2_rebase_image_during_create_notfound(self):
+        self._test_qcow2_rebase_image_during_create(
+                image_ref='snapshot_id_of_resized_instance',
+                base_image_ref='original_image_id',
+                task_state=task_states.RESIZE_FINISH,
+                original_image_in_glance=False,
+                rebase_expected=True)
+
+    def test_local_cell_resize_qcow2_rebase_image_during_create(self):
+        # local cell resize does not go into a spawn from a snapshot,
+        # consequently, instance.image_ref remain the same and we must ensure
+        # that no rebase is done.
+        self._test_qcow2_rebase_image_during_create(
+                image_ref='original_image_id',
+                base_image_ref='original_image_id',
+                task_state=task_states.RESIZE_FINISH,
+                rebase_expected=False)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_try_fetch_image_cache', new=mock.Mock())
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._inject_data')
-    @mock.patch('nova.virt.libvirt.driver.imagecache')
-    def test_data_not_injects_with_configdrive(self, mock_image, mock_inject,
-                                               mock_backend):
+    @mock.patch('nova.virt.libvirt.driver.imagecache', new=mock.Mock())
+    def test_data_not_injects_with_configdrive(self, mock_inject):
         self.flags(inject_partition=-1, group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

@@ -3958,6 +3958,14 @@ class API(base.Base):
 
         current_instance_type = instance.get_flavor()
 
+        # NOTE(aarents): Ensure image_base_image_ref is present as it will be
+        # needed during finish_resize/cross_cell_resize. Instances upgraded
+        # from an older nova release may not have this property because of
+        # a rebuild bug Bug/1893618.
+        instance.system_metadata.update(
+                {'image_base_image_ref': instance.image_ref}
+        )
+
         # If flavor_id is not provided, only migrate the instance.
         volume_backed = None
         if not flavor_id:
