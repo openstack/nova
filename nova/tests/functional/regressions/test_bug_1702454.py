@@ -110,15 +110,14 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
         # only possibility the instance can end up on it is because the
         # scheduler should only verify the requested destination as host2
         # is weighed lower than host3.
-        evacuate = {
-            'evacuate': {
-                'host': 'host2'
-            }
-        }
-        self.admin_api.post_server_action(server['id'], evacuate)
+        target_host = 'host2'
 
-        self._wait_for_state_change(server, 'ACTIVE')
-        server = self.admin_api.get_server(server_id)
+        post_args = {
+            'host': target_host
+        }
+
+        server = self._evacuate_server(
+            server, extra_post_args=post_args, expected_host=target_host)
 
         # Yeepee, that works!
-        self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
+        self.assertEqual(target_host, server['OS-EXT-SRV-ATTR:host'])
