@@ -143,6 +143,10 @@ Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNo
 Request
 -------
 
+.. note:: Since microversion 2.77, allowed request body schema are
+          {"unshelve": null} or {"unshelve": {"availability_zone": <string>}}.
+          A request body of {"unshelve": {}} is not allowed.
+
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
