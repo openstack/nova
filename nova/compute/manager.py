@@ -8055,12 +8055,12 @@ class ComputeManager(manager.Manager):
         LOG.error(msg, msg_args)
 
     @staticmethod
-    def _get_neutron_events_for_live_migration(instance):
+    def _get_neutron_events_for_live_migration(instance, migration):
         # We don't generate events if CONF.vif_plugging_timeout=0
         # meaning that the operator disabled using them.
         if CONF.vif_plugging_timeout:
-            return [('network-vif-plugged', vif['id'])
-                    for vif in instance.get_network_info()]
+            return (instance.get_network_info()
+                    .get_live_migration_plug_time_events())
         else:
             return []
 
@@ -8131,7 +8131,8 @@ class ComputeManager(manager.Manager):
             """
             pass
 
-        events = self._get_neutron_events_for_live_migration(instance)
+        events = self._get_neutron_events_for_live_migration(
+            instance, migration)
         try:
             if ('block_migration' in migrate_data and
                     migrate_data.block_migration):
