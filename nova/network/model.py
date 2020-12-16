@@ -469,6 +469,14 @@ class VIF(Model):
         return (self.is_hybrid_plug_enabled() and not
                 migration.is_same_host())
 
+    @property
+    def has_live_migration_plug_time_event(self):
+        """Returns whether this VIF's network-vif-plugged external event will
+        be sent by Neutron at "plugtime" - in other words, as soon as neutron
+        completes configuring the network backend.
+        """
+        return self.is_hybrid_plug_enabled()
+
     def is_hybrid_plug_enabled(self):
         return self['details'].get(VIF_DETAILS_OVS_HYBRID_PLUG, False)
 
@@ -530,15 +538,22 @@ class NetworkInfo(list):
         return jsonutils.dumps(self)
 
     def get_bind_time_events(self, migration):
-        """Returns whether any of our VIFs have "bind-time" events. See
-        has_bind_time_event() docstring for more details.
+        """Returns a list of external events for any VIFs that have
+        "bind-time" events during cold migration.
         """
         return [('network-vif-plugged', vif['id'])
                 for vif in self if vif.has_bind_time_event(migration)]
 
+    def get_live_migration_plug_time_events(self):
+        """Returns a list of external events for any VIFs that have
+        "plug-time" events during live migration.
+        """
+        return [('network-vif-plugged', vif['id'])
+                for vif in self if vif.has_live_migration_plug_time_event]
+
     def get_plug_time_events(self, migration):
-        """Complementary to get_bind_time_events(), any event that does not
-        fall in that category is a plug-time event.
+        """Returns a list of external events for any VIFs that have
+        "plug-time" events during cold migration.
         """
         return [('network-vif-plugged', vif['id'])
                 for vif in self if not vif.has_bind_time_event(migration)]
