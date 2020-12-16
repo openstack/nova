@@ -647,6 +647,37 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._check_vtpm_support()
 
+        self._register_instance_machine_type()
+
+    def _register_instance_machine_type(self):
+        """Register the machine type of instances on this host
+
+        For each instance found on this host by InstanceList.get_by_host ensure
+        a machine type is registered within the system metadata of the instance
+        """
+        context = nova_context.get_admin_context()
+        hostname = self._host.get_hostname()
+
+        for instance in objects.InstanceList.get_by_host(context, hostname):
+            # NOTE(lyarwood): Skip if hw_machine_type is set already in the
+            # image_meta of the instance. Note that this value comes from the
+            # system metadata of the instance where it is stored under the
+            # image_hw_machine_type key.
+            if instance.image_meta.properties.get('hw_machine_type'):
+                continue
+
+            # Fetch and record the machine type from the config
+            hw_machine_type = libvirt_utils.get_machine_type(
+                instance.image_meta)
+            # NOTE(lyarwood): As above this updates
+            # image_meta.properties.hw_machine_type within the instance and
+            # will be returned the next time libvirt_utils.get_machine_type is
+            # called for the instance image meta.
+            instance.system_metadata['image_hw_machine_type'] = hw_machine_type
+            instance.save()
+            LOG.debug("Instance machine_type updated to %s", hw_machine_type,
+                      instance=instance)
+
     def _check_cpu_compatibility(self):
         mode = CONF.libvirt.cpu_mode
         models = CONF.libvirt.cpu_models
@@ -5679,7 +5710,22 @@ class LibvirtDriver(driver.ComputeDriver):
                     guest.os_loader_type = "pflash"
                 else:
                     raise exception.UEFINotSupported()
-            guest.os_mach_type = libvirt_utils.get_machine_type(image_meta)
+
+            mtype = libvirt_utils.get_machine_type(image_meta)
+            guest.os_mach_type = mtype
+
+            # NOTE(lyarwood): If the machine type isn't recorded in the stashed
+            # image metadata then record it through the system metadata table.
+            # This will allow the host configuration to change in the future
+            # without impacting existing instances.
+            # NOTE(lyarwood): The value of ``hw_machine_type`` within the
+            # stashed image metadata of the instance actually comes from the
+            # system metadata table under the ``image_hw_machine_type`` key via
+            # nova.objects.ImageMeta.from_instance and the
+            # nova.utils.get_image_from_system_metadata function.
+            if image_meta.properties.get('hw_machine_type') is None:
+                instance.system_metadata['image_hw_machine_type'] = mtype
+
             if image_meta.properties.get('hw_boot_menu') is None:
                 guest.os_bootmenu = strutils.bool_from_string(
                     flavor.extra_specs.get('hw:boot_menu', 'no'))

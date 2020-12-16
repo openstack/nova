@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    The libvirt virt driver will now attempt to record the machine type of an
+    instance at startup and when launching an instance if the machine type is
+    not already recorded in the image metadata associated with the instance.
+
+    This machine type will then be used when the instance is restarted or
+    migrated as it will now appear as an image metadata property associated
+    with the instance.
