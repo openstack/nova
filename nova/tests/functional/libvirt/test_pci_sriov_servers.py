@@ -14,11 +14,12 @@
 #    under the License.
 
 import copy
+from urllib import parse as urlparse
+
 import ddt
 import fixtures
-import mock
-
 from lxml import etree
+import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -31,6 +32,7 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.tests.unit import fake_notifier
+from nova.tests.unit.virt.libvirt import fake_os_brick_connector
 from nova.tests.unit.virt.libvirt import fakelibvirt
 
 CONF = cfg.CONF
@@ -58,10 +60,22 @@ class _PCIServersTestBase(base.ServersTestBase):
             '.PciPassthroughFilter.host_passes',
             side_effect=host_pass_mock)).mock
 
+    def assertPCIDeviceCounts(self, hostname, total, free):
+        """Ensure $hostname has $total devices, $free of which are free."""
+        ctxt = context.get_admin_context()
+        devices = objects.PciDeviceList.get_by_compute_node(
+            ctxt, objects.ComputeNode.get_by_nodename(ctxt, hostname).id,
+        )
+        self.assertEqual(total, len(devices))
+        self.assertEqual(free, len([d for d in devices if d.is_available()]))
+
 
 class SRIOVServersTest(_PCIServersTestBase):
 
-    microversion = '2.48'
+    # TODO(stephenfin): We're using this because we want to be able to force
+    # the host during scheduling. We should instead look at overriding policy
+    ADMIN_API = True
+    microversion = 'latest'
 
     VFS_ALIAS_NAME = 'vfs'
     PFS_ALIAS_NAME = 'pfs'
@@ -103,6 +117,43 @@ class SRIOVServersTest(_PCIServersTestBase):
         # new fixture here means that we re-stub what the previous neutron
         # fixture already stubbed.
         self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.driver.connector',
+            fake_os_brick_connector))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.tests.unit.virt.libvirt.fakelibvirt.Domain.migrateToURI3',
+            self._migrate_stub))
+
+    def _migrate_stub(self, domain, destination, params, flags):
+        """Stub out migrateToURI3."""
+
+        src_hostname = domain._connection.hostname
+        dst_hostname = urlparse.urlparse(destination).netloc
+
+        # In a real live migration, libvirt and QEMU on the source and
+        # destination talk it out, resulting in the instance starting to exist
+        # on the destination. Fakelibvirt cannot do that, so we have to
+        # manually create the "incoming" instance on the destination
+        # fakelibvirt.
+        dst = self.computes[dst_hostname]
+        dst.driver._host.get_connection().createXML(
+            params['destination_xml'],
+            'fake-createXML-doesnt-care-about-flags')
+
+        src = self.computes[src_hostname]
+        conn = src.driver._host.get_connection()
+
+        # because migrateToURI3 is spawned in a background thread, this method
+        # does not block the upper nova layers. Because we don't want nova to
+        # think the live migration has finished until this method is done, the
+        # last thing we do is make fakelibvirt's Domain.jobStats() return
+        # VIR_DOMAIN_JOB_COMPLETED.
+        server = etree.fromstring(
+            params['destination_xml']
+        ).find('./uuid').text
+        dom = conn.lookupByUUIDString(server)
+        dom.complete_job()
 
     def _disable_sriov_in_pf(self, pci_info):
         # Check for PF and change the capability from virt_functions
@@ -243,6 +294,141 @@ class SRIOVServersTest(_PCIServersTestBase):
             port['binding:profile'],
         )
 
+    def test_live_migrate_server_with_PF(self):
+        """Live migrate an instance with a PCI PF.
+
+        This should fail because it's not possible to live migrate an instance
+        with a PCI passthrough device, even if it's a SR-IOV PF.
+        """
+
+        # start two compute services
+        self.start_compute(
+            hostname='test_compute0',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pfs=2, num_vfs=4))
+        self.start_compute(
+            hostname='test_compute1',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pfs=2, num_vfs=4))
+
+        # create a server
+        extra_spec = {'pci_passthrough:alias': f'{self.PFS_ALIAS_NAME}:1'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(flavor_id=flavor_id, networks='none')
+
+        # now live migrate that server
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._live_migrate,
+            server, 'completed')
+        # NOTE(stephenfin): this wouldn't happen in a real deployment since
+        # live migration is a cast, but since we are using CastAsCall this will
+        # bubble to the API
+        self.assertEqual(500, ex.response.status_code)
+        self.assertIn('NoValidHost', str(ex))
+
+    def test_live_migrate_server_with_VF(self):
+        """Live migrate an instance with a PCI VF.
+
+        This should fail because it's not possible to live migrate an instance
+        with a PCI passthrough device, even if it's a SR-IOV VF.
+        """
+
+        # start two compute services
+        self.start_compute(
+            hostname='test_compute0',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pfs=2, num_vfs=4))
+        self.start_compute(
+            hostname='test_compute1',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pfs=2, num_vfs=4))
+
+        # create a server
+        extra_spec = {'pci_passthrough:alias': f'{self.VFS_ALIAS_NAME}:1'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(flavor_id=flavor_id, networks='none')
+
+        # now live migrate that server
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._live_migrate,
+            server, 'completed')
+        # NOTE(stephenfin): this wouldn't happen in a real deployment since
+        # live migration is a cast, but since we are using CastAsCall this will
+        # bubble to the API
+        self.assertEqual(500, ex.response.status_code)
+        self.assertIn('NoValidHost', str(ex))
+
+    def test_live_migrate_server_with_neutron(self):
+        """Live migrate an instance using a neutron-provisioned SR-IOV VIF.
+
+        This should succeed since we support this, via detach and attach of the
+        PCI device.
+        """
+
+        # start two compute services with differing PCI device inventory
+        self.start_compute(
+            hostname='test_compute0',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pfs=2, num_vfs=8))
+        self.start_compute(
+            hostname='test_compute1',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=2))
+
+        # create the port
+        self.neutron.create_port({'port': self.neutron.network_4_port_1})
+
+        # create a server using the VF via neutron
+        flavor_id = self._create_flavor()
+        server = self._create_server(
+            flavor_id=flavor_id,
+            networks=[
+                {'port': base.LibvirtNeutronFixture.network_4_port_1['id']},
+            ],
+            host='test_compute0',
+        )
+
+        # our source host should have marked two PCI devices are used, the VF
+        # and the parent PF, while the future destination is currnetly unused
+        self.assertEqual('test_compute0', server['OS-EXT-SRV-ATTR:host'])
+        self.assertPCIDeviceCounts('test_compute0', total=10, free=8)
+        self.assertPCIDeviceCounts('test_compute1', total=3, free=3)
+
+        # ensure the binding details sent to "neutron" are correct
+        port = self.neutron.show_port(
+            base.LibvirtNeutronFixture.network_4_port_1['id'],
+        )['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '8086:1515',
+                # TODO(stephenfin): Stop relying on a side-effect of how nova
+                # chooses from multiple PCI devices (apparently the last
+                # matching one)
+                'pci_slot': '0000:81:00.4',
+                'physical_network': 'physnet4',
+            },
+            port['binding:profile'],
+        )
+
+        # now live migrate that server
+        self._live_migrate(server, 'completed')
+
+        # we should now have transitioned our usage to the destination, freeing
+        # up the source in the process
+        self.assertPCIDeviceCounts('test_compute0', total=10, free=10)
+        self.assertPCIDeviceCounts('test_compute1', total=3, free=1)
+
+        # ensure the binding details sent to "neutron" have been updated
+        port = self.neutron.show_port(
+            base.LibvirtNeutronFixture.network_4_port_1['id'],
+        )['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '8086:1515',
+                'pci_slot': '0000:81:00.2',
+                'physical_network': 'physnet4',
+            },
+            port['binding:profile'],
+        )
+
     def test_get_server_diagnostics_server_with_VF(self):
         """Ensure server disagnostics include info on VF-type PCI devices."""
 
@@ -265,7 +451,7 @@ class SRIOVServersTest(_PCIServersTestBase):
 
         # now check the server diagnostics to ensure the VF-type PCI device is
         # attached
-        diagnostics = self.admin_api.get_server_diagnostics(
+        diagnostics = self.api.get_server_diagnostics(
             server['id']
         )
 
@@ -521,6 +707,37 @@ class PCIServersTest(_PCIServersTestBase):
         self._create_server(
             flavor_id=flavor_id, networks='none', expected_state='ERROR')
 
+    def test_live_migrate_server_with_pci(self):
+        """Live migrate an instance with a PCI passthrough device.
+
+        This should fail because it's not possible to live migrate an instance
+        with a PCI passthrough device, even if it's a SR-IOV VF.
+        """
+
+        # start two compute services
+        self.start_compute(
+            hostname='test_compute0',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=1))
+        self.start_compute(
+            hostname='test_compute1',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=1))
+
+        # create a server
+        extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:1'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(flavor_id=flavor_id, networks='none')
+
+        # now live migrate that server
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._live_migrate,
+            server, 'completed')
+        # NOTE(stephenfin): this wouldn't happen in a real deployment since
+        # live migration is a cast, but since we are using CastAsCall this will
+        # bubble to the API
+        self.assertEqual(500, ex.response.status_code)
+        self.assertIn('NoValidHost', str(ex))
+
     def _confirm_resize(self, server, host='host1'):
         # NOTE(sbauza): Unfortunately, _cleanup_resize() in libvirt checks the
         # host option to know the source hostname but given we have a global
@@ -532,15 +749,6 @@ class PCIServersTest(_PCIServersTestBase):
         self.flags(host=host)
         super()._confirm_resize(server)
         self.flags(host=orig_host)
-
-    def assertPCIDeviceCounts(self, hostname, total, free):
-        """Ensure $hostname has $total devices, $free of which are free."""
-        ctxt = context.get_admin_context()
-        devices = objects.PciDeviceList.get_by_compute_node(
-            ctxt, objects.ComputeNode.get_by_nodename(ctxt, hostname).id,
-        )
-        self.assertEqual(total, len(devices))
-        self.assertEqual(free, len([d for d in devices if d.is_available()]))
 
     def test_cold_migrate_server_with_pci(self):
 

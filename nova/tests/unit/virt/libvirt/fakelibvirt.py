@@ -1177,7 +1177,8 @@ class Domain(object):
               <address type='pci' domain='0x0000' bus='0x81' slot='0x00'
                    function='0x01'/>
           </source>
-        </interface>''' % nic
+          <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
+        </interface>''' % nic  # noqa
 
         hostdevs = ''
         for hostdev in self._def['devices']['hostdevs']:
