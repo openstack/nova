@@ -17,7 +17,6 @@ import functools
 
 import netaddr
 from oslo_serialization import jsonutils
-import six
 
 from nova import exception
 from nova.i18n import _
@@ -513,7 +512,7 @@ class NetworkInfo(list):
 
     @classmethod
     def hydrate(cls, network_info):
-        if isinstance(network_info, six.string_types):
+        if isinstance(network_info, str):
             network_info = jsonutils.loads(network_info)
         return cls([VIF.hydrate(vif) for vif in network_info])
 

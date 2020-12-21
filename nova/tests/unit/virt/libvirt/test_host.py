@@ -22,7 +22,6 @@ from eventlet import tpool
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
-import six
 import testtools
 
 from nova.compute import vm_states
@@ -41,7 +40,7 @@ from nova.virt.libvirt import host
 
 class StringMatcher(object):
     def __eq__(self, other):
-        return isinstance(other, six.string_types)
+        return isinstance(other, str)
 
 
 class FakeVirtDomain(object):

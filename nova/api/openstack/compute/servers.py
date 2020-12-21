@@ -405,7 +405,7 @@ class ServersController(wsgi.Controller):
         # Starting in the 2.37 microversion, requested_networks is either a
         # list or a string enum with value 'auto' or 'none'. The auto/none
         # values are verified via jsonschema so we don't check them again here.
-        if isinstance(requested_networks, six.string_types):
+        if isinstance(requested_networks, str):
             return objects.NetworkRequestList(
                 objects=[objects.NetworkRequest(
                     network_id=requested_networks)])

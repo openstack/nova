@@ -25,7 +25,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
-import six
 
 from nova.compute import manager
 from nova import conf
@@ -532,7 +531,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         instance_ref, network_info = self._get_running_instance()
         console_output = self.connection.get_console_output(self.ctxt,
             instance_ref)
-        self.assertIsInstance(console_output, six.string_types)
+        self.assertIsInstance(console_output, str)
 
     @catch_notimplementederror
     def test_get_vnc_console(self):

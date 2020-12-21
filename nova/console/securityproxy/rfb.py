@@ -139,7 +139,7 @@ class RFBSecurityProxy(base.SecurityProxy):
         f = recv(compute_sock, permitted_auth_types_cnt)
         permitted_auth_types = []
         for auth_type in f:
-            if isinstance(auth_type, six.string_types):
+            if isinstance(auth_type, str):
                 auth_type = ord(auth_type)
             permitted_auth_types.append(auth_type)
 

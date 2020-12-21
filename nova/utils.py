@@ -256,7 +256,7 @@ def utf8(value):
     http://github.com/facebook/tornado/blob/master/tornado/escape.py
 
     """
-    if value is None or isinstance(value, six.binary_type):
+    if value is None or isinstance(value, bytes):
         return value
 
     if not isinstance(value, six.text_type):
@@ -697,7 +697,7 @@ def tpool_execute(func, *args, **kwargs):
 def is_none_string(val):
     """Check if a string represents a None value.
     """
-    if not isinstance(val, six.string_types):
+    if not isinstance(val, str):
         return False
 
     return val.lower() == 'none'

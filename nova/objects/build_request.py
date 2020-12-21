@@ -17,7 +17,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 from oslo_versionedobjects import exception as ovoo_exc
-import six
 
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import api_models
@@ -342,7 +341,7 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
                 continue
 
             # Sometimes the REGEX filter value is not a string
-            if not isinstance(filter_val, six.string_types):
+            if not isinstance(filter_val, str):
                 filter_val = str(filter_val)
             filter_re = re.compile(filter_val)
             if instance_attr and not filter_re.search(str(instance_attr)):

@@ -20,7 +20,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
-import six
 import webob
 
 from nova.api.openstack.compute import security_groups as secgroups_v21
@@ -121,11 +120,11 @@ class MockClient(object):
 
     def create_security_group(self, body=None):
         s = body.get('security_group')
-        if not isinstance(s.get('name', ''), six.string_types):
+        if not isinstance(s.get('name', ''), str):
             msg = ('BadRequest: Invalid input for name. Reason: '
                    'None is not a valid string.')
             raise n_exc.BadRequest(message=msg)
-        if not isinstance(s.get('description.', ''), six.string_types):
+        if not isinstance(s.get('description.', ''), str):
             msg = ('BadRequest: Invalid input for description. Reason: '
                    'None is not a valid string.')
             raise n_exc.BadRequest(message=msg)

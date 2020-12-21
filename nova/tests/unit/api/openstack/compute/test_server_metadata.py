@@ -18,7 +18,6 @@ from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
-import six
 import webob
 
 from nova.api.openstack.compute import server_metadata \
@@ -47,7 +46,7 @@ def fake_instance_save(inst, **kwargs):
 
 
 def return_server_metadata(context, server_id):
-    if not isinstance(server_id, six.string_types) or not len(server_id) == 36:
+    if not isinstance(server_id, str) or not len(server_id) == 36:
         msg = 'id %s must be a uuid in return server metadata' % server_id
         raise Exception(msg)
     return stub_server_metadata()

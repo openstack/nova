@@ -14,7 +14,6 @@
 
 from oslo_utils import timeutils
 from oslo_utils import versionutils
-import six
 
 from nova.compute import utils as compute_utils
 from nova.db import api as db
@@ -198,8 +197,7 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
                 # so pass that as the message to exception_to_dict otherwise
                 # the details will just the exception class name since it
                 # cannot format the message as a NovaException.
-                message = (
-                    exc_val if isinstance(exc_val, six.string_types) else None)
+                message = exc_val if isinstance(exc_val, str) else None
                 values['details'] = compute_utils.exception_to_dict(
                     exc_val, message=message)['message']
             values['traceback'] = exc_tb

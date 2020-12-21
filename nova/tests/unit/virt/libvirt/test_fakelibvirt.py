@@ -14,7 +14,6 @@
 
 from lxml import etree
 from oslo_utils import uuidutils
-import six
 
 from nova.objects import fields as obj_fields
 from nova import test
@@ -147,7 +146,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
         blockstats = dom.blockStats('vda')
         self.assertEqual(len(blockstats), 5)
         for x in blockstats:
-            self.assertIn(type(x), six.integer_types)
+            self.assertIs(type(x), int)
 
     def test_attach_detach(self):
         uuid = uuidutils.generate_uuid()
@@ -172,7 +171,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
         self.assertEqual(info[1], 128000)
         self.assertLessEqual(info[2], 128000)
         self.assertEqual(info[3], 1)
-        self.assertIn(type(info[4]), six.integer_types)
+        self.assertIs(type(info[4]), int)
 
     def test_createXML_runs_domain(self):
         uuid = uuidutils.generate_uuid()

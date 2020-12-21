@@ -560,7 +560,7 @@ class XMLMatches(object):
 
 class EncodedByUTF8(object):
     def match(self, obj):
-        if isinstance(obj, six.binary_type):
+        if isinstance(obj, bytes):
             if hasattr(obj, "decode"):
                 try:
                     obj.decode("utf-8")
@@ -579,6 +579,6 @@ class EncodedByUTF8(object):
                       % {
                           "obj": obj,
                           "obj_type": type(obj).__name__,
-                          "correct_type": six.binary_type.__name__
+                          "correct_type": bytes.__name__
                       })
             return testtools.matchers.Mismatch(reason)

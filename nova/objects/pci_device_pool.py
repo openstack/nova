@@ -17,7 +17,6 @@ import copy
 
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
-import six
 
 from nova import objects
 from nova.objects import base
@@ -85,7 +84,7 @@ def from_pci_stats(pci_stats):
     device pool objects, a simple dict or a list of such dicts.
     """
     pools = []
-    if isinstance(pci_stats, six.string_types):
+    if isinstance(pci_stats, str):
         try:
             pci_stats = jsonutils.loads(pci_stats)
         except (ValueError, TypeError):

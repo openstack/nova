@@ -308,7 +308,7 @@ def convert_objects_related_datetimes(values, *datetime_keys):
 
     for key in datetime_keys:
         if key in values and values[key]:
-            if isinstance(values[key], six.string_types):
+            if isinstance(values[key], str):
                 try:
                     values[key] = timeutils.parse_strtime(values[key])
                 except ValueError:
@@ -1810,7 +1810,7 @@ def _regex_instance_filter(query, filters):
             continue
         filter_val = filters[filter_name]
         # Sometimes the REGEX filter value is not a string
-        if not isinstance(filter_val, six.string_types):
+        if not isinstance(filter_val, str):
             filter_val = str(filter_val)
         if db_regexp_op == 'LIKE':
             query = query.filter(column_attr.op(db_regexp_op)(
@@ -3199,7 +3199,7 @@ def migration_get_all_by_filters(context, filters,
         # The uuid filter is here for the MigrationLister and multi-cell
         # paging support in the compute API.
         uuid = filters["uuid"]
-        uuid = [uuid] if isinstance(uuid, six.string_types) else uuid
+        uuid = [uuid] if isinstance(uuid, str) else uuid
         query = query.filter(models.Migration.uuid.in_(uuid))
 
     model_object = models.Migration
@@ -3209,7 +3209,7 @@ def migration_get_all_by_filters(context, filters,
 
     if "status" in filters:
         status = filters["status"]
-        status = [status] if isinstance(status, six.string_types) else status
+        status = [status] if isinstance(status, str) else status
         query = query.filter(models.Migration.status.in_(status))
     if "host" in filters:
         host = filters["host"]

@@ -50,7 +50,6 @@ from oslo_utils import timeutils
 from oslo_versionedobjects import fixture as ovo_fixture
 from oslotest import base
 from oslotest import mock_fixture
-import six
 import testtools
 
 from nova.compute import rpcapi as compute_rpcapi
@@ -517,9 +516,9 @@ class TestCase(base.BaseTestCase):
         matcher.
 
         """
-        if isinstance(expected, six.string_types):
+        if isinstance(expected, str):
             expected = jsonutils.loads(expected)
-        if isinstance(observed, six.string_types):
+        if isinstance(observed, str):
             observed = jsonutils.loads(observed)
 
         def sort_key(x):

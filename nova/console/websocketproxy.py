@@ -27,7 +27,6 @@ from urllib import parse as urlparse
 from oslo_log import log as logging
 from oslo_utils import encodeutils
 from oslo_utils import importutils
-import six
 import websockify
 
 from nova.compute import rpcapi as compute_rpcapi
@@ -66,7 +65,7 @@ class TenantSock(object):
             # flatten frames onto queue
             for frame in new_frames:
                 self.queue.extend(
-                    [six.binary_type(chr(c), 'ascii') for c in frame])
+                    [bytes(chr(c), 'ascii') for c in frame])
 
             if closed:
                 break
