@@ -8025,41 +8025,36 @@ class CrossCellResizeWithQoSPort(PortResourceRequestBasedSchedulingTestBase):
             # host is in a different cell and while cross cell migration is
             # enabled it is not supported for neutron ports with resource
             # request.
-            # FIXME(gibi): We expect this to fail with NoValidHost.
-            # Unfortunately it fails due to sending an invalid port binding to
-            # Neutron today. This is bug 1907522.
             self.api.post_server_action(server['id'], {'migrate': None})
             self._wait_for_migration_status(server, ['error'])
-            # FIXME(gibi): This is also the result of the bug1907522 as the
-            # cleanup after the failure is incomplete.
             self._wait_for_server_parameter(
                 server,
-                {'status': 'RESIZE', 'OS-EXT-STS:task_state': 'resize_prep'})
+                {'status': 'ACTIVE', 'OS-EXT-SRV-ATTR:host': 'host1'})
             event = self._wait_for_action_fail_completion(
                 server, 'migrate', 'conductor_migrate_server')
-            # This is just the last exception in the chain of exceptions
-            # happening after the port binding fails.
             self.assertIn(
-                'exception.InstanceInfoCacheNotFound', event['traceback'])
-            # This is the root case
+                'exception.NoValidHost', event['traceback'])
             self.assertIn(
+                'Request is allowed by policy to perform cross-cell resize '
+                'but the instance has ports with resource request and '
+                'cross-cell resize is not supported with such ports.',
+                self.stdlog.logger.output)
+            self.assertNotIn(
                 'nova.exception.PortBindingFailed: Binding failed for port',
                 self.stdlog.logger.output)
 
         # Now start a new compute in the same cell as the instance and retry
         # the migration.
-        #
-        # This should work after the fallback to same cell resize is
-        # implemented
-        #
-        # self._start_compute('host3', cell_name='cell1')
-        #
-        # with mock.patch(
-        #         'nova.network.neutron.API._create_port_binding',
-        #         side_effect=spy_on_create_binding, autospec=True
-        # ):
-        #     server = self._migrate_server(server)
-        #     self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
+        self._start_compute('host3', cell_name='cell1')
+        self.compute3_rp_uuid = self._get_provider_uuid_by_host('host3')
+        self._create_networking_rp_tree('host3', self.compute3_rp_uuid)
+
+        with mock.patch(
+                'nova.network.neutron.API._create_port_binding',
+                side_effect=spy_on_create_binding, autospec=True
+        ):
+            server = self._migrate_server(server)
+            self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
 
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)

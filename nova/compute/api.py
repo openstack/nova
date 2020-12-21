@@ -3852,8 +3852,7 @@ class API(base.Base):
                                                migration,
                                                migration.source_compute)
 
-    @staticmethod
-    def _allow_cross_cell_resize(context, instance):
+    def _allow_cross_cell_resize(self, context, instance):
         """Determine if the request can perform a cross-cell resize on this
         instance.
 
@@ -3861,8 +3860,6 @@ class API(base.Base):
         :param instance: Instance object being resized
         :returns: True if cross-cell resize is allowed, False otherwise
         """
-        # TODO(gibi): do not allow cross cell migration if the instance has
-        # neutron ports with resource request. See bug 1907522.
         # First check to see if the requesting project/user is allowed by
         # policy to perform cross-cell resize.
         allowed = context.can(
@@ -3885,7 +3882,17 @@ class API(base.Base):
                           'version in the deployment %s is less than %s so '
                           'cross-cell resize is not allowed at this time.',
                           min_compute_version, MIN_COMPUTE_CROSS_CELL_RESIZE)
-                allowed = False
+                return False
+
+            if self.network_api.get_requested_resource_for_instance(
+                    context, instance.uuid):
+                LOG.info(
+                    'Request is allowed by policy to perform cross-cell '
+                    'resize but the instance has ports with resource request '
+                    'and cross-cell resize is not supported with such ports.',
+                    instance=instance)
+                return False
+
         return allowed
 
     @staticmethod

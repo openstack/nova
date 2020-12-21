@@ -7522,7 +7522,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         version is not new enough.
         """
         instance = objects.Instance(
-            project_id='fake-project', user_id='fake-user')
+            project_id='fake-project', user_id='fake-user',
+            uuid=uuids.instance)
         with mock.patch.object(self.context, 'can', return_value=True) as can:
             self.assertFalse(self.compute_api._allow_cross_cell_resize(
                 self.context, instance))
@@ -7530,20 +7531,45 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         mock_get_min_ver.assert_called_once_with(
             self.context, ['nova-compute'])
 
+    @mock.patch('nova.network.neutron.API.get_requested_resource_for_instance',
+                return_value=[objects.RequestGroup()])
     @mock.patch('nova.objects.service.get_minimum_version_all_cells',
                 return_value=compute_api.MIN_COMPUTE_CROSS_CELL_RESIZE)
-    def test_allow_cross_cell_resize_true(self, mock_get_min_ver):
+    def test_allow_cross_cell_resize_false_port_with_resource_req(
+            self, mock_get_min_ver, mock_get_res_req):
+        """Policy allows cross-cell resize but minimum nova-compute service
+        version is not new enough.
+        """
+        instance = objects.Instance(
+            project_id='fake-project', user_id='fake-user',
+            uuid=uuids.instance)
+        with mock.patch.object(self.context, 'can', return_value=True) as can:
+            self.assertFalse(self.compute_api._allow_cross_cell_resize(
+                self.context, instance))
+        can.assert_called_once()
+        mock_get_min_ver.assert_called_once_with(
+            self.context, ['nova-compute'])
+        mock_get_res_req.assert_called_once_with(self.context, uuids.instance)
+
+    @mock.patch('nova.network.neutron.API.get_requested_resource_for_instance',
+                return_value=[])
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_CROSS_CELL_RESIZE)
+    def test_allow_cross_cell_resize_true(
+            self, mock_get_min_ver, mock_get_res_req):
         """Policy allows cross-cell resize and minimum nova-compute service
         version is new enough.
         """
         instance = objects.Instance(
-            project_id='fake-project', user_id='fake-user')
+            project_id='fake-project', user_id='fake-user',
+            uuid=uuids.instance)
         with mock.patch.object(self.context, 'can', return_value=True) as can:
             self.assertTrue(self.compute_api._allow_cross_cell_resize(
                 self.context, instance))
         can.assert_called_once()
         mock_get_min_ver.assert_called_once_with(
             self.context, ['nova-compute'])
+        mock_get_res_req.assert_called_once_with(self.context, uuids.instance)
 
     def _test_block_accelerators(self, instance, args_info,
                                  until_service=None):
