@@ -70,6 +70,10 @@ Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNo
           to actually support a multiattach volume depends on the volume type
           and compute hosting the instance.
 
+.. note:: This is an asynchronous API, callers should poll the status and list
+          of attachments of the volume within the volume API to determine when
+          the attachment has completed successfully.
+
 Request
 -------
 
@@ -246,6 +250,11 @@ Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNo
 
 .. note:: From v2.20 detach a volume from an instance in SHELVED or SHELVED_OFFLOADED
           state is allowed.
+
+.. note:: This is an asynchronous API, callers should poll the list
+          of volume attachments provided by ``GET
+          /servers/{server_id}/os-volume_attachments`` to determine when the
+          detachment of the volume has completed successfully.
 
 Request
 -------
