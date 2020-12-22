@@ -14,7 +14,6 @@
 
 import collections
 import datetime
-import six
 
 import mock
 import netaddr
@@ -1210,7 +1209,7 @@ class _TestInstanceObject(object):
         inst.host = None
         ex = self.assertRaises(exception.ObjectActionError,
                                inst.destroy, hard_delete=True)
-        self.assertIn('host changed', six.text_type(ex))
+        self.assertIn('host changed', str(ex))
 
     def test_name_does_not_trigger_lazy_loads(self):
         values = {'user_id': self.context.user_id,

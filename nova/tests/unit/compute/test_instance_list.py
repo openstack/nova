@@ -12,7 +12,6 @@
 
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 from nova.compute import instance_list
 from nova.compute import multi_cell_list
@@ -215,7 +214,7 @@ class TestInstanceList(test.NoDBTestCase):
         exp = self.assertRaises(exception.NovaException,
             instance_list.get_instance_objects_sorted, self.context, {}, None,
             None, [], None, None)
-        self.assertIn('configuration indicates', six.text_type(exp))
+        self.assertIn('configuration indicates', str(exp))
 
     @mock.patch('nova.context.scatter_gather_cells')
     def test_get_instances_with_cell_down_support(self, mock_sg):

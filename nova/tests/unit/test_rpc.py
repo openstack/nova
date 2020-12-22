@@ -16,7 +16,6 @@ import mock
 import oslo_messaging as messaging
 from oslo_messaging.rpc import dispatcher
 from oslo_serialization import jsonutils
-import six
 
 import nova.conf
 from nova import context
@@ -354,7 +353,7 @@ class TestJsonPayloadSerializer(test.NoDBTestCase):
         self.assertIsInstance(primitive, dict)
         # Convert anything else, should get a string.
         primitive = rpc.JsonPayloadSerializer.fallback(mock.sentinel.entity)
-        self.assertIsInstance(primitive, six.text_type)
+        self.assertIsInstance(primitive, str)
 
 
 class TestRequestContextSerializer(test.NoDBTestCase):

@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-import six
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
@@ -103,7 +102,7 @@ class LockServerTestsV273(LockServerTestsV21):
 
         exp = self.assertRaises(exception.ValidationError,
             self.controller._lock, self.req, instance.uuid, body=body)
-        self.assertIn('is too long', six.text_type(exp))
+        self.assertIn('is too long', str(exp))
 
     def test_lock_with_reason_in_invalid_format(self):
         instance = fake_instance.fake_instance_obj(
@@ -113,7 +112,7 @@ class LockServerTestsV273(LockServerTestsV21):
 
         exp = self.assertRaises(exception.ValidationError,
             self.controller._lock, self.req, instance.uuid, body=body)
-        self.assertIn("256 is not of type 'string'", six.text_type(exp))
+        self.assertIn("256 is not of type 'string'", str(exp))
 
     def test_lock_with_invalid_paramater(self):
         # This will fail from 2.73 since we have a schema check that allows
@@ -124,4 +123,4 @@ class LockServerTestsV273(LockServerTestsV21):
 
         exp = self.assertRaises(exception.ValidationError,
             self.controller._lock, self.req, instance.uuid, body=body)
-        self.assertIn("('blah' was unexpected)", six.text_type(exp))
+        self.assertIn("('blah' was unexpected)", str(exp))

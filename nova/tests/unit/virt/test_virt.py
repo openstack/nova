@@ -17,7 +17,6 @@ import io
 
 import mock
 import os_traits
-import six
 
 from nova import test
 from nova.virt.disk import api as disk_api
@@ -133,7 +132,7 @@ class FakeMount(object):
 
 class TestDiskImage(test.NoDBTestCase):
     def mock_proc_mounts(self, mock_open):
-        response = io.StringIO(six.text_type(PROC_MOUNTS_CONTENTS))
+        response = io.StringIO(str(PROC_MOUNTS_CONTENTS))
         mock_open.return_value = response
 
     @mock.patch('builtins.open')

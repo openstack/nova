@@ -22,7 +22,6 @@ import mock
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 import webob
 from webob import exc
 
@@ -949,7 +948,7 @@ class VolumeAttachTestsV260(test.NoDBTestCase):
         create_kwargs = attach.call_args[1]
         self.assertFalse(create_kwargs['supports_multiattach'])
         self.assertIn('Multiattach volumes are only supported starting with '
-                      'compute API version 2.60', six.text_type(ex))
+                      'compute API version 2.60', str(ex))
 
     def test_attach_with_multiattach_fails_not_supported_by_driver(self):
         """Tests the case that the user tries to attach with a
@@ -966,7 +965,7 @@ class VolumeAttachTestsV260(test.NoDBTestCase):
         create_kwargs = attach.call_args[1]
         self.assertTrue(create_kwargs['supports_multiattach'])
         self.assertIn("has 'multiattach' set, which is not supported for "
-                      "this instance", six.text_type(ex))
+                      "this instance", str(ex))
 
     def test_attach_with_multiattach_fails_for_shelved_offloaded_server(self):
         """Tests the case that the user tries to attach with a
@@ -981,7 +980,7 @@ class VolumeAttachTestsV260(test.NoDBTestCase):
         create_kwargs = attach.call_args[1]
         self.assertTrue(create_kwargs['supports_multiattach'])
         self.assertIn('Attaching multiattach volumes is not supported for '
-                      'shelved-offloaded instances.', six.text_type(ex))
+                      'shelved-offloaded instances.', str(ex))
 
 
 class VolumeAttachTestsV2_75(VolumeAttachTestsV21):
@@ -1048,8 +1047,7 @@ class VolumeAttachTestsV279(VolumeAttachTestsV2_75):
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.create,
                                req, FAKE_UUID, body=body)
-        self.assertIn("Additional properties are not allowed",
-                      six.text_type(ex))
+        self.assertIn("Additional properties are not allowed", str(ex))
 
     @mock.patch('nova.compute.api.API.attach_volume', return_value=None)
     def test_attach_volume_pre_v279(self, mock_attach_volume):
@@ -1089,7 +1087,7 @@ class VolumeAttachTestsV279(VolumeAttachTestsV2_75):
                                self.controller.create,
                                req, FAKE_UUID, body=body)
         self.assertIn("Invalid input for field/attribute "
-                      "delete_on_termination.", six.text_type(ex))
+                      "delete_on_termination.", str(ex))
 
     def test_create_volume_attach_invalid_delete_on_termination_value(self):
         """"Test the case that the user tries to set the delete_on_termination
@@ -1107,7 +1105,7 @@ class VolumeAttachTestsV279(VolumeAttachTestsV2_75):
                                self.controller.create,
                                req, FAKE_UUID, body=body)
         self.assertIn("Invalid input for field/attribute "
-                      "delete_on_termination.", six.text_type(ex))
+                      "delete_on_termination.", str(ex))
 
     @mock.patch('nova.compute.api.API.attach_volume', return_value=None)
     def test_attach_volume_v279(self, mock_attach_volume):
@@ -1397,8 +1395,7 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
                                self.attachments.update,
                                req, FAKE_UUID,
                                FAKE_UUID_A, body=body)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
@@ -1440,8 +1437,7 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
                                self.attachments.update,
                                req, FAKE_UUID,
                                FAKE_UUID_A, body=body)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
@@ -1479,8 +1475,7 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
                                self.attachments.update,
                                req, FAKE_UUID,
                                FAKE_UUID_A, body=body)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
@@ -1518,8 +1513,7 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
                                self.attachments.update,
                                req, FAKE_UUID,
                                FAKE_UUID_A, body=body)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
     def test_update_volume_with_delete_flag_old_microversion(self):
         body = {'volumeAttachment': {
@@ -1531,8 +1525,7 @@ class UpdateVolumeAttachTests(VolumeAttachTestsV279):
                                self.attachments.update,
                                req, FAKE_UUID,
                                FAKE_UUID_A, body=body)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
 
 class SwapVolumeMultiattachTestCase(test.NoDBTestCase):
@@ -1603,7 +1596,7 @@ class SwapVolumeMultiattachTestCase(test.NoDBTestCase):
                 webob.exc.HTTPBadRequest, controller.update, req,
                 uuids.server1, uuids.old_vol_id, body=body)
         self.assertIn('Swapping multi-attach volumes with more than one ',
-                      six.text_type(ex))
+                      str(ex))
         mock_attachment_get.assert_has_calls([
             mock.call(ctxt, uuids.attachment_id1),
             mock.call(ctxt, uuids.attachment_id2)], any_order=True)
@@ -1866,7 +1859,7 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
                                self.controller.delete, req, '5')
         # This is the result of a KeyError but the only thing in the message
         # is the missing key.
-        self.assertIn('volume_id', six.text_type(ex))
+        self.assertIn('volume_id', str(ex))
 
 
 class AssistedSnapshotDeleteTestCaseV275(AssistedSnapshotDeleteTestCaseV21):

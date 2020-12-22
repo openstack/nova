@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-import six
 from webob import exc
 
 from nova.api.openstack import common
@@ -325,7 +324,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
             ex = self.assertRaises(
                 exc.HTTPForbidden, self.attachments.create,
                 self.req, FAKE_UUID1, body=body)
-        self.assertIn('Maximum number of ports exceeded', six.text_type(ex))
+        self.assertIn('Maximum number of ports exceeded', str(ex))
 
     def test_detach_interface_with_invalid_state(self):
         def fake_detach_interface_invalid_state(*args, **kwargs):

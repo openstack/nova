@@ -17,7 +17,6 @@ from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
-import six
 
 from nova.compute import manager as compute_manager
 from nova import context
@@ -530,7 +529,7 @@ class TestServiceVersionCells(test.TestCase):
         ex = self.assertRaises(exception.ObjectActionError,
                                service.get_minimum_version_all_cells,
                                self.context, ['compute'])
-        self.assertIn('Invalid binary prefix', six.text_type(ex))
+        self.assertIn('Invalid binary prefix', str(ex))
         self.assertTrue(mock_log.warning.called)
 
     @mock.patch('nova.context.scatter_gather_all_cells')

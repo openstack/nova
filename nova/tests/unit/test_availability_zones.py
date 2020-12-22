@@ -19,7 +19,6 @@ Tests for availability zones
 
 import mock
 from oslo_utils.fixture import uuidsentinel
-import six
 
 from nova import availability_zones as az
 from nova.compute import api as compute_api
@@ -120,7 +119,7 @@ class AvailabilityZoneTestCases(test.TestCase):
         service = self._create_service_with_topic('network', self.host)
         services = db.service_get_all(self.context)
         az.set_availability_zones(self.context, services)
-        self.assertIsInstance(services[0]['host'], six.text_type)
+        self.assertIsInstance(services[0]['host'], str)
         cached_key = az._make_cache_key(services[0]['host'])
         self.assertIsInstance(cached_key, str)
         self._destroy_service(service)

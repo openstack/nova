@@ -59,7 +59,6 @@ from oslo_utils import strutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
-import six
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import manager
@@ -1448,7 +1447,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIn(
             "Reserving memory via '[DEFAULT] reserved_host_memory_mb' is not "
             "compatible",
-            six.text_type(mock_log.call_args[0]),
+            str(mock_log.call_args[0]),
         )
 
     def test__check_cpu_compatibility_start_ok(self):
@@ -1547,7 +1546,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         exc = self.assertRaises(exception.InvalidConfiguration,
                                 drvr.init_host, 'dummyhost')
         self.assertIn("vTPM support requires '[libvirt] virt_type' of 'qemu' "
-                      "or 'kvm'; found 'lxc'.", six.text_type(exc))
+                      "or 'kvm'; found 'lxc'.", str(exc))
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch('shutil.which')
@@ -1690,7 +1689,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         ex = self.assertRaises(exception.InvalidConfiguration,
                                drvr._check_cpu_set_configuration)
         self.assertIn("The 'reserved_host_cpus' config option cannot be "
-                      "defined alongside ", six.text_type(ex))
+                      "defined alongside ", str(ex))
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_check_cpu_set_configuration__vcpu_pin_set(self, mock_log):
@@ -1709,7 +1708,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIn("When defined, 'vcpu_pin_set' will be used to calculate "
                       "'VCPU' inventory and schedule instances that have "
                       "'VCPU' allocations.",
-                      six.text_type(mock_log.call_args[0]))
+                      str(mock_log.call_args[0]))
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_check_cpu_set_configuration__vcpu_pin_set_cpu_shared_set(
@@ -1728,7 +1727,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_log.assert_called_once()
         self.assertIn("The '[compute] cpu_shared_set' and 'vcpu_pin_set' "
                       "config options have both been defined.",
-                      six.text_type(mock_log.call_args[0]))
+                      str(mock_log.call_args[0]))
 
     def test_check_cpu_set_configuration__vcpu_pin_set_cpu_dedicated_set(
             self):
@@ -1745,7 +1744,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                drvr._check_cpu_set_configuration)
         self.assertIn("The 'vcpu_pin_set' config option has been deprecated "
                       "and cannot be defined alongside '[compute] "
-                      "cpu_dedicated_set'.", six.text_type(ex))
+                      "cpu_dedicated_set'.", str(ex))
 
     def _do_test_parse_migration_flags(self, lm_expected=None,
                                        bm_expected=None):
@@ -2193,7 +2192,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                       'provider status to "enabled" for provider: %s' %
                       uuids.rp_uuid, log_output)
         # The error should have been logged as well.
-        self.assertIn(six.text_type(error), log_output)
+        self.assertIn(str(error), log_output)
 
     @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
     def test_prepare_pci_device(self, mock_lookup):
@@ -19866,8 +19865,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                create=True) as mock_define:
             srcfile = "/first/path"
             dstfile = "/second/path"
-            orig_xml = six.text_type(mock.sentinel.orig_xml)
-            new_xml = six.text_type(mock.sentinel.new_xml)
+            orig_xml = str(mock.sentinel.orig_xml)
+            new_xml = str(mock.sentinel.new_xml)
 
             mock_dom.XMLDesc.return_value = orig_xml
             mock_dom.isPersistent.return_value = True
@@ -20515,7 +20514,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             image_meta=image_meta, disk_info=disk_info, accel_info=accel_info)
         mock_add_accel.assert_called_once_with(mock.ANY, [])
         self.assertIn('Ignoring accelerator requests for instance',
-                      six.text_type(mock_log.call_args[0]))
+                      str(mock_log.call_args[0]))
 
     def test_get_guest_disk_config_rbd_older_config_drive_fall_back(self):
         # New config drives are stored in rbd but existing instances have
@@ -21507,7 +21506,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                                self.pt, self.cn_rp['name'],
                                allocations=allocations)
         self.assertIn('Unexpected VGPU resource allocation on provider %s'
-                      % uuids.other_rp, six.text_type(ex))
+                      % uuids.other_rp, str(ex))
 
     @mock.patch('nova.objects.instance.Instance.get_by_uuid')
     @mock.patch('nova.objects.migration.MigrationList'
@@ -23702,7 +23701,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertFalse(mock_log.error.called)
         self.assertEqual(1, mock_log.warning.call_count)
         self.assertIn('the device is no longer found on the guest',
-                      six.text_type(mock_log.warning.call_args[0]))
+                      str(mock_log.warning.call_args[0]))
 
     @mock.patch('nova.virt.libvirt.driver.LOG')
     def test_detach_interface_guest_not_found_after_detach(self, mock_log):
@@ -26758,7 +26757,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                                    self.drvr._volume_snapshot_delete,
                                    self.c, instance, self.volume_uuid,
                                    snapshot_id, self.delete_info_1)
-            self.assertIn('has not been fully tested', six.text_type(ex))
+            self.assertIn('has not been fully tested', str(ex))
 
     @mock.patch('time.sleep', new=mock.Mock())
     @mock.patch.object(host.Host, '_get_domain')

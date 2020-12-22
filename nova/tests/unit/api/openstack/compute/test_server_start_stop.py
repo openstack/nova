@@ -15,7 +15,6 @@
 import mock
 from oslo_policy import policy as oslo_policy
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 import webob
 
 from nova.api.openstack.compute import servers \
@@ -72,7 +71,7 @@ class ServerStartStopTestV21(test.TestCase):
         body = dict(start="")
         ex = self.assertRaises(webob.exc.HTTPConflict,
             self.controller._start_server, self.req, uuids.instance, body)
-        self.assertIn('is locked', six.text_type(ex))
+        self.assertIn('is locked', str(ex))
 
     @mock.patch.object(compute_api.API, 'stop')
     def test_stop(self, stop_mock):
@@ -95,7 +94,7 @@ class ServerStartStopTestV21(test.TestCase):
         body = dict(stop="")
         ex = self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, self.req, uuids.instance, body)
-        self.assertIn('is locked', six.text_type(ex))
+        self.assertIn('is locked', str(ex))
 
     @mock.patch.object(compute_api.API, 'stop',
                        side_effect=exception.InstanceIsLocked(

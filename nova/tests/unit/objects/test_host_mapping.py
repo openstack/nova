@@ -13,7 +13,6 @@
 import mock
 from oslo_db import exception as db_exc
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 from nova import context
 from nova import exception
@@ -330,7 +329,7 @@ Found 1 unmapped computes in cell: %(cell)s""" % {'cell': uuids.cell1}
         exp = self.assertRaises(exception.HostMappingExists,
                                 host_mapping.discover_hosts, ctxt)
         expected = "Host 'bar' mapping already exists"
-        self.assertIn(expected, six.text_type(exp))
+        self.assertIn(expected, str(exp))
 
     @mock.patch('nova.objects.CellMappingList.get_all')
     @mock.patch('nova.objects.HostMapping.get_by_host')
@@ -349,4 +348,4 @@ Found 1 unmapped computes in cell: %(cell)s""" % {'cell': uuids.cell1}
                                 host_mapping.discover_hosts, ctxt,
                                 by_service=True)
         expected = "Host 'bar' mapping already exists"
-        self.assertIn(expected, six.text_type(exp))
+        self.assertIn(expected, str(exp))

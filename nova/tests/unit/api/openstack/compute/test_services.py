@@ -20,7 +20,6 @@ from keystoneauth1 import exceptions as ks_exc
 import mock
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel
-import six
 import webob.exc
 
 from nova.api.openstack.compute import services as services_v21
@@ -1191,13 +1190,13 @@ class ServicesTestV253(test.TestCase):
         """Tests that the service uuid is validated in a DELETE request."""
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self.controller.delete, self.req, 1234)
-        self.assertIn('Invalid uuid', six.text_type(ex))
+        self.assertIn('Invalid uuid', str(ex))
 
     def test_update_invalid_service_uuid(self):
         """Tests that the service uuid is validated in a PUT request."""
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self.controller.update, self.req, 1234, body={})
-        self.assertIn('Invalid uuid', six.text_type(ex))
+        self.assertIn('Invalid uuid', str(ex))
 
     def test_update_policy_failed(self):
         """Tests that policy is checked with microversion 2.53."""
@@ -1270,7 +1269,7 @@ class ServicesTestV253(test.TestCase):
                                body={'status': 'enabled',
                                      'disabled_reason': 'invalid'})
         self.assertIn("Specifying 'disabled_reason' with status 'enabled' "
-                      "is invalid.", six.text_type(ex))
+                      "is invalid.", str(ex))
 
     def test_update_disabled_reason_and_forced_down(self):
         """Tests disabling a service with a reason and forcing it down is
@@ -1321,7 +1320,7 @@ class ServicesTestV253(test.TestCase):
                                body={'forced_down': True})
         self.assertEqual('Updating a nova-scheduler service is not supported. '
                          'Only nova-compute services can be updated.',
-                         six.text_type(ex))
+                         str(ex))
 
     def test_update_empty_body(self):
         """Tests that the caller gets a 400 error if they don't request any
@@ -1333,7 +1332,7 @@ class ServicesTestV253(test.TestCase):
                                self.req, service.uuid, body={})
         self.assertEqual("No updates were requested. Fields 'status' or "
                          "'forced_down' should be specified.",
-                         six.text_type(ex))
+                         str(ex))
 
     def test_update_only_disabled_reason(self):
         """Tests that the caller gets a 400 error if they only specify
@@ -1345,7 +1344,7 @@ class ServicesTestV253(test.TestCase):
                                body={'disabled_reason': 'missing status'})
         self.assertEqual("No updates were requested. Fields 'status' or "
                          "'forced_down' should be specified.",
-                         six.text_type(ex))
+                         str(ex))
 
 
 class ServicesTestV275(test.TestCase):

@@ -17,7 +17,6 @@ import datetime
 import iso8601
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 from webob import exc
 
 from nova.api.openstack.compute import migrations as migrations_v21
@@ -314,7 +313,7 @@ class MigrationsTestCaseV259(MigrationsTestCaseV223):
                               self.controller.index, req)
         self.assertEqual(
             "Marker %s could not be found." % uuids.invalid_marker,
-            six.text_type(e))
+            str(e))
 
     def test_index_with_invalid_limit(self):
         """Tests detail paging with an invalid limit."""
@@ -344,8 +343,7 @@ class MigrationsTestCaseV259(MigrationsTestCaseV223):
             version=self.wsgi_api_version, use_admin_context=True)
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.index, req)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
     @mock.patch('nova.compute.api.API.get_migrations',
                 return_value=objects.MigrationList())
@@ -413,7 +411,7 @@ class MigrationTestCaseV266(MigrationsTestCaseV259):
                                       use_admin_context=True)
         ex = self.assertRaises(exc.HTTPBadRequest, self.controller.index, req)
         self.assertIn('The value of changes-since must be less than '
-                      'or equal to changes-before', six.text_type(ex))
+                      'or equal to changes-before', str(ex))
 
     def test_index_with_changes_before_old_microversion_failed(self):
         """Tests that the changes-before query parameter is an error before
@@ -427,8 +425,7 @@ class MigrationTestCaseV266(MigrationsTestCaseV259):
             version='2.65', use_admin_context=True)
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.index, req)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
     @mock.patch('nova.compute.api.API.get_migrations',
                 return_value=objects.MigrationList())
@@ -490,8 +487,7 @@ class MigrationsTestCaseV280(MigrationTestCaseV266):
             version='2.79', use_admin_context=True)
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.index, req)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))
 
     def test_index_filter_by_project_id_pre_v280(self):
         """Tests that the migrations by project_id query parameter
@@ -502,5 +498,4 @@ class MigrationsTestCaseV280(MigrationTestCaseV266):
             version='2.79', use_admin_context=True)
         ex = self.assertRaises(exception.ValidationError,
                                self.controller.index, req)
-        self.assertIn('Additional properties are not allowed',
-                      six.text_type(ex))
+        self.assertIn('Additional properties are not allowed', str(ex))

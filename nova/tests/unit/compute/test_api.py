@@ -27,7 +27,6 @@ from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
-import six
 
 from nova.compute import api as compute_api
 from nova.compute import flavors
@@ -4579,7 +4578,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 exception.MismatchVolumeAZException,
                 self.compute_api._validate_vol_az_for_create, None, volumes)
             self.assertIn('Volumes are in different availability zones: 0,1',
-                          six.text_type(ex))
+                          str(ex))
 
     def test_validate_vol_az_for_create_vol_az_matches_default_cpu_az(self):
         """Tests the scenario that the instance is not being created in a
@@ -6131,7 +6130,7 @@ class _ComputeAPIUnitTestMixIn(object):
         exp = self.assertRaises(exception.InstanceNotFound,
             self.compute_api._get_instance_from_cell, self.context,
             im, [], False)
-        self.assertIn('could not be found', six.text_type(exp))
+        self.assertIn('could not be found', str(exp))
 
     @mock.patch('nova.compute.api.API._save_user_id_in_instance_mapping')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
@@ -6156,13 +6155,13 @@ class _ComputeAPIUnitTestMixIn(object):
         exp = self.assertRaises(exception.NovaException,
             self.compute_api._get_instance_from_cell, self.context,
             im1, [], False)
-        self.assertIn('info is not available', six.text_type(exp))
+        self.assertIn('info is not available', str(exp))
 
         # Have cell down support, error + queued_for_delete = NotFound
         exp = self.assertRaises(exception.InstanceNotFound,
             self.compute_api._get_instance_from_cell, self.context,
             im1, [], True)
-        self.assertIn('could not be found', six.text_type(exp))
+        self.assertIn('could not be found', str(exp))
 
         # Have cell down support, error + archived reqspec = NotFound
         mock_rs.side_effect = exception.RequestSpecNotFound(
@@ -6170,7 +6169,7 @@ class _ComputeAPIUnitTestMixIn(object):
         exp = self.assertRaises(exception.InstanceNotFound,
             self.compute_api._get_instance_from_cell, self.context,
             im2, [], True)
-        self.assertIn('could not be found', six.text_type(exp))
+        self.assertIn('could not be found', str(exp))
 
         # Have cell down support, error + reqspec + not queued_for_delete
         # means we return a minimal instance

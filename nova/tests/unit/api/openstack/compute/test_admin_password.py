@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 import mock
-import six
 import webob
 
 from nova.api.openstack.compute import admin_password as admin_password_v21
@@ -126,8 +125,7 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         ex = self.assertRaises(self.validation_error,
                                self._get_action(),
                                self.fake_req, fakes.FAKE_UUID, body=body)
-        self.assertIn('adminPass. Value: None. None is not of type',
-                      six.text_type(ex))
+        self.assertIn('adminPass. Value: None. None is not of type', str(ex))
 
     def test_change_password_adminpass_none(self):
         body = {'changePassword': None}

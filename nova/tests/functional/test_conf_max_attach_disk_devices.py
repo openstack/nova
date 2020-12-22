@@ -12,8 +12,6 @@
 
 import time
 
-import six
-
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
@@ -103,7 +101,7 @@ class ConfigurableMaxDiskDevicesTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual(403, ex.response.status_code)
         expected = ('The maximum allowed number of disk devices (2) to attach '
                     'to a single instance has been exceeded.')
-        self.assertIn(expected, six.text_type(ex))
+        self.assertIn(expected, str(ex))
         # Verify only one volume is attached (this is a generator)
         attached_vols = list(self.cinder.volume_ids_for_instance(server_id))
         self.assertIn(vol_id, attached_vols)

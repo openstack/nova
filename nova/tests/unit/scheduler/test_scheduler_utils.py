@@ -18,7 +18,6 @@ Tests For Scheduler Utils
 
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
@@ -245,7 +244,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                 scheduler_utils.populate_retry,
                                 filter_properties, uuids.instance)
         # make sure 'msg' is a substring of the complete exception text
-        self.assertIn(msg, six.text_type(nvh))
+        self.assertIn(msg, str(nvh))
 
     def _check_parse_options(self, opts, sep, converter, expected):
         good = scheduler_utils.parse_options(opts,

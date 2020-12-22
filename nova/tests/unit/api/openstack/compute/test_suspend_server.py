@@ -13,7 +13,6 @@
 #    under the License.
 
 import mock
-import six
 import webob
 
 from nova.api.openstack.compute import suspend_server as \
@@ -48,7 +47,7 @@ class SuspendServerTestsV21(admin_only_action_common.CommonTests):
                                self.controller._suspend,
                                self.req, fakes.FAKE_UUID, body={})
         self.assertIn("Operation 'suspend' not supported for SEV-enabled "
-                      "instance (%s)" % instance.uuid, six.text_type(ex))
+                      "instance (%s)" % instance.uuid, str(ex))
 
     def test_suspend_resume_with_non_existed_instance(self):
         self._test_actions_with_non_existed_instance(['_suspend', '_resume'])

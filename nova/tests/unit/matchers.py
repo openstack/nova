@@ -21,7 +21,6 @@ import io
 import pprint
 
 from lxml import etree
-import six
 from testtools import content
 import testtools.matchers
 
@@ -409,7 +408,7 @@ class XMLMatches(object):
 
     @staticmethod
     def _parse(text_or_bytes):
-        if isinstance(text_or_bytes, six.text_type):
+        if isinstance(text_or_bytes, str):
             text_or_bytes = text_or_bytes.encode("utf-8")
         parser = etree.XMLParser(encoding="UTF-8")
         return etree.parse(io.BytesIO(text_or_bytes), parser)
@@ -567,7 +566,7 @@ class EncodedByUTF8(object):
                 except UnicodeDecodeError:
                     return testtools.matchers.Mismatch(
                         "%s is not encoded in UTF-8." % obj)
-        elif isinstance(obj, six.text_type):
+        elif isinstance(obj, str):
             try:
                 obj.encode("utf-8", "strict")
             except UnicodeDecodeError:

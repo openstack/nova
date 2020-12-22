@@ -15,7 +15,6 @@ import mock
 import os_resource_classes as orc
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 from nova import context as nova_context
 from nova import exception
@@ -1310,7 +1309,7 @@ class TestUtils(TestUtilsBase):
                 self.context, instance.uuid)
             self.assertIn(
                 'Expected to find allocations for source node resource '
-                'provider %s' % source_node.uuid, six.text_type(ex))
+                'provider %s' % source_node.uuid, str(ex))
 
         test()
 

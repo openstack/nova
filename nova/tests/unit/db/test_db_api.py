@@ -36,7 +36,6 @@ from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
-import six
 from sqlalchemy import Column
 from sqlalchemy.dialects import sqlite
 from sqlalchemy.exc import OperationalError
@@ -828,7 +827,7 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
 
         self.assertEqual(1, len(result))
         self.assertEqual(2, len(result['host1']))
-        self.assertEqual(six.text_type, type(result['host1'][0]))
+        self.assertEqual(str, type(result['host1'][0]))
 
         result = test2(ctxt)
 

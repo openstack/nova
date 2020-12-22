@@ -15,7 +15,6 @@
 import fixtures as fx
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 from nova.api.openstack.compute import server_external_events \
                                                  as server_external_events_v21
@@ -260,8 +259,7 @@ class ServerExternalEventsTestV276(ServerExternalEventsTestV21):
                 self.api.create,
                 req,
                 body=body)
-        self.assertIn('Invalid input for field/attribute name.',
-                      six.text_type(exp))
+        self.assertIn('Invalid input for field/attribute name.', str(exp))
 
 
 @mock.patch('nova.objects.InstanceMappingList.get_by_instance_uuids',

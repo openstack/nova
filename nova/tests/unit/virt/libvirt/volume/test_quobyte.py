@@ -22,7 +22,6 @@ import mock
 from oslo_concurrency import processutils
 from oslo_utils import fileutils
 import psutil
-import six
 
 from nova import exception as nova_exception
 from nova import test
@@ -51,7 +50,7 @@ class QuobyteTestCase(test.NoDBTestCase):
             self.assertIsInstance(exc, excClass,
                                   'Wrong exception caught: %s Stacktrace: %s' %
                                   (exc, traceback.format_exc()))
-            self.assertIn(msg, six.text_type(exc))
+            self.assertIn(msg, str(exc))
 
         if not caught:
             self.fail('Expected raised exception but nothing caught.')

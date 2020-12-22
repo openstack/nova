@@ -24,7 +24,6 @@ from pypowervm.helpers import log_helper as pvm_hlp_log
 from pypowervm.helpers import vios_busy as pvm_hlp_vbusy
 from pypowervm.utils import transaction as pvm_tx
 from pypowervm.wrappers import virtual_io_server as pvm_vios
-import six
 
 from nova import block_device as nova_block_device
 from nova.compute import provider_tree
@@ -505,11 +504,11 @@ class TestPowerVMDriver(test.NoDBTestCase):
         mock_tf_run.side_effect = exception.InstanceNotFound('id')
         exc = self.assertRaises(exception.VirtualInterfacePlugException,
                                 self.drv.plug_vifs, mock_inst, 'net_info')
-        self.assertIn('instance', six.text_type(exc))
+        self.assertIn('instance', str(exc))
         mock_tf_run.side_effect = Exception
         exc = self.assertRaises(exception.VirtualInterfacePlugException,
                                 self.drv.plug_vifs, mock_inst, 'net_info')
-        self.assertIn('unexpected', six.text_type(exc))
+        self.assertIn('unexpected', str(exc))
 
     @mock.patch('nova.virt.powervm.tasks.base.run', autospec=True)
     @mock.patch('nova.virt.powervm.tasks.network.UnplugVifs', autospec=True)

@@ -14,7 +14,6 @@
 
 from os_vif import objects as osv_objects
 from os_vif.objects import fields as os_vif_fields
-import six
 
 from nova import exception
 from nova.network import model
@@ -1016,7 +1015,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
 
         ex = self.assertRaises(exception.NovaException,
                                os_vif_util.nova_to_osvif_vif, vif)
-        self.assertIn('Unsupported VIF type wibble', six.text_type(ex))
+        self.assertIn('Unsupported VIF type wibble', str(ex))
 
     def test_nova_to_osvif_vif_binding_failed(self):
         vif = model.VIF(

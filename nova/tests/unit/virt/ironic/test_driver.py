@@ -23,7 +23,6 @@ from oslo_config import cfg
 from oslo_service import loopingcall
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
-import six
 from testtools import matchers
 from tooz import hashring as hash_ring
 
@@ -2008,7 +2007,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node_uuid)
         network_info = utils.get_test_network_info()
-        vif_id = six.text_type(network_info[0]['id'])
+        vif_id = str(network_info[0]['id'])
 
         self.driver._plug_vifs(node, instance, network_info)
 
@@ -2133,7 +2132,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node_id)
         network_info = utils.get_test_network_info()
-        vif_id = six.text_type(network_info[0]['id'])
+        vif_id = str(network_info[0]['id'])
         self.driver.unplug_vifs(instance, network_info)
 
         # asserts

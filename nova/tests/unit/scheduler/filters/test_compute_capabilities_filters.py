@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
-
 from nova import objects
 from nova.scheduler.filters import compute_capabilities_filter
 from nova import test
@@ -53,7 +51,7 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
     def test_compute_filter_fails_without_capabilites(self):
         cpu_info = """ { } """
 
-        cpu_info = six.text_type(cpu_info)
+        cpu_info = str(cpu_info)
 
         self._do_test_compute_filter_extra_specs(
             ecaps={'cpu_info': cpu_info},
@@ -65,7 +63,7 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
         "arch": "i686","features": ["lahf_lm", "rdtscp"], "topology":
         {"cores": 1, "threads":1, "sockets": 1}} """
 
-        cpu_info = six.text_type(cpu_info)
+        cpu_info = str(cpu_info)
 
         self._do_test_compute_filter_extra_specs(
             ecaps={'cpu_info': cpu_info},
@@ -77,7 +75,7 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
         "arch": "i686","features": ["lahf_lm", "rdtscp"], "topology":
         {"cores": 1, "threads":1, "sockets": 1}} """
 
-        cpu_info = six.text_type(cpu_info)
+        cpu_info = str(cpu_info)
 
         self._do_test_compute_filter_extra_specs(
             ecaps={'cpu_info': cpu_info},
@@ -89,7 +87,7 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
         "arch": "i686","features": ["lahf_lm", "rdtscp"], "topology":
         {"cores": 1, "threads":1, "sockets": 1}} """
 
-        cpu_info = six.text_type(cpu_info)
+        cpu_info = str(cpu_info)
 
         self._do_test_compute_filter_extra_specs(
             ecaps={'cpu_info': cpu_info},
@@ -98,7 +96,7 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
 
     def test_compute_filter_fail_cpu_info_as_text_type_not_valid(self):
         cpu_info = "cpu_info"
-        cpu_info = six.text_type(cpu_info)
+        cpu_info = str(cpu_info)
         self._do_test_compute_filter_extra_specs(
             ecaps={'cpu_info': cpu_info},
             especs={'capabilities:cpu_info:vendor': 'Intel'},

@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
-
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
@@ -132,7 +130,7 @@ class CrossAZAttachTestCase(test.TestCase,
         self.assertEqual(400, ex.response.status_code)
         self.assertIn('Server and volumes are not in the same availability '
                       'zone. Server is in: london. Volumes are in: %s' %
-                      self.az, six.text_type(ex))
+                      self.az, str(ex))
 
     def test_cross_az_attach_false_no_volumes(self):
         """A simple test to make sure cross_az_attach=False API validation is

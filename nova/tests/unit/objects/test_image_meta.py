@@ -13,7 +13,6 @@
 # under the License.
 
 import datetime
-import six
 
 from nova import exception
 from nova import objects
@@ -373,7 +372,7 @@ class TestImageMetaProps(test.NoDBTestCase):
             obj = objects.ImageMetaProps(hw_video_model=model)
             ex = self.assertRaises(exception.ObjectActionError,
                                    obj.obj_to_primitive, '1.21')
-            self.assertIn('hw_video_model', six.text_type(ex))
+            self.assertIn('hw_video_model', str(ex))
 
     def test_obj_make_compatible_watchdog_action_not_disabled(self):
         """Tests that we don't pop the hw_watchdog_action if the value is not

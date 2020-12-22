@@ -33,7 +33,6 @@ from oslo_service import fixture as service_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
-import six
 import testtools
 
 import nova
@@ -1316,7 +1315,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self._test__validate_pinning_configuration)
         self.assertIn('This host has unpinned instances but has no CPUs '
                       'set aside for this purpose;',
-                      six.text_type(ex))
+                      str(ex))
 
     def test__validate_pinning_configuration_invalid_pinned_config(self):
         """Test that configuring only 'cpu_shared_set' when there are pinned
@@ -1329,7 +1328,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self._test__validate_pinning_configuration)
         self.assertIn('This host has pinned instances but has no CPUs '
                       'set aside for this purpose;',
-                      six.text_type(ex))
+                      str(ex))
 
     @mock.patch.object(manager.LOG, 'warning')
     def test__validate_pinning_configuration_warning(self, mock_log):
@@ -1345,7 +1344,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertEqual(1, mock_log.call_count)
         self.assertIn('Instance is pinned to host CPUs %(cpus)s '
                       'but one or more of these CPUs are not included in ',
-                      six.text_type(mock_log.call_args[0]))
+                      str(mock_log.call_args[0]))
 
     def test__validate_pinning_configuration_no_config(self):
         """Test that not configuring 'cpu_dedicated_set' or 'cpu_shared_set'
@@ -1357,7 +1356,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         self.assertIn("This host has mixed instance requesting both pinned "
                       "and unpinned CPUs but hasn't set aside unpinned CPUs "
                       "for this purpose;",
-                      six.text_type(ex))
+                      str(ex))
 
     def test__validate_pinning_configuration_not_supported(self):
         """Test that the entire check is skipped if the driver doesn't even
@@ -5533,8 +5532,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 allocations=self.allocations,
                 request_group_resource_providers_mapping=mock.sentinel.mapping,
                 accel_uuids=[])
-        self.assertIn('Trusted image certificates provided on host',
-                      six.text_type(ex))
+        self.assertIn('Trusted image certificates provided on host', str(ex))
 
     def test_reverts_task_state_instance_not_found(self):
         # Tests that the reverts_task_state decorator in the compute manager
@@ -7461,7 +7459,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         ex = self.assertRaises(exception.InvalidBDM,
                                self.compute._prep_block_device,
                                self.context, self.instance, bdms)
-        self.assertEqual('oops!', six.text_type(ex))
+        self.assertEqual('oops!', str(ex))
 
     @mock.patch('nova.objects.InstanceGroup.get_by_hint')
     def test_validate_policy_honors_workaround_disabled(self, mock_get):
@@ -9401,7 +9399,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 exception.MigrationError, self.compute._do_live_migration,
                 self.context, 'dest-host', self.instance, None,
                 self.migration, migrate_data)
-            self.assertIn('Timed out waiting for events', six.text_type(ex))
+            self.assertIn('Timed out waiting for events', str(ex))
         self.assertEqual('error', self.migration.status)
         mock_rollback_live_mig.assert_called_once_with(
             self.context, self.instance, 'dest-host',
@@ -10830,7 +10828,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             wrapped_exc = ex2.exc_info[1]
             # The original error should be in the MigrationPreCheckError which
             # itself is in the ExpectedException.
-            self.assertIn(ex1.format_message(), six.text_type(wrapped_exc))
+            self.assertIn(ex1.format_message(), str(wrapped_exc))
         # Assert the mock calls.
         _send_prep_resize_notifications.assert_has_calls([
             mock.call(self.context, self.instance,
@@ -10877,7 +10875,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             wrapped_exc = ex2.exc_info[1]
             # The original error should be in the MigrationPreCheckError which
             # itself is in the ExpectedException.
-            self.assertIn(ex1.format_message(), six.text_type(wrapped_exc))
+            self.assertIn(ex1.format_message(), str(wrapped_exc))
         # Assert the mock calls.
         _send_prep_resize_notifications.assert_has_calls([
             mock.call(self.context, self.instance,
@@ -11076,7 +11074,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # ExpectedException.
         wrapped_exc = ex2.exc_info[1]
         self.assertIn('Failed to power off instance: testing',
-                      six.text_type(wrapped_exc))
+                      str(wrapped_exc))
         # Assert the non-decorator mock calls.
         _prep_snapshot_based_resize_at_source.assert_called_once_with(
             self.context, self.instance, self.migration,
@@ -11948,7 +11946,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # is still called and in this case also fails so the resulting
         # exception should be the one from _complete_volume_attachments
         # but the finish_revert_migration error should have been logged.
-        self.assertIn('vol complete failed', six.text_type(ex))
+        self.assertIn('vol complete failed', str(ex))
         self.assertIn('driver fail', self.stdlog.logger.output)
         # Assert the migration status was not updated.
         self.migration.save.assert_not_called()

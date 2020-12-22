@@ -16,7 +16,6 @@
 
 from ironicclient import exc as ironic_exc
 import mock
-import six
 from webob import exc
 
 from nova.api.openstack.compute import baremetal_nodes \
@@ -181,7 +180,7 @@ class BareMetalNodesTestV21(test.NoDBTestCase):
     def test_show_ironic_node_not_found(self, mock_get):
         error = self.assertRaises(exc.HTTPNotFound, self.controller.show,
                                   self.request, 'fake-uuid')
-        self.assertIn('fake-uuid', six.text_type(error))
+        self.assertIn('fake-uuid', str(error))
 
     def test_show_ironic_not_implemented(self):
         with mock.patch.object(self.mod, 'ironic_client', None):

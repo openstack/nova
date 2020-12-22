@@ -10,8 +10,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
-
 from nova.policies import base as base_policies
 from nova.policies import servers as servers_policies
 from nova import test
@@ -357,7 +355,7 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
         ex = self.assertRaises(api_client.OpenStackApiException,
                                self.api.post_server, {'server': server_req})
         self.assertIn('Only volume-backed servers are allowed for flavors '
-                      'with zero disk.', six.text_type(ex))
+                      'with zero disk.', str(ex))
         self.assertEqual(403, ex.response.status_code)
 
     def test_create_volume_backed_server_with_zero_disk_allowed(self):
@@ -415,7 +413,7 @@ class ResizeCheckInstanceHostTestCase(
         ex = self.assertRaises(api_client.OpenStackApiException,
                                self.api.post_server_action, server['id'], req)
         self.assertEqual(409, ex.response.status_code)
-        self.assertIn('Service is unavailable at this time', six.text_type(ex))
+        self.assertIn('Service is unavailable at this time', str(ex))
         # Now bring the source compute service up but disable it. The operation
         # should be allowed in this case since the service is up.
         self.api.put_service(source_service['id'],
@@ -437,8 +435,7 @@ class ResizeCheckInstanceHostTestCase(
         self.assertEqual(409, ex.response.status_code)
         # This error comes from check_instance_state which is processed before
         # check_instance_host.
-        self.assertIn('while it is in vm_state shelved_offloaded',
-                      six.text_type(ex))
+        self.assertIn('while it is in vm_state shelved_offloaded', str(ex))
 
     def test_cold_migrate_source_compute_validation(self):
         self.test_resize_source_compute_validation(resize=False)

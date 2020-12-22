@@ -15,7 +15,6 @@
 
 import mock
 from oslo_config import cfg
-import six
 
 from nova.compute import instance_actions
 from nova import context
@@ -1020,7 +1019,7 @@ class TestAntiAffinityLiveMigration(test.TestCase,
                                self.admin_api.post_server_action,
                                server['id'], body)
         self.assertEqual(400, ex.response.status_code)
-        self.assertIn('No valid host', six.text_type(ex))
+        self.assertIn('No valid host', str(ex))
 
         # Now start up a 3rd compute service and retry the live migration which
         # should work this time.

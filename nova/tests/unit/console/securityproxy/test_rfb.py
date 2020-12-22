@@ -15,8 +15,6 @@
 
 """Tests the Console Security Proxy Framework."""
 
-import six
-
 import mock
 
 from nova.console.rfb import auth
@@ -128,7 +126,7 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
                                    self.proxy.connect,
                                    self.tenant_sock,
                                    self.compute_sock)
-            self.assertIn('version 3.8, but server', six.text_type(ex))
+            self.assertIn('version 3.8, but server', str(ex))
             self._assert_expected_calls()
 
     def test_fails_on_tenant_version(self):
@@ -150,7 +148,7 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
                                    self.proxy.connect,
                                    self.tenant_sock,
                                    self.compute_sock)
-            self.assertIn('version 3.8, but tenant', six.text_type(ex))
+            self.assertIn('version 3.8, but tenant', str(ex))
             self._assert_expected_calls()
 
     def test_fails_on_sec_type_cnt_zero(self):
@@ -172,7 +170,7 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
                                self.proxy.connect,
                                self.tenant_sock,
                                self.compute_sock)
-        self.assertIn('cheese', six.text_type(ex))
+        self.assertIn('cheese', str(ex))
 
         self._assert_expected_calls()
 

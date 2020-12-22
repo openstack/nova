@@ -14,7 +14,6 @@ import mock
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
-import six
 
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -393,7 +392,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             mock.patch.object(self.task, '_check_can_migrate_pci')):
             ex = self.assertRaises(exception.MigrationPreCheckError,
                                    self.task._check_requested_destination)
-        self.assertIn('across cells', six.text_type(ex))
+        self.assertIn('across cells', str(ex))
 
     @mock.patch.object(live_migrate.LiveMigrationTask,
                        '_call_livem_checks_on_host')

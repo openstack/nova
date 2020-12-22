@@ -23,7 +23,6 @@ from keystoneclient import exceptions as keystone_exception
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
-import six
 
 import nova.conf
 from nova import context
@@ -218,7 +217,7 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         ex = self.assertRaises(exception.NotFound,
                                self.api.create, self.ctx, 1, '', '')
-        self.assertEqual('Volume type can not be found.', six.text_type(ex))
+        self.assertEqual('Volume type can not be found.', str(ex))
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_create_over_quota_failed(self, mock_cinderclient):
@@ -531,7 +530,7 @@ class CinderApiTestCase(test.NoDBTestCase):
                                attachment_id)
 
         self.assertEqual(404, ex.code)
-        self.assertIn(attachment_id, six.text_type(ex))
+        self.assertIn(attachment_id, str(ex))
 
     @mock.patch('nova.volume.cinder.cinderclient',
                 side_effect=exception.CinderAPIVersionNotAvailable(
@@ -604,7 +603,7 @@ class CinderApiTestCase(test.NoDBTestCase):
                                attachment_id)
 
         self.assertEqual(404, ex.code)
-        self.assertIn(attachment_id, six.text_type(ex))
+        self.assertIn(attachment_id, str(ex))
 
     @mock.patch('nova.volume.cinder.cinderclient',
                 side_effect=exception.CinderAPIVersionNotAvailable(
@@ -725,7 +724,7 @@ class CinderApiTestCase(test.NoDBTestCase):
                                attachment_id)
 
         self.assertEqual(404, ex.code)
-        self.assertIn(attachment_id, six.text_type(ex))
+        self.assertIn(attachment_id, str(ex))
 
     @mock.patch('nova.volume.cinder.cinderclient',
                 side_effect=exception.CinderAPIVersionNotAvailable(

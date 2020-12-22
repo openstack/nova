@@ -20,7 +20,6 @@ Tests for Block Device utility functions.
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
-import six
 
 from nova import block_device
 from nova.compute import api as compute_api
@@ -630,8 +629,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         ex = self.assertRaises(exception.InvalidBDMFormat,
                                block_device.BlockDeviceDict.from_api,
                                api_dict, False)
-        self.assertIn('Mapping image to local is not supported',
-                      six.text_type(ex))
+        self.assertIn('Mapping image to local is not supported', str(ex))
 
     def test_from_api_invalid_volume_type_to_destination_local_mapping(self):
         api_dict = {'id': 1,
@@ -643,7 +641,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
                                block_device.BlockDeviceDict.from_api,
                                api_dict, False)
         self.assertIn('Specifying a volume_type with destination_type=local '
-                      'is not supported', six.text_type(ex))
+                      'is not supported', str(ex))
 
     def test_from_api_invalid_specify_volume_type_with_source_volume_mapping(
             self):
@@ -656,7 +654,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
                                block_device.BlockDeviceDict.from_api,
                                api_dict, False)
         self.assertIn('Specifying volume type to existing volume is '
-                      'not supported', six.text_type(ex))
+                      'not supported', str(ex))
 
     def test_legacy(self):
         for legacy, new in zip(self.legacy_mapping, self.new_mapping):

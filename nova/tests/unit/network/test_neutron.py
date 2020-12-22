@@ -31,7 +31,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import requests_mock
-import six
 
 from nova import context
 from nova.db.sqlalchemy import api as db_api
@@ -176,7 +175,7 @@ class TestNeutronClient(test.NoDBTestCase):
         exc = self.assertRaises(
             exception.Forbidden,
             client.create_port)
-        self.assertIsInstance(exc.format_message(), six.text_type)
+        self.assertIsInstance(exc.format_message(), str)
 
     def test_withtoken_context_is_admin(self):
         self.flags(endpoint_override='http://anyhost/', group='neutron')
@@ -438,8 +437,8 @@ class TestAPIBase(test.TestCase):
         info_cache['created_at'] = timeutils.utcnow()
         info_cache['deleted_at'] = timeutils.utcnow()
         info_cache['updated_at'] = timeutils.utcnow()
-        info_cache['network_info'] = model.NetworkInfo.hydrate(six.text_type(
-                                    jsonutils.dumps(nw_info)))
+        info_cache['network_info'] = model.NetworkInfo.hydrate(
+                                    str(jsonutils.dumps(nw_info)))
         return info_cache
 
     def _fake_instance_object_with_info_cache(self, instance):
@@ -1828,7 +1827,7 @@ class TestAPI(TestAPIBase):
                                self.api.validate_networks, self.context,
                                requested_networks, 1)
 
-        self.assertIn(uuids.my_netid1, six.text_type(ex))
+        self.assertIn(uuids.my_netid1, str(ex))
         mock_get_client.assert_called_once_with(self.context)
         mocked_client.list_networks.assert_called_once_with(
             id=[uuids.my_netid1])
@@ -1847,8 +1846,8 @@ class TestAPI(TestAPIBase):
                                self.api.validate_networks,
                                self.context, requested_networks, 1)
 
-        self.assertIn(uuids.my_netid2, six.text_type(ex))
-        self.assertIn(uuids.my_netid3, six.text_type(ex))
+        self.assertIn(uuids.my_netid2, str(ex))
+        self.assertIn(uuids.my_netid3, str(ex))
         mock_get_client.assert_called_once_with(self.context)
         mocked_client.list_networks.assert_called_once_with(id=ids)
 
@@ -4074,7 +4073,7 @@ class TestAPI(TestAPIBase):
                                   '(Network ID is %(net_id)s)' %
                                   {'instance': instance.uuid,
                                    'net_id': uuids.my_netid1})
-        self.assertEqual(expected_exception_msg, six.text_type(exc))
+        self.assertEqual(expected_exception_msg, str(exc))
         mock_client.delete_port.assert_called_once_with(uuids.port_id)
 
     @mock.patch('nova.network.neutron.LOG')
@@ -4098,7 +4097,7 @@ class TestAPI(TestAPIBase):
                                   '(Network ID is %(net_id)s)' %
                                   {'instance': instance.uuid,
                                    'net_id': uuids.my_netid1})
-        self.assertEqual(expected_exception_msg, six.text_type(exc))
+        self.assertEqual(expected_exception_msg, str(exc))
         mock_client.delete_port.assert_called_once_with(uuids.port_id)
         self.assertTrue(mock_log.exception.called)
 
@@ -4693,7 +4692,7 @@ class TestAPI(TestAPIBase):
         self.assertIn(
             "Provider mappings are not available to the compute service but "
             "are required for ports with a resource request.",
-            six.text_type(ex))
+            str(ex))
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_resource_req_live_mig(
@@ -4929,8 +4928,8 @@ class TestAPI(TestAPIBase):
                     self.api.setup_networks_on_host,
                     self.context, instance, host='new-host', teardown=True)
                 # Make sure both ports show up in the exception message.
-                self.assertIn(uuids.port1, six.text_type(ex))
-                self.assertIn(uuids.port2, six.text_type(ex))
+                self.assertIn(uuids.port1, str(ex))
+                self.assertIn(uuids.port2, str(ex))
         self.api._clear_migration_port_profile.assert_called_once_with(
             self.context, instance, get_client_mock.return_value,
             get_ports['ports'])
