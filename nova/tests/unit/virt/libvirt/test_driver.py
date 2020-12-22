@@ -2081,6 +2081,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(NotImplementedError,
                           drvr.set_admin_password, instance, "123")
 
+    @mock.patch(
+        'nova.virt.libvirt.driver.LibvirtDriver._handle_conn_event',
+        new=mock.Mock())
     @mock.patch.object(objects.Service, 'save')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     def test_set_host_enabled_with_disable(self, mock_svc, mock_save):
@@ -2096,6 +2099,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(svc.disabled)
         mock_save.assert_called_once_with()
 
+    @mock.patch(
+        'nova.virt.libvirt.driver.LibvirtDriver._handle_conn_event',
+        new=mock.Mock())
     @mock.patch.object(objects.Service, 'save')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     def test_set_host_enabled_with_enable(self, mock_svc, mock_save):
@@ -2112,6 +2118,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_save.assert_not_called()
         self.assertTrue(svc.disabled)
 
+    @mock.patch(
+        'nova.virt.libvirt.driver.LibvirtDriver._handle_conn_event',
+        new=mock.Mock())
     @mock.patch.object(objects.Service, 'save')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     def test_set_host_enabled_with_enable_state_enabled(self, mock_svc,
@@ -2127,6 +2136,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertFalse(svc.disabled)
         mock_save.assert_not_called()
 
+    @mock.patch(
+        'nova.virt.libvirt.driver.LibvirtDriver._handle_conn_event',
+        new=mock.Mock())
     @mock.patch.object(objects.Service, 'save')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     def test_set_host_enabled_with_disable_state_disabled(self, mock_svc,
