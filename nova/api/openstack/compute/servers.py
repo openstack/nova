@@ -21,7 +21,6 @@ import oslo_messaging as messaging
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
-import six
 import webob
 from webob import exc
 
@@ -662,7 +661,7 @@ class ServersController(wsgi.Controller):
             availability_zone, host, node = parse_az(context,
                                                      availability_zone)
         except exception.InvalidInput as err:
-            raise exc.HTTPBadRequest(explanation=six.text_type(err))
+            raise exc.HTTPBadRequest(explanation=str(err))
         if host or node:
             context.can(server_policies.SERVERS % 'create:forced_host',
                         target=target)

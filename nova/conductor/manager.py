@@ -29,7 +29,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import timeutils
 from oslo_utils import versionutils
-import six
 
 from nova.accelerator import cyborg
 from nova import availability_zones
@@ -498,7 +497,7 @@ class ComputeTaskManager(base.Base):
                           task_state=None)
             migration.status = 'error'
             migration.save()
-            raise exception.MigrationError(reason=six.text_type(ex))
+            raise exception.MigrationError(reason=str(ex))
 
     def _build_live_migrate_task(self, context, instance, destination,
                                  block_migration, disk_over_commit, migration,
@@ -1122,7 +1121,7 @@ class ComputeTaskManager(base.Base):
                                 {'vm_state': vm_states.ERROR,
                                  'task_state': None}, ex, request_spec)
                             LOG.warning('Rebuild failed: %s',
-                                        six.text_type(ex), instance=instance)
+                                        str(ex), instance=instance)
                     except exception.NoValidHost:
                         with excutils.save_and_reraise_exception():
                             if migration:
@@ -1214,7 +1213,7 @@ class ComputeTaskManager(base.Base):
                                 {'vm_state': vm_states.ERROR,
                                  'task_state': None}, ex, request_spec)
                         LOG.warning('Rebuild failed: %s',
-                                    six.text_type(ex), instance=instance)
+                                    str(ex), instance=instance)
 
             compute_utils.notify_about_instance_usage(
                 self.notifier, context, instance, "rebuild.scheduled")

@@ -25,7 +25,6 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_service import periodic_task
-import six
 from stevedore import driver
 
 import nova.conf
@@ -83,7 +82,7 @@ class SchedulerManager(manager.Manager):
         except exception.HostMappingExists as exp:
             msg = ('This periodic task should only be enabled on a single '
                    'scheduler to prevent collisions between multiple '
-                   'schedulers: %s' % six.text_type(exp))
+                   'schedulers: %s' % str(exp))
             if not HOST_MAPPING_EXISTS_WARNING:
                 LOG.warning(msg)
                 HOST_MAPPING_EXISTS_WARNING = True

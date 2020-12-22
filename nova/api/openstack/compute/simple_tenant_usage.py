@@ -19,7 +19,6 @@ from urllib import parse as urlparse
 
 import iso8601
 from oslo_utils import timeutils
-import six
 from webob import exc
 
 from nova.api.openstack import common
@@ -41,7 +40,7 @@ def parse_strtime(dstr, fmt):
     try:
         return timeutils.parse_strtime(dstr, fmt)
     except (TypeError, ValueError) as e:
-        raise exception.InvalidStrTime(reason=six.text_type(e))
+        raise exception.InvalidStrTime(reason=str(e))
 
 
 class SimpleTenantUsageController(wsgi.Controller):

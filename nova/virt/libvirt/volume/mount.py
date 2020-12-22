@@ -20,7 +20,6 @@ import threading
 from oslo_concurrency import processutils
 from oslo_log import log
 from oslo_utils import fileutils
-import six
 
 import nova.conf
 from nova import exception
@@ -380,7 +379,7 @@ class _HostMountState(object):
             nova.privsep.fs.umount(mountpoint)
         except processutils.ProcessExecutionError as ex:
             LOG.error("Couldn't unmount %(mountpoint)s: %(reason)s",
-                      {'mountpoint': mountpoint, 'reason': six.text_type(ex)})
+                      {'mountpoint': mountpoint, 'reason': str(ex)})
 
         if not os.path.ismount(mountpoint):
             nova.privsep.path.rmdir(mountpoint)

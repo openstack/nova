@@ -18,7 +18,6 @@
 import datetime
 
 from oslo_log import log as logging
-import six
 from webob import exc
 
 from nova.api.openstack import api_version_request
@@ -211,14 +210,14 @@ class AggregateController(wsgi.Controller):
                 exception.AggregateHostNotFound,
                 exception.ComputeHostNotFound) as e:
             LOG.error('Failed to remove host %s from aggregate %s. Error: %s',
-                      host, id, six.text_type(e))
+                      host, id, str(e))
             msg = _('Cannot remove host %(host)s in aggregate %(id)s') % {
                         'host': host, 'id': id}
             raise exc.HTTPNotFound(explanation=msg)
         except (exception.InvalidAggregateAction,
                 exception.ResourceProviderUpdateConflict) as e:
             LOG.error('Failed to remove host %s from aggregate %s. Error: %s',
-                      host, id, six.text_type(e))
+                      host, id, str(e))
             msg = _('Cannot remove host %(host)s in aggregate %(id)s') % {
                         'host': host, 'id': id}
             raise exc.HTTPConflict(explanation=msg)

@@ -30,7 +30,6 @@ from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import uuidutils
-import six
 
 from nova.compute import utils as compute_utils
 import nova.conf
@@ -197,7 +196,7 @@ class ClientWrapper(clientv20.Client):
                           "admin credential located in nova.conf")
                 raise exception.NeutronAdminCredentialConfigurationInvalid()
             except neutron_client_exc.Forbidden as e:
-                raise exception.Forbidden(six.text_type(e))
+                raise exception.Forbidden(str(e))
             return ret
         return wrapper
 
@@ -2168,7 +2167,7 @@ class API(base.Base):
             return True
         except neutron_client_exc.Conflict as ex:
             LOG.debug('Unable to auto-allocate networks. %s',
-                      six.text_type(ex))
+                      str(ex))
             return False
 
     def _auto_allocate_network(self, instance, neutron):
@@ -2420,7 +2419,7 @@ class API(base.Base):
         try:
             client.update_floatingip(fip['id'], {'floatingip': param})
         except neutron_client_exc.Conflict as e:
-            raise exception.FloatingIpAssociateFailed(six.text_type(e))
+            raise exception.FloatingIpAssociateFailed(str(e))
 
         # If the floating IP was associated with another server, try to refresh
         # the cache for that instance to avoid a window of time where multiple
@@ -2694,11 +2693,11 @@ class API(base.Base):
             fip = client.create_floatingip(param)
         except (neutron_client_exc.IpAddressGenerationFailureClient,
                 neutron_client_exc.ExternalIpAddressExhaustedClient) as e:
-            raise exception.NoMoreFloatingIps(six.text_type(e))
+            raise exception.NoMoreFloatingIps(str(e))
         except neutron_client_exc.OverQuotaClient as e:
-            raise exception.FloatingIpLimitExceeded(six.text_type(e))
+            raise exception.FloatingIpLimitExceeded(str(e))
         except neutron_client_exc.BadRequest as e:
-            raise exception.FloatingIpBadRequest(six.text_type(e))
+            raise exception.FloatingIpBadRequest(str(e))
 
         return fip['floatingip']['floating_ip_address']
 

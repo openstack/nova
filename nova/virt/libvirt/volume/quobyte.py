@@ -19,7 +19,6 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
 import psutil
-import six
 
 import nova.conf
 from nova import exception as nova_exception
@@ -97,7 +96,7 @@ def umount_volume(mnt_base):
         else:
             nova.privsep.libvirt.unprivileged_umount(mnt_base)
     except processutils.ProcessExecutionError as exc:
-        if 'Device or resource busy' in six.text_type(exc):
+        if 'Device or resource busy' in str(exc):
             LOG.error("The Quobyte volume at %s is still in use.", mnt_base)
         else:
             LOG.exception("Couldn't unmount the Quobyte Volume at %s",

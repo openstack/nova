@@ -24,7 +24,6 @@ from oslo_log import log as logging
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
-import six
 
 from nova.api.metadata import password
 from nova.api.metadata import vendordata_dynamic
@@ -718,7 +717,7 @@ def ec2_md_print(data):
         return output[:-1]
     elif isinstance(data, list):
         return '\n'.join(data)
-    elif isinstance(data, (bytes, six.text_type)):
+    elif isinstance(data, (bytes, str)):
         return data
     else:
         return str(data)

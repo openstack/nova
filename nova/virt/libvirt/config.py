@@ -29,7 +29,6 @@ from collections import OrderedDict
 from lxml import etree
 from oslo_utils import strutils
 from oslo_utils import units
-import six
 
 from nova import exception
 from nova.i18n import _
@@ -60,7 +59,7 @@ class LibvirtConfigObject(object):
 
     def _text_node(self, node_name, value, **kwargs):
         child = self._new_node(node_name, **kwargs)
-        child.text = six.text_type(value)
+        child.text = str(value)
         return child
 
     def format_dom(self):

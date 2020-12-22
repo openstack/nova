@@ -23,7 +23,6 @@ from pypowervm.tasks import scsi_mapper as tsk_map
 from pypowervm.utils import transaction as pvm_tx
 from pypowervm.wrappers import storage as pvm_stor
 from pypowervm.wrappers import virtual_io_server as pvm_vios
-import six
 from taskflow import task
 
 from nova import conf as cfg
@@ -326,7 +325,7 @@ class FCVscsiVolumeAdapter(object):
         except Exception as e:
             LOG.exception('PowerVM error detaching volume from virtual '
                           'machine.', instance=self.instance)
-            ex_args = {'volume_id': self.volume_id, 'reason': six.text_type(e)}
+            ex_args = {'volume_id': self.volume_id, 'reason': str(e)}
             raise exc.VolumeDetachFailed(**ex_args)
         self.stg_ftsk.execute()
 

@@ -25,7 +25,6 @@ import netifaces
 from oslo_log import log
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
-import six
 
 from nova.accelerator import cyborg
 from nova import block_device
@@ -131,7 +130,7 @@ def _get_fault_details(exc_info, error_code):
         # exceptions (see exception_to_dict).
         details = ''.join(traceback.format_exception(
             exc_info[0], exc_info[1], exc_info[2]))
-    return six.text_type(details)
+    return str(details)
 
 
 def add_instance_fault_from_exc(context, instance, fault, exc_info=None,

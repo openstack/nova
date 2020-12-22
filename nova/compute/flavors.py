@@ -22,7 +22,6 @@ import re
 
 from oslo_utils import strutils
 from oslo_utils import uuidutils
-import six
 
 import nova.conf
 from nova import context
@@ -83,7 +82,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
 
     # NOTE(vish): Internally, flavorid is stored as a string but it comes
     #             in through json as an integer, so we convert it here.
-    flavorid = six.text_type(flavorid)
+    flavorid = str(flavorid)
 
     # NOTE(wangbo): validate attributes of the creating flavor.
     # ram and vcpus should be positive ( > 0) integers.

@@ -16,7 +16,6 @@ import os
 from urllib import parse as urlparse
 
 from oslo_log import log as logging
-import six
 from zvmconnector import connector
 
 from oslo_utils import fileutils
@@ -61,9 +60,9 @@ class ConnectorClient(object):
         if results['overallRC'] != 0:
             LOG.error("zVM Cloud Connector request %(api)s failed with "
                "parameters: %(args)s %(kwargs)s .  Results: %(results)s",
-               {'api': func_name, 'args': six.text_type(args),
-                'kwargs': six.text_type(kwargs),
-                'results': six.text_type(results)})
+               {'api': func_name, 'args': str(args),
+                'kwargs': str(kwargs),
+                'results': str(results)})
             raise exception.ZVMConnectorError(results=results)
 
         return results['output']

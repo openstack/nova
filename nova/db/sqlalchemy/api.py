@@ -34,7 +34,6 @@ from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
-import six
 import sqlalchemy as sa
 from sqlalchemy import and_
 from sqlalchemy import Boolean
@@ -4091,7 +4090,7 @@ def _archive_if_instance_deleted(table, shadow_table, instances, conn,
     except db_exc.DBReferenceError as ex:
         LOG.warning('Failed to archive %(table)s: %(error)s',
                     {'table': table.name,
-                     'error': six.text_type(ex)})
+                     'error': str(ex)})
         return 0
 
 
@@ -4167,7 +4166,7 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before):
             # skip this table for now; we'll come back to it later.
             LOG.warning("IntegrityError detected when archiving table "
                         "%(tablename)s: %(error)s",
-                        {'tablename': tablename, 'error': six.text_type(ex)})
+                        {'tablename': tablename, 'error': str(ex)})
 
     # NOTE(jake): instance_actions_events doesn't have a instance_uuid column
     # but still needs to be archived as it is a FK constraint

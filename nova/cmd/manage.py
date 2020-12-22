@@ -40,7 +40,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import uuidutils
 import prettytable
-import six
 from sqlalchemy.engine import url as sqla_url
 
 from nova.cmd import common as cmd_common
@@ -157,7 +156,7 @@ class DbCommands(object):
         for k, v in sorted(dct.items(), key=sort_key):
             # convert dict to str to check length
             if isinstance(v, dict):
-                v = six.text_type(v)
+                v = str(v)
             # if value has a newline, add in multiple rows
             # e.g. fault with stacktrace
             if v and isinstance(v, str) and r'\n' in v:
@@ -197,7 +196,7 @@ Has "nova-manage api_db sync" been run?
 Has "nova-manage cell_v2 map_cell0" been run?
 Is [api_database]/connection set in nova.conf?
 Is the cell0 database connection URL correct?
-Error: %s""") % six.text_type(e))
+Error: %s""") % str(e))
                 return 1
         return migration.db_sync(version)
 
@@ -718,7 +717,7 @@ class CellV2Commands(object):
                                          url=objects.CellMapping.format_mq_url(
                                              transport_url))
         except (messaging.InvalidTransportURL, ValueError) as e:
-            print(_('Invalid transport URL: %s') % six.text_type(e))
+            print(_('Invalid transport URL: %s') % str(e))
             return None
 
         return transport_url
@@ -1527,7 +1526,7 @@ class PlacementCommands(object):
             )['ports']
         except neutron_client_exc.NeutronClientException as e:
             raise exception.UnableToQueryPorts(
-                instance_uuid=instance.uuid, error=six.text_type(e))
+                instance_uuid=instance.uuid, error=str(e))
 
     @staticmethod
     def _has_request_but_no_allocation(port):
@@ -1752,13 +1751,13 @@ class PlacementCommands(object):
         except neutron_client_exc.NeutronClientException as e:
             output(
                 _('Updating port %(port_uuid)s failed: %(error)s') %
-                {'port_uuid': port['id'], 'error': six.text_type(e)})
+                {'port_uuid': port['id'], 'error': str(e)})
             # one of the port updates failed. We need to roll back the updates
             # that succeeded before
             self._rollback_port_updates(neutron, succeeded, output)
             # we failed to heal so we need to stop but we successfully rolled
             # back the partial updates so the admin can retry the healing.
-            raise exception.UnableToUpdatePorts(error=six.text_type(e))
+            raise exception.UnableToUpdatePorts(error=str(e))
 
     @staticmethod
     def _rollback_port_updates(neutron, ports_to_rollback, output):
@@ -1782,7 +1781,7 @@ class PlacementCommands(object):
                 output(
                     _('Rolling back update for port %(port_uuid)s failed: '
                       '%(error)s') % {'port_uuid': port['id'],
-                                      'error': six.text_type(e)})
+                                      'error': str(e)})
                 # TODO(gibi): We could implement a retry mechanism with
                 # back off.
                 manual_rollback_needed.append(port['id'])
@@ -1793,7 +1792,7 @@ class PlacementCommands(object):
             # back. There are partial updates in neutron. Human intervention
             # needed.
             raise exception.UnableToRollbackPortUpdates(
-                error=six.text_type(last_exc),
+                error=str(last_exc),
                 port_uuids=manual_rollback_needed)
 
     def _heal_missing_alloc(self, ctxt, instance, node_cache):

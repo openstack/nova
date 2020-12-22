@@ -36,7 +36,6 @@ from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import strutils
 import retrying
-import six
 
 from nova import availability_zones as az
 import nova.conf
@@ -153,7 +152,7 @@ def _get_server_version(context, url):
                 break
     except cinder_exception.ClientException as e:
         LOG.warning("Error in server version query:%s\n"
-                    "Returning APIVersion 2.0", six.text_type(e.message))
+                    "Returning APIVersion 2.0", str(e.message))
     return (cinder_api_versions.APIVersion(min_version),
             cinder_api_versions.APIVersion(current_version))
 
@@ -614,7 +613,7 @@ class API(object):
                     'Attempting to terminate connection.',
                     {'vol': volume_id,
                      'host': connector.get('host'),
-                     'msg': six.text_type(ex),
+                     'msg': str(ex),
                      'code': ex.code})
                 try:
                     self.terminate_connection(context, volume_id, connector)
@@ -627,7 +626,7 @@ class API(object):
                         'Error: %(msg)s Code: %(code)s.',
                         {'vol': volume_id,
                         'host': connector.get('host'),
-                        'msg': six.text_type(exc),
+                        'msg': str(exc),
                         'code': exc.code if hasattr(exc, 'code') else None})
 
     @translate_volume_exception
@@ -803,7 +802,7 @@ class API(object):
                     LOG.error('Create attachment failed for volume '
                               '%(volume_id)s. Error: %(msg)s Code: %(code)s',
                               {'volume_id': volume_id,
-                               'msg': six.text_type(ex),
+                               'msg': str(ex),
                                'code': getattr(ex, 'code', None)},
                               instance_uuid=instance_id)
 
@@ -829,7 +828,7 @@ class API(object):
                 LOG.error('Show attachment failed for attachment '
                           '%(id)s. Error: %(msg)s Code: %(code)s',
                           {'id': attachment_id,
-                           'msg': six.text_type(ex),
+                           'msg': str(ex),
                            'code': getattr(ex, 'code', None)})
 
     @translate_attachment_exception
@@ -876,7 +875,7 @@ class API(object):
                 LOG.error('Update attachment failed for attachment '
                           '%(id)s. Error: %(msg)s Code: %(code)s',
                           {'id': attachment_id,
-                           'msg': six.text_type(ex),
+                           'msg': str(ex),
                            'code': getattr(ex, 'code', None)})
 
     @translate_attachment_exception
@@ -893,7 +892,7 @@ class API(object):
                 LOG.error('Delete attachment failed for attachment '
                           '%(id)s. Error: %(msg)s Code: %(code)s',
                           {'id': attachment_id,
-                           'msg': six.text_type(ex),
+                           'msg': str(ex),
                            'code': getattr(ex, 'code', None)})
 
     @translate_attachment_exception
@@ -916,5 +915,5 @@ class API(object):
                 LOG.error('Complete attachment failed for attachment '
                           '%(id)s. Error: %(msg)s Code: %(code)s',
                           {'id': attachment_id,
-                           'msg': six.text_type(ex),
+                           'msg': str(ex),
                            'code': getattr(ex, 'code', None)})

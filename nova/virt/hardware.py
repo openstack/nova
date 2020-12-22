@@ -23,7 +23,6 @@ import os_traits
 from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import units
-import six
 
 import nova.conf
 from nova import exception
@@ -339,7 +338,7 @@ def get_cpu_topology_constraints(flavor, image_meta):
         flavor_max_cores = int(flavor_max_cores)
         flavor_max_threads = int(flavor_max_threads)
     except ValueError as e:
-        msg = _('Invalid flavor extra spec. Error: %s') % six.text_type(e)
+        msg = _('Invalid flavor extra spec. Error: %s') % str(e)
         raise exception.InvalidRequest(msg)
 
     LOG.debug("Flavor limits %(sockets)d:%(cores)d:%(threads)d",
@@ -379,7 +378,7 @@ def get_cpu_topology_constraints(flavor, image_meta):
         flavor_cores = int(flavor_cores)
         flavor_threads = int(flavor_threads)
     except ValueError as e:
-        msg = _('Invalid flavor extra spec. Error: %s') % six.text_type(e)
+        msg = _('Invalid flavor extra spec. Error: %s') % str(e)
         raise exception.InvalidRequest(msg)
 
     LOG.debug("Flavor pref %(sockets)d:%(cores)d:%(threads)d",

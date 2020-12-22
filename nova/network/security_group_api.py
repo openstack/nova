@@ -27,7 +27,6 @@ from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import netutils
 from oslo_utils import uuidutils
-import six
 from webob import exc
 
 from nova import context as nova_context
@@ -69,11 +68,11 @@ def validate_name(
         return neutronv20.find_resourceid_by_name_or_id(
             neutron, 'security_group', name, context.project_id)
     except n_exc.NeutronClientNoUniqueMatch as e:
-        raise exception.NoUniqueMatch(six.text_type(e))
+        raise exception.NoUniqueMatch(str(e))
     except n_exc.NeutronClientException as e:
         if e.status_code == 404:
             LOG.debug('Neutron security group %s not found', name)
-            raise exception.SecurityGroupNotFound(six.text_type(e))
+            raise exception.SecurityGroupNotFound(str(e))
         else:
             LOG.error('Neutron Error: %s', e)
             raise e
@@ -237,7 +236,7 @@ def create_security_group(context, name, description):
         security_group = neutron.create_security_group(
             body).get('security_group')
     except n_exc.BadRequest as e:
-        raise exception.Invalid(six.text_type(e))
+        raise exception.Invalid(str(e))
     except n_exc.NeutronClientException as e:
         LOG.exception("Neutron Error creating security group %s", name)
         if e.status_code == 401:
@@ -246,7 +245,7 @@ def create_security_group(context, name, description):
             # quota
             raise exc.HTTPBadRequest()
         elif e.status_code == 409:
-            raise exception.SecurityGroupLimitExceeded(six.text_type(e))
+            raise exception.SecurityGroupLimitExceeded(str(e))
         raise e
     return _convert_to_nova_security_group_format(security_group)
 
@@ -312,7 +311,7 @@ def get(context, id):
     except n_exc.NeutronClientException as e:
         if e.status_code == 404:
             LOG.debug('Neutron security group %s not found', id)
-            raise exception.SecurityGroupNotFound(six.text_type(e))
+            raise exception.SecurityGroupNotFound(str(e))
         else:
             LOG.error("Neutron Error: %s", e)
             raise e
@@ -360,9 +359,9 @@ def destroy(context, security_group):
         neutron.delete_security_group(security_group['id'])
     except n_exc.NeutronClientException as e:
         if e.status_code == 404:
-            raise exception.SecurityGroupNotFound(six.text_type(e))
+            raise exception.SecurityGroupNotFound(str(e))
         elif e.status_code == 409:
-            raise exception.Invalid(six.text_type(e))
+            raise exception.Invalid(str(e))
         else:
             LOG.error("Neutron Error: %s", e)
             raise e
@@ -385,14 +384,14 @@ def add_rules(context, id, name, vals):
     except n_exc.NeutronClientException as e:
         if e.status_code == 404:
             LOG.exception("Neutron Error getting security group %s", name)
-            raise exception.SecurityGroupNotFound(six.text_type(e))
+            raise exception.SecurityGroupNotFound(str(e))
         elif e.status_code == 409:
             LOG.exception("Neutron Error adding rules to security "
                           "group %s", name)
-            raise exception.SecurityGroupLimitExceeded(six.text_type(e))
+            raise exception.SecurityGroupLimitExceeded(str(e))
         elif e.status_code == 400:
             LOG.exception("Neutron Error: %s", e)
-            raise exception.Invalid(six.text_type(e))
+            raise exception.Invalid(str(e))
         else:
             raise e
     converted_rules = []
@@ -462,7 +461,7 @@ def get_rule(context, id):
     except n_exc.NeutronClientException as e:
         if e.status_code == 404:
             LOG.debug("Neutron security group rule %s not found", id)
-            raise exception.SecurityGroupNotFound(six.text_type(e))
+            raise exception.SecurityGroupNotFound(str(e))
         else:
             LOG.error("Neutron Error: %s", e)
             raise e
@@ -606,7 +605,7 @@ def add_to_instance(context, instance, security_group_name):
             security_group_name,
             context.project_id)
     except n_exc.NeutronClientNoUniqueMatch as e:
-        raise exception.NoUniqueMatch(six.text_type(e))
+        raise exception.NoUniqueMatch(str(e))
     except n_exc.NeutronClientException as e:
         if e.status_code == 404:
             msg = (_("Security group %(name)s is not found for "
@@ -649,8 +648,7 @@ def add_to_instance(context, instance, security_group_name):
             neutron.update_port(port['id'], {'port': updated_port})
         except n_exc.NeutronClientException as e:
             if e.status_code == 400:
-                raise exception.SecurityGroupCannotBeApplied(
-                    six.text_type(e))
+                raise exception.SecurityGroupCannotBeApplied(str(e))
             else:
                 raise e
         except Exception:

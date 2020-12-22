@@ -17,7 +17,6 @@
 """The Assisted volume snapshots extension."""
 
 from oslo_serialization import jsonutils
-import six
 from webob import exc
 
 from nova.api.openstack.compute.schemas import assisted_volume_snapshots
@@ -79,7 +78,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
             delete_info = jsonutils.loads(delete_metadata['delete_info'])
             volume_id = delete_info['volume_id']
         except (KeyError, ValueError) as e:
-            raise exc.HTTPBadRequest(explanation=six.text_type(e))
+            raise exc.HTTPBadRequest(explanation=str(e))
 
         try:
             self.compute_api.volume_snapshot_delete(context, volume_id,

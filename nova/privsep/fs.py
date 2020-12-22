@@ -17,8 +17,6 @@
 Helpers for filesystem related routines.
 """
 
-import six
-
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils.secretutils import md5
@@ -282,7 +280,7 @@ def _get_hash_str(base_str):
 
     If base_str is a Unicode string, encode it to UTF-8.
     """
-    if isinstance(base_str, six.text_type):
+    if isinstance(base_str, str):
         base_str = base_str.encode('utf-8')
     return md5(base_str, usedforsecurity=False).hexdigest()
 
