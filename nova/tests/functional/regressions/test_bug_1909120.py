@@ -53,13 +53,8 @@ class TestDetachVolumeWhileComputeDown(integrated_helpers._IntegratedTestBase):
             binary='nova-compute')[0]['id']
         self.admin_api.put_service_force_down(compute_id, True)
 
-        # Assert that the request fails in this functional test as the cast to
-        # detach_volume on the compute is actually treated as a call by the
-        # CastAsCall fixture used by _IntegratedTestBase.
+        # Assert that the request is rejected by n-api with a 409 response
         ex = self.assertRaises(
             client.OpenStackApiException,
             self.api.delete_server_volume, server['id'], volume_id)
-
-        # FIXME(lyarwood): n-cpu should reject the initial request with 409
-        # self.assertEqual(409, ex.response.status_code)
-        self.assertEqual(500, ex.response.status_code)
+        self.assertEqual(409, ex.response.status_code)
