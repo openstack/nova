@@ -4622,6 +4622,28 @@ class API(base.Base):
         except exception.VolumeBDMNotFound:
             pass
 
+    def _check_volume_already_attached(
+        self, context: nova_context.RequestContext, volume_id: str
+    ):
+        """Avoid allowing a non-multiattach volumes being attached twice
+
+        Unlike the above _check_volume_already_attached_to_instance check we
+        also need to ensure that non-multiattached volumes are not attached to
+        multiple instances. This check is also carried out later by c-api
+        itself but it can however be circumvented by admins resetting the state
+        of an attached volume to available. As a result we also need to perform
+        a check within Nova before creating a new BDM for the attachment.
+        """
+        try:
+            bdm = objects.BlockDeviceMapping.get_by_volume(
+                context, volume_id)
+            msg = _("volume %(volume_id)s is already attached to instance "
+                    "%(instance_uuid)s") % {'volume_id': volume_id,
+                    'instance_uuid': bdm.instance_uuid}
+            raise exception.InvalidVolume(reason=msg)
+        except exception.VolumeBDMNotFound:
+            pass
+
     def _check_attach_and_reserve_volume(self, context, volume, instance,
                                          bdm, supports_multiattach=False,
                                          validate_az=True):
@@ -4761,8 +4783,17 @@ class API(base.Base):
         self._check_volume_already_attached_to_instance(context,
                                                         instance,
                                                         volume_id)
-
         volume = self.volume_api.get(context, volume_id)
+
+        # NOTE(lyarwood): Ensure that non multiattach volumes don't already
+        # have active block device mappings present in Nova.
+        # TODO(lyarwood): Merge this into the
+        # _check_volume_already_attached_to_instance check once
+        # BlockDeviceMappingList provides a list of active bdms per volume so
+        # we can preform a single lookup for both checks.
+        if not volume.get('multiattach', False):
+            self._check_volume_already_attached(context, volume_id)
+
         is_shelved_offloaded = instance.vm_state == vm_states.SHELVED_OFFLOADED
         if is_shelved_offloaded:
             if tag:

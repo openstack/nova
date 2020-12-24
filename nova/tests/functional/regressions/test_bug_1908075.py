@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 
 
@@ -44,24 +45,17 @@ class TestVolAttachCinderReset(integrated_helpers._IntegratedTestBase):
 
         # Launch a second server and attempt to attach the same volume again
         server_b = self._create_server(networks='none')
-        # FIXME(lyarwood): n-api shouldn't accept this request as we already
-        # have an active bdm record for this non-multiattach volume.
-        self.api.post_server_volume(
+
+        # Assert that attempting to attach this non multiattach volume to
+        # another instance is rejected by n-api
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self.api.post_server_volume,
             server_b['id'],
             {'volumeAttachment': {'volumeId': volume_id}}
         )
 
-        # Assert that we have bdms within Nova still for this attachment
-        self.assertEqual(
-            volume_id,
-            self.api.get_server_volumes(server_a['id'])[0].get('volumeId'))
-        self.assertEqual(
-            volume_id,
-            self.api.get_server_volumes(server_b['id'])[0].get('volumeId'))
-
-        # Assert that the new attachment is the only one in the fixture
-        self.assertIn(
-            volume_id, self.cinder.volume_ids_for_instance(server_b['id']))
+        self.assertEqual(400, ex.response.status_code)
 
     def test_volume_attach_after_cinder_reset_state_multiattach_volume(self):
 

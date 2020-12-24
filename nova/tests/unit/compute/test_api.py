@@ -444,11 +444,16 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
+    @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
-    def test_attach_volume_new_flow(self, mock_attach, mock_bdm,
-                                    mock_reserve, mock_record):
-        mock_bdm.side_effect = exception.VolumeBDMNotFound(
-                                          volume_id='fake-volume-id')
+    def test_attach_volume_new_flow(
+            self, mock_attach, mock_get_by_volume, mock_get_by_instance,
+            mock_reserve, mock_record
+    ):
+        mock_get_by_instance.side_effect = exception.VolumeBDMNotFound(
+            volume_id='fake-volume-id')
+        mock_get_by_volume.side_effect = exception.VolumeBDMNotFound(
+            volume_id='fake-volume-id')
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
@@ -477,11 +482,16 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
+    @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
-    def test_tagged_volume_attach_new_flow(self, mock_attach, mock_bdm,
-                                           mock_reserve, mock_record):
-        mock_bdm.side_effect = exception.VolumeBDMNotFound(
-                                          volume_id='fake-volume-id')
+    def test_tagged_volume_attach_new_flow(
+            self, mock_attach, mock_get_by_volume, mock_get_by_instance,
+            mock_reserve, mock_record
+    ):
+        mock_get_by_instance.side_effect = exception.VolumeBDMNotFound(
+            volume_id='fake-volume-id')
+        mock_get_by_volume.side_effect = exception.VolumeBDMNotFound(
+            volume_id='fake-volume-id')
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
@@ -513,11 +523,16 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
+    @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
-    def test_attach_volume_attachment_create_fails(self, mock_attach, mock_bdm,
-                                                   mock_reserve):
-        mock_bdm.side_effect = exception.VolumeBDMNotFound(
-                                          volume_id='fake-volume-id')
+    def test_attach_volume_attachment_create_fails(
+            self, mock_attach, mock_get_by_volume, mock_get_by_instance,
+            mock_reserve
+    ):
+        mock_get_by_instance.side_effect = exception.VolumeBDMNotFound(
+            volume_id='fake-volume-id')
+        mock_get_by_volume.side_effect = exception.VolumeBDMNotFound(
+            volume_id='fake-volume-id')
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
@@ -540,6 +555,28 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, volume['id'], instance.uuid)
             self.assertEqual(0, mock_attach.call_count)
             fake_bdm.destroy.assert_called_once_with()
+
+    @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume')
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume_and_instance')
+    def test_attach_volume_bdm_exists(self, mock_by_instance, mock_by_volume):
+        mock_by_instance.side_effect = exception.VolumeBDMNotFound(
+            volume_id=uuids.volume)
+        mock_by_volume.return_value = mock.Mock(
+            spec=objects.BlockDeviceMapping, volume_id=uuids.volume,
+            instance_uuid=uuids.instance)
+        instance = self._create_instance_obj()
+        volume = {'id': uuids.volume, 'multiattach': False}
+        with mock.patch.object(
+            self.compute_api, 'volume_api', mock.MagicMock(spec=cinder.API)
+        ) as mock_v_api:
+            mock_v_api.get.return_value = volume
+            # Assert that we raise InvalidVolume when we find a bdm for the vol
+            self.assertRaises(
+                exception.InvalidVolume,
+                self.compute_api.attach_volume,
+                self.context, instance, uuids.volume
+            )
 
     def test_suspend(self):
         # Ensure instance can be suspended.
