@@ -3472,19 +3472,11 @@ class ComputeManager(manager.Manager):
                 self._notify_instance_rebuild_error(context, instance, e, bdms)
                 raise
             else:
-                instance.apply_migration_context()
-                # NOTE (ndipanov): This save will now update the host and node
-                # attributes making sure that next RT pass is consistent since
-                # it will be based on the instance and not the migration DB
-                # entry.
-                instance.host = self.host
-                instance.node = scheduled_node
-                instance.save()
-                instance.drop_migration_context()
-
-                # NOTE (ndipanov): Mark the migration as done only after we
-                # mark the instance as belonging to this host.
-                self._set_migration_status(migration, 'done')
+                # NOTE(gibi): Let the resource tracker set the instance
+                # host and drop the migration context as we need to hold the
+                # COMPUTE_RESOURCE_SEMAPHORE to avoid the race with
+                # _update_available_resources. See bug 1896463.
+                self.rt.finish_evacuation(instance, scheduled_node, migration)
 
     def _do_rebuild_instance_with_claim(
             self, context, instance, orig_image_ref, image_meta,
