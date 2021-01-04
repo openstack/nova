@@ -21,8 +21,7 @@ from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from webob import exc
 
-from nova.api.openstack.compute import hypervisors \
-        as hypervisors_v21
+from nova.api.openstack.compute import hypervisors as hypervisors_v21
 from nova import exception
 from nova import objects
 from nova import test
@@ -218,11 +217,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
                                        use_admin_context=use_admin_context,
                                        version=self.api_version)
 
-    def _set_up_controller(self):
-        self.controller = hypervisors_v21.HypervisorsController()
-        self.controller.servicegroup_api.service_is_up = mock.MagicMock(
-            return_value=True)
-
     def _get_hyper_id(self):
         """Helper function to get the proper hypervisor id for a request
 
@@ -234,7 +228,10 @@ class HypervisorsTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(HypervisorsTestV21, self).setUp()
-        self._set_up_controller()
+
+        self.controller = hypervisors_v21.HypervisorsController()
+        self.controller.servicegroup_api.service_is_up = mock.MagicMock(
+            return_value=True)
 
         host_api = self.controller.host_api
         host_api.compute_node_get_all = mock.MagicMock(
@@ -262,6 +259,50 @@ class HypervisorsTestV21(test.NoDBTestCase):
             self.TEST_HYPERS_OBJ[0], self.TEST_SERVICES[0], True, req)
 
         self.assertEqual(self.DETAIL_HYPERS_DICTS[0], result)
+
+    def test_view_hypervisor_nodetail_service_down(self):
+        self.controller.servicegroup_api.service_is_up.return_value = False
+
+        expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS[0])
+        expected_dict['state'] = 'down'
+
+        req = self._get_request(True)
+        result = self.controller._view_hypervisor(
+            self.TEST_HYPERS_OBJ[0], self.TEST_SERVICES[0], False, req)
+
+        self.assertEqual(expected_dict, result)
+
+    def test_view_hypervisor_detail_service_down(self):
+        self.controller.servicegroup_api.service_is_up.return_value = False
+
+        expected_dict = copy.deepcopy(self.DETAIL_HYPERS_DICTS[0])
+        expected_dict['state'] = 'down'
+
+        req = self._get_request(True)
+        result = self.controller._view_hypervisor(
+            self.TEST_HYPERS_OBJ[0], self.TEST_SERVICES[0], True, req)
+
+        self.assertEqual(expected_dict, result)
+
+    def test_view_hypervisor_nodetail_service_disabled(self):
+        service = copy.deepcopy(TEST_SERVICES[0])
+        service.disabled = True
+
+        req = self._get_request(True)
+        result = self.controller._view_hypervisor(
+            self.TEST_HYPERS_OBJ[0], service, False, req)
+
+        self.assertEqual('disabled', result['status'])
+
+    def test_view_hypervisor_detail_service_disabled(self):
+        service = copy.deepcopy(TEST_SERVICES[0])
+        service.disabled = True
+
+        req = self._get_request(True)
+        result = self.controller._view_hypervisor(
+            self.TEST_HYPERS_OBJ[0], service, True, req)
+
+        self.assertEqual('disabled', result['status'])
 
     def test_view_hypervisor_servers(self):
         req = self._get_request(True)
