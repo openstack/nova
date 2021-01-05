@@ -3096,3 +3096,148 @@ class LibvirtCommandsTestCase(test.NoDBTestCase):
         self.assertEqual(3, ret)
         self.assertIn("No machine type registered for instance "
                       f"{uuidsentinel.instance}", output)
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
+    @mock.patch('nova.context.get_admin_context')
+    def test_update(self, mock_get_context, mock_update):
+        mock_update.return_value = ('pc-1.2', 'pc-1.1')
+        ret = self.commands.update_machine_type(
+            instance_uuid=uuidsentinel.instance,
+            machine_type='pc-1.2'
+        )
+        mock_update.assert_called_once_with(
+            mock_get_context.return_value,
+            uuidsentinel.instance,
+            'pc-1.2',
+            force=False
+        )
+        output = self.output.getvalue()
+        self.assertEqual(0, ret)
+        self.assertIn(
+            f"Updated instance {uuidsentinel.instance} machine type to pc-1.2 "
+            "(previously pc-1.1)",
+            output
+        )
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
+    @mock.patch('nova.context.get_admin_context')
+    def test_update_force(self, mock_get_context, mock_update):
+        mock_update.return_value = ('q35', 'pc')
+        ret = self.commands.update_machine_type(
+            instance_uuid=uuidsentinel.instance,
+            machine_type='q35',
+            force=True
+        )
+        mock_update.assert_called_once_with(
+            mock_get_context.return_value,
+            uuidsentinel.instance,
+            'q35',
+            force=True
+        )
+        output = self.output.getvalue()
+        self.assertEqual(0, ret)
+        self.assertIn(
+            f"Updated instance {uuidsentinel.instance} machine type to q35 "
+            "(previously pc)",
+            output
+        )
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_update_unknown_failure(self, mock_update):
+        mock_update.side_effect = Exception()
+        ret = self.commands.update_machine_type(
+            instance_uuid=uuidsentinel.instance,
+            machine_type=mock.sentinel.machine_type
+        )
+        self.assertEqual(1, ret)
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_update_instance_mapping_not_found(self, mock_update):
+        mock_update.side_effect = exception.InstanceMappingNotFound(
+            uuid=uuidsentinel.instance
+        )
+        ret = self.commands.update_machine_type(
+            instance_uuid=uuidsentinel.instance,
+            machine_type=mock.sentinel.machine_type
+        )
+        output = self.output.getvalue()
+        self.assertEqual(2, ret)
+        self.assertIn(
+            f"Instance {uuidsentinel.instance} has no mapping to a cell.",
+            output
+        )
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_update_instance_not_found(self, mock_update):
+        mock_update.side_effect = exception.InstanceNotFound(
+            instance_id=uuidsentinel.instance
+        )
+        ret = self.commands.update_machine_type(
+            instance_uuid=uuidsentinel.instance,
+            machine_type=mock.sentinel.machine_type
+        )
+        output = self.output.getvalue()
+        self.assertEqual(2, ret)
+        self.assertIn(
+            f"Instance {uuidsentinel.instance} could not be found.",
+            output
+        )
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_update_instance_invalid_state(self, mock_update):
+        mock_update.side_effect = exception.InstanceInvalidState(
+            instance_uuid=uuidsentinel.instance,
+            attr='vm_state',
+            state='ACTIVE',
+            method='update machine type'
+        )
+        ret = self.commands.update_machine_type(
+            instance_uuid=uuidsentinel.instance,
+            machine_type=mock.sentinel.machine_type
+        )
+        output = self.output.getvalue()
+        self.assertEqual(3, ret)
+        self.assertIn(
+            f"Instance {uuidsentinel.instance} in vm_state ACTIVE. Cannot "
+            "update machine type while the instance is in this state.",
+            output
+        )
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_update_invalid_machine_type_update(self, mock_update):
+        mock_update.side_effect = exception.InvalidMachineTypeUpdate(
+            existing_machine_type='q35',
+            machine_type='pc',
+        )
+        ret = self.commands.update_machine_type(
+            instance_uuid=uuidsentinel.instance,
+            machine_type=mock.sentinel.machine_type
+        )
+        output = self.output.getvalue()
+        self.assertEqual(4, ret)
+        self.assertIn(
+            "Cannot update machine type q35 to pc.",
+            output
+        )
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_update_unsupported_machine_type(self, mock_update):
+        mock_update.side_effect = exception.UnsupportedMachineType(
+            machine_type='foo'
+        )
+        ret = self.commands.update_machine_type(
+            instance_uuid=uuidsentinel.instance,
+            machine_type=mock.sentinel.machine_type
+        )
+        output = self.output.getvalue()
+        self.assertEqual(5, ret)
+        self.assertIn(
+            "Machine type foo is not supported.",
+            output
+        )

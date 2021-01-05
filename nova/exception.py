@@ -1751,6 +1751,15 @@ class InvalidMachineType(Invalid):
                 "%(image_name)s (%(image_id)s): %(reason)s")
 
 
+class InvalidMachineTypeUpdate(Invalid):
+    msg_fmt = _("Cannot update machine type %(existing_machine_type)s to "
+                "%(machine_type)s.")
+
+
+class UnsupportedMachineType(Invalid):
+    msg_fmt = _("Machine type %(machine_type)s is not supported.")
+
+
 class InvalidVirtualMachineMode(Invalid):
     msg_fmt = _("Virtual machine mode '%(vmmode)s' is not recognised")
 

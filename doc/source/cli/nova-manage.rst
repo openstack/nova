@@ -731,6 +731,50 @@ libvirt
        * - 3
          - No machine type found for instance
 
+``nova-manage libvirt update_machine_type [instance-uuid] [machine_type] [--force]``
+    Set or update the recorded machine type of an instance.
+
+    The following criteria must also be met when using this command:
+
+    * The instance must have a ``vm_state`` of ``STOPPED``, ``SHELVED`` or
+      ``SHELVED_OFFLOADED``.
+
+    * The machine type is supported. The supported list includes alias and
+      versioned types of ``pc``, ``pc-i440fx``, ``pc-q35``, ``q35``, ``virt``
+      or ``s390-ccw-virtio``.
+
+    * The update will not move the instance between underlying machine types.
+      For example, ``pc`` to ``q35``.
+
+    * The update will not move the instance between an alias and versioned
+      machine type or vice versa. For example, ``pc`` to ``pc-1.2.3`` or
+      ``pc-1.2.3`` to ``pc``.
+
+    A ``--force`` flag is provided to skip the above checks but caution
+    should be taken as this could easily lead to the underlying ABI of the
+    instance changing when moving between machine types.
+
+    **Return Codes**
+
+    .. list-table::
+       :widths: 20 80
+       :header-rows: 1
+
+       * - Return code
+         - Description
+       * - 0
+         - Update completed successfully
+       * - 1
+         - An unexpected error occurred
+       * - 2
+         - Unable to find instance or instance mapping
+       * - 3
+         - The instance has an invalid vm_state
+       * - 4
+         - The proposed update of the machine type is invalid
+       * - 5
+         - The provided machine type is unsupported
+
 See Also
 ========
 

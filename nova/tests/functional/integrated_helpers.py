@@ -526,6 +526,14 @@ class InstanceHelperMixin:
         self._wait_for_migration_status(server, [expected_migration_status])
         return self._wait_for_server_parameter(server, expected_result)
 
+    def _start_server(self, server):
+        self.api.post_server_action(server['id'], {'os-start': None})
+        return self._wait_for_state_change(server, 'ACTIVE')
+
+    def _stop_server(self, server):
+        self.api.post_server_action(server['id'], {'os-stop': None})
+        return self._wait_for_state_change(server, 'SHUTOFF')
+
 
 class PlacementHelperMixin:
     """A helper mixin for interacting with placement."""

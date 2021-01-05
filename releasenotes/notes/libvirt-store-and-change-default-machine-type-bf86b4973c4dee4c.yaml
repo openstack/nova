@@ -16,3 +16,27 @@ upgrade:
 
     This command will print the current machine type if set in the image
     metadata of the instance.
+
+    ``nova-manage libvirt set_machine_type``
+
+    This command will set or update the machine type of the instance assuming
+    the following criteria are met:
+
+    * The instance must have a ``vm_state`` of ``STOPPED``, ``SHELVED`` or
+      ``SHELVED_OFFLOADED``.
+
+    * The machine type is supported. The supported list includes alias and
+      versioned types of ``pc``, ``pc-i440fx``, ``pc-q35``, ``q35``, ``virt``,
+      ``s390-ccw-virtio``, ``hyperv-gen1`` and ``hyperv-gen2`` as supported by
+      the hyperv driver.
+
+    * The update will not move the instance between underlying machine types.
+      For example, ``pc`` to ``q35``.
+
+    * The update will not move the instance between an alias and versioned
+      machine type or vice versa. For example, ``pc`` to ``pc-1.2.3`` or
+      ``pc-1.2.3`` to ``pc``.
+
+    A ``--force`` flag is provided to skip the above checks but caution
+    should be taken as this could easily lead to the underlying ABI of the
+    instance changing when moving between machine types.

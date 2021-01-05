@@ -2657,6 +2657,67 @@ class LibvirtCommands(object):
             LOG.exception('Unexpected error')
             return 1
 
+    @action_description(
+        _("Set or update the stored machine type of the instance in the "
+          "database. This is only allowed for instances with a STOPPED, "
+          "SHELVED or SHELVED_OFFLOADED vm_state."))
+    @args('instance_uuid', metavar='<instance_uuid>',
+          help='UUID of instance to update')
+    @args('machine_type', metavar='<machine_type>',
+          help='Machine type to set')
+    @args('--force', action='store_true', default=False, dest='force',
+          help='Force the update of the stored machine type')
+    def update_machine_type(
+        self,
+        instance_uuid=None,
+        machine_type=None,
+        force=False
+    ):
+        """Set or update the machine type of a given instance.
+
+        Return codes:
+
+        * 0: Command completed successfully.
+        * 1: An unexpected error happened.
+        * 2: Unable to find the instance or instance cell mapping.
+        * 3: Invalid instance vm_state.
+        * 4: Unable to move between underlying machine types (pc to q35 etc)
+             or to older versions.
+        * 5: Unsupported machine type.
+        """
+        ctxt = context.get_admin_context()
+        if force:
+            print(_("Forcing update of machine type."))
+
+        try:
+            rtype, ptype = machine_type_utils.update_machine_type(
+                ctxt, instance_uuid, machine_type, force=force)
+        except exception.UnsupportedMachineType as e:
+            print(str(e))
+            return 5
+        except exception.InvalidMachineTypeUpdate as e:
+            print(str(e))
+            return 4
+        except exception.InstanceInvalidState as e:
+            print(str(e))
+            return 3
+        except (
+            exception.InstanceNotFound,
+            exception.InstanceMappingNotFound,
+        ) as e:
+            print(str(e))
+            return 2
+        except Exception:
+            LOG.exception('Unexpected error')
+            return 1
+
+        print(_("Updated instance %(instance_uuid)s machine type to "
+                "%(machine_type)s (previously %(previous_type)s)") %
+                {'instance_uuid': instance_uuid,
+                 'machine_type': rtype,
+                 'previous_type': ptype})
+        return 0
+
 
 CATEGORIES = {
     'api_db': ApiDbCommands,
