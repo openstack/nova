@@ -293,3 +293,15 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
         # Reboot the server so the config is updated so we can assert
         self._reboot_server(server, hard=True)
         self._assert_machine_type(server['id'], 'q35')
+
+    def test_machine_type_list_unset_machine_type(self):
+        self.flags(hw_machine_type='x86_64=pc', group='libvirt')
+
+        server_with, server_without = self._create_servers()
+        self._unset_machine_type(server_without['id'])
+
+        instances = machine_type_utils.get_instances_without_type(self.context)
+        self.assertEqual(
+            server_without['id'],
+            instances[0].uuid
+        )

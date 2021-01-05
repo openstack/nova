@@ -2718,6 +2718,37 @@ class LibvirtCommands(object):
                  'previous_type': ptype})
         return 0
 
+    @action_description(
+        _("List the UUIDs of instances that do not have hw_machine_type set "
+          "in their image metadata"))
+    @args('--cell-uuid', metavar='<cell_uuid>', dest='cell_uuid',
+          required=False, help='UUID of cell from which to list instances')
+    def list_unset_machine_type(self, cell_uuid=None):
+        """List the UUIDs of instances without image_hw_machine_type set
+
+        Return codes:
+        * 0: Command completed successfully, no instances found.
+        * 1: An unexpected error happened.
+        * 2: Unable to find cell mapping.
+        * 3: Instances found without hw_machine_type set.
+        """
+        try:
+            instance_list = machine_type_utils.get_instances_without_type(
+                context.get_admin_context(), cell_uuid)
+        except exception.CellMappingNotFound as e:
+            print(str(e))
+            return 2
+        except Exception:
+            LOG.exception('Unexpected error')
+            return 1
+
+        if instance_list:
+            print('\n'.join(i.uuid for i in instance_list))
+            return 3
+        else:
+            print(_("No instances found without hw_machine_type set."))
+            return 0
+
 
 CATEGORIES = {
     'api_db': ApiDbCommands,

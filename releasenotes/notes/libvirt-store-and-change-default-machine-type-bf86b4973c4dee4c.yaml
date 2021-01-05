@@ -40,3 +40,9 @@ upgrade:
     A ``--force`` flag is provided to skip the above checks but caution
     should be taken as this could easily lead to the underlying ABI of the
     instance changing when moving between machine types.
+
+    ``nova-manage libvirt list_unset_machine_type``
+
+    This command will list instance UUIDs that do not have a machine type
+    recorded. An optional cell UUID can be provided to list on instances
+    without a machine type from that cell.
