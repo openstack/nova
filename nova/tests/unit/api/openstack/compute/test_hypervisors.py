@@ -133,7 +133,13 @@ def fake_compute_node_search_by_hypervisor(context, hypervisor_re):
 
 def fake_compute_node_get(context, compute_id):
     for hyper in TEST_HYPERS_OBJ:
-        if hyper.uuid == compute_id or hyper.id == int(compute_id):
+        if hyper.uuid == compute_id:
+            return hyper
+
+        if (
+            (isinstance(compute_id, int) or compute_id.isdigit()) and
+            hyper.id == int(compute_id)
+        ):
             return hyper
     raise exception.ComputeHostNotFound(host=compute_id)
 
@@ -543,33 +549,49 @@ class HypervisorsTestV21(test.NoDBTestCase):
 
         self.assertEqual(dict(hypervisor=self.DETAIL_HYPERS_DICTS[0]), result)
 
+    def test_uptime(self):
+        with mock.patch.object(
+            self.controller.host_api, 'get_host_uptime',
+            return_value="fake uptime"
+        ) as mock_get_uptime:
+            req = self._get_request(True)
+            hyper_id = self._get_hyper_id()
+
+            result = self.controller.uptime(req, hyper_id)
+
+            expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS[0])
+            expected_dict.update({'uptime': "fake uptime"})
+            self.assertEqual(dict(hypervisor=expected_dict), result)
+            self.assertEqual(1, mock_get_uptime.call_count)
+
     def test_uptime_noid(self):
         req = self._get_request(True)
         hyper_id = uuids.hyper3 if self.expect_uuid_for_id else '3'
         self.assertRaises(exc.HTTPNotFound, self.controller.uptime, req,
                           hyper_id)
 
-    def test_uptime_notimplemented(self):
-        with mock.patch.object(self.controller.host_api, 'get_host_uptime',
-                               side_effect=exc.HTTPNotImplemented()
-                               ) as mock_get_uptime:
+    def test_uptime_not_implemented(self):
+        with mock.patch.object(
+            self.controller.host_api, 'get_host_uptime',
+            side_effect=NotImplementedError,
+        ) as mock_get_uptime:
             req = self._get_request(True)
             hyper_id = self._get_hyper_id()
-            self.assertRaises(exc.HTTPNotImplemented,
-                              self.controller.uptime, req, hyper_id)
+            self.assertRaises(
+                exc.HTTPNotImplemented,
+                self.controller.uptime, req, hyper_id)
             self.assertEqual(1, mock_get_uptime.call_count)
 
-    def test_uptime_implemented(self):
-        with mock.patch.object(self.controller.host_api, 'get_host_uptime',
-                               return_value="fake uptime"
-                               ) as mock_get_uptime:
+    def test_uptime_host_not_found(self):
+        with mock.patch.object(
+            self.controller.host_api, 'get_host_uptime',
+            side_effect=exception.HostNotFound('foo'),
+        ) as mock_get_uptime:
             req = self._get_request(True)
             hyper_id = self._get_hyper_id()
-            result = self.controller.uptime(req, hyper_id)
-
-            expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS[0])
-            expected_dict.update({'uptime': "fake uptime"})
-            self.assertEqual(dict(hypervisor=expected_dict), result)
+            self.assertRaises(
+                exc.HTTPBadRequest,
+                self.controller.uptime, req, hyper_id)
             self.assertEqual(1, mock_get_uptime.call_count)
 
     def test_uptime_non_integer_id(self):
@@ -668,11 +690,31 @@ class HypervisorsTestV21(test.NoDBTestCase):
 
     def test_servers_not_mapped(self):
         req = self._get_request(True)
-        with mock.patch.object(self.controller.host_api,
-                               'instance_get_all_by_host') as m:
-            m.side_effect = exception.HostMappingNotFound(name='something')
-            self.assertRaises(exc.HTTPNotFound,
-                              self.controller.servers, req, 'hyper')
+        with mock.patch.object(
+            self.controller.host_api, 'instance_get_all_by_host',
+            side_effect=exception.HostMappingNotFound(name='something'),
+        ):
+            self.assertRaises(
+                exc.HTTPNotFound,
+                self.controller.servers, req, 'hyper')
+
+    def test_servers_compute_host_not_found(self):
+        req = self._get_request(True)
+
+        with test.nested(
+            mock.patch.object(
+                self.controller.host_api, 'instance_get_all_by_host',
+                side_effect=fake_instance_get_all_by_host,
+            ),
+            mock.patch.object(
+                self.controller.host_api, 'service_get_by_compute_host',
+                side_effect=exception.ComputeHostNotFound(host='foo'),
+            ),
+        ):
+            # The result should be empty since every attempt to fetch the
+            # service for a hypervisor "failed"
+            result = self.controller.servers(req, 'hyper')
+            self.assertEqual({'hypervisors': []}, result)
 
     def test_servers_non_id(self):
         with mock.patch.object(self.controller.host_api,
@@ -1020,6 +1062,26 @@ class HypervisorsTestV253(HypervisorsTestV252):
                 side_effect=exception.HostMappingNotFound(name='something')):
             result = self.controller.index(req)
             self.assertEqual(dict(hypervisors=[]), result)
+
+    def test_servers_compute_host_not_found(self):
+        req = self._get_request(
+            use_admin_context=True,
+            url='/os-hypervisors?with_servers=1')
+
+        with test.nested(
+            mock.patch.object(
+                self.controller.host_api, 'instance_get_all_by_host',
+                side_effect=fake_instance_get_all_by_host,
+            ),
+            mock.patch.object(
+                self.controller.host_api, 'service_get_by_compute_host',
+                side_effect=exception.ComputeHostNotFound(host='foo'),
+            ),
+        ):
+            # The result should be empty since every attempt to fetch the
+            # service for a hypervisor "failed"
+            result = self.controller.index(req)
+            self.assertEqual({'hypervisors': []}, result)
 
     def test_list_with_servers(self):
         """Tests GET /os-hypervisors?with_servers=True"""

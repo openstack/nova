@@ -172,18 +172,22 @@ class HypervisorsController(wsgi.Controller):
                         context, hyp.host)
                 service = self.host_api.service_get_by_compute_host(
                     context, hyp.host)
-                hypervisors_list.append(
-                    self._view_hypervisor(
-                        hyp, service, detail, req, servers=instances,
-                        with_servers=with_servers))
-            except (exception.ComputeHostNotFound,
-                    exception.HostMappingNotFound):
+            except (
+                exception.ComputeHostNotFound,
+                exception.HostMappingNotFound,
+            ):
                 # The compute service could be deleted which doesn't delete
                 # the compute node record, that has to be manually removed
                 # from the database so we just ignore it when listing nodes.
                 LOG.debug('Unable to find service for compute node %s. The '
                           'service may be deleted and compute nodes need to '
                           'be manually cleaned up.', hyp.host)
+                continue
+
+            hypervisors_list.append(
+                self._view_hypervisor(
+                    hyp, service, detail, req, servers=instances,
+                    with_servers=with_servers))
 
         hypervisors_dict = dict(hypervisors=hypervisors_list)
         if links:
@@ -311,16 +315,30 @@ class HypervisorsController(wsgi.Controller):
 
         try:
             hyp = self.host_api.compute_node_get(context, id)
-            instances = None
-            if with_servers:
-                instances = self.host_api.instance_get_all_by_host(
-                    context, hyp.host)
-            service = self.host_api.service_get_by_compute_host(
-                context, hyp.host)
-        except (ValueError, exception.ComputeHostNotFound,
-                exception.HostMappingNotFound):
+        except exception.ComputeHostNotFound:
+            # If the ComputeNode is missing, that's a straight up 404
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
+
+        instances = None
+        if with_servers:
+            try:
+                instances = self.host_api.instance_get_all_by_host(
+                    context, hyp.host)
+            except exception.HostMappingNotFound:
+                msg = _("Hypervisor with ID '%s' could not be found.") % id
+                raise webob.exc.HTTPNotFound(explanation=msg)
+
+        try:
+            service = self.host_api.service_get_by_compute_host(
+                context, hyp.host)
+        except (
+            exception.ComputeHostNotFound,
+            exception.HostMappingNotFound,
+        ):
+            msg = _("Hypervisor with ID '%s' could not be found.") % id
+            raise webob.exc.HTTPNotFound(explanation=msg)
+
         return dict(hypervisor=self._view_hypervisor(
             hyp, service, True, req, instances, with_servers))
 
@@ -333,18 +351,30 @@ class HypervisorsController(wsgi.Controller):
 
         try:
             hyp = self.host_api.compute_node_get(context, id)
-        except (ValueError, exception.ComputeHostNotFound):
+        except exception.ComputeHostNotFound:
+            # If the ComputeNode is missing, that's a straight up 404
+            msg = _("Hypervisor with ID '%s' could not be found.") % id
+            raise webob.exc.HTTPNotFound(explanation=msg)
+
+        try:
+            service = self.host_api.service_get_by_compute_host(
+                context, hyp.host)
+        except (
+            exception.ComputeHostNotFound,
+            exception.HostMappingNotFound,
+        ):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
 
         # Get the uptime
         try:
-            host = hyp.host
-            uptime = self.host_api.get_host_uptime(context, host)
-            service = self.host_api.service_get_by_compute_host(context, host)
+            uptime = self.host_api.get_host_uptime(context, hyp.host)
         except NotImplementedError:
             common.raise_feature_not_supported()
-        except exception.ComputeServiceUnavailable as e:
+        except (
+            exception.ComputeServiceUnavailable,
+            exception.HostNotFound,
+        ) as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.HostMappingNotFound:
             # NOTE(danms): This mirrors the compute_node_get() behavior
@@ -366,18 +396,33 @@ class HypervisorsController(wsgi.Controller):
         """
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME % 'search', target={})
-        hypervisors = self._get_compute_nodes_by_name_pattern(context, id)
-        try:
-            return dict(hypervisors=[
-                self._view_hypervisor(
-                    hyp,
-                    self.host_api.service_get_by_compute_host(context,
-                                                              hyp.host),
-                    False, req)
-                for hyp in hypervisors])
-        except exception.HostMappingNotFound:
-            msg = _("No hypervisor matching '%s' could be found.") % id
-            raise webob.exc.HTTPNotFound(explanation=msg)
+
+        # Get all compute nodes with a hypervisor_hostname that matches
+        # the given pattern. If none are found then it's a 404 error.
+        compute_nodes = self._get_compute_nodes_by_name_pattern(context, id)
+
+        hypervisors = []
+        for compute_node in compute_nodes:
+            try:
+                service = self.host_api.service_get_by_compute_host(
+                    context, compute_node.host)
+            except exception.ComputeHostNotFound:
+                # The compute service could be deleted which doesn't delete
+                # the compute node record, that has to be manually removed
+                # from the database so we just ignore it when listing nodes.
+                LOG.debug(
+                    'Unable to find service for compute node %s. The '
+                    'service may be deleted and compute nodes need to '
+                    'be manually cleaned up.', compute_node.host)
+                continue
+            except exception.HostMappingNotFound as e:
+                raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+            hypervisor = self._view_hypervisor(
+                compute_node, service, False, req)
+            hypervisors.append(hypervisor)
+
+        return {'hypervisors': hypervisors}
 
     @wsgi.Controller.api_version('2.1', '2.52')
     @wsgi.expected_errors(404)
@@ -390,20 +435,39 @@ class HypervisorsController(wsgi.Controller):
         """
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME % 'servers', target={})
+
+        # Get all compute nodes with a hypervisor_hostname that matches
+        # the given pattern. If none are found then it's a 404 error.
         compute_nodes = self._get_compute_nodes_by_name_pattern(context, id)
+
         hypervisors = []
         for compute_node in compute_nodes:
             try:
                 instances = self.host_api.instance_get_all_by_host(context,
                     compute_node.host)
-                service = self.host_api.service_get_by_compute_host(
-                    context, compute_node.host)
             except exception.HostMappingNotFound as e:
                 raise webob.exc.HTTPNotFound(explanation=e.format_message())
-            hyp = self._view_hypervisor(compute_node, service, False, req,
-                                        instances)
-            hypervisors.append(hyp)
-        return dict(hypervisors=hypervisors)
+
+            try:
+                service = self.host_api.service_get_by_compute_host(
+                    context, compute_node.host)
+            except exception.ComputeHostNotFound:
+                # The compute service could be deleted which doesn't delete
+                # the compute node record, that has to be manually removed
+                # from the database so we just ignore it when listing nodes.
+                LOG.debug(
+                    'Unable to find service for compute node %s. The '
+                    'service may be deleted and compute nodes need to '
+                    'be manually cleaned up.', compute_node.host)
+                continue
+            except exception.HostMappingNotFound as e:
+                raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+            hypervisor = self._view_hypervisor(
+                compute_node, service, False, req, instances)
+            hypervisors.append(hypervisor)
+
+        return {'hypervisors': hypervisors}
 
     @wsgi.expected_errors(())
     def statistics(self, req):
