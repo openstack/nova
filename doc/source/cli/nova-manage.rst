@@ -708,6 +708,28 @@ Placement
        * - 127
          - Invalid input
 
+libvirt
+~~~~~~~
+
+``nova-manage libvirt get_machine_type [instance-uuid]``
+    Fetch and display the recorded machine type of a libvirt instance.
+
+    **Return Codes**
+
+    .. list-table::
+       :widths: 20 80
+       :header-rows: 1
+
+       * - Return code
+         - Description
+       * - 0
+         - Successfully completed
+       * - 1
+         - An unexpected error occurred
+       * - 2
+         - Unable to find instance or instance mapping
+       * - 3
+         - No machine type found for instance
 
 See Also
 ========

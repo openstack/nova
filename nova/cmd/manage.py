@@ -67,6 +67,7 @@ from nova import rpc
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import version
+from nova.virt.libvirt import machine_type_utils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -2620,11 +2621,49 @@ class PlacementCommands(object):
         return 0
 
 
+class LibvirtCommands(object):
+    """Commands for managing libvirt instances"""
+
+    @action_description(
+        _("Fetch the stored machine type of the instance from the database."))
+    @args('instance_uuid', metavar='<instance_uuid>',
+          help='UUID of instance to fetch the machine type for')
+    def get_machine_type(self, instance_uuid=None):
+        """Fetch the stored machine type of the instance from the database.
+
+        Return codes:
+
+        * 0: Command completed successfully.
+        * 1: An unexpected error happened.
+        * 2: Unable to find instance or instance mapping.
+        * 3: No machine type found for the instance.
+
+        """
+        try:
+            ctxt = context.get_admin_context()
+            mtype = machine_type_utils.get_machine_type(ctxt, instance_uuid)
+            if mtype:
+                print(mtype)
+                return 0
+            else:
+                print(_('No machine type registered for instance %s' %
+                        instance_uuid))
+                return 3
+        except (exception.InstanceNotFound,
+                exception.InstanceMappingNotFound) as e:
+            print(str(e))
+            return 2
+        except Exception:
+            LOG.exception('Unexpected error')
+            return 1
+
+
 CATEGORIES = {
     'api_db': ApiDbCommands,
     'cell_v2': CellV2Commands,
     'db': DbCommands,
-    'placement': PlacementCommands
+    'placement': PlacementCommands,
+    'libvirt': LibvirtCommands,
 }
 
 

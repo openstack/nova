@@ -3019,3 +3019,80 @@ class TestNovaManageMain(test.NoDBTestCase):
             mock_conf.post_mortem = True
             self.assertEqual(255, manage.main())
             self.assertTrue(mock_pm.called)
+
+
+class LibvirtCommandsTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+        self.commands = manage.LibvirtCommands()
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.get_machine_type')
+    @mock.patch('nova.context.get_admin_context')
+    def test_get(self, mock_get_context, mock_get_machine_type):
+        mock_get_context.return_value = mock.sentinel.admin_context
+        mock_get_machine_type.return_value = 'pc'
+        ret = self.commands.get_machine_type(
+            instance_uuid=uuidsentinel.instance
+        )
+        mock_get_machine_type.assert_called_once_with(
+            mock.sentinel.admin_context,
+            uuidsentinel.instance
+        )
+        output = self.output.getvalue()
+        self.assertEqual(0, ret)
+        self.assertIn('pc', output)
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.get_machine_type')
+    @mock.patch('nova.context.get_admin_context')
+    def test_get_unknown_failure(
+        self, mock_get_context, mock_get_machine_type
+    ):
+        mock_get_machine_type.side_effect = Exception()
+        ret = self.commands.get_machine_type(
+            instance_uuid=uuidsentinel.instance
+        )
+        self.assertEqual(1, ret)
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.get_machine_type')
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_get_unable_to_find_instance_mapping(self, mock_get_machine_type):
+        mock_get_machine_type.side_effect = exception.InstanceMappingNotFound(
+            uuid=uuidsentinel.instance)
+        ret = self.commands.get_machine_type(
+            instance_uuid=uuidsentinel.instance
+        )
+        output = self.output.getvalue()
+        self.assertEqual(2, ret)
+        self.assertIn(
+            f"Instance {uuidsentinel.instance} has no mapping to a cell.",
+            output)
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.get_machine_type')
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_get_machine_type_unable_to_find_instance(
+        self, mock_get_machine_type
+    ):
+        mock_get_machine_type.side_effect = exception.InstanceNotFound(
+            instance_id=uuidsentinel.instance)
+        ret = self.commands.get_machine_type(
+            instance_uuid=uuidsentinel.instance)
+        output = self.output.getvalue()
+        self.assertEqual(2, ret)
+        self.assertIn(
+            f"Instance {uuidsentinel.instance} could not be found.",
+            output)
+
+    @mock.patch('nova.virt.libvirt.machine_type_utils.get_machine_type',
+                new=mock.Mock(return_value=None))
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_get_none_found(self):
+        ret = self.commands.get_machine_type(
+            instance_uuid=uuidsentinel.instance
+        )
+        output = self.output.getvalue()
+        self.assertEqual(3, ret)
+        self.assertIn("No machine type registered for instance "
+                      f"{uuidsentinel.instance}", output)

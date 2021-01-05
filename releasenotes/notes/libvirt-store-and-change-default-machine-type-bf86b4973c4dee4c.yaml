@@ -8,3 +8,11 @@ upgrade:
     This machine type will then be used when the instance is restarted or
     migrated as it will now appear as an image metadata property associated
     with the instance.
+
+    The following new ``nova-manage`` commands have been introduced to help
+    operators manage the ``hw_machine_type`` image property:
+
+    ``nova-manage libvirt get_machine_type``
+
+    This command will print the current machine type if set in the image
+    metadata of the instance.
