@@ -766,119 +766,6 @@ class VCPUTopologyTest(test.NoDBTestCase):
                 },
                 "expect": [16, 1, 1]
             },
-            {  # NUMA needs threads, only cores requested by flavor
-                "allow_threads": True,
-                "flavor": objects.Flavor(
-                    vcpus=4, memory_mb=2048,
-                    extra_specs={
-                        "hw:cpu_cores": "2",
-                    }
-                ),
-                "image": {
-                    "properties": {
-                        "hw_cpu_max_cores": 2,
-                    }
-                },
-                "numa_topology": objects.InstanceNUMATopology(cells=[
-                    objects.InstanceNUMACell(
-                        id=0, cpuset=set([0, 1]), pcpuset=set(), memory=1024,
-                        cpu_topology=objects.VirtCPUTopology(
-                            sockets=1, cores=1, threads=2)),
-                    objects.InstanceNUMACell(
-                        id=1, cpuset=set([2, 3]), pcpuset=set(), memory=1024),
-                ]),
-                "expect": [1, 2, 2]
-            },
-            {  # NUMA needs threads, but more than requested by flavor - the
-               # least amount of threads wins
-                "allow_threads": True,
-                "flavor": objects.Flavor(
-                    vcpus=4, memory_mb=2048,
-                    extra_specs={
-                        "hw:cpu_threads": "2",
-                    }
-                ),
-                "image": {
-                    "properties": {}
-                },
-                "numa_topology": objects.InstanceNUMATopology(cells=[
-                    objects.InstanceNUMACell(
-                        id=0, cpuset=set([0, 1, 2, 3]), pcpuset=set(),
-                        memory=2048,
-                        cpu_topology=objects.VirtCPUTopology(
-                            sockets=1, cores=1, threads=4)),
-                ]),
-                "expect": [2, 1, 2]
-            },
-            {  # NUMA needs threads, but more than limit in flavor - the
-               # least amount of threads which divides into the vcpu
-               # count wins. So with desired 4, max of 3, and
-               # vcpu count of 4, we should get 2 threads.
-                "allow_threads": True,
-                "flavor": objects.Flavor(
-                    vcpus=4, memory_mb=2048,
-                    extra_specs={
-                        "hw:cpu_max_sockets": "5",
-                        "hw:cpu_max_cores": "2",
-                        "hw:cpu_max_threads": "3",
-                    }
-                ),
-                "image": {
-                    "properties": {}
-                },
-                "numa_topology": objects.InstanceNUMATopology(cells=[
-                    objects.InstanceNUMACell(
-                        id=0, cpuset=set([0, 1, 2, 3]), pcpuset=set(),
-                        memory=2048,
-                        cpu_topology=objects.VirtCPUTopology(
-                            sockets=1, cores=1, threads=4)),
-                ]),
-                "expect": [2, 1, 2]
-            },
-            {  # NUMA needs threads, but thread count does not
-               # divide into flavor vcpu count, so we must
-               # reduce thread count to closest divisor
-                "allow_threads": True,
-                "flavor": objects.Flavor(
-                    vcpus=6, memory_mb=2048,
-                    extra_specs={}
-                ),
-                "image": {
-                    "properties": {}
-                },
-                "numa_topology": objects.InstanceNUMATopology(cells=[
-                    objects.InstanceNUMACell(
-                        id=0, cpuset=set([0, 1, 2, 3]), pcpuset=set(),
-                        memory=2048,
-                        cpu_topology=objects.VirtCPUTopology(
-                            sockets=1, cores=1, threads=4)),
-                ]),
-                "expect": [2, 1, 3]
-            },
-            {  # NUMA needs different number of threads per cell - the least
-               # amount of threads wins
-                "allow_threads": True,
-                "flavor": objects.Flavor(
-                    vcpus=8, memory_mb=2048,
-                    extra_specs={}
-                ),
-                "image": {
-                    "properties": {}
-                },
-                "numa_topology": objects.InstanceNUMATopology(cells=[
-                    objects.InstanceNUMACell(
-                        id=0, cpuset=set([0, 1, 2, 3]), pcpuset=set(),
-                        memory=1024,
-                        cpu_topology=objects.VirtCPUTopology(
-                            sockets=1, cores=2, threads=2)),
-                    objects.InstanceNUMACell(
-                        id=1, cpuset=set([4, 5, 6, 7]), pcpuset=set(),
-                        memory=1024,
-                        cpu_topology=objects.VirtCPUTopology(
-                            sockets=1, cores=1, threads=4)),
-                ]),
-                "expect": [4, 1, 2]
-            },
         ]
 
         for topo_test in testdata:
@@ -886,8 +773,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
             topology = hw._get_desirable_cpu_topologies(
                 topo_test["flavor"],
                 image_meta,
-                topo_test["allow_threads"],
-                topo_test.get("numa_topology"))[0]
+                topo_test["allow_threads"],)[0]
 
             self.assertEqual(topo_test["expect"][0], topology.sockets)
             self.assertEqual(topo_test["expect"][1], topology.cores)
@@ -3284,8 +3170,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
 
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=3, threads=1)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+        self.assertNotIn('cpu_topology', inst_pin)
         got_pinning = {x: x for x in range(0, 3)}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
 
@@ -3340,8 +3225,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
 
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=4, threads=1)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+        self.assertNotIn('cpu_topology', inst_pin)
         got_pinning = {x: x for x in range(0, 4)}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
 
@@ -3369,8 +3253,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
 
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+        self.assertNotIn('cpu_topology', inst_pin)
         got_pinning = {x: x for x in range(0, 4)}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
 
@@ -3398,8 +3281,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
 
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=4, threads=2)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+        self.assertNotIn('cpu_topology', inst_pin)
         got_pinning = {x: x for x in range(0, 8)}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
 
@@ -3426,8 +3308,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
 
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+        self.assertNotIn('cpu_topology', inst_pin)
         got_pinning = {0: 0, 1: 3, 2: 4, 3: 7}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
 
@@ -3454,8 +3335,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
 
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=1, threads=4)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+        self.assertNotIn('cpu_topology', inst_pin)
         got_pinning = {x: x for x in range(0, 4)}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
 
@@ -3482,8 +3362,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
 
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+        self.assertNotIn('cpu_topology', inst_pin)
         got_pinning = {x: x for x in range(0, 4)}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
 
@@ -3561,8 +3440,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
 
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+        self.assertNotIn('cpu_topology', inst_pin)
 
     def test_get_pinning_require_policy_fits_w_usage(self):
         host_pin = objects.NUMACell(
@@ -3588,8 +3466,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
 
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=2)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+        self.assertNotIn('cpu_topology', inst_pin)
 
     def test_get_pinning_host_siblings_instance_odd_fit(self):
         host_pin = objects.NUMACell(
@@ -3612,10 +3489,8 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         )
 
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
+        self.assertNotIn('cpu_topology', inst_pin)
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=5, threads=1)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
     def test_get_pinning_host_siblings_instance_fit_optimize_threads(self):
         host_pin = objects.NUMACell(
@@ -3638,10 +3513,8 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         )
 
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
+        self.assertNotIn('cpu_topology', inst_pin)
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=3, threads=2)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
     def test_get_pinning_host_siblings_instance_odd_fit_w_usage(self):
         host_pin = objects.NUMACell(
@@ -3664,10 +3537,8 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         )
 
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
+        self.assertNotIn('cpu_topology', inst_pin)
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=3, threads=1)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
     def test_get_pinning_host_siblings_instance_mixed_siblings(self):
         host_pin = objects.NUMACell(
@@ -3690,10 +3561,8 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         )
 
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
+        self.assertNotIn('cpu_topology', inst_pin)
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=4, threads=1)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
     def test_get_pinning_host_siblings_instance_odd_fit_orphan_only(self):
         host_pin = objects.NUMACell(
@@ -3716,10 +3585,8 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         )
 
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
+        self.assertNotIn('cpu_topology', inst_pin)
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=4, threads=1)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
     def test_get_pinning_host_siblings_large_instance_odd_fit(self):
         host_pin = objects.NUMACell(
@@ -3744,11 +3611,9 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         )
 
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
+        self.assertNotIn('cpu_topology', inst_pin)
         self.assertInstanceCellPinned(inst_pin)
         self.assertPinningPreferThreads(inst_pin, host_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=5, threads=1)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
     # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_get_pinning_isolate_policy_too_few_fully_free_cores(self):
@@ -3775,7 +3640,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         )
 
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
+        self.assertNotIn('cpu_topology', inst_pin)
         self.assertIsNone(inst_pin)
 
     # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
@@ -3830,10 +3695,8 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         )
 
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
+        self.assertNotIn('cpu_topology', inst_pin)
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
     # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_get_pinning_isolate_policy_fits_ht_host(self):
@@ -3860,10 +3723,8 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         )
 
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
+        self.assertNotIn('cpu_topology', inst_pin)
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
     # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     def test_get_pinning_isolate_policy_fits_w_usage(self):
@@ -3890,10 +3751,8 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         )
 
         inst_pin = hw._numa_fit_instance_cell(host_pin, inst_pin, limits)
-
+        self.assertNotIn('cpu_topology', inst_pin)
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
-        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
 
     # TODO(stephenfin): Remove when we drop support for vcpu_pin_set
     @mock.patch.object(hw, 'LOG')
