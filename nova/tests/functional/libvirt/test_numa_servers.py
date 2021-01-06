@@ -103,8 +103,8 @@ class NUMAServersTest(NUMAServersTestBase):
         nodes.
         """
 
-        host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2)
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {'hw:numa_nodes': '2'}
@@ -118,6 +118,41 @@ class NUMAServersTest(NUMAServersTestBase):
         self.assertEqual(2, len(inst.numa_topology.cells))
         self.assertNotIn('cpu_topology', inst.numa_topology.cells[0])
         self.assertNotIn('cpu_topology', inst.numa_topology.cells[1])
+
+    def test_create_server_with_numa_topology_and_cpu_topology_and_pinning(
+            self):
+        """Create a server with two NUMA nodes.
+
+        This should pass and result in a guest NUMA topology with two NUMA
+        nodes, pinned cpus and numa affined memory.
+        """
+
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=4, cpu_threads=1,
+            kB_mem=(1024 * 1024 * 16))  # 16 GB
+        self.start_compute(host_info=host_info, hostname='compute1')
+
+        extra_spec = {
+            'hw:numa_nodes': '2',
+            'hw:cpu_max_sockets': '2',
+            'hw:cpu_max_cores': '2',
+            'hw:cpu_max_threads': '8',
+            'hw:cpu_policy': 'dedicated',
+            'hw:mem_page_size': 'any'
+        }
+        flavor_id = self._create_flavor(vcpu=8, extra_spec=extra_spec)
+        self._run_build_test(flavor_id, end_status='ERROR')
+
+        # FIXME(sean-k-mooney): The instance should boot but
+        # it fails due to https://bugs.launchpad.net/nova/+bug/1910466
+        msg = "IndexError: list index out of range"
+        self.assertIn(msg, self.stdlog.logger.output)
+        # ctx = nova_context.get_admin_context()
+        # inst = objects.Instance.get_by_uuid(ctx, server['id'])
+        # self.assertEqual(2, len(inst.numa_topology.cells))
+        # self.assertLessEqual(inst.vcpu_model.topology.sockets, 2)
+        # self.assertLessEqual(inst.vcpu_model.topology.cores, 2)
+        # self.assertLessEqual(inst.vcpu_model.topology.threads, 8)
 
     def test_create_server_with_numa_fails(self):
         """Create a two NUMA node instance on a host with only one node.
