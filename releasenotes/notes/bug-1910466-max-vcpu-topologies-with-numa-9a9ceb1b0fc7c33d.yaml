@@ -1,0 +1,23 @@
+---
+fixes:
+  - |
+    The nova libvirt driver supports two independent features, virtual CPU
+    topologies and virtual NUMA topologies. Previously, when
+    ``hw:cpu_max_sockets``, ``hw:cpu_max_cores`` and ``hw:cpu_max_threads``
+    were specified for pinned instances (``hw:cpu_policy=dedicated``)
+    without explicit ``hw:cpu_sockets``, ``hw:cpu_cores``, ``hw:cpu_threads``
+    extra specs or their image equivalent, nova failed to generate a valid
+    virtual CPU topology. This has now been fixed and it is now possible to
+    use max CPU constraints with pinned instances.
+    e.g. a combination of  ``hw:numa_nodes=2``, ``hw:cpu_max_sockets=2``,
+    ``hw:cpu_max_cores=2``, ``hw:cpu_max_threads=8`` and
+    ``hw:cpu_policy=dedicated`` can now generate a valid topology using
+    a flavor with 8 vCPUs.
+upgrade:
+  - |
+    As part of the fix for bug 1910466, code that attempted to optimize VM CPU
+    thread assignment based on the host CPU topology as it was determined
+    to be buggy, undocumented and rejected valid virtual CPU topologies while
+    also producing different behavior when CPU pinning was enabled vs disabled.
+    The optimization may be reintroduced in the future with a more generic
+    implementation that works for both pinned and unpinned VMs.

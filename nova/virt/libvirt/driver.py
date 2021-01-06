@@ -5086,8 +5086,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if cpu is None:
             return None
 
-        topology = hardware.get_best_cpu_topology(
-                flavor, image_meta, numa_topology=instance_numa_topology)
+        topology = hardware.get_best_cpu_topology(flavor, image_meta)
 
         cpu.sockets = topology.sockets
         cpu.cores = topology.cores
