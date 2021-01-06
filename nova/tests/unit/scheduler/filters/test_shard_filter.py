@@ -177,3 +177,24 @@ class TestShardFilter(test.NoDBTestCase):
         self.filt_cls._PROJECT_SHARD_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
                                                      'vc-b-0']
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_shard_project_has_sharding_enabled_any_host_passes(self):
+        self.filt_cls._PROJECT_SHARD_CACHE['baz'] = ['sharding_enabled']
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1']),
+                 objects.Aggregate(id=1, name='vc-a-0', hosts=['host1'])]
+        host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='baz',
+            flavor=objects.Flavor(extra_specs={}))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_shard_project_has_sharding_enabled_and_single_shards(self):
+        self.filt_cls._PROJECT_SHARD_CACHE['baz'] = ['sharding_enabled',
+                                                     'vc-a-1']
+        aggs = [objects.Aggregate(id=1, name='some-az-a', hosts=['host1']),
+                 objects.Aggregate(id=1, name='vc-a-0', hosts=['host1'])]
+        host = fakes.FakeHostState('host1', 'compute', {'aggregates': aggs})
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx, project_id='baz',
+            flavor=objects.Flavor(extra_specs={}))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))

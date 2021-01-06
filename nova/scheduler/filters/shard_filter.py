@@ -33,11 +33,15 @@ class ShardFilter(filters.BaseHostFilter):
     """Filter hosts based on the vcenter-shard configured in their aggregate
     and the vcenter-shards configured in the project's tags in keystone. They
     have to overlap for a host to pass this filter.
+
+    Alternatively the project may have the "sharding_enabled" tag set, which
+    enables the project for hosts in all shards.
     """
 
     _PROJECT_SHARD_CACHE = {}
     _PROJECT_SHARD_CACHE_RETENTION_TIME = 10 * 60
     _SHARD_PREFIX = 'vc-'
+    _ALL_SHARDS = "sharding_enabled"
 
     def _update_cache(self):
         """Ask keystone for the list of projects to save the interesting tags
@@ -83,7 +87,8 @@ class ShardFilter(filters.BaseHostFilter):
             for project in data['projects']:
                 project_id = project['id']
                 shards = [t for t in project['tags']
-                          if t.startswith(self._SHARD_PREFIX)]
+                          if t.startswith(self._SHARD_PREFIX) or
+                          t == self._ALL_SHARDS]
                 self._PROJECT_SHARD_CACHE[project_id] = shards
 
             url = data['links']['next']
@@ -148,7 +153,11 @@ class ShardFilter(filters.BaseHostFilter):
                       {'project_id': project_id})
             return False
 
-        if host_shard_names & set(shards):
+        if self._ALL_SHARDS in shards:
+            LOG.debug('project enabled for all shards %(project_shards)s.',
+                      {'project_shards': shards})
+            return True
+        elif host_shard_names & set(shards):
             LOG.debug('%(host_state)s shard %(host_shard)s found in project '
                       'shards %(project_shards)s.',
                       {'host_state': host_state,
