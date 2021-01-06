@@ -2087,7 +2087,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 'group_policy3': 'none',
             })
         req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
-        resources = scheduler_utils.ResourceRequest(req_spec)
+        resources = scheduler_utils.ResourceRequest.from_request_spec(req_spec)
         resources.get_request_group(None).aggregates = [
             ['agg1', 'agg2', 'agg3'], ['agg1', 'agg2']]
         forbidden_aggs = set(['agg1', 'agg5', 'agg6'])
@@ -2145,7 +2145,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 'group_policy': 'bogus',
             })
         req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
-        resources = scheduler_utils.ResourceRequest(req_spec)
+        resources = scheduler_utils.ResourceRequest.from_request_spec(req_spec)
         expected_path = '/allocation_candidates'
         expected_query = [
             ('limit', '42'),
@@ -2189,7 +2189,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)
         req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
-        resources = scheduler_utils.ResourceRequest(req_spec)
+        resources = scheduler_utils.ResourceRequest.from_request_spec(req_spec)
 
         res = self.client.get_allocation_candidates(self.context, resources)
 

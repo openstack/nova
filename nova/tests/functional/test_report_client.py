@@ -1006,7 +1006,7 @@ class SchedulerReportClientTests(test.TestCase):
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)
         req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
         self.client.get_allocation_candidates(
-            self.context, utils.ResourceRequest(req_spec))
+            self.context, utils.ResourceRequest.from_request_spec(req_spec))
 
     def _set_up_provider_tree(self):
         r"""Create two compute nodes in placement ("this" one, and another one)
@@ -1221,7 +1221,7 @@ class SchedulerReportClientTests(test.TestCase):
         req_spec = objects.RequestSpec(flavor=flavor, is_bfv=False)
         self._set_up_provider_tree()
         acs = self.client.get_allocation_candidates(
-            self.context, utils.ResourceRequest(req_spec))[0]
+            self.context, utils.ResourceRequest.from_request_spec(req_spec))[0]
         # We're not going to validate all the allocations - Placement has
         # tests for that - just make sure they're there.
         self.assertEqual(3, len(acs))
@@ -1284,7 +1284,7 @@ class SchedulerReportClientTests(test.TestCase):
             (ot.COMPUTE_STATUS_DISABLED, ot.COMPUTE_VOLUME_EXTEND,
              'CUSTOM_FOO'))
         acs, _, ver = self.client.get_allocation_candidates(
-            self.context, utils.ResourceRequest(req_spec))
+            self.context, utils.ResourceRequest.from_request_spec(req_spec))
         self.assertEqual('1.35', ver)
         # This prints which ddt permutation we're using if it fails.
         self.assertEqual(data['expected_acs'], len(acs), data)
