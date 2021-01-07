@@ -670,6 +670,10 @@ class CinderApiTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_detach_no_attachment_id(self, mock_cinderclient):
+        """This behaves like the multiattach case. It searches the
+        attachment_id in the cinder attachments, because we ran into problems
+        with "ghost attachments" because of MessagingTimeout on attach.
+        """
         attachment = {'server_id': 'fake_uuid',
                       'attachment_id': 'fakeid'
                      }
@@ -683,7 +687,7 @@ class CinderApiTestCase(test.NoDBTestCase):
         self.api.detach(self.ctx, 'id1', instance_uuid='fake_uuid')
 
         mock_cinderclient.assert_called_with(self.ctx, microversion=None)
-        mock_volumes.detach.assert_called_once_with('id1', None)
+        mock_volumes.detach.assert_called_once_with('id1', 'fakeid')
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_detach_no_attachment_id_multiattach(self, mock_cinderclient):
@@ -701,6 +705,52 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         mock_cinderclient.assert_called_with(self.ctx, microversion=None)
         mock_volumes.detach.assert_called_once_with('id1', 'fakeid')
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_detach_no_attachment_id_ghost_attachment_no_others(
+            self, mock_cinderclient):
+        """If we have no attachment_id and we can't find an attachment for the
+        instance_uuid in Cinder and we have not attachments reported by Cinder,
+        we don't do a detach call without attachment_id.
+        We call without attachment_id, because we need to reset the state of
+        the volume in Cinder. Since there's no other attachment reported, we
+        can't delete an attachment for another instance in Cinder.
+        """
+        mock_volumes = mock.MagicMock()
+        mock_cinderclient.return_value = mock.MagicMock(version='2',
+                                                        volumes=mock_volumes)
+        mock_cinderclient.return_value.volumes.get.return_value = \
+            FakeVolume('id1', attachments=[])
+
+        self.api.detach(self.ctx, 'id1', instance_uuid='fake_uuid')
+
+        mock_cinderclient.assert_called_with(self.ctx, microversion=None)
+        mock_volumes.detach.assert_called_once_with('id1', None)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_detach_no_attachment_id_ghost_attachment_with_others(
+            self, mock_cinderclient):
+        """If we have no attachment_id and we can't find an attachment for the
+        instance_uuid in Cinder and we have attachments reported by Cinder, we
+        don't do a detach call. The reason is, that the attachment probably
+        didn't work because of MessagingTimeout on reserving the block device
+        name. Then we only have a block device mapping without connection_info,
+        which also has updated_at set to NULL.
+        """
+        attachment = {'server_id': 'fake_uuid2',
+                      'attachment_id': 'fakeid'
+                     }
+
+        mock_volumes = mock.MagicMock()
+        mock_cinderclient.return_value = mock.MagicMock(version='2',
+                                                        volumes=mock_volumes)
+        mock_cinderclient.return_value.volumes.get.return_value = \
+            FakeVolume('id1', attachments=[attachment])
+
+        self.api.detach(self.ctx, 'id1', instance_uuid='fake_uuid')
+
+        mock_cinderclient.assert_called_with(self.ctx, microversion=None)
+        mock_volumes.detach.assert_not_called()
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_detach_internal_server_error(self, mock_cinderclient):

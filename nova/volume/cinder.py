@@ -584,28 +584,33 @@ class API(object):
         client = cinderclient(context)
         if attachment_id is None:
             volume = self.get(context, volume_id)
+            attachments = volume.get('attachments', {})
+            if instance_uuid:
+                attachment_id = attachments.get(instance_uuid, {}).\
+                        get('attachment_id')
+            else:
+                LOG.warning("attachment_id couldn't be retrieved for "
+                            "volume %(volume_id)s.",
+                            {'volume_id': volume_id})
             if volume['multiattach']:
-                attachments = volume.get('attachments', {})
-                if instance_uuid:
-                    attachment_id = attachments.get(instance_uuid, {}).\
-                            get('attachment_id')
-                    if not attachment_id:
-                        LOG.warning("attachment_id couldn't be retrieved "
-                                    "for volume %(volume_id)s with "
-                                    "instance_uuid %(instance_id)s. The "
-                                    "volume has the 'multiattach' flag "
-                                    "enabled, without the attachment_id "
-                                    "Cinder most probably cannot perform "
-                                    "the detach.",
-                                    {'volume_id': volume_id,
-                                     'instance_id': instance_uuid})
-                else:
-                    LOG.warning("attachment_id couldn't be retrieved for "
-                                "volume %(volume_id)s. The volume has the "
-                                "'multiattach' flag enabled, without the "
-                                "attachment_id Cinder most probably "
-                                "cannot perform the detach.",
-                                {'volume_id': volume_id})
+                if not attachment_id:
+                    LOG.warning("attachment_id couldn't be retrieved "
+                                "for volume %(volume_id)s with "
+                                "instance_uuid %(instance_id)s. The "
+                                "volume has the 'multiattach' flag "
+                                "enabled, without the attachment_id "
+                                "Cinder most probably cannot perform "
+                                "the detach.",
+                                {'volume_id': volume_id,
+                                'instance_id': instance_uuid})
+            elif not attachment_id and attachments:
+                # NOTE(jkulik): If we detach unconditionally although we have
+                # other attachments, we will delete the other attachment's
+                # attachment entry in Cinder.
+                LOG.info("Not calling detach, because there are attachments "
+                         "that don't belong to instance %(instance_uuid)s.",
+                         {'instance_uuid': instance_uuid})
+                return
 
         client.volumes.detach(volume_id, attachment_id)
 
