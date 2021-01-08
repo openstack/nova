@@ -514,6 +514,13 @@ class HypervisorsTestV21(test.NoDBTestCase):
 
         _test(self)
 
+    def test_show(self):
+        req = self._get_request(True)
+        hyper_id = self._get_hyper_id()
+        result = self.controller.show(req, hyper_id)
+
+        self.assertEqual({'hypervisor': self.DETAIL_HYPERS_DICTS[0]}, result)
+
     def test_show_compute_host_not_mapped(self):
         """Tests that if a service is deleted but the compute node is not we
         don't fail when listing hypervisors.
@@ -542,13 +549,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
     def test_show_non_integer_id(self):
         req = self._get_request(True)
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req, 'abc')
-
-    def test_show_with_id(self):
-        req = self._get_request(True)
-        hyper_id = self._get_hyper_id()
-        result = self.controller.show(req, hyper_id)
-
-        self.assertEqual(dict(hypervisor=self.DETAIL_HYPERS_DICTS[0]), result)
 
     def test_uptime(self):
         with mock.patch.object(
@@ -737,7 +737,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
                               self.controller.servers, req, 'abc')
             self.assertEqual(1, mock_node_search.call_count)
 
-    def test_servers_with_no_server(self):
+    def test_servers_with_no_servers(self):
         with mock.patch.object(self.controller.host_api,
                                'instance_get_all_by_host',
                                return_value=[]) as mock_inst_get_all:
@@ -1036,7 +1036,27 @@ class HypervisorsTestV253(HypervisorsTestV252):
                           self.controller.servers,
                           self._get_request(True), 'hyper')
 
-    def test_servers_with_no_server(self):
+    def test_servers_not_mapped(self):
+        # the separate 'servers' API has been removed, so skip this test
+        pass
+
+    def test_servers_compute_host_not_found(self):
+        # the separate 'servers' API has been removed, so skip this test
+        pass
+
+    def test_servers_non_id(self):
+        # the separate 'servers' API has been removed, so skip this test
+        pass
+
+    def test_servers_with_non_integer_hypervisor_id(self):
+        # the separate 'servers' API has been removed, so skip this test
+        pass
+
+    def test_servers_with_no_servers(self):
+        # the separate 'servers' API has been removed, so skip this test
+        pass
+
+    def test_index_with_no_servers(self):
         """Tests GET /os-hypervisors?with_servers=1 when there are no
         instances on the given host.
         """
@@ -1053,7 +1073,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
             mock.call(req.environ['nova.context'], TEST_HYPERS_OBJ[0].host),
             mock.call(req.environ['nova.context'], TEST_HYPERS_OBJ[1].host)))
 
-    def test_servers_not_mapped(self):
+    def test_index_with_servers_not_mapped(self):
         """Tests that instance_get_all_by_host fails with HostMappingNotFound.
         """
         req = self._get_request(use_admin_context=True,
@@ -1064,7 +1084,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
             result = self.controller.index(req)
             self.assertEqual(dict(hypervisors=[]), result)
 
-    def test_servers_compute_host_not_found(self):
+    def test_index_with_servers_compute_host_not_found(self):
         req = self._get_request(
             use_admin_context=True,
             url='/os-hypervisors?with_servers=1')
@@ -1084,7 +1104,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
             result = self.controller.index(req)
             self.assertEqual({'hypervisors': []}, result)
 
-    def test_list_with_servers(self):
+    def test_index_with_servers(self):
         """Tests GET /os-hypervisors?with_servers=True"""
         instances = [
             objects.InstanceList(objects=[objects.Instance(
@@ -1109,14 +1129,14 @@ class HypervisorsTestV253(HypervisorsTestV252):
             mock.call(req.environ['nova.context'], TEST_HYPERS_OBJ[0].host),
             mock.call(req.environ['nova.context'], TEST_HYPERS_OBJ[1].host)))
 
-    def test_list_with_servers_invalid_parameter(self):
+    def test_index_with_servers_invalid_parameter(self):
         """Tests using an invalid with_servers query parameter."""
         req = self._get_request(use_admin_context=True,
                                 url='/os-hypervisors?with_servers=invalid')
         self.assertRaises(
             exception.ValidationError, self.controller.index, req)
 
-    def test_list_with_hostname_pattern_and_paging_parameters(self):
+    def test_index_with_hostname_pattern_and_paging_parameters(self):
         """This is a negative test to validate that trying to list hypervisors
         with a hostname pattern and paging parameters results in a 400 error.
         """
@@ -1129,7 +1149,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
                       'hypervisor_hostname_pattern query parameter is not '
                       'supported.', str(ex))
 
-    def test_servers_with_non_integer_hypervisor_id(self):
+    def test_index_with_hostname_pattern_no_match(self):
         """This is a poorly named test, it's really checking the 404 case where
         there is no match for the hostname pattern.
         """
@@ -1143,19 +1163,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
             self.assertRaises(exc.HTTPNotFound, self.controller.index, req)
             s.assert_called_once_with(req.environ['nova.context'], 'shenzhen')
 
-    def test_servers_non_id(self):
-        """There is no reason to test this for 2.53 since the
-        /os-hypervisors/servers route is deprecated.
-        """
-        pass
-
-    def test_search_old_route(self):
-        """Asserts that calling the search route after 2.52 fails."""
-        self.assertRaises(exception.VersionNotFoundForAPIMethod,
-                          self.controller.search,
-                          self._get_request(True), 'hyper')
-
-    def test_search(self):
+    def test_detail_with_hostname_pattern(self):
         """Test listing hypervisors with details and using the
         hypervisor_hostname_pattern query string.
         """
@@ -1177,7 +1185,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
         self.assertNotIn('hypervisors_links', result)
         self.assertDictEqual(expected, result)
 
-    def test_search_invalid_hostname_pattern_parameter(self):
+    def test_detail_invalid_hostname_pattern_parameter(self):
         """Tests passing an invalid hypervisor_hostname_pattern query
         parameter.
         """
@@ -1186,6 +1194,12 @@ class HypervisorsTestV253(HypervisorsTestV252):
             url='/os-hypervisors?hypervisor_hostname_pattern=invalid~host')
         self.assertRaises(
             exception.ValidationError, self.controller.detail, req)
+
+    def test_search(self):
+        """Asserts that calling the search route after 2.52 fails."""
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.search,
+                          self._get_request(True), 'hyper')
 
     def test_search_non_exist(self):
         """This is a duplicate of test_servers_with_non_integer_hypervisor_id.
@@ -1255,6 +1269,17 @@ class HypervisorsTestV253(HypervisorsTestV252):
         # instance_get_all_by_host is called
         mock_inst_get_all.assert_called_once_with(
             req.environ['nova.context'], TEST_HYPERS_OBJ[0].host)
+
+    def test_show_duplicate_query_parameters_validation(self):
+        """Tests that the show query parameter schema enforces only a single
+        entry for any query parameter.
+        """
+        req = self._get_request(
+            use_admin_context=True,
+            url='/os-hypervisors/%s?with_servers=1&with_servers=1' %
+                uuids.hyper1)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.show, req, uuids.hyper1)
 
     def test_uptime_non_integer_id(self):
         """There is no reason to test this for 2.53 since 2.53 requires a
@@ -1370,22 +1395,11 @@ class HypervisorsTestV253(HypervisorsTestV252):
             self.assertRaises(exception.ValidationError,
                               self.controller.index, req)
 
-    def test_show_duplicate_query_parameters_validation(self):
-        """Tests that the show query parameter schema enforces only a single
-        entry for any query parameter.
-        """
-        req = self._get_request(
-            use_admin_context=True,
-            url='/os-hypervisors/%s?with_servers=1&with_servers=1' %
-                uuids.hyper1)
-        self.assertRaises(exception.ValidationError,
-                          self.controller.show, req, uuids.hyper1)
-
 
 class HypervisorsTestV275(HypervisorsTestV253):
     api_version = '2.75'
 
-    def _test_servers_with_no_server(self, func, version=None, **kwargs):
+    def _test_servers_with_no_servers(self, func, version=None, **kwargs):
         """Tests GET APIs return 'servers' field in response even
            no servers on hypervisors.
         """
@@ -1401,38 +1415,37 @@ class HypervisorsTestV275(HypervisorsTestV253):
             result = func(req, **kwargs)
         return result
 
-    def test_list_servers_with_no_server_old_version(self):
-        result = self._test_servers_with_no_server(self.controller.index,
-                                                   version='2.74')
-        for hyper in result['hypervisors']:
-            self.assertNotIn('servers', hyper)
-
-    def test_list_detail_servers_with_no_server_old_version(self):
-        result = self._test_servers_with_no_server(self.controller.detail,
-                                                   version='2.74')
-        for hyper in result['hypervisors']:
-            self.assertNotIn('servers', hyper)
-
-    def test_show_servers_with_no_server_old_version(self):
-        result = self._test_servers_with_no_server(self.controller.show,
-                                                   version='2.74',
-                                                   id=uuids.hyper1)
-        self.assertNotIn('servers', result['hypervisor'])
-
-    def test_servers_with_no_server(self):
-        result = self._test_servers_with_no_server(self.controller.index)
+    def test_index_with_no_servers(self):
+        result = self._test_servers_with_no_servers(self.controller.index)
         for hyper in result['hypervisors']:
             self.assertEqual(0, len(hyper['servers']))
 
-    def test_list_detail_servers_with_empty_server_list(self):
-        result = self._test_servers_with_no_server(self.controller.detail)
+    def test_index_with_no_servers_old_version(self):
+        result = self._test_servers_with_no_servers(
+            self.controller.index, version='2.74')
+        for hyper in result['hypervisors']:
+            self.assertNotIn('servers', hyper)
+
+    def test_detail_with_no_servers(self):
+        result = self._test_servers_with_no_servers(self.controller.detail)
         for hyper in result['hypervisors']:
             self.assertEqual(0, len(hyper['servers']))
 
-    def test_show_servers_with_empty_server_list(self):
-        result = self._test_servers_with_no_server(self.controller.show,
-                                                   id=uuids.hyper1)
+    def test_detail_with_no_servers_old_version(self):
+        result = self._test_servers_with_no_servers(
+            self.controller.detail, version='2.74')
+        for hyper in result['hypervisors']:
+            self.assertNotIn('servers', hyper)
+
+    def test_show_with_no_servers(self):
+        result = self._test_servers_with_no_servers(
+            self.controller.show, id=uuids.hyper1)
         self.assertEqual(0, len(result['hypervisor']['servers']))
+
+    def test_show_with_no_servers_old_version(self):
+        result = self._test_servers_with_no_servers(
+            self.controller.show, version='2.74', id=uuids.hyper1)
+        self.assertNotIn('servers', result['hypervisor'])
 
 
 class HypervisorsTestV288(HypervisorsTestV275):
