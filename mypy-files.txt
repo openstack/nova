@@ -1,6 +1,7 @@
 nova/compute/manager.py
 nova/crypto.py
 nova/privsep/path.py
+nova/scheduler/utils.py
 nova/virt/driver.py
 nova/virt/hardware.py
 nova/virt/libvirt/__init__.py

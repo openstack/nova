@@ -17,6 +17,7 @@
 import collections
 import re
 import sys
+import typing as ty
 from urllib import parse
 
 import os_resource_classes as orc
@@ -254,7 +255,7 @@ class ResourceRequest(object):
         if not vpmem_labels:
             # No vpmems required
             return
-        amount_by_rc = collections.defaultdict(int)
+        amount_by_rc: ty.DefaultDict[str, int] = collections.defaultdict(int)
         for vpmem_label in vpmem_labels:
             resource_class = orc.normalize_name(
                 "PMEM_NAMESPACE_" + vpmem_label)
@@ -302,7 +303,7 @@ class ResourceRequest(object):
             dedicated_cpus = hardware.get_dedicated_cpu_constraint(flavor)
             realtime_cpus = hardware.get_realtime_cpu_constraint(flavor, image)
 
-            pcpus = len(dedicated_cpus or realtime_cpus)
+            pcpus = len(dedicated_cpus or realtime_cpus or [])
             vcpus = flavor.vcpus - pcpus
 
             # apply for the VCPU resource of a 'mixed' instance
@@ -428,7 +429,7 @@ class ResourceRequest(object):
 
         :return: A dict of the form {resource_class: amount}
         """
-        ret = collections.defaultdict(lambda: 0)
+        ret: ty.DefaultDict[str, int] = collections.defaultdict(lambda: 0)
         for rg in self._rg_by_id.values():
             for resource_class, amount in rg.resources.items():
                 ret[resource_class] += amount
@@ -469,7 +470,7 @@ class ResourceRequest(object):
 
     @property
     def all_required_traits(self):
-        traits = set()
+        traits: ty.Set[str] = set()
         for rr in self._rg_by_id.values():
             traits = traits.union(rr.required_traits)
         return traits
