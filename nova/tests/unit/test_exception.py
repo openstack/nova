@@ -220,9 +220,6 @@ class NovaExceptionTestCase(test.NoDBTestCase):
         class FakeNovaException_Remote(exception.NovaException):
             msg_fmt = "some message %(somearg)s"
 
-            def __unicode__(self):
-                return u"print the whole trace"
-
         exc = FakeNovaException_Remote(lame_arg='lame')
         self.assertEqual("some message %(somearg)s", exc.format_message())
 
