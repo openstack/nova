@@ -155,9 +155,8 @@ class Forbidden(NovaException):
     code = 403
 
 
-class ForbiddenWithAccelerators(NovaException):
+class ForbiddenWithAccelerators(Forbidden):
     msg_fmt = _("Forbidden with instances that have accelerators.")
-    code = 403
 
 
 class AdminRequired(Forbidden):
