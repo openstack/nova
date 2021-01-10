@@ -192,6 +192,13 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '5.12'},
 )
 
+# This is used to raise an error at service startup if older than N-1 computes
+# are detected. Update this at the beginning of every release cycle
+OLDEST_SUPPORTED_SERVICE_VERSION = 'Ussuri'
+SERVICE_VERSION_ALIASES = {
+    'Ussuri': 41
+}
+
 
 # TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register

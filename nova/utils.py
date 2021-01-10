@@ -1053,3 +1053,53 @@ def normalize_rc_name(rc_name):
     norm_name = norm_name.upper()
     norm_name = orc.CUSTOM_NAMESPACE + norm_name
     return norm_name
+
+
+def raise_if_old_compute():
+    # to avoid circular imports
+    from nova import context as nova_context
+    from nova.objects import service
+
+    ctxt = nova_context.get_admin_context()
+
+    if CONF.api_database.connection is not None:
+        scope = 'system'
+        try:
+            current_service_version = service.get_minimum_version_all_cells(
+                ctxt, ['nova-compute'])
+        except exception.DBNotAllowed:
+            # This most likely means we are in a nova-compute service
+            # which is configured with a connection to the API database.
+            # We should not be attempting to "get out" of our cell to
+            # look at the minimum versions of nova-compute services in other
+            # cells, so DBNotAllowed was raised. Leave a warning message
+            # and fall back to only querying computes in our cell.
+            LOG.warning(
+                'This service is configured for access to the API database '
+                'but is not allowed to directly access the database. You '
+                'should run this service without the '
+                '[api_database]/connection config option. The service version '
+                'check will only query the local cell.')
+            scope = 'cell'
+            current_service_version = service.Service.get_minimum_version(
+                ctxt, 'nova-compute')
+    else:
+        scope = 'cell'
+        # We in a cell so target our query to the current cell only
+        current_service_version = service.Service.get_minimum_version(
+            ctxt, 'nova-compute')
+
+    if current_service_version == 0:
+        # 0 means no compute in the system,
+        # probably a fresh install before the computes are registered
+        return
+
+    oldest_supported_service_level = service.SERVICE_VERSION_ALIASES[
+            service.OLDEST_SUPPORTED_SERVICE_VERSION]
+
+    if current_service_version < oldest_supported_service_level:
+        raise exception.TooOldComputeService(
+            oldest_supported_version=service.OLDEST_SUPPORTED_SERVICE_VERSION,
+            scope=scope,
+            min_service_level=current_service_version,
+            oldest_supported_service=oldest_supported_service_level)

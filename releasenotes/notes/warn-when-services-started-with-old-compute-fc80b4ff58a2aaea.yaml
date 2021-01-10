@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    Nova services only support old computes if the compute is not
+    older than the previous major nova release. From now on nova services will
+    emit a warning at startup if the deployment contains too old compute
+    services. From the 23.0.0 (Wallaby) release nova services will refuse to
+    start if the deployment contains too old compute services to prevent
+    compatibility issues.
