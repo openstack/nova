@@ -1501,26 +1501,6 @@ class SchedulerReportClient(object):
 
         return resp.json()
 
-    def get_allocations_for_consumer_by_provider(self, context, rp_uuid,
-                                                 consumer):
-        """Return allocations for a consumer and a resource provider.
-
-        :param context: The nova.context.RequestContext auth context
-        :param rp_uuid: UUID of the resource provider
-        :param consumer: UUID of the consumer
-        :return: the resources dict of the consumer's allocation keyed by
-                 resource classes
-        """
-        # NOTE(cdent): This trims to just the allocations being
-        # used on this resource provider. In the future when there
-        # are shared resources there might be other providers.
-        allocations = self.get_allocations_for_consumer(context, consumer)
-        if allocations is None:
-            # safe_connect can return None on 404
-            allocations = {}
-        return allocations.get(
-            rp_uuid, {}).get('resources', {})
-
     # NOTE(jaypipes): Currently, this method is ONLY used in three places:
     # 1. By the scheduler to allocate resources on the selected destination
     #    hosts.
