@@ -1,0 +1,25 @@
+{
+    "hypervisors": [
+        {
+            "host_ip": "192.168.1.135",
+            "hypervisor_hostname": "host2",
+            "hypervisor_type": "fake",
+            "hypervisor_version": 1000,
+            "id": "f6d28711-9c10-470e-8b31-c03f498b0032",
+            "service": {
+                "disabled_reason": null,
+                "host": "host2",
+                "id": "21bbb5fb-ec98-48b3-89cf-c94402c55611"
+            },
+            "state": "up",
+            "status": "enabled",
+            "uptime": null
+        }
+    ],
+    "hypervisors_links": [
+        {
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/os-hypervisors/detail?limit=1&marker=f6d28711-9c10-470e-8b31-c03f498b0032",
+            "rel": "next"
+        }
+    ]
+}

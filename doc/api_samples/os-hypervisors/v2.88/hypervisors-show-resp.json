@@ -1,0 +1,17 @@
+{
+    "hypervisor": {
+        "host_ip": "192.168.1.135",
+        "hypervisor_hostname": "fake-mini",
+        "hypervisor_type": "fake",
+        "hypervisor_version": 1000,
+        "id": "f79c1cce-9972-44c6-aa30-1d9e6526ce37",
+        "service": {
+            "disabled_reason": null,
+            "host": "compute",
+            "id": "7e6b27b8-f563-4c21-baa4-a40d579ed8c4"
+        },
+        "state": "up",
+        "status": "enabled",
+        "uptime": null
+    }
+}

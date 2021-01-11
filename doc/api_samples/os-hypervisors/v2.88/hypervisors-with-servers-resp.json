@@ -1,0 +1,20 @@
+{
+    "hypervisors": [
+        {
+            "hypervisor_hostname": "fake-mini",
+            "id": "39b0c938-8e2f-49da-bb52-e85c78d4ff2a",
+            "servers": [
+                {
+                    "name": "test_server1",
+                    "uuid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                },
+                {
+                    "name": "test_server2",
+                    "uuid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                }
+            ],
+            "state": "up",
+            "status": "enabled"
+        }
+    ]
+}

@@ -1,0 +1,33 @@
+---
+deprecations:
+  - |
+    The 2.88 API microversion has been added. This microversion removes a
+    number of fields have been removed from the ``GET /os-hypervisors/detail``
+    (detailed list) and ``GET /os-hypervisors/{hypervisor_id}`` (show) APIs::
+
+    - ``current_workload``
+    - ``cpu_info``
+    - ``vcpus``
+    - ``vcpus_used``
+    - ``free_disk_gb``
+    - ``local_gb``
+    - ``local_gb_used``
+    - ``disk_available_least``
+    - ``free_ram_mb``
+    - ``memory_mb``
+    - ``memory_mb_used``
+    - ``running_vms``
+
+    The fields have been removed as the information they provided was
+    frequently misleading or outright wrong, and more accurate information can
+    now be queried from placement.
+
+    In addition, the ``GET /os-hypervisors/statistics`` API, which provided a
+    summary view with just the fields listed above, has been removed entirely
+    and will now raise a HTTP 404 with microversion 2.88 or greater.
+
+    Finally, the ``GET /os-hypervisors/{hypervisor}/uptime`` API, which
+    provided a similar response to the ``GET /os-hypervisors/{hypervisor}`` API
+    but with an additional ``uptime`` field, has been removed in favour of
+    including this field in the primary ``GET /os-hypervisors/{hypervisor}``
+    API.

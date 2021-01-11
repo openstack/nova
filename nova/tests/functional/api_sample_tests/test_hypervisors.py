@@ -272,3 +272,21 @@ class HypervisorsSampleJson253Tests(HypervisorsSampleJson228Tests):
                                 hypervisor_id)
         self._verify_response('hypervisors-show-with-servers-resp', subs,
                               response, 200)
+
+
+class HypervisorsSampleJson288Tests(HypervisorsSampleJson253Tests):
+    microversion = '2.88'
+    scenarios = [('v2_88', {'api_major_version': 'v2.1'})]
+
+    def test_hypervisors_uptime(self):
+        """The uptime route is deprecated in 2.88 and now returns a 404.
+        """
+        hypervisor_id = '1'
+        response = self._do_get('os-hypervisors/%s/statistics' % hypervisor_id)
+        self.assertEqual(404, response.status_code)
+
+    def test_hypervisors_statistics(self):
+        """The statistics route is deprecated in 2.88 and now returns a 404.
+        """
+        response = self._do_get('os-hypervisors/statistics')
+        self.assertEqual(404, response.status_code)

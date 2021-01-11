@@ -1,0 +1,29 @@
+{
+    "hypervisors": [
+        {
+            "host_ip": "192.168.1.135",
+            "hypervisor_hostname": "fake-mini",
+            "hypervisor_type": "fake",
+            "hypervisor_version": 1000,
+            "id": "28b0e607-d58a-4602-a511-efe18024f4d5",
+            "servers": [
+                {
+                    "name": "test_server1",
+                    "uuid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+                },
+                {
+                    "name": "test_server2",
+                    "uuid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
+                }
+            ],
+            "service": {
+                "disabled_reason": null,
+                "host": "compute",
+                "id": "40e769a5-7489-4cf3-be46-f6bd3e4e3c25"
+            },
+            "state": "up",
+            "status": "enabled",
+            "uptime": null
+        }
+    ]
+}

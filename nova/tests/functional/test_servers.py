@@ -3956,10 +3956,12 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         # 10gb root, 20gb ephemeral, 5gb swap
         expected_usage = 35
         self.assertEqual(expected_usage, resources['DISK_GB'])
-        # Ensure the compute node is reporting the correct disk usage
-        self.assertEqual(
-            expected_usage,
-            self.admin_api.get_hypervisor_stats()['local_gb_used'])
+        # Ensure the compute node is reporting the correct disk usage. We're
+        # using v2.87 explicitly as the api returns 404 starting with 2.88
+        with nova_utils.temporary_mutation(self.api, microversion='2.87'):
+            self.assertEqual(
+                expected_usage,
+                self.admin_api.get_hypervisor_stats()['local_gb_used'])
 
     def test_volume_backed_image_type_filter(self):
         # Enable the image type support filter and ensure that a
@@ -3978,10 +3980,12 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
         # 0gb root, 20gb ephemeral, 5gb swap
         expected_usage = 25
         self.assertEqual(expected_usage, resources['DISK_GB'])
-        # Ensure the compute node is reporting the correct disk usage
-        self.assertEqual(
-            expected_usage,
-            self.admin_api.get_hypervisor_stats()['local_gb_used'])
+        # Ensure the compute node is reporting the correct disk usage. We're
+        # using v2.87 explicitly as the api returns 404 starting with 2.88
+        with nova_utils.temporary_mutation(self.api, microversion='2.87'):
+            self.assertEqual(
+                expected_usage,
+                self.admin_api.get_hypervisor_stats()['local_gb_used'])
 
         # Now let's hack the RequestSpec.is_bfv field to mimic migrating an
         # old instance created before RequestSpec.is_bfv was set in the API,

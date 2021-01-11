@@ -12,6 +12,7 @@ for a hypervisor, lists all servers on hypervisors that match the given
 ``hypervisor_hostname_pattern`` or searches for hypervisors by the given
 ``hypervisor_hostname_pattern``.
 
+
 List Hypervisors
 ================
 
@@ -63,6 +64,7 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.53/hypervisors-with-servers-resp.json
    :language: javascript
+
 
 List Hypervisors Details
 ========================
@@ -122,6 +124,7 @@ Response
   - service.id: service_id_body_2_52
   - service.id: service_id_body_2_53
   - service.disabled_reason: service_disable_reason
+  - uptime: hypervisor_uptime
   - vcpus: hypervisor_vcpus
   - vcpus_used: hypervisor_vcpus_used
   - hypervisor_links: hypervisor_links
@@ -136,12 +139,24 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.53/hypervisors-detail-resp.json
    :language: javascript
 
-Show Hypervisor Statistics
-==========================
+**Example List Hypervisors Details (v2.88): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.88/hypervisors-detail-resp.json
+   :language: javascript
+
+
+Show Hypervisor Statistics (DEPRECATED)
+=======================================
 
 .. rest_method:: GET /os-hypervisors/statistics
+   max_version: 2.87
 
 Shows summary statistics for all enabled hypervisors over all compute nodes.
+
+.. warning::
+
+   This API is deprecated and will fail with HTTP 404 starting with microversion
+   2.88. Use placement to get information on resource usage across hypervisors.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
@@ -158,7 +173,7 @@ the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Response
 --------
@@ -167,7 +182,7 @@ Response
 
   - hypervisor_statistics: hypervisor_statistics
   - count: hypervisor_count
-  - current_workload: current_workload
+  - current_workload: current_workload_total
   - disk_available_least: disk_available_least_total
   - free_disk_gb: hypervisor_free_disk_gb_total
   - free_ram_mb: free_ram_mb_total
@@ -183,6 +198,7 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-statistics-resp.json
    :language: javascript
+
 
 Show Hypervisor Details
 =======================
@@ -249,6 +265,7 @@ Response
   - service.id: service_id_body_2_52
   - service.id: service_id_body_2_53
   - service.disabled_reason: service_disable_reason
+  - uptime: hypervisor_uptime
   - vcpus: hypervisor_vcpus
   - vcpus_used: hypervisor_vcpus_used
 
@@ -262,12 +279,25 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.53/hypervisors-show-with-servers-resp.json
    :language: javascript
 
-Show Hypervisor Uptime
-======================
+**Example Show Hypervisors Details (v2.88): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.88/hypervisors-show-with-servers-resp.json
+   :language: javascript
+
+
+Show Hypervisor Uptime (DEPRECATED)
+===================================
 
 .. rest_method:: GET /os-hypervisors/{hypervisor_id}/uptime
+   max_version: 2.87
 
 Shows the uptime for a given hypervisor.
+
+.. warning::
+
+    This API is deprecated and will fail with HTTP 404 starting with
+    microversion 2.88. Use `Show Hypervisor Details`_ with microversion 2.88
+    and later to get this information.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
@@ -308,8 +338,9 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.53/hypervisors-uptime-resp.json
    :language: javascript
 
-Search Hypervisor
-=================
+
+Search Hypervisor (DEPRECATED)
+==============================
 
 .. rest_method:: GET /os-hypervisors/{hypervisor_hostname_pattern}/search
    max_version: 2.52
@@ -351,8 +382,9 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-search-resp.json
    :language: javascript
 
-List Hypervisor Servers
-=======================
+
+List Hypervisor Servers (DEPRECATED)
+====================================
 
 .. rest_method:: GET /os-hypervisors/{hypervisor_hostname_pattern}/servers
    max_version: 2.52
