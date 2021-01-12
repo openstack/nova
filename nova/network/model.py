@@ -103,14 +103,16 @@ VNIC_TYPE_MACVTAP = 'macvtap'
 VNIC_TYPE_DIRECT_PHYSICAL = 'direct-physical'
 VNIC_TYPE_BAREMETAL = 'baremetal'
 VNIC_TYPE_VIRTIO_FORWARDER = 'virtio-forwarder'
+VNIC_TYPE_VDPA = 'vdpa'
 
 # Define list of ports which needs pci request.
 # Note: The macvtap port needs a PCI request as it is a tap interface
 # with VF as the lower physical interface.
 # Note: Currently, VNIC_TYPE_VIRTIO_FORWARDER assumes a 1:1
 # relationship with a VF. This is expected to change in the future.
-VNIC_TYPES_SRIOV = (VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP,
-                    VNIC_TYPE_DIRECT_PHYSICAL, VNIC_TYPE_VIRTIO_FORWARDER)
+VNIC_TYPES_SRIOV = (
+    VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP, VNIC_TYPE_DIRECT_PHYSICAL,
+    VNIC_TYPE_VIRTIO_FORWARDER, VNIC_TYPE_VDPA)
 
 # Define list of ports which are passthrough to the guest
 # and need a special treatment on snapshot and suspend/resume
