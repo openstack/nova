@@ -876,6 +876,30 @@ Related options:
   :oslo.config:option:`libvirt.hw_machine_type`; see
   :ref:`deploying-sev-capable-infrastructure` for more on this.
 """),
+    cfg.IntOpt('device_detach_attempts',
+               default=8,
+               min=1,
+               help="""
+Maximum number of attempts the driver tries to detach a device in libvirt.
+
+Related options:
+
+* :oslo.config:option:`libvirt.device_detach_timeout`
+
+"""),
+    cfg.IntOpt('device_detach_timeout',
+               default=20,
+               min=1,
+               help="""
+Maximum number of seconds the driver waits for the success or the failure
+event from libvirt for a given device detach attempt before it re-trigger the
+detach.
+
+Related options:
+
+* :oslo.config:option:`libvirt.device_detach_attempts`
+
+"""),
 ]
 
 libvirt_imagebackend_opts = [

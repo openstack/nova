@@ -1278,9 +1278,17 @@ class Domain(object):
         self.attachDevice(xml)
 
     def detachDevice(self, xml):
+        # TODO(gibi): this should handle nics similarly to attachDevice()
         disk_info = _parse_disk_info(etree.fromstring(xml))
-        disk_info['_attached'] = True
-        return disk_info in self._def['devices']['disks']
+        attached_disk_info = None
+        for attached_disk in self._def['devices']['disks']:
+            if attached_disk['target_dev'] == disk_info.get('target_dev'):
+                attached_disk_info = attached_disk
+                break
+
+        if attached_disk_info:
+            self._def['devices']['disks'].remove(attached_disk_info)
+        return attached_disk_info is not None
 
     def detachDeviceFlags(self, xml, flags):
         self.detachDevice(xml)
