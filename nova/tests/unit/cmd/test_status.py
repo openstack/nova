@@ -476,3 +476,30 @@ class TestUpgradeCheckOldCompute(test.NoDBTestCase):
                 return_value=too_old):
             result = self.cmd._check_old_computes()
             self.assertEqual(upgradecheck.Code.WARNING, result.code)
+
+
+class TestCheckMachineTypeUnset(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.cmd = status.UpgradeCommands()
+
+    @mock.patch(
+        'nova.virt.libvirt.machine_type_utils.get_instances_without_type',
+        new=mock.Mock(return_value=[mock.Mock(spec=objects.Instance)]))
+    def test_instances_found_without_hw_machine_type(self):
+        result = self.cmd._check_machine_type_set()
+        self.assertEqual(
+            upgradecheck.Code.WARNING,
+            result.code
+        )
+
+    @mock.patch(
+        'nova.virt.libvirt.machine_type_utils.get_instances_without_type',
+        new=mock.Mock(return_value=[]))
+    def test_instances_not_found_without_hw_machine_type(self):
+        result = self.cmd._check_machine_type_set()
+        self.assertEqual(
+            upgradecheck.Code.SUCCESS,
+            result.code
+        )

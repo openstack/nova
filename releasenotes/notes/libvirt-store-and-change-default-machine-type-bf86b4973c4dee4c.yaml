@@ -46,3 +46,8 @@ upgrade:
     This command will list instance UUIDs that do not have a machine type
     recorded. An optional cell UUID can be provided to list on instances
     without a machine type from that cell.
+
+    A new ``nova-status`` check has been introduced to help operators
+    identify if any instances within their environment have ``hw_machine_type``
+    unset before they attempt to change the ``[libvirt]hw_machine_type``
+    configurable.

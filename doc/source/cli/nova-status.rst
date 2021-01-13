@@ -146,6 +146,7 @@ Upgrade
   **23.0.0 (Wallaby)**
 
   * Checks for computes older than the previous major release
+  * Checks for any instances without ``hw_machine_type`` set.
 
 See Also
 ========
