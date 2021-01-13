@@ -427,6 +427,16 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
             status = upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
         return status
 
+    def _check_old_computes(self):
+        # warn if there are computes in the system older than the previous
+        # major release
+        try:
+            utils.raise_if_old_compute()
+        except exception.TooOldComputeService as e:
+            return upgradecheck.Result(upgradecheck.Code.WARNING, str(e))
+
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
+
     # The format of the check functions is to return an upgradecheck.Result
     # object with the appropriate upgradecheck.Code and details set. If the
     # check hits warnings or failures then those should be stored in the
@@ -447,6 +457,8 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         (_('Policy Scope-based Defaults'), _check_policy),
         # Added in Victoria
         (_('Policy File JSON to YAML Migration'), _check_policy_json),
+        # Backported from Wallaby
+        (_('Older than N-1 computes'), _check_old_computes)
     )
 
 

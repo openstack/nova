@@ -142,6 +142,8 @@ Upgrade
   **22.0.0 (Victoria)**
 
   * Checks for the policy files is not JSON-formatted.
+  * Checks for computes older than the previous major release. This check was
+    backported from 23.0.0 (Wallaby).
 
 See Also
 ========
