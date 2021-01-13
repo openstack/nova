@@ -242,6 +242,10 @@ VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
+# VDPA interface support
+MIN_LIBVIRT_VDPA = (6, 9, 0)
+MIN_QEMU_VDPA = (5, 1, 0)
+
 
 class AsyncDeviceEventsHandler:
     """A synchornization point between libvirt events an clients waiting for
@@ -7267,18 +7271,27 @@ class LibvirtDriver(driver.ComputeDriver):
         :returns: a JSON string containing a list of the assignable PCI
                   devices information
         """
-        dev_flags = (libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_NET |
-                     libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV)
+        dev_flags = (
+            libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_NET |
+            libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV
+        )
+        if self._host.has_min_version(
+            lv_ver=MIN_LIBVIRT_VDPA, hv_ver=MIN_QEMU_VDPA,
+        ):
+            dev_flags |= libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_VDPA
+
         devices = {
             dev.name(): dev for dev in
             self._host.list_all_devices(flags=dev_flags)
         }
         net_devs = [dev for dev in devices.values() if "net" in dev.listCaps()]
+        vdpa_devs = [
+            dev for dev in devices.values() if "vdpa" in dev.listCaps()
+        ]
         pci_info = [
-            self._host._get_pcidev_info(name, dev, net_devs)
+            self._host._get_pcidev_info(name, dev, net_devs, vdpa_devs)
             for name, dev in devices.items() if "pci" in dev.listCaps()
         ]
-
         return jsonutils.dumps(pci_info)
 
     def _get_mdev_capabilities_for_dev(self, devname, types=None):

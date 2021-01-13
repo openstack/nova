@@ -1188,7 +1188,8 @@ class Host(object):
         self,
         devname: str,
         dev: 'libvirt.virNodeDevice',
-        net_devs: ty.List['libvirt.virNodeDevice']
+        net_devs: ty.List['libvirt.virNodeDevice'],
+        vdpa_devs: ty.List['libvirt.virNodeDevice'],
     ) -> ty.Dict[str, ty.Union[str, dict]]:
         """Returns a dict of PCI device."""
 
@@ -1196,7 +1197,8 @@ class Host(object):
             cfgdev: vconfig.LibvirtConfigNodeDevice,
             pci_address: str,
             device: 'libvirt.virNodeDevice',
-            net_devs: ty.List['libvirt.virNodeDevice']
+            net_devs: ty.List['libvirt.virNodeDevice'],
+            vdpa_devs: ty.List['libvirt.virNodeDevice'],
         ) -> ty.Dict[str, str]:
             """Get a PCI device's device type.
 
@@ -1205,6 +1207,7 @@ class Host(object):
             Function (VF).
             """
             net_dev_parents = {dev.parent() for dev in net_devs}
+            vdpa_parents = {dev.parent() for dev in vdpa_devs}
             for fun_cap in cfgdev.pci_capability.fun_capability:
                 if fun_cap.type == 'virt_functions':
                     return {
@@ -1230,6 +1233,8 @@ class Host(object):
                         parent_ifname = pci_utils.get_ifname_by_pci_address(
                             pci_address, pf_interface=True)
                         result['parent_ifname'] = parent_ifname
+                    if device.name() in vdpa_parents:
+                        result['dev_type'] = fields.PciDeviceType.VDPA
                     return result
 
             return {'dev_type': fields.PciDeviceType.STANDARD}
@@ -1238,18 +1243,20 @@ class Host(object):
             device_dict: dict,
             device: 'libvirt.virNodeDevice',
             net_devs: ty.List['libvirt.virNodeDevice']
-        ) -> ty.Dict[str, ty.Dict[str, ty.Optional[ty.List[str]]]]:
+        ) -> ty.Dict[str, ty.Dict[str, ty.Any]]:
             """Get PCI VF device's additional capabilities.
 
             If a PCI device is a virtual function, this function reads the PCI
             parent's network capabilities (must be always a NIC device) and
             appends this information to the device's dictionary.
             """
+            caps: ty.Dict[str, ty.Dict[str, ty.Any]] = {}
+
             if device_dict.get('dev_type') == fields.PciDeviceType.SRIOV_VF:
                 pcinet_info = self._get_pcinet_info(device, net_devs)
                 if pcinet_info:
                     return {'capabilities': {'network': pcinet_info}}
-            return {}
+            return caps
 
         xmlstr = dev.XMLDesc(0)
         cfgdev = vconfig.LibvirtConfigNodeDevice()
@@ -1272,9 +1279,52 @@ class Host(object):
 
         # requirement by DataBase Model
         device['label'] = 'label_%(vendor_id)s_%(product_id)s' % device
-        device.update(_get_device_type(cfgdev, address, dev, net_devs))
+        device.update(
+            _get_device_type(cfgdev, address, dev, net_devs, vdpa_devs))
         device.update(_get_device_capabilities(device, dev, net_devs))
         return device
+
+    def get_vdpa_nodedev_by_address(
+        self, pci_address: str,
+    ) -> vconfig.LibvirtConfigNodeDevice:
+        """Finds a vDPA device by the parent VF PCI device address.
+
+        :param pci_address: Parent PCI device address
+        :returns: A libvirt nodedev representing the vDPA device
+        :raises: StopIteration if not found
+        """
+        dev_flags = (
+            libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_VDPA |
+            libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV
+        )
+        devices = {
+            dev.name(): dev for dev in
+            self.list_all_devices(flags=dev_flags)}
+        vdpa_devs = [
+            dev for dev in devices.values() if "vdpa" in dev.listCaps()]
+        pci_info = [
+            self._get_pcidev_info(name, dev, [], vdpa_devs) for name, dev
+            in devices.items() if "pci" in dev.listCaps()]
+        parent_dev = next(
+            dev for dev in pci_info if dev['address'] == pci_address)
+        vdpa_dev = next(
+            dev for dev in vdpa_devs if dev.parent() == parent_dev['dev_id'])
+        xmlstr = vdpa_dev.XMLDesc(0)
+        cfgdev = vconfig.LibvirtConfigNodeDevice()
+        cfgdev.parse_str(xmlstr)
+        return cfgdev
+
+    def get_vdpa_device_path(
+        self, pci_address: str,
+    ) -> str:
+        """Finds a vDPA device path by the parent VF PCI device address.
+
+        :param pci_address: Parent PCI device address
+        :returns: Device path as string
+        :raises: StopIteration if not found
+        """
+        nodedev = self.get_vdpa_nodedev_by_address(pci_address)
+        return nodedev.vdpa_capability.dev_path
 
     def list_pci_devices(self, flags=0):
         """Lookup pci devices.

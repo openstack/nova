@@ -3103,6 +3103,7 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
         self.parent = None
         self.pci_capability = None
         self.mdev_information = None
+        self.vdpa_capability = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigNodeDevice, self).parse_dom(xmldoc)
@@ -3120,6 +3121,23 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
                 mdev_info = LibvirtConfigNodeDeviceMdevInformation()
                 mdev_info.parse_dom(c)
                 self.mdev_information = mdev_info
+            elif c.tag == "capability" and c.get("type") in ['vdpa']:
+                vdpa_caps = LibvirtConfigNodeDeviceVDPACap()
+                vdpa_caps.parse_dom(c)
+                self.vdpa_capability = vdpa_caps
+
+
+class LibvirtConfigNodeDeviceVDPACap(LibvirtConfigObject):
+    def __init__(self, **kwargs):
+        super().__init__(
+            root_name="capability", **kwargs)
+        self.dev_path = None
+
+    def parse_dom(self, xmldoc):
+        super().parse_dom(xmldoc)
+        for c in xmldoc:
+            if c.tag == "chardev":
+                self.dev_path = c.text
 
 
 class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
@@ -3181,6 +3199,10 @@ class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
                 mdevcap = LibvirtConfigNodeDeviceMdevCapableSubFunctionCap()
                 mdevcap.parse_dom(c)
                 self.mdev_capability.append(mdevcap)
+
+    def pci_address(self):
+        return "%04x:%02x:%02x.%01x" % (
+            self.domain, self.bus, self.slot, self.function)
 
 
 class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigObject):

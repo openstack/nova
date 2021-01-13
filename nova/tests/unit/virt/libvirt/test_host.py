@@ -1100,7 +1100,7 @@ Active:          8381604 kB
         pci_dev = fakelibvirt.NodeDevice(
             self.host._get_connection(),
             xml=fake_libvirt_data._fake_NodeDevXml[dev_name])
-        actual_vf = self.host._get_pcidev_info(dev_name, pci_dev, [])
+        actual_vf = self.host._get_pcidev_info(dev_name, pci_dev, [], [])
         expect_vf = {
             "dev_id": dev_name, "address": "0000:04:11.7",
             "product_id": '1520', "numa_node": 0,
@@ -1133,7 +1133,8 @@ Active:          8381604 kB
             dev for dev in node_devs.values() if dev.name() not in devs]
 
         name = "pci_0000_04_00_3"
-        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        actual_vf = self.host._get_pcidev_info(
+            name, node_devs[name], net_devs, [])
         expect_vf = {
             "dev_id": "pci_0000_04_00_3",
             "address": "0000:04:00.3",
@@ -1146,7 +1147,8 @@ Active:          8381604 kB
         self.assertEqual(expect_vf, actual_vf)
 
         name = "pci_0000_04_10_7"
-        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        actual_vf = self.host._get_pcidev_info(
+            name, node_devs[name], net_devs, [])
         expect_vf = {
             "dev_id": "pci_0000_04_10_7",
             "address": "0000:04:10.7",
@@ -1164,7 +1166,8 @@ Active:          8381604 kB
         self.assertEqual(expect_vf, actual_vf)
 
         name = "pci_0000_04_11_7"
-        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        actual_vf = self.host._get_pcidev_info(
+            name, node_devs[name], net_devs, [])
         expect_vf = {
             "dev_id": "pci_0000_04_11_7",
             "address": "0000:04:11.7",
@@ -1182,7 +1185,8 @@ Active:          8381604 kB
         self.assertEqual(expect_vf, actual_vf)
 
         name = "pci_0000_04_00_1"
-        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        actual_vf = self.host._get_pcidev_info(
+            name, node_devs[name], net_devs, [])
         expect_vf = {
             "dev_id": "pci_0000_04_00_1",
             "address": "0000:04:00.1",
@@ -1195,7 +1199,8 @@ Active:          8381604 kB
         self.assertEqual(expect_vf, actual_vf)
 
         name = "pci_0000_03_00_0"
-        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        actual_vf = self.host._get_pcidev_info(
+            name, node_devs[name], net_devs, [])
         expect_vf = {
             "dev_id": "pci_0000_03_00_0",
             "address": "0000:03:00.0",
@@ -1208,7 +1213,8 @@ Active:          8381604 kB
         self.assertEqual(expect_vf, actual_vf)
 
         name = "pci_0000_03_00_1"
-        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        actual_vf = self.host._get_pcidev_info(
+            name, node_devs[name], net_devs, [])
         expect_vf = {
             "dev_id": "pci_0000_03_00_1",
             "address": "0000:03:00.1",
@@ -1302,6 +1308,121 @@ Active:          8381604 kB
             ret = self.host.list_all_devices(flags=42)
             self.assertEqual([], ret)
         mock_list_all_devices.assert_called_once_with(42)
+
+    def test_get_vdpa_nodedev_by_address(self):
+        with test.nested(
+            mock.patch.object(
+                self.host.get_connection(), "listAllDevices"),
+            mock.patch.object(self.host, "_get_pcinet_info"),
+        ) as (mock_list_all_devices, mock_get_pci_info):
+            vdpa_str = """
+                <device>
+                  <name>vdpa_vdpa0</name>
+                  <path>/sys/devices/pci0000:00/0000:00:02.2/0000:06:00.2/vdpa0</path>
+                  <parent>pci_0000_06_00_2</parent>
+                  <driver>
+                    <name>vhost_vdpa</name>
+                  </driver>
+                  <capability type='vdpa'>
+                    <chardev>/dev/vhost-vdpa-0</chardev>
+                  </capability>
+                </device>"""  # noqa: E501
+            vdpa_dev = fakelibvirt.NodeDevice(None, xml=vdpa_str)
+            vf_str = """
+                <device>
+                  <name>pci_0000_06_00_2</name>
+                  <path>/sys/devices/pci0000:00/0000:00:02.2/0000:06:00.2</path>
+                  <parent>pci_0000_00_02_2</parent>
+                  <driver>
+                    <name>mlx5_core</name>
+                  </driver>
+                  <capability type='pci'>
+                  <class>0x020000</class>
+                  <domain>0</domain>
+                  <bus>6</bus>
+                  <slot>0</slot>
+                  <function>2</function>
+                  <product id='0x101e'>ConnectX Family mlx5Gen Virtual Function</product>
+                  <vendor id='0x15b3'>Mellanox Technologies</vendor>
+                  <capability type='phys_function'>
+                     <address domain='0x0000' bus='0x06' slot='0x00' function='0x0'/>
+                  </capability>
+                  <iommuGroup number='99'>
+                    <address domain='0x0000' bus='0x06' slot='0x00' function='0x2'/>
+                  </iommuGroup>
+                  <numa node='0'/>
+                  <pci-express>
+                    <link validity='cap' port='0' speed='16' width='8'/>
+                    <link validity='sta' width='0'/>
+                  </pci-express>
+                  </capability>
+                </device>"""  # noqa: E501
+            vf_dev = fakelibvirt.NodeDevice(None, xml=vf_str)
+            node_devs = [vdpa_dev, vf_dev]
+            mock_list_all_devices.return_value = node_devs
+            mock_get_pci_info.return_value = [
+                {
+                    "dev_id": "pci_0000_06_00_2",
+                    "address": "0000:06:00.2",
+                    "product_id": '101e',
+                    "vendor_id": '15b3',
+                    "numa_node": 0,
+                    "label": 'label_101e_15b3',
+                    "dev_type": 'type-VF',
+                    "parent_addr": "0000:00:02.2",
+                    "parent_ifname": "enp6s0f0",
+                    "capabilities": {
+                        "network": [
+                            "rx", "tx", "sg", "tso", "gso", "gro", "rxvlan",
+                            "txvlan",
+                        ],
+                    },
+                },
+                {
+                    "dev_id": "vdpa_vdpa0",
+                    "address": "0000:06:00.2",
+                    "product_id": '101e',
+                    "vendor_id": '15b3',
+                    "numa_node": 0,
+                    "label": 'label_101e_15b3',
+                    "dev_type": 'vdpa',
+                    'parent_addr': '0000:06:00.2',
+                    "parent_ifname": "enp6s0f0v0",
+                    "capabilities": {
+                        "network": [
+                            "rx", "tx", "sg", "tso", "gso", "gro",
+                            "rxvlan", "txvlan"],
+                    },
+                },
+            ]
+            ret = self.host.get_vdpa_nodedev_by_address("0000:06:00.2")
+            cfgdev = vconfig.LibvirtConfigNodeDevice()
+            cfgdev.parse_str(vdpa_str)
+            self.assertEqual(cfgdev.name, ret.name)
+            self.assertEqual(
+                "/dev/vhost-vdpa-0", ret.vdpa_capability.dev_path)
+
+    def test_get_vdpa_device_path(self):
+        with mock.patch.object(
+            self.host, "get_vdpa_nodedev_by_address",
+        ) as mock_vdpa:
+            xml_str = """
+            <device>
+              <name>vdpa_vdpa0</name>
+              <path>/sys/devices/pci0000:00/0000:00:02.2/0000:06:00.2/vdpa0</path>
+              <parent>pci_0000_06_00_2</parent>
+              <driver>
+                <name>vhost_vdpa</name>
+              </driver>
+              <capability type='vdpa'>
+                <chardev>/dev/vhost-vdpa-0</chardev>
+              </capability>
+            </device>"""
+            cfgdev = vconfig.LibvirtConfigNodeDevice()
+            cfgdev.parse_str(xml_str)
+            mock_vdpa.return_value = cfgdev
+            ret = self.host.get_vdpa_device_path("0000:06:00.2")
+            self.assertEqual("/dev/vhost-vdpa-0", ret)
 
     @mock.patch.object(fakelibvirt.virConnect, "listDevices")
     def test_list_devices(self, mock_listDevices):
