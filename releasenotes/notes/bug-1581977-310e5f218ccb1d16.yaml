@@ -1,0 +1,24 @@
+---
+fixes:
+  - |
+    Nova will now replace periods (``.``) with dashes (``-``) when santizing an
+    instance's display name for use as a hostname.
+
+    Nova publishes hostnames for instances via the metadata service and config
+    drives. This hostname is based on a sanitized version of the instance name
+    combined with the domain value specified in ``[api] dhcp_domain``. The
+    previous sanitization of the hostname included the replacement of whitespace
+    and underscores with dashes and the stripping of unicode characters along
+    with leading and trailing periods and dashes. It did not, however, include
+    the removal of periods in the name. Periods are not valid in the hostname
+    or, more specifically, in the host-specific or leaf label (the ``host`` in
+    ``host.example.com``) and their presence can cause conflicts when ``[api]
+    dhcp_domain`` is configured, leading to instances being mistakenly
+    configured with hostnames like ``host.example.com.example.com``. More
+    pressingly, their use can result in a failure to boot instances if DNS
+    integration is enabled in neutron, likely via designate, as the hostname is
+    identified as a FQDN (fully-qualified domain name) by neutron and reasonable
+    instance names like ``test-ubuntu20.04`` will be rejected as invalid FQDNs,
+    in this case because the name would yield a TLD (top-level domain) of ``04``
+    and TLDs cannot be entire numerical. To avoid these issues, periods are now
+    replaced with dashes.

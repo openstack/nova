@@ -372,7 +372,7 @@ def sanitize_hostname(hostname, default_name=None):
         hostname = hostname.encode('latin-1', 'ignore').decode('latin-1')
 
     hostname = truncate_hostname(hostname)
-    hostname = re.sub('[ _]', '-', hostname)
+    hostname = re.sub(r'[ _\.]', '-', hostname)
     hostname = re.sub(r'[^\w.-]+', '', hostname)
     hostname = hostname.lower()
     hostname = hostname.strip('.-')
