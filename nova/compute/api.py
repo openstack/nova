@@ -1336,10 +1336,11 @@ class API(base.Base):
                 instance.trusted_certs = self._retrieve_trusted_certs_object(
                     context, trusted_certs)
 
-                instance = self.create_db_entry_for_new_instance(context,
-                        instance_type, boot_meta, instance, security_groups,
-                        block_device_mapping, num_instances, i,
-                        shutdown_terminate, create_instance=False)
+                self._populate_instance_for_create(
+                    context, instance, boot_meta, i,
+                    security_groups, instance_type,
+                    num_instances, shutdown_terminate)
+
                 block_device_mapping = (
                     self._bdm_validate_set_size_and_instance(context,
                         instance, instance_type, block_device_mapping,
@@ -1963,32 +1964,6 @@ class API(base.Base):
         for tag in instance_tags:
             tag.resource_id = resource_id
         return instance_tags
-
-    # This method remains because cellsv1 uses it in the scheduler
-    def create_db_entry_for_new_instance(self, context, instance_type, image,
-            instance, security_group, block_device_mapping, num_instances,
-            index, shutdown_terminate=False, create_instance=True):
-        """Create an entry in the DB for this new instance,
-        including any related table updates (such as security group,
-        etc).
-
-        This is called by the scheduler after a location for the
-        instance has been determined.
-
-        :param create_instance: Determines if the instance is created here or
-            just populated for later creation. This is done so that this code
-            can be shared with cellsv1 which needs the instance creation to
-            happen here. It should be removed and this method cleaned up when
-            cellsv1 is a distant memory.
-        """
-        self._populate_instance_for_create(context, instance, image, index,
-                                           security_group, instance_type,
-                                           num_instances, shutdown_terminate)
-
-        if create_instance:
-            instance.create()
-
-        return instance
 
     def _check_multiple_instances_with_neutron_ports(self,
                                                      requested_networks):
