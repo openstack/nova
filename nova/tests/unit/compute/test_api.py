@@ -215,7 +215,7 @@ class _ComputeAPIUnitTestMixIn(object):
         get_image.return_value = (None, {})
         check_requested_networks.return_value = 1
 
-        instance_type = self._create_flavor()
+        flavor = self._create_flavor()
 
         port = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         address = '10.0.0.1'
@@ -226,7 +226,7 @@ class _ComputeAPIUnitTestMixIn(object):
         with mock.patch.object(self.compute_api.network_api,
                                'create_resource_requests',
                                return_value=(None, [])):
-            self.compute_api.create(self.context, instance_type, 'image_id',
+            self.compute_api.create(self.context, flavor, 'image_id',
                                     requested_networks=requested_networks,
                                     max_count=None)
 
@@ -239,7 +239,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                             mock_limit_check, mock_count):
         image_href = "image_href"
         image_id = 0
-        instance_type = self._create_flavor()
+        flavor = self._create_flavor()
 
         quotas = {'instances': 1, 'cores': 1, 'ram': 1}
         quota_exception = exception.OverQuota(quotas=quotas,
@@ -259,7 +259,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                return_value=(image_id, {})) as mock_get_image:
             for min_count, message in [(20, '20-40'), (40, '40')]:
                 try:
-                    self.compute_api.create(self.context, instance_type,
+                    self.compute_api.create(self.context, flavor,
                                             "image_href", min_count=min_count,
                                             max_count=40)
                 except exception.TooManyInstances as e:
@@ -277,7 +277,7 @@ class _ComputeAPIUnitTestMixIn(object):
         # creating a volume-backed instance
         self.assertRaises(exception.CertificateValidationFailed,
                           self.compute_api.create, self.context,
-                          instance_type=self._create_flavor(), image_href=None,
+                          flavor=self._create_flavor(), image_href=None,
                           trusted_certs=['test-cert-1', 'test-cert-2'])
 
     @mock.patch('nova.objects.Quotas.limit_check')
@@ -290,7 +290,7 @@ class _ComputeAPIUnitTestMixIn(object):
         # creating a volume-backed instance
         self.assertRaises(exception.CertificateValidationFailed,
                           self.compute_api.create, self.context,
-                          instance_type=self._create_flavor(),
+                          flavor=self._create_flavor(),
                           image_href=None)
 
     def _test_create_max_net_count(self, max_net_count, min_count, max_count):
@@ -4628,7 +4628,7 @@ class _ComputeAPIUnitTestMixIn(object):
              side_effect=exception.CinderConnectionFailed(reason='error'))
     def test_validate_bdm_with_cinder_down(self, mock_get_snapshot):
         instance = self._create_instance_obj()
-        instance_type = self._create_flavor()
+        flavor = self._create_flavor()
         bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
                 {
@@ -4643,7 +4643,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.CinderConnectionFailed,
                           self.compute_api._validate_bdm,
                           self.context,
-                          instance, instance_type, bdms, image_cache, volumes)
+                          instance, flavor, bdms, image_cache, volumes)
 
     @mock.patch.object(cinder.API, 'attachment_create',
                        side_effect=exception.InvalidInput(reason='error'))
@@ -4653,7 +4653,7 @@ class _ComputeAPIUnitTestMixIn(object):
         # 'available' results in _validate_bdm re-raising InvalidVolume.
         instance = self._create_instance_obj()
         del instance.id
-        instance_type = self._create_flavor()
+        flavor = self._create_flavor()
         volume_id = 'e856840e-9f5b-4894-8bde-58c6e29ac1e8'
         volume_info = {'status': 'error',
                        'attach_status': 'detached',
@@ -4671,7 +4671,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.InvalidVolume,
                           self.compute_api._validate_bdm,
                           self.context,
-                          instance, instance_type, bdms, {},
+                          instance, flavor, bdms, {},
                           {volume_id: volume_info})
 
         mock_attach_create.assert_called_once_with(
@@ -4694,7 +4694,7 @@ class _ComputeAPIUnitTestMixIn(object):
         """Test _check_requested_volume_type method is used.
         """
         instance = self._create_instance_obj()
-        instance_type = self._create_flavor()
+        flavor = self._create_flavor()
 
         volume_type = 'fake_lvm_1'
         volume_types = [{'id': 'fake_volume_type_id_1', 'name': 'fake_lvm_1'},
@@ -4733,7 +4733,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
             image_cache = volumes = {}
             self.compute_api._validate_bdm(self.context, instance,
-                                           instance_type, bdms, image_cache,
+                                           flavor, bdms, image_cache,
                                            volumes)
 
             get_all_vol_types.assert_called_once_with(self.context)
@@ -4951,7 +4951,7 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.objects.Instance')
     @mock.patch('nova.objects.InstanceMapping.create')
     def _test_provision_instances_with_accels(self,
-        instance_type, dp_request_groups, prev_request_groups,
+        flavor, dp_request_groups, prev_request_groups,
         mock_im, mock_instance, mock_br, mock_rs, mock_get_dp):
 
         @mock.patch.object(self.compute_api, '_get_volumes_for_bdms')
@@ -4968,7 +4968,7 @@ class _ComputeAPIUnitTestMixIn(object):
         def do_test(mock_bdm_v, mock_sg, mock_cniq, mock_get_vols):
             mock_cniq.return_value = 1
             self.compute_api._provision_instances(self.context,
-                                                  instance_type,
+                                                  flavor,
                                                   1, 1, mock.MagicMock(),
                                                   {}, None,
                                                   None, None, None, {}, None,
@@ -4988,7 +4988,7 @@ class _ComputeAPIUnitTestMixIn(object):
         # should be obtained, and added to reqspec's requested_resources.
         dp_name = 'mydp'
         extra_specs = {'extra_specs': {'accel:device_profile': dp_name}}
-        instance_type = self._create_flavor(**extra_specs)
+        flavor = self._create_flavor(**extra_specs)
 
         prev_groups = [objects.RequestGroup(requester_id='prev0'),
                        objects.RequestGroup(requester_id='prev1')]
@@ -4996,7 +4996,7 @@ class _ComputeAPIUnitTestMixIn(object):
                      objects.RequestGroup(requester_id='deviceprofile3')]
 
         mock_get_dp, fake_rs = self._test_provision_instances_with_accels(
-            instance_type, dp_groups, prev_groups)
+            flavor, dp_groups, prev_groups)
         mock_get_dp.assert_called_once_with(self.context, dp_name)
         self.assertEqual(prev_groups + dp_groups, fake_rs.requested_resources)
 
@@ -5004,11 +5004,11 @@ class _ComputeAPIUnitTestMixIn(object):
         # If extra specs has no accel spec, no attempt should be made to
         # get device profile's request_groups, and reqspec.requested_resources
         # should be left unchanged.
-        instance_type = self._create_flavor()
+        flavor = self._create_flavor()
         prev_groups = [objects.RequestGroup(requester_id='prev0'),
                        objects.RequestGroup(requester_id='prev1')]
         mock_get_dp, fake_rs = self._test_provision_instances_with_accels(
-            instance_type, [], prev_groups)
+            flavor, [], prev_groups)
         mock_get_dp.assert_not_called()
         self.assertEqual(prev_groups, fake_rs.requested_resources)
 
@@ -5654,7 +5654,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self._test_detach_interface_invalid_state(state)
 
     def _test_check_and_transform_bdm(self, block_device_mapping):
-        instance_type = self._create_flavor()
+        flavor = self._create_flavor()
         base_options = {'uuid': uuids.bdm_instance,
                         'image_ref': 'fake_image_ref',
                         'metadata': {}}
@@ -5667,7 +5667,7 @@ class _ComputeAPIUnitTestMixIn(object):
         block_device_mapping = block_device_mapping
         self.assertRaises(exception.InvalidRequest,
                           self.compute_api._check_and_transform_bdm,
-                          self.context, base_options, instance_type,
+                          self.context, base_options, flavor,
                           image_meta, 1, 1, block_device_mapping, legacy_bdm)
 
     def test_check_and_transform_bdm_source_volume(self):
@@ -5698,8 +5698,8 @@ class _ComputeAPIUnitTestMixIn(object):
         swap_size = 42
         ephemeral_size = 24
         instance = self._create_instance_obj()
-        instance_type = self._create_flavor(swap=swap_size,
-                                            ephemeral_gb=ephemeral_size)
+        flavor = self._create_flavor(
+            swap=swap_size, ephemeral_gb=ephemeral_size)
         block_device_mapping = [
                 {'device_name': '/dev/sda1',
                  'source_type': 'snapshot', 'destination_type': 'volume',
@@ -5722,7 +5722,7 @@ class _ComputeAPIUnitTestMixIn(object):
         with mock.patch.object(self.compute_api, '_validate_bdm'):
             image_cache = volumes = {}
             bdms = self.compute_api._bdm_validate_set_size_and_instance(
-                self.context, instance, instance_type, block_device_mapping,
+                self.context, instance, flavor, block_device_mapping,
                 image_cache, volumes)
 
         expected = [{'device_name': '/dev/sda1',
@@ -7083,7 +7083,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         requested Neutron security group and that will be returned from
         _validate_and_build_base_options
         """
-        instance_type = objects.Flavor(**test_flavor.fake_flavor)
+        flavor = objects.Flavor(**test_flavor.fake_flavor)
         boot_meta = metadata = {}
         kernel_id = ramdisk_id = key_name = key_data = user_data = \
             access_ip_v4 = access_ip_v6 = config_drive = \
@@ -7102,7 +7102,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             base_options, max_network_count, key_pair, security_groups, \
                     network_metadata = (
                 self.compute_api._validate_and_build_base_options(
-                    self.context, instance_type, boot_meta, uuids.image_href,
+                    self.context, flavor, boot_meta, uuids.image_href,
                     mock.sentinel.image_id, kernel_id, ramdisk_id,
                     'fake-display-name', 'fake-description', key_name,
                     key_data, requested_secgroups, 'fake-az', user_data,

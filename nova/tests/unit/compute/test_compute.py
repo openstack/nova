@@ -1621,7 +1621,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertRaises(exception.MultiplePortsNotApplicable,
                           self.compute_api.create,
                           self.context,
-                          instance_type=self.default_flavor,
+                          flavor=self.default_flavor,
                           image_href=None,
                           max_count=2,
                           requested_networks=requested_networks)
@@ -8612,11 +8612,12 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_create_instance_sets_system_metadata(self):
         # Make sure image properties are copied into system metadata.
-        with mock.patch.object(self.compute_api.compute_task_api,
-                               'schedule_and_build_instances') as mock_sbi:
-            (ref, resv_id) = self.compute_api.create(
+        with mock.patch.object(
+            self.compute_api.compute_task_api, 'schedule_and_build_instances',
+        ) as mock_sbi:
+            ref, resv_id = self.compute_api.create(
                 self.context,
-                instance_type=self.default_flavor,
+                flavor=self.default_flavor,
                 image_href='f5000000-0000-0000-0000-000000000000')
 
             build_call = mock_sbi.call_args_list[0]
@@ -8630,11 +8631,12 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(value, instance.system_metadata[key])
 
     def test_create_saves_flavor(self):
-        with mock.patch.object(self.compute_api.compute_task_api,
-                               'schedule_and_build_instances') as mock_sbi:
-            (ref, resv_id) = self.compute_api.create(
+        with mock.patch.object(
+            self.compute_api.compute_task_api, 'schedule_and_build_instances',
+        ) as mock_sbi:
+            ref, resv_id = self.compute_api.create(
                 self.context,
-                instance_type=self.default_flavor,
+                flavor=self.default_flavor,
                 image_href=uuids.image_href_id)
 
             build_call = mock_sbi.call_args_list[0]
@@ -8654,7 +8656,7 @@ class ComputeAPITestCase(BaseTestCase):
         ) as (mock_sbi, mock_secgroups):
             self.compute_api.create(
                 self.context,
-                instance_type=self.default_flavor,
+                flavor=self.default_flavor,
                 image_href=uuids.image_href_id,
                 security_groups=['testgroup'])
 
@@ -8671,12 +8673,13 @@ class ComputeAPITestCase(BaseTestCase):
             'nova.network.security_group_api.validate_name',
             side_effect=exception.SecurityGroupNotFound('foo'),
         ) as mock_secgroups:
-            self.assertRaises(exception.SecurityGroupNotFound,
-                              self.compute_api.create,
-                              self.context,
-                              instance_type=self.default_flavor,
-                              image_href=None,
-                              security_groups=['invalid_sec_group'])
+            self.assertRaises(
+                exception.SecurityGroupNotFound,
+                self.compute_api.create,
+                self.context,
+                flavor=self.default_flavor,
+                image_href=None,
+                security_groups=['invalid_sec_group'])
 
         self.assertEqual(pre_build_len,
                          len(db.instance_get_all(self.context)))
@@ -8697,7 +8700,7 @@ class ComputeAPITestCase(BaseTestCase):
         ) as (mock_sbi, _mock_create_resreqs):
             self.compute_api.create(
                 self.context,
-                instance_type=self.default_flavor,
+                flavor=self.default_flavor,
                 image_href=uuids.image_href_id,
                 requested_networks=requested_networks)
 
@@ -8737,14 +8740,14 @@ class ComputeAPITestCase(BaseTestCase):
         instance = objects.Instance()
         instance.update(base_options)
         instance = self.compute_api._populate_instance_for_create(
-                                self.context,
-                                instance,
-                                self.fake_image,
-                                1,
-                                security_groups=objects.SecurityGroupList(),
-                                instance_type=self.tiny_flavor,
-                                num_instances=num_instances,
-                                shutdown_terminate=False)
+            self.context,
+            instance,
+            self.fake_image,
+            1,
+            security_groups=objects.SecurityGroupList(),
+            flavor=self.tiny_flavor,
+            num_instances=num_instances,
+            shutdown_terminate=False)
         self.assertEqual(str(base_options['image_ref']),
                          instance['system_metadata']['image_base_image_ref'])
         self.assertEqual(vm_states.BUILDING, instance['vm_state'])
@@ -8772,14 +8775,14 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.key_manager = key_manager.API()
         index = 1
         instance = self.compute_api._populate_instance_for_create(
-                                self.context,
-                                instance,
-                                self.fake_image,
-                                index,
-                                security_groups=objects.SecurityGroupList(),
-                                instance_type=self.tiny_flavor,
-                                num_instances=num_instances,
-                                shutdown_terminate=False)
+            self.context,
+            instance,
+            self.fake_image,
+            index,
+            security_groups=objects.SecurityGroupList(),
+            flavor=self.tiny_flavor,
+            num_instances=num_instances,
+            shutdown_terminate=False)
         self.assertIsNotNone(instance.ephemeral_key_uuid)
 
     def test_default_hostname_generator(self):
