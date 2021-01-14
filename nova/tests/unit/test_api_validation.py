@@ -643,16 +643,16 @@ class BooleanTestCase(APIValidationTestCase):
                                     expected_detail=detail)
 
 
-class HostnameTestCase(APIValidationTestCase):
+class FQDNTestCase(APIValidationTestCase):
 
     post_schema = {
         'type': 'object',
         'properties': {
-            'foo': parameter_types.hostname,
+            'foo': parameter_types.fqdn,
         },
     }
 
-    def test_validate_hostname(self):
+    def test_validate_fqdn(self):
         self.assertEqual('Validation succeeded.',
                          self.post(body={'foo': 'localhost'},
                                    req=FakeRequest()))
@@ -664,7 +664,7 @@ class HostnameTestCase(APIValidationTestCase):
         self.assertEqual('Validation succeeded.',
                          self.post(body={'foo': 'my_host'}, req=FakeRequest()))
 
-    def test_validate_hostname_fails(self):
+    def test_validate_fqdn_fails(self):
         detail = ("Invalid input for field/attribute foo. Value: True."
                   " True is not of type 'string'")
         self.check_validation_error(self.post, body={'foo': True},
@@ -677,50 +677,6 @@ class HostnameTestCase(APIValidationTestCase):
 
         detail = ("Invalid input for field/attribute foo. Value: my$host."
                   " 'my$host' does not match '^[a-zA-Z0-9-._]*$'")
-        self.check_validation_error(self.post, body={'foo': 'my$host'},
-                                    expected_detail=detail)
-
-
-class HostnameIPaddressTestCase(APIValidationTestCase):
-
-    post_schema = {
-        'type': 'object',
-        'properties': {
-            'foo': parameter_types.hostname_or_ip_address,
-        },
-    }
-
-    def test_validate_hostname_or_ip_address(self):
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'localhost'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'localhost.localdomain.com'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'my-host'}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': 'my_host'}, req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': '192.168.10.100'},
-                                   req=FakeRequest()))
-        self.assertEqual('Validation succeeded.',
-                         self.post(body={'foo': '2001:db8::9abc'},
-                                   req=FakeRequest()))
-
-    def test_validate_hostname_or_ip_address_fails(self):
-        detail = ("Invalid input for field/attribute foo. Value: True."
-                  " True is not of type 'string'")
-        self.check_validation_error(self.post, body={'foo': True},
-                                    expected_detail=detail)
-
-        detail = ("Invalid input for field/attribute foo. Value: 1."
-                  " 1 is not of type 'string'")
-        self.check_validation_error(self.post, body={'foo': 1},
-                                    expected_detail=detail)
-
-        detail = ("Invalid input for field/attribute foo. Value: my$host."
-                  " 'my$host' does not match '^[a-zA-Z0-9-_.:]*$'")
         self.check_validation_error(self.post, body={'foo': 'my$host'},
                                     expected_detail=detail)
 

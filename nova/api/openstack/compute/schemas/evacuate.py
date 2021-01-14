@@ -23,7 +23,7 @@ evacuate = {
         'evacuate': {
             'type': 'object',
             'properties': {
-                'host': parameter_types.hostname,
+                'host': parameter_types.fqdn,
                 'onSharedStorage': parameter_types.boolean,
                 'adminPass': parameter_types.admin_password,
             },

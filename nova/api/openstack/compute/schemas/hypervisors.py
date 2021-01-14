@@ -35,7 +35,7 @@ list_query_schema_v253 = {
         # and requesting hosted servers in the GET /os-hypervisors and
         # GET /os-hypervisors/detail response.
         'hypervisor_hostname_pattern': parameter_types.single_param(
-            parameter_types.hostname),
+            parameter_types.fqdn),
         'with_servers': parameter_types.single_param(
             parameter_types.boolean)
     },
