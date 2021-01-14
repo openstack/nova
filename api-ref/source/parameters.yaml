@@ -737,8 +737,10 @@ hostname_query_server:
   description: |
     Filter the server list result by the host name of server.
 
-    This parameter is only valid when specified by administrators.
-    If non-admin users specify this parameter, it is ignored.
+    This parameter is only valid when specified by administrators until
+    microversion 2.90, after which it can be specified by all users.
+    If non-admin users specify this parameter before microversion 2.90, it is
+    ignored.
   in: query
   required: false
   type: string
@@ -6330,21 +6332,36 @@ server_host_create:
   required: false
   type: string
   min_version: 2.74
-server_hostname:
+server_hostname: &server_hostname
   in: body
   required: false
   type: string
   description: |
-    The hostname set on the instance when it is booted.
-    By default, it appears in the response for administrative users only.
+    The hostname of the instance reported in the metadata service.
+    This parameter only appears in responses for administrators until
+    microversion 2.90, after which it is shown for all users.
+
+    .. note::
+
+        This information is published via the metadata service and requires
+        application such as ``cloud-init`` to propogate it through to the
+        instance.
   min_version: 2.3
-server_hostname_update_rebuild:
+server_hostname_req:
   in: body
   required: false
   type: string
   description: |
-    The hostname set on the instance when it is booted.
-    By default, it appears in the response for administrative users only.
+    The hostname to configure for the instance in the metadata service.
+
+    .. note::
+
+        This information is published via the metadata service and requires
+        application such as ``cloud-init`` to propogate it through to the
+        instance.
+  min_version: 2.90
+server_hostname_update_rebuild:
+  <<: *server_hostname
   min_version: 2.75
 # This is the hypervisor_hostname in a POST (create instance) request body.
 server_hypervisor_hostname_create:

@@ -355,6 +355,14 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.create, self.context, 'fake_flavor', 'image_id',
             max_count=2, requested_networks=requested_networks)
 
+    def test_specified_hostname_and_multiple_instances(self):
+        # Tests that if hostname is specified then there is only one instance
+        # request allowed (i.e max_count == 1)
+        self.assertRaises(
+            exception.AmbiguousHostnameForMultipleInstances,
+            self.compute_api.create, self.context, 'fake_flavor', 'image_id',
+            max_count=2, hostname='foo')
+
     # TODO(huaqiang): Remove in Wallaby
     @mock.patch('nova.compute.api.API._check_requested_networks',
                 new=mock.Mock(return_value=1))
@@ -4856,8 +4864,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                       volume_types)
         self.assertEqual(bdms[0].volume_type, volume_types[0]['name'])
 
-    def _test_provision_instances_with_cinder_error(self,
-                                                    expected_exception):
+    def _test_provision_instances_with_cinder_error(self, expected_exception):
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects.Instance, 'create')
         @mock.patch.object(objects.RequestSpec, 'from_components')
@@ -7185,11 +7192,11 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                 self.compute_api._validate_and_build_base_options(
                     self.context, flavor, boot_meta, uuids.image_href,
                     mock.sentinel.image_id, kernel_id, ramdisk_id,
-                    'fake-display-name', 'fake-description', key_name,
-                    key_data, requested_secgroups, 'fake-az', user_data,
-                    metadata, access_ip_v4, access_ip_v6, requested_networks,
-                    config_drive, auto_disk_config, reservation_id, max_count,
-                    supports_port_resource_request
+                    'fake-display-name', 'fake-description', 'fake-hostname',
+                    key_name, key_data, requested_secgroups, 'fake-az',
+                    user_data, metadata, access_ip_v4, access_ip_v6,
+                    requested_networks, config_drive, auto_disk_config,
+                    reservation_id, max_count, supports_port_resource_request,
                 )
             )
         # Assert the neutron security group API get method was called once

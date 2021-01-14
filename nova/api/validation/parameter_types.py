@@ -245,6 +245,38 @@ non_negative_integer = {
     'pattern': '^[0-9]*$', 'minimum': 0, 'minLength': 1
 }
 
+# A host-specific or leaf label.
+#
+# This is based on the specifications from two RFCs, RFCC 952 and RFC 1123.
+#
+# From RFC 952:
+#
+#   A "name" (Net, Host, Gateway, or Domain name) is a text string up to 24
+#   characters drawn from the alphabet (A-Z), digits (0-9), minus sign (-), and
+#   period (.). Note that periods are only allowed when they serve to delimit
+#   components of "domain style names". (See RFC-921, "Domain Name System
+#   Implementation Schedule", for background). No blank or space characters are
+#   permitted as part of a name. No distinction is made between upper and lower
+#   case. The first character must be an alpha character. The last character
+#   must not be a minus sign or period. [...] Single character names or
+#   nicknames are not allowed.
+#
+# From RFC 1123, which revises RFC 952:
+#
+#   The syntax of a legal Internet host name was specified in RFC-952 [DNS:4].
+#   One aspect of host name syntax is hereby changed: the restriction on the
+#   first character is relaxed to allow either a letter or a digit. Host
+#   software MUST support this more liberal syntax.
+#
+#   Host software MUST handle host names of up to 63 characters and SHOULD
+#   handle host names of up to 255 characters.
+hostname = {
+    'type': 'string',
+    'minLength': 2,
+    'maxLength': 63,
+    'pattern': '^[a-zA-Z0-9]+[a-zA-Z0-9-]*[a-zA-Z0-9]+$',
+}
+
 fqdn = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
     # NOTE: 'host' is defined in "services" table, and that

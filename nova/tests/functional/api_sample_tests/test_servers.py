@@ -596,9 +596,6 @@ class ServersSampleJson274Test(ServersSampleBase):
     def _setup_compute_service(self):
         return self.start_service('compute', host='openstack-node-01')
 
-    def setUp(self):
-        super(ServersSampleJson274Test, self).setUp()
-
     def test_servers_post_with_only_host(self):
         self._post_server(use_common_server_api_samples=False,
                           sample_name='server-create-req-with-only-host')
@@ -610,6 +607,15 @@ class ServersSampleJson274Test(ServersSampleBase):
     def test_servers_post_with_host_and_node(self):
         self._post_server(use_common_server_api_samples=False,
                           sample_name='server-create-req-with-host-and-node')
+
+
+class ServersSampleJson290Test(ServersSampleJsonTest):
+    microversion = '2.90'
+    scenarios = [('v2_90', {'api_major_version': 'v2.1'})]
+    use_common_server_post = False
+
+    # we want to show that the non-admin response includes the hostname
+    ADMIN_API = False
 
 
 class ServersUpdateSampleJsonTest(ServersSampleBase):
@@ -634,7 +640,7 @@ class ServersUpdateSampleJson247Test(ServersUpdateSampleJsonTest):
     scenarios = [('v2_47', {'api_major_version': 'v2.1'})]
 
 
-class ServersSampleJson275Test(ServersUpdateSampleJsonTest):
+class ServersUpdateSampleJson275Test(ServersUpdateSampleJsonTest):
     microversion = '2.75'
     scenarios = [('v2_75', {'api_major_version': 'v2.1'})]
 
@@ -651,6 +657,46 @@ class ServersSampleJson275Test(ServersUpdateSampleJsonTest):
 
         resp = self._do_post('servers/%s/action' % uuid,
                              'server-action-rebuild', params)
+        subs = params.copy()
+        del subs['uuid']
+        self._verify_response('server-action-rebuild-resp', subs, resp, 202)
+
+
+class ServersUpdateSampleJson289Test(ServersUpdateSampleJsonTest):
+    microversion = '2.90'
+    scenarios = [('v2_90', {'api_major_version': 'v2.1'})]
+
+    # we want to show that the non-admin response includes the hostname
+    ADMIN_API = False
+
+    def test_update_server(self):
+        uuid = self._post_server()
+        subs = {}
+        subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
+        subs['hostname'] = 'updated-hostname'
+        response = self._do_put('servers/%s' % uuid,
+                                'server-update-req', subs)
+        self._verify_response('server-update-resp', subs, response, 200)
+
+    def test_server_rebuild(self):
+        uuid = self._post_server()
+        params = {
+            'uuid': self.glance.auto_disk_config_enabled_image['id'],
+            'name': 'foobar',
+            'pass': 'seekr3t',
+            'hostid': '[a-f0-9]+',
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::',
+            'hostname': 'updated-hostname',
+        }
+
+        resp = self._do_post(
+            'servers/%s/action' % uuid,
+            'server-action-rebuild',
+            params,
+        )
         subs = params.copy()
         del subs['uuid']
         self._verify_response('server-action-rebuild-resp', subs, resp, 202)

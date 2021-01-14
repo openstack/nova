@@ -999,7 +999,7 @@ class API:
 
     def _validate_and_build_base_options(
         self, context, flavor, boot_meta, image_href, image_id, kernel_id,
-        ramdisk_id, display_name, display_description, key_name,
+        ramdisk_id, display_name, display_description, hostname, key_name,
         key_data, security_groups, availability_zone, user_data, metadata,
         access_ip_v4, access_ip_v6, requested_networks, config_drive,
         auto_disk_config, reservation_id, max_count,
@@ -1091,6 +1091,7 @@ class API:
             'ephemeral_gb': flavor['ephemeral_gb'],
             'display_name': display_name,
             'display_description': display_description,
+            'hostname': hostname,
             'user_data': user_data,
             'key_name': key_name,
             'key_data': key_data,
@@ -1500,7 +1501,7 @@ class API:
     def _create_instance(self, context, flavor,
                image_href, kernel_id, ramdisk_id,
                min_count, max_count,
-               display_name, display_description,
+               display_name, display_description, hostname,
                key_name, key_data, security_groups,
                availability_zone, user_data, metadata, injected_files,
                admin_password, access_ip_v4, access_ip_v6,
@@ -1550,7 +1551,7 @@ class API:
         ) = self._validate_and_build_base_options(
             context, flavor, boot_meta, image_href, image_id,
             kernel_id, ramdisk_id, display_name, display_description,
-            key_name, key_data, security_groups, availability_zone,
+            hostname, key_name, key_data, security_groups, availability_zone,
             user_data, metadata, access_ip_v4, access_ip_v6,
             requested_networks, config_drive, auto_disk_config,
             reservation_id, max_count, supports_port_resource_request,
@@ -1586,8 +1587,8 @@ class API:
                 flavor, metadata, injected_files,
                 block_device_mapping.root_bdm(), validate_numa=False)
 
-        instance_group = self._get_requested_instance_group(context,
-                                   filter_properties)
+        instance_group = self._get_requested_instance_group(
+            context, filter_properties)
 
         tags = self._create_tag_list_obj(context, tags)
 
@@ -1903,24 +1904,21 @@ class API:
         if 'display_name' not in instance or instance.display_name is None:
             instance.display_name = 'Server %s' % instance.uuid
 
-        # if we're booting multiple instances, we need to add an indexing
-        # suffix to both instance.hostname and instance.display_name. This is
-        # not necessary for a single instance.
-        if num_instances == 1:
-            default_hostname = 'Server-%s' % instance.uuid
-            instance.hostname = utils.sanitize_hostname(
-                instance.display_name, default_hostname)
-        elif num_instances > 1:
-            old_display_name = instance.display_name
-            new_display_name = '%s-%d' % (old_display_name, index + 1)
+        # only set the hostname if the user hasn't already requested one
+        if 'hostname' not in instance or not instance.hostname:
+            # if we're booting multiple instances, we need to add an indexing
+            # suffix to both instance.hostname and instance.display_name.
+            # This is not necessary for a single instance.
+            hostname = utils.sanitize_hostname(instance.display_name)
+            if not hostname:
+                hostname = f'Server-{instance.uuid}'
+            elif num_instances > 1:
+                hostname = f'{hostname}-{index + 1}'
 
-            if utils.sanitize_hostname(old_display_name) == "":
-                instance.hostname = 'Server-%s' % instance.uuid
-            else:
-                instance.hostname = utils.sanitize_hostname(
-                    new_display_name)
+            instance.hostname = hostname
 
-            instance.display_name = new_display_name
+        if num_instances > 1:
+            instance.display_name = f'{instance.display_name}-{index + 1}'
 
     def _populate_instance_for_create(
         self, context, instance, image, index, security_groups, flavor,
@@ -2029,7 +2027,7 @@ class API:
         self, context, flavor,
         image_href, kernel_id=None, ramdisk_id=None,
         min_count=None, max_count=None,
-        display_name=None, display_description=None,
+        display_name=None, display_description=None, hostname=None,
         key_name=None, key_data=None, security_groups=None,
         availability_zone=None, forced_host=None, forced_node=None,
         user_data=None, metadata=None, injected_files=None,
@@ -2054,6 +2052,9 @@ class API:
             self._check_multiple_instances_with_neutron_ports(
                 requested_networks)
 
+        if hostname and max_count is not None and max_count > 1:
+            raise exception.AmbiguousHostnameForMultipleInstances()
+
         if availability_zone and forced_host is None:
             azs = availability_zones.get_availability_zones(
                 context.elevated(), self.host_api, get_only_available=True)
@@ -2068,7 +2069,7 @@ class API:
             context, flavor,
             image_href, kernel_id, ramdisk_id,
             min_count, max_count,
-            display_name, display_description,
+            display_name, display_description, hostname,
             key_name, key_data, security_groups,
             availability_zone, user_data, metadata,
             injected_files, admin_password,
@@ -3482,6 +3483,9 @@ class API:
             trusted_certs = kwargs.pop('trusted_certs')
             instance.trusted_certs = self._retrieve_trusted_certs_object(
                 context, trusted_certs, rebuild=True)
+
+        if 'hostname' in kwargs:
+            instance.hostname = kwargs.pop('hostname')
 
         image_id, image = self._get_image(context, image_href)
         self._check_auto_disk_config(image=image,
