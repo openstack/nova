@@ -396,7 +396,7 @@ all_tenants_query:
   description: |
     Specify the ``all_tenants`` query parameter to list all instances
     for all projects. By default this is only allowed by administrators.
-    If the value of this parameter is not specified, it is treated as
+    If this parameter is specified without a value, the value defaults to
     ``True``. If the value is specified, ``1``, ``t``, ``true``,
     ``on``, ``y`` and ``yes`` are treated as ``True``. ``0``, ``f``,
     ``false``, ``off``, ``n`` and ``no`` are treated as ``False``.
