@@ -29,7 +29,7 @@ note when comparing availability zones and host aggregates:
 
   .. warning::
 
-      The use of the default availability zone name is requests can be very
+      The use of the default availability zone name in requests can be very
       error-prone. Since the user can see the list of availability zones, they
       have no way to know whether the default availability zone name (currently
       ``nova``) is provided because an host belongs to an aggregate whose AZ
