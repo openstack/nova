@@ -19,8 +19,10 @@ from nova.api.openstack.compute.schemas import reset_server_state
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
+from nova.compute import instance_actions
 from nova.compute import vm_states
 from nova import exception
+from nova import objects
 from nova.policies import admin_actions as aa_policies
 
 # States usable in resetState action
@@ -73,9 +75,14 @@ class AdminActionsController(wsgi.Controller):
         context.can(aa_policies.POLICY_ROOT % 'reset_state',
                     target={'project_id': instance.project_id})
 
+        # Log os-resetState as an instance action
+        instance_action = objects.InstanceAction.action_start(
+            context, instance.uuid, instance_actions.RESET_STATE)
+
         # Identify the desired state from the body
         state = state_map[body["os-resetState"]["state"]]
 
         instance.vm_state = state
         instance.task_state = None
         instance.save(admin_state_reset=True)
+        instance_action.finish()

@@ -18,6 +18,7 @@ import webob
 
 from nova.api.openstack.compute import admin_actions \
         as admin_actions_v21
+from nova.compute import instance_actions
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
@@ -59,18 +60,27 @@ class ResetStateTestsV21(test.NoDBTestCase):
     def _get_request(self):
         return fakes.HTTPRequest.blank('')
 
+    @mock.patch(
+        'nova.objects.instance_action.InstanceAction.action_start',
+        new=mock.Mock(spec=objects.InstanceAction))
     def test_no_state(self):
         self.assertRaises(self.bad_request,
                           self.admin_api._reset_state,
                           self.request, self.uuid,
                           body={"os-resetState": None})
 
+    @mock.patch(
+        'nova.objects.instance_action.InstanceAction.action_start',
+        new=mock.Mock(spec=objects.InstanceAction))
     def test_bad_state(self):
         self.assertRaises(self.bad_request,
                           self.admin_api._reset_state,
                           self.request, self.uuid,
                           body={"os-resetState": {"state": "spam"}})
 
+    @mock.patch(
+        'nova.objects.instance_action.InstanceAction.action_start',
+        new=mock.Mock(spec=objects.InstanceAction))
     def test_no_instance(self):
         self.compute_api.get = mock.MagicMock(
             side_effect=exception.InstanceNotFound(instance_id='inst_ud'))
@@ -84,11 +94,14 @@ class ResetStateTestsV21(test.NoDBTestCase):
             self.context, self.uuid, expected_attrs=None,
             cell_down_support=False)
 
-    def test_reset_active(self):
+    @mock.patch('nova.objects.instance_action.InstanceAction.action_start')
+    def test_reset_active(self, mock_instance_action_start):
         expected = dict(vm_state=vm_states.ACTIVE, task_state=None)
         self.instance.save = mock.MagicMock(
             side_effect=lambda **kw: self._check_instance_state(expected))
         self.compute_api.get = mock.MagicMock(return_value=self.instance)
+        mock_instance_action = mock.Mock(spec=objects.InstanceAction)
+        mock_instance_action_start.return_value = mock_instance_action
 
         body = {"os-resetState": {"state": "active"}}
         result = self.admin_api._reset_state(self.request, self.uuid,
@@ -107,11 +120,18 @@ class ResetStateTestsV21(test.NoDBTestCase):
             cell_down_support=False)
         self.instance.save.assert_called_once_with(admin_state_reset=True)
 
-    def test_reset_error(self):
+        mock_instance_action_start.assert_called_once_with(
+            self.context, self.instance.uuid, instance_actions.RESET_STATE)
+        mock_instance_action.finish.assert_called_once()
+
+    @mock.patch('nova.objects.instance_action.InstanceAction.action_start')
+    def test_reset_error(self, mock_instance_action_start):
         expected = dict(vm_state=vm_states.ERROR, task_state=None)
         self.instance.save = mock.MagicMock(
             side_effect=lambda **kw: self._check_instance_state(expected))
         self.compute_api.get = mock.MagicMock(return_value=self.instance)
+        mock_instance_action = mock.Mock(spec=objects.InstanceAction)
+        mock_instance_action_start.return_value = mock_instance_action
 
         body = {"os-resetState": {"state": "error"}}
         result = self.admin_api._reset_state(self.request, self.uuid,
@@ -129,3 +149,7 @@ class ResetStateTestsV21(test.NoDBTestCase):
             self.context, self.instance.uuid, expected_attrs=None,
             cell_down_support=False)
         self.instance.save.assert_called_once_with(admin_state_reset=True)
+
+        mock_instance_action_start.assert_called_once_with(
+            self.context, self.instance.uuid, instance_actions.RESET_STATE)
+        mock_instance_action.finish.assert_called_once()
