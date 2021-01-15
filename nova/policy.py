@@ -48,29 +48,6 @@ DEFAULT_POLICY_FILE = 'policy.yaml'
 opts.set_defaults(cfg.CONF, DEFAULT_POLICY_FILE)
 
 
-def pick_policy_file(policy_file):
-    # TODO(gmann): We have changed the default value of
-    # CONF.oslo_policy.policy_file option to 'policy.yaml' in Victoria
-    # release. To avoid breaking any deployment relying on default
-    # value, we need to add this is fallback logic to pick the old default
-    # policy file (policy.json) if exist. We can to remove this fallback
-    # logic sometime in future.
-    if policy_file:
-        return policy_file
-
-    if CONF.oslo_policy.policy_file == DEFAULT_POLICY_FILE:
-        location = CONF.get_location('policy_file', 'oslo_policy').location
-        if CONF.find_file(CONF.oslo_policy.policy_file):
-            return CONF.oslo_policy.policy_file
-        elif location in [cfg.Locations.opt_default,
-                          cfg.Locations.set_default]:
-            old_default = 'policy.json'
-            if CONF.find_file(old_default):
-                return old_default
-    # Return overridden value
-    return CONF.oslo_policy.policy_file
-
-
 def reset():
     global _ENFORCER
     if _ENFORCER:
@@ -99,7 +76,7 @@ def init(policy_file=None, rules=None, default_rule=None, use_conf=True,
     if not _ENFORCER:
         _ENFORCER = policy.Enforcer(
             CONF,
-            policy_file=pick_policy_file(policy_file),
+            policy_file=policy_file,
             rules=rules,
             default_rule=default_rule,
             use_conf=use_conf)

@@ -24,8 +24,8 @@ import traceback
 from keystoneauth1 import exceptions as ks_exc
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_upgradecheck import common_checks
 from oslo_upgradecheck import upgradecheck
-from oslo_utils import fileutils
 import pkg_resources
 from sqlalchemy import func as sqlfunc
 from sqlalchemy import MetaData, Table, and_, select
@@ -409,23 +409,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         policy.reset()
         return status
 
-    def _check_policy_json(self):
-        "Checks to see if policy file is JSON-formatted policy file."
-        msg = _("Your policy file  is JSON-formatted which is "
-                "deprecated since Victoria release (Nova 22.0.0). "
-                "You need to switch to YAML-formatted file. You can use the "
-                "``oslopolicy-convert-json-to-yaml`` tool to convert existing "
-                "JSON-formatted files to YAML-formatted files in a "
-                "backwards-compatible manner: "
-                "https://docs.openstack.org/oslo.policy/"
-                "latest/cli/oslopolicy-convert-json-to-yaml.html.")
-        status = upgradecheck.Result(upgradecheck.Code.SUCCESS)
-        # Check if policy file exist and is JSON-formatted.
-        policy_path = CONF.find_file(CONF.oslo_policy.policy_file)
-        if policy_path and fileutils.is_json(policy_path):
-            status = upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
-        return status
-
     def _check_old_computes(self):
         # warn if there are computes in the system older than the previous
         # major release
@@ -455,7 +438,10 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         # Added in Ussuri
         (_('Policy Scope-based Defaults'), _check_policy),
         # Added in Victoria
-        (_('Policy File JSON to YAML Migration'), _check_policy_json),
+        (
+            _('Policy File JSON to YAML Migration'),
+            (common_checks.check_policy_json, {'conf': CONF})
+        ),
         # Added in Wallaby
         (_('Older than N-1 computes'), _check_old_computes)
     )
