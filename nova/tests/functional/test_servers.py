@@ -33,6 +33,7 @@ from oslo_utils import timeutils
 from nova.compute import api as compute_api
 from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
+from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import exception
 from nova.network import constants
@@ -7894,6 +7895,29 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         self._wait_for_state_change(self.server, 'ACTIVE')
         self._check_allocations_usage(self.server)
 
+    def test_shelve_and_unshelve_ok(self):
+        self.flags(shelved_offload_time=1)
+        arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
+        self.assertEqual(len(arqs), 1)
+        self._shelve_server(self.server, 'SHELVED')
+        arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
+        self.assertEqual(len(arqs), 1)
+        self._unshelve_server(self.server)
+        arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
+        self.assertEqual(len(arqs), 1)
+
+    def test_shelve_offload_and_unshelve_ok(self):
+        self.flags(shelved_offload_time=-1)
+        arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
+        self.assertEqual(len(arqs), 1)
+        self._shelve_server(self.server, 'SHELVED')
+        self._shelve_offload_server(self.server)
+        arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
+        self.assertEqual(len(arqs), 0)
+        self._unshelve_server(self.server)
+        arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
+        self.assertEqual(len(arqs), 1)
+
     def test_resize_fails(self):
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server_action, self.server['id'],
@@ -7952,6 +7976,81 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
                 'OS-DCF:diskConfig': 'AUTO'}})
         self.assertEqual(403, ex.response.status_code)
         self._check_allocations_usage(self.server)
+
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells')
+    def test_shelve_old_compute(self, old_compute_version):
+        """Tests when the source compute service is too old to call
+        shelve so OpenStackApiException is raised.
+        """
+        old_compute_version.return_value = 53
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'],
+            {'shelve': {}})
+        self.assertEqual(403, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def _test_shelve_instance_with_compute_rpc_pin(
+            self, version_cap, body=None):
+        self.flags(compute=version_cap, group='upgrade_levels')
+
+        self.flags(shelved_offload_time=-1)
+        self.api.post_server_action(self.server['id'], body)
+        self._wait_for_state_change(self.server, 'SHELVED')
+
+    def test_shelve_with_compute_rpc_pin_5_0(self):
+        self.flags(compute=5.0, group='upgrade_levels')
+        compute_rpcapi.reset_globals()
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.post_server_action,
+            self.server['id'], {'shelve': {}})
+        self.assertEqual(403, ex.response.status_code)
+
+    def test_shelve_instance_5_13(self):
+        body = {'shelve': {}}
+        self._test_shelve_instance_with_compute_rpc_pin(
+                '5.13', body=body)
+
+    def _test_shelve_offload_instance_with_compute_rpc_pin(self, version_cap):
+        self.flags(compute=version_cap, group='upgrade_levels')
+
+        self.flags(shelved_offload_time=2)
+        self.api.post_server_action(self.server['id'], {'shelve': {}})
+        self._wait_for_state_change(self.server, 'SHELVED')
+
+        self.api.post_server_action(self.server['id'], {'shelveOffload': {}})
+        self._wait_for_state_change(self.server, 'SHELVED_OFFLOADED')
+
+    def test_shelve_offload_instance_5_0(self):
+        self._test_shelve_offload_instance_with_compute_rpc_pin('5.0')
+
+    def test_shelve_offload_instance_5_13(self):
+        self._test_shelve_offload_instance_with_compute_rpc_pin('5.13')
+
+    def _test_unshelve_instance_with_compute_rpc_pin(
+            self, version_cap, body=None):
+        self.flags(compute=version_cap, group='upgrade_levels')
+
+        self.api.microversion = '2.87'
+        self.api.post_server_action(self.server['id'], {'shelve': {}})
+        self._wait_for_state_change(self.server, 'SHELVED_OFFLOADED')
+
+        self.api.post_server_action(self.server['id'], body)
+        self._wait_for_state_change(self.server, 'ACTIVE')
+
+    def test_unshelve_instance_5_0(self):
+        body = {'unshelve': None}
+        self._test_unshelve_instance_with_compute_rpc_pin(
+                '5.0', body=body)
+
+    def test_unshelve_instance_5_2(self):
+        body = {'unshelve': None}
+        self._test_unshelve_instance_with_compute_rpc_pin(
+                '5.2', body=body)
+
+    def test_unshelve_instance_5_13(self):
+        body = {'unshelve': None}
+        self._test_unshelve_instance_with_compute_rpc_pin(
+                '5.13', body=body)
 
 
 class CrossCellResizeWithQoSPort(PortResourceRequestBasedSchedulingTestBase):

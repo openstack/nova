@@ -528,7 +528,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.12')
+    target = messaging.Target(version='5.13')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -6326,7 +6326,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def shelve_instance(self, context, instance, image_id,
-                        clean_shutdown):
+                        clean_shutdown, accel_uuids=None):
         """Shelve an instance.
 
         This should be used when you want to take a snapshot of the instance.
@@ -6337,15 +6337,17 @@ class ComputeManager(manager.Manager):
         :param instance: an Instance object
         :param image_id: an image id to snapshot to.
         :param clean_shutdown: give the GuestOS a chance to stop
+        :param accel_uuids: the accelerators uuids for the instance
         """
 
         @utils.synchronized(instance.uuid)
         def do_shelve_instance():
-            self._shelve_instance(context, instance, image_id, clean_shutdown)
+            self._shelve_instance(context, instance, image_id, clean_shutdown,
+                                  accel_uuids)
         do_shelve_instance()
 
     def _shelve_instance(self, context, instance, image_id,
-                         clean_shutdown):
+                         clean_shutdown, accel_uuids=None):
         LOG.info('Shelving', instance=instance)
         offload = CONF.shelved_offload_time == 0
         if offload:
@@ -6400,14 +6402,16 @@ class ComputeManager(manager.Manager):
                 phase=fields.NotificationPhase.END, bdms=bdms)
 
         if offload:
-            self._shelve_offload_instance(context, instance,
-                                          clean_shutdown=False, bdms=bdms)
+            self._shelve_offload_instance(
+                context, instance, clean_shutdown=False, bdms=bdms,
+                accel_uuids=accel_uuids)
 
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
-    def shelve_offload_instance(self, context, instance, clean_shutdown):
+    def shelve_offload_instance(self, context, instance, clean_shutdown,
+            accel_uuids=None):
         """Remove a shelved instance from the hypervisor.
 
         This frees up those resources for use by other instances, but may lead
@@ -6418,15 +6422,17 @@ class ComputeManager(manager.Manager):
         :param context: request context
         :param instance: nova.objects.instance.Instance
         :param clean_shutdown: give the GuestOS a chance to stop
+        :param accel_uuids: the accelerators uuids for the instance
         """
 
         @utils.synchronized(instance.uuid)
         def do_shelve_offload_instance():
-            self._shelve_offload_instance(context, instance, clean_shutdown)
+            self._shelve_offload_instance(context, instance, clean_shutdown,
+                                          accel_uuids=accel_uuids)
         do_shelve_offload_instance()
 
     def _shelve_offload_instance(self, context, instance, clean_shutdown,
-                                 bdms=None):
+                                 bdms=None, accel_uuids=None):
         LOG.info('Shelve offloading', instance=instance)
         if bdms is None:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -6450,6 +6456,12 @@ class ComputeManager(manager.Manager):
         # the instance is going to be removed from the host so we want to
         # terminate all the connections with the volume server and the host
         self._terminate_volume_connections(context, instance, bdms)
+
+        # NOTE(brinzhang): Free up the accelerator resource occupied
+        # in the cyborg service.
+        if accel_uuids:
+            cyclient = cyborg.get_client(context)
+            cyclient.delete_arqs_for_instance(instance.uuid)
 
         # Free up the resource allocations in the placement service.
         # This should happen *before* the vm_state is changed to
@@ -6490,8 +6502,9 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
-    def unshelve_instance(self, context, instance, image,
-                          filter_properties, node, request_spec=None):
+    def unshelve_instance(
+            self, context, instance, image, filter_properties, node,
+            request_spec=None, accel_uuids=None):
         """Unshelve the instance.
 
         :param context: request context
@@ -6502,6 +6515,7 @@ class ComputeManager(manager.Manager):
         :param node: target compute node
         :param request_spec: the RequestSpec object used to schedule the
             instance
+        :param accel_uuids: the accelerators uuids for the instance
         """
         if filter_properties is None:
             filter_properties = {}
@@ -6510,7 +6524,7 @@ class ComputeManager(manager.Manager):
         def do_unshelve_instance():
             self._unshelve_instance(
                 context, instance, image, filter_properties, node,
-                request_spec)
+                request_spec, accel_uuids)
         do_unshelve_instance()
 
     def _unshelve_instance_key_scrub(self, instance):
@@ -6527,7 +6541,7 @@ class ComputeManager(manager.Manager):
         instance.update(keys)
 
     def _unshelve_instance(self, context, instance, image, filter_properties,
-                           node, request_spec):
+                           node, request_spec, accel_uuids):
         LOG.info('Unshelving', instance=instance)
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
@@ -6574,6 +6588,19 @@ class ComputeManager(manager.Manager):
                 provider_mappings=provider_mappings)
             network_info = self.network_api.get_instance_nw_info(
                 context, instance)
+
+            accel_info = []
+            if accel_uuids:
+                try:
+                    accel_info = self._get_bound_arq_resources(
+                        context, instance, accel_uuids)
+                except (Exception, eventlet.timeout.Timeout) as exc:
+                    LOG.exception('Failure getting accelerator requests '
+                                  'with the exception: %s', exc,
+                                  instance=instance)
+                    self._build_resources_cleanup(instance, network_info)
+                    raise
+
             with self.rt.instance_claim(context, instance, node, allocations,
                                         limits):
                 self.driver.spawn(context, instance, image_meta,
@@ -6581,7 +6608,8 @@ class ComputeManager(manager.Manager):
                                   admin_password=None,
                                   allocations=allocations,
                                   network_info=network_info,
-                                  block_device_info=block_device_info)
+                                  block_device_info=block_device_info,
+                                  accel_info=accel_info)
         except Exception:
             with excutils.save_and_reraise_exception(logger=LOG):
                 LOG.exception('Instance failed to spawn',

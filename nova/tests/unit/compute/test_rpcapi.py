@@ -897,19 +897,67 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_shelve_instance(self):
         self._test_compute_api('shelve_instance', 'cast',
                 instance=self.fake_instance_obj, image_id='image_id',
-                clean_shutdown=True, version='5.0')
+                clean_shutdown=True, accel_uuids=None, version='5.13')
+
+    def test_shelve_instance_old_rpcapi(self):
+        # With rpcapi < 5.13, accel_uuids must be dropped in the client call.
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        compute_api = compute_rpcapi.ComputeAPI()
+        compute_api.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        compute_api.router.client.return_value = mock_client
+        # Force can_send_version to False, so that 5.0 version is used.
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        compute_api.shelve_instance(
+                ctxt, instance=self.fake_instance_obj,
+                accel_uuids=[],
+                image_id='image_id', clean_shutdown=True)
+
+        mock_client.can_send_version.assert_called_once_with('5.13')
+        mock_client.prepare.assert_called_with(
+                server=self.fake_instance_obj.host, version='5.0')
+        mock_cctx.cast.assert_called_with(  # No accel_uuids
+                ctxt, 'shelve_instance',
+                instance=self.fake_instance_obj,
+                image_id='image_id', clean_shutdown=True)
 
     def test_shelve_offload_instance(self):
         self._test_compute_api('shelve_offload_instance', 'cast',
                 instance=self.fake_instance_obj,
-                clean_shutdown=True, version='5.0')
+                clean_shutdown=True, accel_uuids=None, version='5.13')
+
+    def test_shelve_offload_instance_old_rpcapi(self):
+        # With rpcapi < 5.13, accel_uuids must be dropped in the client call.
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        compute_api = compute_rpcapi.ComputeAPI()
+        compute_api.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        compute_api.router.client.return_value = mock_client
+        # Force can_send_version to False, so that 5.0 version is used.
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        compute_api.shelve_offload_instance(
+                ctxt, instance=self.fake_instance_obj,
+                accel_uuids=['938af7f9-f136-4e5a-bdbe-3b6feab54311'],
+                clean_shutdown=True,)
+
+        mock_client.can_send_version.assert_called_once_with('5.13')
+        mock_client.prepare.assert_called_with(
+                server=self.fake_instance_obj.host, version='5.0')
+        mock_cctx.cast.assert_called_with(  # No accel_uuids
+                ctxt, 'shelve_offload_instance',
+                instance=self.fake_instance_obj,
+                clean_shutdown=True)
 
     def test_unshelve_instance(self):
         self._test_compute_api('unshelve_instance', 'cast',
                 instance=self.fake_instance_obj, host='host', image='image',
                 filter_properties={'fakeprop': 'fakeval'}, node='node',
-                request_spec=self.fake_request_spec_obj,
-                version='5.2')
+                request_spec=self.fake_request_spec_obj, accel_uuids=None,
+                version='5.13')
 
     def test_cache_image(self):
         self._test_compute_api('cache_images', 'call',
@@ -943,7 +991,10 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             host='host', request_spec=self.fake_request_spec_obj,
             image='image')
 
-        mock_client.can_send_version.assert_called_once_with('5.2')
+        mock_client.can_send_version.assert_has_calls([
+            mock.call('5.13'),
+            mock.call('5.2'),
+        ])
         mock_client.prepare.assert_called_with(
             server='host', version='5.0')
         mock_cctx.cast.assert_called_with(
