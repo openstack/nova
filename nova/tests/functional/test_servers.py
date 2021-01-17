@@ -40,6 +40,8 @@ from nova.network import constants
 from nova.network import neutron as neutronapi
 from nova import objects
 from nova.objects import block_device as block_device_obj
+from nova.policies import base as base_policies
+from nova.policies import servers as servers_policies
 from nova.scheduler import utils
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -8256,3 +8258,110 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
                 'OS-DCF:diskConfig': 'AUTO'}})
         self.assertEqual(403, ex.response.status_code)
         self._check_allocations_usage(self.server)
+
+
+class CrossCellResizeWithQoSPort(PortResourceRequestBasedSchedulingTestBase):
+    NUMBER_OF_CELLS = 2
+
+    def setUp(self):
+        # Use our custom weigher defined above to make sure that we have
+        # a predictable host order in the alternate list returned by the
+        # scheduler for migration.
+        self.useFixture(nova_fixtures.HostNameWeigherFixture())
+        super(CrossCellResizeWithQoSPort, self).setUp()
+        # start compute2 in cell2, compute1 is started in cell1 by default
+        self.compute2 = self._start_compute('host2', cell_name='cell2')
+        self.compute2_rp_uuid = self._get_provider_uuid_by_host('host2')
+        self._create_networking_rp_tree('host2', self.compute2_rp_uuid)
+        self.compute2_service_id = self.admin_api.get_services(
+            host='host2', binary='nova-compute')[0]['id']
+
+        # Enable cross-cell resize policy since it defaults to not allow
+        # anyone to perform that type of operation. For these tests we'll
+        # just allow admins to perform cross-cell resize.
+        self.policy.set_rules({
+            servers_policies.CROSS_CELL_RESIZE:
+                base_policies.RULE_ADMIN_API},
+            overwrite=False)
+
+    def test_cross_cell_migrate_server_with_qos_ports(self):
+        """Test that cross cell migration is not supported with qos ports and
+        nova therefore falls back to do a same cell migration instead.
+        To test this properly we first make sure that there is no valid host
+        in the same cell but there is valid host in another cell and observe
+        that the migration fails with NoValidHost. Then we start a new compute
+        in the same cell the instance is in and retry the migration that is now
+        expected to pass.
+        """
+
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports_and_check_allocation(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        orig_create_binding = neutronapi.API._create_port_binding
+
+        hosts = {
+            'host1': self.compute1_rp_uuid, 'host2': self.compute2_rp_uuid}
+
+        # Add an extra check to our neutron fixture. This check makes sure that
+        # the RP sent in the binding corresponds to host of the binding. In a
+        # real deployment this is checked by the Neutron server. As bug
+        # 1907522 showed we fail this check for cross cell migration with qos
+        # ports in a real deployment. So to reproduce that bug we need to have
+        # the same check in our test env too.
+        def spy_on_create_binding(context, client, port_id, data):
+            host_rp_uuid = hosts[data['binding']['host']]
+            device_rp_uuid = data['binding']['profile'].get('allocation')
+            if port_id == qos_normal_port['id']:
+                if device_rp_uuid != self.ovs_bridge_rp_per_host[host_rp_uuid]:
+                    raise exception.PortBindingFailed(port_id=port_id)
+            elif port_id == qos_sriov_port['id']:
+                if (device_rp_uuid not in
+                        self.sriov_dev_rp_per_host[host_rp_uuid].values()):
+                    raise exception.PortBindingFailed(port_id=port_id)
+
+            return orig_create_binding(context, client, port_id, data)
+
+        with mock.patch(
+            'nova.network.neutron.API._create_port_binding',
+            side_effect=spy_on_create_binding, autospec=True
+        ):
+            # We expect the migration to fail as the only available target
+            # host is in a different cell and while cross cell migration is
+            # enabled it is not supported for neutron ports with resource
+            # request.
+            # FIXME(gibi): We expect this to fail with NoValidHost.
+            # Unfortunately it fails by not finding the target compute service
+            # in the same cell the source service. This is bug 1907511. If
+            # there would be a standalone fix for 1907511 then the next failure
+            # would be 1907522. Our coming fix will fix both bug with a same
+            # fix.
+            self.api.post_server_action(server['id'], {'migrate': None})
+            self._wait_for_migration_status(server, ['error'])
+            self._wait_for_action_fail_completion(
+                server, 'migrate', 'conductor_migrate_server')
+            # This is the root case
+            self.assertIn(
+                "AttributeError: 'NoneType' object has no attribute 'version'",
+                self.stdlog.logger.output)
+
+        # Now start a new compute in the same cell as the instance and retry
+        # the migration.
+        #
+        # This should work after the fallback to same cell resize is
+        # implemented
+        #
+        # self._start_compute('host3', cell_name='cell1')
+        #
+        # with mock.patch(
+        #         'nova.network.neutron.API._create_port_binding',
+        #         side_effect=spy_on_create_binding, autospec=True
+        # ):
+        #     server = self._migrate_server(server)
+        #     self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
+
+        self._delete_server_and_check_allocations(
+            server, qos_normal_port, qos_sriov_port)
