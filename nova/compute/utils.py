@@ -68,6 +68,13 @@ NON_INHERITABLE_IMAGE_PROPERTIES = frozenset([
     'img_signature_key_type',
     'img_signature_certificate_uuid'])
 
+# Properties starting with these namespaces are reserved for internal
+# use by other services. It does not make sense (and may cause a request
+# fail) if we include them in a snapshot.
+NON_INHERITABLE_IMAGE_NAMESPACES = frozenset([
+    'os_glance',
+])
+
 
 def exception_to_dict(fault, message=None):
     """Converts exceptions to a dict for use in notifications.
@@ -1268,6 +1275,9 @@ def initialize_instance_snapshot_metadata(context, instance, name,
     properties = image_meta['properties']
     keys_to_pop = set(CONF.non_inheritable_image_properties).union(
         NON_INHERITABLE_IMAGE_PROPERTIES)
+    for ns in NON_INHERITABLE_IMAGE_NAMESPACES:
+        keys_to_pop |= {key for key in properties
+                        if key.startswith(ns)}
     for key in keys_to_pop:
         properties.pop(key, None)
 
