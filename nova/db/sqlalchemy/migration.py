@@ -30,7 +30,7 @@ from nova.i18n import _
 
 INIT_VERSION = {}
 INIT_VERSION['main'] = 401
-INIT_VERSION['api'] = 61
+INIT_VERSION['api'] = 66
 _REPOSITORY = {}
 
 LOG = logging.getLogger(__name__)

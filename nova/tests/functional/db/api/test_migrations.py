@@ -167,15 +167,13 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         return self.engine
 
     def _skippable_migrations(self):
-        stein_placeholders = list(range(63, 68))
         train_placeholders = list(range(68, 73))
         ussuri_placeholders = list(range(73, 78))
         victoria_placeholders = list(range(78, 83))
         special_cases = [
             self.INIT_VERSION + 1,  # initial change
         ]
-        return (stein_placeholders +
-                train_placeholders +
+        return (train_placeholders +
                 ussuri_placeholders +
                 victoria_placeholders +
                 special_cases)
