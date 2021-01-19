@@ -1538,7 +1538,7 @@ class TestAPI(TestAPIBase):
         if requested_networks:
             if isinstance(requested_networks, objects.NetworkRequestList):
                 requested_networks = requested_networks.as_tuples()
-            for net, fip, port, request_id in requested_networks:
+            for net, fip, port, request_id, _, _ in requested_networks:
                 ret_data.append({'network_id': net,
                                  'device_id': self.instance.uuid,
                                  'device_owner': 'compute:nova',
@@ -1555,7 +1555,7 @@ class TestAPI(TestAPIBase):
         expected_show_network_calls = []
         expected_update_port_calls = []
         if requested_networks:
-            for net, fip, port, request_id in requested_networks:
+            for net, fip, port, request_id, _, _ in requested_networks:
                 expected_show_port_calls.append(mock.call(
                     port, fields=['binding:profile', 'network_id']))
                 show_port_values.append({'port': ret_data[0]})
@@ -1783,8 +1783,9 @@ class TestAPI(TestAPIBase):
     def test_validate_networks(self, mock_get_client):
         mocked_client = mock.create_autospec(client.Client)
         mock_get_client.return_value = mocked_client
-        requested_networks = [(uuids.my_netid1, None, None, None),
-                              (uuids.my_netid2, None, None, None)]
+        requested_networks = [
+            (uuids.my_netid1, None, None, None, None, None),
+            (uuids.my_netid2, None, None, None, None, None)]
         ids = [uuids.my_netid1, uuids.my_netid2]
         mocked_client.list_networks.return_value = {'networks': self.nets2}
         mocked_client.show_quota.return_value = {'quota': {'port': 50}}
@@ -1803,8 +1804,9 @@ class TestAPI(TestAPIBase):
             self, mock_get_client):
         mocked_client = mock.create_autospec(client.Client)
         mock_get_client.return_value = mocked_client
-        requested_networks = [(uuids.my_netid1, None, None, None),
-                              (uuids.my_netid2, None, None, None)]
+        requested_networks = [
+            (uuids.my_netid1, None, None, None, None, None),
+            (uuids.my_netid2, None, None, None, None, None)]
         ids = [uuids.my_netid1, uuids.my_netid2]
         mocked_client.list_networks.return_value = {'networks': self.nets2}
         mocked_client.show_quota.return_value = {'quota': {}}
@@ -1819,7 +1821,8 @@ class TestAPI(TestAPIBase):
     def test_validate_networks_ex_1(self, mock_get_client):
         mocked_client = mock.create_autospec(client.Client)
         mock_get_client.return_value = mocked_client
-        requested_networks = [(uuids.my_netid1, None, None, None)]
+        requested_networks = [
+            (uuids.my_netid1, None, None, None, None, None)]
         mocked_client.list_networks.return_value = {'networks': []}
 
         ex = self.assertRaises(exception.NetworkNotFound,
@@ -1835,9 +1838,10 @@ class TestAPI(TestAPIBase):
     def test_validate_networks_ex_2(self, mock_get_client):
         mocked_client = mock.create_autospec(client.Client)
         mock_get_client.return_value = mocked_client
-        requested_networks = [(uuids.my_netid1, None, None, None),
-                              (uuids.my_netid2, None, None, None),
-                              (uuids.my_netid3, None, None, None)]
+        requested_networks = [
+            (uuids.my_netid1, None, None, None, None, None),
+            (uuids.my_netid2, None, None, None, None, None),
+            (uuids.my_netid3, None, None, None, None, None)]
         ids = [uuids.my_netid1, uuids.my_netid2, uuids.my_netid3]
         mocked_client.list_networks.return_value = {'networks': self.nets1}
 
@@ -3766,8 +3770,9 @@ class TestAPI(TestAPIBase):
         """Test validates that a relevant exception is being raised when
            there are more ports defined, than there is a quota for it.
         """
-        requested_networks = [(uuids.my_netid1, '10.0.1.2', None, None),
-                              (uuids.my_netid2, '10.0.1.3', None, None)]
+        requested_networks = [
+            (uuids.my_netid1, '10.0.1.2', None, None, None, None),
+            (uuids.my_netid2, '10.0.1.3', None, None, None, None)]
 
         list_port_values = [({'network_id': uuids.my_netid1,
                               'fixed_ips': 'ip_address=10.0.1.2',
@@ -3814,7 +3819,8 @@ class TestAPI(TestAPIBase):
                   'subnets': ['mysubnid1'],
                   'tenant_id': uuids.my_tenant}]
 
-        requested_networks = [(uuids.my_netid1, '10.0.1.2', None, None)]
+        requested_networks = [
+            (uuids.my_netid1, '10.0.1.2', None, None, None, None)]
         ids = [uuids.my_netid1]
         list_port_values = [({'network_id': uuids.my_netid1,
                               'fixed_ips': 'ip_address=10.0.1.2',
@@ -3838,8 +3844,9 @@ class TestAPI(TestAPIBase):
                   'subnets': ['mysubnid2'],
                   'tenant_id': uuids.my_tenant}]
 
-        requested_networks = [(uuids.my_netid1, '10.0.1.2', None, None),
-                              (uuids.my_netid2, '10.0.1.3', None, None)]
+        requested_networks = [
+            (uuids.my_netid1, '10.0.1.2', None, None, None, None),
+            (uuids.my_netid2, '10.0.1.3', None, None, None, None)]
         ids = [uuids.my_netid1, uuids.my_netid2]
         list_port_values = [({'network_id': uuids.my_netid1,
                               'fixed_ips': 'ip_address=10.0.1.2',
@@ -3860,7 +3867,8 @@ class TestAPI(TestAPIBase):
         # Test validation for a request for a network with a
         # fixed ip that is already in use
 
-        requested_networks = [(uuids.my_netid1, '10.0.1.2', None, None)]
+        requested_networks = [
+            (uuids.my_netid1, '10.0.1.2', None, None, None, None)]
         list_port_mock_params = {'network_id': uuids.my_netid1,
                                  'fixed_ips': 'ip_address=10.0.1.2',
                                  'fields': 'device_id'}
@@ -5134,7 +5142,9 @@ class TestAPI(TestAPIBase):
             objects = [objects.NetworkRequest(network_id='net-1',
                                               address='192.168.0.3',
                                               port_id=uuids.portid_1,
-                                              pci_request_id=uuids.pci_1)])
+                                              pci_request_id=uuids.pci_1,
+                                              arq_uuid=uuids.arq,
+                                              device_profile=None)])
         mock_gppids.return_value = [uuids.portid_3]
 
         self.api.deallocate_for_instance(mock.sentinel.ctx, mock_inst,

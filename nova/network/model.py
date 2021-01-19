@@ -104,12 +104,21 @@ VNIC_TYPE_DIRECT_PHYSICAL = 'direct-physical'
 VNIC_TYPE_BAREMETAL = 'baremetal'
 VNIC_TYPE_VIRTIO_FORWARDER = 'virtio-forwarder'
 VNIC_TYPE_VDPA = 'vdpa'
+VNIC_TYPE_ACCELERATOR_DIRECT = 'accelerator-direct'
+VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL = 'accelerator-direct-physical'
 
 # Define list of ports which needs pci request.
 # Note: The macvtap port needs a PCI request as it is a tap interface
 # with VF as the lower physical interface.
 # Note: Currently, VNIC_TYPE_VIRTIO_FORWARDER assumes a 1:1
 # relationship with a VF. This is expected to change in the future.
+# Note:
+# VNIC_TYPE_ACCELERATOR_DIRECT and VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL
+# does not need a PCI request, these devices are not tracked by the pci
+# tracker in nova but tracked by cyborg. The scheduling will use the
+# cyborg provided resource request to find a compute with such devices,
+# and the device claiming will be done via binding the cyborg arqs to the
+# selected compute node.
 VNIC_TYPES_SRIOV = (
     VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP, VNIC_TYPE_DIRECT_PHYSICAL,
     VNIC_TYPE_VIRTIO_FORWARDER, VNIC_TYPE_VDPA)
@@ -117,7 +126,15 @@ VNIC_TYPES_SRIOV = (
 # Define list of ports which are passthrough to the guest
 # and need a special treatment on snapshot and suspend/resume
 VNIC_TYPES_DIRECT_PASSTHROUGH = (VNIC_TYPE_DIRECT,
-                                 VNIC_TYPE_DIRECT_PHYSICAL)
+                                 VNIC_TYPE_DIRECT_PHYSICAL,
+                                 VNIC_TYPE_ACCELERATOR_DIRECT,
+                                 VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL)
+
+# Define list of ports which contains devices managed by cyborg.
+VNIC_TYPES_ACCELERATOR = (
+                          VNIC_TYPE_ACCELERATOR_DIRECT,
+                          VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL
+)
 
 # Constants for the 'vif_model' values
 VIF_MODEL_VIRTIO = 'virtio'

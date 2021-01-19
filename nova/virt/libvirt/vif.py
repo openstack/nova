@@ -356,7 +356,8 @@ class LibvirtGenericVIFDriver(object):
         profile = vif["profile"]
         vif_details = vif["details"]
         net_type = 'direct'
-        if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
+        if vif['vnic_type'] in [network_model.VNIC_TYPE_DIRECT,
+            network_model.VNIC_TYPE_ACCELERATOR_DIRECT]:
             net_type = 'hostdev'
 
         designer.set_vif_host_backend_hw_veb(
