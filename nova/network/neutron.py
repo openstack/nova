@@ -33,6 +33,7 @@ from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import uuidutils
 
+from nova.accelerator import cyborg
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context as nova_context
@@ -1931,14 +1932,15 @@ class API:
         :param port_id: The id of port to be queried
 
         :return: A tuple of vNIC type, trusted status, network ID, resource
-            request of the port if any and port numa affintiy policy.
+            request of the port if any and port numa affintiy policy,
+            and device_profile.
             Trusted status only affects SR-IOV ports and will always be
             None for other port types. If no port numa policy is
             requested by a port, None will be returned.
         """
         fields = ['binding:vnic_type', constants.BINDING_PROFILE,
                   'network_id', constants.RESOURCE_REQUEST,
-                  constants.NUMA_POLICY]
+                  constants.NUMA_POLICY, 'device_profile']
         port = self._show_port(
             context, port_id, neutron_client=neutron, fields=fields)
         network_id = port.get('network_id')
@@ -1954,7 +1956,9 @@ class API:
         # extension is enabled.
         resource_request = port.get(constants.RESOURCE_REQUEST, None)
         numa_policy = port.get(constants.NUMA_POLICY, None)
-        return vnic_type, trusted, network_id, resource_request, numa_policy
+        device_profile = port.get("device_profile", None)
+        return (vnic_type, trusted, network_id, resource_request,
+            numa_policy, device_profile)
 
     def create_resource_requests(
             self, context, requested_networks, pci_requests=None,
@@ -1999,10 +2003,26 @@ class API:
                 # to a port with a resource_request.
                 requester_id = request_net.port_id
                 (vnic_type, trusted, network_id, resource_request,
-                 port_numa_policy) = self._get_port_vnic_info(
+                 port_numa_policy, device_profile) = self._get_port_vnic_info(
                      context, neutron, request_net.port_id)
                 physnet, tunneled_ = self._get_physnet_tunneled_info(
                     context, neutron, network_id)
+
+                if vnic_type in network_model.VNIC_TYPES_ACCELERATOR:
+                    # get request groups from cyborg profile
+                    if not device_profile:
+                        err = ('No device profile for port %s.'
+                            % (request_net.port_id))
+                        raise exception.DeviceProfileError(
+                            name=device_profile, msg=err)
+                    dp_request_groups = (
+                        cyborg.get_device_profile_request_groups(
+                            context, device_profile, request_net.port_id))
+                    LOG.debug("device_profile request group(ARQ): %s",
+                        dp_request_groups)
+                    # keep device_profile to avoid get vnic info again
+                    request_net.device_profile = device_profile
+                    resource_requests.extend(dp_request_groups)
 
                 if resource_request:
                     # NOTE(gibi): explicitly orphan the RequestGroup by setting

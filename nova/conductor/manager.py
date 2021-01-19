@@ -836,7 +836,8 @@ class ComputeTaskManager:
 
             try:
                 accel_uuids = self._create_and_bind_arq_for_instance(
-                    context, instance, host.nodename, local_reqspec)
+                    context, instance, host.nodename, local_reqspec,
+                    requested_networks)
             except Exception as exc:
                 LOG.exception('Failed to reschedule. Reason: %s', exc)
                 self._cleanup_when_reschedule_fails(
@@ -856,16 +857,36 @@ class ComputeTaskManager:
                     limits=host.limits, host_list=host_list,
                     accel_uuids=accel_uuids)
 
-    def _create_and_bind_arq_for_instance(self, context, instance, hostname,
-                                          request_spec):
+    def _create_and_bind_arq_for_instance(
+            self, context, instance, hostname,
+            request_spec, requested_networks=None):
         try:
             resource_provider_mapping = (
                 request_spec.get_request_group_mapping())
             # Using nodename instead of hostname. See:
             # http://lists.openstack.org/pipermail/openstack-discuss/2019-November/011044.html  # noqa
-            return self._create_and_bind_arqs(
-                context, instance.uuid, instance.flavor.extra_specs,
+            cyclient = cyborg.get_client(context)
+            bindings = {}
+            port_bindings = {}
+
+            # Create ARQs comes from extra specs.
+            bindings = self._create_and_bind_arqs(
+                cyclient, instance.uuid, instance.flavor.extra_specs,
                 hostname, resource_provider_mapping)
+
+            if requested_networks:
+                # Create ARQs comes from port device profile
+                port_bindings = self._create_arqs_for_ports(
+                    cyclient, instance.uuid, requested_networks,
+                    hostname, resource_provider_mapping)
+
+            # Initiate Cyborg binding asynchronously
+            bindings.update(port_bindings)
+            if bindings:
+                cyclient.bind_arqs(bindings)
+
+            return list(bindings.keys())
+
         except exception.AcceleratorRequestBindingFailed as exc:
             # If anything failed here we need to cleanup and bail out.
             cyclient = cyborg.get_client(context)
@@ -1676,7 +1697,8 @@ class ComputeTaskManager:
 
             try:
                 accel_uuids = self._create_and_bind_arq_for_instance(
-                        context, instance, host.nodename, request_spec)
+                        context, instance, host.nodename, request_spec,
+                        requested_networks)
             except Exception as exc:
                 with excutils.save_and_reraise_exception():
                     self._cleanup_build_artifacts(
@@ -1702,33 +1724,78 @@ class ComputeTaskManager:
                     limits=host.limits, host_list=host_list,
                     accel_uuids=accel_uuids)
 
-    def _create_and_bind_arqs(self, context, instance_uuid, extra_specs,
-                              hostname, resource_provider_mapping):
-        """Create ARQs, determine their RPs and initiate ARQ binding.
+    def _create_and_bind_arqs(
+            self, cyclient, instance_uuid, extra_specs,
+            hostname, resource_provider_mapping):
+        """Create ARQs comes from extra specs, determine their RPs.
 
            The binding is asynchronous; Cyborg will notify on completion.
            The notification will be handled in the compute manager.
         """
+        arqs = []
+        bindings = {}
         dp_name = extra_specs.get('accel:device_profile')
+
+        # profiles from request spec: Create ARQ and binding
         if not dp_name:
-            return []
+            # empty arq list and binding info
+            return bindings
 
         LOG.debug('Calling Cyborg to get ARQs. dp_name=%s instance=%s',
-                  dp_name, instance_uuid)
-        cyclient = cyborg.get_client(context)
+                dp_name, instance_uuid)
         arqs = cyclient.create_arqs_and_match_resource_providers(
             dp_name, resource_provider_mapping)
         LOG.debug('Got ARQs with resource provider mapping %s', arqs)
+        bindings = {
+            arq['uuid']:
+                {"hostname": hostname,
+                "device_rp_uuid": arq['device_rp_uuid'],
+                "instance_uuid": instance_uuid
+                }
+            for arq in arqs}
 
-        bindings = {arq['uuid']:
-                       {"hostname": hostname,
-                        "device_rp_uuid": arq['device_rp_uuid'],
-                        "instance_uuid": instance_uuid
-                       }
-                    for arq in arqs}
-        # Initiate Cyborg binding asynchronously
-        cyclient.bind_arqs(bindings=bindings)
-        return [arq['uuid'] for arq in arqs]
+        return bindings
+
+    def _create_arqs_for_ports(self, cyclient, instance_uuid,
+                               requested_networks,
+                               hostname, resource_provider_mapping):
+        """Create ARQs for port with backend device profile.
+
+           The binding is asynchronous; Cyborg will notify on completion.
+           The notification will be handled in the compute manager.
+        """
+        bindings = {}
+
+        for request_net in requested_networks:
+            if request_net.port_id and request_net.device_profile:
+                device_profile = request_net.device_profile
+                # the port doesn't support multiple devices
+                arqs = cyclient.create_arqs(device_profile)
+                if len(arqs) > 1:
+                    raise exception.AcceleratorRequestOpFailed(
+                        op=_('create'),
+                        msg='the port does not support multiple devices.')
+                arq = arqs[0]
+
+                LOG.debug("Create ARQ %s for port %s of instance %s",
+                    arq["uuid"], request_net.port_id, instance_uuid)
+                request_net.arq_uuid = arq["uuid"]
+
+                rp_uuid = cyclient.get_arq_device_rp_uuid(
+                    arq,
+                    resource_provider_mapping,
+                    request_net.port_id)
+
+                arq_binding = {request_net.arq_uuid:
+                    {"hostname": hostname,
+                    "device_rp_uuid": rp_uuid,
+                    "instance_uuid": instance_uuid}
+                }
+                LOG.debug("ARQ %s binding: %s", request_net.arq_uuid,
+                    arq_binding)
+                bindings.update(arq_binding)
+
+        return bindings
 
     @staticmethod
     def _map_instance_to_cell(context, instance, cell):
