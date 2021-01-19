@@ -992,41 +992,6 @@ def security_group_destroy(context, security_group_id):
     return IMPL.security_group_destroy(context, security_group_id)
 
 
-####################
-
-
-def security_group_rule_create(context, values):
-    """Create a new security group."""
-    return IMPL.security_group_rule_create(context, values)
-
-
-def security_group_rule_get_by_security_group(context, security_group_id,
-                                              columns_to_join=None):
-    """Get all rules for a given security group."""
-    return IMPL.security_group_rule_get_by_security_group(
-        context, security_group_id, columns_to_join=columns_to_join)
-
-
-def security_group_rule_get_by_instance(context, instance_uuid):
-    """Get all rules for a given instance."""
-    return IMPL.security_group_rule_get_by_instance(context, instance_uuid)
-
-
-def security_group_rule_destroy(context, security_group_rule_id):
-    """Deletes a security group rule."""
-    return IMPL.security_group_rule_destroy(context, security_group_rule_id)
-
-
-def security_group_rule_get(context, security_group_rule_id):
-    """Gets a security group rule."""
-    return IMPL.security_group_rule_get(context, security_group_rule_id)
-
-
-def security_group_rule_count_by_group(context, security_group_id):
-    """Count rules in a given security group."""
-    return IMPL.security_group_rule_count_by_group(context, security_group_id)
-
-
 ###################
 
 
@@ -1311,10 +1276,6 @@ def archive_deleted_rows(context=None, max_rows=None, before=None):
     """
     return IMPL.archive_deleted_rows(context=context, max_rows=max_rows,
                                      before=before)
-
-
-def pcidevice_online_data_migration(context, max_count):
-    return IMPL.pcidevice_online_data_migration(context, max_count)
 
 
 ####################
