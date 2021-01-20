@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The ``[libvirt] use_usb_tablet`` config option, which was first deprecated
+    in the 14.0.0 (Newton) release, has now been removed. It has been replaced
+    by the ``[DEFAULT] pointer_model`` config option.

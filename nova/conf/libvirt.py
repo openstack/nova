@@ -219,26 +219,6 @@ Related options:
 * ``virt_type``: If you use ``lxc`` as virt_type it will be treated as a
   single partition image
 """),
-    cfg.BoolOpt('use_usb_tablet',
-                default=True,
-                deprecated_for_removal=True,
-                deprecated_reason="This option is being replaced by the "
-                                  "'pointer_model' option.",
-                deprecated_since='14.0.0',
-                help="""
-Enable a mouse cursor within a graphical VNC or SPICE sessions.
-
-This will only be taken into account if the VM is fully virtualized and VNC
-and/or SPICE is enabled. If the node doesn't support a graphical framebuffer,
-then it is valid to set this to False.
-
-Related options:
-
-* ``[vnc]enabled``: If VNC is enabled, ``use_usb_tablet`` will have an effect.
-* ``[spice]enabled`` + ``[spice].agent_enabled``: If SPICE is enabled and the
-  spice agent is disabled, the config value of ``use_usb_tablet`` will have
-  an effect.
-"""),
     cfg.StrOpt('live_migration_scheme',
                help="""
 URI scheme used for live migration.

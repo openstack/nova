@@ -6398,16 +6398,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_guest_pointer_model(self, os_type, image_meta):
         pointer_model = image_meta.properties.get(
             'hw_pointer_model', CONF.pointer_model)
-        if pointer_model is None and CONF.libvirt.use_usb_tablet:
-            # TODO(sahid): We set pointer_model to keep compatibility
-            # until the next release O*. It means operators can continue
-            # to use the deprecated option "use_usb_tablet" or set a
-            # specific device to use
-            pointer_model = "usbtablet"
-            LOG.warning('The option "use_usb_tablet" has been '
-                        'deprecated for Newton in favor of the more '
-                        'generic "pointer_model". Please update '
-                        'nova.conf to address this change.')
 
         if pointer_model == "usbtablet":
             # We want a tablet if VNC is enabled, or SPICE is enabled and
@@ -6418,7 +6408,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     CONF.spice.enabled and not CONF.spice.agent_enabled):
                 return self._get_guest_usb_tablet(os_type)
             else:
-                if CONF.pointer_model or CONF.libvirt.use_usb_tablet:
+                if CONF.pointer_model:
                     # For backward compatibility We don't want to break
                     # process of booting an instance if host is configured
                     # to use USB tablet without VNC or SPICE and SPICE
@@ -6438,14 +6428,14 @@ class LibvirtDriver(driver.ComputeDriver):
             tablet.type = "tablet"
             tablet.bus = "usb"
         else:
-            if CONF.pointer_model or CONF.libvirt.use_usb_tablet:
+            if CONF.pointer_model:
                 # For backward compatibility We don't want to break
                 # process of booting an instance if virtual machine mode
                 # is not configured as HVM.
-                LOG.warning('USB tablet requested for guests by host '
-                            'configuration. In order to accept this '
-                            'request the machine mode should be '
-                            'configured as HVM.')
+                LOG.warning(
+                    'USB tablet requested for guests by host configuration. '
+                    'In order to accept this request the machine mode should '
+                    'be configured as HVM.')
             else:
                 raise exception.UnsupportedPointerModelRequested(
                     model="usbtablet")
