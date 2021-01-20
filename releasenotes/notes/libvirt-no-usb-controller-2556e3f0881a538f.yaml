@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Previously, when using the libvirt driver on x86 hosts, a USB controller
+    was added by default to all instances even if no guest device actually
+    required this controller. This has been resolved. A USB controller will
+    now only be added if an input or disk device requires a USB bus.

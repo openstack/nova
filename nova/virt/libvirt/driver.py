@@ -5940,6 +5940,33 @@ class LibvirtDriver(driver.ComputeDriver):
                 cpu_config.features.add(xf)
         return cpu_config
 
+    def _guest_needs_usb(self, guest):
+        """Evaluate devices currently attached to the guest."""
+        for dev in guest.devices:
+            if isinstance(dev, vconfig.LibvirtConfigGuestDisk):
+                if dev.target_bus == 'usb':
+                    return True
+
+            if isinstance(dev, vconfig.LibvirtConfigGuestInput):
+                if dev.bus == 'usb':
+                    return True
+
+        return False
+
+    def _guest_add_usb_root_controller(self, guest):
+        """Add USB root controller, if necessary.
+
+        Note that these are added by default on x86-64. We add the controller
+        here explicitly so that we can _disable_ it (by setting the model to
+        'none') if it's not necessary.
+        """
+        usbhost = vconfig.LibvirtConfigGuestUSBHostController()
+        usbhost.index = 0
+        # an unset model means autodetect, while 'none' means don't add a
+        # controller (x86 gets one by default)
+        usbhost.model = None if self._guest_needs_usb(guest) else 'none'
+        guest.add_device(usbhost)
+
     def _guest_add_pcie_root_ports(self, guest):
         """Add PCI Express root ports.
 
@@ -6006,10 +6033,6 @@ class LibvirtDriver(driver.ComputeDriver):
         keyboard.type = "keyboard"
         keyboard.bus = "usb"
         guest.add_device(keyboard)
-
-        usbhost = vconfig.LibvirtConfigGuestUSBHostController()
-        usbhost.index = 0
-        guest.add_device(usbhost)
 
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
@@ -6129,6 +6152,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if self._guest_needs_pcie(guest, caps):
             self._guest_add_pcie_root_ports(guest)
 
+        self._guest_add_usb_root_controller(guest)
+
         self._guest_add_pci_devices(guest, instance)
 
         pci_arq_list = []
@@ -6149,6 +6174,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          'But got these unsupported types: %s.',
                          instance.uuid, supported_types_set,
                          ah_types_set.difference(supported_types_set))
+
         self._guest_add_accel_pci_devices(guest, pci_arq_list)
 
         self._guest_add_watchdog_action(guest, flavor, image_meta)
