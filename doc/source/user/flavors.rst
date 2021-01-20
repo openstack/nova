@@ -475,16 +475,13 @@ CPU pinning policy
   - ``prefer``: (default) The host may or may not have an SMT architecture.
     Where an SMT architecture is present, thread siblings are preferred.
   - ``isolate``: The host must not have an SMT architecture or must emulate a
-    non-SMT architecture. If the host does not have an SMT architecture, each
-    vCPU is placed on a different core as expected. If the host does have an
-    SMT architecture - that is, one or more cores have thread siblings - then
-    each vCPU is placed on a different physical core. No vCPUs from other
-    guests are placed on the same core. All but one thread sibling on each
-    utilized core is therefore guaranteed to be unusable.
-  - ``require``: The host must have an SMT architecture. Each vCPU is allocated
-    on thread siblings. If the host does not have an SMT architecture, then it
-    is not used. If the host has an SMT architecture, but not enough cores with
-    free thread siblings are available, then scheduling fails.
+    non-SMT architecture. Hosts that support SMT (by reporting the
+    ``HW_CPU_HYPERTHREADING`` trait) are excluded.
+  - ``require``: The host must have an SMT architecture and must report the
+    ``HW_CPU_HYPERTHREADING`` trait. Each vCPU is allocated on thread siblings.
+    If the host does not have an SMT architecture, then it is not used. If the
+    host has an SMT architecture, but not enough cores with free thread
+    siblings are available, then scheduling fails.
 
   .. note::
 
