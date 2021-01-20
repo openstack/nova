@@ -243,6 +243,8 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             }
         self.assertEqual(expect, mapping)
 
+    @mock.patch('nova.virt.libvirt.utils.get_arch',
+        new=mock.Mock(return_value=obj_fields.Architecture.X86_64))
     def test_get_disk_mapping_rescue_with_config(self):
         # A simple disk mapping setup, but in rescue mode with a config drive
 
@@ -337,6 +339,8 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self._test_get_disk_mapping_stable_rescue(
             rescue_props, expected, block_info)
 
+    @mock.patch('nova.virt.libvirt.utils.get_arch',
+        new=mock.Mock(return_value=obj_fields.Architecture.X86_64))
     def test_get_disk_mapping_stable_rescue_ide_cdrom(self):
         """Assert the disk mapping when rescuing using an IDE cd-rom"""
         rescue_props = {'hw_rescue_device': 'cdrom'}
