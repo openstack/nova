@@ -10541,9 +10541,15 @@ class ComputeManager(manager.Manager):
                 requests=pci_reqs,
                 instance_uuid=instance.uuid)
 
+            # if we are called during the live migration with NUMA topology
+            # support the PCI claim needs to consider the destination NUMA
+            # topology that is then stored in the migration_context
+            dest_topo = None
+            if instance.migration_context:
+                dest_topo = instance.migration_context.new_numa_topology
+
             claimed_pci_devices_objs = self.rt.claim_pci_devices(
-                ctxt,
-                vif_pci_requests)
+                ctxt, vif_pci_requests, dest_topo)
 
             # Update VIFMigrateData profile with the newly claimed PCI
             # device
