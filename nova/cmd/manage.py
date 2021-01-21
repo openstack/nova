@@ -26,6 +26,7 @@ import functools
 import os
 import re
 import sys
+import time
 import traceback
 from urllib import parse as urlparse
 
@@ -249,9 +250,14 @@ class DbCommands(object):
                 '``--before`` option to avoid races for those consuming '
                 '``task_log`` record data via the '
                 '``/os-instance_usage_audit_log`` API (example: Telemetry).'))
-    def archive_deleted_rows(self, max_rows=1000, verbose=False,
-                             until_complete=False, purge=False,
-                             before=None, all_cells=False, task_log=False):
+    @args('--sleep', type=int, metavar='<seconds>', dest='sleep',
+          help='The amount of time in seconds to sleep between batches when '
+               '``--until-complete`` is used. Defaults to 0.')
+    def archive_deleted_rows(
+        self, max_rows=1000, verbose=False,
+        until_complete=False, purge=False,
+        before=None, all_cells=False, task_log=False, sleep=0,
+    ):
         """Move deleted rows from production tables to shadow tables.
 
         Returns 0 if nothing was archived, 1 if some number of rows were
@@ -344,7 +350,8 @@ class DbCommands(object):
                         verbose,
                         before_date,
                         cell_name,
-                        task_log)
+                        task_log,
+                        sleep)
                 except KeyboardInterrupt:
                     interrupt = True
                     break
@@ -377,8 +384,10 @@ class DbCommands(object):
         # NOTE(danms): Return nonzero if we archived something
         return int(bool(table_to_rows_archived))
 
-    def _do_archive(self, table_to_rows_archived, cctxt, max_rows,
-                    until_complete, verbose, before_date, cell_name, task_log):
+    def _do_archive(
+        self, table_to_rows_archived, cctxt, max_rows,
+        until_complete, verbose, before_date, cell_name, task_log, sleep,
+    ):
         """Helper function for archiving deleted rows for a cell.
 
         This will archive deleted rows for a cell database and remove the
@@ -398,6 +407,8 @@ class DbCommands(object):
         :param cell_name: Name of the cell or None if not archiving across all
             cells
         :param task_log: Whether to archive task_log table rows
+        :param sleep: The amount of time in seconds to sleep between batches
+            when ``until_complete`` is True.
         """
         ctxt = context.get_admin_context()
         while True:
@@ -437,6 +448,8 @@ class DbCommands(object):
                 break
             if verbose:
                 sys.stdout.write('.')
+            # Optionally sleep between batches to throttle the archiving.
+            time.sleep(sleep)
         return total_rows_archived
 
     @args('--before', metavar='<before>', dest='before',

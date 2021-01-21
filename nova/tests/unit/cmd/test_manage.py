@@ -315,17 +315,20 @@ Archiving.....complete
         # Tests that we get table output.
         self._test_archive_deleted_rows(verbose=True)
 
+    @mock.patch('time.sleep')
     @mock.patch.object(db, 'archive_deleted_rows')
     @mock.patch.object(objects.CellMappingList, 'get_all')
     def test_archive_deleted_rows_until_complete(self, mock_get_all,
-                                                 mock_db_archive,
-                                                 verbose=False):
+                                                 mock_db_archive, mock_sleep,
+                                                 verbose=False,
+                                                 sleep=0):
         mock_db_archive.side_effect = [
             ({'instances': 10, 'instance_extra': 5}, list(), 15),
             ({'instances': 5, 'instance_faults': 1}, list(), 6),
             ({}, list(), 0)]
         result = self.commands.archive_deleted_rows(20, verbose=verbose,
-                                                    until_complete=True)
+                                                    until_complete=True,
+                                                    sleep=sleep)
         self.assertEqual(1, result)
         if verbose:
             expected = """\
@@ -353,9 +356,14 @@ Archiving.....complete
                 test.MatchType(context.RequestContext), 20, before=None,
                 task_log=False),
         ])
+        self.assertEqual(2, mock_sleep.call_count)
+        mock_sleep.assert_has_calls([mock.call(sleep), mock.call(sleep)])
 
     def test_archive_deleted_rows_until_complete_quiet(self):
         self.test_archive_deleted_rows_until_complete(verbose=False)
+
+    def test_archive_deleted_rows_until_complete_sleep(self):
+        self.test_archive_deleted_rows_until_complete(sleep=30)
 
     @mock.patch('nova.db.main.api.purge_shadow_tables')
     @mock.patch.object(db, 'archive_deleted_rows')
