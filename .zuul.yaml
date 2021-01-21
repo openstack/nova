@@ -379,7 +379,6 @@
       # NOTE(danms): These tests create an empty non-raw image, which nova
       # will refuse because we set never_download_image_if_on_rbd in this job.
       # Just skip these tests for this case.
-      tempest_black_regex: .*encrypted_cinder_volumes.*|.*test_attach_cloned_encrypted_volume.*
       devstack_localrc:
         GLANCE_STANDALONE: True
         GLANCE_USE_IMPORT_WORKFLOW: True
