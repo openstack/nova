@@ -32,6 +32,8 @@ class LibvirtNVMEVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
             initiator.NVME, 'sudo',
             device_scan_attempts=3)
 
+    @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory',
+        new=mock.Mock(return_value=mock.Mock()))
     def test_libvirt_nvme_driver_connect(self):
         nvme_driver = nvme.LibvirtNVMEVolumeDriver(self.fake_host)
         config = {'server_ip': '127.0.0.1', 'server_port': 9898}
@@ -44,21 +46,26 @@ class LibvirtNVMEVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                'connect_volume',
                                return_value={'path': '/dev/dms1234567'}):
             nvme_driver.connect_volume(connection_info, None)
+            nvme_driver.connector.connect_volume.assert_called_once_with(
+                connection_info['data'])
             self.assertEqual('/dev/dms1234567',
                              connection_info['data']['device_path'])
 
+    @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory',
+        new=mock.Mock(return_value=mock.Mock()))
     def test_libvirt_nvme_driver_disconnect(self):
-        nvme_con = nvme.LibvirtNVMEVolumeDriver(self.connr)
-        nvme_con.connector.disconnect_volume = mock.MagicMock()
+        nvme_driver = nvme.LibvirtNVMEVolumeDriver(self.connr)
         disk_info = {
             'path': '/dev/dms1234567', 'name': 'aNVMEVolume',
                      'type': 'raw', 'dev': 'vda1', 'bus': 'pci0',
                      'device_path': '/dev/dms123456'}
         connection_info = {'data': disk_info}
-        nvme_con.disconnect_volume(connection_info, None)
-        nvme_con.connector.disconnect_volume.assert_called_once_with(
+        nvme_driver.disconnect_volume(connection_info, None)
+        nvme_driver.connector.disconnect_volume.assert_called_once_with(
             disk_info, None)
 
+    @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory',
+        new=mock.Mock(return_value=mock.Mock()))
     def test_libvirt_nvme_driver_get_config(self):
         nvme_driver = nvme.LibvirtNVMEVolumeDriver(self.fake_host)
         device_path = '/dev/fake-dev'
