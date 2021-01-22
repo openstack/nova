@@ -1,0 +1,303 @@
+Libvirt virt driver OS distribution support matrix
+==================================================
+
+This page documents the libvirt versions present in the various distro versions
+that OpenStack Nova aims to be deployable with.
+
+.. note::
+
+    This document was previously hosted on the OpenStack wiki:
+
+    https://wiki.openstack.org/wiki/LibvirtDistroSupportMatrix
+
+Libvirt minimum version change policy
+-------------------------------------
+
+At the start of each Nova development cycle this matrix will be consulted to
+determine if it is viable to drop support for any end-of-life or otherwise
+undesired distro versions. Based on this distro evaluation, it may be possible
+to increase the minimum required version of libvirt in Nova, and thus drop some
+compatibility code for older versions.
+
+When a decision to update the minimum required libvirt version is made, there
+must be a warning issued for one cycle. This is achieved by editing
+``nova/virt/libvirt/driver.py`` to set ``NEXT_MIN_LIBVIRT_VESION``.
+For example:
+
+.. code::
+
+    NEXT_MIN_LIBVIRT_VERSION = (X, Y, Z)
+
+This causes a deprecation warning to be emitted when Nova starts up warning the
+admin that the version of libvirt in use on the host will no longer be
+supported in the subsequent release.
+
+After a version has been listed in ``NEXT_MIN_LIBVIRT_VERSION`` for one release
+cycle, the corresponding actual minimum required libvirt can be updated by
+setting
+
+.. code::
+
+    MIN_LIBVIRT_VERSION = (X, Y, Z)
+
+At this point of course, an even newer version might be set in
+``NEXT_MIN_LIBVIRT_VERSION`` to repeat the process....
+
+An email should also be sent at this point to the
+``openstack-discuss@lists.openstack.org`` mailing list as a courtesy raising
+awareness of the change in minimum version requirements in the upcoming
+release, for example:
+
+http://lists.openstack.org/pipermail/openstack-discuss/2021-January/019849.html
+
+There is more background on the rationale used for picking minimum versions in
+the operators mailing list thread here:
+
+http://lists.openstack.org/pipermail/openstack-operators/2015-May/007012.html
+
+QEMU minimum version change policy
+----------------------------------
+
+After choosing a minimum libvirt version, the minimum QEMU version is
+determined by looking for the lowest QEMU version from all the distros that
+support the decided libvirt version.
+
+``MIN_{LIBVIRT,QEMU}_VESION`` and ``NEXT_MIN_{LIBVIRT,QEMU}_VESION`` table
+--------------------------------------------------------------------------
+
+.. list-table:: OpenStack Nova libvirt/QEMU Support Matrix
+
+    * - OpenStack Release
+      - Nova Release
+      - ``MIN_LIBVIRT_VESION``
+      - ``NEXT_MIN_LIBVIRT_VESION``
+      - ``MIN_QEMU_VESION``
+      - ``NEXT_MIN_QEMU_VESION``
+    * - Havana
+      - 2013.2.0
+      - 0.9.6
+      - 0.9.6
+      -
+      -
+    * - Icehouse
+      - 2014.1
+      - 0.9.6
+      - 0.9.11
+      -
+      -
+    * - Juno
+      - 2014.2.0
+      - 0.9.11
+      - 0.9.11
+      -
+      -
+    * - Kilo
+      - 2015.1.0
+      - 0.9.11
+      - 0.9.11
+      -
+      -
+    * - Liberty
+      - 12.0.0
+      - 0.9.11
+      - 0.10.2
+      -
+      -
+    * - Mitaka
+      - 13.0.0
+      - 0.10.2
+      - 1.2.1
+      -
+      -
+    * - Newton
+      - 14.0.0
+      - 1.2.1
+      - 1.2.1
+      - 1.5.3
+      - 1.5.3
+    * - Ocata
+      - 15.0.0
+      - 1.2.1
+      - 1.2.9
+      - 1.5.3
+      - 2.1.0
+    * - Pike
+      - 16.0.0
+      - 1.2.9
+      - 1.3.1
+      - 2.1.0
+      - 2.5.0
+    * - Queens
+      - 17.0.0
+      - 1.2.9
+      - 1.3.1
+      - 2.1.0
+      - 2.5.0
+    * - Rocky
+      - 18.0.0
+      - 1.3.1
+      - 3.0.0
+      - 2.5.0
+      - 2.8.0
+    * - Stein
+      - 19.0.0
+      - 3.0.0
+      - 4.0.0
+      - 2.8.0
+      - 2.11.0
+    * - Train
+      - 20.0.0
+      - 3.0.0
+      - 4.0.0
+      - 2.8.0
+      - 2.11.0
+    * - Ussuri
+      - 21.0.0
+      - 4.0.0
+      - 5.0.0
+      - 2.11.0
+      - 4.0.0
+    * - Victoria
+      - 22.0.0
+      - 5.0.0
+      - 6.0.0
+      - 4.0.0
+      - 4.2.0
+    * - Wallaby
+      - 23.0.0
+      - 6.0.0
+      - 7.0.0
+      - 4.2.0
+      - 5.2.0
+
+OS distribution versions
+------------------------
+
+This table provides information on a representative sample of OS distros and
+the version of libirt/QEMU/libguestfs that they ship. This is **NOT** intended
+to be an exhaustive list of distros where OpenStack Nova can run - it is
+intended to run on any Linux distro that can satisfy the minimum required
+software versions. This table merely aims to help identify when minimum
+required versions can be reasonably updated without losing support for
+important OS distros.
+
+.. list-table:: Distro libvirt/QEMU Support Table
+
+    * - OS Distro
+      - GA date
+      - Libvirt
+      - QEMU/KVM
+      - libguestfs
+    * - **Debian**
+      -
+      -
+      -
+      -
+    * - 10.x (Buster) ("stable")
+      - as of 2020-05-15
+      - 5.0.0
+      - 3.1
+      - 1.40
+    * - 11.x (Bullseye) ("sid" - unstable)
+      - No GA date as of 2020-05-15
+      - 6.0.0
+      - 5.0
+      - 1.42.0
+    * - **Fedora**
+      -
+      -
+      -
+      -
+    * - 32
+      - 2020-04-28
+      - 6.1.0
+      - 4.2.0
+      - 1.42.0
+    * - 33
+      - 2020-10-27
+      - 6.6.0
+      - 5.1.0
+      - 1.43.0
+    * - **SUSE**
+      -
+      -
+      -
+      -
+    * - Leap 15.0
+      - 2018-05
+      - 4.0.0
+      - 2.11.1
+      - 1.38.0
+    * - Leap 15.1
+      - 2019-05-22
+      - 5.1.0
+      - 3.1.1
+      - 1.38.0
+    * - Leap 15.2
+      - 2020-07-02 (scheduled)
+      - 6.0.0
+      - 4.2.0
+      - 1.38.0
+    * - **RHEL**
+      -
+      -
+      -
+      -
+    * - 7.7
+      - 2019-08-06
+      - 4.5.0-23
+      - 2.12.0-33
+      - 1.40.2-5
+    * - 7.8
+      - 2020-03-31
+      - 4.5.0-36
+      - 2.12.0-48
+      - 1.40.2-10
+    * - 8.2
+      - 2020-04-28
+      - 6.0.0-17.2
+      - 4.2.0-19
+      - 1.40.2-22
+    * - 8.3
+      - 2020-10-29
+      - 6.0.0-25.5
+      - 4.2.0-29
+      - 1.40.2-24
+    * - **SLES**
+      -
+      -
+      -
+      -
+    * - 15
+      - 2018-07
+      - 4.0.0
+      - 2.11.1
+      - 1.38.0
+    * - 15.1
+      - 2019
+      - 5.1.0
+      - 3.1.1
+      - 1.38.0
+    * - 15.2
+      - 2020
+      - 6.0.0
+      - 4.2.1
+      - 1.38.0
+    * - **Ubuntu**
+      -
+      -
+      -
+      -
+    * - 18.04 (Bionic LTS - Cloud Archive)
+      - as of 2019-11-18
+      - 5.4
+      - 4.0
+      - 1.36
+    * - 20.04 (Focal Fossa)
+      - 2020-04-23
+      - 6.0.0
+      - 4.2
+      - 1.40.2
+
+.. NB: maintain alphabetical ordering of distros, followed by oldest released
+       versions first
