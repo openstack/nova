@@ -127,6 +127,7 @@ from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt.libvirt.volume import fs
 from nova.virt.libvirt.volume import mount
 from nova.virt.libvirt.volume import remotefs
+from nova.virt.libvirt.volume import volume
 from nova.virt import netutils
 from nova.volume import cinder
 
@@ -172,25 +173,27 @@ class InjectionInfo(collections.namedtuple(
                 'admin_pass=<SANITIZED>)') % (self.network_info, self.files)
 
 
-libvirt_volume_drivers = [
-    'iscsi=nova.virt.libvirt.volume.iscsi.LibvirtISCSIVolumeDriver',
-    'iser=nova.virt.libvirt.volume.iser.LibvirtISERVolumeDriver',
-    'local=nova.virt.libvirt.volume.volume.LibvirtVolumeDriver',
-    'fake=nova.virt.libvirt.volume.volume.LibvirtFakeVolumeDriver',
-    'rbd=nova.virt.libvirt.volume.net.LibvirtNetVolumeDriver',
-    'nfs=nova.virt.libvirt.volume.nfs.LibvirtNFSVolumeDriver',
-    'smbfs=nova.virt.libvirt.volume.smbfs.LibvirtSMBFSVolumeDriver',
-    'fibre_channel='
-        'nova.virt.libvirt.volume.fibrechannel.'
-        'LibvirtFibreChannelVolumeDriver',
-    'gpfs=nova.virt.libvirt.volume.gpfs.LibvirtGPFSVolumeDriver',
-    'quobyte=nova.virt.libvirt.volume.quobyte.LibvirtQuobyteVolumeDriver',
-    'scaleio=nova.virt.libvirt.volume.scaleio.LibvirtScaleIOVolumeDriver',
-    'vzstorage='
-        'nova.virt.libvirt.volume.vzstorage.LibvirtVZStorageVolumeDriver',
-    'storpool=nova.virt.libvirt.volume.storpool.LibvirtStorPoolVolumeDriver',
-    'nvmeof=nova.virt.libvirt.volume.nvme.LibvirtNVMEVolumeDriver',
-]
+# NOTE(lyarwood): Dict of volume drivers supported by the libvirt driver, keyed
+# by the connection_info['driver_volume_type'] returned by Cinder for each
+# volume type it supports
+# TODO(lyarwood): Add host configurables to allow this list to be changed.
+# Allowing native iSCSI to be reintroduced etc.
+VOLUME_DRIVERS = {
+    'iscsi': 'nova.virt.libvirt.volume.iscsi.LibvirtISCSIVolumeDriver',
+    'iser': 'nova.virt.libvirt.volume.iser.LibvirtISERVolumeDriver',
+    'local': 'nova.virt.libvirt.volume.volume.LibvirtVolumeDriver',
+    'fake': 'nova.virt.libvirt.volume.volume.LibvirtFakeVolumeDriver',
+    'rbd': 'nova.virt.libvirt.volume.net.LibvirtNetVolumeDriver',
+    'nfs': 'nova.virt.libvirt.volume.nfs.LibvirtNFSVolumeDriver',
+    'smbfs': 'nova.virt.libvirt.volume.smbfs.LibvirtSMBFSVolumeDriver',
+    'fibre_channel': 'nova.virt.libvirt.volume.fibrechannel.LibvirtFibreChannelVolumeDriver',  # noqa:E501
+    'gpfs': 'nova.virt.libvirt.volume.gpfs.LibvirtGPFSVolumeDriver',
+    'quobyte': 'nova.virt.libvirt.volume.quobyte.LibvirtQuobyteVolumeDriver',
+    'scaleio': 'nova.virt.libvirt.volume.scaleio.LibvirtScaleIOVolumeDriver',
+    'vzstorage': 'nova.virt.libvirt.volume.vzstorage.LibvirtVZStorageVolumeDriver',  # noqa:E501
+    'storpool': 'nova.virt.libvirt.volume.storpool.LibvirtStorPoolVolumeDriver',  # noqa:E501
+    'nvmeof': 'nova.virt.libvirt.volume.nvme.LibvirtNVMEVolumeDriver',
+}
 
 
 def patch_tpool_proxy():
@@ -319,11 +322,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
 
-        # TODO(mriedem): Long-term we should load up the volume drivers on
-        # demand as needed rather than doing this on startup, as there might
-        # be unsupported volume drivers in this list based on the underlying
-        # platform.
-        self.volume_drivers = self._get_volume_drivers()
+        # NOTE(lyarwood): Volume drivers are loaded on-demand
+        self.volume_drivers: ty.Dict[str, volume.LibvirtBaseVolumeDriver] = {}
 
         self._disk_cachemode = None
         self.image_cache_manager = imagecache.ImageCacheManager()
@@ -464,20 +464,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 size=ns['size'],
                 align=ns['daxregion']['align'])
         return vpmems_host
-
-    def _get_volume_drivers(self):
-        driver_registry = dict()
-
-        for driver_str in libvirt_volume_drivers:
-            driver_type, _sep, driver = driver_str.partition('=')
-            driver_class = importutils.import_class(driver)
-            try:
-                driver_registry[driver_type] = driver_class(self._host)
-            except brick_exception.InvalidConnectorProtocol:
-                LOG.debug('Unable to load volume driver %s. It is not '
-                          'supported on this host.', driver)
-
-        return driver_registry
 
     @property
     def disk_cachemode(self):
@@ -1580,11 +1566,55 @@ class LibvirtDriver(driver.ComputeDriver):
             except exception.InternalError as e:
                 LOG.debug(e, instance=instance)
 
-    def _get_volume_driver(self, connection_info):
+    def _get_volume_driver(
+        self, connection_info: ty.Dict[str, ty.Any]
+    ) -> 'volume.LibvirtBaseVolumeDriver':
+        """Fetch the nova.virt.libvirt.volume driver
+
+        Based on the provided connection_info return a nova.virt.libvirt.volume
+        driver. This will call out to os-brick to construct an connector and
+        check if the connector is valid on the underlying host.
+
+        :param connection_info: The connection_info associated with the volume
+        :raises: VolumeDriverNotFound if no driver is found or if the host
+            doesn't support the requested driver. This retains legacy behaviour
+            when only supported drivers were loaded on startup leading to a
+            VolumeDriverNotFound being raised later if an invalid driver was
+            requested.
+        """
         driver_type = connection_info.get('driver_volume_type')
-        if driver_type not in self.volume_drivers:
+
+        # If the driver_type isn't listed in the supported type list fail
+        if driver_type not in VOLUME_DRIVERS:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
-        return self.volume_drivers[driver_type]
+
+        # Return the cached driver
+        if driver_type in self.volume_drivers:
+            return self.volume_drivers.get(driver_type)
+
+        @utils.synchronized('cache_volume_driver')
+        def _cache_volume_driver(driver_type):
+            # Check if another request cached the driver while we waited
+            if driver_type in self.volume_drivers:
+                return self.volume_drivers.get(driver_type)
+
+            try:
+                driver_class = importutils.import_class(
+                    VOLUME_DRIVERS.get(driver_type))
+                self.volume_drivers[driver_type] = driver_class(self._host)
+                return self.volume_drivers.get(driver_type)
+            except brick_exception.InvalidConnectorProtocol:
+                LOG.debug('Unable to load volume driver %s. It is not '
+                          'supported on this host.', driver_type)
+                # NOTE(lyarwood): This exception is a subclass of
+                # VolumeDriverNotFound to ensure no callers have to change
+                # their error handling code after the move to on-demand loading
+                # of the volume drivers and associated os-brick connectors.
+                raise exception.VolumeDriverNotSupported(
+                    volume_driver=VOLUME_DRIVERS.get(driver_type))
+
+        # Cache the volume driver if it hasn't already been
+        return _cache_volume_driver(driver_type)
 
     def _connect_volume(self, context, connection_info, instance,
                         encryption=None):

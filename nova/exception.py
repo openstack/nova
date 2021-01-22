@@ -694,6 +694,11 @@ class VolumeDriverNotFound(NotFound):
     msg_fmt = _("Could not find a handler for %(driver_type)s volume.")
 
 
+class VolumeDriverNotSupported(VolumeDriverNotFound):
+    msg_fmt = _("The %(volume_driver)s volume driver is not supported on this "
+                "platform.")
+
+
 class InvalidImageRef(Invalid):
     msg_fmt = _("Invalid image href %(image_href)s.")
 
