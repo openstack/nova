@@ -1536,6 +1536,7 @@ class ComputeUtilsImageFunctionsTestCase(test.TestCase):
             'deeeeeac-d75e-11e2-8271-1234567897d6',
             'image_some_key': 'some_value',
             'image_fred': 'barney',
+            'image_os_glance_importing_to_stores': '',
             'image_cache_in_nova': 'true'
         }
         image_meta = compute_utils.initialize_instance_snapshot_metadata(
@@ -1548,6 +1549,7 @@ class ComputeUtilsImageFunctionsTestCase(test.TestCase):
             self.assertNotIn(p, properties)
         for p in CONF.non_inheritable_image_properties:
             self.assertNotIn(p, properties)
+        self.assertNotIn('os_glance_importing_to_stores', properties)
 
 
 class PciRequestUpdateTestCase(test.NoDBTestCase):
