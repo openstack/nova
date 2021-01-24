@@ -1380,8 +1380,6 @@ def upgrade(migrate_engine):
         else:
             index.create(migrate_engine)
 
-    Index('project_id', dns_domains.c.project_id).drop
-
     # Common foreign keys
     fkeys = [
         [
