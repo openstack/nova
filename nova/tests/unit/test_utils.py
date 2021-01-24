@@ -73,24 +73,25 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertEqual(('', ''), result)
 
     def test_hostname_unicode_sanitization(self):
-        hostname = u"\u7684.test.example.com"
-        self.assertEqual("test.example.com",
-                         utils.sanitize_hostname(hostname))
+        hostname = u'\u7684myamazinghostname'
+        self.assertEqual(
+            'myamazinghostname', utils.sanitize_hostname(hostname))
 
     def test_hostname_sanitize_periods(self):
-        hostname = "....test.example.com..."
-        self.assertEqual("test.example.com",
-                         utils.sanitize_hostname(hostname))
+        hostname = '....test.example.com...'
+        self.assertEqual(
+            'test-example-com', utils.sanitize_hostname(hostname))
 
     def test_hostname_sanitize_dashes(self):
-        hostname = "----test.example.com---"
-        self.assertEqual("test.example.com",
-                         utils.sanitize_hostname(hostname))
+        hostname = '----my-amazing-hostname---'
+        self.assertEqual(
+            "my-amazing-hostname", utils.sanitize_hostname(hostname))
 
     def test_hostname_sanitize_characters(self):
         hostname = "(#@&$!(@*--#&91)(__=+--test-host.example!!.com-0+"
-        self.assertEqual("91----test-host.example.com-0",
-                         utils.sanitize_hostname(hostname))
+        self.assertEqual(
+            "91----test-host-example-com-0",
+            utils.sanitize_hostname(hostname))
 
     def test_hostname_translate(self):
         hostname = "<}\x1fh\x10e\x08l\x02l\x05o\x12!{>"
@@ -99,20 +100,20 @@ class GenericUtilsTestCase(test.NoDBTestCase):
     def test_hostname_has_default(self):
         hostname = u"\u7684hello"
         defaultname = "Server-1"
-        self.assertEqual("hello", utils.sanitize_hostname(hostname,
-                                                          defaultname))
+        self.assertEqual(
+            "hello", utils.sanitize_hostname(hostname, defaultname))
 
     def test_hostname_empty_has_default(self):
         hostname = u"\u7684"
         defaultname = "Server-1"
-        self.assertEqual(defaultname, utils.sanitize_hostname(hostname,
-                                                              defaultname))
+        self.assertEqual(
+            defaultname, utils.sanitize_hostname(hostname, defaultname))
 
     def test_hostname_empty_has_default_too_long(self):
         hostname = u"\u7684"
         defaultname = "a" * 64
-        self.assertEqual("a" * 63, utils.sanitize_hostname(hostname,
-                                                           defaultname))
+        self.assertEqual(
+            "a" * 63, utils.sanitize_hostname(hostname, defaultname))
 
     def test_hostname_empty_no_default(self):
         hostname = u"\u7684"
