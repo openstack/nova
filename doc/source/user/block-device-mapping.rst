@@ -48,6 +48,9 @@ When we talk about block device mapping, we usually refer to one of two things
    virt driver code). We will refer to this format as 'Driver BDMs' from now
    on.
 
+   For more details on this please refer to the :doc:`Driver BDM Data
+   Structures <../reference/block-device-structs>` refernce document.
+
 .. note::
 
    The maximum limit on the number of disk devices allowed to attach to
@@ -55,8 +58,8 @@ When we talk about block device mapping, we usually refer to one of two things
    :oslo.config:option:`compute.max_disk_devices_to_attach`.
 
 
-Data format and its history
-----------------------------
+API BDM data format and its history
+-----------------------------------
 
 In the early days of Nova, block device mapping general structure closely
 mirrored that of the EC2 API. During the Havana release of Nova, block device
