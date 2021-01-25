@@ -41,6 +41,7 @@ import random
 import shutil
 import sys
 import tempfile
+import threading
 import time
 import typing as ty
 import uuid
@@ -240,6 +241,143 @@ ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 VGPU_RESOURCE_SEMAPHORE = 'vgpu_resources'
 
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
+
+
+class AsyncDeviceEventsHandler:
+    """A synchornization point between libvirt events an clients waiting for
+    such events.
+
+    It provides an interface for the clients to wait for one or more libvirt
+    event types. It implements event delivery by expecting the libvirt driver
+    to forward libvirt specific events to notify_waiters()
+
+    It handles multiple clients for the same instance, device and event
+    type and delivers the event to each clients.
+    """
+
+    class Waiter:
+        def __init__(
+            self,
+            instance_uuid: str,
+            device_name: str,
+            event_types: ty.Set[ty.Type[libvirtevent.DeviceEvent]]
+        ):
+            self.instance_uuid = instance_uuid
+            self.device_name = device_name
+            self.event_types = event_types
+            self.threading_event = threading.Event()
+            self.result: ty.Optional[libvirtevent.DeviceEvent] = None
+
+        def matches(self, event: libvirtevent.DeviceEvent) -> bool:
+            """Returns true if the event is one of the expected event types
+            for the given instance and device.
+            """
+            return (
+                self.instance_uuid == event.uuid and
+                self.device_name == event.dev and
+                isinstance(event, tuple(self.event_types)))
+
+        def __repr__(self) -> str:
+            return (
+                "AsyncDeviceEventsHandler.Waiter("
+                f"instance_uuid={self.instance_uuid}, "
+                f"device_name={self.device_name}, "
+                f"event_types={self.event_types})")
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        # Ongoing device operations in libvirt where we wait for the events
+        # about success or failure.
+        self._waiters: ty.Set[AsyncDeviceEventsHandler.Waiter] = set()
+
+    def create_waiter(
+        self,
+        instance_uuid: str,
+        device_name: str,
+        event_types: ty.Set[ty.Type[libvirtevent.DeviceEvent]]
+    ) -> 'AsyncDeviceEventsHandler.Waiter':
+        """Returns an opaque token the caller can use in wait() to
+        wait for the libvirt event
+
+        :param instance_uuid: The UUID of the instance.
+        :param device_name: The device name alias used by libvirt for this
+            device.
+        :param event_type: A set of classes derived from DeviceEvent
+            specifying which event types the caller waits for. Specifying more
+            than one event type means waiting for either of the events to be
+            received.
+        :returns: an opaque token to be used with wait_for_event().
+        """
+        waiter = AsyncDeviceEventsHandler.Waiter(
+            instance_uuid, device_name, event_types)
+        with self._lock:
+            self._waiters.add(waiter)
+
+        return waiter
+
+    def delete_waiter(self, token: 'AsyncDeviceEventsHandler.Waiter'):
+        """Deletes the waiter
+
+        :param token: the opaque token returned by create_waiter() to be
+            deleted
+        """
+        with self._lock:
+            self._waiters.remove(token)
+
+    def wait(
+        self, token: 'AsyncDeviceEventsHandler.Waiter', timeout: float,
+    ) -> ty.Optional[libvirtevent.DeviceEvent]:
+        """Blocks waiting for the libvirt event represented by the opaque token
+
+        :param token: A token created by calling create_waiter()
+        :param timeout: Maximum number of seconds this call blocks waiting for
+            the event to be received
+        :returns: The received libvirt event, or None in case of timeout
+        """
+        token.threading_event.wait(timeout)
+
+        with self._lock:
+            self._waiters.remove(token)
+
+        return token.result
+
+    def notify_waiters(self, event: libvirtevent.DeviceEvent) -> bool:
+        """Unblocks the client waiting for this event.
+
+        :param event: the libvirt event that is received
+        :returns: True if there was a client waiting and False otherwise.
+        """
+        dispatched = False
+        with self._lock:
+            for waiter in self._waiters:
+                if waiter.matches(event):
+                    waiter.result = event
+                    waiter.threading_event.set()
+                    dispatched = True
+
+        return dispatched
+
+    def cleanup_waiters(self, instance_uuid: str) -> None:
+        """Deletes all waiters and unblock all clients related to the specific
+        instance.
+
+        param instance_uuid: The instance UUID for which the cleanup is
+            requested
+        """
+        with self._lock:
+            instance_waiters = set()
+            for waiter in self._waiters:
+                if waiter.instance_uuid == instance_uuid:
+                    # unblock any waiting thread
+                    waiter.threading_event.set()
+                    instance_waiters.add(waiter)
+
+            self._waiters -= instance_waiters
+
+        if instance_waiters:
+            LOG.debug(
+                'Cleaned up device related libvirt event waiters: %s',
+                instance_waiters)
 
 
 class LibvirtDriver(driver.ComputeDriver):
