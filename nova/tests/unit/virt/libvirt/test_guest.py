@@ -540,6 +540,49 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertIsNotNone(
             self.guest.get_interface_by_cfg(cfg))
         self.assertIsNone(self.guest.get_interface_by_cfg(None))
+        self.domain.XMLDesc.assert_has_calls([mock.call(0)] * 6)
+
+        # now check if the persistent config can be queried too
+        self.domain.XMLDesc.reset_mock()
+        devs = self.guest.get_all_devices(
+            devtype=None, from_persistent_config=True)
+        self.domain.XMLDesc.assert_called_once_with(
+            fakelibvirt.VIR_DOMAIN_XML_INACTIVE)
+
+    def test_get_interface_by_cfg_persistent_domain(self):
+        self.domain.XMLDesc.return_value = """<domain>
+  <devices>
+    <interface type="bridge">
+      <mac address="fa:16:3e:f9:af:ae"/>
+      <model type="virtio"/>
+      <driver name="qemu"/>
+      <source bridge="qbr84008d03-11"/>
+      <target dev="tap84008d03-11"/>
+    </interface>
+  </devices>
+</domain>"""
+        cfg = vconfig.LibvirtConfigGuestInterface()
+        cfg.parse_str("""
+            <interface type="bridge">
+              <mac address="fa:16:3e:f9:af:ae"/>
+              <model type="virtio"/>
+              <driver name="qemu"/>
+              <source bridge="qbr84008d03-11"/>
+              <target dev="tap84008d03-11"/>
+              </interface>""")
+        self.assertIsNotNone(
+            self.guest.get_interface_by_cfg(
+                cfg, from_persistent_config=True))
+        self.assertIsNone(
+            self.guest.get_interface_by_cfg(
+                vconfig.LibvirtConfigGuestInterface(),
+                from_persistent_config=True))
+        self.domain.XMLDesc.assert_has_calls(
+            [
+                mock.call(fakelibvirt.VIR_DOMAIN_XML_INACTIVE),
+                mock.call(fakelibvirt.VIR_DOMAIN_XML_INACTIVE),
+            ]
+        )
 
     def test_get_interface_by_cfg_vhostuser(self):
         self.domain.XMLDesc.return_value = """<domain>

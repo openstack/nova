@@ -24034,6 +24034,41 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         self.assertIsNone(guest.get_disk('vdc'))
 
+        dom.XMLDesc.assert_has_calls([mock.call(0)] * 3)
+
+    def test_get_disk_xml_from_persistent_config(self):
+        dom_xml = """
+              <domain type="kvm">
+                <devices>
+                  <disk type="file">
+                     <source file="disk1_file"/>
+                     <target dev="vda" bus="virtio"/>
+                     <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
+                  </disk>
+                  <disk type="block">
+                    <source dev="/path/to/dev/1"/>
+                    <target dev="vdb" bus="virtio" serial="1234"/>
+                  </disk>
+                </devices>
+              </domain>
+              """
+
+        diska_xml = """<disk type="file" device="disk">
+  <source file="disk1_file"/>
+  <target bus="virtio" dev="vda"/>
+  <serial>0e38683e-f0af-418f-a3f1-6b67ea0f919d</serial>
+</disk>"""
+
+        dom = mock.MagicMock()
+        dom.XMLDesc.return_value = dom_xml
+        guest = libvirt_guest.Guest(dom)
+
+        actual_diska_xml = guest.get_disk(
+            'vda', from_persistent_config=True).to_xml()
+        self.assertXmlEqual(diska_xml, actual_diska_xml)
+        dom.XMLDesc.assert_called_once_with(
+            fakelibvirt.VIR_DOMAIN_XML_INACTIVE)
+
     def test_vcpu_model_from_config(self):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         vcpu_model = drv._cpu_config_to_vcpu_model(None, None)
