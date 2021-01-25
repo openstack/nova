@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    The `os-resetState`_ API will now log an instance action when called. The
+    resulting instance action being visable via the `os-instance-actions`_ API
+    to users and admins, resolving `bug 1911924`_.
+
+    .. _bug 1911924: https://launchpad.net/bugs/1911924
+    .. _os-instance-actions: https://docs.openstack.org/api-ref/compute/?expanded=reset-server-state-os-resetstate-action-detail,list-actions-for-server-detail
+    .. _os-resetState: https://docs.openstack.org/api-ref/compute/?expanded=reset-server-state-os-resetstate-action-detail
