@@ -1204,6 +1204,51 @@ class RequestGroup(base.NovaEphemeralObject):
             if self.resources[rclass] == 0:
                 self.resources.pop(rclass)
 
+    def to_queryparams(self):
+        """Convert the RequestGroup to placement allocation candidates query
+        parameters.
+        """
+
+        # NOTE(efried): The sorting herein is not necessary for the API; it is
+        # to make testing easier and logging/debugging predictable.
+        res = self.resources
+        required_traits = self.required_traits
+        forbidden_traits = self.forbidden_traits
+        aggregates = self.aggregates
+        in_tree = self.in_tree
+        forbidden_aggregates = self.forbidden_aggregates
+        suffix = self.requester_id or ''
+
+        resource_query = ",".join(
+            sorted("%s:%s" % (rc, amount)
+                   for (rc, amount) in res.items()))
+        qs_params = [('resources%s' % suffix, resource_query)]
+
+        # Assemble required and forbidden traits, allowing for either/both
+        # to be empty.
+        required_val = ','.join(
+            sorted(required_traits) +
+            ['!%s' % ft for ft in sorted(forbidden_traits)])
+        if required_val:
+            qs_params.append(('required%s' % suffix, required_val))
+        if aggregates:
+            aggs = []
+            # member_of$S is a list of lists.  We need a tuple of
+            # ('member_of$S', 'in:uuid,uuid,...') for each inner list.
+            for agglist in aggregates:
+                aggs.append(('member_of%s' % suffix,
+                             'in:' + ','.join(sorted(agglist))))
+            qs_params.extend(sorted(aggs))
+        if in_tree:
+            qs_params.append(('in_tree%s' % suffix, in_tree))
+        if forbidden_aggregates:
+            # member_of$S is a list of aggregate uuids. We need a
+            # tuple of ('member_of$S, '!in:uuid,uuid,...').
+            forbidden_aggs = '!in:' + ','.join(
+                sorted(forbidden_aggregates))
+            qs_params.append(('member_of%s' % suffix, forbidden_aggs))
+        return qs_params
+
 
 @base.NovaObjectRegistry.register
 class RequestLevelParams(base.NovaObject):

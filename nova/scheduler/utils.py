@@ -447,48 +447,6 @@ class ResourceRequest(object):
         """Produce a querystring of the form expected by
         GET /allocation_candidates.
         """
-        # TODO(gibi): We have a RequestGroup OVO so we can move this to that
-        # class as a member function.
-        # NOTE(efried): The sorting herein is not necessary for the API; it is
-        # to make testing easier and logging/debugging predictable.
-        def to_queryparams(request_group, suffix):
-            res = request_group.resources
-            required_traits = request_group.required_traits
-            forbidden_traits = request_group.forbidden_traits
-            aggregates = request_group.aggregates
-            in_tree = request_group.in_tree
-            forbidden_aggregates = request_group.forbidden_aggregates
-
-            resource_query = ",".join(
-                sorted("%s:%s" % (rc, amount)
-                       for (rc, amount) in res.items()))
-            qs_params = [('resources%s' % suffix, resource_query)]
-
-            # Assemble required and forbidden traits, allowing for either/both
-            # to be empty.
-            required_val = ','.join(
-                sorted(required_traits) +
-                ['!%s' % ft for ft in sorted(forbidden_traits)])
-            if required_val:
-                qs_params.append(('required%s' % suffix, required_val))
-            if aggregates:
-                aggs = []
-                # member_of$S is a list of lists.  We need a tuple of
-                # ('member_of$S', 'in:uuid,uuid,...') for each inner list.
-                for agglist in aggregates:
-                    aggs.append(('member_of%s' % suffix,
-                                 'in:' + ','.join(sorted(agglist))))
-                qs_params.extend(sorted(aggs))
-            if in_tree:
-                qs_params.append(('in_tree%s' % suffix, in_tree))
-            if forbidden_aggregates:
-                # member_of$S is a list of aggregate uuids. We need a
-                # tuple of ('member_of$S, '!in:uuid,uuid,...').
-                forbidden_aggs = '!in:' + ','.join(
-                    sorted(forbidden_aggregates))
-                qs_params.append(('member_of%s' % suffix, forbidden_aggs))
-            return qs_params
-
         if self._limit is not None:
             qparams = [('limit', self._limit)]
         else:
@@ -500,12 +458,12 @@ class ResourceRequest(object):
                                                   sorted(self._root_forbidden)]
             qparams.append(('root_required', ','.join(vals)))
 
-        for ident, rg in self._rg_by_id.items():
+        for rg in self._rg_by_id.values():
             # [('resources[$S]', 'rclass:amount,rclass:amount,...'),
             #  ('required[$S]', 'trait_name,!trait_name,...'),
             #  ('member_of[$S]', 'in:uuid,uuid,...'),
             #  ('member_of[$S]', 'in:uuid,uuid,...')]
-            qparams.extend(to_queryparams(rg, ident or ''))
+            qparams.extend(rg.to_queryparams())
 
         return parse.urlencode(sorted(qparams))
 
