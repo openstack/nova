@@ -21,6 +21,8 @@ from sqlalchemy import ForeignKey, Index, Integer, MetaData, String, Table
 from sqlalchemy import Text
 from sqlalchemy.types import NullType
 
+from nova.db.sqlalchemy import types
+
 LOG = logging.getLogger(__name__)
 
 
@@ -259,6 +261,7 @@ def upgrade(migrate_engine):
         Column('metrics', Text, nullable=True),
         Column('extra_resources', Text, nullable=True),
         Column('stats', Text, default='{}'),
+        Column('numa_topology', Text, nullable=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -407,20 +410,6 @@ def upgrade(migrate_engine):
         Column('name', String(length=255)),
         UniqueConstraint('uuid', 'deleted',
                          name='uniq_instance_groups0uuid0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8',
-    )
-
-    group_metadata = Table('instance_group_metadata', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('deleted', Integer),
-        Column('id', Integer, primary_key=True, nullable=False),
-        Column('key', String(length=255)),
-        Column('value', String(length=255)),
-        Column('group_id', Integer, ForeignKey('instance_groups.id'),
-               nullable=False),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -635,6 +624,19 @@ def upgrade(migrate_engine):
         mysql_charset='utf8',
     )
 
+    instance_extra = Table('instance_extra', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('deleted_at', DateTime),
+        Column('deleted', Integer),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('instance_uuid', String(length=36), nullable=False),
+        Column('numa_topology', Text, nullable=True),
+        Column('pci_requests', Text, nullable=True),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
     iscsi_targets = Table('iscsi_targets', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -714,6 +716,13 @@ def upgrade(migrate_engine):
         Column('priority', Integer),
         Column('rxtx_base', Integer),
         Column('deleted', Integer),
+        Column('mtu', Integer),
+        Column('dhcp_server', types.IPAddress),
+        # NOTE(stephenfin): These were originally added by sqlalchemy-migrate
+        # which did not generate the constraints
+        Column('enable_dhcp', Boolean(create_constraint=False), default=True),
+        Column(
+            'share_address', Boolean(create_constraint=False), default=False),
         UniqueConstraint('vlan', 'deleted', name='uniq_networks0vlan0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
@@ -735,6 +744,7 @@ def upgrade(migrate_engine):
         Column('status', String(36), nullable=False),
         Column('extra_info', Text, nullable=True),
         Column('instance_uuid', String(36), nullable=True),
+        Column('request_id', String(36), nullable=True),
         Index('ix_pci_devices_compute_node_id_deleted',
               'compute_node_id', 'deleted'),
         Index('ix_pci_devices_instance_uuid_deleted',
@@ -1078,8 +1088,8 @@ def upgrade(migrate_engine):
               instance_faults, instance_id_mappings, instance_info_caches,
               instance_metadata, instance_system_metadata,
               instance_type_extra_specs, instance_type_projects,
-              instance_actions, instance_actions_events,
-              groups, group_metadata, group_policy, group_member,
+              instance_actions, instance_actions_events, instance_extra,
+              groups, group_policy, group_member,
               iscsi_targets, key_pairs, migrations, networks,
               pci_devices, provider_fw_rules, quota_classes, quota_usages,
               quotas, project_user_quotas,
@@ -1140,16 +1150,6 @@ def upgrade(migrate_engine):
               block_device_mapping.c.instance_uuid,
               block_device_mapping.c.device_name),
 
-        # NOTE(dprince): This is now a duplicate index on MySQL and needs to
-        # be removed there. We leave it here so the Index ordering
-        # matches on schema diffs (for MySQL).
-        # See Havana migration 186_new_bdm_format where we dropped the
-        # virtual_name column.
-        # IceHouse fix is here: https://bugs.launchpad.net/nova/+bug/1265839
-        Index(
-             'block_device_mapping_instance_uuid_virtual_name_device_name_idx',
-             block_device_mapping.c.instance_uuid,
-             block_device_mapping.c.device_name),
         Index('block_device_mapping_instance_uuid_volume_id_idx',
               block_device_mapping.c.instance_uuid,
               block_device_mapping.c.volume_id),
@@ -1192,9 +1192,6 @@ def upgrade(migrate_engine):
         Index('instance_group_member_instance_idx',
               group_member.c.instance_id),
 
-        # group_metadata
-        Index('instance_group_metadata_key_idx', group_metadata.c.key),
-
         # group_policy
         Index('instance_group_policy_policy_idx', group_policy.c.policy),
 
@@ -1220,6 +1217,9 @@ def upgrade(migrate_engine):
         # instance_actions
         Index('instance_uuid_idx', instance_actions.c.instance_uuid),
         Index('request_id_idx', instance_actions.c.request_id),
+
+        # instance_extra
+        Index('instance_extra_idx', instance_extra.c.instance_uuid),
 
         # instance_faults
         Index('instance_faults_host_idx', instance_faults.c.host),
@@ -1318,14 +1318,7 @@ def upgrade(migrate_engine):
     if migrate_engine.name == 'postgresql':
         Index('address', fixed_ips.c.address).create()
 
-    # NOTE(dprince): PostgreSQL doesn't allow duplicate indexes
-    # so we skip creation of select indexes (so schemas match exactly).
-    POSTGRES_INDEX_SKIPS = [
-        # See Havana migration 186_new_bdm_format where we dropped the
-        # virtual_name column.
-        # IceHouse fix is here: https://bugs.launchpad.net/nova/+bug/1265839
-        'block_device_mapping_instance_uuid_virtual_name_device_name_idx'
-    ]
+    POSTGRES_INDEX_SKIPS = []
 
     MYSQL_INDEX_SKIPS = [
         # we create this one manually for MySQL above
@@ -1417,7 +1410,7 @@ def upgrade(migrate_engine):
             [migrations.c.instance_uuid],
             [instances.c.uuid],
             'fk_migrations_instance_uuid',
-        ]
+        ],
     ]
 
     for fkey_pair in fkeys:
@@ -1434,6 +1427,17 @@ def upgrade(migrate_engine):
                 columns=fkey_pair[0], refcolumns=fkey_pair[1])
             fkey.create()
 
+    # TODO(stephenfin): Fold these in somehow
+    fkey = ForeignKeyConstraint(
+        columns=[pci_devices.c.compute_node_id],
+        refcolumns=[compute_nodes.c.id])
+    fkey.create()
+
+    fkey = ForeignKeyConstraint(
+        columns=[instance_extra.c.instance_uuid],
+        refcolumns=[instances.c.uuid])
+    fkey.create()
+
     if migrate_engine.name == 'mysql':
         # In Folsom we explicitly converted migrate_version to UTF8.
         migrate_engine.execute(
@@ -1444,3 +1448,30 @@ def upgrade(migrate_engine):
             migrate_engine.url.database)
 
     _create_shadow_tables(migrate_engine)
+
+    # TODO(stephenfin): Fix these various bugs in a follow-up
+
+    # 244_increase_user_id_length_volume_usage_cache; this alternation should
+    # apply to shadow tables also
+
+    table = Table('volume_usage_cache', meta, autoload=True)
+    table.c.user_id.alter(type=String(64))
+
+    # 247_nullable_mismatch; these alterations should apply to shadow tables
+    # also
+
+    table = Table('quota_usages', meta, autoload=True)
+    table.c.resource.alter(nullable=False)
+
+    table = Table('pci_devices', meta, autoload=True)
+    table.c.deleted.alter(nullable=True)
+    table.c.product_id.alter(nullable=False)
+    table.c.vendor_id.alter(nullable=False)
+    table.c.dev_type.alter(nullable=False)
+
+    # 252_add_instance_extra_table; we don't create indexes for shadow tables
+    # in general and these should be removed
+
+    shadow_table = Table('shadow_instance_extra', meta, autoload=True)
+    idx = Index('shadow_instance_extra_idx', shadow_table.c.instance_uuid)
+    idx.create(migrate_engine)
