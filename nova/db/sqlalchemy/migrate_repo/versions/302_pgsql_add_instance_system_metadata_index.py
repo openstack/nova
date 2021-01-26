@@ -27,7 +27,7 @@ def upgrade(migrate_engine):
     """Add instance_system_metadata indexes missing on PostgreSQL and other DB.
     """
 
-    # This index was already added by migration 216 for MySQL
+    # This index was already added by migration 234_icehouse for MySQL
     if migrate_engine.name != 'mysql':
         # Adds index for PostgreSQL and other DB
         if not utils.index_exists(migrate_engine, SYS_META_TABLE_NAME,

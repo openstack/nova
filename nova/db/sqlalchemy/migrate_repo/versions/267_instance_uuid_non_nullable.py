@@ -102,7 +102,7 @@ def upgrade(migrate_engine):
     UniqueConstraint('uuid', table=instances, name=UC_NAME).create()
 
     # NOTE(mriedem): We now have a unique index on instances.uuid from the
-    # 216_havana migration and a unique constraint on the same column, which
+    # 234_icehouse migration and a unique constraint on the same column, which
     # is redundant but should not be a big performance penalty. We should
     # clean this up in a later (separate) migration since it involves dropping
     # any ForeignKeys on the instances.uuid column due to some index rename

@@ -87,33 +87,6 @@ def _create_shadow_tables(migrate_engine):
             raise
 
 
-# NOTE(dprince): we add these here so our schema contains dump tables
-# which were added in migration 209 (in Havana). We can drop these in
-# Icehouse: https://bugs.launchpad.net/nova/+bug/1266538
-def _create_dump_tables(migrate_engine):
-    meta = MetaData(migrate_engine)
-    meta.reflect(migrate_engine)
-
-    table_names = ['compute_node_stats', 'compute_nodes', 'instance_actions',
-                   'instance_actions_events', 'instance_faults', 'migrations']
-    for table_name in table_names:
-        table = Table(table_name, meta, autoload=True)
-
-        dump_table_name = 'dump_' + table.name
-        columns = []
-        for column in table.columns:
-            # NOTE(dprince): The dump_ tables were originally created from an
-            # earlier schema version so we don't want to add the pci_stats
-            # column so that schema diffs are exactly the same.
-            if column.name == 'pci_stats':
-                continue
-            else:
-                columns.append(column.copy())
-        table_dump = Table(dump_table_name, meta, *columns,
-                           mysql_engine='InnoDB')
-        table_dump.create()
-
-
 def upgrade(migrate_engine):
     meta = MetaData()
     meta.bind = migrate_engine
@@ -258,19 +231,6 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    compute_node_stats = Table('compute_node_stats', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('id', Integer, primary_key=True, nullable=False),
-        Column('compute_node_id', Integer, nullable=False),
-        Column('key', String(length=255), nullable=False),
-        Column('value', String(length=255)),
-        Column('deleted', Integer),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
     compute_nodes = Table('compute_nodes', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -296,6 +256,9 @@ def upgrade(migrate_engine):
         Column('host_ip', InetSmall()),
         Column('supported_instances', Text),
         Column('pci_stats', Text, nullable=True),
+        Column('metrics', Text, nullable=True),
+        Column('extra_resources', Text, nullable=True),
+        Column('stats', Text, default='{}'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -629,6 +592,7 @@ def upgrade(migrate_engine):
         Column(
             'locked_by', Enum('owner', 'admin', name='instances0locked_by')),
         Column('cleaned', Integer, default=0),
+        Column('ephemeral_key_uuid', String(36)),
         Index('project_id', 'project_id'),
         Index('uuid', 'uuid', unique=True),
         mysql_engine='InnoDB',
@@ -665,6 +629,8 @@ def upgrade(migrate_engine):
         Column('result', String(length=255)),
         Column('traceback', Text),
         Column('deleted', Integer),
+        Column('host', String(255)),
+        Column('details', Text),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -1107,7 +1073,7 @@ def upgrade(migrate_engine):
               # those that are children and others later
               agent_builds, aggregate_hosts, aggregate_metadata,
               block_device_mapping, bw_usage_cache, cells,
-              certificates, compute_node_stats, compute_nodes, consoles,
+              certificates, compute_nodes, consoles,
               dns_domains, fixed_ips, floating_ips,
               instance_faults, instance_id_mappings, instance_info_caches,
               instance_metadata, instance_system_metadata,
@@ -1197,13 +1163,6 @@ def upgrade(migrate_engine):
               certificates.c.project_id, certificates.c.deleted),
         Index('certificates_user_id_deleted_idx', certificates.c.user_id,
               certificates.c.deleted),
-
-        # compute_node_stats
-        Index('ix_compute_node_stats_compute_node_id',
-              compute_node_stats.c.compute_node_id),
-        Index('compute_node_stats_node_id_and_deleted_idx',
-              compute_node_stats.c.compute_node_id,
-              compute_node_stats.c.deleted),
 
         # consoles
         Index('consoles_instance_uuid_idx', consoles.c.instance_uuid),
@@ -1319,6 +1278,8 @@ def upgrade(migrate_engine):
         Index('ix_reservations_user_id_deleted',
               reservations.c.user_id, reservations.c.deleted),
         Index('reservations_uuid_idx', reservations.c.uuid),
+        Index('reservations_deleted_expire_idx',
+              reservations.c.deleted, reservations.c.expire),
 
         # security_group_instance_association
         Index('security_group_instance_association_instance_uuid_idx',
@@ -1403,11 +1364,6 @@ def upgrade(migrate_engine):
             'security_group_instance_association_ibfk_1',
         ],
         [
-            [compute_node_stats.c.compute_node_id],
-            [compute_nodes.c.id],
-            'fk_compute_node_stats_compute_node_id',
-        ],
-        [
             [compute_nodes.c.service_id],
             [services.c.id],
             'fk_compute_nodes_service_id',
@@ -1488,5 +1444,3 @@ def upgrade(migrate_engine):
             migrate_engine.url.database)
 
     _create_shadow_tables(migrate_engine)
-
-    _create_dump_tables(migrate_engine)
