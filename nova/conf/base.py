@@ -118,6 +118,20 @@ For a couple of operations, e.g. scheduling decisions and special settings when
 spawning, we have to identify a big VM and handle them differently. Every VM
 having more or equal to this setting's amount of RAM is a big VM.
 """),
+    cfg.IntOpt(
+        'largevm_mb',
+        default=230 * 1024,      # 230 GB
+        min=0,
+        help="""
+Instance memory usage identifying it as large VM
+
+For a couple of operations, e.g. special settings when
+spawning, we have to identify a large VM and handle them differently - even
+differently than big VMs. Every VM having more or equal to this setting's
+amount of RAM and less than bigvm_mb is a large VM.
+
+See also: nova.utils.is_large_vm()
+"""),
     cfg.StrOpt(
         'bigvm_deployment_rp_name_prefix',
         default='bigvm-deployment',

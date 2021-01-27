@@ -1137,7 +1137,8 @@ class VMwareVMOps(object):
         vm_util.rename_vm(self._session, vm_ref, instance)
 
         # Make sure we don't automatically move around "big" VMs
-        if utils.is_big_vm(int(instance.memory_mb), instance.flavor):
+        if utils.is_big_vm(int(instance.memory_mb), instance.flavor) or \
+                utils.is_large_vm(int(instance.memory_mb), instance.flavor):
             behavior = constants.DRS_BEHAVIOR_PARTIALLY_AUTOMATED
             LOG.debug("Adding DRS override '%s' for big VM.", behavior,
                       instance=instance)
@@ -1829,10 +1830,15 @@ class VMwareVMOps(object):
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
         old_flavor = instance.old_flavor
-        old_is_big = utils.is_big_vm(int(old_flavor.memory_mb), old_flavor)
-        new_is_big = utils.is_big_vm(int(flavor.memory_mb), flavor)
+        old_needs_override = utils.is_big_vm(int(old_flavor.memory_mb),
+                                             old_flavor) \
+                             or utils.is_large_vm(int(old_flavor.memory_mb),
+                                                  old_flavor)
+        new_needs_override = utils.is_big_vm(int(flavor.memory_mb), flavor) \
+                             or utils.is_large_vm(int(flavor.memory_mb),
+                                                  flavor)
 
-        if not old_is_big and new_is_big:
+        if not old_needs_override and new_needs_override:
             # Make sure we don't automatically move around "big" VMs
             behavior = constants.DRS_BEHAVIOR_PARTIALLY_AUTOMATED
             LOG.debug("Adding DRS override '%s' for big VM.", behavior,
@@ -1842,7 +1848,7 @@ class VMwareVMOps(object):
                                                         vm_ref,
                                                         operation='add',
                                                         behavior=behavior)
-        elif old_is_big and not new_is_big:
+        elif old_needs_override and not new_needs_override:
             # remove the old override, if we had one before. make sure we don't
             # error out if it was already deleted another way
             LOG.debug("Removing DRS override for former big VM.",

@@ -226,7 +226,7 @@ class _SpecialVmSpawningServer(object):
 
             # filter for hosts without big VMs
             vms_per_host = {h: vms for h, vms in vms_per_host.items()
-                            if all(mem < CONF.bigvm_mb
+                            if all(mem < CONF.largevm_mb
                                    for mem, state, used_mem in vms)}
 
             if not vms_per_host:

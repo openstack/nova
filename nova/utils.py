@@ -1234,6 +1234,18 @@ def is_big_vm(memory_mb, flavor):
     return True
 
 
+def is_large_vm(memory_mb, flavor):
+    # small and big VMs are not large
+    if memory_mb < CONF.largevm_mb or memory_mb > CONF.bigvm_mb:
+        return False
+
+    # baremetal instances are not large
+    if is_baremetal_flavor(flavor):
+        return False
+
+    return True
+
+
 def vm_needs_special_spawning(memory_mb, flavor):
     if is_big_vm(memory_mb, flavor):
         return True
