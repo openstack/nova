@@ -10145,11 +10145,12 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch.dict(self.compute.driver.capabilities,
                              supports_attach_interface=True),
             mock.patch('oslo_concurrency.lockutils.lock'),
+            mock.patch("nova.network.neutron.API.create_resource_requests"),
             mock.patch.object(
                 self.compute,
                 "_claim_pci_device_for_interface_attach",
                 return_value=None)
-        ) as (cap, mock_lock, mock_claim_pci):
+        ) as (cap, mock_lock, mock_create_resource_req, mock_claim_pci):
             vif = self.compute.attach_interface(self.context,
                                                 instance,
                                                 network_id,
@@ -10175,7 +10176,12 @@ class ComputeAPITestCase(BaseTestCase):
                 mock.ANY, delay=mock.ANY, do_log=mock.ANY, fair=mock.ANY,
                 semaphores=mock.ANY)
         mock_claim_pci.assert_called_once_with(
-            self.context, instance, network_requests)
+            self.context, instance,
+            test.MatchType(objects.InstancePCIRequests))
+        pci_reqs = mock_claim_pci.mock_calls[0][1][2]
+        self.assertEqual(instance.uuid, pci_reqs.instance_uuid)
+        self.assertEqual([], pci_reqs.requests)
+
         return nwinfo, port_id
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
@@ -10262,10 +10268,11 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch.dict(self.compute.driver.capabilities,
                             supports_attach_interface=True,
                             supports_tagged_attach_interface=True),
+            mock.patch("nova.network.neutron.API.create_resource_requests"),
             mock.patch.object(self.compute,
                               '_claim_pci_device_for_interface_attach',
                               return_value=None)
-        ) as (mock_capabilities, mock_claim_pci):
+        ) as (mock_capabilities, mock_create_resource_req, mock_claim_pci):
             vif = self.compute.attach_interface(self.context,
                                                 instance,
                                                 network_id,
@@ -10289,7 +10296,11 @@ class ComputeAPITestCase(BaseTestCase):
             mock.call(self.context, instance, self.compute.host,
                       action='interface_attach', phase='end')])
         mock_claim_pci.assert_called_once_with(
-            self.context, instance, network_requests)
+            self.context, instance,
+            test.MatchType(objects.InstancePCIRequests))
+        pci_reqs = mock_claim_pci.mock_calls[0][1][2]
+        self.assertEqual(instance.uuid, pci_reqs.instance_uuid)
+        self.assertEqual([], pci_reqs.requests)
 
         return nwinfo, port_id
 
@@ -10329,11 +10340,12 @@ class ComputeAPITestCase(BaseTestCase):
                               'deallocate_port_for_instance'),
             mock.patch.dict(self.compute.driver.capabilities,
                             supports_attach_interface=True),
+            mock.patch("nova.network.neutron.API.create_resource_requests"),
             mock.patch.object(self.compute,
                               '_claim_pci_device_for_interface_attach',
                               return_value=None),
         ) as (mock_notify, mock_attach, mock_allocate, mock_deallocate,
-              mock_dict, mock_claim_pci):
+              mock_dict, mock_create_resource_req, mock_claim_pci):
 
             mock_allocate.return_value = nwinfo
             mock_attach.side_effect = exception.NovaException("attach_failed")
@@ -10361,7 +10373,11 @@ class ComputeAPITestCase(BaseTestCase):
                           exception=mock_attach.side_effect,
                           phase='error')])
             mock_claim_pci.assert_called_once_with(
-                self.context, instance, network_requests)
+                self.context, instance,
+                test.MatchType(objects.InstancePCIRequests))
+            pci_reqs = mock_claim_pci.mock_calls[0][1][2]
+            self.assertEqual(instance.uuid, pci_reqs.instance_uuid)
+            self.assertEqual([], pci_reqs.requests)
 
     def test_attach_sriov_interface_failed_in_driver(self):
         new_type = flavors.get_flavor_by_flavor_id('4')

@@ -1225,6 +1225,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             pci_req for pci_req in self.pci_requests.requests
             if pci_req.request_id != pci_device.request_id]
 
+    # TODO(gibi): remove this as it is unused
     def add_pci_device_and_request(self, pci_device, pci_request):
         self.pci_requests.requests.append(pci_request)
         self.pci_devices.objects.append(pci_device)

@@ -2543,8 +2543,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         f_instance = objects.Instance._from_db_object(self.context,
                                                       objects.Instance(),
                                                       db_instance)
+        f_instance.flavor = objects.Flavor()
+        f_instance.system_metadata = {}
         e = exception.InterfaceAttachFailed(instance_uuid=f_instance.uuid)
 
+        @mock.patch('nova.network.neutron.API.create_resource_requests')
         @mock.patch.object(self.compute,
                            '_claim_pci_device_for_interface_attach',
                            return_value=None)
@@ -2555,7 +2558,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                            'allocate_for_instance', side_effect=e)
         @mock.patch.object(self.compute, '_instance_update',
                            side_effect=lambda *a, **k: {})
-        def do_test(update, meth, add_fault, notify, event, mock_claim_pci):
+        def do_test(
+                update, meth, add_fault, notify, event, mock_claim_pci,
+                mock_create_resource_req):
             self.assertRaises(exception.InterfaceAttachFailed,
                               self.compute.attach_interface,
                               self.context, f_instance, uuids.network_id,
