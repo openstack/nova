@@ -758,8 +758,9 @@ class PCINUMAAffinityPolicy(BaseNovaEnum):
     REQUIRED = "required"
     LEGACY = "legacy"
     PREFERRED = "preferred"
+    SOCKET = "socket"
 
-    ALL = (REQUIRED, LEGACY, PREFERRED)
+    ALL = (REQUIRED, LEGACY, PREFERRED, SOCKET)
 
 
 class DiskFormat(BaseNovaEnum):

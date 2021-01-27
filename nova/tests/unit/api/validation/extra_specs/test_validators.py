@@ -70,6 +70,9 @@ class TestValidators(test.NoDBTestCase):
             ('hw:cpu_thread_policy', 'prefer'),
             ('hw:emulator_threads_policy', 'isolate'),
             ('hw:pci_numa_affinity_policy', 'legacy'),
+            ('hw:pci_numa_affinity_policy', 'required'),
+            ('hw:pci_numa_affinity_policy', 'preferred'),
+            ('hw:pci_numa_affinity_policy', 'socket'),
             ('hw:cpu_policy', 'mixed'),
         )
         for key, value in valid_specs:
@@ -86,6 +89,9 @@ class TestValidators(test.NoDBTestCase):
             ('hw:cpu_thread_policy', 'preferred'),
             ('hw:emulator_threads_policy', 'iisolate'),
             ('hw:pci_numa_affinity_policy', 'lgacy'),
+            ('hw:pci_numa_affinity_policy', 'requird'),
+            ('hw:pci_numa_affinity_policy', 'prefrred'),
+            ('hw:pci_numa_affinity_policy', 'socet'),
         )
         for key, value in invalid_specs:
             with testtools.ExpectedException(exception.ValidationError):
