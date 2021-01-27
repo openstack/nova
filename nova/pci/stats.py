@@ -298,6 +298,15 @@ class PciDeviceStats(object):
                 pool['count'] for pool in filtered_pools) >= requested_count:
             return filtered_pools
 
+        # the SOCKET policy is a bit of a special case. It's less strict than
+        # REQUIRED (so REQUIRED will automatically fulfil SOCKET, at least
+        # with our assumption of never having multiple sockets per NUMA node),
+        # but not always more strict than LEGACY: a PCI device with no NUMA
+        # affinity will fulfil LEGACY but not SOCKET. If we have SOCKET,
+        # process it here and don't continue.
+        if requested_policy == fields.PCINUMAAffinityPolicy.SOCKET:
+            return self._filter_pools_for_socket_affinity(pools, numa_cells)
+
         # some systems don't report NUMA node info for PCI devices, in which
         # case None is reported in 'pci_device.numa_node'. The LEGACY policy
         # allows us to use these devices so we include None in the list of
@@ -322,6 +331,39 @@ class PciDeviceStats(object):
         # can, folks.
         return sorted(
             pools, key=lambda pool: pool.get('numa_node') not in numa_cell_ids)
+
+    def _filter_pools_for_socket_affinity(self, pools, numa_cells):
+        host_cells = self.numa_topology.cells
+        # bail early if we don't have socket information for all host_cells.
+        # This could happen if we're running on an weird older system with
+        # multiple sockets per NUMA node, which is a configuration that we
+        # explicitly chose not to support.
+        if any(cell.socket is None for cell in host_cells):
+            LOG.debug('No socket information in host NUMA cell(s).')
+            return []
+
+        # get a set of host sockets that the guest cells are in. Since guest
+        # cell IDs map to host cell IDs, we can just lookup the latter's
+        # socket.
+        socket_ids = set()
+        for guest_cell in numa_cells:
+            for host_cell in host_cells:
+                if guest_cell.id == host_cell.id:
+                    socket_ids.add(host_cell.socket)
+
+        # now get a set of host NUMA nodes that are in the above sockets
+        allowed_numa_nodes = set()
+        for host_cell in host_cells:
+            if host_cell.socket in socket_ids:
+                allowed_numa_nodes.add(host_cell.id)
+
+        # filter out pools that are not in one of the correct host NUMA nodes.
+        return [
+            pool for pool in pools if any(
+                utils.pci_device_prop_match(pool, [{'numa_node': numa_node}])
+                for numa_node in allowed_numa_nodes
+            )
+        ]
 
     def _filter_pools_for_unrequested_pfs(self, pools, request):
         """Filter out pools with PFs, unless these are required.
@@ -383,8 +425,8 @@ class PciDeviceStats(object):
             return None
 
         # Next, let's exclude all devices that aren't on the correct NUMA node
-        # *assuming* we have devices and care about that, as determined by
-        # policy
+        # or socket, *assuming* we have devices and care about that, as
+        # determined by policy
         before_count = after_count
         pools = self._filter_pools_for_numa_cells(pools, request, numa_cells)
         after_count = sum([pool['count'] for pool in pools])

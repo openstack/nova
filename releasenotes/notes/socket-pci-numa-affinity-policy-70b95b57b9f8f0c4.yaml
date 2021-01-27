@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    A new PCI NUMA affinity policy is available. The
+    ``hw:pci_numa_affinity_policy`` flavor extra spec and
+    ``hw_pci_numa_affinity_policy`` image metadata property now accept a
+    ``socket`` policy value. This value indicates that the PCI device must be
+    affined to the same host socket as at least one of the guest NUMA nodes.
+    For more information, see the `PCI Passthrough`__ guide.
+
+    .. __: https://docs.openstack.org/nova/latest/admin/pci-passthrough.html

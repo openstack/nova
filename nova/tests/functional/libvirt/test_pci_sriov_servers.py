@@ -23,6 +23,7 @@ import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import units
 
 import nova
 from nova import context
@@ -1027,3 +1028,72 @@ class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
                    group='pci')
 
         self._test_policy(pci_numa_node, status, 'required')
+
+    def test_socket_policy_pass(self):
+        # With 1 socket containing 2 NUMA nodes, make the first node's CPU
+        # available for pinning, but affine the PCI device to the second node.
+        # This should pass.
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2,
+            kB_mem=(16 * units.Gi) // units.Ki)
+        self.flags(cpu_dedicated_set='0-3', group='compute')
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=1)
+
+        self.start_compute(host_info=host_info, pci_info=pci_info)
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'pci_passthrough:alias': '%s:1' % self.ALIAS_NAME,
+            'hw:pci_numa_affinity_policy': 'socket'
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        self._create_server(flavor_id=flavor_id)
+        self.assertTrue(self.mock_filter.called)
+
+    def test_socket_policy_fail(self):
+        # With 2 sockets containing 1 NUMA node each, make the first socket's
+        # CPUs available for pinning, but affine the PCI device to the second
+        # NUMA node in the second socket. This should fail.
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=1, cpu_sockets=2, cpu_cores=2, cpu_threads=2,
+            kB_mem=(16 * units.Gi) // units.Ki)
+        self.flags(cpu_dedicated_set='0-3', group='compute')
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=1)
+        self.start_compute(host_info=host_info, pci_info=pci_info)
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+            'pci_passthrough:alias': '%s:1' % self.ALIAS_NAME,
+            'hw:pci_numa_affinity_policy': 'socket'
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(
+            flavor_id=flavor_id, expected_state='ERROR')
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
+
+    def test_socket_policy_multi_numa_pass(self):
+        # 2 sockets, 2 NUMA nodes each, with the PCI device on NUMA 0 and
+        # socket 0. If we restrict cpu_dedicated_set to NUMA 1, 2 and 3, we
+        # should still be able to boot an instance with hw:numa_nodes=3 and the
+        # `socket` policy, because one of the instance's NUMA nodes will be on
+        # the same socket as the PCI device (even if there is no direct NUMA
+        # node affinity).
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=2, cpu_cores=2, cpu_threads=1,
+            kB_mem=(16 * units.Gi) // units.Ki)
+        self.flags(cpu_dedicated_set='2-7', group='compute')
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=0)
+
+        self.start_compute(host_info=host_info, pci_info=pci_info)
+
+        extra_spec = {
+            'hw:numa_nodes': '3',
+            'hw:cpu_policy': 'dedicated',
+            'pci_passthrough:alias': '%s:1' % self.ALIAS_NAME,
+            'hw:pci_numa_affinity_policy': 'socket'
+        }
+        flavor_id = self._create_flavor(vcpu=6, memory_mb=3144,
+                                        extra_spec=extra_spec)
+        self._create_server(flavor_id=flavor_id)
+        self.assertTrue(self.mock_filter.called)

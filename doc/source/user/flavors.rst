@@ -495,7 +495,7 @@ PCI NUMA Affinity Policy
   PCI passthrough devices and neutron SR-IOV interfaces via the
   ``hw:pci_numa_affinity_policy`` flavor extra spec or
   ``hw_pci_numa_affinity_policy``  image property. The allowed values are
-  ``required``,``preferred`` or ``legacy`` (default).
+  ``required``, ``socket``, ``preferred`` or ``legacy`` (default).
 
   **required**
       This value will mean that nova will boot instances with PCI devices
@@ -503,6 +503,25 @@ PCI NUMA Affinity Policy
       with these PCI devices. It means that if NUMA node info for some PCI
       devices could not be determined, those PCI devices wouldn't be consumable
       by the instance. This provides maximum performance.
+
+  **socket**
+      This means that the PCI device must be affined to the same host socket as
+      at least one of the guest NUMA nodes. For example, consider a system with
+      two sockets, each with two NUMA nodes, numbered node 0 and node 1 on
+      socket 0, and node 2 and node 3 on socket 1. There is a PCI device
+      affined to node 0. An PCI instance with two guest NUMA nodes and the
+      ``socket`` policy can be affined to either:
+
+      * node 0 and node 1
+      * node 0 and node 2
+      * node 0 and node 3
+      * node 1 and node 2
+      * node 1 and node 3
+
+      The instance cannot be affined to node 2 and node 3, as neither of those
+      are on the same socket as the PCI device. If the other nodes are consumed
+      by other instances and only nodes 2 and 3 are available, the instance
+      will not boot.
 
   **preferred**
       This value will mean that ``nova-scheduler`` will choose a compute host
