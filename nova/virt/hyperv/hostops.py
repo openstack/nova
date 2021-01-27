@@ -98,7 +98,7 @@ class HostOps(object):
 
         # NOTE(claudiub): The hypervisor_version will be stored in the database
         # as an Integer and it will be used by the scheduler, if required by
-        # the image property 'hypervisor_version_requires'.
+        # the image property 'img_hv_requested_version'.
         # The hypervisor_version will then be converted back to a version
         # by splitting the int in groups of 3 digits.
         # E.g.: hypervisor_version 6003 is converted to '6.3'.

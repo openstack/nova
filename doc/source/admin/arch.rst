@@ -68,7 +68,6 @@ availability zones. Compute supports the following hypervisors:
 - `VMware vSphere
   <https://www.vmware.com/support/vsphere-hypervisor.html>`__
 
-- `Xen (using libvirt) <https://www.xenproject.org>`__
 
 - `zVM <https://www.ibm.com/it-infrastructure/z/zvm>`__
 

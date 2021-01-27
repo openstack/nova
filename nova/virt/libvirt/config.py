@@ -2608,13 +2608,6 @@ class LibvirtConfigGuestFeatureAPIC(LibvirtConfigGuestFeature):
                                                             **kwargs)
 
 
-class LibvirtConfigGuestFeaturePAE(LibvirtConfigGuestFeature):
-
-    def __init__(self, **kwargs):
-        super(LibvirtConfigGuestFeaturePAE, self).__init__("pae",
-                                                           **kwargs)
-
-
 class LibvirtConfigGuestFeatureKvmHidden(LibvirtConfigGuestFeature):
 
     def __init__(self, **kwargs):

@@ -1540,11 +1540,6 @@ class InternalError(NovaException):
     msg_fmt = "%(err)s"
 
 
-class PciDevicePrepareFailed(NovaException):
-    msg_fmt = _("Failed to prepare PCI device %(id)s for instance "
-                "%(instance_uuid)s: %(reason)s")
-
-
 class PciDeviceDetachFailed(NovaException):
     msg_fmt = _("Failed to detach PCI device %(dev)s: %(reason)s")
 

@@ -147,12 +147,6 @@ class LibvirtTestCase(test.NoDBTestCase):
                            mock_fcntl.F_SETFL, 32769 | os.O_NONBLOCK)])
             self.assertIn(mock.call('/fake/path', 'r'), mock_open.mock_calls)
 
-    @mock.patch('oslo_concurrency.processutils.execute')
-    def test_xend_probe(self, mock_execute):
-        nova.privsep.libvirt.xend_probe()
-        mock_execute.assert_called_with('xend', 'status',
-                                        check_exit_code=True)
-
     def test_create_nmdev(self):
         mock_open = mock.mock_open()
         with mock.patch('builtins.open', new=mock_open) as mock_open:

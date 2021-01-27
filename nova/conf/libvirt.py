@@ -104,7 +104,7 @@ Related options:
 """),
     cfg.StrOpt('virt_type',
                default='kvm',
-               choices=('kvm', 'lxc', 'qemu', 'xen', 'parallels'),
+               choices=('kvm', 'lxc', 'qemu', 'parallels'),
                help="""
 Describes the virtualization type (or so called domain type) libvirt should
 use.
@@ -128,7 +128,8 @@ If set, Nova will use this URI to connect to libvirt.
 
 Possible values:
 
-* An URI like ``qemu:///system`` or ``xen+ssh://oirase/`` for example.
+* An URI like ``qemu:///system``.
+
   This is only necessary if the URI differs to the commonly known URIs
   for the chosen virtualization type.
 
@@ -273,7 +274,6 @@ in following list:
 
 * 'kvm': 'qemu+tcp://%s/system'
 * 'qemu': 'qemu+tcp://%s/system'
-* 'xen': 'xenmigr://%s/system'
 * 'parallels': 'parallels+tcp://%s/system'
 
 Related options:
@@ -627,9 +627,6 @@ Related options:
                default='$instances_path/snapshots',
                help='Location where libvirt driver will store snapshots '
                     'before uploading them to image service'),
-    cfg.StrOpt('xen_hvmloader_path',
-               default='/usr/lib/xen/boot/hvmloader',
-               help='Location where the Xen hvmloader is kept'),
     cfg.ListOpt('disk_cachemodes',
                 default=[],
                 help="""

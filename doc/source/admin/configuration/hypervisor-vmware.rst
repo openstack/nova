@@ -811,7 +811,7 @@ Tag VMware images
 In a mixed hypervisor environment, OpenStack Compute uses the
 ``hypervisor_type`` tag to match images to the correct hypervisor type.  For
 VMware images, set the hypervisor type to ``vmware``.  Other valid hypervisor
-types include: ``hyperv``, ``ironic``, ``lxc``, ``qemu``, and ``xen``.
+types include: ``hyperv``, ``ironic``, ``lxc``, and ``qemu``.
 Note that ``qemu`` is used for both QEMU and KVM hypervisor types.
 
 .. code-block:: console

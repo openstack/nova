@@ -79,7 +79,6 @@ def fake_kvm_guest():
     obj.features = [
         config.LibvirtConfigGuestFeatureACPI(),
         config.LibvirtConfigGuestFeatureAPIC(),
-        config.LibvirtConfigGuestFeaturePAE(),
         config.LibvirtConfigGuestFeatureKvmHidden()
     ]
 
@@ -202,7 +201,6 @@ FAKE_KVM_GUEST = """
     <features>
       <acpi/>
       <apic/>
-      <pae/>
       <kvm>
         <hidden state='on'/>
       </kvm>

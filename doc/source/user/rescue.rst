@@ -42,7 +42,7 @@ hosts.
 
    This mode is only supported when using the Libvirt virt driver.
 
-   This mode is not supported when using LXC or Xen hypervisors as enabled by
+   This mode is not supported when using the LXC hypervisor as enabled by
    the :oslo.config:option:`libvirt.virt_type` configurable on the computes.
 
 Usage

@@ -18,7 +18,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import errno
 import grp
 import os
 import pwd
@@ -185,63 +184,6 @@ def create_ploop_image(
     nova.privsep.libvirt.ploop_init(size, disk_format, fs_type, disk_path)
 
 
-def pick_disk_driver_name(
-    hypervisor_version: int, is_block_dev: bool = False,
-) -> ty.Optional[str]:
-    """Pick the libvirt primary backend driver name
-
-    If the hypervisor supports multiple backend drivers we have to tell libvirt
-    which one should be used.
-
-    Xen supports the following drivers: "tap", "tap2", "phy", "file", or
-    "qemu", being "qemu" the preferred one. Qemu only supports "qemu".
-
-    :param is_block_dev:
-    :returns: driver_name or None
-    """
-    if CONF.libvirt.virt_type == "xen":
-        if is_block_dev:
-            return "phy"
-        else:
-            # 4002000 == 4.2.0
-            if hypervisor_version >= 4002000:
-                try:
-                    nova.privsep.libvirt.xend_probe()
-                except OSError as exc:
-                    if exc.errno == errno.ENOENT:
-                        LOG.debug("xend is not found")
-                        # libvirt will try to use libxl toolstack
-                        return 'qemu'
-                    else:
-                        raise
-                except processutils.ProcessExecutionError:
-                    LOG.debug("xend is not started")
-                    # libvirt will try to use libxl toolstack
-                    return 'qemu'
-            # libvirt will use xend/xm toolstack
-            try:
-                out, err = processutils.execute('tap-ctl', 'check',
-                                                check_exit_code=False)
-                if out == 'ok\n':
-                    # 4000000 == 4.0.0
-                    if hypervisor_version > 4000000:
-                        return "tap2"
-                    else:
-                        return "tap"
-                else:
-                    LOG.info("tap-ctl check: %s", out)
-            except OSError as exc:
-                if exc.errno == errno.ENOENT:
-                    LOG.debug("tap-ctl tool is not installed")
-                else:
-                    raise
-            return "file"
-    elif CONF.libvirt.virt_type in ('kvm', 'qemu'):
-        return "qemu"
-    else:  # parallels
-        return None
-
-
 def get_disk_size(path: str, format: ty.Optional[str] = None) -> int:
     """Get the (virtual) size of a disk image
 
@@ -403,11 +345,7 @@ def find_disk(guest: libvirt_guest.Guest) -> ty.Tuple[str, ty.Optional[str]]:
         raise RuntimeError(_("Can't retrieve root device path "
                              "from instance libvirt configuration"))
 
-    # This is a legacy quirk of libvirt/xen. Everything else should
-    # report the on-disk format in type.
-    if disk_format == 'aio':
-        disk_format = 'raw'
-    return (disk_path, disk_format)
+    return disk_path, disk_format
 
 
 def get_disk_type_from_path(path: str) -> ty.Optional[str]:

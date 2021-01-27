@@ -192,11 +192,6 @@ def readpty(path):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def xend_probe():
-    processutils.execute('xend', 'status', check_exit_code=True)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
 def create_mdev(physical_device, mdev_type, uuid=None):
     """Instantiate a mediated device."""
     if uuid is None:

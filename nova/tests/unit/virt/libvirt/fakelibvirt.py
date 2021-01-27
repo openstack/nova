@@ -1439,12 +1439,13 @@ class Connection(object):
                 raise ValueError("URI was None, but fake libvirt is "
                                  "configured to not accept this.")
 
-        uri_whitelist = ['qemu:///system',
-                         'qemu:///session',
-                         'lxc:///',     # from LibvirtDriver._uri()
-                         'xen:///',     # from LibvirtDriver._uri()
-                         'test:///default',
-                         'parallels:///system']
+        uri_whitelist = [
+            'qemu:///system',
+            'qemu:///session',
+            'lxc:///',     # from LibvirtDriver._uri()
+            'test:///default',
+            'parallels:///system',
+        ]
 
         if uri not in uri_whitelist:
             raise make_libvirtError(
