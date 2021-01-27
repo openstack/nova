@@ -161,7 +161,6 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
     def test_pick_disk_driver_name(self):
         type_map = {'kvm': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
                     'qemu': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
-                    'uml': ([True, None], [False, None], [None, None]),
                     'lxc': ([True, None], [False, None], [None, None])}
         # NOTE(aloga): Xen is tested in test_pick_disk_driver_name_xen
 

@@ -1443,7 +1443,6 @@ class Connection(object):
                          'qemu:///session',
                          'lxc:///',     # from LibvirtDriver._uri()
                          'xen:///',     # from LibvirtDriver._uri()
-                         'uml:///system',
                          'test:///default',
                          'parallels:///system']
 

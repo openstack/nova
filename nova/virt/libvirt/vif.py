@@ -74,7 +74,6 @@ SUPPORTED_VIF_MODELS = {
         network_model.VIF_MODEL_RTL8139,
         network_model.VIF_MODEL_E1000],
     'lxc': [],
-    'uml': [],
     'parallels': [
         network_model.VIF_MODEL_VIRTIO,
         network_model.VIF_MODEL_RTL8139,

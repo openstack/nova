@@ -5171,36 +5171,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[10],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-    def test_get_guest_config_with_root_device_name(self):
-        self.flags(virt_type='uml', group='libvirt')
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-
-        block_device_info = {'root_device_name': '/dev/vdb'}
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta,
-                                            block_device_info)
-        cfg = drvr._get_guest_config(instance_ref, [],
-                                     image_meta, disk_info,
-                                     None, block_device_info)
-        self.assertEqual(0, len(cfg.features))
-        self.assertEqual(cfg.memory, instance_ref.flavor.memory_mb * units.Ki)
-        self.assertEqual(cfg.vcpus, instance_ref.flavor.vcpus)
-        self.assertEqual(cfg.os_type, "uml")
-        self.assertEqual(cfg.os_boot_dev, [])
-        self.assertEqual(cfg.os_root, '/dev/vdb')
-        self.assertEqual(len(cfg.devices), 4)
-        self.assertIsInstance(cfg.devices[0],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[1],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[2],
-                              vconfig.LibvirtConfigGuestConsole)
-        self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestUSBHostController)
-
     def test_has_uefi_support_not_supported_arch(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self._stub_host_capabilities_cpu_arch(fields.Architecture.ALPHA)
@@ -8019,23 +7989,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
-    def test_get_guest_cpu_config_default_uml(self):
-        self.flags(virt_type="uml",
-                   cpu_mode='none',
-                   group='libvirt')
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        conf = drvr._get_guest_config(instance_ref,
-                                      _fake_network_info(self),
-                                      image_meta, disk_info)
-        self.assertIsNone(conf.cpu)
-
     def test_get_guest_cpu_config_default_lxc(self):
         self.flags(virt_type="lxc",
                    cpu_mode='none',
@@ -10442,10 +10395,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 (lambda t: t.find('.').get('type'), 'kvm'),
                 (lambda t: t.find('./devices/disk/target').get('dev'),
                  _get_prefix(prefix, 'vda'))],
-            'uml': [
-                (lambda t: t.find('.').get('type'), 'uml'),
-                (lambda t: t.find('./devices/disk/target').get('dev'),
-                 _get_prefix(prefix, 'ubda'))]
             }
 
         for (virt_type, checks) in type_disk_map.items():
@@ -10590,10 +10539,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               (lambda t: t.find('./os/type').text,
                                fields.VMMode.HVM),
                               (lambda t: t.find('./devices/emulator'), None)]),
-                        'uml': ('uml:///system',
-                             [(lambda t: t.find('.').get('type'), 'uml'),
-                              (lambda t: t.find('./os/type').text,
-                               fields.VMMode.UML)]),
                         'xen': ('xen:///',
                              [(lambda t: t.find('.').get('type'), 'xen'),
                               (lambda t: t.find('./os/type').text,
@@ -25584,7 +25529,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         all_traits = set(ot.get_traits('COMPUTE_STORAGE_BUS_'))
         # ensure each virt type reports the correct bus types
         for virt_type, buses in blockinfo.SUPPORTED_DEVICE_BUSES.items():
-            if virt_type in ('qemu', 'kvm'):
+            if virt_type in ('qemu', 'kvm', 'uml'):
                 continue
 
             self.flags(virt_type=virt_type, group='libvirt')
