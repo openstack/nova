@@ -188,6 +188,8 @@ class ResourceRequest(object):
 
         res_req._translate_vtpm_request(request_spec.flavor, image)
 
+        res_req._translate_pci_numa_affinity_policy(request_spec.flavor, image)
+
         res_req.strip_zeros()
 
         return res_req
@@ -350,6 +352,16 @@ class ResourceRequest(object):
                       {'trait': os_traits.HW_CPU_HYPERTHREADING,
                        'value': trait})
             self._add_trait(os_traits.HW_CPU_HYPERTHREADING, trait)
+
+    def _translate_pci_numa_affinity_policy(self, flavor, image):
+        policy = hardware.get_pci_numa_policy_constraint(flavor, image)
+        # only the socket policy supports a trait
+        if policy == objects.fields.PCINUMAAffinityPolicy.SOCKET:
+            trait = os_traits.COMPUTE_SOCKET_PCI_NUMA_AFFINITY
+            self._add_trait(trait, 'required')
+            LOG.debug(
+                "Requiring 'socket' PCI NUMA affinity support via trait %s.",
+                trait)
 
     @property
     def group_policy(self):
