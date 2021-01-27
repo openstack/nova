@@ -167,13 +167,7 @@ class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
                 exceptions.append(ex)
             if archived == 0:
                 break
-        # FIXME(melwitt): OrphanedObjectError is raised because of the bug.
-        self.assertTrue(exceptions)
-        for ex in exceptions:
-            self.assertEqual(500, ex.response.status_code)
-            self.assertIn('OrphanedObjectError', str(ex))
-        # FIXME(melwitt): Uncomment when the bug is fixed.
-        # self.assertFalse(exceptions)
+        self.assertFalse(exceptions)
 
     def _get_table_counts(self):
         engine = sqlalchemy_api.get_engine()
