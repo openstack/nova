@@ -9338,15 +9338,16 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_available_mb = (
             (disk_available_gb * units.Ki) - CONF.reserved_host_disk_mb)
 
-        # Compare CPU
-        try:
-            if not instance.vcpu_model or not instance.vcpu_model.model:
-                source_cpu_info = src_compute_info['cpu_info']
-                self._compare_cpu(None, source_cpu_info, instance)
-            else:
-                self._compare_cpu(instance.vcpu_model, None, instance)
-        except exception.InvalidCPUInfo as e:
-            raise exception.MigrationPreCheckError(reason=e)
+        if not CONF.workarounds.skip_cpu_compare_on_dest:
+            # Compare CPU
+            try:
+                if not instance.vcpu_model or not instance.vcpu_model.model:
+                    source_cpu_info = src_compute_info['cpu_info']
+                    self._compare_cpu(None, source_cpu_info, instance)
+                else:
+                    self._compare_cpu(instance.vcpu_model, None, instance)
+            except exception.InvalidCPUInfo as e:
+                raise exception.MigrationPreCheckError(reason=e)
 
         # Create file on storage, to be checked on source host
         filename = self._create_shared_storage_test_file(instance)
