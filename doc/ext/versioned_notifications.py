@@ -161,5 +161,9 @@ jQuery(document).ready(function(){
 
 
 def setup(app):
-    app.add_directive('versioned_notifications',
-                      VersionedNotificationDirective)
+    app.add_directive(
+        'versioned_notifications', VersionedNotificationDirective)
+    return {
+        'parallel_read_safe': True,
+        'parallel_write_safe': True,
+    }

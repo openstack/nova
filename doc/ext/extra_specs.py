@@ -224,7 +224,16 @@ class NovaDomain(domains.Domain):
             )
         return None
 
+    def merge_domaindata(self, docnames, otherdata):
+        for target, docname in otherdata['extra_specs'].items():
+            if docname in docnames:
+                self.data['extra_specs'][target] = docname
+
 
 def setup(app):
     app.add_domain(NovaDomain)
     app.add_directive('extra-specs', ExtraSpecGroupDirective)
+    return {
+        'parallel_read_safe': True,
+        'parallel_write_safe': True,
+    }

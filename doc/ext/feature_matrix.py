@@ -576,3 +576,7 @@ class FeatureMatrixDirective(rst.Directive):
 def setup(app):
     app.add_directive('feature_matrix', FeatureMatrixDirective)
     app.add_stylesheet('feature-matrix.css')
+    return {
+        'parallel_read_safe': True,
+        'parallel_write_safe': True,
+    }
