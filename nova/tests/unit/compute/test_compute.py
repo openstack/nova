@@ -12935,8 +12935,8 @@ class EvacuateHostTestCase(BaseTestCase):
                                                               self.inst.uuid)
 
             mock_update_pci_req.assert_called_once_with(
-                ctxt, self.compute.reportclient, self.inst,
-                mock.sentinel.mapping)
+                ctxt, self.compute.reportclient,
+                self.inst.pci_requests.requests, mock.sentinel.mapping)
 
         _test_rebuild(vm_is_stopped=vm_states_is_stopped)
 

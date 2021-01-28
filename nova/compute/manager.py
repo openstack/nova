@@ -2341,7 +2341,8 @@ class ComputeManager(manager.Manager):
             try:
                 compute_utils\
                     .update_pci_request_spec_with_allocated_interface_name(
-                        context, self.reportclient, instance, provider_mapping)
+                        context, self.reportclient,
+                        instance.pci_requests.requests, provider_mapping)
             except (exception.AmbiguousResourceProviderForPCIRequest,
                     exception.UnexpectedResourceProviderNameForPCIRequest
                     ) as e:
@@ -3482,7 +3483,8 @@ class ComputeManager(manager.Manager):
             if provider_mapping:
                 compute_utils.\
                     update_pci_request_spec_with_allocated_interface_name(
-                        context, self.reportclient, instance, provider_mapping)
+                        context, self.reportclient,
+                        instance.pci_requests.requests, provider_mapping)
 
         claim_context = rebuild_claim(
             context, instance, scheduled_node, allocations,
@@ -5119,7 +5121,8 @@ class ComputeManager(manager.Manager):
             try:
                 compute_utils.\
                     update_pci_request_spec_with_allocated_interface_name(
-                        context, self.reportclient, instance, provider_mapping)
+                        context, self.reportclient,
+                        instance.pci_requests.requests, provider_mapping)
             except (exception.AmbiguousResourceProviderForPCIRequest,
                     exception.UnexpectedResourceProviderNameForPCIRequest
                     ) as e:
@@ -6581,7 +6584,9 @@ class ComputeManager(manager.Manager):
                 update = (
                     compute_utils.
                         update_pci_request_spec_with_allocated_interface_name)
-                update(context, self.reportclient, instance, provider_mappings)
+                update(
+                    context, self.reportclient, instance.pci_requests.requests,
+                    provider_mappings)
 
             self.network_api.setup_instance_network_on_host(
                 context, instance, self.host,

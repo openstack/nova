@@ -8060,6 +8060,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 objects.RequestGroup(
                     requester_id=uuids.port1,
                     provider_uuids=[uuids.rp1])])
+        self.instance.pci_requests = objects.InstancePCIRequests(requests=[])
+
         with test.nested(
             mock.patch.object(self.compute.driver, 'spawn'),
             mock.patch.object(
@@ -10597,7 +10599,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             clean_shutdown=True, migration=self.migration, host_list=[])
 
         mock_update_pci.assert_called_once_with(
-            self.context, self.compute.reportclient, instance,
+            self.context, self.compute.reportclient, [],
             {uuids.port_id: [uuids.rp_uuid]})
         mock_save.assert_called_once_with()
 

@@ -545,8 +545,8 @@ class LiveMigrationTask(base.TaskBase):
                 # runs.
                 compute_utils.\
                     update_pci_request_spec_with_allocated_interface_name(
-                        self.context, self.report_client, self.instance,
-                        provider_mapping)
+                        self.context, self.report_client,
+                        self.instance.pci_requests.requests, provider_mapping)
             try:
                 self._check_compatible_with_source_hypervisor(host)
                 self._call_livem_checks_on_host(host, provider_mapping)
