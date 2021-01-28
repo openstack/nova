@@ -7475,6 +7475,34 @@ class ComputeManager(manager.Manager):
             # cinder v3 api flow
             self.volume_api.attachment_delete(context, bdm.attachment_id)
 
+    def _deallocate_port_resource_for_instance(
+        self,
+        context: nova.context.RequestContext,
+        instance: 'objects.Instance',
+        port_id: str,
+        port_allocation: ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]],
+    ) -> None:
+
+        if not port_allocation:
+            return
+
+        try:
+            client = self.reportclient
+            client.remove_resources_from_instance_allocation(
+                context, instance.uuid, port_allocation)
+        except Exception as ex:
+            # We always raise here as it is not a race condition where
+            # somebody has already deleted the port we want to cleanup.
+            # Here we see that the port exists, the allocation exists,
+            # but we cannot clean it up so we will actually leak
+            # allocations.
+            with excutils.save_and_reraise_exception():
+                LOG.warning(
+                    'Failed to remove resource allocation of port %(port_id)s '
+                    'for instance. Error: %(error)s',
+                    {'port_id': port_id, 'error': ex},
+                    instance=instance)
+
     def _deallocate_port_for_instance(
             self, context, instance, port_id, raise_on_failure=False,
             pci_device=None):
@@ -7494,25 +7522,10 @@ class ComputeManager(manager.Manager):
                 self.rt.unclaim_pci_devices(context, pci_device, instance)
                 instance.remove_pci_device_and_request(pci_device)
 
-            if port_allocation:
-                # Deallocate the resources in placement that were used by the
-                # detached port.
-                try:
-                    client = self.reportclient
-                    client.remove_resources_from_instance_allocation(
-                        context, instance.uuid, port_allocation)
-                except Exception as ex:
-                    # We always raise here as it is not a race condition where
-                    # somebody has already deleted the port we want to cleanup.
-                    # Here we see that the port exists, the allocation exists,
-                    # but we cannot clean it up so we will actually leak
-                    # allocations.
-                    with excutils.save_and_reraise_exception():
-                        LOG.warning('Failed to remove resource allocation '
-                                    'of port %(port_id)s for instance. Error: '
-                                    '%(error)s',
-                                    {'port_id': port_id, 'error': ex},
-                                    instance=instance)
+            # Deallocate the resources in placement that were used by the
+            # detached port.
+            self._deallocate_port_resource_for_instance(
+                context, instance, port_id, port_allocation)
 
     def _claim_pci_device_for_interface_attach(
         self,
