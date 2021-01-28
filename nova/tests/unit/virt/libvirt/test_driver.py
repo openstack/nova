@@ -10017,6 +10017,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'serial': uuids.volume_id,
             'driver_volume_type': 'rbd',
             'data': {'name': 'pool/volume',
+                     'auth_enabled': 'true',
+                     'auth_username': 'username',
                      'access_mode': 'rw'}
         }
         disk_1 = mock.Mock(spec=vconfig.LibvirtConfigGuestDisk,
@@ -10058,7 +10060,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_get_encryption_metadata.assert_called_once_with(
             self.context, drvr._volume_api, uuids.volume_id, connection_info)
-        mock_qemu_img_info.assert_called_once_with('rbd:pool/volume')
+        mock_qemu_img_info.assert_called_once_with(
+            'rbd:pool/volume:id=username')
 
         # Assert that the Libvirt call to resize the device within the instance
         # is called with the LUKSv1 payload offset taken into account.
