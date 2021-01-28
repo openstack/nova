@@ -35,6 +35,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography import x509
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+from oslo_utils.secretutils import md5
 import paramiko
 
 import nova.conf
@@ -70,10 +71,7 @@ def generate_fingerprint(public_key: str) -> str:
         serialization.load_ssh_public_key(
             pub_bytes, backends.default_backend())
         pub_data = base64.b64decode(public_key.split(' ')[1])
-        digest = hashes.Hash(hashes.MD5(), backends.default_backend())
-        digest.update(pub_data)
-        md5hash = digest.finalize()
-        raw_fp = binascii.hexlify(md5hash).decode('ascii')
+        raw_fp = md5(pub_data, usedforsecurity=False).hexdigest()
         return ':'.join(a + b for a, b in zip(raw_fp[::2], raw_fp[1::2]))
     except Exception:
         raise exception.InvalidKeypair(
