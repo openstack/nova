@@ -10818,6 +10818,25 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                        '_create_shared_storage_test_file',
                        return_value='fake')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_compare_cpu')
+    def test_check_can_live_migrate_guest_cpu_none_model_skip_compare(
+            self, mock_cpu, mock_test_file):
+        self.flags(group='workarounds', skip_cpu_compare_on_dest=True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
+        instance_ref.vcpu_model.model = None
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
+        drvr.check_can_live_migrate_destination(
+            self.context, instance_ref, compute_info, compute_info)
+        mock_cpu.assert_not_called()
+
+    @mock.patch(
+        'nova.network.neutron.API.supports_port_binding_extension',
+        new=mock.Mock(return_value=False))
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_create_shared_storage_test_file',
+                       return_value='fake')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_compare_cpu')
     def test_check_can_live_migrate_dest_numa_lm(
         self, mock_cpu, mock_test_file,
     ):

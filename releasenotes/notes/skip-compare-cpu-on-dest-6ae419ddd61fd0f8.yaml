@@ -1,0 +1,24 @@
+---
+issues:
+  - |
+    Nova's use of libvirt's compareCPU() API served its purpose over the
+    years, but its design limitations break live migration in subtle
+    ways. For example, the compareCPU() API compares against the host
+    physical CPUID. Some of the features from this CPUID aren not
+    exposed by KVM, and then there are some features that KVM emulates
+    that are not in the host CPUID. The latter can cause bogus live
+    migration failures.
+
+    With QEMU >=2.9 and libvirt >= 4.4.0, libvirt will do the right
+    thing in terms of CPU compatibility checks on the destination host
+    during live migration. Nova satisfies these minimum version
+    requirements by a good margin. So, this workaround provides a way to
+    skip the CPU comparison check on the destination host before
+    migrating a guest, and let libvirt handle it correctly.
+
+    This workaround will be deprecated and removed once Nova replaces
+    the older libvirt APIs with their newer counterparts. The work is
+    being tracked via this `blueprint
+    cpu-selection-with-hypervisor-consideration`_.
+
+    .. _blueprint cpu-selection-with-hypervisor-consideration: https://blueprints.launchpad.net/nova/+spec/cpu-selection-with-hypervisor-consideration
