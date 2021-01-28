@@ -4316,38 +4316,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                  instance=instance)
                         os.unlink(config_disk_local_path)
 
-    def _prepare_pci_devices_for_use(self, pci_devices):
-        # kvm , qemu support managed mode
-        # In managed mode, the configured device will be automatically
-        # detached from the host OS drivers when the guest is started,
-        # and then re-attached when the guest shuts down.
-        if CONF.libvirt.virt_type != 'xen':
-            # we do manual detach only for xen
-            return
-        try:
-            for dev in pci_devices:
-                libvirt_dev_addr = dev['hypervisor_name']
-                libvirt_dev = \
-                        self._host.device_lookup_by_name(libvirt_dev_addr)
-                # Note(yjiang5) Spelling for 'dettach' is correct, see
-                # http://libvirt.org/html/libvirt-libvirt.html.
-                libvirt_dev.dettach()
-
-            # Note(yjiang5): A reset of one PCI device may impact other
-            # devices on the same bus, thus we need two separated loops
-            # to detach and then reset it.
-            for dev in pci_devices:
-                libvirt_dev_addr = dev['hypervisor_name']
-                libvirt_dev = \
-                        self._host.device_lookup_by_name(libvirt_dev_addr)
-                libvirt_dev.reset()
-
-        except libvirt.libvirtError as exc:
-            raise exception.PciDevicePrepareFailed(id=dev['id'],
-                                                   instance_uuid=
-                                                   dev['instance_uuid'],
-                                                   reason=str(exc))
-
     def _detach_pci_devices(self, guest, pci_devs):
         try:
             for dev in pci_devs:
