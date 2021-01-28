@@ -3450,12 +3450,17 @@ class TestAllocations(SchedulerReportClientTestCase):
             "user_id": uuids.user_id,
         }
         resources_to_remove = {
+
             uuids.rp1: {
-                'VCPU': 1
+                "resources": {
+                    'VCPU': 1,
+                },
             },
             uuids.rp2: {
-                'NET_BW_EGR_KILOBIT_PER_SEC': 100,
-                'NET_BW_IGR_KILOBIT_PER_SEC': 200,
+                "resources": {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 100,
+                    'NET_BW_IGR_KILOBIT_PER_SEC': 200,
+                },
             }
         }
         updated_allocations = {
@@ -3502,8 +3507,10 @@ class TestAllocations(SchedulerReportClientTestCase):
         # the allocation so the whole resource class will be removed
         resources_to_remove = {
             uuids.rp1: {
-                'NET_BW_EGR_KILOBIT_PER_SEC': 200,
-                'NET_BW_IGR_KILOBIT_PER_SEC': 200,
+                "resources": {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                    'NET_BW_IGR_KILOBIT_PER_SEC': 200,
+                }
             }
         }
         updated_allocations = {
@@ -3540,8 +3547,10 @@ class TestAllocations(SchedulerReportClientTestCase):
         }
         resources_to_remove = {
             uuids.rp1: {
-                'NET_BW_EGR_KILOBIT_PER_SEC': 200,
-                'NET_BW_IGR_KILOBIT_PER_SEC': 300,
+                "resources": {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                    'NET_BW_IGR_KILOBIT_PER_SEC': 300,
+                }
             }
         }
         updated_allocations = {
@@ -3560,8 +3569,10 @@ class TestAllocations(SchedulerReportClientTestCase):
         mock_get.side_effect = ks_exc.EndpointNotFound()
         resources_to_remove = {
             uuids.rp1: {
-                'NET_BW_EGR_KILOBIT_PER_SEC': 200,
-                'NET_BW_IGR_KILOBIT_PER_SEC': 200,
+                "resources": {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                    'NET_BW_IGR_KILOBIT_PER_SEC': 200,
+                }
             }
         }
 
@@ -3573,8 +3584,10 @@ class TestAllocations(SchedulerReportClientTestCase):
     def test_remove_res_from_alloc_empty_alloc(self):
         resources_to_remove = {
             uuids.rp1: {
-                'NET_BW_EGR_KILOBIT_PER_SEC': 200,
-                'NET_BW_IGR_KILOBIT_PER_SEC': 200,
+                "resources": {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                    'NET_BW_IGR_KILOBIT_PER_SEC': 200,
+                }
             }
         }
         current_allocations = {
@@ -3615,7 +3628,9 @@ class TestAllocations(SchedulerReportClientTestCase):
         }
         resources_to_remove = {
             uuids.rp1: {
-                'VCPU': 1,
+                "resources": {
+                    'VCPU': 1,
+                }
             }
         }
 
@@ -3640,7 +3655,9 @@ class TestAllocations(SchedulerReportClientTestCase):
         }
         resources_to_remove = {
             uuids.other_rp: {
-                'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                "resources": {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                }
             }
         }
 
@@ -3667,7 +3684,9 @@ class TestAllocations(SchedulerReportClientTestCase):
         }
         resources_to_remove = {
             uuids.rp1: {
-                'NET_BW_EGR_KILOBIT_PER_SEC': 400,
+                "resources": {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 400,
+                }
             }
         }
 
@@ -3703,7 +3722,9 @@ class TestAllocations(SchedulerReportClientTestCase):
         current_allocations_2['consumer_generation'] = 3
         resources_to_remove = {
             uuids.rp1: {
-                'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                "resources": {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                }
             }
         }
         updated_allocations = {
@@ -3778,7 +3799,9 @@ class TestAllocations(SchedulerReportClientTestCase):
         }
         resources_to_remove = {
             uuids.rp1: {
-                'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                "resources": {
+                    'NET_BW_EGR_KILOBIT_PER_SEC': 200,
+                }
             }
         }
         updated_allocations = {

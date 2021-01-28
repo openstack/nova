@@ -1686,8 +1686,10 @@ class API(base.Base):
                  allocation of the port per resource provider uuid. E.g.:
                  {
                      rp_uuid: {
-                         NET_BW_EGR_KILOBIT_PER_SEC: 10000,
-                         NET_BW_IGR_KILOBIT_PER_SEC: 20000,
+                        "resources": {
+                            "NET_BW_EGR_KILOBIT_PER_SEC": 10000,
+                            "NET_BW_IGR_KILOBIT_PER_SEC": 20000,
+                        }
                      }
                  }
                  Note that right now this dict only contains a single key as a
@@ -1728,7 +1730,10 @@ class API(base.Base):
             allocated_rp = profile.get(constants.ALLOCATION)
             if resource_request and allocated_rp:
                 port_allocation = {
-                    allocated_rp: resource_request.get('resources', {})}
+                    allocated_rp: {
+                        "resources": resource_request.get("resources", {})
+                    }
+                }
         else:
             # Check the info_cache. If the port is still in the info_cache and
             # in that cache there is allocation in the profile then we suspect
