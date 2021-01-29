@@ -5321,20 +5321,19 @@ class _ComputeAPIUnitTestMixIn(object):
                      'device_name': 'vda',
                      'boot_index': 0,
                      }))])
-            shutdown_terminate = True
             instance_group = None
             check_server_group_quota = False
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
             trusted_certs = None
 
-            self.assertRaises(expected_exception,
-                              self.compute_api._provision_instances, ctxt,
-                              flavor, min_count, max_count, base_options,
-                              boot_meta, security_groups, block_device_mapping,
-                              shutdown_terminate, instance_group,
-                              check_server_group_quota, filter_properties,
-                              None, objects.TagList(), trusted_certs, False)
+            self.assertRaises(
+                expected_exception,
+                self.compute_api._provision_instances, ctxt,
+                flavor, min_count, max_count, base_options,
+                boot_meta, security_groups, block_device_mapping,
+                instance_group, check_server_group_quota, filter_properties,
+                None, objects.TagList(), trusted_certs, False)
 
         do_test()
 
@@ -5377,14 +5376,14 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_cniq.return_value = 1
             self.compute_api._provision_instances(
                 self.context, flavor, 1, 1, mock.MagicMock(), {}, None, None,
-                None, None, {}, None, fake_keypair, objects.TagList(), None,
+                None, {}, None, fake_keypair, objects.TagList(), None,
                 False)
             self.assertEqual(
                 'test',
                 mock_instance.return_value.keypairs.objects[0].name)
             self.compute_api._provision_instances(
                 self.context, flavor, 1, 1, mock.MagicMock(), {}, None, None,
-                None, None, {}, None, None, objects.TagList(), None, False)
+                None, {}, None, None, objects.TagList(), None, False)
             self.assertEqual(
                 0,
                 len(mock_instance.return_value.keypairs.objects))
@@ -5413,14 +5412,9 @@ class _ComputeAPIUnitTestMixIn(object):
                            '_bdm_validate_set_size_and_instance')
         def do_test(mock_bdm_v, mock_sg, mock_cniq, mock_get_vols):
             mock_cniq.return_value = 1
-            self.compute_api._provision_instances(self.context,
-                                                  flavor,
-                                                  1, 1, mock.MagicMock(),
-                                                  {}, None,
-                                                  None, None, None, {}, None,
-                                                  None,
-                                                  objects.TagList(), None,
-                                                  False)
+            self.compute_api._provision_instances(
+                self.context, flavor, 1, 1, mock.MagicMock(), {}, None, None,
+                None, {}, None, None, objects.TagList(), None, False)
 
         mock_get_dp.return_value = dp_request_groups
         fake_rs = fake_request_spec.fake_spec_obj()
@@ -5487,7 +5481,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.flags(driver="nova.quota.NoopQuotaDriver", group="quota")
             self.compute_api._provision_instances(
                 self.context, flavor, 1, 1, mock.MagicMock(), {}, None, None,
-                None, None, {}, None, None, objects.TagList(), None, False)
+                None, None, {}, None, objects.TagList(), None, False)
 
         fake_rs = fake_request_spec.fake_spec_obj()
         mock_rs.return_value = fake_rs
@@ -5552,7 +5546,6 @@ class _ComputeAPIUnitTestMixIn(object):
                      'boot_index': 0,
                      }))])
             instance_tags = objects.TagList(objects=[objects.Tag(tag='tag')])
-            shutdown_terminate = True
             trusted_certs = None
             instance_group = None
             check_server_group_quota = False
@@ -5560,16 +5553,17 @@ class _ComputeAPIUnitTestMixIn(object):
                     'instance_type': flavor}
 
             with mock.patch.object(
-                    self.compute_api,
-                    '_bdm_validate_set_size_and_instance',
-                    return_value=block_device_mappings) as validate_bdm:
+                self.compute_api,
+                '_bdm_validate_set_size_and_instance',
+                return_value=block_device_mappings,
+            ) as validate_bdm:
                 instances_to_build = self.compute_api._provision_instances(
-                        ctxt, flavor,
-                        min_count, max_count, base_options, boot_meta,
-                        security_groups, block_device_mappings,
-                        shutdown_terminate, instance_group,
-                        check_server_group_quota, filter_properties, None,
-                        instance_tags, trusted_certs, False)
+                    ctxt, flavor,
+                    min_count, max_count, base_options, boot_meta,
+                    security_groups, block_device_mappings, instance_group,
+                    check_server_group_quota, filter_properties, None,
+                    instance_tags, trusted_certs, False)
+
             validate_bdm.assert_has_calls([mock.call(
                 ctxt, test.MatchType(objects.Instance), flavor,
                 block_device_mappings, {}, mock_get_volumes.return_value,
@@ -5656,20 +5650,19 @@ class _ComputeAPIUnitTestMixIn(object):
                      'device_name': 'vda',
                      'boot_index': 0,
                      }))])
-            shutdown_terminate = True
             instance_group = None
             check_server_group_quota = False
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
             trusted_certs = None
 
-            instances_to_build = (
-                self.compute_api._provision_instances(ctxt, flavor,
-                    min_count, max_count, base_options, boot_meta,
-                    security_groups, block_device_mapping, shutdown_terminate,
-                    instance_group, check_server_group_quota,
-                    filter_properties, None, objects.TagList(), trusted_certs,
-                    False))
+            instances_to_build = self.compute_api._provision_instances(
+                ctxt, flavor,
+                min_count, max_count, base_options, boot_meta,
+                security_groups, block_device_mapping,
+                instance_group, check_server_group_quota,
+                filter_properties, None, objects.TagList(), trusted_certs,
+                False)
             rs, br, im = instances_to_build[0]
             self.assertTrue(uuidutils.is_uuid_like(br.instance.uuid))
             self.assertEqual(br.instance_uuid, im.instance_uuid)
@@ -5757,24 +5750,23 @@ class _ComputeAPIUnitTestMixIn(object):
                      'device_name': 'vda',
                      'boot_index': 0,
                      }))])
-            shutdown_terminate = True
             instance_group = None
             check_server_group_quota = False
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
             tags = objects.TagList()
             trusted_certs = None
-            self.assertRaises(exception.InvalidVolume,
-                              self.compute_api._provision_instances, ctxt,
-                              flavor, min_count, max_count, base_options,
-                              boot_meta, security_groups, block_device_mapping,
-                              shutdown_terminate, instance_group,
-                              check_server_group_quota, filter_properties,
-                              None, tags, trusted_certs, False)
+            self.assertRaises(
+                exception.InvalidVolume,
+                self.compute_api._provision_instances,
+                ctxt, flavor, min_count, max_count, base_options,
+                boot_meta, security_groups, block_device_mapping,
+                instance_group,
+                check_server_group_quota, filter_properties,
+                None, tags, trusted_certs, False)
             # First instance, build_req, mapping is created and destroyed
-            mock_create_rs_br_im.assert_called_once_with(ctxt, req_spec_mock,
-                                                         build_req_mocks[0],
-                                                         inst_map_mocks[0])
+            mock_create_rs_br_im.assert_called_once_with(
+                ctxt, req_spec_mock, build_req_mocks[0], inst_map_mocks[0])
             self.assertTrue(build_req_mocks[0].destroy.called)
             self.assertTrue(inst_map_mocks[0].destroy.called)
             # Second instance, build_req, mapping is not created nor destroyed
@@ -5805,7 +5797,7 @@ class _ComputeAPIUnitTestMixIn(object):
             flavor = self._create_flavor()
             self.compute_api._provision_instances(
                 ctxt, flavor, None, None, mock.MagicMock(), None, None, [],
-                None, None, None, None, None, objects.TagList(), None, False)
+                None, None, None, None, objects.TagList(), None, False)
             secgroups = mock_secgroup.return_value
             mock_objects.RequestSpec.from_components.assert_called_once_with(
                 mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY,
@@ -7382,8 +7374,7 @@ class _ComputeAPIUnitTestMixIn(object):
             secgroup_obj.SecurityGroup(uuid=uuids.secgroup_id)
         ]
         instance = self.compute_api._populate_instance_for_create(
-            self.context, instance, {}, 0, security_groups, flavor, 1,
-            False)
+            self.context, instance, {}, 0, security_groups, flavor, 1)
         self.assertEqual(0, len(instance.security_groups))
 
     def test_retrieve_trusted_certs_object(self):

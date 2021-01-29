@@ -11243,9 +11243,12 @@ class ComputeManager(manager.Manager):
                          'vm_power_state': vm_power_state},
                         instance=db_instance)
             try:
-                # Note(maoy): here we call the API instead of
+                # NOTE(maoy): here we call the API instead of
                 # brutally updating the vm_state in the database
                 # to allow all the hooks and checks to be performed.
+                # TODO(stephenfin): Nothing can set this attribute any more,
+                # but there might be legacy instances with it set. When we drop
+                # that field, we can remove this code
                 if db_instance.shutdown_terminate:
                     self.compute_api.delete(context, db_instance)
                 else:

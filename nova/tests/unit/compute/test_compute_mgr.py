@@ -4207,15 +4207,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.compute._sync_power_states(mock.sentinel.context)
         gni.assert_called_once_with()
 
-    def _get_sync_instance(self, power_state, vm_state, task_state=None,
-                           shutdown_terminate=False):
+    def _get_sync_instance(self, power_state, vm_state, task_state=None):
         instance = objects.Instance()
         instance.uuid = uuids.instance
         instance.power_state = power_state
         instance.vm_state = vm_state
         instance.host = self.compute.host
         instance.task_state = task_state
-        instance.shutdown_terminate = shutdown_terminate
+        instance.shutdown_terminate = False
         return instance
 
     @mock.patch.object(objects.Instance, 'refresh')
@@ -4244,9 +4243,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_info.assert_called_once_with(instance, use_cache=False)
 
     def _test_sync_to_stop(self, vm_power_state, vm_state, driver_power_state,
-                           stop=True, force=False, shutdown_terminate=False):
-        instance = self._get_sync_instance(
-            vm_power_state, vm_state, shutdown_terminate=shutdown_terminate)
+                           stop=True, force=False):
+        instance = self._get_sync_instance(vm_power_state, vm_state)
 
         with test.nested(
             mock.patch.object(objects.Instance, 'refresh'),
@@ -4262,9 +4260,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             self.compute._sync_instance_power_state(self.context, instance,
                                                     driver_power_state)
-            if shutdown_terminate:
-                mock_delete.assert_called_once_with(self.context, instance)
-            elif stop:
+            if stop:
                 if force:
                     mock_force.assert_called_once_with(self.context, instance)
                 else:
@@ -4288,11 +4284,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         self._test_sync_to_stop(power_state.SHUTDOWN, vm_states.STOPPED,
                                 power_state.RUNNING, force=True)
-
-    def test_sync_instance_power_state_to_terminate(self):
-        self._test_sync_to_stop(power_state.RUNNING, vm_states.ACTIVE,
-                                power_state.SHUTDOWN,
-                                force=False, shutdown_terminate=True)
 
     def test_sync_instance_power_state_to_no_stop(self):
         for ps in (power_state.PAUSED, power_state.NOSTATE):
