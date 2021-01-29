@@ -57,7 +57,7 @@ Similarities
 ------------
 
 * Both scheduler hints and flavor extra specs can be used by
-  :doc:`scheduler filters </admin/configuration/schedulers>`.
+  :doc:`scheduler filters </admin/scheduling>`.
 
 * Both are totally customizable, meaning there is no whitelist within Nova of
   acceptable hints or extra specs, unlike image properties [1]_.

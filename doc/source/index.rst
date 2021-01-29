@@ -182,7 +182,7 @@ Once you are running nova, the following information is extremely useful.
 * :doc:`Quotas </user/quotas>`: Managing project quotas in nova.
 * :doc:`Aggregates </admin/aggregates>`: Aggregates are a useful way of grouping
   hosts together for scheduling purposes.
-* :doc:`Filter Scheduler </user/filter-scheduler>`: How the filter scheduler is
+* :doc:`Scheduling </admin/scheduling>`: How the scheduler is
   configured, and how that will impact where compute instances land in your
   environment. If you are seeing unexpected distribution of compute instances
   in your hosts, you'll want to dive into this configuration.
@@ -200,7 +200,6 @@ Once you are running nova, the following information is extremely useful.
    user/flavors
    admin/upgrades
    user/quotas
-   user/filter-scheduler
    admin/vendordata
 
 Reference Material

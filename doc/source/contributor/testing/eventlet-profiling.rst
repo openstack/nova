@@ -31,7 +31,7 @@ Profiling the entire service will produce mostly noise and the output will be
 confusing because different tasks will operate during the profile run. It is
 better to begin the process with a candidate task or method *within* the
 service that can be associated with an identifier. For example,
-``select_destinations`` in the ``FilterScheduler`` can be associated with the
+``select_destinations`` in the ``SchedulerManager`` can be associated with the
 list of ``instance_uuids`` passed to it and it runs only once for that set of
 instance UUIDs.
 

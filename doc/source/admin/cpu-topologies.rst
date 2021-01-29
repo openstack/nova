@@ -93,7 +93,7 @@ guest OS.
 
 In all cases where NUMA awareness is used, the ``NUMATopologyFilter``
 filter must be enabled. Details on this filter are provided in
-:doc:`/admin/configuration/schedulers`.
+:doc:`/admin/scheduling`.
 
 .. caution::
 

@@ -41,7 +41,7 @@ Root Disk GB
   The root disk is an ephemeral disk that the base image is copied into. When
   booting from a persistent volume it is not used. The ``0`` size is a special
   case which uses the native base image size as the size of the ephemeral root
-  volume. However, in this case the filter scheduler cannot select the compute
+  volume. However, in this case the scheduler cannot select the compute
   host based on the virtual image size. As a result, ``0`` should only be used
   for volume booted instances or for testing purposes. Volume-backed instances
   can be enforced for flavors with zero root disk via the
@@ -185,9 +185,6 @@ Required traits
   below). Any other value will be considered
   invalid.
 
-  The FilterScheduler is currently the only scheduler driver that supports
-  this feature.
-
   Traits can be managed using the `osc-placement plugin`__.
 
   __ https://docs.openstack.org/osc-placement/latest/index.html
@@ -206,9 +203,6 @@ Forbidden traits
 
   - ``trait:HW_CPU_X86_AVX2=forbidden``
   - ``trait:STORAGE_DISK_SSD=forbidden``
-
-  The FilterScheduler is currently the only scheduler driver that supports
-  this feature.
 
   Traits can be managed using the `osc-placement plugin`__.
 
