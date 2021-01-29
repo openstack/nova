@@ -12,3 +12,4 @@
           # or public) to copy. This way we will be able to test copy
           # image via non-admin as well as on private images.
           echo $'{"copy_image": ""}' > /etc/glance/policy.json
+          sudo systemctl restart 'devstack@g-*'
