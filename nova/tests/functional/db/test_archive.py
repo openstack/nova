@@ -17,7 +17,6 @@ import re
 
 from dateutil import parser as dateutil_parser
 from oslo_utils import timeutils
-from sqlalchemy.dialects import sqlite
 from sqlalchemy import func
 from sqlalchemy import MetaData
 from sqlalchemy import select
@@ -33,22 +32,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
 
     def setUp(self):
         super(TestDatabaseArchive, self).setUp()
-        # TODO(mriedem): pull this out so we can re-use it in
-        # test_archive_deleted_rows_fk_constraint
-        # SQLite doesn't enforce foreign key constraints without a pragma.
-        engine = sqlalchemy_api.get_engine()
-        dialect = engine.url.get_dialect()
-        if dialect == sqlite.dialect:
-            # We're seeing issues with foreign key support in SQLite 3.6.20
-            # SQLAlchemy doesn't support it at all with < SQLite 3.6.19
-            # It works fine in SQLite 3.7.
-            # So return early to skip this test if running SQLite < 3.7
-            import sqlite3
-            tup = sqlite3.sqlite_version_info
-            if tup[0] < 3 or (tup[0] == 3 and tup[1] < 7):
-                self.skipTest(
-                    'sqlite version too old for reliable SQLA foreign_keys')
-            engine.connect().execute("PRAGMA foreign_keys = ON")
+        self.enforce_fk_constraints()
 
     def test_archive_deleted_rows(self):
         # Boots a server, deletes it, and then tries to archive it.
