@@ -9,3 +9,6 @@ upgrade:
   - |
     The ``[scheduler] scheduler_driver`` config option has been removed, along
     with the ``nova.scheduler.driver`` setuptools entrypoint.
+  - |
+    The ``[scheduler] periodic_task_interval`` config option has been removed.
+    It was no longer used by any supported scheduler drivers.

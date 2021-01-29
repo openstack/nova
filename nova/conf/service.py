@@ -49,7 +49,6 @@ for more than service_down_time, then the compute node is considered down.
 Related Options:
 
 * report_interval (service_down_time should not be less than report_interval)
-* scheduler.periodic_task_interval
 """),
     cfg.BoolOpt('periodic_enable',
                default=True,
