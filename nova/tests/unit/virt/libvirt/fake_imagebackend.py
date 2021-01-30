@@ -116,8 +116,8 @@ class ImageBackendFixture(fixtures.Fixture):
 
         # NOTE(mdbooth): test_virt_drivers assumes libvirt_info has functional
         # output
-        disk.libvirt_info.side_effect = \
-            functools.partial(self._fake_libvirt_info, disk)
+        disk.libvirt_info.side_effect = functools.partial(
+            self._fake_libvirt_info, disk)
 
         return disk
 
@@ -212,9 +212,10 @@ class ImageBackendFixture(fixtures.Fixture):
         if self.imported_files is not None:
             self.imported_files.append((local_filename, remote_filename))
 
-    def _fake_libvirt_info(self, mock_disk, disk_info, cache_mode,
-                           extra_specs, hypervisor_version, disk_unit=None,
-                           boot_order=None):
+    def _fake_libvirt_info(
+        self, mock_disk, disk_info, cache_mode, extra_specs, disk_unit=None,
+        boot_order=None,
+    ):
         # For tests in test_virt_drivers which expect libvirt_info to be
         # functional
         info = config.LibvirtConfigGuestDisk()

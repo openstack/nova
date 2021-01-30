@@ -4642,7 +4642,6 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_mapping['unit'] += 1  # Increments for the next disk added
         conf = disk.libvirt_info(disk_info, self.disk_cachemode,
                                  inst_type['extra_specs'],
-                                 self._host.get_version(),
                                  disk_unit=disk_unit,
                                  boot_order=boot_order)
         return conf
