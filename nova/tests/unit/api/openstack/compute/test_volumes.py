@@ -571,6 +571,19 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
              'status': 'in-use',
              'id': FAKE_UUID_A})
 
+    @mock.patch.object(compute_api.API, 'detach_volume')
+    def test_detach_volume_compute_down(self, mock_detach_volume):
+        mock_detach_volume.side_effect = exception.ServiceUnavailable()
+        self.assertRaises(
+            webob.exc.HTTPConflict, self.attachments.delete,
+            self.req, FAKE_UUID, FAKE_UUID_A)
+        mock_detach_volume.assert_called_once_with(
+            self.req.environ['nova.context'],
+            test.MatchType(objects.Instance),
+            {'attach_status': 'attached',
+             'status': 'in-use',
+             'id': FAKE_UUID_A})
+
     def test_attach_volume(self):
         self.stub_out('nova.compute.api.API.attach_volume',
                       lambda self, context, instance, volume_id,

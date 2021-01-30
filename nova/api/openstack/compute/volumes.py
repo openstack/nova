@@ -538,7 +538,7 @@ class VolumeAttachmentController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InvalidInput as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-        except exception.InstanceIsLocked as e:
+        except (exception.InstanceIsLocked, exception.ServiceUnavailable) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,

@@ -7780,3 +7780,17 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             exception.MixedInstanceNotSupportByComputeService,
             self.compute_api._check_compute_service_for_mixed_instance,
             fake_numa_topo)
+
+    def test_volume_detach_while_compute_down(self):
+        """Assert that requests to detach a volume from an instance on a down
+        compute are rejected with ServiceUnavailable being raised
+        """
+        instance = self._create_instance_obj()
+        with mock.patch.object(
+            self.compute_api, 'get_instance_host_status',
+            return_value=fields_obj.HostStatus.DOWN
+        ) as mock_host_status:
+            self.assertRaises(
+                exception.ServiceUnavailable,
+                self.compute_api.detach_volume, self.context, instance, None)
+            mock_host_status.assert_called_once_with(instance)

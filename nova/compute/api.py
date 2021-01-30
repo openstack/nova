@@ -4822,6 +4822,21 @@ class API(base.Base):
             instance_actions.DETACH_VOLUME)
         detach_volume(self, context, instance, bdms)
 
+    @check_instance_host(check_is_up=True)
+    def _detach_volume(self, context, instance, volume):
+        try:
+            self.volume_api.begin_detaching(context, volume['id'])
+        except exception.InvalidInput as exc:
+            raise exception.InvalidVolume(reason=exc.format_message())
+        attachments = volume.get('attachments', {})
+        attachment_id = None
+        if attachments and instance.uuid in attachments:
+            attachment_id = attachments[instance.uuid]['attachment_id']
+        self._record_action_start(
+            context, instance, instance_actions.DETACH_VOLUME)
+        self.compute_rpcapi.detach_volume(context, instance=instance,
+                volume_id=volume['id'], attachment_id=attachment_id)
+
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.STOPPED, vm_states.RESIZED,
@@ -4832,18 +4847,7 @@ class API(base.Base):
         if instance.vm_state == vm_states.SHELVED_OFFLOADED:
             self._detach_volume_shelved_offloaded(context, instance, volume)
         else:
-            try:
-                self.volume_api.begin_detaching(context, volume['id'])
-            except exception.InvalidInput as exc:
-                raise exception.InvalidVolume(reason=exc.format_message())
-            attachments = volume.get('attachments', {})
-            attachment_id = None
-            if attachments and instance.uuid in attachments:
-                attachment_id = attachments[instance.uuid]['attachment_id']
-            self._record_action_start(
-                context, instance, instance_actions.DETACH_VOLUME)
-            self.compute_rpcapi.detach_volume(context, instance=instance,
-                    volume_id=volume['id'], attachment_id=attachment_id)
+            self._detach_volume(context, instance, volume)
 
     def _count_attachments_for_swap(self, ctxt, volume):
         """Counts the number of attachments for a swap-related volume.

@@ -10838,6 +10838,8 @@ class ComputeAPITestCase(BaseTestCase):
             mock_attach_complete.assert_called_once_with(
                 self.context, uuids.attachment_id)
 
+    @mock.patch('nova.compute.api.API.get_instance_host_status',
+                new=mock.Mock(return_value=obj_fields.HostStatus.UP))
     @mock.patch('nova.compute.api.API._record_action_start')
     def test_detach_volume(self, mock_record):
         # Ensure volume can be detached from instance
@@ -10914,6 +10916,8 @@ class ComputeAPITestCase(BaseTestCase):
         mock_begin_detaching.assert_not_called()
         self.assertTrue(mock_local_cleanup.called)
 
+    @mock.patch('nova.compute.api.API.get_instance_host_status',
+                new=mock.Mock(return_value=obj_fields.HostStatus.UP))
     @mock.patch.object(nova.volume.cinder.API, 'begin_detaching',
                        side_effect=exception.InvalidInput(reason='error'))
     def test_detach_invalid_volume(self, mock_begin_detaching):
