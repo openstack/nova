@@ -234,47 +234,6 @@ class TestGetEngine(test.NoDBTestCase):
             mock_get_engine.assert_called_once_with()
 
 
-class TestFlavorCheck(test.TestCase):
-    def setUp(self):
-        super(TestFlavorCheck, self).setUp()
-        self.context = context.get_admin_context()
-        self.migration = importlib.import_module(
-            'nova.db.sqlalchemy.migrate_repo.versions.'
-            '291_enforce_flavors_migrated')
-        self.engine = db_api.get_engine()
-
-    def test_upgrade_clean(self):
-        inst = objects.Instance(context=self.context,
-                                uuid=uuidsentinel.fake,
-                                user_id=self.context.user_id,
-                                project_id=self.context.project_id,
-                                system_metadata={'foo': 'bar'})
-        inst.create()
-        self.migration.upgrade(self.engine)
-
-    def test_upgrade_dirty(self):
-        inst = objects.Instance(context=self.context,
-                                uuid=uuidsentinel.fake,
-                                user_id=self.context.user_id,
-                                project_id=self.context.project_id,
-                                system_metadata={'foo': 'bar',
-                                                 'instance_type_id': 'foo'})
-        inst.create()
-        self.assertRaises(exception.ValidationError,
-                          self.migration.upgrade, self.engine)
-
-    def test_upgrade_flavor_deleted_instances(self):
-        inst = objects.Instance(context=self.context,
-                                uuid=uuidsentinel.fake,
-                                user_id=self.context.user_id,
-                                project_id=self.context.project_id,
-                                system_metadata={'foo': 'bar',
-                                                 'instance_type_id': 'foo'})
-        inst.create()
-        inst.destroy()
-        self.migration.upgrade(self.engine)
-
-
 class TestNewtonCheck(test.TestCase):
     def setUp(self):
         super(TestNewtonCheck, self).setUp()

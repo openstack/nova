@@ -20,8 +20,10 @@ from sqlalchemy import dialects
 from sqlalchemy import ForeignKey, Index, Integer, MetaData, String, Table
 from sqlalchemy import Text
 from sqlalchemy.types import NullType
+from sqlalchemy import Unicode
 
 from nova.db.sqlalchemy import types
+from nova.objects import keypair
 
 LOG = logging.getLogger(__name__)
 
@@ -55,6 +57,10 @@ def _create_shadow_tables(migrate_engine):
     meta.bind = migrate_engine
 
     for table_name in table_names:
+        # Skip tables that are not soft-deletable
+        if table_name in ('tags', ):
+            continue
+
         table = Table(table_name, meta, autoload=True)
 
         columns = []
@@ -72,7 +78,23 @@ def _create_shadow_tables(migrate_engine):
                     'owner', 'admin', name='shadow_instances0locked_by',
                 )
                 column_copy = Column(column.name, enum)
-            else:
+
+            # NOTE(stephenfin): By default, 'sqlalchemy.Enum' will issue a
+            # 'CREATE TYPE' command on PostgreSQL, even if the type already
+            # exists. We work around this by using the PostgreSQL-specific
+            # 'sqlalchemy.dialects.postgresql.ENUM' type and setting
+            # 'create_type' to 'False'. See [1] for more information.
+            #
+            # [1] https://stackoverflow.com/a/28894354/613428
+            if migrate_engine.name == 'postgresql':
+                if table_name == 'key_pairs' and column.name == 'type':
+                    enum = dialects.postgresql.ENUM(
+                        'ssh', 'x509', name='keypair_types', create_type=False)
+                    column_copy = Column(
+                        column.name, enum, nullable=False,
+                        server_default=keypair.KEYPAIR_TYPE_SSH)
+
+            if column_copy is None:
                 column_copy = column.copy()
 
             columns.append(column_copy)
@@ -238,7 +260,7 @@ def upgrade(migrate_engine):
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
         Column('id', Integer, primary_key=True, nullable=False),
-        Column('service_id', Integer, nullable=False),
+        Column('service_id', Integer, nullable=True),
         Column('vcpus', Integer, nullable=False),
         Column('memory_mb', Integer, nullable=False),
         Column('local_gb', Integer, nullable=False),
@@ -262,6 +284,11 @@ def upgrade(migrate_engine):
         Column('extra_resources', Text, nullable=True),
         Column('stats', Text, default='{}'),
         Column('numa_topology', Text, nullable=True),
+        Column('host', String(255), nullable=True),
+        UniqueConstraint(
+            'host', 'hypervisor_hostname', 'deleted',
+            name='uniq_compute_nodes0host0hypervisor_hostname0deleted',
+        ),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -560,7 +587,7 @@ def upgrade(migrate_engine):
         Column('launched_on', MediumText()),
         Column('instance_type_id', Integer),
         Column('vm_mode', String(length=255)),
-        Column('uuid', String(length=36)),
+        Column('uuid', String(length=36), nullable=False),
         Column('architecture', String(length=255)),
         Column('root_device_name', String(length=255)),
         Column('access_ip_v4', InetSmall()),
@@ -582,8 +609,8 @@ def upgrade(migrate_engine):
             'locked_by', Enum('owner', 'admin', name='instances0locked_by')),
         Column('cleaned', Integer, default=0),
         Column('ephemeral_key_uuid', String(36)),
-        Index('project_id', 'project_id'),
         Index('uuid', 'uuid', unique=True),
+        UniqueConstraint('uuid', name='uniq_instances0uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -633,6 +660,8 @@ def upgrade(migrate_engine):
         Column('instance_uuid', String(length=36), nullable=False),
         Column('numa_topology', Text, nullable=True),
         Column('pci_requests', Text, nullable=True),
+        Column('flavor', Text, nullable=True),
+        Column('vcpu_model', Text, nullable=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -660,6 +689,9 @@ def upgrade(migrate_engine):
         Column('fingerprint', String(length=255)),
         Column('public_key', MediumText()),
         Column('deleted', Integer),
+        Column(
+            'type', Enum('ssh', 'x509', name='keypair_types'), nullable=False,
+            server_default=keypair.KEYPAIR_TYPE_SSH),
         UniqueConstraint(
             'user_id', 'name', 'deleted',
             name='uniq_key_pairs0user_id0name0deleted'),
@@ -745,10 +777,11 @@ def upgrade(migrate_engine):
         Column('extra_info', Text, nullable=True),
         Column('instance_uuid', String(36), nullable=True),
         Column('request_id', String(36), nullable=True),
-        Index('ix_pci_devices_compute_node_id_deleted',
-              'compute_node_id', 'deleted'),
+        Column('numa_node', Integer, default=None),
         Index('ix_pci_devices_instance_uuid_deleted',
               'instance_uuid', 'deleted'),
+        Index('ix_pci_devices_compute_node_id_deleted',
+              'compute_node_id', 'deleted'),
         UniqueConstraint(
             'compute_node_id', 'address', 'deleted',
             name='uniq_pci_devices0compute_node_id0address0deleted'),
@@ -972,6 +1005,14 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
+    tags = Table('tags', meta,
+        Column('resource_id', String(36), primary_key=True, nullable=False),
+        Column('tag', Unicode(80), primary_key=True, nullable=False),
+        Index('tags_tag_idx', 'tag'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
     task_log = Table('task_log', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -1095,7 +1136,7 @@ def upgrade(migrate_engine):
               quotas, project_user_quotas,
               reservations, s3_images, security_group_instance_association,
               security_group_rules, security_group_default_rules,
-              services, snapshot_id_mappings, task_log,
+              services, snapshot_id_mappings, tags, task_log,
               virtual_interfaces,
               volume_id_mappings,
               volume_usage_cache]
@@ -1107,28 +1148,6 @@ def upgrade(migrate_engine):
             LOG.info(repr(table))
             LOG.exception('Exception while creating table.')
             raise
-
-    # created first (to preserve ordering for schema diffs)
-    mysql_pre_indexes = [
-        Index('instance_type_id', instance_type_projects.c.instance_type_id),
-        Index('project_id', dns_domains.c.project_id),
-        Index('fixed_ip_id', floating_ips.c.fixed_ip_id),
-        Index('network_id', virtual_interfaces.c.network_id),
-        Index('network_id', fixed_ips.c.network_id),
-        Index('fixed_ips_virtual_interface_id_fkey',
-              fixed_ips.c.virtual_interface_id),
-        Index('address', fixed_ips.c.address),
-        Index('fixed_ips_instance_uuid_fkey', fixed_ips.c.instance_uuid),
-        Index('instance_uuid', instance_system_metadata.c.instance_uuid),
-        Index('iscsi_targets_volume_id_fkey', iscsi_targets.c.volume_id),
-        Index('snapshot_id', block_device_mapping.c.snapshot_id),
-        Index('usage_id', reservations.c.usage_id),
-        Index('virtual_interfaces_instance_uuid_fkey',
-              virtual_interfaces.c.instance_uuid),
-        Index('volume_id', block_device_mapping.c.volume_id),
-        Index('security_group_id',
-              security_group_instance_association.c.security_group_id),
-    ]
 
     # Common indexes (indexes we apply to all databases)
     # NOTE: order specific for MySQL diff support
@@ -1144,12 +1163,13 @@ def upgrade(migrate_engine):
               agent_builds.c.architecture),
 
         # block_device_mapping
+        Index('snapshot_id', block_device_mapping.c.snapshot_id),
+        Index('volume_id', block_device_mapping.c.volume_id),
         Index('block_device_mapping_instance_uuid_idx',
               block_device_mapping.c.instance_uuid),
         Index('block_device_mapping_instance_uuid_device_name_idx',
               block_device_mapping.c.instance_uuid,
               block_device_mapping.c.device_name),
-
         Index('block_device_mapping_instance_uuid_volume_id_idx',
               block_device_mapping.c.instance_uuid,
               block_device_mapping.c.volume_id),
@@ -1170,8 +1190,14 @@ def upgrade(migrate_engine):
         # dns_domains
         Index('dns_domains_domain_deleted_idx',
               dns_domains.c.domain, dns_domains.c.deleted),
+        Index('dns_domains_project_id_idx', dns_domains.c.project_id),
 
         # fixed_ips
+        Index('network_id', fixed_ips.c.network_id),
+        Index('address', fixed_ips.c.address),
+        Index('fixed_ips_instance_uuid_fkey', fixed_ips.c.instance_uuid),
+        Index('fixed_ips_virtual_interface_id_fkey',
+              fixed_ips.c.virtual_interface_id),
         Index('fixed_ips_host_idx', fixed_ips.c.host),
         Index('fixed_ips_network_id_host_deleted_idx', fixed_ips.c.network_id,
               fixed_ips.c.host, fixed_ips.c.deleted),
@@ -1180,8 +1206,12 @@ def upgrade(migrate_engine):
               fixed_ips.c.network_id, fixed_ips.c.deleted),
         Index('fixed_ips_deleted_allocated_idx', fixed_ips.c.address,
               fixed_ips.c.deleted, fixed_ips.c.allocated),
+        Index('fixed_ips_deleted_allocated_updated_at_idx',
+              fixed_ips.c.deleted, fixed_ips.c.allocated,
+              fixed_ips.c.updated_at),
 
         # floating_ips
+        Index('fixed_ip_id', floating_ips.c.fixed_ip_id),
         Index('floating_ips_host_idx', floating_ips.c.host),
         Index('floating_ips_project_id_idx', floating_ips.c.project_id),
         Index('floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
@@ -1204,8 +1234,6 @@ def upgrade(migrate_engine):
         Index('instances_task_state_updated_at_idx',
               instances.c.task_state,
               instances.c.updated_at),
-        Index('instances_host_deleted_idx', instances.c.host,
-              instances.c.deleted),
         Index('instances_uuid_deleted_idx', instances.c.uuid,
               instances.c.deleted),
         Index('instances_host_node_deleted_idx', instances.c.host,
@@ -1213,6 +1241,8 @@ def upgrade(migrate_engine):
         Index('instances_host_deleted_cleaned_idx',
               instances.c.host, instances.c.deleted,
               instances.c.cleaned),
+        Index('instances_project_id_deleted_idx',
+              instances.c.project_id, instances.c.deleted),
 
         # instance_actions
         Index('instance_uuid_idx', instance_actions.c.instance_uuid),
@@ -1240,7 +1270,7 @@ def upgrade(migrate_engine):
               instance_type_extra_specs.c.key),
 
         # iscsi_targets
-        Index('iscsi_targets_host_idx', iscsi_targets.c.host),
+        Index('iscsi_targets_volume_id_fkey', iscsi_targets.c.volume_id),
         Index('iscsi_targets_host_volume_id_deleted_idx',
               iscsi_targets.c.host, iscsi_targets.c.volume_id,
               iscsi_targets.c.deleted),
@@ -1298,12 +1328,38 @@ def upgrade(migrate_engine):
         Index('ix_quota_usages_user_id_deleted',
               quota_usages.c.user_id, quota_usages.c.deleted),
 
+        # virtual_interfaces
+        Index('virtual_interfaces_instance_uuid_fkey',
+              virtual_interfaces.c.instance_uuid),
+        Index('virtual_interfaces_network_id_idx',
+              virtual_interfaces.c.network_id),
+
         # volumes
         Index('volumes_instance_uuid_idx', volumes.c.instance_uuid),
     ]
 
     # MySQL specific indexes
     if migrate_engine.name == 'mysql':
+        # created first (to preserve ordering for schema diffs)
+        # NOTE(stephenfin): For some reason, we have to put this within the if
+        # statement to avoid it being evaluated for the sqlite case. Even
+        # though we don't call create except in the MySQL case... Failure to do
+        # this will result in the following ugly error message:
+        #
+        #   sqlalchemy.exc.OperationalError: (sqlite3.OperationalError) no such
+        #   index: instance_type_id
+        #
+        # Yeah, I don't get it either...
+        mysql_pre_indexes = [
+            Index(
+                'instance_type_id', instance_type_projects.c.instance_type_id),
+            Index('instance_uuid', instance_system_metadata.c.instance_uuid),
+            Index('usage_id', reservations.c.usage_id),
+            Index(
+                'security_group_id',
+                security_group_instance_association.c.security_group_id),
+        ]
+
         for index in mysql_pre_indexes:
             index.create(migrate_engine)
 
@@ -1313,10 +1369,6 @@ def upgrade(migrate_engine):
                "migrations (deleted, source_compute(100), dest_compute(100), "
                "source_node(100), dest_node(100), status)")
         migrate_engine.execute(sql)
-
-    # PostgreSQL specific indexes
-    if migrate_engine.name == 'postgresql':
-        Index('address', fixed_ips.c.address).create()
 
     POSTGRES_INDEX_SKIPS = []
 
@@ -1355,11 +1407,6 @@ def upgrade(migrate_engine):
             [security_group_instance_association.c.security_group_id],
             [security_groups.c.id],
             'security_group_instance_association_ibfk_1',
-        ],
-        [
-            [compute_nodes.c.service_id],
-            [services.c.id],
-            'fk_compute_nodes_service_id',
         ],
         [
             [fixed_ips.c.instance_uuid],
@@ -1414,7 +1461,7 @@ def upgrade(migrate_engine):
     ]
 
     for fkey_pair in fkeys:
-        if migrate_engine.name == 'mysql':
+        if migrate_engine.name in ('mysql', 'sqlite'):
             # For MySQL we name our fkeys explicitly
             # so they match Havana
             fkey = ForeignKeyConstraint(
@@ -1475,3 +1522,19 @@ def upgrade(migrate_engine):
     shadow_table = Table('shadow_instance_extra', meta, autoload=True)
     idx = Index('shadow_instance_extra_idx', shadow_table.c.instance_uuid)
     idx.create(migrate_engine)
+
+    # 280_add_nullable_false_to_keypairs_name; this should apply to the shadow
+    # table also
+
+    # Note: Since we are altering name field, this constraint on name needs to
+    # first be dropped before we can alter name. We then re-create the same
+    # constraint.
+    UniqueConstraint(
+        'user_id', 'name', 'deleted', table=key_pairs,
+        name='uniq_key_pairs0user_id0name0deleted'
+    ).drop()
+    key_pairs.c.name.alter(nullable=False)
+    UniqueConstraint(
+        'user_id', 'name', 'deleted', table=key_pairs,
+        name='uniq_key_pairs0user_id0name0deleted',
+    ).create()
