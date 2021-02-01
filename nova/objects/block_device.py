@@ -351,7 +351,8 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.15: BlockDeviceMapping <= version 1.14
     # Version 1.16: BlockDeviceMapping <= version 1.15
     # Version 1.17: Add get_by_instance_uuids()
-    VERSION = '1.17'
+    # Version 1.18: Add get_by_volume()
+    VERSION = '1.18'
 
     fields = {
         'objects': fields.ListOfObjectsField('BlockDeviceMapping'),
@@ -397,6 +398,22 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
             context, instance_uuid, use_slave=use_slave)
         return base.obj_make_list(
                 context, cls(), objects.BlockDeviceMapping, db_bdms or [])
+
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_block_device_mapping_get_all_by_volume(
+            context, volume_id, use_slave=False):
+        return db.block_device_mapping_get_all_by_volume_id(
+                context, volume_id)
+
+    @base.remotable_classmethod
+    def get_by_volume(cls, context, volume_id, use_slave=False):
+        db_bdms = cls._db_block_device_mapping_get_all_by_volume(
+            context, volume_id, use_slave=use_slave)
+        if not db_bdms:
+            raise exception.VolumeBDMNotFound(volume_id=volume_id)
+        return base.obj_make_list(
+            context, cls(), objects.BlockDeviceMapping, db_bdms)
 
     def root_bdm(self):
         """It only makes sense to call this method when the
