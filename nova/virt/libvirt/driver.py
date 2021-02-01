@@ -2056,7 +2056,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 if 'device_path' in connection_info['data']:
                     path = connection_info['data']['device_path']
                 elif connection_info['driver_volume_type'] == 'rbd':
-                    path = 'rbd:%s' % (connection_info['data']['name'])
+                    volume_name = connection_info['data']['name']
+                    path = f"rbd:{volume_name}"
+                    if connection_info['data'].get('auth_enabled'):
+                        username = connection_info['data']['auth_username']
+                        path = f"rbd:{volume_name}:id={username}"
                 else:
                     path = 'unknown'
                     raise exception.DiskNotFound(location='unknown')
