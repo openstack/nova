@@ -169,6 +169,7 @@ class ManagedObjectReference(object):
         # typically have values like vm-123 or
         # host-232 and not UUID.
         self.value = value
+        self._value_1 = value
         # Managed Object Reference type
         # attributes hold the name of the type
         # of the vCenter object the value
