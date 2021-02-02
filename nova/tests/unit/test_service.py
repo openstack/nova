@@ -156,7 +156,7 @@ class ServiceTestCase(test.NoDBTestCase):
         service_obj = mock.Mock()
         service_obj.binary = 'fake-binary'
         service_obj.host = 'fake-host'
-        service_obj.version = -42
+        service_obj.version = 42
         mock_get_by_host_and_binary.return_value = service_obj
 
         serv = service.Service(self.host, self.binary, self.topic,
