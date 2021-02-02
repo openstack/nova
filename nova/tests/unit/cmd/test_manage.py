@@ -30,7 +30,6 @@ from nova.cmd import manage
 from nova import conf
 from nova import context
 from nova.db import api as db
-from nova.db import migration
 from nova.db.sqlalchemy import migration as sqla_migration
 from nova import exception
 from nova import objects
@@ -583,32 +582,6 @@ Cell %s: 456
         ret = self.commands.purge(purge_all=True, all_cells=True)
         self.assertEqual(4, ret)
         self.assertIn('Unable to get cell list', self.output.getvalue())
-
-    @mock.patch.object(migration, 'db_null_instance_uuid_scan',
-                       return_value={'foo': 0})
-    def test_null_instance_uuid_scan_no_records_found(self, mock_scan):
-        self.commands.null_instance_uuid_scan()
-        self.assertIn("There were no records found", self.output.getvalue())
-
-    @mock.patch.object(migration, 'db_null_instance_uuid_scan',
-                       return_value={'foo': 1, 'bar': 0})
-    def _test_null_instance_uuid_scan(self, mock_scan, delete):
-        self.commands.null_instance_uuid_scan(delete)
-        output = self.output.getvalue()
-
-        if delete:
-            self.assertIn("Deleted 1 records from table 'foo'.", output)
-            self.assertNotIn("Deleted 0 records from table 'bar'.", output)
-        else:
-            self.assertIn("1 records in the 'foo' table", output)
-            self.assertNotIn("0 records in the 'bar' table", output)
-        self.assertNotIn("There were no records found", output)
-
-    def test_null_instance_uuid_scan_readonly(self):
-        self._test_null_instance_uuid_scan(delete=False)
-
-    def test_null_instance_uuid_scan_delete(self):
-        self._test_null_instance_uuid_scan(delete=True)
 
     @mock.patch.object(sqla_migration, 'db_version', return_value=2)
     def test_version(self, sqla_migrate):

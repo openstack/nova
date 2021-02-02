@@ -463,35 +463,6 @@ Error: %s""") % str(e))
         else:
             return 3
 
-    @args('--delete', action='store_true', dest='delete',
-          help='If specified, automatically delete any records found where '
-               'instance_uuid is NULL.')
-    def null_instance_uuid_scan(self, delete=False):
-        """Lists and optionally deletes database records where
-        instance_uuid is NULL.
-        """
-        hits = migration.db_null_instance_uuid_scan(delete)
-        records_found = False
-        for table_name, records in hits.items():
-            # Don't print anything for 0 hits
-            if records:
-                records_found = True
-                if delete:
-                    print(_("Deleted %(records)d records "
-                            "from table '%(table_name)s'.") %
-                          {'records': records, 'table_name': table_name})
-                else:
-                    print(_("There are %(records)d records in the "
-                            "'%(table_name)s' table where the uuid or "
-                            "instance_uuid column is NULL. Run this "
-                            "command again with the --delete option after you "
-                            "have backed up any necessary data.") %
-                          {'records': records, 'table_name': table_name})
-        # check to see if we didn't find anything
-        if not records_found:
-            print(_('There were no records found where '
-                    'instance_uuid was NULL.'))
-
     def _run_migration(self, ctxt, max_count):
         ran = 0
         exceptions = False
