@@ -5747,6 +5747,10 @@ class LibvirtDriver(driver.ComputeDriver):
         s390x_archs = (fields.Architecture.S390, fields.Architecture.S390X)
         return libvirt_utils.get_arch(image_meta) in s390x_archs
 
+    def _is_ppc64_guest(self, image_meta):
+        archs = (fields.Architecture.PPC64, fields.Architecture.PPC64LE)
+        return libvirt_utils.get_arch(image_meta) in archs
+
     def _create_consoles_qemu_kvm(self, guest_cfg, instance, flavor,
                                   image_meta):
         char_dev_cls = vconfig.LibvirtConfigGuestSerial
@@ -5884,8 +5888,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 cpu_config.features.add(xf)
         return cpu_config
 
-    def _guest_needs_usb(self, guest):
+    def _guest_needs_usb(self, guest, image_meta):
         """Evaluate devices currently attached to the guest."""
+        if self._is_ppc64_guest(image_meta):
+            # PPC64 guests get a USB keyboard and mouse automatically
+            return True
+
         for dev in guest.devices:
             if isinstance(dev, vconfig.LibvirtConfigGuestDisk):
                 if dev.target_bus == 'usb':
@@ -5897,7 +5905,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return False
 
-    def _guest_add_usb_root_controller(self, guest):
+    def _guest_add_usb_root_controller(self, guest, image_meta):
         """Add USB root controller, if necessary.
 
         Note that these are added by default on x86-64. We add the controller
@@ -5908,7 +5916,9 @@ class LibvirtDriver(driver.ComputeDriver):
         usbhost.index = 0
         # an unset model means autodetect, while 'none' means don't add a
         # controller (x86 gets one by default)
-        usbhost.model = None if self._guest_needs_usb(guest) else 'none'
+        usbhost.model = None
+        if not self._guest_needs_usb(guest, image_meta):
+            usbhost.model = 'none'
         guest.add_device(usbhost)
 
     def _guest_add_pcie_root_ports(self, guest):
@@ -6096,7 +6106,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if self._guest_needs_pcie(guest, caps):
             self._guest_add_pcie_root_ports(guest)
 
-        self._guest_add_usb_root_controller(guest)
+        self._guest_add_usb_root_controller(guest, image_meta)
 
         self._guest_add_pci_devices(guest, instance)
 

@@ -8420,6 +8420,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         else:
             self.fail('Did not find a USB host controller')
 
+        # while PPC64 should always get a USB controller, regardless of config
+        self.mock_get_arch.return_value = fields.Architecture.PPC64
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance_ref, image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref, [], image_meta, disk_info)
+        for device in cfg.devices:
+            if isinstance(device, vconfig.LibvirtConfigGuestUSBHostController):
+                # the model property should be unset, meaning auto-configured
+                self.assertIsNone(device.model)
+                break
+        else:
+            self.fail('Did not find a USB host controller')
+
     @mock.patch.object(libvirt_driver, 'LOG')
     @mock.patch.object(
         fakelibvirt, 'VIR_PERF_PARAM_CPU_CLOCK', 'cpu_clock', create=True)
