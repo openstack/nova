@@ -187,12 +187,32 @@ Nova Database
     Use the ``--max_rows`` option, which defaults to 1000, as a batch size for
     each iteration (note that the purged API database table records are not
     included in this batch size). Specifying ``--before`` will archive only
-    instances that were deleted before the date_ provided, and records in other
+    instances that were deleted before the date provided, and records in other
     tables related to those instances. Specifying ``--purge`` will cause a
     *full* DB purge to be completed after archival. If a date range is desired
     for the purge, then run ``nova-manage db purge --before <date>`` manually
     after archiving is complete. Specifying ``--all-cells`` will
     cause the process to run against all cell databases.
+
+    .. note::
+
+       The date argument accepted by the ``--before`` option can be in any
+       of several formats, including ``YYYY-MM-DD [HH:mm[:ss]]`` and the default
+       format produced by the ``date`` command, e.g. ``Fri May 24 09:20:11 CDT 2019``.
+       Date strings containing spaces must be quoted appropriately. Some examples::
+
+         # Purge shadow table rows older than a specific date
+         nova-manage db purge --before 2015-10-21
+         # or
+         nova-manage db purge --before "Oct 21 2015"
+         # Times are also accepted
+         nova-manage db purge --before "2015-10-21 12:00"
+
+       Relative dates (such as ``yesterday``) are not supported natively.
+       The ``date`` command can be helpful here::
+
+         # Archive deleted rows more than one month old
+         nova-manage db archive_deleted_rows --before "$(date -d 'now - 1 month')"
 
     **Return Codes**
 
@@ -222,13 +242,33 @@ Nova Database
 ``nova-manage db purge [--all] [--before <date>] [--verbose] [--all-cells]``
     Delete rows from shadow tables. Specifying ``--all`` will delete all data from
     all shadow tables. Specifying ``--before`` will delete data from all shadow tables
-    that is older than the date_ provided. Specifying ``--verbose`` will
+    that is older than the date provided. Specifying ``--verbose`` will
     cause information to be printed about purged records. Specifying
     ``--all-cells`` will cause the purge to be applied against all cell databases.
     For ``--all-cells`` to work, the api database connection information must
     be configured. Returns exit code 0 if rows were deleted, 1 if required
     arguments are not provided, 2 if an invalid date is provided, 3 if no
     data was deleted, 4 if the list of cells cannot be obtained.
+
+    .. note::
+
+       The date argument accepted by the ``--before`` option can be in any
+       of several formats, including ``YYYY-MM-DD [HH:mm[:ss]]`` and the default
+       format produced by the ``date`` command, e.g. ``Fri May 24 09:20:11 CDT 2019``.
+       Date strings containing spaces must be quoted appropriately. Some examples::
+
+         # Purge shadow table rows older than a specific date
+         nova-manage db purge --before 2015-10-21
+         # or
+         nova-manage db purge --before "Oct 21 2015"
+         # Times are also accepted
+         nova-manage db purge --before "2015-10-21 12:00"
+
+       Relative dates (such as ``yesterday``) are not supported natively.
+       The ``date`` command can be helpful here::
+
+         # Archive deleted rows more than one month old
+         nova-manage db archive_deleted_rows --before "$(date -d 'now - 1 month')"
 
 ``nova-manage db online_data_migrations [--max-count]``
    Perform data migration to update all live data.
@@ -276,52 +316,6 @@ Nova Database
    which did require a data migration. Since ``--max-count`` defaults to 50
    and only two records were migrated with no more candidates remaining, the
    command completed successfully with exit code 0.
-
-``nova-manage db ironic_flavor_migration [--all] [--host] [--node] [--resource_class]``
-   Perform the ironic flavor migration process against the database
-   while services are offline. This is *not recommended* for most
-   people. The ironic compute driver will do this online and as
-   necessary if run normally. This routine is provided only for
-   advanced users that may be skipping the 16.0.0 Pike release, never
-   able to run services normally at the Pike level. Since this utility
-   is for use when all services (including ironic) are down, you must
-   pass the resource class set on your node(s) with the
-   ``--resource_class`` parameter.
-
-   To migrate a specific host and node, provide the hostname and node uuid with
-   ``--host $hostname --node $uuid``. To migrate all instances on nodes managed
-   by a single host, provide only ``--host``. To iterate over all nodes in the
-   system in a single pass, use ``--all``. Note that this process is not lightweight,
-   so it should not be run frequently without cause, although it is not harmful
-   to do so. If you have multiple cellsv2 cells, you should run this once per cell
-   with the corresponding cell config for each (i.e. this does not iterate cells
-   automatically).
-
-   Note that this is not recommended unless you need to run this
-   specific data migration offline, and it should be used with care as
-   the work done is non-trivial. Running smaller and more targeted batches (such as
-   specific nodes) is recommended.
-
-.. _date:
-
-``--before <date>``
-   The date argument accepted by the ``--before`` option can be in any
-   of several formats, including ``YYYY-MM-DD [HH:mm[:ss]]`` and the default
-   format produced by the ``date`` command, e.g. ``Fri May 24 09:20:11 CDT 2019``.
-   Date strings containing spaces must be quoted appropriately. Some examples::
-
-     # Purge shadow table rows older than a specific date
-     nova-manage db purge --before 2015-10-21
-     # or
-     nova-manage db purge --before "Oct 21 2015"
-     # Times are also accepted
-     nova-manage db purge --before "2015-10-21 12:00"
-
-   Note that relative dates (such as ``yesterday``) are not supported natively.
-   The ``date`` command can be helpful here::
-
-     # Archive deleted rows more than one month old
-     nova-manage db archive_deleted_rows --before "$(date -d 'now - 1 month')"
 
 Nova API Database
 ~~~~~~~~~~~~~~~~~
