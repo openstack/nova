@@ -3533,10 +3533,10 @@ class TestAPI(TestAPIBase):
         self.assertFalse(tunneled)
         self.assertIsNone(physnet_name)
 
-    def _test_get_port_vnic_info(self, mock_get_client,
-                                 binding_vnic_type,
-                                 expected_vnic_type,
-                                 port_resource_request=None):
+    def _test_get_port_vnic_info(
+        self, mock_get_client, binding_vnic_type, expected_vnic_type,
+        port_resource_request=None, numa_policy=None
+    ):
         test_port = {
             'port': {'id': 'my_port_id2',
                       'network_id': 'net-id',
@@ -3548,22 +3548,25 @@ class TestAPI(TestAPIBase):
         if port_resource_request:
             test_port['port'][
                 constants.RESOURCE_REQUEST] = port_resource_request
+        if numa_policy:
+            test_port['port'][constants.NUMA_POLICY] = numa_policy
 
         mock_get_client.reset_mock()
         mock_client = mock_get_client.return_value
         mock_client.show_port.return_value = test_port
 
-        vnic_type, trusted, network_id, resource_request = (
+        vnic_type, trusted, network_id, resource_request, numa = (
             self.api._get_port_vnic_info(
                 self.context, mock_client, test_port['port']['id']))
 
         mock_client.show_port.assert_called_once_with(test_port['port']['id'],
             fields=['binding:vnic_type', 'binding:profile', 'network_id',
-                    constants.RESOURCE_REQUEST])
+                    constants.RESOURCE_REQUEST, constants.NUMA_POLICY])
         self.assertEqual(expected_vnic_type, vnic_type)
         self.assertEqual('net-id', network_id)
         self.assertIsNone(trusted)
         self.assertEqual(port_resource_request, resource_request)
+        self.assertEqual(numa_policy, numa)
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.MagicMock())
     def test_get_port_vnic_info_1(self, mock_get_client):
@@ -3579,6 +3582,14 @@ class TestAPI(TestAPIBase):
     def test_get_port_vnic_info_3(self, mock_get_client):
         self._test_get_port_vnic_info(mock_get_client, None,
                                       model.VNIC_TYPE_NORMAL)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_4(self, mock_get_client):
+        policies = ['required', 'legacy', 'preferred']
+        for policy_name in policies:
+            self._test_get_port_vnic_info(
+                mock_get_client, None, model.VNIC_TYPE_NORMAL,
+                numa_policy=policy_name)
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_get_port_vnic_info_requested_resources(self, mock_get_client):
@@ -3612,11 +3623,11 @@ class TestAPI(TestAPIBase):
         mock_client.list_extensions.return_value = test_ext_list
         result = self.api._get_port_vnic_info(
             self.context, mock_client, test_port['port']['id'])
-        vnic_type, trusted, network_id, resource_requests = result
+        vnic_type, trusted, network_id, resource_requests, _ = result
 
         mock_client.show_port.assert_called_once_with(test_port['port']['id'],
             fields=['binding:vnic_type', 'binding:profile', 'network_id',
-                    constants.RESOURCE_REQUEST])
+                    constants.RESOURCE_REQUEST, constants.NUMA_POLICY])
         self.assertEqual(model.VNIC_TYPE_DIRECT, vnic_type)
         self.assertEqual('net-id', network_id)
         self.assertTrue(trusted)
@@ -5766,14 +5777,14 @@ class TestAPI(TestAPIBase):
         # _get_port_vnic_info should be called for every NetworkRequest with a
         # port_id attribute (so six times)
         mock_get_port_vnic_info.side_effect = [
-            (model.VNIC_TYPE_DIRECT, None, 'netN', None),
+            (model.VNIC_TYPE_DIRECT, None, 'netN', None, None),
             (model.VNIC_TYPE_NORMAL, None, 'netN',
-             mock.sentinel.resource_request1),
-            (model.VNIC_TYPE_MACVTAP, None, 'netN', None),
-            (model.VNIC_TYPE_MACVTAP, None, 'netN', None),
-            (model.VNIC_TYPE_DIRECT_PHYSICAL, None, 'netN', None),
+             mock.sentinel.resource_request1, None),
+            (model.VNIC_TYPE_MACVTAP, None, 'netN', None, None),
+            (model.VNIC_TYPE_MACVTAP, None, 'netN', None, None),
+            (model.VNIC_TYPE_DIRECT_PHYSICAL, None, 'netN', None, None),
             (model.VNIC_TYPE_DIRECT, True, 'netN',
-             mock.sentinel.resource_request2),
+             mock.sentinel.resource_request2, None),
         ]
         # _get_physnet_tunneled_info should be called for every NetworkRequest
         # (so seven times)
