@@ -95,7 +95,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
     def test_list_base_images(self):
         listing = ['00000001',
-                   'ephemeral_0_20_None',
+                   'ephemeral_20_abcdefg',
                    '00000004',
                    'swap_1000']
         images = ['e97222e91fc4241f49a7f520d1dcf446751129b3_sm',
@@ -149,6 +149,9 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         self.assertEqual(1, len(image_cache_manager.back_swap_images))
         self.assertIn('swap_1000', image_cache_manager.back_swap_images)
+        self.assertEqual(1, len(image_cache_manager.back_ephemeral_images))
+        self.assertIn(
+            'ephemeral_20_abcdefg', image_cache_manager.back_ephemeral_images)
 
     def test_list_backing_images_small(self):
         self.stub_out('os.listdir',
@@ -621,6 +624,19 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         expect_set = set(['swap_123', 'swap_456'])
         self.assertEqual(image_cache_manager.back_swap_images, expect_set)
 
+    def test_store_ephemeral_image(self):
+        image_cache_manager = imagecache.ImageCacheManager()
+        image_cache_manager._store_ephemeral_image('ephemeral_')
+        image_cache_manager._store_ephemeral_image('ephemeral_123')
+        image_cache_manager._store_ephemeral_image('ephemeral_456_40d1d2c')
+        image_cache_manager._store_ephemeral_image('ephemeral_abc_40d1f2e')
+        image_cache_manager._store_ephemeral_image('123_ephemeral_40e1d2d')
+        image_cache_manager._store_ephemeral_image('ephemeral_129_')
+
+        self.assertEqual(len(image_cache_manager.back_ephemeral_images), 1)
+        expect_set = set(['ephemeral_456_40d1d2c'])
+        self.assertEqual(image_cache_manager.back_ephemeral_images, expect_set)
+
     @mock.patch.object(lockutils, 'external_lock')
     @mock.patch('os.path.exists')
     @mock.patch('os.path.getmtime')
@@ -658,6 +674,36 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         image_cache_manager._age_and_verify_swap_images(None, base_dir)
         self.assertEqual(set(['swap_128']), expected_exist)
         self.assertEqual(set(['swap_256']), expected_remove)
+
+    @mock.patch.object(lockutils, 'external_lock')
+    @mock.patch('os.path.exists')
+    @mock.patch('os.path.getmtime')
+    @mock.patch('os.remove')
+    @mock.patch('nova.privsep.path.utime')
+    def test_age_and_verify_ephemeral_images(self, mock_utime, mock_remove,
+            mock_getmtime, mock_exist, mock_lock):
+        base_dir = '/tmp_age_test'
+        image_cache_manager = imagecache.ImageCacheManager()
+        expected_remove = set()
+        expected_exist = set(['ephemeral_456_40d1d2c', 'ephemeral_2_41e1f2c'])
+        image_cache_manager.back_ephemeral_images.add('ephemeral_456_40d1d2c')
+        image_cache_manager.back_ephemeral_images.add('ephemeral_2_41e1f2c')
+        image_cache_manager.used_ephemeral_images.add('ephemeral_2_41e1f2c')
+        mock_getmtime.side_effect = lambda path: time.time() - 1000000
+        mock_exist.side_effect = \
+            lambda path: os.path.dirname(path) == base_dir and \
+                         os.path.basename(path) in expected_exist
+
+        def removefile(path):
+            self.assertEqual(base_dir, os.path.dirname(path),
+                             'Attempt to remove unexpected path')
+            fn = os.path.basename(path)
+            expected_remove.add(fn)
+            expected_exist.remove(fn)
+        mock_remove.side_effect = removefile
+        image_cache_manager._age_and_verify_ephemeral_images(None, base_dir)
+        self.assertEqual(set(['ephemeral_2_41e1f2c']), expected_exist)
+        self.assertEqual(set(['ephemeral_456_40d1d2c']), expected_remove)
 
     @mock.patch.object(utils, 'synchronized')
     @mock.patch.object(imagecache.ImageCacheManager, '_get_age_of_file',

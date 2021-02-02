@@ -49,6 +49,18 @@ swap_bdm_256 = [block_device.BlockDeviceDict(
          'volume_size': 256,
          'boot_index': -1})]
 
+ephemeral_bdm = [block_device.BlockDeviceDict(
+        {'id': 1, 'instance_uuid': uuids.instance,
+         'device_name': '/dev/sdc1',
+         'source_type': 'blank',
+         'destination_type': 'local',
+         'disk_bus': 'scsi',
+         'device_type': 'disk',
+         'volume_size': 4,
+         'guest_format': 'ext4',
+         'delete_on_termination': True,
+         'boot_index': -1})]
+
 
 class ImageCacheManagerTests(test.NoDBTestCase):
 
@@ -104,7 +116,7 @@ class ImageCacheManagerTests(test.NoDBTestCase):
 
         ctxt = context.get_admin_context()
         swap_bdm_256_list = block_device_obj.block_device_make_list_from_dicts(
-            ctxt, swap_bdm_256)
+            ctxt, swap_bdm_256 + ephemeral_bdm)
         swap_bdm_128_list = block_device_obj.block_device_make_list_from_dicts(
             ctxt, swap_bdm_128)
         mock_bdms_by_uuid.return_value = {uuids.instance_1: swap_bdm_256_list,
@@ -133,6 +145,9 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         self.assertEqual(len(running['used_swap_images']), 2)
         self.assertIn('swap_128', running['used_swap_images'])
         self.assertIn('swap_256', running['used_swap_images'])
+
+        self.assertEqual(len(running['used_ephemeral_images']), 1)
+        self.assertIn('ephemeral_4_0706d66', running['used_ephemeral_images'])
 
     @mock.patch.object(objects.BlockDeviceMappingList,
                        'bdms_by_instance_uuid')

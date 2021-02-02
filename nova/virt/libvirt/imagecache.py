@@ -67,6 +67,9 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         self.back_swap_images = set()
         self.used_swap_images = set()
 
+        self.back_ephemeral_images = set()
+        self.used_ephemeral_images = set()
+
         self.active_base_files = []
         self.originals = []
         self.removable_base_files = []
@@ -88,6 +91,15 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 LOG.debug('Adding %s into backend swap images', ent)
                 self.back_swap_images.add(ent)
 
+    def _store_ephemeral_image(self, ent):
+        """Store base ephemeral images for later examination."""
+        names = ent.split('_')
+        if len(names) == 3 and names[0] == 'ephemeral':
+            if len(names[1]) > 0 and names[1].isdigit():
+                if len(names[2]) == 7 and isinstance(names[2], str):
+                    LOG.debug('Adding %s into backend ephemeral images', ent)
+                    self.back_ephemeral_images.add(ent)
+
     def _scan_base_images(self, base_dir):
         """Scan base images in base_dir and call _store_image or
         _store_swap_image on each as appropriate. These methods populate
@@ -104,6 +116,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
             else:
                 self._store_swap_image(ent)
+                self._store_ephemeral_image(ent)
 
     def _list_backing_images(self):
         """List the backing images currently in use."""
@@ -185,7 +198,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         return (True, age)
 
     def _remove_old_enough_file(self, base_file, maxage, remove_lock=True):
-        """Remove a single swap or base file if it is old enough."""
+        """Remove a single swap, base or ephemeral file if it is old enough."""
         exists, age = self._get_age_of_file(base_file)
         if not exists:
             return
@@ -202,7 +215,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             if not exists or age < maxage:
                 return
 
-            LOG.info('Removing base or swap file: %s', base_file)
+            LOG.info('Removing base, swap or ephemeral file: %s', base_file)
             try:
                 os.remove(base_file)
             except OSError as e:
@@ -212,7 +225,8 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                            'error': e})
 
         if age < maxage:
-            LOG.info('Base or swap file too young to remove: %s', base_file)
+            LOG.info('Base, swap or ephemeral file too young to remove: %s',
+                     base_file)
         else:
             _inner_remove_old_enough_file()
             if remove_lock:
@@ -229,6 +243,12 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                               'error was %(error)s',
                               {'lock_file': lock_file,
                                'error': e})
+
+    def _remove_ephemeral_file(self, base_file):
+        """Remove a single ephemeral base file if it is old enough."""
+        maxage = CONF.image_cache.remove_unused_original_minimum_age_seconds
+
+        self._remove_old_enough_file(base_file, maxage, remove_lock=False)
 
     def _remove_swap_file(self, base_file):
         """Remove a single swap base file if it is old enough."""
@@ -259,6 +279,21 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         LOG.debug('image %(id)s at (%(base_file)s): image is in use',
                   {'id': img_id, 'base_file': base_file})
         nova.privsep.path.utime(base_file)
+
+    def _age_and_verify_ephemeral_images(self, context, base_dir):
+        LOG.debug('Verify ephemeral images')
+
+        for ent in self.back_ephemeral_images:
+            base_file = os.path.join(base_dir, ent)
+            if ent in self.used_ephemeral_images and os.path.exists(base_file):
+                nova.privsep.path.utime(base_file)
+            elif self.remove_unused_base_images:
+                self._remove_ephemeral_file(base_file)
+
+        error_images = self.used_ephemeral_images - self.back_ephemeral_images
+        for error_image in error_images:
+            LOG.warning('%s ephemeral image was used by instance'
+                        ' but no back files existing!', error_image)
 
     def _age_and_verify_swap_images(self, context, base_dir):
         LOG.debug('Verify swap images')
@@ -347,9 +382,11 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         self.used_images = running['used_images']
         self.instance_names = running['instance_names']
         self.used_swap_images = running['used_swap_images']
+        self.used_ephemeral_images = running['used_ephemeral_images']
         # perform the aging and image verification
         self._age_and_verify_cached_images(context, all_instances, base_dir)
         self._age_and_verify_swap_images(context, base_dir)
+        self._age_and_verify_ephemeral_images(context, base_dir)
 
     def get_disk_usage(self):
         try:
