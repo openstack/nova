@@ -9280,7 +9280,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.assertTrue(nw_info.return_value[0].is_hybrid_plug_enabled())
             self.assertEqual(
                 [], self.compute._get_neutron_events_for_live_migration(
-                    self.instance, migration))
+                    self.instance))
 
         # 2. no VIFs
         self.flags(vif_plugging_timeout=300)
@@ -9289,7 +9289,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             nw_info.return_value = network_model.NetworkInfo([])
             self.assertEqual(
                 [], self.compute._get_neutron_events_for_live_migration(
-                    self.instance, migration))
+                    self.instance))
 
         # 3. no plug time events
         with mock.patch.object(self.instance, 'get_network_info') as nw_info:
@@ -9300,7 +9300,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.assertFalse(nw_info.return_value[0].is_hybrid_plug_enabled())
             self.assertEqual(
                 [], self.compute._get_neutron_events_for_live_migration(
-                    self.instance, migration))
+                    self.instance))
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._post_live_migration')
