@@ -1195,6 +1195,11 @@ class RequestFilterFailed(NovaException):
     msg_fmt = _("Scheduling failed: %(reason)s")
 
 
+class InvalidRoutedNetworkConfiguration(RequestFilterFailed):
+    msg_fmt = _("Neutron routed networks configuration is invalid: "
+                "%(reason)s.")
+
+
 class MaxRetriesExceeded(NoValidHost):
     msg_fmt = _("Exceeded maximum number of retries. %(reason)s")
 

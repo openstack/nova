@@ -23,7 +23,9 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import context as nova_context
 from nova import exception
+from nova.network import neutron
 from nova import objects
+from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit import fake_instance
@@ -407,3 +409,111 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.assertRaises(exception.NoValidHost,
                           scheduler_utils.setup_instance_group,
                           self.context, spec)
+
+    @mock.patch('nova.network.neutron.API.get_segment_ids_for_network')
+    def test_get_aggregates_for_routed_network(self, mock_get_segment_ids):
+        mock_get_segment_ids.return_value = [uuids.segment1, uuids.segment2]
+        report_client = report.SchedulerReportClient()
+        network_api = neutron.API()
+
+        def fake_get_provider_aggregates(context, segment_id):
+            agg = uuids.agg1 if segment_id == uuids.segment1 else uuids.agg2
+            agg_info = report.AggInfo(aggregates=[agg], generation=1)
+            return agg_info
+
+        with mock.patch.object(report_client, '_get_provider_aggregates',
+                side_effect=fake_get_provider_aggregates) as mock_get_aggs:
+            res = scheduler_utils.get_aggregates_for_routed_network(
+                self.context, network_api, report_client, uuids.network1)
+        self.assertEqual([uuids.agg1, uuids.agg2], res)
+        mock_get_segment_ids.assert_called_once_with(
+            self.context, uuids.network1)
+        mock_get_aggs.assert_has_calls(
+            [mock.call(self.context, uuids.segment1),
+             mock.call(self.context, uuids.segment2)])
+
+    @mock.patch('nova.network.neutron.API.get_segment_ids_for_network')
+    def test_get_aggregates_for_routed_network_none(self,
+                                                    mock_get_segment_ids):
+        mock_get_segment_ids.return_value = []
+        report_client = report.SchedulerReportClient()
+        network_api = neutron.API()
+        self.assertEqual(
+            [],
+            scheduler_utils.get_aggregates_for_routed_network(
+                self.context, network_api, report_client, uuids.network1))
+
+    @mock.patch('nova.network.neutron.API.get_segment_ids_for_network')
+    def test_get_aggregates_for_routed_network_fails(self,
+                                                     mock_get_segment_ids):
+        mock_get_segment_ids.return_value = [uuids.segment1]
+        report_client = report.SchedulerReportClient()
+        network_api = neutron.API()
+
+        # We could fail on some placement issue...
+        with mock.patch.object(report_client, '_get_provider_aggregates',
+                return_value=None):
+            self.assertRaises(
+                exception.InvalidRoutedNetworkConfiguration,
+                scheduler_utils.get_aggregates_for_routed_network,
+                self.context, network_api, report_client, uuids.network1)
+
+        # ... but we also want to fail if we can't find the related aggregate
+        agg_info = report.AggInfo(aggregates=set(), generation=1)
+        with mock.patch.object(report_client, '_get_provider_aggregates',
+                return_value=agg_info):
+            self.assertRaises(
+                exception.InvalidRoutedNetworkConfiguration,
+                scheduler_utils.get_aggregates_for_routed_network,
+                self.context, network_api, report_client, uuids.network1)
+
+    @mock.patch('nova.network.neutron.API.get_segment_id_for_subnet')
+    def test_get_aggregates_for_routed_subnet(self, mock_get_segment_ids):
+        mock_get_segment_ids.return_value = uuids.segment1
+        report_client = report.SchedulerReportClient()
+        network_api = neutron.API()
+        agg_info = report.AggInfo(aggregates=[uuids.agg1], generation=1)
+
+        with mock.patch.object(report_client, '_get_provider_aggregates',
+                return_value=agg_info) as mock_get_aggs:
+            res = scheduler_utils.get_aggregates_for_routed_subnet(
+                self.context, network_api, report_client,
+                uuids.subnet1)
+        self.assertEqual([uuids.agg1], res)
+        mock_get_segment_ids.assert_called_once_with(
+            self.context, uuids.subnet1)
+        mock_get_aggs.assert_called_once_with(self.context, uuids.segment1)
+
+    @mock.patch('nova.network.neutron.API.get_segment_id_for_subnet')
+    def test_get_aggregates_for_routed_subnet_none(self, mock_get_segment_ids):
+        mock_get_segment_ids.return_value = None
+        report_client = report.SchedulerReportClient()
+        network_api = neutron.API()
+        self.assertEqual(
+            [],
+            scheduler_utils.get_aggregates_for_routed_subnet(
+                self.context, network_api, report_client, uuids.subnet1))
+
+    @mock.patch('nova.network.neutron.API.get_segment_id_for_subnet')
+    def test_get_aggregates_for_routed_subnet_fails(self,
+                                                    mock_get_segment_ids):
+        mock_get_segment_ids.return_value = uuids.segment1
+        report_client = report.SchedulerReportClient()
+        network_api = neutron.API()
+
+        # We could fail on some placement issue...
+        with mock.patch.object(report_client, '_get_provider_aggregates',
+                return_value=None):
+            self.assertRaises(
+                exception.InvalidRoutedNetworkConfiguration,
+                scheduler_utils.get_aggregates_for_routed_subnet,
+                self.context, network_api, report_client, uuids.subnet1)
+
+        # ... but we also want to fail if we can't find the related aggregate
+        agg_info = report.AggInfo(aggregates=set(), generation=1)
+        with mock.patch.object(report_client, '_get_provider_aggregates',
+                return_value=agg_info):
+            self.assertRaises(
+                exception.InvalidRoutedNetworkConfiguration,
+                scheduler_utils.get_aggregates_for_routed_subnet,
+                self.context, network_api, report_client, uuids.subnet1)
