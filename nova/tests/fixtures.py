@@ -1401,6 +1401,11 @@ class NeutronFixture(fixtures.Fixture):
         ],
     }
 
+    # Fixtures inheriting from NeutronFixture can redefine the default port
+    # that create_port() is duplicating for creating a new port by using this
+    # variable
+    default_port = copy.deepcopy(port_2)
+
     # network_2 does not have security groups enabled - that's okay since most
     # of these ports are SR-IOV'y anyway
     network_2 = {
@@ -1965,6 +1970,11 @@ class NeutronFixture(fixtures.Fixture):
         return {'networks': self._list_resource(
             self._networks, retrieve_all, **_params)}
 
+    def show_subnet(self, subnet_id, **_params):
+        if subnet_id not in self._subnets:
+            raise neutron_client_exc.NeutronClientException()
+        return {'subnet': copy.deepcopy(self._subnets[subnet_id])}
+
     def list_subnets(self, retrieve_all=True, **_params):
         # NOTE(gibi): The fixture does not support filtering for subnets
         return {'subnets': copy.deepcopy(list(self._subnets.values()))}
@@ -1982,10 +1992,10 @@ class NeutronFixture(fixtures.Fixture):
         # created. This is port_2. So if that port is not created yet then
         # that is the one created here.
         new_port = copy.deepcopy(body['port'])
-        new_port.update(copy.deepcopy(self.port_2))
-        if self.port_2['id'] in self._ports:
-            # If port_2 is already created then create a new port based on
-            # the request body, the port_2 as a template, and assign new
+        new_port.update(copy.deepcopy(self.default_port))
+        if self.default_port['id'] in self._ports:
+            # If the port is already created then create a new port based on
+            # the request body, the default port as a template, and assign new
             # port_id and mac_address for the new port
             # we need truly random uuids instead of named sentinels as some
             # tests needs more than 3 ports

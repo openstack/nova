@@ -138,6 +138,15 @@ Number of workers for the nova-scheduler service. The default will be the
 number of CPUs available if using the "filter_scheduler" scheduler driver,
 otherwise the default will be 1.
 """),
+    cfg.BoolOpt("query_placement_for_routed_network_aggregates",
+                default=False,
+                help="""
+Enable the scheduler to filter compute hosts affined to routed network segment
+aggregates.
+
+See https://docs.openstack.org/neutron/latest/admin/config-routed-networks.html
+for details.
+"""),
     cfg.BoolOpt("limit_tenants_to_placement_aggregate",
                 default=False,
                 help="""
