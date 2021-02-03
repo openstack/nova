@@ -134,9 +134,6 @@
       - ^setup.cfg$
       - ^tools/.*$
       - ^tox.ini$
-    # TODO(mriedem): Make this voting and gating once bug 1771700 is fixed
-    # and we've had enough runs to feel comfortable with this setup.
-    voting: false
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_black_regex.
