@@ -159,6 +159,10 @@
         LVM_VOLUME_CLEAR: none
         # Disable SSH validation in tests to save time.
         TEMPEST_RUN_VALIDATION: false
+        # Increase the size of the swift loopback device to accommodate RAW
+        # snapshots from the LV based instance disks.
+        # See bug #1913451 for more details.
+        SWIFT_LOOPBACK_DISK_SIZE: 24G
       devstack_services:
         # Disable non-essential services that we don't need for this job.
         c-bak: false
