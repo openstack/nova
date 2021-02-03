@@ -61,8 +61,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.heal_reqspec_is_bfv_mock = _p.start()
         self.addCleanup(_p.stop)
 
-        _p = mock.patch('nova.objects.RequestSpec.ensure_network_metadata')
-        self.ensure_network_metadata_mock = _p.start()
+        _p = mock.patch('nova.objects.RequestSpec.ensure_network_information')
+        self.ensure_network_information_mock = _p.start()
         self.addCleanup(_p.stop)
 
         self.mock_network_api = mock.Mock()
@@ -130,7 +130,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
             task.execute()
             _is_source_cell_mock.assert_called_once_with(selection)
 
-        self.ensure_network_metadata_mock.assert_called_once_with(
+        self.ensure_network_information_mock.assert_called_once_with(
             self.instance)
         self.heal_reqspec_is_bfv_mock.assert_called_once_with(
             self.context, self.request_spec, self.instance)

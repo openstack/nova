@@ -270,7 +270,7 @@ class MigrationTask(base.TaskBase):
         migration = self._preallocate_migration()
 
         self.request_spec.ensure_project_and_user_id(self.instance)
-        self.request_spec.ensure_network_metadata(self.instance)
+        self.request_spec.ensure_network_information(self.instance)
         compute_utils.heal_reqspec_is_bfv(
             self.context, self.request_spec, self.instance)
         # On an initial call to migrate, 'self.host_list' will be None, so we
