@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    The libvirt driver now allows explicitly disabling CPU flags for
+    guests via the ``[libvirt]cpu_model_extra_flags`` config attribute.
+    This is possible via a ``+`` / ``-`` notation, where if you specify
+    a CPU flag prefixed with a ``+`` sign (without quotes), it will be
+    enabled for the guest, while a prefix of ``-`` will disable it.  If
+    neither ``+`` nor ``-`` is specified, the CPU flag will be enabled,
+    which is the default behaviour.
+
+    Refer to the ``[libvirt]cpu_model_extra_flags`` documentation for
+    more information.
