@@ -97,7 +97,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(PciDeviceStatsTestCase, self).setUp()
-        self.pci_stats = stats.PciDeviceStats()
+        self.pci_stats = stats.PciDeviceStats(objects.NUMATopology())
         # The following two calls need to be made before adding the devices.
         patcher = fakes.fake_pci_whitelist()
         self.addCleanup(patcher.stop)
@@ -123,7 +123,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
                           self.fake_dev_2)
 
     def test_pci_stats_equivalent(self):
-        pci_stats2 = stats.PciDeviceStats()
+        pci_stats2 = stats.PciDeviceStats(objects.NUMATopology())
         for dev in [self.fake_dev_1,
                     self.fake_dev_2,
                     self.fake_dev_3,
@@ -132,7 +132,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertEqual(self.pci_stats, pci_stats2)
 
     def test_pci_stats_not_equivalent(self):
-        pci_stats2 = stats.PciDeviceStats()
+        pci_stats2 = stats.PciDeviceStats(objects.NUMATopology())
         for dev in [self.fake_dev_1,
                     self.fake_dev_2,
                     self.fake_dev_3]:
@@ -141,7 +141,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     def test_object_create(self):
         m = self.pci_stats.to_device_pools_obj()
-        new_stats = stats.PciDeviceStats(m)
+        new_stats = stats.PciDeviceStats(objects.NUMATopology(), m)
 
         self.assertEqual(len(new_stats.pools), 3)
         self.assertEqual(set([d['count'] for d in new_stats]),
@@ -426,7 +426,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
     def test_white_list_parsing(self, mock_whitelist_parse):
         white_list = '{"product_id":"0001", "vendor_id":"8086"}'
         CONF.set_override('passthrough_whitelist', white_list, 'pci')
-        pci_stats = stats.PciDeviceStats()
+        pci_stats = stats.PciDeviceStats(objects.NUMATopology())
         pci_stats.add_device(self.fake_dev_2)
         pci_stats.remove_device(self.fake_dev_2)
         self.assertEqual(1, mock_whitelist_parse.call_count)
@@ -441,7 +441,9 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                        '{"vendor_id":"1137","product_id":"0072"}']
         self.flags(passthrough_whitelist=white_list, group='pci')
         dev_filter = whitelist.Whitelist(white_list)
-        self.pci_stats = stats.PciDeviceStats(dev_filter=dev_filter)
+        self.pci_stats = stats.PciDeviceStats(
+            objects.NUMATopology(),
+            dev_filter=dev_filter)
 
     def _create_pci_devices(self):
         self.pci_tagged_devices = []
@@ -594,7 +596,7 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
         white_list = ['{"vendor_id":"8086","product_id":"1528"}',
                       '{"vendor_id":"8086","product_id":"1515"}']
         self.flags(passthrough_whitelist=white_list, group='pci')
-        self.pci_stats = stats.PciDeviceStats()
+        self.pci_stats = stats.PciDeviceStats(objects.NUMATopology())
 
     def _create_pci_devices(self, vf_product_id=1515, pf_product_id=1528):
         self.sriov_pf_devices = []

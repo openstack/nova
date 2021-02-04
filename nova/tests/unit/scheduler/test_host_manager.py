@@ -1568,10 +1568,9 @@ class HostStateTestCase(test.NoDBTestCase):
         host = host_manager.HostState("fakehost", "fakenode", uuids.cell)
         self.assertIsNone(host.updated)
         host.pci_stats = pci_stats.PciDeviceStats(
-                                      [objects.PciDevicePool(vendor_id='8086',
-                                                             product_id='15ed',
-                                                             numa_node=1,
-                                                             count=1)])
+            objects.NUMATopology(),
+            [objects.PciDevicePool(vendor_id='8086', product_id='15ed',
+                                   numa_node=1, count=1)])
         host.numa_topology = fakes.NUMA_TOPOLOGY
         host.consume_from_request(req_spec)
         self.assertIsInstance(req_spec.numa_topology,
@@ -1602,7 +1601,7 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertIsNone(host.updated)
         fake_updated = mock.sentinel.fake_updated
         host.updated = fake_updated
-        host.pci_stats = pci_stats.PciDeviceStats()
+        host.pci_stats = pci_stats.PciDeviceStats(objects.NUMATopology())
         with mock.patch.object(host.pci_stats, 'apply_requests',
                                side_effect=exception.PciDeviceRequestFailed):
             host.consume_from_request(req_spec)

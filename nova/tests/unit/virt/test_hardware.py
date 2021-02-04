@@ -2831,7 +2831,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
         pci_request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': '8086'}])
         pci_reqs = [pci_request]
-        pci_stats = stats.PciDeviceStats()
+        pci_stats = stats.PciDeviceStats(objects.NUMATopology())
         with mock.patch.object(stats.PciDeviceStats,
                 'support_requests', return_value= True):
             fitted_instance1 = hw.numa_fit_instance_to_host(self.host,
@@ -2845,7 +2845,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
         pci_request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': '8086'}])
         pci_reqs = [pci_request]
-        pci_stats = stats.PciDeviceStats()
+        pci_stats = stats.PciDeviceStats(objects.NUMATopology())
         with mock.patch.object(stats.PciDeviceStats,
                 'support_requests', return_value= False):
             fitted_instance1 = hw.numa_fit_instance_to_host(
@@ -2861,6 +2861,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
             test_dict = copy.copy(fake_pci.fake_pool_dict)
             test_dict['numa_node'] = node
             return stats.PciDeviceStats(
+                objects.NUMATopology(),
                 [objects.PciDevicePool.from_dict(test_dict)])
 
         # the PCI device is found on host cell 1

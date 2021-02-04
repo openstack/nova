@@ -37,7 +37,7 @@ def _create_pci_stats(counts):
         return None
 
     pools = [_create_pci_pool(count) for count in counts]
-    return stats.PciDeviceStats(pools)
+    return stats.PciDeviceStats(objects.NUMATopology(), pools)
 
 
 class PCIWeigherTestCase(test.NoDBTestCase):

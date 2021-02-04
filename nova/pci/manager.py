@@ -63,7 +63,13 @@ class PciDevTracker(object):
         self.stale = {}
         self.node_id = compute_node.id
         self.dev_filter = whitelist.Whitelist(CONF.pci.passthrough_whitelist)
-        self.stats = stats.PciDeviceStats(dev_filter=self.dev_filter)
+        numa_topology = compute_node.numa_topology
+        if numa_topology:
+            # For legacy reasons, the NUMATopology is stored as a JSON blob.
+            # Deserialize it into a real object.
+            numa_topology = objects.NUMATopology.obj_from_db_obj(numa_topology)
+        self.stats = stats.PciDeviceStats(
+            numa_topology, dev_filter=self.dev_filter)
         self._context = context
         self.pci_devs = objects.PciDeviceList.get_by_compute_node(
             context, self.node_id)

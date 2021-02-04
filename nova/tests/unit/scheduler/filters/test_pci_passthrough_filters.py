@@ -70,7 +70,8 @@ class TestPCIPassthroughFilter(test.NoDBTestCase):
         requests = objects.InstancePCIRequests(requests=[request])
         spec_obj = objects.RequestSpec(pci_requests=requests)
         host = fakes.FakeHostState('host1', 'node1',
-            attribute_dict={'pci_stats': stats.PciDeviceStats()})
+            attribute_dict={
+                'pci_stats': stats.PciDeviceStats(objects.NUMATopology())})
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_pci_passthrough_with_pci_stats_none(self):

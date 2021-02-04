@@ -61,7 +61,7 @@ class DummyTracker(object):
             return_value=objects.PciDeviceList()
         ):
             self.pci_tracker = pci_manager.PciDevTracker(
-                ctxt, objects.ComputeNode(id=1))
+                ctxt, objects.ComputeNode(id=1, numa_topology=None))
 
 
 class ClaimTestCase(test.NoDBTestCase):

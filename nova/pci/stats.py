@@ -54,8 +54,9 @@ class PciDeviceStats(object):
 
     pool_keys = ['product_id', 'vendor_id', 'numa_node', 'dev_type']
 
-    def __init__(self, stats=None, dev_filter=None):
+    def __init__(self, numa_topology, stats=None, dev_filter=None):
         super(PciDeviceStats, self).__init__()
+        self.numa_topology = numa_topology
         # NOTE(sbauza): Stats are a PCIDevicePoolList object
         self.pools = [pci_pool.to_dict()
                       for pci_pool in stats] if stats else []
@@ -234,8 +235,7 @@ class PciDeviceStats(object):
             except exception.PciDeviceNotFound:
                 return
 
-    @staticmethod
-    def _filter_pools_for_spec(pools, request):
+    def _filter_pools_for_spec(self, pools, request):
         """Filter out pools that don't match the request's device spec.
 
         Exclude pools that do not match the specified ``vendor_id``,
@@ -254,8 +254,7 @@ class PciDeviceStats(object):
             if utils.pci_device_prop_match(pool, request_specs)
         ]
 
-    @classmethod
-    def _filter_pools_for_numa_cells(cls, pools, request, numa_cells):
+    def _filter_pools_for_numa_cells(self, pools, request, numa_cells):
         """Filter out pools with the wrong NUMA affinity, if required.
 
         Exclude pools that do not have *suitable* PCI NUMA affinity.
@@ -324,8 +323,7 @@ class PciDeviceStats(object):
         return sorted(
             pools, key=lambda pool: pool.get('numa_node') not in numa_cell_ids)
 
-    @classmethod
-    def _filter_pools_for_unrequested_pfs(cls, pools, request):
+    def _filter_pools_for_unrequested_pfs(self, pools, request):
         """Filter out pools with PFs, unless these are required.
 
         This is necessary in cases where PFs and VFs have the same product_id
@@ -347,8 +345,7 @@ class PciDeviceStats(object):
             ]
         return pools
 
-    @classmethod
-    def _filter_pools(cls, pools, request, numa_cells):
+    def _filter_pools(self, pools, request, numa_cells):
         """Determine if an individual PCI request can be met.
 
         Filter pools, which are collections of devices with similar traits, to
@@ -372,7 +369,7 @@ class PciDeviceStats(object):
         # Firstly, let's exclude all devices that don't match our spec (e.g.
         # they've got different PCI IDs or something)
         before_count = sum([pool['count'] for pool in pools])
-        pools = cls._filter_pools_for_spec(pools, request)
+        pools = self._filter_pools_for_spec(pools, request)
         after_count = sum([pool['count'] for pool in pools])
 
         if after_count < before_count:
@@ -389,7 +386,7 @@ class PciDeviceStats(object):
         # *assuming* we have devices and care about that, as determined by
         # policy
         before_count = after_count
-        pools = cls._filter_pools_for_numa_cells(pools, request, numa_cells)
+        pools = self._filter_pools_for_numa_cells(pools, request, numa_cells)
         after_count = sum([pool['count'] for pool in pools])
 
         if after_count < before_count:
@@ -405,7 +402,7 @@ class PciDeviceStats(object):
         # Finally, if we're not requesting PFs then we should not use these.
         # Exclude them.
         before_count = after_count
-        pools = cls._filter_pools_for_unrequested_pfs(pools, request)
+        pools = self._filter_pools_for_unrequested_pfs(pools, request)
         after_count = sum([pool['count'] for pool in pools])
 
         if after_count < before_count:
