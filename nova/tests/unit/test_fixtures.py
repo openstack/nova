@@ -88,6 +88,7 @@ class TestLogging(testtools.TestCase):
 class TestOSAPIFixture(testtools.TestCase):
     @mock.patch('nova.objects.Service.get_by_host_and_binary')
     @mock.patch('nova.objects.Service.create')
+    @mock.patch('nova.utils.raise_if_old_compute', new=mock.Mock())
     def test_responds_to_version(self, mock_service_create, mock_get):
         """Ensure the OSAPI server responds to calls sensibly."""
         self.useFixture(output.CaptureOutput())

@@ -26,6 +26,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_service import service
 from oslo_utils import importutils
+import six
 
 from nova.api import wsgi as api_wsgi
 from nova import baserpc
@@ -267,6 +268,17 @@ class Service(service.Service):
                           periodic_enable=periodic_enable,
                           periodic_fuzzy_delay=periodic_fuzzy_delay,
                           periodic_interval_max=periodic_interval_max)
+
+        # NOTE(gibi): This have to be after the service object creation as
+        # that is the point where we can safely use the RPC to the conductor.
+        # E.g. the Service.__init__ actually waits for the conductor to start
+        # up before it allows the service to be created. The
+        # raise_if_old_compute() depends on the RPC to be up and does not
+        # implement its own retry mechanism to connect to the conductor.
+        try:
+            utils.raise_if_old_compute()
+        except exception.TooOldComputeService as e:
+            LOG.warning(six.text_type(e))
 
         return service_obj
 
