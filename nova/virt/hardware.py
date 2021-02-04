@@ -1012,9 +1012,14 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
     LOG.debug('Selected cores for pinning: %s, in cell %s', pinning,
                                                             host_cell.id)
 
-    topology = objects.VirtCPUTopology(sockets=1,
-                                       cores=len(pinning) // threads_no,
-                                       threads=threads_no)
+    # TODO(stephenfin): we're using this attribute essentially as a container
+    # for the thread count used in '_get_desirable_cpu_topologies'; we should
+    # drop it and either use a non-persistent attrbiute or add a new
+    # 'min_threads' field
+    topology = objects.VirtCPUTopology(
+        sockets=1,
+        cores=len(instance_cell) // threads_no,
+        threads=threads_no)
     instance_cell.pin_vcpus(*pinning)
     instance_cell.cpu_topology = topology
     instance_cell.id = host_cell.id
