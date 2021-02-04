@@ -639,6 +639,6 @@ memory allocation turned on. The Hyper-V driver will ignore the configured
 instances with a NUMA topology.
 
 .. Links
-.. _`Image metadata`: https://docs.openstack.org/image-guide/image-metadata.html
+.. _`Image metadata`: https://docs.openstack.org/image-guide/introduction.html#image-metadata
 .. _`discussion`: http://lists.openstack.org/pipermail/openstack-dev/2016-March/090367.html
 .. _`MTTCG project`: http://wiki.qemu.org/Features/tcg-multithread

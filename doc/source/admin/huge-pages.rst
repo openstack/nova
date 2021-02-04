@@ -239,4 +239,4 @@ guide.
 .. Links
 .. _`Linux THP guide`: https://www.kernel.org/doc/Documentation/vm/transhuge.txt
 .. _`Linux hugetlbfs guide`: https://www.kernel.org/doc/Documentation/vm/hugetlbpage.txt
-.. _`Image metadata`: https://docs.openstack.org/image-guide/image-metadata.html
+.. _`Image metadata`: https://docs.openstack.org/image-guide/introduction.html#image-metadata
