@@ -41,6 +41,7 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import fields
+from nova import version
 from nova.virt import configdrive
 from nova.virt import hardware
 from nova.virt.hyperv import block_device_manager
@@ -395,7 +396,8 @@ class VMOps(object):
                                 cpus_per_numa_node,
                                 CONF.hyperv.limit_cpu_features,
                                 dynamic_memory_ratio,
-                                host_shutdown_action=host_shutdown_action)
+                                host_shutdown_action=host_shutdown_action,
+                                chassis_asset_tag=version.product_string())
 
         self._configure_remotefx(instance, vm_gen)
 
