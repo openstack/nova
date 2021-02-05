@@ -17,6 +17,7 @@ import webob
 
 from nova.api.openstack.compute import suspend_server as \
     suspend_server_v21
+from nova import exception
 from nova import objects
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
@@ -58,3 +59,10 @@ class SuspendServerTestsV21(admin_only_action_common.CommonTests):
 
     def test_actions_with_locked_instance(self):
         self._test_actions_with_locked_instance(['_suspend', '_resume'])
+
+    @mock.patch('nova.compute.api.API.suspend',
+                side_effect=exception.ForbiddenWithAccelerators)
+    def test_suspend_raises_http_forbidden(self, mock_suspend):
+        self.assertRaises(webob.exc.HTTPForbidden,
+                          self.controller._suspend,
+                          self.req, fakes.FAKE_UUID, body={})

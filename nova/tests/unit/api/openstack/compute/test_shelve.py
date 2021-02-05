@@ -59,6 +59,19 @@ class ShelveControllerTest(test.NoDBTestCase):
             webob.exc.HTTPConflict, self.controller._shelve,
             self.req, uuids.fake, {})
 
+    @mock.patch('nova.compute.api.API.shelve')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_shelve_raise_http_forbidden(
+        self, mock_get_instance, mock_shelve,
+    ):
+        mock_get_instance.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        mock_shelve.side_effect = exception.ForbiddenWithAccelerators
+
+        self.assertRaises(
+            webob.exc.HTTPForbidden, self.controller._shelve,
+            self.req, uuids.fake, {})
+
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_unshelve_locked_server(self, get_instance_mock):
         get_instance_mock.return_value = (

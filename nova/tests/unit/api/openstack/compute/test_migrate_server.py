@@ -300,6 +300,14 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
             expected_exc=webob.exc.HTTPInternalServerError,
             check_response=False)
 
+    @mock.patch('nova.compute.api.API.live_migrate',
+                side_effect=exception.ForbiddenWithAccelerators)
+    def test_live_migration_raises_http_forbidden(self, mock_migrate):
+        body = self._get_migration_body(host='hostname')
+        self.assertRaises(webob.exc.HTTPForbidden,
+                          self.controller._migrate_live,
+                          self.req, fakes.FAKE_UUID, body=body)
+
 
 class MigrateServerTestsV225(MigrateServerTestsV21):
 
