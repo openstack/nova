@@ -61,7 +61,6 @@ DEVICE_TYPE_FOR_VNIC_TYPE = {
 
 CONF = nova.conf.CONF
 
-_ALIAS_CAP_TYPE = ['pci']
 _ALIAS_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
@@ -75,7 +74,7 @@ _ALIAS_SCHEMA = {
         # should probably be removed.
         "capability_type": {
             "type": "string",
-            "enum": _ALIAS_CAP_TYPE,
+            "enum": ['pci'],
         },
         "product_id": {
             "type": "string",
