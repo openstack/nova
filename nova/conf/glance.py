@@ -60,29 +60,6 @@ Enable glance operation retries.
 Specifies the number of retries when uploading / downloading
 an image to / from glance. 0 means no retries.
 """),
-    cfg.ListOpt('allowed_direct_url_schemes',
-        default=[],
-        deprecated_for_removal=True,
-        deprecated_since='17.0.0',
-        deprecated_reason="""
-This was originally added for the 'nova.image.download.file' FileTransfer
-extension which was removed in the 16.0.0 Pike release. The
-'nova.image.download.modules' extension point is not maintained
-and there is no indication of its use in production clouds.
-""",
-        help="""
-List of url schemes that can be directly accessed.
-
-This option specifies a list of url schemes that can be downloaded
-directly via the direct_url. This direct_URL can be fetched from
-Image metadata which can be used by nova to get the
-image more efficiently. nova-compute could benefit from this by
-invoking a copy when it has access to the same file system as glance.
-
-Possible values:
-
-* [file], Empty list (default)
-"""),
     cfg.BoolOpt('verify_glance_signatures',
         default=False,
         help="""

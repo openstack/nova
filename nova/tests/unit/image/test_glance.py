@@ -687,43 +687,6 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         with testtools.ExpectedException(exception.ImageUnacceptable):
             service.download(ctx, mock.sentinel.image_id)
 
-    # TODO(stephenfin): Drop this test since it's not possible to run in
-    # production
-    @mock.patch('os.path.getsize', return_value=1)
-    @mock.patch('builtins.open')
-    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_method')
-    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
-    def test_download_direct_file_uri_v2(
-            self, show_mock, get_tran_mock, open_mock, getsize_mock):
-        self.flags(allowed_direct_url_schemes=['file'], group='glance')
-        show_mock.return_value = {
-            'locations': [
-                {
-                    'url': 'file:///files/image',
-                    'metadata': mock.sentinel.loc_meta
-                }
-            ]
-        }
-        tran_mod = mock.MagicMock()
-        get_tran_mock.return_value = tran_mod
-        client = mock.MagicMock()
-        ctx = mock.sentinel.ctx
-        writer = mock.MagicMock()
-        open_mock.return_value = writer
-        service = glance.GlanceImageServiceV2(client)
-        res = service.download(ctx, mock.sentinel.image_id,
-                               dst_path=mock.sentinel.dst_path)
-
-        self.assertIsNone(res)
-        self.assertFalse(client.call.called)
-        show_mock.assert_called_once_with(ctx,
-                                          mock.sentinel.image_id,
-                                          include_locations=True)
-        get_tran_mock.assert_called_once_with('file')
-        tran_mod.assert_called_once_with(ctx, mock.ANY,
-                                         mock.sentinel.dst_path,
-                                         mock.sentinel.loc_meta)
-
     @mock.patch('glanceclient.common.utils.IterableWithLength')
     @mock.patch('os.path.getsize', return_value=1)
     @mock.patch('builtins.open')
@@ -802,11 +765,11 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         # Test that we fall back to downloading to the dst_path
         # if the download method of the transfer module raised
         # an exception.
-        self.flags(allowed_direct_url_schemes=['file'], group='glance')
+        self.flags(enable_rbd_download=True, group='glance')
         show_mock.return_value = {
             'locations': [
                 {
-                    'url': 'file:///files/image',
+                    'url': 'rbd://cluser/pool/image/snapshot',
                     'metadata': mock.sentinel.loc_meta
                 }
             ]
@@ -829,7 +792,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         show_mock.assert_called_once_with(ctx,
                                           mock.sentinel.image_id,
                                           include_locations=True)
-        get_tran_mock.assert_called_once_with('file')
+        get_tran_mock.assert_called_once_with('rbd')
         tran_method.assert_called_once_with(ctx, mock.ANY,
                                             mock.sentinel.dst_path,
                                             mock.sentinel.loc_meta)
@@ -857,11 +820,11 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         # Test that we fall back to downloading to the dst_path
         # if no appropriate transfer module is found...
         # an exception.
-        self.flags(allowed_direct_url_schemes=['funky'], group='glance')
+        self.flags(enable_rbd_download=True, group='glance')
         show_mock.return_value = {
             'locations': [
                 {
-                    'url': 'file:///files/image',
+                    'url': 'funky://cluser/pool/image/snapshot',
                     'metadata': mock.sentinel.loc_meta
                 }
             ]
@@ -882,7 +845,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         show_mock.assert_called_once_with(ctx,
                                           mock.sentinel.image_id,
                                           include_locations=True)
-        get_tran_mock.assert_called_once_with('file')
+        get_tran_mock.assert_called_once_with('funky')
         client.call.assert_called_once_with(
             ctx, 2, 'data', args=(mock.sentinel.image_id,))
         fsync_mock.assert_called_once_with(writer)

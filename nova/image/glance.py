@@ -345,11 +345,7 @@ class GlanceImageServiceV2(object):
         """Calls out to Glance for data and writes data."""
 
         # First, check if image could be directly downloaded by special handler
-        # TODO(stephenfin): Remove check for 'allowed_direct_url_schemes' when
-        # we clean up tests since it's not used elsewhere
-        if ((CONF.glance.allowed_direct_url_schemes or
-             self._download_handlers) and dst_path is not None
-        ):
+        if (self._download_handlers and dst_path is not None):
             image = self.show(context, image_id, include_locations=True)
             for entry in image.get('locations', []):
                 loc_url = entry['url']
