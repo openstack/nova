@@ -211,23 +211,14 @@ def patch_tpool_proxy():
 
 patch_tpool_proxy()
 
-# For information about when MIN_LIBVIRT_VERSION and
-# NEXT_MIN_LIBVIRT_VERSION can be changed, consult
+# For information about when MIN_{LIBVIRT,QEMU}_VERSION and
+# NEXT_MIN_{LIBVIRT,QEMU}_VERSION can be changed, consult the following:
 #
-#   https://wiki.openstack.org/wiki/LibvirtDistroSupportMatrix
+# doc/source/reference/libvirt-distro-support-matrix.rst
 #
-# Currently this is effectively the min version for i686/x86_64
-# + KVM/QEMU, as other architectures/hypervisors require newer
-# versions. Over time, this will become a common min version
-# for all architectures/hypervisors, as this value rises to
-# meet them.
+# DO NOT FORGET to update this document when touching any versions below!
 MIN_LIBVIRT_VERSION = (6, 0, 0)
 MIN_QEMU_VERSION = (4, 2, 0)
-# TODO(berrange): Re-evaluate this at start of each release cycle
-# to decide if we want to plan a future min version bump.
-# MIN_LIBVIRT_VERSION can be updated to match this after
-# NEXT_MIN_LIBVIRT_VERSION  has been at a higher value for
-# one cycle
 NEXT_MIN_LIBVIRT_VERSION = (7, 0, 0)
 NEXT_MIN_QEMU_VERSION = (5, 2, 0)
 
