@@ -163,7 +163,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.INIT_VERSION + 1,
         ]
 
-        mitaka_placeholders = list(range(320, 330))
         newton_placeholders = list(range(335, 345))
         ocata_placeholders = list(range(348, 358))
         pike_placeholders = list(range(363, 373))
@@ -177,7 +176,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         victoria_placeholders = list(range(413, 418))
 
         return (special +
-                mitaka_placeholders +
                 newton_placeholders +
                 ocata_placeholders +
                 pike_placeholders +
@@ -244,43 +242,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_330(self, engine, data):
-        # Just a sanity-check migration
-        pass
-
-    def _check_331(self, engine, data):
-        self.assertColumnExists(engine, 'virtual_interfaces', 'tag')
-        self.assertColumnExists(engine, 'block_device_mapping', 'tag')
-
-    def _check_332(self, engine, data):
-        self.assertColumnExists(engine, 'instance_extra', 'keypairs')
-
-    def _check_333(self, engine, data):
-        self.assertColumnExists(engine, 'console_auth_tokens', 'id')
-        self.assertColumnExists(engine, 'console_auth_tokens', 'token_hash')
-        self.assertColumnExists(engine, 'console_auth_tokens', 'console_type')
-        self.assertColumnExists(engine, 'console_auth_tokens', 'host')
-        self.assertColumnExists(engine, 'console_auth_tokens', 'port')
-        self.assertColumnExists(engine, 'console_auth_tokens',
-                                'internal_access_path')
-        self.assertColumnExists(engine, 'console_auth_tokens',
-                                'instance_uuid')
-        self.assertColumnExists(engine, 'console_auth_tokens', 'expires')
-        self.assertIndexMembers(engine, 'console_auth_tokens',
-            'console_auth_tokens_instance_uuid_idx',
-            ['instance_uuid'])
-        self.assertIndexMembers(engine, 'console_auth_tokens',
-            'console_auth_tokens_host_expires_idx',
-            ['host', 'expires'])
-        self.assertIndexMembers(engine, 'console_auth_tokens',
-            'console_auth_tokens_token_hash_idx',
-            ['token_hash'])
-
-    def _check_334(self, engine, data):
-        self.assertColumnExists(engine, 'instance_extra', 'device_metadata')
-        self.assertColumnExists(engine, 'shadow_instance_extra',
-                                        'device_metadata')
 
     def _check_345(self, engine, data):
         # NOTE(danms): Just a sanity-check migration

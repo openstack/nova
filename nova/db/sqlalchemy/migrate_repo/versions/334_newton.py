@@ -64,6 +64,7 @@ def _create_shadow_tables(migrate_engine):
             'inventories',
             'allocations',
             'resource_provider_aggregates',
+            'console_auth_tokens',
         ):
             continue
 
@@ -232,6 +233,7 @@ def upgrade(migrate_engine):
         Column('disk_bus', String(length=255), nullable=True),
         Column('boot_index', Integer),
         Column('image_id', String(length=36), nullable=True),
+        Column('tag', String(255)),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -326,6 +328,26 @@ def upgrade(migrate_engine):
         ),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
+    )
+
+    console_auth_tokens = Table('console_auth_tokens', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('token_hash', String(255), nullable=False),
+        Column('console_type', String(255), nullable=False),
+        Column('host', String(255), nullable=False),
+        Column('port', Integer, nullable=False),
+        Column('internal_access_path', String(255)),
+        Column('instance_uuid', String(36), nullable=False),
+        Column('expires', Integer, nullable=False),
+        Index('console_auth_tokens_instance_uuid_idx', 'instance_uuid'),
+        Index('console_auth_tokens_host_expires_idx', 'host', 'expires'),
+        Index('console_auth_tokens_token_hash_idx', 'token_hash'),
+        UniqueConstraint(
+            'token_hash', name='uniq_console_auth_tokens0token_hash'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
     )
 
     console_pools = Table('console_pools', meta,
@@ -698,6 +720,8 @@ def upgrade(migrate_engine):
         Column('flavor', Text, nullable=True),
         Column('vcpu_model', Text, nullable=True),
         Column('migration_context', Text, nullable=True),
+        Column('keypairs', Text, nullable=True),
+        Column('device_metadata', Text, nullable=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -1136,6 +1160,7 @@ def upgrade(migrate_engine):
         Column('uuid', String(length=36)),
         Column('instance_uuid', String(length=36), nullable=True),
         Column('deleted', Integer),
+        Column('tag', String(255)),
         UniqueConstraint(
             'address', 'deleted',
             name='uniq_virtual_interfaces0address0deleted'),
@@ -1180,7 +1205,8 @@ def upgrade(migrate_engine):
     )
 
     # create all tables
-    tables = [instances, aggregates, console_pools, instance_types,
+    tables = [instances, aggregates, console_auth_tokens,
+              console_pools, instance_types,
               security_groups, snapshots,
               # those that are children and others later
               agent_builds, aggregate_hosts, aggregate_metadata,
