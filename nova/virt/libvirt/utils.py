@@ -592,7 +592,8 @@ def mdev_uuid2name(mdev_uuid: str) -> str:
 
 def get_flags_by_flavor_specs(flavor: 'objects.Flavor') -> ty.Set[str]:
     req_spec = objects.RequestSpec(flavor=flavor)
-    resource_request = scheduler_utils.ResourceRequest(req_spec)
+    resource_request = scheduler_utils.ResourceRequest.from_request_spec(
+        req_spec)
     required_traits = resource_request.all_required_traits
 
     flags = [TRAITS_CPU_MAPPING[trait] for trait in required_traits

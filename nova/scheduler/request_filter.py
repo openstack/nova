@@ -66,7 +66,7 @@ def isolate_aggregates(ctxt, request_spec):
         return False
 
     # Get required traits set in flavor and image
-    res_req = utils.ResourceRequest(request_spec)
+    res_req = utils.ResourceRequest.from_request_spec(request_spec)
     required_traits = res_req.all_required_traits
 
     keys = ['trait:%s' % trait for trait in required_traits]

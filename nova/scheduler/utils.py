@@ -57,7 +57,30 @@ class ResourceRequest(object):
     XS_KEYPAT = re.compile(r"^(%s)([a-zA-Z0-9_-]{1,64})?:(.*)$" %
                            '|'.join((XS_RES_PREFIX, XS_TRAIT_PREFIX)))
 
-    def __init__(self, request_spec, enable_pinning_translate=True):
+    def __init__(self):
+        """Create an empty ResourceRequest
+
+        Do not call this directly, use the existing static factory methods
+        from_*()
+        """
+        self._rg_by_id: ty.Dict[str, objects.RequestGroup] = {}
+        self._group_policy: ty.Optional[str] = None
+        # Default to the configured limit but _limit can be
+        # set to None to indicate "no limit".
+        self._limit = CONF.scheduler.max_placement_results
+        self._root_required: ty.Set[str] = set()
+        self._root_forbidden: ty.Set[str] = set()
+        self.suffixed_groups_from_flavor = 0
+        # TODO(stephenfin): Remove this parameter once we drop support for
+        # 'vcpu_pin_set'
+        self.cpu_pinning_requested = False
+
+    @classmethod
+    def from_request_spec(
+        cls,
+        request_spec: 'objects.RequestSpec',
+        enable_pinning_translate: bool = True
+    ) -> 'ResourceRequest':
         """Create a new instance of ResourceRequest from a RequestSpec.
 
         Examines the flavor, flavor extra specs, (optional) image metadata,
@@ -102,17 +125,13 @@ class ResourceRequest(object):
         :param request_spec: An instance of ``objects.RequestSpec``.
         :param enable_pinning_translate: True if the CPU policy extra specs
             should be translated to placement resources and traits.
+        :return: a ResourceRequest instance
         """
-        # { ident: RequestGroup }
-        self._rg_by_id = {}
-        self._group_policy = None
+        res_req = cls()
         # root_required+=these
-        self._root_required = request_spec.root_required
+        res_req._root_required = request_spec.root_required
         # root_required+=!these
-        self._root_forbidden = request_spec.root_forbidden
-        # Default to the configured limit but _limit can be
-        # set to None to indicate "no limit".
-        self._limit = CONF.scheduler.max_placement_results
+        res_req._root_forbidden = request_spec.root_forbidden
 
         # TODO(efried): Handle member_of[$S], which will need to be reconciled
         # with destination.aggregates handling in resources_from_request_spec
@@ -124,36 +143,35 @@ class ResourceRequest(object):
             image = objects.ImageMeta(properties=objects.ImageMetaProps())
 
         # Parse the flavor extra specs
-        self._process_extra_specs(request_spec.flavor)
+        res_req._process_extra_specs(request_spec.flavor)
 
-        self.suffixed_groups_from_flavor = self.get_num_of_suffixed_groups()
+        # NOTE(gibi): this assumes that _process_extra_specs() was already
+        # called but _process_requested_resources() hasn't called it yet.
+        res_req.suffixed_groups_from_flavor = (
+            res_req.get_num_of_suffixed_groups())
 
         # Now parse the (optional) image metadata
-        self._process_image_meta(image)
-
-        # TODO(stephenfin): Remove this parameter once we drop support for
-        # 'vcpu_pin_set'
-        self.cpu_pinning_requested = False
+        res_req._process_image_meta(image)
 
         if enable_pinning_translate:
             # Next up, let's handle those pesky CPU pinning policies
-            self._translate_pinning_policies(request_spec.flavor, image)
+            res_req._translate_pinning_policies(request_spec.flavor, image)
 
         # Add on any request groups that came from outside of the flavor/image,
         # e.g. from ports or device profiles.
-        self._process_requested_resources(request_spec)
+        res_req._process_requested_resources(request_spec)
 
         # Parse the flavor itself, though we'll only use these fields if they
         # don't conflict with something already provided by the flavor extra
         # specs. These are all added to the unsuffixed request group.
-        merged_resources = self.merged_resources()
+        merged_resources = res_req.merged_resources()
 
         if (orc.VCPU not in merged_resources and
                 orc.PCPU not in merged_resources):
-            self._add_resource(orc.VCPU, request_spec.vcpus)
+            res_req._add_resource(orc.VCPU, request_spec.vcpus)
 
         if orc.MEMORY_MB not in merged_resources:
-            self._add_resource(orc.MEMORY_MB, request_spec.memory_mb)
+            res_req._add_resource(orc.MEMORY_MB, request_spec.memory_mb)
 
         if orc.DISK_GB not in merged_resources:
             disk = request_spec.ephemeral_gb
@@ -162,15 +180,17 @@ class ResourceRequest(object):
                 disk += request_spec.root_gb
 
             if disk:
-                self._add_resource(orc.DISK_GB, disk)
+                res_req._add_resource(orc.DISK_GB, disk)
 
-        self._translate_memory_encryption(request_spec.flavor, image)
+        res_req._translate_memory_encryption(request_spec.flavor, image)
 
-        self._translate_vpmems_request(request_spec.flavor)
+        res_req._translate_vpmems_request(request_spec.flavor)
 
-        self._translate_vtpm_request(request_spec.flavor, image)
+        res_req._translate_vtpm_request(request_spec.flavor, image)
 
-        self.strip_zeros()
+        res_req.strip_zeros()
+
+        return res_req
 
     def _process_requested_resources(self, request_spec):
         requested_resources = (request_spec.requested_resources
@@ -554,7 +574,7 @@ def resources_from_flavor(instance, flavor):
     # just merge together all the resources specified in the flavor and pass
     # them along.  This will need to be adjusted when nested and/or shared RPs
     # are in play.
-    res_req = ResourceRequest(req_spec)
+    res_req = ResourceRequest.from_request_spec(req_spec)
 
     return res_req.merged_resources()
 
@@ -573,7 +593,8 @@ def resources_from_request_spec(ctxt, spec_obj, host_manager,
     :return: A ResourceRequest object.
     :raises NoValidHost: If the specified host/node is not found in the DB.
     """
-    res_req = ResourceRequest(spec_obj, enable_pinning_translate)
+    res_req = ResourceRequest.from_request_spec(
+        spec_obj, enable_pinning_translate)
 
     # values to get the destination target compute uuid
     target_host = None
