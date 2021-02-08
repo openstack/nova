@@ -534,6 +534,29 @@ class _TestBlockDeviceMappingListObject(object):
             self.context, uuids.bdm_instance)
         self.assertRaises(exception.UndefinedRootBDM, bdm_list.root_bdm)
 
+    @mock.patch.object(db, 'block_device_mapping_get_all_by_volume_id')
+    def test_get_by_volume(self, get_all_by_volume_id):
+        fakes = [
+            self.fake_bdm(123, instance_uuid=uuids.instance_1),
+            self.fake_bdm(456, instance_uuid=uuids.instance_2),
+        ]
+        get_all_by_volume_id.return_value = fakes
+        bdm_list = objects.BlockDeviceMappingList.get_by_volume(
+            self.context, uuids.volume_id)
+        for faked, res in zip(fakes, bdm_list):
+            self.assertIsInstance(res, objects.BlockDeviceMapping)
+            self.assertEqual(faked['id'], res.id)
+
+    @mock.patch.object(db, 'block_device_mapping_get_all_by_volume_id',
+        new=mock.Mock(return_value=None))
+    def test_get_by_volume_no_result(self):
+        self.assertRaises(
+            exception.VolumeBDMNotFound,
+            objects.BlockDeviceMappingList.get_by_volume,
+            self.context,
+            uuids.volume_id,
+        )
+
 
 class TestBlockDeviceMappingListObject(test_objects._LocalTest,
                                        _TestBlockDeviceMappingListObject):

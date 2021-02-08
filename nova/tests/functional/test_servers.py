@@ -1033,7 +1033,7 @@ class ServerTestV220(integrated_helpers._IntegratedTestBase):
         # Test attach volume
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
         with test.nested(mock.patch.object(compute_api.API,
-                            '_check_volume_already_attached_to_instance'),
+                            '_check_volume_already_attached'),
                          mock.patch.object(volume.cinder.API,
                                         'check_availability_zone'),
                          mock.patch.object(volume.cinder.API,

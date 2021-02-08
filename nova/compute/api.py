@@ -23,6 +23,7 @@ import collections
 import functools
 import re
 import string
+import typing as ty
 
 from castellan import key_manager
 import os_traits
@@ -4602,47 +4603,53 @@ class API(base.Base):
             volume_bdm.save()
         return volume_bdm
 
-    def _check_volume_already_attached_to_instance(self, context, instance,
-                                                   volume_id):
-        """Avoid attaching the same volume to the same instance twice.
-
-           As the new Cinder flow (microversion 3.44) is handling the checks
-           differently and allows to attach the same volume to the same
-           instance twice to enable live_migrate we are checking whether the
-           BDM already exists for this combination for the new flow and fail
-           if it does.
-        """
-
-        try:
-            objects.BlockDeviceMapping.get_by_volume_and_instance(
-                context, volume_id, instance.uuid)
-
-            msg = _("volume %s already attached") % volume_id
-            raise exception.InvalidVolume(reason=msg)
-        except exception.VolumeBDMNotFound:
-            pass
-
     def _check_volume_already_attached(
-        self, context: nova_context.RequestContext, volume_id: str
+        self,
+        context: nova_context.RequestContext,
+        instance: objects.Instance,
+        volume: ty.Mapping[str, ty.Any],
     ):
-        """Avoid allowing a non-multiattach volumes being attached twice
+        """Avoid duplicate volume attachments.
 
-        Unlike the above _check_volume_already_attached_to_instance check we
-        also need to ensure that non-multiattached volumes are not attached to
-        multiple instances. This check is also carried out later by c-api
-        itself but it can however be circumvented by admins resetting the state
-        of an attached volume to available. As a result we also need to perform
-        a check within Nova before creating a new BDM for the attachment.
+        Since the 3.44 Cinder microversion, Cinder allows us to attach the same
+        volume to the same instance twice. This is ostensibly to enable live
+        migration, but it's not something we want to occur outside of this
+        particular code path.
+
+        In addition, we also need to ensure that non-multiattached volumes are
+        not attached to multiple instances. This check is also carried out
+        later by c-api itself but it can however be circumvented by admins
+        resetting the state of an attached volume to available. As a result we
+        also need to perform a check within Nova before creating a new BDM for
+        the attachment.
+
+        :param context: nova auth RequestContext
+        :param instance: Instance object
+        :param volume: volume dict from cinder
         """
+        # Fetch a list of active bdms for the volume, return if none are found.
         try:
-            bdm = objects.BlockDeviceMapping.get_by_volume(
-                context, volume_id)
-            msg = _("volume %(volume_id)s is already attached to instance "
-                    "%(instance_uuid)s") % {'volume_id': volume_id,
-                    'instance_uuid': bdm.instance_uuid}
-            raise exception.InvalidVolume(reason=msg)
+            bdms = objects.BlockDeviceMappingList.get_by_volume(
+                context, volume['id'])
         except exception.VolumeBDMNotFound:
-            pass
+            return
+
+        # Fail if the volume isn't multiattach but BDMs already exist
+        if not volume.get('multiattach'):
+            instance_uuids = ' '.join(f"{b.instance_uuid}" for b in bdms)
+            msg = _(
+                "volume %(volume_id)s is already attached to instances: "
+                "%(instance_uuids)s"
+            ) % {
+                'volume_id': volume['id'],
+                'instance_uuids': instance_uuids
+            }
+            raise exception.InvalidVolume(reason=msg)
+
+        # Fail if the volume is already attached to our instance
+        if any(b for b in bdms if b.instance_uuid == instance.uuid):
+            msg = _("volume %s already attached") % volume['id']
+            raise exception.InvalidVolume(reason=msg)
 
     def _check_attach_and_reserve_volume(self, context, volume, instance,
                                          bdm, supports_multiattach=False,
@@ -4780,19 +4787,10 @@ class API(base.Base):
         # _check_attach_and_reserve_volume and Cinder will allow multiple
         # attachments between the same volume and instance but the old flow
         # API semantics don't allow that so we enforce it here.
-        self._check_volume_already_attached_to_instance(context,
-                                                        instance,
-                                                        volume_id)
-        volume = self.volume_api.get(context, volume_id)
-
         # NOTE(lyarwood): Ensure that non multiattach volumes don't already
         # have active block device mappings present in Nova.
-        # TODO(lyarwood): Merge this into the
-        # _check_volume_already_attached_to_instance check once
-        # BlockDeviceMappingList provides a list of active bdms per volume so
-        # we can preform a single lookup for both checks.
-        if not volume.get('multiattach', False):
-            self._check_volume_already_attached(context, volume_id)
+        volume = self.volume_api.get(context, volume_id)
+        self._check_volume_already_attached(context, instance, volume)
 
         is_shelved_offloaded = instance.vm_state == vm_states.SHELVED_OFFLOADED
         if is_shelved_offloaded:
@@ -4971,8 +4969,8 @@ class API(base.Base):
             self.volume_api.reserve_volume(context, new_volume['id'])
         else:
             try:
-                self._check_volume_already_attached_to_instance(
-                    context, instance, new_volume['id'])
+                self._check_volume_already_attached(
+                    context, instance, new_volume)
             except exception.InvalidVolume:
                 with excutils.save_and_reraise_exception():
                     self.volume_api.roll_detaching(context, old_volume['id'])
