@@ -234,6 +234,7 @@ def upgrade(migrate_engine):
         Column('boot_index', Integer),
         Column('image_id', String(length=36), nullable=True),
         Column('tag', String(255)),
+        Column('attachment_id', String(36), nullable=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -322,6 +323,8 @@ def upgrade(migrate_engine):
         Column('cpu_allocation_ratio', Float, nullable=True),
         Column('uuid', String(36), nullable=True),
         Column('disk_allocation_ratio', Float, nullable=True),
+        Column('mapped', Integer, default=0, nullable=True),
+        Index('compute_nodes_uuid_idx', 'uuid', unique=True),
         UniqueConstraint(
             'host', 'hypervisor_hostname', 'deleted',
             name='uniq_compute_nodes0host0hypervisor_hostname0deleted',
@@ -864,6 +867,7 @@ def upgrade(migrate_engine):
         Column('request_id', String(36), nullable=True),
         Column('numa_node', Integer, default=None),
         Column('parent_addr', String(12), nullable=True),
+        Column('uuid', String(36)),
         Index('ix_pci_devices_instance_uuid_deleted',
               'instance_uuid', 'deleted'),
         Index('ix_pci_devices_compute_node_id_deleted',
@@ -1079,6 +1083,8 @@ def upgrade(migrate_engine):
         # which did not generate the constraints
         Column('forced_down', Boolean(create_constraint=False), default=False),
         Column('version', Integer, default=0),
+        Column('uuid', String(36), nullable=True),
+        Index('services_uuid_idx', 'uuid', unique=True),
         UniqueConstraint(
             'host', 'topic', 'deleted',
             name='uniq_services0host0topic0deleted'),
@@ -1386,6 +1392,7 @@ def upgrade(migrate_engine):
         Index('networks_vlan_deleted_idx', networks.c.vlan,
               networks.c.deleted),
 
+        # pci_devices
         Index('ix_pci_devices_compute_node_id_parent_addr_deleted',
               pci_devices.c.compute_node_id,
               pci_devices.c.parent_addr,
