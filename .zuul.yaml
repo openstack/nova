@@ -136,12 +136,12 @@
       - ^tox.ini$
     vars:
       # We use the "all" environment for tempest_test_regex and
-      # tempest_black_regex.
+      # tempest_exclude_regex.
       tox_envlist: all
       # Only run compute API tests.
       tempest_test_regex: ^tempest\.api\.compute
       # Skip slow tests.
-      tempest_black_regex: .*\[.*\bslow\b.*\]
+      tempest_exclude_regex: .*\[.*\bslow\b.*\]
       devstack_local_conf:
         test-config:
           $TEMPEST_CONFIG:
@@ -185,7 +185,7 @@
     post-run: playbooks/nova-next/post.yaml
     vars:
       # We use the "all" environment for tempest_test_regex and
-      # tempest_black_regex.
+      # tempest_exclude_regex.
       tox_envlist: all
       # Run all compute API tests and most scenario tests at the default
       # concurrency (nproc/2 which is normally 4 in the gate).
@@ -193,8 +193,8 @@
       # The tempest.scenario.test_network* tests are skipped because they
       # (1) take a long time and (2) are already covered in the
       # tempest-slow* job. If this regex gets more complicated use
-      # tempest_test_blacklist.
-      tempest_black_regex: ^tempest.scenario.test_network
+      # tempest_test_exclude_list.
+      tempest_exclude_regex: ^tempest.scenario.test_network
       devstack_local_conf:
         post-config:
           $NOVA_CPU_CONF:
@@ -303,11 +303,11 @@
     irrelevant-files: *dsvm-irrelevant-files
     vars:
       # We use the "all" environment for tempest_test_regex and
-      # tempest_test_blacklist.
+      # tempest_test_exclude_list.
       tox_envlist: all
       # Run compute API and scenario tests.
       tempest_test_regex: ^tempest\.(scenario|(api\.compute))
-      tempest_test_blacklist: '{{ ansible_user_dir }}/{{ zuul.projects["opendev.org/openstack/nova"].src_dir }}/devstack/nova-multi-cell-blacklist.txt'
+      tempest_test_exclude_list: '{{ ansible_user_dir }}/{{ zuul.projects["opendev.org/openstack/nova"].src_dir }}/devstack/nova-multi-cell-exclude-list.txt'
       devstack_local_conf:
         post-config:
           $NOVA_CONF:

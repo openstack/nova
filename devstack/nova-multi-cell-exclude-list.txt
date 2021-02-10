@@ -1,4 +1,4 @@
-# --blacklist-file contents for the nova-multi-cell job defined in .zuul.yaml
+# --exclude-list contents for the nova-multi-cell job defined in .zuul.yaml
 # See: https://stestr.readthedocs.io/en/latest/MANUAL.html#test-selection
 
 # Exclude tempest.scenario.test_network tests since they are slow and
