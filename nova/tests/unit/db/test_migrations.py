@@ -162,7 +162,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.INIT_VERSION + 1,
         ]
 
-        queens_placeholders = list(range(379, 389))
         # We forgot to add the rocky placeholder. We've also switched to 5
         # placeholders per cycle since the rate of DB changes has dropped
         # significantly
@@ -172,7 +171,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         victoria_placeholders = list(range(413, 418))
 
         return (special +
-                queens_placeholders +
                 stein_placeholders +
                 train_placeholders +
                 ussuri_placeholders +
@@ -230,16 +228,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_389(self, engine, data):
-        self.assertIndexMembers(engine, 'aggregate_metadata',
-                                'aggregate_metadata_value_idx',
-                                ['value'])
-
-    def _check_390(self, engine, data):
-        self.assertColumnExists(engine, 'instance_extra', 'trusted_certs')
-        self.assertColumnExists(engine, 'shadow_instance_extra',
-                                'trusted_certs')
 
     def _check_391(self, engine, data):
         self.assertColumnExists(engine, 'block_device_mapping', 'volume_type')
