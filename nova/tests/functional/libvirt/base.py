@@ -43,17 +43,7 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
 
         super(ServersTestBase, self).setUp()
 
-        # Replace libvirt with fakelibvirt
         self.useFixture(fake_imagebackend.ImageBackendFixture())
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.libvirt',
-            fakelibvirt))
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.host.libvirt',
-            fakelibvirt))
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.guest.libvirt',
-            fakelibvirt))
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
         self.useFixture(fixtures.MockPatch(
