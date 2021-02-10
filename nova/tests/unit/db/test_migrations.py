@@ -43,7 +43,6 @@ from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as oslodbutils
 from oslotest import timeout
 import sqlalchemy
-from sqlalchemy.engine import reflection
 import sqlalchemy.exc
 import testtools
 
@@ -163,7 +162,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             self.INIT_VERSION + 1,
         ]
 
-        pike_placeholders = list(range(363, 373))
         queens_placeholders = list(range(379, 389))
         # We forgot to add the rocky placeholder. We've also switched to 5
         # placeholders per cycle since the rate of DB changes has dropped
@@ -174,7 +172,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         victoria_placeholders = list(range(413, 418))
 
         return (special +
-                pike_placeholders +
                 queens_placeholders +
                 stein_placeholders +
                 train_placeholders +
@@ -233,38 +230,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
-
-    def _check_373(self, engine, data):
-        self.assertColumnExists(engine, 'migrations', 'uuid')
-
-    def _check_374(self, engine, data):
-        self.assertColumnExists(engine, 'block_device_mapping', 'uuid')
-        self.assertColumnExists(engine, 'shadow_block_device_mapping', 'uuid')
-
-        inspector = reflection.Inspector.from_engine(engine)
-        constraints = inspector.get_unique_constraints('block_device_mapping')
-        constraint_names = [constraint['name'] for constraint in constraints]
-        self.assertIn('uniq_block_device_mapping0uuid', constraint_names)
-
-    def _check_375(self, engine, data):
-        self.assertColumnExists(engine, 'console_auth_tokens',
-                                'access_url_base')
-
-    def _check_376(self, engine, data):
-        self.assertIndexMembers(
-            engine, 'console_auth_tokens',
-            'console_auth_tokens_token_hash_instance_uuid_idx',
-            ['token_hash', 'instance_uuid'])
-
-    def _check_377(self, engine, data):
-        self.assertIndexMembers(engine, 'migrations',
-                                'migrations_updated_at_idx', ['updated_at'])
-
-    def _check_378(self, engine, data):
-        self.assertIndexMembers(
-            engine, 'instance_actions',
-            'instance_actions_instance_uuid_updated_at_idx',
-            ['instance_uuid', 'updated_at'])
 
     def _check_389(self, engine, data):
         self.assertIndexMembers(engine, 'aggregate_metadata',
