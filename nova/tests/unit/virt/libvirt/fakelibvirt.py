@@ -1919,6 +1919,11 @@ class FakeLibvirtFixture(fixtures.Fixture):
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.host.Host._log_host_capabilities'))
 
+        # Ensure tests perform the same on all host architectures
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.utils.get_arch',
+            return_value=obj_fields.Architecture.X86_64))
+
         disable_event_thread(self)
 
         if self.stub_os_vif:

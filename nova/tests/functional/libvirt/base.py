@@ -21,7 +21,6 @@ import mock
 from oslo_utils import units
 
 from nova import conf
-from nova.objects import fields as obj_fields
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.virt.libvirt import fake_imagebackend
@@ -81,13 +80,6 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         _p = mock.patch('nova.virt.libvirt.host.Host.get_connection')
         self.mock_conn = _p.start()
         self.addCleanup(_p.stop)
-
-        # Mock the 'get_arch' function as we may need to provide different host
-        # architectures during some tests. We default to x86_64
-        _a = mock.patch('nova.virt.libvirt.utils.get_arch')
-        self.mock_arch = _a.start()
-        self.mock_arch.return_value = obj_fields.Architecture.X86_64
-        self.addCleanup(_a.stop)
 
     def _setup_compute_service(self):
         # NOTE(stephenfin): We don't start the compute service here as we wish

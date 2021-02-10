@@ -1402,17 +1402,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_register_instance_machine_type', new=mock.Mock())
-    @mock.patch.object(fields.Architecture, "from_host",
-                       return_value=fields.Architecture.PPC64)
-    def test_min_version_ppc_ok(self, mock_arch):
+    def test_min_version_ppc_ok(self):
+        self.mock_get_arch.return_value = fields.Architecture.PPC64
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_register_instance_machine_type', new=mock.Mock())
-    @mock.patch.object(fields.Architecture, "from_host",
-                       return_value=fields.Architecture.S390X)
-    def test_min_version_s390_ok(self, mock_arch):
+    def test_min_version_s390_ok(self):
+        self.mock_get_arch.return_value = fields.Architecture.S390X
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
