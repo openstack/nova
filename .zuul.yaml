@@ -181,6 +181,7 @@
       volume multi-attach testing.
       Starting in Train, the job enabled counting quota usage from placement.
       Starting in Ussuri, the job was changed to multinode.
+      Starting in Wallaby, the job defaults to the q35 machine type.
       Runs all tempest compute API and most scenario tests concurrently.
     irrelevant-files: *dsvm-irrelevant-files
     # Run post-tempest tests like for nova-manage commands.
@@ -200,6 +201,11 @@
       devstack_local_conf:
         post-config:
           $NOVA_CPU_CONF:
+            libvirt:
+              # Increase the number of PCIe ports per instance given the q35
+              # machine type attaches more devices by default than pc
+              num_pcie_ports: 24
+              hw_machine_type: "x86_64=q35"
             compute:
               # Switch off the provider association refresh, which should
               # reduce the number of placement calls in steady state. Added in
@@ -221,6 +227,9 @@
           $TEMPEST_CONFIG:
             network-feature-enabled:
               qos_placement_physnet: public
+            compute-feature-enabled:
+              # The q35 machine type doesn't support an IDE bus
+              ide_bus: False
       devstack_localrc:
         # Added in Pike.
         NOVA_USE_SERVICE_TOKEN: True
