@@ -2654,6 +2654,44 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.InstanceNotFound,
                           db.instance_destroy, ctxt, instance['uuid'])
 
+    def test_instance_destroy_already_destroyed_race(self):
+        # Test the scenario where the instance record still exists when we
+        # begin instance_destroy but becomes deleted by a racing request
+        # before we call query.soft_delete.
+        ctxt = context.get_admin_context()
+        instance = self.create_instance_with_args()
+
+        # Save the real implementation of _instance_get_by_uuid before we mock
+        # it later.
+        real_get_i = sqlalchemy_api._instance_get_by_uuid
+
+        # We will delete the instance record before we begin and mock
+        # _instance_get_by_uuid to simulate the instance still existing at the
+        # beginning of instance_destroy by returning the instance only the
+        # first time it is called.
+        # We want to actually delete the instance record so that we can verify
+        # the behavior and handling when query.soft_delete is called after the
+        # record has been deleted.
+        db.instance_destroy(ctxt, instance['uuid'])
+
+        # Mock the _instance_get_by_uuid method to return the instance object
+        # the first time it is called and pass through to the real
+        # implementation for any subsequent calls.
+        def fake_get_i(*a, **kw):
+            if not fake_get_i.called:
+                fake_get_i.called = True
+                return instance
+            return real_get_i(*a, **kw)
+
+        with mock.patch.object(sqlalchemy_api,
+                               '_instance_get_by_uuid') as mock_get_i:
+            fake_get_i.called = False
+            mock_get_i.side_effect = fake_get_i
+            # We expect InstanceNotFound to be raised in the case of the
+            # record having already been deleted.
+            self.assertRaises(exception.InstanceNotFound,
+                              db.instance_destroy, ctxt, instance['uuid'])
+
     def test_instance_destroy_hard(self):
         ctxt = context.get_admin_context()
         instance = self.create_instance_with_args()

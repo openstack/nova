@@ -1162,6 +1162,14 @@ def instance_destroy(context, instance_uuid, constraint=None,
     # to make sure that the constraints were met.
     count = query.soft_delete()
     if count == 0:
+        # The failure to soft delete could be due to one of two things:
+        # 1) A racing request has deleted the instance out from under us
+        # 2) A constraint was not met
+        # Try to read the instance back once more and let it raise
+        # InstanceNotFound if 1) happened. This will give the caller an error
+        # that more accurately reflects the reason for the failure.
+        _instance_get_by_uuid(context, instance_uuid)
+        # Else, raise ConstraintNotMet if 2) happened.
         raise exception.ConstraintNotMet()
 
     models_to_delete = [
