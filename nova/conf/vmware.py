@@ -81,6 +81,18 @@ This option is ignored if serial_port_service_uri is not specified.
 
 * serial_port_service_uri
 """),
+    cfg.BoolOpt('serial_port_connected_default',
+                default=True,
+                help="""
+Configure, whether the added serial port should be connected by default
+
+This option can be used to enable the possibility to collect logs only for
+specific VMs, by reconfiguring and rebooting them in the vCenter.
+
+Related options:
+This option is ignored if serial_port_service_uri is not specified.
+* serial_port_service_uri
+"""),
     cfg.StrOpt('serial_log_dir',
                default='/opt/vmware/vspc',
                help="""

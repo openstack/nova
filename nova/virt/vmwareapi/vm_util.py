@@ -332,9 +332,9 @@ def create_serial_port_spec(client_factory):
     backing.proxyURI = CONF.vmware.serial_port_proxy_uri
 
     connectable_spec = client_factory.create('ns0:VirtualDeviceConnectInfo')
-    connectable_spec.startConnected = True
+    connectable_spec.startConnected = CONF.vmware.serial_port_connected_default
     connectable_spec.allowGuestControl = True
-    connectable_spec.connected = True
+    connectable_spec.connected = CONF.vmware.serial_port_connected_default
 
     serial_port = client_factory.create('ns0:VirtualSerialPort')
     serial_port.connectable = connectable_spec
