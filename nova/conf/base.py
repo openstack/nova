@@ -111,6 +111,21 @@ Clusters/resource-provider with this much usage are not used for freeing up a
 host for spawning (a big VM). Clusters found to reach that amount, that already
 have a host freed, get their free host removed.
 """),
+    cfg.StrOpt(
+        "flavorid_alias_prefix",
+        default="x_deprecated_",
+        help="""
+To enable gradual deprecation of old flavor names, the new flavors can specifiy
+an extra_spec key 'catalog:alias', which adds the flavor to the flavor listing
+a second time, only with a different flavorid, and the flavor name replaced by
+the value of 'catalog:alias'.
+The flavorid is changed by prepending this config value to the actual flavorid.
+When the flavor with this flavorid is inspected or used to deploy a server, the
+actual aliased flavor will be shown/used respectively.
+The 'x_' prefix in the default sorts aliased flavors towards the end of the
+flavor list (when sorting by flavorid, which is the API default). This
+decreases visibility for aliased flavors.
+""")
 ]
 
 
