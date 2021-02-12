@@ -532,7 +532,7 @@ class _TestRequestSpecObject(object):
         spec = objects.RequestSpec()
         self.assertEqual({}, spec.to_legacy_filter_properties_dict())
 
-    def test_ensure_network_metadata(self):
+    def test_ensure_network_information(self):
         network_a = fake_network_cache_model.new_network({
             'physical_network': 'foo', 'tunneled': False})
         vif_a = fake_network_cache_model.new_vif({'network': network_a})
@@ -553,14 +553,19 @@ class _TestRequestSpecObject(object):
 
         spec = objects.RequestSpec()
         self.assertNotIn('network_metadata', spec)
+        self.assertNotIn('requested_networks', spec)
 
-        spec.ensure_network_metadata(instance)
+        spec.ensure_network_information(instance)
         self.assertIn('network_metadata', spec)
         self.assertIsInstance(spec.network_metadata, objects.NetworkMetadata)
         self.assertEqual(spec.network_metadata.physnets, set(['foo', 'bar']))
         self.assertTrue(spec.network_metadata.tunneled)
+        self.assertEqual(4, len(spec.requested_networks))
+        for idx, reqnet in enumerate(spec.requested_networks):
+            self.assertEqual(nw_info[idx]['network']['id'], reqnet.network_id)
+            self.assertEqual(nw_info[idx]['id'], reqnet.port_id)
 
-    def test_ensure_network_metadata_missing(self):
+    def test_ensure_network_information_missing(self):
         nw_info = network_model.NetworkInfo([])
         info_cache = objects.InstanceInfoCache(network_info=nw_info,
                                                instance_uuid=uuids.instance)
@@ -569,9 +574,11 @@ class _TestRequestSpecObject(object):
 
         spec = objects.RequestSpec()
         self.assertNotIn('network_metadata', spec)
+        self.assertNotIn('requested_networks', spec)
 
-        spec.ensure_network_metadata(instance)
+        spec.ensure_network_information(instance)
         self.assertNotIn('network_metadata', spec)
+        self.assertNotIn('requested_networks', spec)
 
     @mock.patch.object(request_spec.RequestSpec,
             '_get_by_instance_uuid_from_db')

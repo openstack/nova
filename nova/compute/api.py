@@ -1546,6 +1546,10 @@ class API(base.Base):
             build_requests.append(build_request)
             instance = build_request.get_new_instance(context)
             instances.append(instance)
+            # NOTE(sbauza): Add the requested networks so the related scheduler
+            # pre-filter can verify them
+            if requested_networks is not None:
+                rs.requested_networks = requested_networks
             request_specs.append(rs)
 
         self.compute_task_api.schedule_and_build_instances(

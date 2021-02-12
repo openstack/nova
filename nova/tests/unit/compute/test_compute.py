@@ -8668,6 +8668,32 @@ class ComputeAPITestCase(BaseTestCase):
                          len(db.instance_get_all(self.context)))
         mock_secgroups.assert_called_once_with(mock.ANY, 'invalid_sec_group')
 
+    def test_create_instance_associates_requested_networks(self):
+        # Make sure create adds the requested networks to the RequestSpec
+
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=uuids.port_instance)])
+
+        with test.nested(
+                mock.patch.object(self.compute_api.compute_task_api,
+                                  'schedule_and_build_instances'),
+                mock.patch.object(self.compute_api.network_api,
+                                  'create_resource_requests',
+                                  return_value=(None, [])),
+        ) as (mock_sbi, _mock_create_resreqs):
+            self.compute_api.create(
+                self.context,
+                instance_type=self.default_flavor,
+                image_href=uuids.image_href_id,
+                requested_networks=requested_networks)
+
+            build_call = mock_sbi.call_args_list[0]
+            reqspec = build_call[1]['request_spec'][0]
+
+        self.assertEqual(1, len(reqspec.requested_networks))
+        self.assertEqual(uuids.port_instance,
+                         reqspec.requested_networks[0].port_id)
+
     def test_create_with_malformed_user_data(self):
         # Test an instance type with malformed user data.
 

@@ -502,7 +502,7 @@ class LiveMigrationTask(base.TaskBase):
                 cell=cell_mapping)
 
         request_spec.ensure_project_and_user_id(self.instance)
-        request_spec.ensure_network_metadata(self.instance)
+        request_spec.ensure_network_information(self.instance)
         compute_utils.heal_reqspec_is_bfv(
             self.context, request_spec, self.instance)
 

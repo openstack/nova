@@ -110,7 +110,8 @@ class RequestSpec(base.NovaObject):
                                                          default=None),
         # NOTE(efried): This field won't be persisted.
         'request_level_params': fields.ObjectField('RequestLevelParams'),
-        # NOTE(sbauza); This field won't be persisted.
+        # NOTE(sbauza); This field won't be persisted. For move operations, we
+        # reevaluate it using the network-related instance info_cache.
         'requested_networks': fields.ObjectField('NetworkRequestList')
     }
 
@@ -544,12 +545,16 @@ class RequestSpec(base.NovaObject):
         if 'user_id' not in self or self.user_id is None:
             self.user_id = instance.user_id
 
-    def ensure_network_metadata(self, instance):
+    def ensure_network_information(self, instance):
         if not (instance.info_cache and instance.info_cache.network_info):
+            # NOTE(sbauza): On create, the network_info field is null but we
+            # directly set the RequestSpec nested network_requests field, so we
+            # are fine returning here.
             return
 
         physnets = set([])
         tunneled = True
+        network_requests = []
 
         # physical_network and tunneled might not be in the cache for old
         # instances that haven't had their info_cache healed yet
@@ -561,8 +566,21 @@ class RequestSpec(base.NovaObject):
             tunneled |= vif.get('network', {}).get('meta', {}).get(
                 'tunneled', False)
 
+            # We also want to recreate the original NetworkRequests
+            # TODO(sbauza): We miss tag and pci_request_id information that is
+            # not stored in the VIF model to fully provide all fields
+            # FIXME(sbauza): We can't also guess whether the user provided us
+            # a specific IP address to use for create, and which one.
+            nr_args = {
+                'network_id': vif['network']['id'],
+                'port_id': vif['id'],
+            }
+            network_request = objects.NetworkRequest(**nr_args)
+            network_requests.append(network_request)
         self.network_metadata = objects.NetworkMetadata(
             physnets=physnets, tunneled=tunneled)
+        self.requested_networks = objects.NetworkRequestList(
+            objects=network_requests)
 
     @staticmethod
     def _from_db_object(context, spec, db_spec):

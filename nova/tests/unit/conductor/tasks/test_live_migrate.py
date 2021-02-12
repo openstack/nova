@@ -71,8 +71,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.heal_reqspec_is_bfv_mock = _p.start()
         self.addCleanup(_p.stop)
 
-        _p = mock.patch('nova.objects.RequestSpec.ensure_network_metadata')
-        self.ensure_network_metadata_mock = _p.start()
+        _p = mock.patch('nova.objects.RequestSpec.ensure_network_information')
+        self.ensure_network_information_mock = _p.start()
         self.addCleanup(_p.stop)
 
         _p = mock.patch(
@@ -154,7 +154,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         # When the task is executed with a destination it means the host is
         # being forced and we don't call the scheduler, so we don't need to
         # modify the request spec
-        self.ensure_network_metadata_mock.assert_not_called()
+        self.ensure_network_information_mock.assert_not_called()
 
     @mock.patch('nova.availability_zones.get_host_availability_zone',
                 return_value='nova')
@@ -415,7 +415,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_reset.assert_called_once_with()
-        self.ensure_network_metadata_mock.assert_called_once_with(
+        self.ensure_network_information_mock.assert_called_once_with(
             self.instance)
         self.heal_reqspec_is_bfv_mock.assert_called_once_with(
             self.context, self.fake_spec, self.instance)
@@ -699,7 +699,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         mock_setup.assert_called_once_with(self.context, self.fake_spec)
         mock_reset.assert_called_once_with()
-        self.ensure_network_metadata_mock.assert_called_once_with(
+        self.ensure_network_information_mock.assert_called_once_with(
             self.instance)
         self.heal_reqspec_is_bfv_mock.assert_called_once_with(
             self.context, self.fake_spec, self.instance)

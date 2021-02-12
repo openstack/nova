@@ -362,8 +362,8 @@ class _BaseTaskTestCase(object):
         self.heal_reqspec_is_bfv_mock = _p.start()
         self.addCleanup(_p.stop)
 
-        _p = mock.patch('nova.objects.RequestSpec.ensure_network_metadata')
-        self.ensure_network_metadata_mock = _p.start()
+        _p = mock.patch('nova.objects.RequestSpec.ensure_network_information')
+        self.ensure_network_information_mock = _p.start()
         self.addCleanup(_p.stop)
 
     def _prepare_rebuild_args(self, update_args=None):
@@ -1385,7 +1385,7 @@ class _BaseTaskTestCase(object):
             # ComputeTaskManager.
             if isinstance(self.conductor,
                           conductor_manager.ComputeTaskManager):
-                self.ensure_network_metadata_mock.assert_called_once_with(
+                self.ensure_network_information_mock.assert_called_once_with(
                     test.MatchType(objects.Instance))
                 self.heal_reqspec_is_bfv_mock.assert_called_once_with(
                     self.context, fake_spec, instance)
@@ -1397,7 +1397,7 @@ class _BaseTaskTestCase(object):
             else:
                 # RPC API tests won't have the same request spec or instance
                 # since they go over the wire.
-                self.ensure_network_metadata_mock.assert_called_once_with(
+                self.ensure_network_information_mock.assert_called_once_with(
                     test.MatchType(objects.Instance))
                 self.heal_reqspec_is_bfv_mock.assert_called_once_with(
                     self.context, test.MatchType(objects.RequestSpec),
@@ -1770,7 +1770,7 @@ class _BaseTaskTestCase(object):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
-            self.ensure_network_metadata_mock.assert_called_once_with(
+            self.ensure_network_information_mock.assert_called_once_with(
                 inst_obj)
             self.heal_reqspec_is_bfv_mock.assert_called_once_with(
                 self.context, fake_spec, inst_obj)
@@ -1820,7 +1820,7 @@ class _BaseTaskTestCase(object):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
-            self.ensure_network_metadata_mock.assert_called_once_with(
+            self.ensure_network_information_mock.assert_called_once_with(
                 inst_obj)
             self.heal_reqspec_is_bfv_mock.assert_called_once_with(
                 self.context, fake_spec, inst_obj)
