@@ -288,7 +288,7 @@ class LibvirtGenericVIFDriver(object):
         # In kernels 3.x, the number of queues on a tap interface
         # is limited to 8. From 4.0, the number is 256.
         # See: https://bugs.launchpad.net/nova/+bug/1570631
-        kernel_version = int(os.uname()[2].split(".")[0])
+        kernel_version = int(os.uname().release.split(".")[0])
         if kernel_version <= 2:
             return 1
         elif kernel_version == 3:

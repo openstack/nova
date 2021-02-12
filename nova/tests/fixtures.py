@@ -3145,9 +3145,14 @@ class CyborgFixture(fixtures.Fixture):
 
 class GenericPoisonFixture(fixtures.Fixture):
     POISON_THESE = (
-        ('netifaces.interfaces',
-         'a test environment should not be inspecting real interfaces on the '
-         'test node'),
+        (
+            'netifaces.interfaces',
+            'tests should not be inspecting real interfaces on the test node',
+        ),
+        (
+            'os.uname',
+            'tests should not be inspecting host information on the test node',
+        ),
     )
 
     def setUp(self):

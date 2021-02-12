@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+
 import fixtures
 import mock
 
@@ -20,6 +22,10 @@ from nova import test
 from nova.tests.unit.virt.disk.vfs import fakeguestfs
 from nova.virt.disk.vfs import guestfs as vfsimpl
 from nova.virt.image import model as imgmodel
+
+os_uname = collections.namedtuple(
+    'uname_result', ['sysname', 'nodename', 'release', 'version', 'machine'],
+)
 
 
 class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
@@ -326,10 +332,11 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         self.assertFalse(setup_os.called)
 
     @mock.patch('os.access')
-    @mock.patch('os.uname', return_value=('Linux', '', 'kernel_name'))
-    def test_appliance_setup_inspect_capabilties_fail_with_ubuntu(self,
-                                                                  mock_uname,
-                                                                  mock_access):
+    @mock.patch('os.uname', return_value=os_uname(
+        'Linux', '', 'kernel_name', '', ''))
+    def test_appliance_setup_inspect_capabilties_fail_with_ubuntu(
+        self, mock_uname, mock_access,
+    ):
         # In ubuntu os will default host kernel as 600 permission
         m = mock.MagicMock()
         m.launch.side_effect = Exception
