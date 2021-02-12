@@ -128,6 +128,53 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         # Verify that the pci_devices record has not been dropped
         self.assertNotIn('pci_devices', results)
 
+    def test_archive_deleted_rows_incomplete(self):
+        """This tests a scenario where archive_deleted_rows is run with
+        --max_rows and does not run to completion.
+
+        That is, the archive is stopped before all archivable records have been
+        archived. Specifically, the problematic state is when a single instance
+        becomes partially archived (example: 'instance_extra' record for one
+        instance has been archived while its 'instances' record remains). Any
+        access of the instance (example: listing deleted instances) that
+        triggers the retrieval of a dependent record that has been archived
+        away, results in undefined behavior that may raise an error.
+
+        We will force the system into a state where a single deleted instance
+        is partially archived. We want to verify that we can, for example,
+        successfully do a GET /servers/detail at any point between partial
+        archive_deleted_rows runs without errors.
+        """
+        # Boots a server, deletes it, and then tries to archive it.
+        server = self._create_server()
+        server_id = server['id']
+        # Assert that there are instance_actions. instance_actions are
+        # interesting since we don't soft delete them but they have a foreign
+        # key back to the instances table.
+        actions = self.api.get_instance_actions(server_id)
+        self.assertTrue(len(actions),
+                        'No instance actions for server: %s' % server_id)
+        self._delete_server(server)
+        # Archive deleted records iteratively, 1 row at a time, and try to do a
+        # GET /servers/detail between each run. All should succeed.
+        exceptions = []
+        while True:
+            _, _, archived = db.archive_deleted_rows(max_rows=1)
+            try:
+                # Need to use the admin API to list deleted servers.
+                self.admin_api.get_servers(search_opts={'deleted': True})
+            except Exception as ex:
+                exceptions.append(ex)
+            if archived == 0:
+                break
+        # FIXME(melwitt): OrphanedObjectError is raised because of the bug.
+        self.assertTrue(exceptions)
+        for ex in exceptions:
+            self.assertEqual(500, ex.response.status_code)
+            self.assertIn('OrphanedObjectError', str(ex))
+        # FIXME(melwitt): Uncomment when the bug is fixed.
+        # self.assertFalse(exceptions)
+
     def _get_table_counts(self):
         engine = sqlalchemy_api.get_engine()
         conn = engine.connect()
