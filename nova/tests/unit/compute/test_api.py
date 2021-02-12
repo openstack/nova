@@ -4242,7 +4242,7 @@ class _ComputeAPIUnitTestMixIn(object):
                             'cores': 1 + instance.flavor.vcpus,
                             'ram': 512 + instance.flavor.memory_mb},
             project_id=instance.project_id)
-        update_qfd.assert_called_once_with(admin_context, instance, False)
+        update_qfd.assert_called_once_with(admin_context, instance.uuid, False)
 
     @mock.patch('nova.objects.Quotas.get_all_by_project_and_user',
                 new=mock.MagicMock())
@@ -4283,7 +4283,7 @@ class _ComputeAPIUnitTestMixIn(object):
                             'cores': 1 + instance.flavor.vcpus,
                             'ram': 512 + instance.flavor.memory_mb},
             project_id=instance.project_id)
-        update_qfd.assert_called_once_with(self.context, instance, False)
+        update_qfd.assert_called_once_with(self.context, instance.uuid, False)
 
     @mock.patch.object(objects.InstanceAction, 'action_start')
     def test_external_instance_event(self, mock_action_start):
@@ -6002,7 +6002,8 @@ class _ComputeAPIUnitTestMixIn(object):
         inst = objects.Instance(uuid=uuid)
         im = objects.InstanceMapping(instance_uuid=uuid)
         mock_get.return_value = im
-        self.compute_api._update_queued_for_deletion(self.context, inst, True)
+        self.compute_api._update_queued_for_deletion(
+            self.context, inst.uuid, True)
         self.assertTrue(im.queued_for_delete)
         mock_get.assert_called_once_with(self.context, inst.uuid)
         mock_save.assert_called_once_with()

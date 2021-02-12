@@ -17,7 +17,6 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import policy_fixture
 
@@ -79,14 +78,8 @@ class TestDeleteWhileBooting(test.TestCase,
         # while booting" in compute/api fails after a different request has
         # deleted it.
         br_not_found = exception.BuildRequestNotFound(uuid=self.server['id'])
-        mock_get_br.side_effect = [self.br, br_not_found]
-        # FIXME(melwitt): Delete request fails due to the AttributeError.
-        ex = self.assertRaises(
-            client.OpenStackApiException, self._delete_server, self.server)
-        self.assertEqual(500, ex.response.status_code)
-        self.assertIn('AttributeError', str(ex))
-        # FIXME(melwitt): Uncomment when the bug is fixed.
-        # self._delete_server(self.server)
+        mock_get_br.side_effect = [self.br, br_not_found, br_not_found]
+        self._delete_server(self.server)
 
     @mock.patch('nova.objects.build_request.BuildRequest.get_by_instance_uuid')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
@@ -119,7 +112,7 @@ class TestDeleteWhileBooting(test.TestCase,
             context=self.ctxt, instance_uuid=self.server['id'],
             cell_mapping=self.cell_mappings['cell1'])
         mock_get_im.side_effect = [
-            no_cell_im, has_cell_im, has_cell_im, has_cell_im]
+            no_cell_im, has_cell_im, has_cell_im, has_cell_im, has_cell_im]
         # Simulate that the instance object has been created by the conductor
         # in the create path while the delete request is being processed.
         # First lookups are before the instance has been deleted and the last
@@ -127,7 +120,7 @@ class TestDeleteWhileBooting(test.TestCase,
         # request to make an instance object for testing.
         i = self.br.get_new_instance(self.ctxt)
         i_not_found = exception.InstanceNotFound(instance_id=self.server['id'])
-        mock_get_i.side_effect = [i, i, i, i_not_found]
+        mock_get_i.side_effect = [i, i, i, i_not_found, i_not_found]
 
         # Simulate that the conductor is running instance_destroy at the same
         # time as we are.
@@ -142,10 +135,4 @@ class TestDeleteWhileBooting(test.TestCase,
 
         self.stub_out(
             'nova.objects.instance.Instance.destroy', fake_instance_destroy)
-        # FIXME(melwitt): Delete request fails due to the AttributeError.
-        ex = self.assertRaises(
-            client.OpenStackApiException, self._delete_server, self.server)
-        self.assertEqual(500, ex.response.status_code)
-        self.assertIn('AttributeError', str(ex))
-        # FIXME(melwitt): Uncomment when the bug is fixed.
-        # self._delete_server(self.server)
+        self._delete_server(self.server)
