@@ -739,35 +739,41 @@ class Host(object):
 
         :returns: a config.LibvirtConfigCaps object
         """
-        if not self._caps:
-            xmlstr = self.get_connection().getCapabilities()
-            self._log_host_capabilities(xmlstr)
-            self._caps = vconfig.LibvirtConfigCaps()
-            self._caps.parse_str(xmlstr)
-            # NOTE(mriedem): Don't attempt to get baseline CPU features
-            # if libvirt can't determine the host cpu model.
-            if (hasattr(libvirt,
-                        'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES') and
-                    self._caps.host.cpu.model is not None):
-                try:
-                    xml_str = self._caps.host.cpu.to_xml()
-                    if isinstance(xml_str, bytes):
-                        xml_str = xml_str.decode('utf-8')
-                    features = self.get_connection().baselineCPU(
-                        [xml_str],
-                        libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
-                    if features:
-                        cpu = vconfig.LibvirtConfigCPU()
-                        cpu.parse_str(features)
-                        self._caps.host.cpu.features = cpu.features
-                except libvirt.libvirtError as ex:
-                    error_code = ex.get_error_code()
-                    if error_code == libvirt.VIR_ERR_NO_SUPPORT:
-                        LOG.warning("URI %(uri)s does not support full set"
-                                    " of host capabilities: %(error)s",
-                                     {'uri': self._uri, 'error': ex})
-                    else:
-                        raise
+        if self._caps:
+            return self._caps
+
+        xmlstr = self.get_connection().getCapabilities()
+        self._log_host_capabilities(xmlstr)
+        self._caps = vconfig.LibvirtConfigCaps()
+        self._caps.parse_str(xmlstr)
+
+        # NOTE(mriedem): Don't attempt to get baseline CPU features
+        # if libvirt can't determine the host cpu model.
+        if (
+            hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES') and
+            self._caps.host.cpu.model is not None
+        ):
+            try:
+                xml_str = self._caps.host.cpu.to_xml()
+                if isinstance(xml_str, bytes):
+                    xml_str = xml_str.decode('utf-8')
+                features = self.get_connection().baselineCPU(
+                    [xml_str],
+                    libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
+                if features:
+                    cpu = vconfig.LibvirtConfigCPU()
+                    cpu.parse_str(features)
+                    self._caps.host.cpu.features = cpu.features
+            except libvirt.libvirtError as ex:
+                error_code = ex.get_error_code()
+                if error_code == libvirt.VIR_ERR_NO_SUPPORT:
+                    LOG.warning(
+                        "URI %(uri)s does not support full set of host "
+                        "capabilities: %(error)s",
+                        {'uri': self._uri, 'error': ex})
+                else:
+                    raise
+
         return self._caps
 
     def get_domain_capabilities(self):

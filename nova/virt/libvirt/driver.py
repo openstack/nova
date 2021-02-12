@@ -5154,7 +5154,7 @@ class LibvirtDriver(driver.ComputeDriver):
             id_maps.extend(gid_maps)
         return id_maps
 
-    def _update_guest_cputune(self, guest, flavor, virt_type):
+    def _update_guest_cputune(self, guest, flavor):
         is_able = self._host.is_cpu_control_policy_capable()
 
         cputuning = ['shares', 'period', 'quota']
@@ -5164,7 +5164,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if wants_cputune and not is_able:
             raise exception.UnsupportedHostCPUControlPolicy()
 
-        if not is_able or virt_type not in ('lxc', 'kvm', 'qemu'):
+        if not is_able or CONF.libvirt.virt_type not in ('lxc', 'kvm', 'qemu'):
             return
 
         if guest.cputune is None:
@@ -5445,29 +5445,31 @@ class LibvirtDriver(driver.ComputeDriver):
         return GuestNumaConfig(None, guest_cpu_tune, guest_cpu_numa_config,
                                guest_numa_tune)
 
-    def _get_guest_os_type(self, virt_type):
+    def _get_guest_os_type(self):
         """Returns the guest OS type based on virt type."""
-        if virt_type == "lxc":
+        if CONF.libvirt.virt_type == "lxc":
             ret = fields.VMMode.EXE
         else:
             ret = fields.VMMode.HVM
         return ret
 
-    def _set_guest_for_rescue(self, rescue, guest, inst_path, virt_type,
-                              root_device_name):
+    def _set_guest_for_rescue(
+        self, rescue, guest, inst_path, root_device_name,
+    ):
         if rescue.get('kernel_id'):
             guest.os_kernel = os.path.join(inst_path, "kernel.rescue")
             guest.os_cmdline = ("root=%s %s" % (root_device_name, CONSOLE))
-            if virt_type == "qemu":
+            if CONF.libvirt.virt_type == "qemu":
                 guest.os_cmdline += " no_timer_check"
         if rescue.get('ramdisk_id'):
             guest.os_initrd = os.path.join(inst_path, "ramdisk.rescue")
 
-    def _set_guest_for_inst_kernel(self, instance, guest, inst_path, virt_type,
-                                root_device_name, image_meta):
+    def _set_guest_for_inst_kernel(
+        self, instance, guest, inst_path, root_device_name, image_meta,
+    ):
         guest.os_kernel = os.path.join(inst_path, "kernel")
         guest.os_cmdline = ("root=%s %s" % (root_device_name, CONSOLE))
-        if virt_type == "qemu":
+        if CONF.libvirt.virt_type == "qemu":
             guest.os_cmdline += " no_timer_check"
         if instance.ramdisk_id:
             guest.os_initrd = os.path.join(inst_path, "ramdisk")
@@ -5477,7 +5479,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if image_meta.properties.get("os_command_line"):
             guest.os_cmdline = image_meta.properties.os_command_line
 
-    def _set_clock(self, guest, os_type, image_meta, virt_type):
+    def _set_clock(self, guest, os_type, image_meta):
         # NOTE(mikal): Microsoft Windows expects the clock to be in
         # "localtime". If the clock is set to UTC, then you can use a
         # registry key to let windows know, but Microsoft says this is
@@ -5490,7 +5492,7 @@ class LibvirtDriver(driver.ComputeDriver):
             clk.offset = 'utc'
         guest.set_clock(clk)
 
-        if virt_type == "kvm":
+        if CONF.libvirt.virt_type == "kvm":
             self._set_kvm_timers(clk, os_type, image_meta)
 
     def _set_kvm_timers(self, clk, os_type, image_meta):
@@ -5531,19 +5533,18 @@ class LibvirtDriver(driver.ComputeDriver):
             tmhyperv.present = True
             clk.add_timer(tmhyperv)
 
-    def _set_features(self, guest, os_type, caps, virt_type, image_meta,
-            flavor):
+    def _set_features(self, guest, os_type, image_meta, flavor):
         hide_hypervisor_id = (strutils.bool_from_string(
                 flavor.extra_specs.get('hide_hypervisor_id')) or
                 strutils.bool_from_string(
                     flavor.extra_specs.get('hw:hide_hypervisor_id')) or
                 image_meta.properties.get('img_hide_hypervisor_id'))
 
-        if virt_type in ('qemu', 'kvm'):
+        if CONF.libvirt.virt_type in ('qemu', 'kvm'):
             guest.features.append(vconfig.LibvirtConfigGuestFeatureACPI())
             guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
 
-        if virt_type in ('qemu', 'kvm') and os_type == 'windows':
+        if CONF.libvirt.virt_type in ('qemu', 'kvm') and os_type == 'windows':
             hv = vconfig.LibvirtConfigGuestFeatureHyperV()
             hv.relaxed = True
 
@@ -5569,7 +5570,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             guest.features.append(hv)
 
-        if virt_type in ("qemu", "kvm"):
+        if CONF.libvirt.virt_type in ("qemu", "kvm"):
             if hide_hypervisor_id:
                 guest.features.append(
                     vconfig.LibvirtConfigGuestFeatureKvmHidden())
@@ -5587,11 +5588,13 @@ class LibvirtDriver(driver.ComputeDriver):
                     vconfig.LibvirtConfigGuestFeaturePMU(pmu))
 
     def _check_number_of_serial_console(self, num_ports):
-        virt_type = CONF.libvirt.virt_type
-        if (virt_type in ("kvm", "qemu") and
-            num_ports > ALLOWED_QEMU_SERIAL_PORTS):
+        if (
+            CONF.libvirt.virt_type in ("kvm", "qemu") and
+            num_ports > ALLOWED_QEMU_SERIAL_PORTS
+        ):
             raise exception.SerialPortNumberLimitExceeded(
-                allowed=ALLOWED_QEMU_SERIAL_PORTS, virt_type=virt_type)
+                allowed=ALLOWED_QEMU_SERIAL_PORTS,
+                virt_type=CONF.libvirt.virt_type)
 
     def _video_model_supported(self, model):
         return model in fields.VideoModel.ALL
@@ -5867,18 +5870,23 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return supported_events
 
-    def _configure_guest_by_virt_type(self, guest, virt_type, caps, instance,
-                                      image_meta, flavor, root_device_name,
-                                      sev_enabled):
-        if virt_type in ("kvm", "qemu"):
-            if caps.host.cpu.arch in (fields.Architecture.I686,
-                                      fields.Architecture.X86_64):
+    def _configure_guest_by_virt_type(
+        self, guest, instance, image_meta, flavor,
+    ):
+        if CONF.libvirt.virt_type in ("kvm", "qemu"):
+            caps = self._host.get_capabilities()
+            if caps.host.cpu.arch in (
+                fields.Architecture.I686, fields.Architecture.X86_64,
+            ):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
+
             hw_firmware_type = image_meta.properties.get('hw_firmware_type')
+
             if caps.host.cpu.arch == fields.Architecture.AARCH64:
                 if not hw_firmware_type:
                     hw_firmware_type = fields.FirmwareType.UEFI
+
             if hw_firmware_type == fields.FirmwareType.UEFI:
                 if self._has_uefi_support():
                     global uefi_logged
@@ -5914,28 +5922,28 @@ class LibvirtDriver(driver.ComputeDriver):
                     flavor.extra_specs.get('hw:boot_menu', 'no'))
             else:
                 guest.os_bootmenu = image_meta.properties.hw_boot_menu
-        elif virt_type == "lxc":
+        elif CONF.libvirt.virt_type == "lxc":
             guest.os_init_path = "/sbin/init"
             guest.os_cmdline = CONSOLE
             guest.os_init_env["product_name"] = "OpenStack Nova"
-        elif virt_type == "parallels":
+        elif CONF.libvirt.virt_type == "parallels":
             if guest.os_type == fields.VMMode.EXE:
                 guest.os_init_path = "/sbin/init"
 
-    def _conf_non_lxc(self, virt_type, guest, root_device_name, rescue,
-                      instance, inst_path, image_meta, disk_info):
+    def _conf_non_lxc(
+        self, guest, root_device_name, rescue, instance, inst_path, image_meta,
+        disk_info,
+    ):
         if rescue:
-            self._set_guest_for_rescue(rescue, guest, inst_path, virt_type,
-                                       root_device_name)
+            self._set_guest_for_rescue(
+                rescue, guest, inst_path, root_device_name)
         elif instance.kernel_id:
-            self._set_guest_for_inst_kernel(instance, guest, inst_path,
-                                            virt_type, root_device_name,
-                                            image_meta)
+            self._set_guest_for_inst_kernel(
+                instance, guest, inst_path, root_device_name, image_meta)
         else:
             guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
 
-    def _create_consoles(self, virt_type, guest_cfg, instance, flavor,
-                         image_meta):
+    def _create_consoles(self, guest_cfg, instance, flavor, image_meta):
         # NOTE(markus_z): Beware! Below are so many conditionals that it is
         # easy to lose track. Use this chart to figure out your case:
         #
@@ -5948,20 +5956,20 @@ class LibvirtDriver(driver.ComputeDriver):
         #    4 |       yes |     yes | tcp with logd
         #
         #    * exception: `virt_type=parallels` doesn't create a device
-        if virt_type == 'parallels':
+        if CONF.libvirt.virt_type == 'parallels':
             pass
-        elif virt_type not in ("qemu", "kvm"):
+        elif CONF.libvirt.virt_type == 'lxc':
             log_path = self._get_console_log_path(instance)
-            self._create_pty_device(guest_cfg,
-                                    vconfig.LibvirtConfigGuestConsole,
-                                    log_path=log_path)
-        elif (virt_type in ("qemu", "kvm") and
-                  self._is_s390x_guest(image_meta)):
-            self._create_consoles_s390x(guest_cfg, instance,
-                                        flavor, image_meta)
-        elif virt_type in ("qemu", "kvm"):
-            self._create_consoles_qemu_kvm(guest_cfg, instance,
-                                        flavor, image_meta)
+            self._create_pty_device(
+                guest_cfg, vconfig.LibvirtConfigGuestConsole,
+                log_path=log_path)
+        else:  # qemu, kvm
+            if self._is_s390x_guest(image_meta):
+                self._create_consoles_s390x(
+                    guest_cfg, instance, flavor, image_meta)
+            else:
+                self._create_consoles_qemu_kvm(
+                    guest_cfg, instance, flavor, image_meta)
 
     def _is_s390x_guest(self, image_meta):
         s390x_archs = (fields.Architecture.S390, fields.Architecture.S390X)
@@ -6158,10 +6166,11 @@ class LibvirtDriver(driver.ComputeDriver):
             pcierootport = vconfig.LibvirtConfigGuestPCIeRootPortController()
             guest.add_device(pcierootport)
 
-    def _guest_needs_pcie(self, guest, caps):
+    def _guest_needs_pcie(self, guest):
         """Check for prerequisites for adding PCIe root port
         controllers
         """
+        caps = self._host.get_capabilities()
 
         # TODO(kchamart) In the third 'if' conditional below, for 'x86'
         # arch, we're assuming: when 'os_mach_type' is 'None', you'll
@@ -6214,9 +6223,8 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_mapping = disk_info['mapping']
         vpmems = self._get_ordered_vpmems(instance, flavor)
 
-        virt_type = CONF.libvirt.virt_type
         guest = vconfig.LibvirtConfigGuest()
-        guest.virt_type = virt_type
+        guest.virt_type = CONF.libvirt.virt_type
         guest.name = instance.name
         guest.uuid = instance.uuid
         # We are using default unit for memory: KiB
@@ -6242,7 +6250,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for event in self._supported_perf_events:
             guest.add_perf_event(event)
 
-        self._update_guest_cputune(guest, flavor, virt_type)
+        self._update_guest_cputune(guest, flavor)
 
         guest.cpu = self._get_guest_cpu_config(
             flavor, image_meta, guest_numa_config.numaconfig,
@@ -6259,22 +6267,21 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             root_device_name = None
 
-        guest.os_type = (fields.VMMode.get_from_instance(instance) or
-                self._get_guest_os_type(virt_type))
-        caps = self._host.get_capabilities()
+        guest.os_type = (
+            fields.VMMode.get_from_instance(instance) or
+            self._get_guest_os_type()
+        )
 
         sev_enabled = self._sev_enabled(flavor, image_meta)
 
-        self._configure_guest_by_virt_type(guest, virt_type, caps, instance,
-                                           image_meta, flavor,
-                                           root_device_name, sev_enabled)
-        if virt_type != 'lxc':
-            self._conf_non_lxc(virt_type, guest, root_device_name, rescue,
-                    instance, inst_path, image_meta, disk_info)
+        self._configure_guest_by_virt_type(guest, instance, image_meta, flavor)
+        if CONF.libvirt.virt_type != 'lxc':
+            self._conf_non_lxc(
+                guest, root_device_name, rescue, instance, inst_path,
+                image_meta, disk_info)
 
-        self._set_features(guest, instance.os_type, caps, virt_type,
-                           image_meta, flavor)
-        self._set_clock(guest, instance.os_type, image_meta, virt_type)
+        self._set_features(guest, instance.os_type, image_meta, flavor)
+        self._set_clock(guest, instance.os_type, image_meta)
 
         storage_configs = self._get_guest_storage_config(context,
                 instance, image_meta, disk_info, rescue, block_device_info,
@@ -6284,11 +6291,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for vif in network_info:
             config = self.vif_driver.get_config(
-                instance, vif, image_meta, flavor, virt_type,
+                instance, vif, image_meta, flavor, CONF.libvirt.virt_type,
             )
             guest.add_device(config)
 
-        self._create_consoles(virt_type, guest, instance, flavor, image_meta)
+        self._create_consoles(guest, instance, flavor, image_meta)
 
         self._guest_add_spice_channel(guest)
 
@@ -6299,12 +6306,12 @@ class LibvirtDriver(driver.ComputeDriver):
             self._guest_add_keyboard_device(guest, image_meta)
 
         # Some features are only supported 'qemu' and 'kvm' hypervisor
-        if virt_type in ('qemu', 'kvm'):
+        if CONF.libvirt.virt_type in ('qemu', 'kvm'):
             self._set_qemu_guest_agent(guest, flavor, instance, image_meta)
             self._add_rng_device(guest, flavor, image_meta)
             self._add_vtpm_device(guest, flavor, instance, image_meta)
 
-        if self._guest_needs_pcie(guest, caps):
+        if self._guest_needs_pcie(guest):
             self._guest_add_pcie_root_ports(guest)
 
         self._guest_add_usb_root_controller(guest, image_meta)
@@ -6340,6 +6347,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._guest_add_mdevs(guest, mdevs)
 
         if sev_enabled:
+            caps = self._host.get_capabilities()
             self._guest_configure_sev(guest, caps.host.cpu.arch,
                                       guest.os_mach_type)
 
@@ -6469,7 +6477,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _guest_add_spice_channel(guest):
         if (
             CONF.spice.enabled and CONF.spice.agent_enabled and
-            guest.virt_type != 'lxc'
+            CONF.libvirt.virt_type != 'lxc'
         ):
             channel = vconfig.LibvirtConfigGuestChannel()
             channel.type = 'spicevmc'
@@ -6480,7 +6488,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _guest_add_memory_balloon(guest):
         # Memory balloon device only support 'qemu/kvm' hypervisor
         if (
-            guest.virt_type in ('qemu', 'kvm') and
+            CONF.libvirt.virt_type in ('qemu', 'kvm') and
             CONF.libvirt.mem_stats_period_seconds > 0
         ):
             balloon = vconfig.LibvirtConfigMemoryBalloon()
@@ -6506,15 +6514,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InvalidWatchdogAction(action=watchdog_action)
 
     def _guest_add_pci_devices(self, guest, instance):
-        virt_type = guest.virt_type
-        if virt_type in ('qemu', 'kvm'):
+        if CONF.libvirt.virt_type in ('qemu', 'kvm'):
             # Get all generic PCI devices (non-SR-IOV).
             for pci_dev in pci_manager.get_instance_pci_devs(instance):
                 guest.add_device(self._get_guest_pci_device(pci_dev))
         else:
             # PCI devices is only supported for QEMU/KVM hypervisor
             if pci_manager.get_instance_pci_devs(instance, 'all'):
-                raise exception.PciDeviceUnsupportedHypervisor(type=virt_type)
+                raise exception.PciDeviceUnsupportedHypervisor(
+                    type=CONF.libvirt.virt_type
+                )
 
     def _guest_add_accel_pci_devices(self, guest, accel_info):
         """Add all accelerator PCI functions from ARQ list."""
@@ -6530,23 +6539,29 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _guest_add_video_device(guest):
+        if CONF.libvirt.virt_type == 'lxc':
+            return False
+
         # NB some versions of libvirt support both SPICE and VNC
         # at the same time. We're not trying to second guess which
         # those versions are. We'll just let libvirt report the
         # errors appropriately if the user enables both.
         add_video_driver = False
-        if CONF.vnc.enabled and guest.virt_type not in ('lxc',):
+
+        if CONF.vnc.enabled:
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "vnc"
             graphics.listen = CONF.vnc.server_listen
             guest.add_device(graphics)
             add_video_driver = True
-        if CONF.spice.enabled and guest.virt_type != 'lxc':
+
+        if CONF.spice.enabled:
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "spice"
             graphics.listen = CONF.spice.server_listen
             guest.add_device(graphics)
             add_video_driver = True
+
         return add_video_driver
 
     def _guest_add_pointer_device(self, guest, image_meta):
@@ -10161,8 +10176,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         disk_info = []
 
-        if (guest_config.virt_type == 'parallels' and
-                guest_config.os_type == fields.VMMode.EXE):
+        if (
+            CONF.libvirt.virt_type == 'parallels' and
+            guest_config.os_type == fields.VMMode.EXE
+        ):
             node_type = 'filesystem'
         else:
             node_type = 'disk'
