@@ -2459,7 +2459,6 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         xml = obj.to_xml()
 
         self.assertXmlEqual(
-            xml,
             """
             <domain type="kvm">
               <uuid>f01cf68d-515c-4daf-b85f-ef1424d93bfc</uuid>
@@ -2471,6 +2470,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 <loader secure='yes' readonly='yes' type='pflash'>/tmp/OVMF_CODE.secboot.fd</loader>
               </os>
             </domain>""",  # noqa: E501
+            xml,
         )
 
     def _test_config_uefi_autoconfigure(self, secure):

@@ -21,6 +21,7 @@ import typing as ty
 
 import fixtures
 from lxml import etree
+import mock
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import versionutils
@@ -1963,13 +1964,60 @@ class FakeLibvirtFixture(fixtures.Fixture):
         self.useFixture(
             fixtures.MockPatch('os.uname', return_value=fake_uname))
 
-        # Ensure UEFI checks don't actually check the host
-        def fake_has_uefi_support():
-            return os.uname().machine == obj_fields.Architecture.AARCH64
-
-        self.useFixture(fixtures.MockPatch(
-            'nova.virt.libvirt.driver.LibvirtDriver._has_uefi_support',
-            side_effect=fake_has_uefi_support))
+        # ...and on all machine types
+        fake_loaders = [
+            {
+                'description': 'UEFI firmware for x86_64',
+                'interface-types': ['uefi'],
+                'mapping': {
+                    'device': 'flash',
+                    'executable': {
+                        'filename': '/usr/share/OVMF/OVMF_CODE.fd',
+                        'format': 'raw',
+                    },
+                    'nvram-template': {
+                        'filename': '/usr/share/OVMF/OVMF_VARS.fd',
+                        'format': 'raw',
+                    },
+                },
+                'targets': [
+                    {
+                        'architecture': 'x86_64',
+                        'machines': ['pc-i440fx-*', 'pc-q35-*'],
+                    },
+                ],
+                'features': ['acpi-s3', 'amd-sev', 'verbose-dynamic'],
+                'tags': [],
+            },
+            {
+                'description': 'UEFI firmware for aarch64',
+                'interface-types': ['uefi'],
+                'mapping': {
+                    'device': 'flash',
+                    'executable': {
+                        'filename': '/usr/share/AAVMF/AAVMF_CODE.fd',
+                        'format': 'raw',
+                    },
+                    'nvram-template': {
+                        'filename': '/usr/share/AAVMF/AAVMF_VARS.fd',
+                        'format': 'raw',
+                    }
+                },
+                'targets': [
+                    {
+                        'architecture': 'aarch64',
+                        'machines': ['virt-*'],
+                    }
+                ],
+                'features': ['verbose-static'],
+                "tags": [],
+            }
+        ]
+        self.useFixture(
+            fixtures.MockPatch(
+                'nova.virt.libvirt.host.Host.loaders',
+                new_callable=mock.PropertyMock,
+                return_value=fake_loaders))
 
         disable_event_thread(self)
 

@@ -84,6 +84,9 @@ class LibvirtConfigObject(object):
                                  pretty_print=pretty_print)
         return xml_str
 
+    def __repr__(self):
+        return self.to_xml(pretty_print=False)
+
 
 class LibvirtConfigCaps(LibvirtConfigObject):
 
@@ -2784,6 +2787,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.os_firmware = None
         self.os_loader_type = None
         self.os_loader_secure = None
+        self.os_nvram = None
+        self.os_nvram_template = None
         self.os_kernel = None
         self.os_initrd = None
         self.os_cmdline = None
@@ -2841,19 +2846,27 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         if self.os_kernel is not None:
             os.append(self._text_node("kernel", self.os_kernel))
 
-        # Generate XML nodes for UEFI boot.
         if (
+            self.os_loader is not None or
             self.os_loader_type is not None or
             self.os_loader_secure is not None
         ):
             loader = self._text_node("loader", self.os_loader)
             if self.os_loader_type is not None:
-                loader.set("type", "pflash")
+                loader.set("type", self.os_loader_type)
                 loader.set("readonly", "yes")
             if self.os_loader_secure is not None:
                 loader.set(
                     "secure", self.get_yes_no_str(self.os_loader_secure))
             os.append(loader)
+
+        if (
+            self.os_nvram is not None or
+            self.os_nvram_template is not None
+        ):
+            nvram = self._text_node("nvram", self.os_nvram)
+            nvram.set("template", self.os_nvram_template)
+            os.append(nvram)
 
         if self.os_initrd is not None:
             os.append(self._text_node("initrd", self.os_initrd))
