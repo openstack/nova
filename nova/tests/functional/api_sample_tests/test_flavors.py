@@ -136,3 +136,57 @@ class FlavorsSampleJsonTest2_75(FlavorsSampleJsonTest2_61):
 
     def test_flavors_list(self):
         pass
+
+
+class FlavorIdAliasTest(api_sample_base.ApiSampleTestBaseV21):
+    alias_prefix = "x_test_alias_"
+
+    def setUp(self):
+        super(FlavorIdAliasTest, self).setUp()
+        self.ctxt = nova_context.get_admin_context()
+        self.flags(flavorid_alias_prefix=self.alias_prefix)
+
+    def _create_aliased_flavor(self, alias):
+        flavors = objects.FlavorList.get_all(self.ctxt)
+        self.flavor_id = str(int(flavors[-1].flavorid) + 1)
+        self.flavor_id_alias = self.alias_prefix + self.flavor_id + "_0"
+        aliased_flavor = objects.Flavor(
+            self.ctxt, memory_mb=2048, vcpus=1, root_gb=20,
+            flavorid=self.flavor_id, name='my.flavor',
+            extra_specs={'catalog:alias': alias})
+        aliased_flavor.create()
+
+    @staticmethod
+    def _response_flavor_ids(response):
+        return [f['id'] for f in response.json()['flavors']]
+
+    def test_aliased_flavor_visible_in_list(self):
+        self._create_aliased_flavor('my.flavor.old')
+        response = self._do_get('flavors')
+        self.assertIn(self.flavor_id_alias,
+                      self._response_flavor_ids(response))
+
+    def test_aliased_flavor_unaliased_name_in_show(self):
+        self._create_aliased_flavor('my.flavor.old')
+        response = self._do_get('flavors/%s' % self.flavor_id_alias)
+        response_flavor = response.json()['flavor']
+        response_id = response_flavor['id']
+        response_name = response_flavor['name']
+        self.assertEqual(response_id, self.flavor_id)
+        self.assertEqual(response_name, 'my.flavor')
+
+    def test_empty_catalog_alias_doesnt_create_alias(self):
+        self._create_aliased_flavor('')
+        response = self._do_get('flavors')
+        self.assertNotIn(self.flavor_id_alias,
+                         self._response_flavor_ids(response))
+
+    def test_multiple_aliases_list(self):
+        self._create_aliased_flavor('old1,old2, old3')
+        response = self._do_get('flavors')
+        self.assertIn(self.flavor_id_alias,
+                      self._response_flavor_ids(response))
+        self.assertIn(self.flavor_id_alias.replace("_0", "_1"),
+                      self._response_flavor_ids(response))
+        self.assertIn(self.flavor_id_alias.replace("_0", "_2"),
+                      self._response_flavor_ids(response))
