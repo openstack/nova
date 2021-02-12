@@ -27647,6 +27647,7 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
         guest.name = 'name'
         guest.uuid = 'uuid'
         guest.memory = 1024
+        guest.os_type = fields.VMMode.HVM
         vpmems = [self.vpmem_0]
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr._guest_add_vpmems(guest, vpmems)
@@ -27658,7 +27659,7 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
               <maxMemory slots="1">4193280</maxMemory>
               <vcpu>1</vcpu>
               <os>
-                <type>None</type>
+                <type>hvm</type>
               </os>
               <devices>
                 <memory model="nvdimm" access="shared">
