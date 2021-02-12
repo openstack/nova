@@ -457,27 +457,6 @@ class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
             </cpu>
         """)
 
-    def test_config_disabled_features(self):
-        obj = config.LibvirtConfigCPU()
-        obj.model = "Penryn"
-        obj.vendor = "Intel"
-        obj.arch = obj_fields.Architecture.X86_64
-
-        disabled_feature = config.LibvirtConfigCPUFeature("mtrr")
-        disabled_feature.policy = "disable"
-        obj.add_feature(disabled_feature)
-        obj.add_feature(config.LibvirtConfigCPUFeature("apic"))
-
-        xml = obj.to_xml()
-        self.assertXmlEqual(xml, """
-            <cpu>
-              <arch>x86_64</arch>
-              <model>Penryn</model>
-              <vendor>Intel</vendor>
-              <feature name="apic"/>
-            </cpu>
-        """)
-
     def test_only_uniq_cpu_featues(self):
         obj = config.LibvirtConfigCPU()
         obj.model = "Penryn"
