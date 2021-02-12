@@ -2179,22 +2179,22 @@ class API(base.Base):
             return True
         return False
 
-    def _local_delete_cleanup(self, context, instance):
+    def _local_delete_cleanup(self, context, instance_uuid):
         # NOTE(aarents) Ensure instance allocation is cleared and instance
         # mapping queued as deleted before _delete() return
         try:
             self.placementclient.delete_allocation_for_instance(
-                context, instance.uuid)
+                context, instance_uuid)
         except exception.AllocationDeleteFailed:
             LOG.info("Allocation delete failed during local delete cleanup.",
-                     instance=instance)
+                     instance_uuid=instance_uuid)
 
         try:
-            self._update_queued_for_deletion(context, instance, True)
+            self._update_queued_for_deletion(context, instance_uuid, True)
         except exception.InstanceMappingNotFound:
             LOG.info("Instance Mapping does not exist while attempting "
                      "local delete cleanup.",
-                     instance=instance)
+                     instance_uuid=instance_uuid)
 
     def _attempt_delete_of_buildrequest(self, context, instance):
         # If there is a BuildRequest then the instance may not have been
@@ -2231,7 +2231,7 @@ class API(base.Base):
         if not instance.host and not may_have_ports_or_volumes:
             try:
                 if self._delete_while_booting(context, instance):
-                    self._local_delete_cleanup(context, instance)
+                    self._local_delete_cleanup(context, instance.uuid)
                     return
                 # If instance.host was not set it's possible that the Instance
                 # object here was pulled from a BuildRequest object and is not
@@ -2240,6 +2240,11 @@ class API(base.Base):
                 # properly. A lookup is attempted which will either return a
                 # full Instance or None if not found. If not found then it's
                 # acceptable to skip the rest of the delete processing.
+
+                # Save a copy of the instance UUID early, in case
+                # _lookup_instance returns instance = None, to pass to
+                # _local_delete_cleanup if needed.
+                instance_uuid = instance.uuid
                 cell, instance = self._lookup_instance(context, instance.uuid)
                 if cell and instance:
                     try:
@@ -2250,11 +2255,11 @@ class API(base.Base):
                     except exception.InstanceNotFound:
                         pass
                     # The instance was deleted or is already gone.
-                    self._local_delete_cleanup(context, instance)
+                    self._local_delete_cleanup(context, instance.uuid)
                     return
                 if not instance:
                     # Instance is already deleted.
-                    self._local_delete_cleanup(context, instance)
+                    self._local_delete_cleanup(context, instance_uuid)
                     return
             except exception.ObjectActionError:
                 # NOTE(melwitt): This means the instance.host changed
@@ -2267,7 +2272,7 @@ class API(base.Base):
                 cell, instance = self._lookup_instance(context, instance.uuid)
                 if not instance:
                     # Instance is already deleted
-                    self._local_delete_cleanup(context, instance)
+                    self._local_delete_cleanup(context, instance_uuid)
                     return
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -2311,7 +2316,7 @@ class API(base.Base):
                              'field, its vm_state is %(state)s.',
                              {'state': instance.vm_state},
                               instance=instance)
-                    self._local_delete_cleanup(context, instance)
+                    self._local_delete_cleanup(context, instance.uuid)
                     return
                 except exception.ObjectActionError as ex:
                     # The instance's host likely changed under us as
@@ -2496,7 +2501,7 @@ class API(base.Base):
             instance.destroy()
 
     @staticmethod
-    def _update_queued_for_deletion(context, instance, qfd):
+    def _update_queued_for_deletion(context, instance_uuid, qfd):
         # NOTE(tssurya): We query the instance_mapping record of this instance
         # and update the queued_for_delete flag to True (or False according to
         # the state of the instance). This just means that the instance is
@@ -2505,7 +2510,7 @@ class API(base.Base):
         # value could be stale which is fine, considering its use is only
         # during down cell (desperate) situation.
         im = objects.InstanceMapping.get_by_instance_uuid(context,
-                                                          instance.uuid)
+                                                          instance_uuid)
         im.queued_for_delete = qfd
         im.save()
 
@@ -2517,7 +2522,7 @@ class API(base.Base):
             instance.save()
         else:
             self.compute_rpcapi.terminate_instance(context, instance, bdms)
-        self._update_queued_for_deletion(context, instance, True)
+        self._update_queued_for_deletion(context, instance.uuid, True)
 
     def _do_soft_delete(self, context, instance, bdms, local=False):
         if local:
@@ -2527,7 +2532,7 @@ class API(base.Base):
             instance.save()
         else:
             self.compute_rpcapi.soft_delete_instance(context, instance)
-        self._update_queued_for_deletion(context, instance, True)
+        self._update_queued_for_deletion(context, instance.uuid, True)
 
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @check_instance_lock
@@ -2580,7 +2585,7 @@ class API(base.Base):
             instance.task_state = None
             instance.deleted_at = None
             instance.save(expected_task_state=[None])
-        self._update_queued_for_deletion(context, instance, False)
+        self._update_queued_for_deletion(context, instance.uuid, False)
 
     @check_instance_lock
     @check_instance_state(task_state=None,
