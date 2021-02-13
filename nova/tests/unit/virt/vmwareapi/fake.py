@@ -1225,12 +1225,7 @@ class FakeVim(object):
         self.client = FakeClient()
         self.client.factory = FakeFactory()
 
-        transport = DataObject()
-        transport.cookiejar = "Fake-CookieJar"
-        options = DataObject()
-        options.transport = transport
-
-        self.client.options = options
+        self.client.cookiejar = "Fake-CookieJar"
 
         service_content = self.client.factory.create('ns0:ServiceContent')
         service_content.propertyCollector = "PropCollector"
