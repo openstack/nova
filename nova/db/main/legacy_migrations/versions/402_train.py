@@ -19,7 +19,7 @@ from sqlalchemy import dialects
 from sqlalchemy.ext import compiler
 from sqlalchemy import types as sqla_types
 
-from nova.db.sqlalchemy import types
+from nova.db import types
 from nova.objects import keypair
 
 LOG = logging.getLogger(__name__)
