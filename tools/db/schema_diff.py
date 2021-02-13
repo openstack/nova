@@ -126,7 +126,7 @@ def _get_db_driver_class(db_url):
 # Migrate
 
 
-MIGRATE_REPO = os.path.join(os.getcwd(), "nova/db/sqlalchemy/migrate_repo")
+MIGRATE_REPO = os.path.join(os.getcwd(), "nova/db/main/legacy_migrations")
 
 
 def _migrate(db_url, migration_version):

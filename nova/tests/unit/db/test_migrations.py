@@ -46,8 +46,8 @@ import sqlalchemy
 import sqlalchemy.exc
 import testtools
 
+from nova.db.main import legacy_migrations
 from nova.db import migration
-from nova.db.sqlalchemy import migrate_repo
 from nova.db.sqlalchemy import models
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -73,7 +73,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
     @property
     def REPOSITORY(self):
         return repository.Repository(
-            os.path.abspath(os.path.dirname(migrate_repo.__file__)))
+            os.path.abspath(os.path.dirname(legacy_migrations.__file__)))
 
     @property
     def migration_api(self):
@@ -272,9 +272,14 @@ class ProjectTestCase(test.NoDBTestCase):
         topdir = os.path.normpath(os.path.dirname(__file__) + '/../../../')
         # Walk both the nova_api and nova (cell) database migrations.
         includes_downgrade = []
-        for subdir in ('api_migrations', ''):
-            py_glob = os.path.join(topdir, "db", "sqlalchemy", subdir,
-                                   "migrate_repo", "versions", "*.py")
+        for directory in (
+            os.path.join(topdir, 'db', 'main', 'legacy_migrations'),
+            os.path.join(
+                topdir, 'db', 'sqlalchemy', 'api_migrations',
+                'migrate_repo',
+            ),
+        ):
+            py_glob = os.path.join(directory, 'versions', '*.py')
             for path in glob.iglob(py_glob):
                 has_upgrade = False
                 has_downgrade = False
