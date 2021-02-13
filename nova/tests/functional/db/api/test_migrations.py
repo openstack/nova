@@ -40,7 +40,6 @@ import testtools
 from nova.db import migration
 from nova.db.sqlalchemy.api_migrations import migrate_repo
 from nova.db.sqlalchemy import api_models
-from nova.db.sqlalchemy import migration as sa_migration
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 
@@ -53,9 +52,8 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
         self.engine = enginefacade.writer.get_engine()
 
     def db_sync(self, engine):
-        with mock.patch.object(sa_migration, 'get_engine',
-                               return_value=engine):
-            sa_migration.db_sync(database='api')
+        with mock.patch.object(migration, 'get_engine', return_value=engine):
+            migration.db_sync(database='api')
 
     @property
     def migrate_engine(self):
@@ -160,7 +158,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
 
     @property
     def migration_api(self):
-        return sa_migration.versioning_api
+        return migration.versioning_api
 
     @property
     def migrate_engine(self):
