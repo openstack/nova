@@ -24,8 +24,8 @@ from sqlalchemy import sql
 
 import nova.conf
 from nova import context as nova_context
+from nova.db.api import models as api_models
 from nova.db.main import api as db
-from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
 from nova.scheduler.client import report

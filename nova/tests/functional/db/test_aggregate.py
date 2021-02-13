@@ -18,8 +18,8 @@ from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 
 from nova import context
+from nova.db.api import models as api_models
 from nova.db.main import api as db_api
-from nova.db.sqlalchemy import api_models
 from nova import exception
 import nova.objects.aggregate as aggregate_obj
 from nova import test
@@ -401,8 +401,9 @@ class AggregateObjectDbTestCase(test.TestCase):
 
     def test_aggregate_metadata_add_retry(self):
         result = _create_aggregate(self.context, metadata=None)
-        with mock.patch('nova.db.sqlalchemy.api_models.'
-                        'AggregateMetadata.__table__.insert') as insert_mock:
+        with mock.patch(
+            'nova.db.api.models.AggregateMetadata.__table__.insert'
+        ) as insert_mock:
             insert_mock.side_effect = db_exc.DBDuplicateEntry
             self.assertRaises(db_exc.DBDuplicateEntry,
                               aggregate_obj._metadata_add_to_db,

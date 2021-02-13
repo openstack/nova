@@ -274,10 +274,7 @@ class ProjectTestCase(test.NoDBTestCase):
         includes_downgrade = []
         for directory in (
             os.path.join(topdir, 'db', 'main', 'legacy_migrations'),
-            os.path.join(
-                topdir, 'db', 'sqlalchemy', 'api_migrations',
-                'migrate_repo',
-            ),
+            os.path.join(topdir, 'db', 'api', 'legacy_migrations'),
         ):
             py_glob = os.path.join(directory, 'versions', '*.py')
             for path in glob.iglob(py_glob):

@@ -21,8 +21,8 @@ from sqlalchemy import sql
 from sqlalchemy.sql import expression
 
 import nova.conf
+from nova.db.api import models as api_models
 from nova.db.main import api as db_api
-from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova.notifications.objects import base as notification
 from nova.notifications.objects import flavor as flavor_notification
