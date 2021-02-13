@@ -37,8 +37,22 @@ LOG = logging.getLogger(__name__)
 def get_engine(database='main', context=None):
     if database == 'main':
         return db_session.get_engine(context=context)
+
     if database == 'api':
         return db_session.get_api_engine()
+
+
+def find_migrate_repo(database='main'):
+    """Get the path for the migrate repository."""
+    global _REPOSITORY
+    rel_path = 'migrate_repo'
+    if database == 'api':
+        rel_path = os.path.join('api_migrations', 'migrate_repo')
+    path = os.path.join(os.path.abspath(os.path.dirname(__file__)), rel_path)
+    assert os.path.exists(path)
+    if _REPOSITORY.get(database) is None:
+        _REPOSITORY[database] = Repository(path)
+    return _REPOSITORY[database]
 
 
 def db_sync(version=None, database='main', context=None):
@@ -50,18 +64,17 @@ def db_sync(version=None, database='main', context=None):
             raise exception.NovaException(_("version should be an integer"))
 
     current_version = db_version(database, context=context)
-    repository = _find_migrate_repo(database)
+    repository = find_migrate_repo(database)
+    engine = get_engine(database, context=context)
     if version is None or version > current_version:
-        return versioning_api.upgrade(get_engine(database, context=context),
-                repository, version)
+        return versioning_api.upgrade(engine, repository, version)
     else:
-        return versioning_api.downgrade(get_engine(database, context=context),
-                repository, version)
+        return versioning_api.downgrade(engine, repository, version)
 
 
 def db_version(database='main', context=None):
     """Display the current database version."""
-    repository = _find_migrate_repo(database)
+    repository = find_migrate_repo(database)
 
     # NOTE(mdbooth): This is a crude workaround for races in _db_version. The 2
     # races we have seen in practise are:
@@ -96,20 +109,17 @@ def db_version(database='main', context=None):
 
 
 def _db_version(repository, database, context):
+    engine = get_engine(database, context=context)
     try:
-        return versioning_api.db_version(get_engine(database, context=context),
-                                         repository)
+        return versioning_api.db_version(engine, repository)
     except versioning_exceptions.DatabaseNotControlledError as exc:
         meta = sqlalchemy.MetaData()
-        engine = get_engine(database, context=context)
         meta.reflect(bind=engine)
         tables = meta.tables
         if len(tables) == 0:
-            db_version_control(INIT_VERSION[database],
-                               database,
-                               context=context)
-            return versioning_api.db_version(
-                        get_engine(database, context=context), repository)
+            db_version_control(
+                INIT_VERSION[database], database, context=context)
+            return versioning_api.db_version(engine, repository)
         else:
             LOG.exception(exc)
             # Some pre-Essex DB's may not be version controlled.
@@ -124,22 +134,7 @@ def db_initial_version(database='main'):
 
 
 def db_version_control(version=None, database='main', context=None):
-    repository = _find_migrate_repo(database)
-    versioning_api.version_control(get_engine(database, context=context),
-                                   repository,
-                                   version)
+    repository = find_migrate_repo(database)
+    engine = get_engine(database, context=context)
+    versioning_api.version_control(engine, repository, version)
     return version
-
-
-def _find_migrate_repo(database='main'):
-    """Get the path for the migrate repository."""
-    global _REPOSITORY
-    rel_path = 'migrate_repo'
-    if database == 'api':
-        rel_path = os.path.join('api_migrations', 'migrate_repo')
-    path = os.path.join(os.path.abspath(os.path.dirname(__file__)),
-                        rel_path)
-    assert os.path.exists(path)
-    if _REPOSITORY.get(database) is None:
-        _REPOSITORY[database] = Repository(path)
-    return _REPOSITORY[database]

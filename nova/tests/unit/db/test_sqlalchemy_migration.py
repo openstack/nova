@@ -23,7 +23,7 @@ from nova import test
 
 
 @mock.patch.object(migration, 'db_version', return_value=2)
-@mock.patch.object(migration, '_find_migrate_repo', return_value='repo')
+@mock.patch.object(migration, 'find_migrate_repo', return_value='repo')
 @mock.patch.object(versioning_api, 'upgrade')
 @mock.patch.object(versioning_api, 'downgrade')
 @mock.patch.object(migration, 'get_engine', return_value='engine')
@@ -50,7 +50,7 @@ class TestDbSync(test.NoDBTestCase):
         self.assertFalse(mock_upgrade.called)
 
 
-@mock.patch.object(migration, '_find_migrate_repo', return_value='repo')
+@mock.patch.object(migration, 'find_migrate_repo', return_value='repo')
 @mock.patch.object(versioning_api, 'db_version')
 @mock.patch.object(migration, 'get_engine')
 class TestDbVersion(test.NoDBTestCase):
@@ -63,8 +63,9 @@ class TestDbVersion(test.NoDBTestCase):
         mock_find_repo.assert_called_once_with(database)
         mock_db_version.assert_called_once_with('engine', 'repo')
 
-    def test_not_controlled(self, mock_get_engine, mock_db_version,
-            mock_find_repo):
+    def test_not_controlled(
+        self, mock_get_engine, mock_db_version, mock_find_repo,
+    ):
         database = 'api'
         mock_get_engine.side_effect = ['engine', 'engine', 'engine']
         exc = versioning_exceptions.DatabaseNotControlledError()
@@ -79,7 +80,7 @@ class TestDbVersion(test.NoDBTestCase):
                 migration.INIT_VERSION['api'], database, context=None)
             db_version_calls = [mock.call('engine', 'repo')] * 2
             self.assertEqual(db_version_calls, mock_db_version.call_args_list)
-        engine_calls = [mock.call(database, context=None)] * 3
+        engine_calls = [mock.call(database, context=None)]
         self.assertEqual(engine_calls, mock_get_engine.call_args_list)
 
     def test_db_version_init_race(self, mock_get_engine, mock_db_version,
@@ -104,7 +105,7 @@ class TestDbVersion(test.NoDBTestCase):
                 migration.INIT_VERSION['api'], database, context=None)
             db_version_calls = [mock.call('engine', 'repo')] * 2
             self.assertEqual(db_version_calls, mock_db_version.call_args_list)
-        engine_calls = [mock.call(database, context=None)] * 3
+        engine_calls = [mock.call(database, context=None)] * 2
         self.assertEqual(engine_calls, mock_get_engine.call_args_list)
 
     def test_db_version_raise_on_error(self, mock_get_engine, mock_db_version,
@@ -127,7 +128,7 @@ class TestDbVersion(test.NoDBTestCase):
                               migration.db_version, database)
 
 
-@mock.patch.object(migration, '_find_migrate_repo', return_value='repo')
+@mock.patch.object(migration, 'find_migrate_repo', return_value='repo')
 @mock.patch.object(migration, 'get_engine', return_value='engine')
 @mock.patch.object(versioning_api, 'version_control')
 class TestDbVersionControl(test.NoDBTestCase):
