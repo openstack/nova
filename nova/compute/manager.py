@@ -8075,8 +8075,8 @@ class ComputeManager(manager.Manager):
         # We don't generate events if CONF.vif_plugging_timeout=0
         # meaning that the operator disabled using them.
         if CONF.vif_plugging_timeout:
-            return [('network-vif-plugged', vif['id'])
-                    for vif in instance.get_network_info()]
+            return (instance.get_network_info()
+                    .get_live_migration_plug_time_events())
         else:
             return []
 
