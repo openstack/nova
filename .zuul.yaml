@@ -220,8 +220,6 @@
             network-feature-enabled:
               qos_placement_physnet: public
       devstack_localrc:
-        # Added in Pike.
-        NOVA_USE_SERVICE_TOKEN: True
         # Enable TLS between the noVNC proxy & compute nodes; this requires
         # the tls-proxy service to be enabled. Added in Queens.
         NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
