@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    Experimental support for thread pooling of DB API calls has been removed.
+    This feature was first introduced in the 2014.2 (Juno) release but has not
+    graduated to fully-supported status since nor was it being used for any
+    API DB calls. The ``[oslo_db] use_tpool`` config option used to enable
+    this feature will now be ignored by nova.
