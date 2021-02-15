@@ -25,7 +25,7 @@ from oslo_utils import uuidutils
 
 import nova.conf
 from nova import context
-from nova.db import api as db
+from nova.db import constants as db_const
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -96,19 +96,20 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     }
 
     for key, value in flavor_attributes.items():
-        kwargs[key] = utils.validate_integer(kwargs[key], value[0], value[1],
-                                             db.MAX_INT)
+        kwargs[key] = utils.validate_integer(
+            kwargs[key], value[0], value[1], db_const.MAX_INT)
 
     # rxtx_factor should be a positive float
     try:
         kwargs['rxtx_factor'] = float(kwargs['rxtx_factor'])
-        if (kwargs['rxtx_factor'] <= 0 or
-                kwargs['rxtx_factor'] > db.SQL_SP_FLOAT_MAX):
+        if (
+            kwargs['rxtx_factor'] <= 0 or
+            kwargs['rxtx_factor'] > db_const.SQL_SP_FLOAT_MAX
+        ):
             raise ValueError()
     except ValueError:
-        msg = (_("'rxtx_factor' argument must be a float between 0 and %g") %
-               db.SQL_SP_FLOAT_MAX)
-        raise exception.InvalidInput(reason=msg)
+        msg = _("'rxtx_factor' argument must be a float between 0 and %g")
+        raise exception.InvalidInput(reason=msg % db_const.SQL_SP_FLOAT_MAX)
 
     kwargs['name'] = name
     kwargs['flavorid'] = flavorid

@@ -48,6 +48,7 @@ import nova.conf
 from nova import config
 from nova import context
 from nova.db import api as db
+from nova.db import constants as db_const
 from nova.db import migration
 from nova.db.sqlalchemy import api as sa_db
 from nova import exception
@@ -246,9 +247,9 @@ Error: %s""") % str(e))
         if max_rows < 0:
             print(_("Must supply a positive value for max_rows"))
             return 2
-        if max_rows > db.MAX_INT:
+        if max_rows > db_const.MAX_INT:
             print(_('max rows must be <= %(max_value)d') %
-                  {'max_value': db.MAX_INT})
+                  {'max_value': db_const.MAX_INT})
             return 2
 
         ctxt = context.get_admin_context()

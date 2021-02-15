@@ -18,7 +18,7 @@ import mock
 import webob
 
 from nova.api.openstack.compute import quota_sets as quotas_v21
-from nova.db import api as db
+from nova.db import constants as db_const
 from nova import exception
 from nova import quota
 from nova import test
@@ -156,7 +156,7 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         # Invalid - limit is larger than 0x7FFFFFFF
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._validate_quota_limit,
-                          resource, db.MAX_INT + 1, -1, -1)
+                          resource, db_const.MAX_INT + 1, -1, -1)
 
     def test_quotas_defaults(self):
         uri = '/v2/%s/os-quota-sets/%s/defaults' % (

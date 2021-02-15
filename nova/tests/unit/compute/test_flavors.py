@@ -17,7 +17,7 @@
 
 from nova.compute import flavors
 from nova import context
-from nova.db import api as db
+from nova.db import constants as db_const
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -149,35 +149,36 @@ class TestCreateFlavor(test.TestCase):
         self.assertInvalidInput('flavor1', 'foo', 1, 120)
         self.assertInvalidInput('flavor1', -1, 1, 120)
         self.assertInvalidInput('flavor1', 0, 1, 120)
-        self.assertInvalidInput('flavor1', db.MAX_INT + 1, 1, 120)
+        self.assertInvalidInput('flavor1', db_const.MAX_INT + 1, 1, 120)
         flavors.create('flavor1', 1, 1, 120)
 
     def test_vcpus_must_be_positive_db_integer(self):
         self.assertInvalidInput('flavor`', 64, 'foo', 120)
         self.assertInvalidInput('flavor1', 64, -1, 120)
         self.assertInvalidInput('flavor1', 64, 0, 120)
-        self.assertInvalidInput('flavor1', 64, db.MAX_INT + 1, 120)
+        self.assertInvalidInput('flavor1', 64, db_const.MAX_INT + 1, 120)
         flavors.create('flavor1', 64, 1, 120)
 
     def test_root_gb_must_be_nonnegative_db_integer(self):
         self.assertInvalidInput('flavor1', 64, 1, 'foo')
         self.assertInvalidInput('flavor1', 64, 1, -1)
-        self.assertInvalidInput('flavor1', 64, 1, db.MAX_INT + 1)
+        self.assertInvalidInput('flavor1', 64, 1, db_const.MAX_INT + 1)
         flavors.create('flavor1', 64, 1, 0)
         flavors.create('flavor2', 64, 1, 120)
 
     def test_ephemeral_gb_must_be_nonnegative_db_integer(self):
         self.assertInvalidInput('flavor1', 64, 1, 120, ephemeral_gb='foo')
         self.assertInvalidInput('flavor1', 64, 1, 120, ephemeral_gb=-1)
-        self.assertInvalidInput('flavor1', 64, 1, 120,
-                                ephemeral_gb=db.MAX_INT + 1)
+        self.assertInvalidInput(
+            'flavor1', 64, 1, 120, ephemeral_gb=db_const.MAX_INT + 1)
         flavors.create('flavor1', 64, 1, 120, ephemeral_gb=0)
         flavors.create('flavor2', 64, 1, 120, ephemeral_gb=120)
 
     def test_swap_must_be_nonnegative_db_integer(self):
         self.assertInvalidInput('flavor1', 64, 1, 120, swap='foo')
         self.assertInvalidInput('flavor1', 64, 1, 120, swap=-1)
-        self.assertInvalidInput('flavor1', 64, 1, 120, swap=db.MAX_INT + 1)
+        self.assertInvalidInput(
+            'flavor1', 64, 1, 120, swap=db_const.MAX_INT + 1)
         flavors.create('flavor1', 64, 1, 120, swap=0)
         flavors.create('flavor2', 64, 1, 120, swap=1)
 
@@ -195,14 +196,14 @@ class TestCreateFlavor(test.TestCase):
     def test_rxtx_factor_must_be_within_sql_float_range(self):
         # We do * 10 since this is an approximation and we need to make sure
         # the difference is noticeble.
-        over_rxtx_factor = db.SQL_SP_FLOAT_MAX * 10
+        over_rxtx_factor = db_const.SQL_SP_FLOAT_MAX * 10
 
         self.assertInvalidInput('flavor1', 64, 1, 120,
                                 rxtx_factor=over_rxtx_factor)
 
-        flavor = flavors.create('flavor2', 64, 1, 120,
-                                rxtx_factor=db.SQL_SP_FLOAT_MAX)
-        self.assertEqual(db.SQL_SP_FLOAT_MAX, flavor.rxtx_factor)
+        flavor = flavors.create(
+            'flavor2', 64, 1, 120, rxtx_factor=db_const.SQL_SP_FLOAT_MAX)
+        self.assertEqual(db_const.SQL_SP_FLOAT_MAX, flavor.rxtx_factor)
 
     def test_is_public_must_be_valid_bool_string(self):
         self.assertInvalidInput('flavor1', 64, 1, 120, is_public='foo')
