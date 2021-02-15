@@ -13,10 +13,10 @@
 #    under the License.
 
 from migrate.changeset import UniqueConstraint
-from migrate import ForeignKeyConstraint
 from oslo_log import log as logging
 import sqlalchemy as sa
 from sqlalchemy import dialects
+from sqlalchemy.ext import compiler
 from sqlalchemy import types as sqla_types
 
 from nova.db.sqlalchemy import types
@@ -46,6 +46,13 @@ def InetSmall():
     return sa.String(length=39).with_variant(
         dialects.postgresql.INET(), 'postgresql',
     )
+
+
+# We explicitly name many of our foreignkeys for MySQL so they match Havana
+@compiler.compiles(sa.ForeignKeyConstraint, 'postgresql')
+def process(element, compiler, **kw):
+    element.name = None
+    return compiler.visit_foreign_key_constraint(element, **kw)
 
 
 def _create_shadow_tables(migrate_engine):
@@ -230,7 +237,11 @@ def upgrade(migrate_engine):
         sa.Column('volume_size', sa.Integer),
         sa.Column('no_device', sa.Boolean),
         sa.Column('connection_info', MediumText()),
-        sa.Column('instance_uuid', sa.String(length=36)),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid',
+                name='block_device_mapping_instance_uuid_fkey')),
         sa.Column('deleted', sa.Integer),
         sa.Column('source_type', sa.String(length=255), nullable=True),
         sa.Column('destination_type', sa.String(length=255), nullable=True),
@@ -449,7 +460,11 @@ def upgrade(migrate_engine):
         sa.Column('reserved', sa.Boolean),
         sa.Column('virtual_interface_id', sa.Integer),
         sa.Column('host', sa.String(length=255)),
-        sa.Column('instance_uuid', sa.String(length=36)),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='fixed_ips_instance_uuid_fkey'),
+        ),
         sa.Column('deleted', sa.Integer),
         sa.Index('network_id', 'network_id'),
         sa.Index('address', 'address'),
@@ -509,7 +524,10 @@ def upgrade(migrate_engine):
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('instance_uuid', sa.String(length=36)),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='fk_instance_faults_instance_uuid')),
         sa.Column('code', sa.Integer, nullable=False),
         sa.Column('message', sa.String(length=255)),
         sa.Column('details', MediumText()),
@@ -541,7 +559,12 @@ def upgrade(migrate_engine):
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('network_info', MediumText()),
-        sa.Column('instance_uuid', sa.String(length=36), nullable=False),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid',
+                name='instance_info_caches_instance_uuid_fkey'),
+            nullable=False),
         sa.Column('deleted', sa.Integer),
         UniqueConstraint(
             'instance_uuid',
@@ -606,7 +629,11 @@ def upgrade(migrate_engine):
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('key', sa.String(length=255)),
         sa.Column('value', sa.String(length=255)),
-        sa.Column('instance_uuid', sa.String(length=36), nullable=True),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='instance_metadata_instance_uuid_fkey'),
+            nullable=True),
         sa.Column('deleted', sa.Integer),
         sa.Index('instance_metadata_instance_uuid_idx', 'instance_uuid'),
         mysql_engine='InnoDB',
@@ -618,7 +645,11 @@ def upgrade(migrate_engine):
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('instance_uuid', sa.String(length=36), nullable=False),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='instance_system_metadata_ibfk_1'),
+            nullable=False),
         sa.Column('key', sa.String(length=255), nullable=False),
         sa.Column('value', sa.String(length=255)),
         sa.Column('deleted', sa.Integer),
@@ -656,7 +687,11 @@ def upgrade(migrate_engine):
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('instance_type_id', sa.Integer, nullable=False),
+        sa.Column(
+            'instance_type_id', sa.Integer,
+            sa.ForeignKey(
+                'instance_types.id', name='instance_type_projects_ibfk_1'),
+            nullable=False),
         sa.Column('project_id', sa.String(length=255)),
         sa.Column('deleted', sa.Integer),
         UniqueConstraint(
@@ -787,7 +822,10 @@ def upgrade(migrate_engine):
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('action', sa.String(length=255)),
-        sa.Column('instance_uuid', sa.String(length=36)),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='fk_instance_actions_instance_uuid')),
         sa.Column('request_id', sa.String(length=255)),
         sa.Column('user_id', sa.String(length=255)),
         sa.Column('project_id', sa.String(length=255)),
@@ -829,7 +867,11 @@ def upgrade(migrate_engine):
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('deleted', sa.Integer),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('instance_uuid', sa.String(length=36), nullable=False),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='instance_extra_instance_uuid_fkey'),
+            nullable=False),
         sa.Column('numa_topology', sa.Text, nullable=True),
         sa.Column('pci_requests', sa.Text, nullable=True),
         sa.Column('flavor', sa.Text, nullable=True),
@@ -898,7 +940,10 @@ def upgrade(migrate_engine):
         sa.Column('dest_compute', sa.String(length=255)),
         sa.Column('dest_host', sa.String(length=255)),
         sa.Column('status', sa.String(length=255)),
-        sa.Column('instance_uuid', sa.String(length=36)),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='fk_migrations_instance_uuid')),
         sa.Column('old_instance_type_id', sa.Integer),
         sa.Column('new_instance_type_id', sa.Integer),
         sa.Column('source_node', sa.String(length=255)),
@@ -1007,7 +1052,11 @@ def upgrade(migrate_engine):
         sa.Column('deleted_at', sa.DateTime(timezone=False)),
         sa.Column('deleted', sa.Integer, default=0, nullable=False),
         sa.Column('id', sa.Integer, primary_key=True),
-        sa.Column('compute_node_id', sa.Integer, nullable=False),
+        sa.Column(
+            'compute_node_id', sa.Integer,
+            sa.ForeignKey(
+                'compute_nodes.id', name='pci_devices_compute_node_id_fkey'),
+            nullable=False),
         sa.Column('address', sa.String(12), nullable=False),
         sa.Column('product_id', sa.String(4)),
         sa.Column('vendor_id', sa.String(4)),
@@ -1128,7 +1177,10 @@ def upgrade(migrate_engine):
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('uuid', sa.String(length=36), nullable=False),
-        sa.Column('usage_id', sa.Integer, nullable=False),
+        sa.Column(
+            'usage_id', sa.Integer,
+            sa.ForeignKey('quota_usages.id', name='reservations_ibfk_1'),
+            nullable=False),
         sa.Column('project_id', sa.String(length=255)),
         sa.Column('resource', sa.String(length=255)),
         sa.Column('delta', sa.Integer, nullable=False),
@@ -1181,14 +1233,24 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    security_group_instance_association = \
-        sa.Table('security_group_instance_association', meta,
+    security_group_instance_association = sa.Table(
+        'security_group_instance_association', meta,
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('security_group_id', sa.Integer),
-        sa.Column('instance_uuid', sa.String(length=36)),
+        sa.Column(
+            'security_group_id', sa.Integer,
+            sa.ForeignKey(
+                'security_groups.id',
+                name='security_group_instance_association_ibfk_1'),
+        ),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid',
+                name='security_group_instance_association_instance_uuid_fkey'),
+        ),
         sa.Column('deleted', sa.Integer),
         sa.Index(
             'security_group_instance_association_instance_uuid_idx',
@@ -1350,7 +1412,12 @@ def upgrade(migrate_engine):
         sa.Column('address', sa.String(length=255)),
         sa.Column('network_id', sa.Integer),
         sa.Column('uuid', sa.String(length=36)),
-        sa.Column('instance_uuid', sa.String(length=36), nullable=True),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid',
+                name='virtual_interfaces_instance_uuid_fkey'),
+            nullable=True),
         sa.Column('deleted', sa.Integer),
         sa.Column('tag', sa.String(255)),
         sa.Index('virtual_interfaces_instance_uuid_fkey', 'instance_uuid'),
@@ -1457,100 +1524,6 @@ def upgrade(migrate_engine):
 
         for index in mysql_specific_indexes:
             index.create(migrate_engine)
-
-    # Common foreign keys
-    fkeys = [
-        [
-            [instance_type_projects.c.instance_type_id],
-            [instance_types.c.id],
-            'instance_type_projects_ibfk_1',
-        ],
-        [
-            [reservations.c.usage_id],
-            [quota_usages.c.id],
-            'reservations_ibfk_1',
-        ],
-        [
-            [security_group_instance_association.c.security_group_id],
-            [security_groups.c.id],
-            'security_group_instance_association_ibfk_1',
-        ],
-        [
-            [fixed_ips.c.instance_uuid],
-            [instances.c.uuid],
-            'fixed_ips_instance_uuid_fkey',
-        ],
-        [
-            [block_device_mapping.c.instance_uuid],
-            [instances.c.uuid],
-            'block_device_mapping_instance_uuid_fkey',
-        ],
-        [
-            [instance_info_caches.c.instance_uuid],
-            [instances.c.uuid],
-            'instance_info_caches_instance_uuid_fkey',
-        ],
-        [
-            [instance_metadata.c.instance_uuid],
-            [instances.c.uuid],
-            'instance_metadata_instance_uuid_fkey',
-        ],
-        [
-            [instance_system_metadata.c.instance_uuid],
-            [instances.c.uuid],
-            'instance_system_metadata_ibfk_1',
-        ],
-        [
-            [security_group_instance_association.c.instance_uuid],
-            [instances.c.uuid],
-            'security_group_instance_association_instance_uuid_fkey',
-        ],
-        [
-            [virtual_interfaces.c.instance_uuid],
-            [instances.c.uuid],
-            'virtual_interfaces_instance_uuid_fkey',
-        ],
-        [
-            [instance_actions.c.instance_uuid],
-            [instances.c.uuid],
-            'fk_instance_actions_instance_uuid',
-        ],
-        [
-            [instance_faults.c.instance_uuid],
-            [instances.c.uuid],
-            'fk_instance_faults_instance_uuid',
-        ],
-        [
-            [migrations.c.instance_uuid],
-            [instances.c.uuid],
-            'fk_migrations_instance_uuid',
-        ],
-    ]
-
-    for fkey_pair in fkeys:
-        if migrate_engine.name in ('mysql', 'sqlite'):
-            # For MySQL we name our fkeys explicitly
-            # so they match Havana
-            fkey = ForeignKeyConstraint(
-                columns=fkey_pair[0], refcolumns=fkey_pair[1],
-                name=fkey_pair[2])
-            fkey.create()
-        elif migrate_engine.name == 'postgresql':
-            # PostgreSQL names things like it wants (correct and compatible!)
-            fkey = ForeignKeyConstraint(
-                columns=fkey_pair[0], refcolumns=fkey_pair[1])
-            fkey.create()
-
-    # TODO(stephenfin): Fold these in somehow
-    fkey = ForeignKeyConstraint(
-        columns=[pci_devices.c.compute_node_id],
-        refcolumns=[compute_nodes.c.id])
-    fkey.create()
-
-    fkey = ForeignKeyConstraint(
-        columns=[instance_extra.c.instance_uuid],
-        refcolumns=[instances.c.uuid])
-    fkey.create()
 
     if migrate_engine.name == 'mysql':
         # In Folsom we explicitly converted migrate_version to UTF8.
