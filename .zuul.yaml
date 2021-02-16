@@ -334,6 +334,7 @@
         # We only have two computes and we don't yet support cross-cell live
         # migration.
         LIVE_MIGRATION_AVAILABLE: false
+        DEVSTACK_PARALLEL: True
     group-vars:
       peers:
         devstack_localrc:
@@ -383,6 +384,7 @@
       devstack_localrc:
         GLANCE_STANDALONE: True
         GLANCE_USE_IMPORT_WORKFLOW: True
+        DEVSTACK_PARALLEL: True
       devstack_local_conf:
         post-config:
           $NOVA_CONF:
