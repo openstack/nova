@@ -407,7 +407,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         backing = vmwareapi_fake.DataObject()
         backing.datastore = ds.ref
         device.backing = backing
-        vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
+        vmdk = vm_util.VmdkInfo('[fake] test (uuid)/root.vmdk',
                                 'fake-adapter',
                                 'fake-disk',
                                 'fake-capacity',
@@ -428,7 +428,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             uuid = self._instance.image_ref
             cache_path = ds.build_path('vmware_base', uuid, uuid + '.vmdk')
-            rescue_path = ds.build_path(self._uuid, uuid + '-rescue.vmdk')
+            vm_folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
+            rescue_path = ds.build_path(vm_folder, uuid + '-rescue.vmdk')
 
             mock_disk_copy.assert_called_once_with(self._session, dc_info.ref,
                              cache_path, rescue_path)

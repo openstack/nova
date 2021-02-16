@@ -1225,7 +1225,8 @@ class VMwareVMOps(object):
         self._fetch_image_if_missing(context, vi)
 
         # Get the rescue disk path
-        rescue_disk_path = datastore.build_path(instance.uuid,
+        vm_folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
+        rescue_disk_path = datastore.build_path(vm_folder,
                 "%s-rescue.%s" % (image_info.image_id, image_info.file_type))
 
         # Copy the cached image to the be the rescue disk. This will be used
