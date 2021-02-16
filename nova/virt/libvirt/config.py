@@ -755,8 +755,7 @@ class LibvirtConfigCPU(LibvirtConfigObject):
 
         # sorting the features to allow more predictable tests
         for f in sorted(self.features, key=lambda x: x.name):
-            if f.policy != "disable":
-                cpu.append(f.format_dom())
+            cpu.append(f.format_dom())
 
         return cpu
 
