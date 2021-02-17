@@ -230,9 +230,6 @@ Nova Database
     arguments are not provided, 2 if an invalid date is provided, 3 if no
     data was deleted, 4 if the list of cells cannot be obtained.
 
-``nova-manage db null_instance_uuid_scan [--delete]``
-    Lists and optionally deletes database records where instance_uuid is NULL.
-
 ``nova-manage db online_data_migrations [--max-count]``
    Perform data migration to update all live data.
 

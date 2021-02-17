@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The ``nova-manage db null_instance_uuid_scan`` command has been removed.
+    A blocking migration has been in place since the 12.0.0 (Liberty) release
+    making this check unnecessary.
