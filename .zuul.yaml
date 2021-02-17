@@ -88,6 +88,8 @@
     vars:
       tox_envlist: all
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
+      devstack_services:
+        neutron-trunk: true
       devstack_local_conf:
         test-config:
           $TEMPEST_CONFIG:
