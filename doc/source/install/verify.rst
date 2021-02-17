@@ -115,10 +115,6 @@ Verify operation of the Compute service.
       | Result: Success                                                    |
       | Details: None                                                      |
       +--------------------------------------------------------------------+
-      | Check: Ironic Flavor Migration                                     |
-      | Result: Success                                                    |
-      | Details: None                                                      |
-      +--------------------------------------------------------------------+
       | Check: Cinder API                                                  |
       | Result: Success                                                    |
       | Details: None                                                      |

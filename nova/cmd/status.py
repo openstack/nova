@@ -16,19 +16,17 @@
 CLI interface for nova status commands.
 """
 
-import collections
 import functools
 import sys
 import traceback
 
 from keystoneauth1 import exceptions as ks_exc
 from oslo_config import cfg
-from oslo_serialization import jsonutils
 from oslo_upgradecheck import common_checks
 from oslo_upgradecheck import upgradecheck
 import pkg_resources
 from sqlalchemy import func as sqlfunc
-from sqlalchemy import MetaData, Table, and_, select
+from sqlalchemy import MetaData, Table, select
 
 from nova.cmd import common as cmd_common
 import nova.conf
@@ -189,15 +187,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     @staticmethod
-    def _get_non_cell0_mappings():
-        """Queries the API database for non-cell0 cell mappings.
-
-        :returns: list of nova.objects.CellMapping objects
-        """
-        return UpgradeCommands._get_cell_mappings(include_cell0=False)
-
-    @staticmethod
-    def _get_cell_mappings(include_cell0=True):
+    def _get_cell_mappings():
         """Queries the API database for cell mappings.
 
         .. note:: This method is unique in that it queries the database using
@@ -209,113 +199,11 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
                   formatted 'database_connection' value back on those objects
                   (they are read-only).
 
-        :param include_cell0: True if cell0 should be returned, False if cell0
-            should be excluded from the results.
         :returns: list of nova.objects.CellMapping objects
         """
         ctxt = nova_context.get_admin_context()
         cell_mappings = cell_mapping_obj.CellMappingList.get_all(ctxt)
-        if not include_cell0:
-            # Since CellMappingList does not implement remove() we have to
-            # create a new list and exclude cell0.
-            mappings = [mapping for mapping in cell_mappings
-                        if not mapping.is_cell0()]
-            cell_mappings = cell_mapping_obj.CellMappingList(objects=mappings)
         return cell_mappings
-
-    @staticmethod
-    def _is_ironic_instance_migrated(extras, inst):
-        extra = (extras.select().where(extras.c.instance_uuid == inst['uuid']
-                                       ).execute().first())
-        # Pull the flavor and deserialize it. Note that the flavor info for an
-        # instance is a dict keyed by "cur", "old", "new" and we want the
-        # current flavor.
-        flavor = jsonutils.loads(extra['flavor'])['cur']['nova_object.data']
-        # Do we have a custom resource flavor extra spec?
-        specs = flavor['extra_specs'] if 'extra_specs' in flavor else {}
-        for spec_key in specs:
-            if spec_key.startswith('resources:CUSTOM_'):
-                # We found a match so this instance is good.
-                return True
-        return False
-
-    def _check_ironic_flavor_migration(self):
-        """In Pike, ironic instances and flavors need to be migrated to use
-        custom resource classes. In ironic, the node.resource_class should be
-        set to some custom resource class value which should match a
-        "resources:<custom resource class name>" flavor extra spec on baremetal
-        flavors. Existing ironic instances will have their embedded
-        instance.flavor.extra_specs migrated to use the matching ironic
-        node.resource_class value in the nova-compute service, or they can
-        be forcefully migrated using "nova-manage db ironic_flavor_migration".
-
-        In this check, we look for all ironic compute nodes in all non-cell0
-        cells, and from those ironic compute nodes, we look for an instance
-        that has a "resources:CUSTOM_*" key in it's embedded flavor extra
-        specs.
-        """
-        cell_mappings = self._get_non_cell0_mappings()
-        ctxt = nova_context.get_admin_context()
-        # dict of cell identifier (name or uuid) to number of unmigrated
-        # instances
-        unmigrated_instance_count_by_cell = collections.defaultdict(int)
-        for cell_mapping in cell_mappings:
-            with nova_context.target_cell(ctxt, cell_mapping) as cctxt:
-                # Get the (non-deleted) ironic compute nodes in this cell.
-                meta = MetaData(bind=db_session.get_engine(context=cctxt))
-                compute_nodes = Table('compute_nodes', meta, autoload=True)
-                ironic_nodes = (
-                    compute_nodes.select().where(and_(
-                        compute_nodes.c.hypervisor_type == 'ironic',
-                        compute_nodes.c.deleted == 0
-                    )).execute().fetchall())
-
-                if ironic_nodes:
-                    # We have ironic nodes in this cell, let's iterate over
-                    # them looking for instances.
-                    instances = Table('instances', meta, autoload=True)
-                    extras = Table('instance_extra', meta, autoload=True)
-                    for node in ironic_nodes:
-                        nodename = node['hypervisor_hostname']
-                        # Get any (non-deleted) instances for this node.
-                        ironic_instances = (
-                            instances.select().where(and_(
-                                instances.c.node == nodename,
-                                instances.c.deleted == 0
-                            )).execute().fetchall())
-                        # Get the instance_extras for each instance so we can
-                        # find the flavors.
-                        for inst in ironic_instances:
-                            if not self._is_ironic_instance_migrated(
-                                    extras, inst):
-                                # We didn't find the extra spec key for this
-                                # instance so increment the number of
-                                # unmigrated instances in this cell.
-                                unmigrated_instance_count_by_cell[
-                                    cell_mapping.uuid] += 1
-
-        if not cell_mappings:
-            # There are no non-cell0 mappings so we can't determine this, just
-            # return a warning. The cellsv2 check would have already failed
-            # on this.
-            msg = (_('Unable to determine ironic flavor migration without '
-                     'cell mappings.'))
-            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
-
-        if unmigrated_instance_count_by_cell:
-            # There are unmigrated ironic instances, so we need to fail.
-            msg = (_('There are (cell=x) number of unmigrated instances in '
-                     'each cell: %s. Run \'nova-manage db '
-                     'ironic_flavor_migration\' on each cell.') %
-                   ' '.join('(%s=%s)' % (
-                       cell_id, unmigrated_instance_count_by_cell[cell_id])
-                            for cell_id in
-                            sorted(unmigrated_instance_count_by_cell.keys())))
-            return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
-
-        # Either there were no ironic compute nodes or all instances for
-        # those nodes are already migrated, so there is nothing to do.
-        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
     def _check_cinder(self):
         """Checks to see that the cinder API is available at a given minimum
@@ -431,8 +319,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         (_('Cells v2'), _check_cellsv2),
         # Added in Ocata
         (_('Placement API'), _check_placement),
-        # Added in Rocky (but also useful going back to Pike)
-        (_('Ironic Flavor Migration'), _check_ironic_flavor_migration),
         # Added in Train
         (_('Cinder API'), _check_cinder),
         # Added in Ussuri

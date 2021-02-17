@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The ``nova-manage db ironic_flavor_migration`` command has been removed.
+    This command could be used to assist users skipping the 16.0.0 (Pike)
+    release, which is now in the distant past.
+  - |
+    The ``Ironic Flavor Migration`` upgrade check has been removed. It is no
+    longer necessary.
