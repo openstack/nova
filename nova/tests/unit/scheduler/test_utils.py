@@ -1243,6 +1243,25 @@ class TestUtils(TestUtilsBase):
         rr = utils.ResourceRequest.from_request_spec(rs)
         self.assertResourceRequestsEqual(expected, rr)
 
+    def test_resource_request_from_request_spec_with_secure_boot(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
+            extra_specs={'os:secure_boot': 'required'},
+        )
+        expected = FakeResourceRequest()
+        expected._rg_by_id[None] = objects.RequestGroup(
+            use_same_provider=False,
+            required_traits={'COMPUTE_SECURITY_UEFI_SECURE_BOOT'},
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            },
+        )
+        rs = objects.RequestSpec(flavor=flavor, is_bfv=False)
+        rr = utils.ResourceRequest.from_request_spec(rs)
+        self.assertResourceRequestsEqual(expected, rr)
+
     def test_resource_request_from_request_spec_with_vtpm_1_2(self):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0,
