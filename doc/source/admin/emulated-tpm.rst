@@ -34,9 +34,10 @@ feature:
 With the above requirements satisfied, verify vTPM support by inspecting the
 traits on the compute node's resource provider:
 
-.. code:: console
+.. code:: bash
 
-   $ openstack resource provider trait list $compute_uuid | grep SECURITY_TPM
+   $ COMPUTE_UUID=$(openstack resource provider list --name $HOST -f value -c uuid)
+   $ openstack resource provider trait list $COMPUTE_UUID | grep SECURITY_TPM
    | COMPUTE_SECURITY_TPM_1_2 |
    | COMPUTE_SECURITY_TPM_2_0 |
 
