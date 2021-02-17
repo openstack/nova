@@ -322,11 +322,8 @@ class NUMAServersTest(NUMAServersTestBase):
         }
         flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
 
-        # FIXME(stephenfin): This is bug #1898272. In real life, this
-        # configuration will result in a libvirt traceback due to attempting to
-        # pin the single shared instance vCPU to an empty set
-        # self._run_build_test(flavor_id, end_status='ERROR')
-        self._run_build_test(flavor_id)
+        # There shouldn't be any hosts available to satisfy this request
+        self._run_build_test(flavor_id, end_status='ERROR')
 
     def test_create_server_with_dedicated_policy_old_configuration(self):
         """Create a server using the legacy extra spec and configuration.

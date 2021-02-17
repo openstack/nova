@@ -1120,7 +1120,12 @@ def _numa_fit_instance_cell(
                           'cpuset_reserved': cpuset_reserved
                       })
             return None
-    else:
+
+    if instance_cell.cpu_policy in (
+        fields.CPUAllocationPolicy.SHARED,
+        fields.CPUAllocationPolicy.MIXED,
+        None,
+    ):
         required_cpus = len(instance_cell.cpuset)
         if required_cpus > len(host_cell.cpuset):
             LOG.debug('Not enough host cell CPUs to fit instance cell; '
@@ -1134,7 +1139,7 @@ def _numa_fit_instance_cell(
         fields.CPUAllocationPolicy.DEDICATED,
         fields.CPUAllocationPolicy.MIXED,
     ):
-        LOG.debug('Pinning has been requested')
+        LOG.debug('Instance has requested pinned CPUs')
         required_cpus = len(instance_cell.pcpuset) + cpuset_reserved
         if required_cpus > host_cell.avail_pcpus:
             LOG.debug('Not enough available CPUs to schedule instance. '
@@ -1165,9 +1170,14 @@ def _numa_fit_instance_cell(
             LOG.debug('Failed to map instance cell CPUs to host cell CPUs')
             return None
 
-    elif limits:
-        LOG.debug('No pinning requested, considering limitations on usable cpu'
-                  ' and memory')
+    if instance_cell.cpu_policy in (
+        fields.CPUAllocationPolicy.SHARED,
+        fields.CPUAllocationPolicy.MIXED,
+        None,
+    ) and limits:
+        LOG.debug(
+            'Instance has requested shared CPUs; considering limitations '
+            'on usable CPU and memory.')
         cpu_usage = host_cell.cpu_usage + len(instance_cell.cpuset)
         cpu_limit = len(host_cell.cpuset) * limits.cpu_allocation_ratio
         if cpu_usage > cpu_limit:

@@ -3926,6 +3926,29 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
             mock_log.warning.call_args[0][0],
         )
 
+    def test_get_pinning_mixed_policy_bug_1898272(self):
+        """A host cell must have sufficient dedicated *and* shared CPUs when
+        using the mixed policy.
+        """
+        host_pin = objects.NUMACell(
+            id=0,
+            cpuset=set(),
+            pcpuset=set(range(4)),
+            memory=4096,
+            memory_usage=0,
+            pinned_cpus=set(),
+            siblings=[{0, 2}, {1, 3}],
+            mempages=[],
+        )
+        inst_pin = objects.InstanceNUMACell(
+            cpuset={0},
+            pcpuset={1, 2, 3},
+            memory=2048,
+            cpu_policy=fields.CPUAllocationPolicy.MIXED,
+        )
+        inst_topo = hw._numa_fit_instance_cell(host_pin, inst_pin)
+        self.assertIsNone(inst_topo)
+
 
 class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
     def test_host_numa_fit_instance_to_host_single_cell(self):
