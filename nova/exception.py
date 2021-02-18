@@ -1891,6 +1891,10 @@ class UEFINotSupported(Invalid):
     msg_fmt = _("UEFI is not supported")
 
 
+class SecureBootNotSupported(Invalid):
+    msg_fmt = _("Secure Boot is not supported by host")
+
+
 class TriggerCrashDumpNotSupported(Invalid):
     msg_fmt = _("Triggering crash dump is not supported")
 

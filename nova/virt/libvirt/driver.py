@@ -5818,6 +5818,29 @@ class LibvirtDriver(driver.ComputeDriver):
             caps.host.cpu.arch == fields.Architecture.AARCH64
         )
 
+    def _check_secure_boot_support(
+        self,
+        arch: str,
+        machine_type: str,
+        firmware_type: str,
+    ) -> bool:
+        if not self._host.supports_secure_boot:
+            # secure boot requires host configuration
+            return False
+
+        if firmware_type != fields.FirmwareType.UEFI:
+            # secure boot is only supported with UEFI
+            return False
+
+        if (
+            arch == fields.Architecture.X86_64 and
+            'q35' not in machine_type
+        ):
+            # secure boot on x86_64 requires the Q35 machine type
+            return False
+
+        return True
+
     def _get_supported_perf_events(self):
         if not len(CONF.libvirt.enabled_perf_events):
             return []
@@ -5883,8 +5906,35 @@ class LibvirtDriver(driver.ComputeDriver):
                     # architecture that we have no default machine type for
                     raise exception.UEFINotSupported()
 
-                loader, nvram_template = self._host.get_loader(
-                    arch, mach_type, has_secure_boot=False)
+                os_secure_boot = hardware.get_secure_boot_constraint(
+                    flavor, image_meta)
+                if os_secure_boot == 'required':
+                    # hard fail if we don't support secure boot and it's
+                    # required
+                    if not self._check_secure_boot_support(
+                        arch, mach_type, hw_firmware_type,
+                    ):
+                        raise exception.SecureBootNotSupported()
+
+                    guest.os_loader_secure = True
+                elif os_secure_boot == 'optional':
+                    # only enable it if the host is configured appropriately
+                    guest.os_loader_secure = self._check_secure_boot_support(
+                        arch, mach_type, hw_firmware_type,
+                    )
+                else:
+                    guest.os_loader_secure = False
+
+                try:
+                    loader, nvram_template = self._host.get_loader(
+                        arch, mach_type,
+                        has_secure_boot=guest.os_loader_secure)
+                except exception.UEFINotSupported as exc:
+                    if guest.os_loader_secure:
+                        # we raise a specific exception if we requested secure
+                        # boot and couldn't get that
+                        raise exception.SecureBootNotSupported() from exc
+                    raise
 
                 guest.os_loader = loader
                 guest.os_loader_type = 'pflash'

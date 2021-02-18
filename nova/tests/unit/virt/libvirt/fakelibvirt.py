@@ -1990,6 +1990,36 @@ class FakeLibvirtFixture(fixtures.Fixture):
                 'tags': [],
             },
             {
+                'description': 'UEFI firmware for x86_64, with SB+SMM',
+                'interface-types': ['uefi'],
+                'mapping': {
+                    'device': 'flash',
+                    'executable': {
+                        'filename': '/usr/share/OVMF/OVMF_CODE.secboot.fd',
+                        'format': 'raw',
+                    },
+                    'nvram-template': {
+                        'filename': '/usr/share/OVMF/OVMF_VARS.secboot.fd',
+                        'format': 'raw',
+                    },
+                },
+                'targets': [
+                    {
+                        'architecture': 'x86_64',
+                        'machines': ['pc-q35-*'],
+                    },
+                ],
+                'features': [
+                    'acpi-s3',
+                    'amd-sev',
+                    'enrolled-keys',
+                    'requires-smm',
+                    'secure-boot',
+                    'verbose-dynamic',
+                ],
+                'tags': [],
+            },
+            {
                 'description': 'UEFI firmware for aarch64',
                 'interface-types': ['uefi'],
                 'mapping': {
@@ -2011,7 +2041,7 @@ class FakeLibvirtFixture(fixtures.Fixture):
                 ],
                 'features': ['verbose-static'],
                 "tags": [],
-            }
+            },
         ]
         self.useFixture(
             fixtures.MockPatch(

@@ -5266,9 +5266,85 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             CONF.libvirt.virt_type, instance_ref, image_meta)
         cfg = drvr._get_guest_config(
             instance_ref, [], image_meta, disk_info)
-        # these values are derived from the FakeLibvirtFixture
+        # these paths are derived from the FakeLibvirtFixture
         self.assertEqual('/usr/share/OVMF/OVMF_CODE.fd', cfg.os_loader)
         self.assertEqual('/usr/share/OVMF/OVMF_VARS.fd', cfg.os_nvram_template)
+
+    @ddt.data(True, False)
+    def test_get_guest_config_with_secure_boot_required(
+        self, host_has_support,
+    ):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._host._supports_uefi = True
+        drvr._host._supports_secure_boot = host_has_support
+
+        image_meta = objects.ImageMeta.from_dict({
+            'disk_format': 'raw',
+            # secure boot requires UEFI
+            'properties': {
+                'hw_firmware_type': 'uefi',
+                'hw_machine_type': 'q35',
+                'os_secure_boot': 'required',
+            },
+        })
+        instance_ref = objects.Instance(**self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance_ref, image_meta)
+        if host_has_support:
+            # if the host supports it, we should get the feature
+            cfg = drvr._get_guest_config(
+                instance_ref, [], image_meta, disk_info)
+            # these paths are derived from the FakeLibvirtFixture
+            self.assertEqual(
+                '/usr/share/OVMF/OVMF_CODE.secboot.fd', cfg.os_loader)
+            self.assertEqual(
+                '/usr/share/OVMF/OVMF_VARS.secboot.fd', cfg.os_nvram_template)
+            self.assertTrue(cfg.os_loader_secure)
+        else:
+            # if not, we should see an exception
+            self.assertRaises(
+                exception.SecureBootNotSupported,
+                drvr._get_guest_config,
+                instance_ref, [], image_meta, disk_info)
+
+    @ddt.data(True, False)
+    def test_get_guest_config_with_secure_boot_optional(
+        self, host_has_support,
+    ):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._host._supports_uefi = True
+        drvr._host._supports_secure_boot = host_has_support
+
+        image_meta = objects.ImageMeta.from_dict({
+            'disk_format': 'raw',
+            # secure boot requires UEFI
+            'properties': {
+                'hw_firmware_type': 'uefi',
+                'hw_machine_type': 'q35',
+                'os_secure_boot': 'optional',
+            },
+        })
+        instance_ref = objects.Instance(**self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance_ref, image_meta)
+        cfg = drvr._get_guest_config(
+            instance_ref, [], image_meta, disk_info)
+        if host_has_support:
+            # if the host supports it we should get the feature
+            self.assertEqual(
+                '/usr/share/OVMF/OVMF_CODE.secboot.fd', cfg.os_loader)
+            self.assertEqual(
+                '/usr/share/OVMF/OVMF_VARS.secboot.fd', cfg.os_nvram_template)
+            self.assertTrue(cfg.os_loader_secure)
+        else:
+            # if not, silently ignore
+            self.assertEqual(
+                '/usr/share/OVMF/OVMF_CODE.fd', cfg.os_loader)
+            self.assertEqual(
+                '/usr/share/OVMF/OVMF_VARS.fd', cfg.os_nvram_template)
+            self.assertFalse(cfg.os_loader_secure)
 
     def test_check_uefi_support_aarch64(self):
         self.mock_uname.return_value = fakelibvirt.os_uname(
