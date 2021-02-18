@@ -5678,12 +5678,12 @@ class LibvirtDriver(driver.ComputeDriver):
         flavor: 'objects.Flavor',
         instance: 'objects.Instance',
         image_meta: 'objects.ImageMeta',
-    ):
+    ) -> None:
         """Add a vTPM device to the guest, if requested."""
         # Enable virtual tpm support if required in the flavor or image.
         vtpm_config = hardware.get_vtpm_constraint(flavor, image_meta)
         if not vtpm_config:
-            return
+            return None
 
         vtpm_secret_uuid = instance.system_metadata.get('vtpm_secret_uuid')
         if not vtpm_secret_uuid:
@@ -5871,8 +5871,12 @@ class LibvirtDriver(driver.ComputeDriver):
         return supported_events
 
     def _configure_guest_by_virt_type(
-        self, guest, instance, image_meta, flavor,
-    ):
+        self,
+        guest: libvirt_guest.Guest,
+        instance: 'objects.Instance',
+        image_meta: 'objects.ImageMeta',
+        flavor: 'objects.Flavor',
+    ) -> None:
         if CONF.libvirt.virt_type in ("kvm", "qemu"):
             caps = self._host.get_capabilities()
             if caps.host.cpu.arch in (
@@ -5930,9 +5934,17 @@ class LibvirtDriver(driver.ComputeDriver):
             if guest.os_type == fields.VMMode.EXE:
                 guest.os_init_path = "/sbin/init"
 
+        return None
+
     def _conf_non_lxc(
-        self, guest, root_device_name, rescue, instance, inst_path, image_meta,
-        disk_info,
+        self,
+        guest: libvirt_guest.Guest,
+        root_device_name: str,
+        rescue: bool,
+        instance: 'objects.Instance',
+        inst_path: str,
+        image_meta: 'objects.ImageMeta',
+        disk_info: ty.Dict[str, ty.Any],
     ):
         if rescue:
             self._set_guest_for_rescue(

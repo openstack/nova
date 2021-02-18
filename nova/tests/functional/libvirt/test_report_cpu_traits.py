@@ -165,7 +165,7 @@ class LibvirtReportNoSevTraitsTests(LibvirtReportTraitsTestBase):
             # As we are changing the domain caps we need to clear the
             # cache in the host object.
             self.compute.driver._host._domain_caps = None
-            self.compute.driver._host._set_amd_sev_support()
+            self.compute.driver._host._supports_amd_sev = None
             self.assertTrue(self.compute.driver._host.supports_amd_sev)
 
             mock_exists.assert_has_calls([mock.call(SEV_KERNEL_PARAM_FILE)])
@@ -235,7 +235,7 @@ class LibvirtReportSevTraitsTests(LibvirtReportTraitsTestBase):
             # Retrigger the detection code.  In the real world this
             # would be a restart of the compute service.
             self.compute.driver._host._domain_caps = None
-            self.compute.driver._host._set_amd_sev_support()
+            self.compute.driver._host._supports_amd_sev = None
             self.assertFalse(self.compute.driver._host.supports_amd_sev)
 
             mock_exists.assert_has_calls([mock.call(SEV_KERNEL_PARAM_FILE)])
