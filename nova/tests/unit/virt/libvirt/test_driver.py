@@ -1264,6 +1264,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         ],
         any_order=True)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     @mock.patch.object(host.Host, "has_min_version")
     def test_min_version_start_ok(self, mock_version):
         mock_version.return_value = True
@@ -1278,6 +1280,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           drvr.init_host,
                           "dummyhost")
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                             libvirt_driver.NEXT_MIN_LIBVIRT_VERSION) - 1)
@@ -1306,6 +1310,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 break
         self.assertTrue(version_arg_found)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
                             libvirt_driver.NEXT_MIN_QEMU_VERSION) - 1)
@@ -1334,6 +1340,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 break
         self.assertTrue(version_arg_found)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                             libvirt_driver.NEXT_MIN_LIBVIRT_VERSION))
@@ -1362,6 +1370,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 break
         self.assertFalse(version_arg_found)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
                             libvirt_driver.NEXT_MIN_QEMU_VERSION))
@@ -1390,18 +1400,24 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 break
         self.assertFalse(version_arg_found)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     @mock.patch.object(fields.Architecture, "from_host",
                        return_value=fields.Architecture.PPC64)
     def test_min_version_ppc_ok(self, mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     @mock.patch.object(fields.Architecture, "from_host",
                        return_value=fields.Architecture.S390X)
     def test_min_version_s390_ok(self, mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     def test_file_backed_memory_support_called(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         with mock.patch.object(drvr,
@@ -1455,6 +1471,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             str(mock_log.call_args[0]),
         )
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     def test__check_cpu_compatibility_start_ok(self):
         self.flags(cpu_mode="custom",
                    cpu_models=["Penryn"],
@@ -1486,6 +1504,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(exception.InvalidCPUInfo,
                           drvr.init_host, "dummyhost")
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     def test__check_cpu_compatibility_with_flag(self):
         self.flags(cpu_mode="custom",
                    cpu_models=["Penryn"],
@@ -1527,6 +1547,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertRaises(exception.Invalid, drvr.init_host, "dummyhost")
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     def test__check_cpu_compatibility_aarch64_qemu_custom_start_OK(self):
         """Test getting CPU traits when using a virt_type that doesn't support
         the feature, only kvm and qemu supports reporting CPU traits.
@@ -1630,6 +1652,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         )
         mock_getgrnam.assert_called_with('admins')
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     @mock.patch('shutil.which')
     @mock.patch('pwd.getpwnam')
     @mock.patch('grp.getgrnam')
@@ -2603,6 +2627,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         result = drvr.get_volume_connector(volume)
         self.assertEqual(storage_ip, result['ip'])
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     def test_lifecycle_event_registration(self):
         calls = []
 
@@ -2839,6 +2865,36 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         # i440fx is not pcie machine so there should be no pcie ports
         self.assertEqual(0, num_ports)
+
+    @mock.patch('nova.virt.libvirt.utils.get_default_machine_type',
+                new=mock.Mock(return_value='config-machine_type'))
+    def test_get_guest_config_records_machine_type_in_instance(self):
+        # Assert that the config derived machine type is used when it
+        # isn't present in the image_meta of an instance.
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({})
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type,
+            instance,
+            image_meta
+        )
+
+        cfg = drvr._get_guest_config(
+            instance,
+            _fake_network_info(self),
+            image_meta,
+            disk_info
+        )
+
+        self.assertEqual(
+            'config-machine_type',
+            instance.system_metadata.get('image_hw_machine_type'),
+        )
+        self.assertEqual(
+            'config-machine_type',
+            cfg.os_mach_type,
+        )
 
     def test_get_guest_config_missing_ownership_info(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -7581,9 +7637,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             instance_ref,
                                             image_meta)
 
-        return drvr._get_guest_config(instance_ref,
-                                      _fake_network_info(self),
-                                      image_meta, disk_info)
+        return drvr._get_guest_config(
+            instance_ref, _fake_network_info(self), image_meta, disk_info)
 
     def test_get_guest_config_machine_type_through_image_meta(self):
         cfg = self._get_guest_config_machine_type_through_image_meta(
@@ -15529,6 +15584,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                          {'ifaces': '8.8.8.8, 75.75.75.75',
                                           'my_ip': mock.ANY})
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     def test_init_host_checks_ip(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         with mock.patch.object(drvr, '_check_my_ip') as mock_check:
@@ -15583,6 +15640,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               drvr.init_host, ("wibble",))
             self.assertTrue(service_mock.disabled)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     def test_service_resume_after_broken_connection(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         service_mock = mock.MagicMock()
@@ -19793,6 +19852,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertRaises(exception.NovaException,
                               driver.init_host, 'wibble')
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_VIRTUOZZO_VERSION))
@@ -24913,6 +24974,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual(set([uuids.mdev1]),
                          drvr._get_existing_mdevs_not_assigned(parent=None))
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     @mock.patch('nova.compute.utils.get_machine_ips',
                 new=mock.Mock(return_value=[]))
     @mock.patch.object(nova.privsep.libvirt, 'create_mdev')
@@ -25578,6 +25641,54 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual(0, mock_qemu_img_info.call_count)
         mock_execute.assert_called_once_with('qemu-img', 'rebase',
                                              '-b', '', 'disk')
+
+    @mock.patch('nova.objects.instance.InstanceList.get_by_host')
+    @mock.patch('nova.virt.libvirt.host.Host.get_hostname',
+        new=mock.Mock(return_value=mock.sentinel.hostname))
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_register_machine_type_already_registered_image_metadata(
+        self, mock_get_by_host
+    ):
+        instance = self._create_instance(
+            params={
+                'system_metadata': {
+                    'image_hw_machine_type': 'existing_type',
+                }
+            }
+        )
+        mock_get_by_host.return_value = [instance]
+        self.drvr._register_instance_machine_type()
+        # Assert that we don't overwrite the existing type
+        self.assertEqual(
+            'existing_type',
+            instance.image_meta.properties.hw_machine_type
+        )
+        self.assertEqual(
+            'existing_type',
+            instance.system_metadata.get('image_hw_machine_type')
+        )
+
+    @mock.patch('nova.objects.instance.Instance.save')
+    @mock.patch('nova.objects.instance.InstanceList.get_by_host')
+    @mock.patch('nova.virt.libvirt.utils.get_machine_type',
+        new=mock.Mock(return_value='conf_type'))
+    @mock.patch('nova.virt.libvirt.host.Host.get_hostname', new=mock.Mock())
+    @mock.patch('nova.context.get_admin_context', new=mock.Mock())
+    def test_register_machine_type(
+        self, mock_get_by_host, mock_instance_save,
+    ):
+        instance = self._create_instance()
+        mock_get_by_host.return_value = [instance]
+        self.drvr._register_instance_machine_type()
+        mock_instance_save.assert_called_once()
+        self.assertEqual(
+            'conf_type',
+            instance.image_meta.properties.hw_machine_type
+        )
+        self.assertEqual(
+            'conf_type',
+            instance.system_metadata.get('image_hw_machine_type')
+        )
 
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
