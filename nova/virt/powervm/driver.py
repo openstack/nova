@@ -80,6 +80,7 @@ class PowerVMDriver(driver.ComputeDriver):
             'supports_pcpus': False,
             'supports_accelerators': False,
             'supports_vtpm': False,
+            'supports_secure_boot': False,
 
             # Supported image types
             "supports_image_type_aki": False,
