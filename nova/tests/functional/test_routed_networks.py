@@ -518,11 +518,12 @@ class RoutedNetworkTests(integrated_helpers._IntegratedTestBase):
 
         # Make sure we correctly looked up at which aggregates were related to
         # the segment ID #2
-        exp_segment_id = self.neutron.segment_id_2['id']
+        expected_subnet_id = self.neutron.subnet_for_segment_id_2['id']
+        expected_segment_id = self.neutron.segment_id_2['id']
         mock_get_aggregates.assert_called_once_with(
-            mock.ANY, exp_segment_id)
+            mock.ANY, expected_segment_id)
 
         self.assertIn('No valid host', server['fault']['message'])
         self.assertIn(
-            'Failed to find aggregate related to segment %s' % exp_segment_id,
+            'Aggregates not found for the subnet %s' % expected_subnet_id,
             server['fault']['message'])
