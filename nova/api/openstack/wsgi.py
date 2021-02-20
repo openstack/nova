@@ -29,6 +29,7 @@ from nova.api import wsgi
 from nova import exception
 from nova import i18n
 from nova.i18n import _
+from nova import version
 
 
 LOG = logging.getLogger(__name__)
@@ -683,9 +684,10 @@ def expected_errors(errors):
                     raise
 
                 LOG.exception("Unexpected exception in API method")
-                msg = _('Unexpected API Error. Please report this at '
-                    'http://bugs.launchpad.net/nova/ and attach the Nova '
-                    'API log if possible.\n%s') % type(exc)
+                msg = _("Unexpected API Error. "
+                        "%(support)s\n%(exc)s" % {
+                            'support': version.support_string(),
+                            'exc': type(exc)})
                 raise webob.exc.HTTPInternalServerError(explanation=msg)
 
         return wrapped
