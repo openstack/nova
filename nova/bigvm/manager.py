@@ -621,7 +621,7 @@ class BigVmManager(manager.Manager):
         # Auto-create custom resource classes coming from a virt driver
         for rc_name in inv_data:
             if rc_name not in rc_fields.ResourceClass.STANDARD:
-                client._ensure_resource_class(context, rc_name)
+                client._ensure_resource_classes(context, [rc_name])
 
         if client._update_inventory(context, rp_uuid, inv_data):
             LOG.info('Added inventory to the resource-provider for spawning '
