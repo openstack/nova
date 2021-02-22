@@ -22,10 +22,6 @@ feature:
 * A `key manager service`__, such as `barbican`__, must be configured to store
   secrets used to encrypt the virtual device files at rest.
 
-* QEMU version >= 2.11 (>= 2.12 is recommended)
-
-* Libvirt version >= 5.6.0
-
 * The swtpm__ binary and associated libraries__.
 
 * Set the :oslo.config:option:`libvirt.swtpm_enabled` config option to
@@ -50,8 +46,10 @@ traits on the compute node's resource provider:
 Configuring a flavor or image
 -----------------------------
 
-A vTPM can be requested on a server via :ref:`flavor extra_specs <vtpm-flavor>`
-or image metadata properties.
+A vTPM can be requested on a server via flavor extra specs or image metadata
+properties. There are two versions supported - 1.2 and 2.0 - and two models -
+TPM Interface Specification (TIS) and Command-Response Buffer (CRB). The CRB
+model is only supported with version 2.0.
 
 .. list-table::
    :header-rows: 1
@@ -67,6 +65,14 @@ or image metadata properties.
      - ``hw_tpm_model``
      - Specify the TPM model, ``tpm-tis`` (the default) or ``tpm-crb`` (only
        valid with version ``2.0``.
+
+For example, to configure a flavor to use the TPM 2.0 with the CRB model:
+
+.. code-block:: console
+
+   $ openstack flavor set $FLAVOR \
+       --property hw:tpm_version=2.0 \
+       --property hw:tpm_model=tpm-crb
 
 Scheduling will fail if flavor and image supply conflicting values, or if model
 ``tpm-crb`` is requested with version ``1.2``.
@@ -112,10 +118,14 @@ beyond the scope of this document.
 References
 ----------
 
+* `TCG PC Client Specific TPM Interface Specification (TIS)`__
+* `TCG PC Client Platform TPM Profile (PTP) Specification`__
 * `QEMU docs on tpm`__
 * `Libvirt XML to request emulated TPM device`__
 * `Libvirt secret for usage type ``vtpm```__
 
-.. __: https://github.com/qemu/qemu/blob/stable-2.12/docs/specs/tpm.txt
+.. __: https://trustedcomputinggroup.org/resource/pc-client-work-group-pc-client-specific-tpm-interface-specification-tis/
+.. __: https://trustedcomputinggroup.org/resource/pc-client-platform-tpm-profile-ptp-specification/
+.. __: https://qemu.readthedocs.io/en/latest/specs/tpm.html
 .. __: https://libvirt.org/formatdomain.html#elementsTpm
 .. __: https://libvirt.org/formatsecret.html#vTPMUsageType
