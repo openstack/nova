@@ -13616,7 +13616,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_utime.assert_called()
         mock_create_cow_image.assert_called_once_with(
-            backfile_path, '/fake/instance/dir/disk_path')
+            backfile_path, '/fake/instance/dir/disk_path', virt_disk_size)
 
     @mock.patch('nova.virt.libvirt.utils.create_image',
                 new=mock.NonCallableMock())
@@ -13700,9 +13700,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             # TODO(efried): Should these be disk_info[path]??
             mock_create_cow_image.assert_has_calls([
-                mock.call(root_backing, CONF.instances_path + '/disk'),
-                mock.call(ephemeral_backing,
-                          CONF.instances_path + '/disk.local')])
+                mock.call(
+                    root_backing,
+                    CONF.instances_path + '/disk',
+                    disk_info_byname['disk']['virt_disk_size']
+                ),
+                mock.call(
+                    ephemeral_backing,
+                    CONF.instances_path + '/disk.local',
+                    disk_info_byname['disk.local']['virt_disk_size']
+                ),
+            ])
 
     def test_create_images_and_backing_disk_info_none(self):
         instance = objects.Instance(**self.test_instance)
