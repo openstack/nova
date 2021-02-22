@@ -116,6 +116,7 @@ instance for these kind of workloads.
    uefi
    secure-boot
    managing-resource-providers
+   resource-limits
 
 
 Additional guides
