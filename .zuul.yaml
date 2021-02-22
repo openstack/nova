@@ -171,6 +171,9 @@
         # Disable non-essential services that we don't need for this job.
         c-bak: false
 
+#TODO(lucasagomes): Move this job to ML2/OVN when QoS Minimum Bandwidth
+# support is implemented.
+# See: https://docs.openstack.org/neutron/latest/ovn/gaps.html
 - job:
     name: nova-next
     parent: tempest-multinode-full-py3
@@ -228,6 +231,10 @@
             ovs:
               bridge_mappings: public:br-ex
               resource_provider_bandwidths: br-ex:1000000:1000000
+            AGENT:
+              tunnel_types: gre,vxlan
+            ml2:
+              type_drivers: flat,geneve,vlan,gre,local,vxlan
         test-config:
           $TEMPEST_CONFIG:
             network-feature-enabled:
@@ -235,7 +242,13 @@
             compute-feature-enabled:
               # The q35 machine type doesn't support an IDE bus
               ide_bus: False
+            neutron_plugin_options:
+              available_type_drivers: flat,geneve,vlan,gre,local,vxlan
       devstack_localrc:
+        Q_AGENT: openvswitch
+        Q_ML2_TENANT_NETWORK_TYPE: vxlan
+        Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch,linuxbridge
+        ML2_L3_PLUGIN: router
         # Enable TLS between the noVNC proxy & compute nodes; this requires
         # the tls-proxy service to be enabled. Added in Queens.
         NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
@@ -244,6 +257,18 @@
         # Added in Ussuri.
         FORCE_CONFIG_DRIVE: True
       devstack_services:
+        # Disable OVN services
+        br-ex-tcpdump: false
+        br-int-flows: false
+        ovn-controller: false
+        ovn-northd: false
+        q-ovn-metadata-agent: false
+        # Neutron services
+        q-agt: true
+        q-dhcp: true
+        q-l3: true
+        q-meta: true
+        q-metering: true
         tls-proxy: true
         # neutron-* needed for QoS port heal allocation testing.
         neutron-placement: true
@@ -256,10 +281,24 @@
     group-vars:
       subnode:
         devstack_localrc:
+          Q_AGENT: openvswitch
+          Q_ML2_TENANT_NETWORK_TYPE: vxlan
+          Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch,linuxbridge
+          ML2_L3_PLUGIN: router
           NOVA_USE_SERVICE_TOKEN: True
           NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
           FORCE_CONFIG_DRIVE: True
         devstack_services:
+          # Disable OVN services
+          br-ex-tcpdump: false
+          br-int-flows: false
+          ovn-controller: false
+          ovn-northd: false
+          ovs-vswitchd: false
+          ovsdb-server: false
+          q-ovn-metadata-agent: false
+          # Neutron services
+          q-agt: true
           tls-proxy: true
           c-bak: false
 
