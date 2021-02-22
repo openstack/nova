@@ -36,5 +36,8 @@ same-cell resize if the server has such ports.
 As of 21.0.0 (Ussuri), nova supports evacuating, live migrating and unshelving
 servers with neutron ports having resource requests.
 
+As of 23.0.0 (Wallaby), nova supports attaching neutron ports having QoS
+minimum bandwidth rules.
+
 See :nova-doc:`the admin guide <admin/port_with_resource_request.html>` for
 administrative details.

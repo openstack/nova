@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    The ``POST /servers/{server_id}/os-interface`` API now supports
+    attaching neutron ports with QoS minimum bandwidth rules attached.

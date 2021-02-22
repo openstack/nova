@@ -7576,6 +7576,96 @@ class ComputeManager(manager.Manager):
 
         return device
 
+    def _allocate_port_resource_for_instance(
+        self,
+        context: nova.context.RequestContext,
+        instance: 'objects.Instance',
+        pci_reqs: 'objects.InstancePCIRequests',
+        request_groups: ty.List['objects.RequestGroup'],
+    ) -> ty.Tuple[ty.Optional[ty.Dict[str, ty.List[str]]],
+                  ty.Optional[ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]]]]:
+        """Allocate resources for the request in placement
+
+        :param context: nova.context.RequestContext
+        :param instance: the objects.Instance to where the interface is being
+            attached
+        :param pci_reqs: A list of InstancePCIRequest objects describing the
+            needed PCI devices
+        :param request_groups: A list of RequestGroup objects describing the
+            resources the port requests from placement
+        :raises InterfaceAttachResourceAllocationFailed: if we failed to
+            allocate resource in placement for the request
+        :returns: A tuple of provider mappings and allocated resources or
+            (None, None) if no resource allocation was needed for the request
+        """
+
+        if not request_groups:
+            return None, None
+
+        request_group = request_groups[0]
+
+        # restrict the resource request to the current compute node. The
+        # compute node uuid is the uuid of the root provider of the node in
+        # placement
+        compute_node_uuid = objects.ComputeNode.get_by_nodename(
+            context, instance.node).uuid
+        request_group.in_tree = compute_node_uuid
+
+        # NOTE(gibi): when support is added for attaching a cyborg based
+        # smart NIC the ResourceRequest could be extended to handle multiple
+        # request groups.
+        rr = scheduler_utils.ResourceRequest.from_request_group(request_group)
+        res = self.reportclient.get_allocation_candidates(context, rr)
+        alloc_reqs, provider_sums, version = res
+
+        if not alloc_reqs:
+            # no allocation candidates available, we run out of free resources
+            raise exception.InterfaceAttachResourceAllocationFailed(
+                instance_uuid=instance.uuid)
+
+        # select one of the candidates and update the instance
+        # allocation
+        # TODO(gibi): We could loop over all possible candidates
+        # if the first one selected here does not work due to race or due
+        # to not having free PCI devices. However the latter is only
+        # detected later in the interface attach code path.
+        alloc_req = alloc_reqs[0]
+        resources = alloc_req['allocations']
+        provider_mappings = alloc_req['mappings']
+        try:
+            self.reportclient.add_resources_to_instance_allocation(
+                context, instance.uuid, resources)
+        except exception.AllocationUpdateFailed as e:
+            # We lost a race. We could retry another candidate
+            raise exception.InterfaceAttachResourceAllocationFailed(
+                instance_uuid=instance.uuid) from e
+        except (
+            exception.ConsumerAllocationRetrievalFailed,
+            keystone_exception.ClientException,
+        ) as e:
+            # These are non-recoverable errors so we should not retry
+            raise exception.InterfaceAttachResourceAllocationFailed(
+                instance_uuid=instance.uuid) from e
+
+        try:
+            update = (
+                compute_utils.
+                    update_pci_request_spec_with_allocated_interface_name)
+            update(
+                context, self.reportclient, pci_reqs.requests,
+                provider_mappings)
+        except (
+            exception.AmbiguousResourceProviderForPCIRequest,
+            exception.UnexpectedResourceProviderNameForPCIRequest
+        ):
+            # These are programing errors. So we clean up an re-raise to let
+            # the request fail
+            with excutils.save_and_reraise_exception():
+                self.reportclient.remove_resources_from_instance_allocation(
+                    context, instance.uuid, resources)
+
+        return provider_mappings, resources
+
     # TODO(mriedem): There are likely race failures which can result in
     # NotFound and QuotaError exceptions getting traced as well.
     @messaging.expected_exceptions(
@@ -7589,6 +7679,7 @@ class ComputeManager(manager.Manager):
         # PortNotUsableDNS
         # AttachSRIOVPortNotSupported
         # NetworksWithQoSPolicyNotSupported
+        # InterfaceAttachResourceAllocationFailed
         exception.Invalid)
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
@@ -7646,31 +7737,39 @@ class ComputeManager(manager.Manager):
             instance.flavor, instance.image_meta)
         pci_reqs = objects.InstancePCIRequests(
             requests=[], instance_uuid=instance.uuid)
-        self.network_api.create_resource_requests(
+        _, request_groups = self.network_api.create_resource_requests(
             context, requested_networks, pci_reqs,
             affinity_policy=pci_numa_affinity_policy)
 
         # We only support one port per attach request so we at most have one
         # pci request
-        pci_req = None
         if pci_reqs.requests:
             pci_req = pci_reqs.requests[0]
             requested_networks[0].pci_request_id = pci_req.request_id
-            instance.pci_requests.requests.append(pci_req)
+
+        result = self._allocate_port_resource_for_instance(
+            context, instance, pci_reqs, request_groups)
+        provider_mappings, resources = result
 
         try:
             pci_device = self._claim_pci_device_for_interface_attach(
                 context, instance, pci_reqs)
         except exception.InterfaceAttachPciClaimFailed:
             with excutils.save_and_reraise_exception():
-                if pci_req:
-                    instance.pci_requests.requests.remove(pci_req)
+                if resources:
+                    # TODO(gibi): Instead of giving up we could try another
+                    # allocation candidate from _allocate_resources() if any
+                    self._deallocate_port_resource_for_instance(
+                        context, instance, port_id, resources)
+
+        instance.pci_requests.requests.extend(pci_reqs.requests)
 
         network_info = self.network_api.allocate_for_instance(
             context,
             instance,
             requested_networks,
             bind_host_id=bind_host_id,
+            resource_provider_mapping=provider_mappings,
         )
 
         if len(network_info) != 1:

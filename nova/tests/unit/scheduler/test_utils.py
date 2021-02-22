@@ -1274,6 +1274,31 @@ class TestUtils(TestUtilsBase):
         rr = utils.ResourceRequest.from_request_spec(rs)
         self.assertResourceRequestsEqual(expected, rr)
 
+    def test_resource_request_from_request_group(self):
+        rg = objects.RequestGroup.from_port_request(
+            self.context,
+            uuids.port_id,
+            port_resource_request={
+                "resources": {
+                    "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+                    "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
+                "required": ["CUSTOM_PHYSNET_2",
+                             "CUSTOM_VNIC_TYPE_NORMAL"]
+            }
+        )
+
+        rr = utils.ResourceRequest.from_request_group(rg)
+
+        self.assertEqual(
+            f'limit=1000&'
+            f'required{uuids.port_id}='
+                f'CUSTOM_PHYSNET_2%2C'
+                f'CUSTOM_VNIC_TYPE_NORMAL&'
+            f'resources{uuids.port_id}='
+                f'NET_BW_EGR_KILOBIT_PER_SEC%3A1000%2C'
+                f'NET_BW_IGR_KILOBIT_PER_SEC%3A1000',
+            rr.to_querystring())
+
     def test_resource_request_add_group_inserts_the_group(self):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=0)
