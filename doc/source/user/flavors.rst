@@ -184,18 +184,6 @@ Performance Monitoring Unit (vPMU)
   required, such workloads should set ``hw:pmu=False``. For most workloads
   the default of unset or enabling the vPMU ``hw:pmu=True`` will be correct.
 
-.. _extra-specs-memory-encryption:
-
-Hardware encryption of guest memory
-  If there are compute hosts which support encryption of guest memory
-  at the hardware level, this functionality can be requested via the
-  ``hw:mem_encryption`` extra spec parameter:
-
-  .. code-block:: console
-
-     $ openstack flavor set FLAVOR-NAME \
-         --property hw:mem_encryption=True
-
 .. _extra-specs-hiding-hypervisor-signature:
 
 Hiding hypervisor signature
