@@ -56,6 +56,8 @@ VCPU
   Resource class representing a unit of CPU resources for a single guest
   approximating the processing power of a single physical processor.
 
+.. _numa-topologies:
+
 Customizing instance NUMA placement policies
 --------------------------------------------
 
@@ -113,12 +115,14 @@ filter must be enabled. Details on this filter are provided in
 
 When used, NUMA awareness allows the operating system of the instance to
 intelligently schedule the workloads that it runs and minimize cross-node
-memory bandwidth. To restrict an instance's vCPUs to a single host NUMA node,
+memory bandwidth. To configure guest NUMA nodes, you can use the
+:nova:extra-spec:`hw:numa_nodes` flavor extra spec.
+For example, to restrict an instance's vCPUs to a single host NUMA node,
 run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] --property hw:numa_nodes=1
+   $ openstack flavor set $FLAVOR --property hw:numa_nodes=1
 
 Some workloads have very demanding requirements for memory access latency or
 bandwidth that exceed the memory bandwidth available from a single NUMA node.
@@ -129,25 +133,45 @@ nodes, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] --property hw:numa_nodes=2
+   $ openstack flavor set $FLAVOR --property hw:numa_nodes=2
 
-The allocation of instances vCPUs and memory from different host NUMA nodes can
+The allocation of instance vCPUs and memory from different host NUMA nodes can
 be configured. This allows for asymmetric allocation of vCPUs and memory, which
-can be important for some workloads. To spread the 6 vCPUs and 6 GB of memory
+can be important for some workloads. You can configure the allocation of
+instance vCPUs and memory across each **guest** NUMA node using the
+:nova:extra-spec:`hw:numa_cpus.{id}` and :nova:extra-spec:`hw:numa_mem.{id}`
+extra specs respectively.
+For example, to spread the 6 vCPUs and 6 GB of memory
 of an instance across two NUMA nodes and create an asymmetric 1:2 vCPU and
 memory mapping between the two nodes, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] --property hw:numa_nodes=2
+   $ openstack flavor set $FLAVOR --property hw:numa_nodes=2
    # configure guest node 0
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --property hw:numa_cpus.0=0,1 \
      --property hw:numa_mem.0=2048
    # configure guest node 1
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --property hw:numa_cpus.1=2,3,4,5 \
      --property hw:numa_mem.1=4096
+
+.. note::
+
+   The ``{num}`` parameter is an index of *guest* NUMA nodes and may not
+   correspond to *host* NUMA nodes. For example, on a platform with two NUMA
+   nodes, the scheduler may opt to place guest NUMA node 0, as referenced in
+   ``hw:numa_mem.0`` on host NUMA node 1 and vice versa.  Similarly, the
+   CPUs bitmask specified in the value for ``hw:numa_cpus.{num}`` refer to
+   *guest* vCPUs and may not correspond to *host* CPUs. As such, this feature
+   cannot be used to constrain instances to specific host CPUs or NUMA nodes.
+
+.. warning::
+
+   If the combined values of ``hw:numa_cpus.{num}`` or ``hw:numa_mem.{num}``
+   are greater than the available number of CPUs or memory respectively, an
+   exception will be raised.
 
 .. note::
 
@@ -155,8 +179,10 @@ memory mapping between the two nodes, run:
     driver will not spawn instances with such topologies.
 
 For more information about the syntax for ``hw:numa_nodes``, ``hw:numa_cpus.N``
-and ``hw:num_mem.N``, refer to the :ref:`NUMA
-topology <extra-specs-numa-topology>` guide.
+and ``hw:num_mem.N``, refer to :doc:`/configuration/extra-specs`.
+
+
+.. _cpu-pinning-policies:
 
 Customizing instance CPU pinning policies
 -----------------------------------------
@@ -189,14 +215,16 @@ CPUs can use the CPUs of another pinned instance, thus preventing resource
 contention between instances.
 
 CPU pinning policies can be used to determine whether an instance should be
-pinned or not. There are three policies: ``dedicated``, ``mixed`` and
+pinned or not. They can be configured using the
+:nova:extra-spec:`hw:cpu_policy` extra spec and equivalent image metadata
+property. There are three policies: ``dedicated``, ``mixed`` and
 ``shared`` (the default). The ``dedicated`` CPU policy is used to specify
 that all CPUs of an instance should use pinned CPUs. To configure a flavor to
 use the ``dedicated`` CPU policy, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] --property hw:cpu_policy=dedicated
+   $ openstack flavor set $FLAVOR --property hw:cpu_policy=dedicated
 
 This works by ensuring ``PCPU`` allocations are used instead of ``VCPU``
 allocations. As such, it is also possible to request this resource type
@@ -204,9 +232,9 @@ explicitly. To configure this, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] --property resources:PCPU=N
+   $ openstack flavor set $FLAVOR --property resources:PCPU=N
 
-where ``N`` is the number of vCPUs defined in the flavor.
+(where ``N`` is the number of vCPUs defined in the flavor).
 
 .. note::
 
@@ -218,28 +246,28 @@ use pinned CPUs. To configure a flavor to use the ``shared`` CPU policy, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] --property hw:cpu_policy=shared
+   $ openstack flavor set $FLAVOR --property hw:cpu_policy=shared
 
 The ``mixed`` CPU policy is used to specify that an instance use pinned CPUs
 along with unpinned CPUs. The instance pinned CPU could be specified in the
-``hw:cpu_dedicated_mask`` or, if real-time is enabled
-(``hw:cpu_realtime``\ = yes), in the ``hw:cpu_realtime_mask`` extra spec. For
+:nova:extra-spec:`hw:cpu_dedicated_mask` or, if :doc:`real-time <real-time>` is
+enabled, in the :nova:extra-spec:`hw:cpu_realtime_mask` extra spec. For
 example, to configure a flavor to use the ``mixed`` CPU policy with 4 vCPUs in
-total and the first 2 vCPUs as pinned CPUs, with the ``hw:cpu_realtime_mask``
-extra spec, run:
+total and the first 2 vCPUs as pinned CPUs, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --vcpus=4 \
      --property hw:cpu_policy=mixed \
      --property hw:cpu_dedicated_mask=0-1
 
-To create the mixed instance with the real-time extra specs, run:
+To configure a flavor to use the ``mixed`` CPU policy with 4 vCPUs in total and
+the first 2 vCPUs as pinned **real-time** CPUs, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --vcpus=4 \
      --property hw:cpu_policy=mixed \
      --property hw:cpu_realtime=yes \
@@ -249,7 +277,12 @@ To create the mixed instance with the real-time extra specs, run:
 
    For more information about the syntax for ``hw:cpu_policy``,
    ``hw:cpu_dedicated_mask``, ``hw:realtime_cpu`` and ``hw:cpu_realtime_mask``,
-   refer to the :doc:`/user/flavors` guide.
+   refer to :doc:`/configuration/extra-specs`
+
+.. note::
+
+   For more information about real-time functionality, refer to the
+   :doc:`documentation <real-time>`.
 
 It is also possible to configure the CPU policy via image metadata. This can
 be useful when packaging applications that require real-time or near real-time
@@ -259,13 +292,13 @@ policy, run:
 
 .. code-block:: console
 
-   $ openstack image set [IMAGE_ID] --property hw_cpu_policy=dedicated
+   $ openstack image set $IMAGE --property hw_cpu_policy=dedicated
 
 Likewise, to configure an image to use the ``shared`` CPU policy, run:
 
 .. code-block:: console
 
-   $ openstack image set [IMAGE_ID] --property hw_cpu_policy=shared
+   $ openstack image set $IMAGE --property hw_cpu_policy=shared
 
 .. note::
 
@@ -312,7 +345,7 @@ performance, you can request hosts **with** SMT.  To configure this, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --property hw:cpu_policy=dedicated \
      --property hw:cpu_thread_policy=require
 
@@ -322,7 +355,7 @@ request this trait explicitly. To configure this, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --property resources:PCPU=N \
      --property trait:HW_CPU_HYPERTHREADING=required
 
@@ -331,7 +364,7 @@ you can request hosts **without** SMT. To configure this, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --property hw:cpu_policy=dedicated \
      --property hw:cpu_thread_policy=isolate
 
@@ -341,7 +374,7 @@ possible to request this trait explicitly. To configure this, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --property resources:PCPU=N \
      --property trait:HW_CPU_HYPERTHREADING=forbidden
 
@@ -351,7 +384,7 @@ is the default, but it can be set explicitly:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --property hw:cpu_policy=dedicated \
      --property hw:cpu_thread_policy=prefer
 
@@ -360,7 +393,7 @@ This does not utilize traits and, as such, there is no trait-based equivalent.
 .. note::
 
    For more information about the syntax for ``hw:cpu_thread_policy``, refer to
-   the :doc:`/user/flavors` guide.
+   :doc:`/configuration/extra-specs`.
 
 As with CPU policies, it also possible to configure the CPU thread policy via
 image metadata. This can be useful when packaging applications that require
@@ -370,7 +403,7 @@ image are always pinned regardless of flavor. To configure an image to use the
 
 .. code-block:: console
 
-   $ openstack image set [IMAGE_ID] \
+   $ openstack image set $IMAGE \
      --property hw_cpu_policy=dedicated \
      --property hw_cpu_thread_policy=require
 
@@ -378,7 +411,7 @@ Likewise, to configure an image to use the ``isolate`` CPU thread policy, run:
 
 .. code-block:: console
 
-   $ openstack image set [IMAGE_ID] \
+   $ openstack image set $IMAGE \
      --property hw_cpu_policy=dedicated \
      --property hw_cpu_thread_policy=isolate
 
@@ -386,7 +419,7 @@ Finally, to configure an image to use the ``prefer`` CPU thread policy, run:
 
 .. code-block:: console
 
-   $ openstack image set [IMAGE_ID] \
+   $ openstack image set $IMAGE \
      --property hw_cpu_policy=dedicated \
      --property hw_cpu_thread_policy=prefer
 
@@ -399,6 +432,8 @@ an exception will be raised.
 
    For more information about image metadata, refer to the `Image metadata`_
    guide.
+
+.. _emulator-thread-pinning-policies:
 
 Customizing instance emulator thread pinning policies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -429,25 +464,45 @@ the ``isolate`` emulator thread policy, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --property hw:cpu_policy=dedicated \
      --property hw:emulator_threads_policy=isolate
 
 The ``share`` policy is used to specify that emulator threads from a given
 instance should be run on the pool of host cores listed in
-:oslo.config:option:`compute.cpu_shared_set`. To configure a flavor to use the
-``share`` emulator thread policy, run:
+:oslo.config:option:`compute.cpu_shared_set` if configured, else across all
+pCPUs of the instance.
+To configure a flavor to use the ``share`` emulator thread policy, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --property hw:cpu_policy=dedicated \
      --property hw:emulator_threads_policy=share
+
+The above behavior can be summarized in this helpful table:
+
+.. list-table::
+   :header-rows: 1
+   :stub-columns: 1
+
+   * -
+     - :oslo.config:option:`compute.cpu_shared_set` set
+     - :oslo.config:option:`compute.cpu_shared_set` unset
+   * - ``hw:emulator_treads_policy`` unset (default)
+     - Pinned to all of the instance's pCPUs
+     - Pinned to all of the instance's pCPUs
+   * - ``hw:emulator_threads_policy`` = ``share``
+     - Pinned to :oslo.config:option:`compute.cpu_shared_set`
+     - Pinned to all of the instance's pCPUs
+   * - ``hw:emulator_threads_policy`` = ``isolate``
+     - Pinned to a single pCPU distinct from the instance's pCPUs
+     - Pinned to a single pCPU distinct from the instance's pCPUs
 
 .. note::
 
    For more information about the syntax for ``hw:emulator_threads_policy``,
-   refer to the :doc:`/user/flavors` guide.
+   refer to :nova:extra-spec:`the documentation <hw:emulator_threads_policy>`.
 
 Customizing instance CPU topologies
 -----------------------------------
@@ -476,17 +531,17 @@ sockets.
 
 Some workloads benefit from a custom topology. For example, in some operating
 systems, a different license may be needed depending on the number of CPU
-sockets. To configure a flavor to use a maximum of two sockets, run:
+sockets. To configure a flavor to use two sockets, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] --property hw:cpu_sockets=2
+   $ openstack flavor set $FLAVOR --property hw:cpu_sockets=2
 
 Similarly, to configure a flavor to use one core and one thread, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] \
+   $ openstack flavor set $FLAVOR \
      --property hw:cpu_cores=1 \
      --property hw:cpu_threads=1
 
@@ -501,22 +556,25 @@ Similarly, to configure a flavor to use one core and one thread, run:
    with ten cores fails.
 
 For more information about the syntax for ``hw:cpu_sockets``, ``hw:cpu_cores``
-and ``hw:cpu_threads``, refer to the :doc:`/user/flavors` guide.
+and ``hw:cpu_threads``, refer to :doc:`/configuration/extra-specs`.
 
 It is also possible to set upper limits on the number of sockets, cores, and
 threads used. Unlike the hard values above, it is not necessary for this exact
 number to used because it only provides a limit. This can be used to provide
 some flexibility in scheduling, while ensuring certain limits are not
-exceeded. For example, to ensure no more than two sockets are defined in the
-instance topology, run:
+exceeded. For example, to ensure no more than two sockets, eight cores and one
+thread are defined in the instance topology, run:
 
 .. code-block:: console
 
-   $ openstack flavor set [FLAVOR_ID] --property hw:cpu_max_sockets=2
+   $ openstack flavor set $FLAVOR \
+     --property hw:cpu_max_sockets=2 \
+     --property hw:cpu_max_cores=8 \
+     --property hw:cpu_max_threads=1
 
 For more information about the syntax for ``hw:cpu_max_sockets``,
-``hw:cpu_max_cores``, and ``hw:cpu_max_threads``, refer to the
-:doc:`/user/flavors` guide.
+``hw:cpu_max_cores``, and ``hw:cpu_max_threads``, refer to
+:doc:`/configuration/extra-specs`.
 
 Applications are frequently packaged as images. For applications that prefer
 certain CPU topologies, configure image metadata to hint that created instances
@@ -525,7 +583,7 @@ request a two-socket, four-core per socket topology, run:
 
 .. code-block:: console
 
-   $ openstack image set [IMAGE_ID] \
+   $ openstack image set $IMAGE \
      --property hw_cpu_sockets=2 \
      --property hw_cpu_cores=4
 
@@ -535,7 +593,7 @@ maximum of one thread, run:
 
 .. code-block:: console
 
-   $ openstack image set [IMAGE_ID] \
+   $ openstack image set $IMAGE \
      --property hw_cpu_max_sockets=2 \
      --property hw_cpu_max_threads=1
 
