@@ -184,61 +184,6 @@ Performance Monitoring Unit (vPMU)
   required, such workloads should set ``hw:pmu=False``. For most workloads
   the default of unset or enabling the vPMU ``hw:pmu=True`` will be correct.
 
-.. _pci_numa_affinity_policy:
-
-PCI NUMA Affinity Policy
-  For the libvirt driver, you can specify the NUMA affinity policy for
-  PCI passthrough devices and neutron SR-IOV interfaces via the
-  ``hw:pci_numa_affinity_policy`` flavor extra spec or
-  ``hw_pci_numa_affinity_policy``  image property. The allowed values are
-  ``required``, ``socket``, ``preferred`` or ``legacy`` (default).
-
-  **required**
-      This value will mean that nova will boot instances with PCI devices
-      **only** if at least one of the NUMA nodes of the instance is associated
-      with these PCI devices. It means that if NUMA node info for some PCI
-      devices could not be determined, those PCI devices wouldn't be consumable
-      by the instance. This provides maximum performance.
-
-  **socket**
-      This means that the PCI device must be affined to the same host socket as
-      at least one of the guest NUMA nodes. For example, consider a system with
-      two sockets, each with two NUMA nodes, numbered node 0 and node 1 on
-      socket 0, and node 2 and node 3 on socket 1. There is a PCI device
-      affined to node 0. An PCI instance with two guest NUMA nodes and the
-      ``socket`` policy can be affined to either:
-
-      * node 0 and node 1
-      * node 0 and node 2
-      * node 0 and node 3
-      * node 1 and node 2
-      * node 1 and node 3
-
-      The instance cannot be affined to node 2 and node 3, as neither of those
-      are on the same socket as the PCI device. If the other nodes are consumed
-      by other instances and only nodes 2 and 3 are available, the instance
-      will not boot.
-
-  **preferred**
-      This value will mean that ``nova-scheduler`` will choose a compute host
-      with minimal consideration for the NUMA affinity of PCI devices.
-      ``nova-compute`` will attempt a best effort selection of PCI devices
-      based on NUMA affinity, however, if this is not possible then
-      ``nova-compute`` will fall back to scheduling on a NUMA node that is not
-      associated with the PCI device.
-
-  **legacy**
-      This is the default value and it describes the current nova behavior.
-      Usually we have information about association of PCI devices with NUMA
-      nodes. However, some PCI devices do not provide such information. The
-      ``legacy`` value will mean that nova will boot instances with PCI device
-      if either:
-
-      * The PCI device is associated with at least one NUMA nodes on which the
-        instance will be booted
-
-      * There is no information about PCI-NUMA affinity available
-
 .. _extra-specs-memory-encryption:
 
 Hardware encryption of guest memory
@@ -250,24 +195,6 @@ Hardware encryption of guest memory
 
      $ openstack flavor set FLAVOR-NAME \
          --property hw:mem_encryption=True
-
-.. _extra-spec-pci-passthrough:
-
-PCI passthrough
-  You can assign PCI devices to a guest by specifying them in the flavor.
-
-  .. code:: console
-
-     $ openstack flavor set FLAVOR-NAME \
-         --property pci_passthrough:alias=ALIAS:COUNT
-
-  Where:
-
-  - ALIAS: (string) The alias which correspond to a particular PCI device class
-    as configured in the nova configuration file (see
-    :oslo.config:option:`pci.alias`).
-  - COUNT: (integer) The amount of PCI devices of type ALIAS to be assigned to
-    a guest.
 
 .. _extra-specs-hiding-hypervisor-signature:
 
