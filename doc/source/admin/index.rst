@@ -119,6 +119,7 @@ instance for these kind of workloads.
    sev
    managing-resource-providers
    resource-limits
+   cpu-models
 
 
 Additional guides

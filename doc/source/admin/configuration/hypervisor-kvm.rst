@@ -289,154 +289,6 @@ On the Nova compute node in nova.conf:
    rbd_ceph_conf=/etc/ceph/ceph.conf
    rbd_connect_timeout=5
 
-Specify the CPU model of KVM guests
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The Compute service enables you to control the guest CPU model that is exposed
-to KVM virtual machines. Use cases include:
-
-* To maximize performance of virtual machines by exposing new host CPU features
-  to the guest
-
-* To ensure a consistent default CPU across all machines, removing reliance of
-  variable QEMU defaults
-
-In libvirt, the CPU is specified by providing a base CPU model name (which is a
-shorthand for a set of feature flags), a set of additional feature flags, and
-the topology (sockets/cores/threads). The libvirt KVM driver provides a number
-of standard CPU model names. These models are defined in the
-``/usr/share/libvirt/cpu_map.xml`` file for libvirt prior to version 4.7.0 or
-``/usr/share/libvirt/cpu_map/*.xml`` files thereafter. Make a check to
-determine which models are supported by your local installation.
-
-Two Compute configuration options in the :oslo.config:group:`libvirt` group
-of ``nova.conf`` define which type of CPU model is exposed to the hypervisor
-when using KVM: :oslo.config:option:`libvirt.cpu_mode` and
-:oslo.config:option:`libvirt.cpu_models`.
-
-The :oslo.config:option:`libvirt.cpu_mode` option can take one of the following
-values: ``none``, ``host-passthrough``, ``host-model``, and ``custom``.
-
-See `Effective Virtual CPU configuration in Nova`_ for a recorded presentation
-about this topic.
-
-.. _Effective Virtual CPU configuration in Nova: https://www.openstack.org/videos/summits/berlin-2018/effective-virtual-cpu-configuration-in-nova
-
-Host model (default for KVM & QEMU)
------------------------------------
-
-If your ``nova.conf`` file contains ``cpu_mode=host-model``, libvirt identifies
-the CPU model in ``/usr/share/libvirt/cpu_map.xml`` for version prior to 4.7.0
-or ``/usr/share/libvirt/cpu_map/*.xml`` for version 4.7.0 and higher that most
-closely matches the host, and requests additional CPU flags to complete the
-match. This configuration provides the maximum functionality and performance
-and maintains good reliability.
-
-With regard to enabling and facilitating live migration between
-compute nodes, you should assess whether ``host-model`` is suitable
-for your compute architecture. In general, using ``host-model`` is a
-safe choice if your compute node CPUs are largely identical. However,
-if your compute nodes span multiple processor generations, you may be
-better advised to select a ``custom`` CPU model.
-
-Host pass through
------------------
-
-If your ``nova.conf`` file contains ``cpu_mode=host-passthrough``, libvirt
-tells KVM to pass through the host CPU with no modifications.  The difference
-to host-model, instead of just matching feature flags, every last detail of the
-host CPU is matched. This gives the best performance, and can be important to
-some apps which check low level CPU details, but it comes at a cost with
-respect to migration.
-
-In ``host-passthrough`` mode, the guest can only be live-migrated to a
-target host that matches the source host extremely closely. This
-definitely includes the physical CPU model and running microcode, and
-may even include the running kernel. Use this mode only if
-
-* your compute nodes have a very large degree of homogeneity
-  (i.e. substantially all of your compute nodes use the exact same CPU
-  generation and model), and you make sure to only live-migrate
-  between hosts with exactly matching kernel versions, *or*
-
-* you decide, for some reason and against established best practices,
-  that your compute infrastructure should not support any live
-  migration at all.
-
-Custom
-------
-
-If :file:`nova.conf` contains :oslo.config:option:`libvirt.cpu_mode`\ =custom,
-you can explicitly specify an ordered list of supported named models using
-the :oslo.config:option:`libvirt.cpu_models` configuration option. It is
-expected that the list is ordered so that the more common and less advanced cpu
-models are listed earlier.
-
-An end user can specify required CPU features through traits. When specified,
-the libvirt driver will select the first cpu model in the
-:oslo.config:option:`libvirt.cpu_models` list that can provide the requested
-feature traits. If no CPU feature traits are specified then the instance will
-be configured with the first cpu model in the list.
-
-For example, if specifying CPU features ``avx`` and ``avx2`` as follows:
-
-.. code-block:: console
-
-    $ openstack flavor set FLAVOR_ID --property trait:HW_CPU_X86_AVX=required \
-                                     --property trait:HW_CPU_X86_AVX2=required
-
-and :oslo.config:option:`libvirt.cpu_models` is configured like this:
-
-.. code-block:: ini
-
-    [libvirt]
-    cpu_mode = custom
-    cpu_models = Penryn,IvyBridge,Haswell,Broadwell,Skylake-Client
-
-Then ``Haswell``, the first cpu model supporting both ``avx`` and ``avx2``,
-will be chosen by libvirt.
-
-In selecting the ``custom`` mode, along with a
-:oslo.config:option:`libvirt.cpu_models` that matches the oldest of your compute
-node CPUs, you can ensure that live migration between compute nodes will always
-be possible. However, you should ensure that the
-:oslo.config:option:`libvirt.cpu_models` you select passes the correct CPU
-feature flags to the guest.
-
-If you need to further tweak your CPU feature flags in the ``custom``
-mode, see `Set CPU feature flags`_.
-
-.. note::
-
-  If :oslo.config:option:`libvirt.cpu_models` is configured,
-  the CPU models in the list needs to be compatible with the host CPU. Also, if
-  :oslo.config:option:`libvirt.cpu_model_extra_flags` is configured, all flags
-  needs to be compatible with the host CPU. If incompatible CPU models or flags
-  are specified, nova service will raise an error and fail to start.
-
-
-None (default for all libvirt-driven hypervisors other than KVM & QEMU)
------------------------------------------------------------------------
-
-If your ``nova.conf`` file contains ``cpu_mode=none``, libvirt does not specify
-a CPU model. Instead, the hypervisor chooses the default model.
-
-Set CPU feature flags
-~~~~~~~~~~~~~~~~~~~~~
-
-Regardless of whether your selected :oslo.config:option:`libvirt.cpu_mode` is
-``host-passthrough``, ``host-model``, or ``custom``, it is also
-possible to selectively enable additional feature flags. Suppose your
-selected ``custom`` CPU model is ``IvyBridge``, which normally does
-not enable the ``pcid`` feature flag --- but you do want to pass
-``pcid`` into your guest instances. In that case, you would set:
-
-.. code-block:: ini
-
-   [libvirt]
-   cpu_mode = custom
-   cpu_models = IvyBridge
-   cpu_model_extra_flags = pcid
 
 Nested guest support
 ~~~~~~~~~~~~~~~~~~~~
@@ -446,8 +298,8 @@ your Nova instances to themselves run hardware-accelerated virtual
 machines with KVM. Doing so requires a module parameter on
 your KVM kernel module, and corresponding ``nova.conf`` settings.
 
-Nested guest support in the KVM kernel module
----------------------------------------------
+Host configuration
+------------------
 
 To enable nested KVM guests, your compute node must load the
 ``kvm_intel`` or ``kvm_amd`` module with ``nested=1``. You can enable
@@ -462,14 +314,14 @@ content:
 
 A reboot may be required for the change to become effective.
 
-Nested guest support in ``nova.conf``
--------------------------------------
+Nova configuration
+------------------
 
 To support nested guests, you must set your
 :oslo.config:option:`libvirt.cpu_mode` configuration to one of the following
 options:
 
-Host pass through
+Host passthrough (``host-passthrough``)
   In this mode, nested virtualization is automatically enabled once
   the KVM kernel module is loaded with nesting support.
 
@@ -478,10 +330,11 @@ Host pass through
      [libvirt]
      cpu_mode = host-passthrough
 
-  However, do consider the other implications that `Host pass
-  through`_ mode has on compute functionality.
+  However, do consider the other implications that
+  :doc:`host passthrough </admin/cpu-models>` mode has on compute
+  functionality.
 
-Host model
+Host model (``host-model``)
   In this mode, nested virtualization is automatically enabled once
   the KVM kernel module is loaded with nesting support, **if** the
   matching CPU model exposes the ``vmx`` feature flag to guests by
@@ -495,10 +348,10 @@ Host model
      cpu_mode = host-model
      cpu_model_extra_flags = vmx
 
-  Again, consider the other implications that apply to the `Host model
-  (default for KVM & Qemu)`_ mode.
+  Again, consider the other implications that apply to the
+  :doc:`host model </admin/cpu-models>` mode.
 
-Custom
+Custom (``custom``)
   In custom mode, the same considerations apply as in host-model mode,
   but you may *additionally* want to ensure that libvirt passes not only
   the ``vmx``, but also the ``pcid`` flag to its guests:
@@ -510,8 +363,10 @@ Custom
      cpu_models = IvyBridge
      cpu_model_extra_flags = vmx,pcid
 
-Nested guest support limitations
---------------------------------
+More information on CPU models can be found in :doc:`/admin/cpu-models`.
+
+Limitations
+-----------
 
 When enabling nested guests, you should be aware of (and inform your
 users about) certain limitations that are currently inherent to nested
