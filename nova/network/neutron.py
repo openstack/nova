@@ -626,14 +626,22 @@ class API(base.Base):
         if port_client is None:
             # Requires admin creds to set port bindings
             port_client = get_client(context, admin=True)
-        networks = {}
+
+        # it is a dict of network dicts as returned by the neutron client keyed
+        # by network UUID
+        networks: ty.Dict[str, ty.Dict] = {}
         for port_id in ports:
             # A port_id is optional in the NetworkRequest object so check here
             # in case the caller forgot to filter the list.
             if port_id is None:
                 continue
-            port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
-            port_req_body['port'][constants.BINDING_HOST_ID] = None
+            port_req_body: ty.Dict[str, ty.Any] = {
+                'port': {
+                    'device_id': '',
+                    'device_owner': '',
+                    constants.BINDING_HOST_ID: None,
+                }
+            }
             try:
                 port = self._show_port(
                     context, port_id, neutron_client=neutron,
@@ -648,12 +656,12 @@ class API(base.Base):
                 LOG.exception("Unable to get binding:profile for port '%s'",
                               port_id)
                 port_profile = {}
-                network = {}
+                network: dict = {}
             else:
                 port_profile = get_binding_profile(port)
                 net_id = port.get('network_id')
                 if net_id in networks:
-                    network = networks.get(net_id)
+                    network = networks[net_id]
                 else:
                     network = neutron.show_network(net_id,
                                                    fields=['dns_domain']
@@ -1649,7 +1657,7 @@ class API(base.Base):
         search_opts = {'device_id': instance.uuid}
         neutron = get_client(context)
         data = neutron.list_ports(**search_opts)
-        ports = [port['id'] for port in data.get('ports', [])]
+        ports = {port['id'] for port in data.get('ports', [])}
 
         requested_networks = kwargs.get('requested_networks') or []
         # NOTE(danms): Temporary and transitional
@@ -3160,8 +3168,9 @@ class API(base.Base):
             # Use the current set of ports from neutron rather than the cache.
             port_ids = self._get_ordered_port_list(context, instance,
                                                    current_neutron_ports)
-            net_ids = [current_neutron_port_map.get(port_id).get('network_id')
-                       for port_id in port_ids]
+            net_ids = [
+                current_neutron_port_map.get(port_id, {}).get('network_id')
+                for port_id in port_ids]
 
             # This is copied from _gather_port_ids_and_networks.
             networks = self._get_available_networks(
@@ -3253,9 +3262,10 @@ class API(base.Base):
                 subnet_dict['ipv6_address_mode'] = subnet['ipv6_address_mode']
 
             # attempt to populate DHCP server field
-            search_opts = {'network_id': subnet['network_id'],
-                           'device_owner': 'network:dhcp'}
-            data = client.list_ports(**search_opts)
+            dhcp_search_opts = {
+                'network_id': subnet['network_id'],
+                'device_owner': 'network:dhcp'}
+            data = client.list_ports(**dhcp_search_opts)
             dhcp_ports = data.get('ports', [])
             for p in dhcp_ports:
                 for ip_pair in p['fixed_ips']:
