@@ -231,13 +231,16 @@ class Guest(object):
 
         return interfaces
 
-    def get_interface_by_cfg(self, cfg, from_persistent_config=False):
+    def get_interface_by_cfg(
+        self,
+        cfg: vconfig.LibvirtConfigGuestDevice,
+        from_persistent_config: bool = False
+    ) -> ty.Optional[vconfig.LibvirtConfigGuestDevice]:
         """Lookup a full LibvirtConfigGuestDevice with
         LibvirtConfigGuesDevice generated
         by nova.virt.libvirt.vif.get_config.
 
         :param cfg: config object that represents the guest interface.
-        :type cfg: a subtype of LibvirtConfigGuestDevice object
         :param from_persistent_config: query the device from the persistent
             domain instead of the live domain configuration
         :returns: nova.virt.libvirt.config.LibvirtConfigGuestDevice instance
@@ -255,6 +258,7 @@ class Guest(object):
                 # equality check based on available information on nova side
                 if cfg == interface:
                     return interface
+        return None
 
     def get_vcpus_info(self):
         """Returns virtual cpus information of guest.
@@ -341,10 +345,18 @@ class Guest(object):
         config.parse_str(self._domain.XMLDesc(0))
         return config
 
-    def get_disk(self, device, from_persistent_config=False):
+    def get_disk(
+        self,
+        device: str,
+        from_persistent_config: bool = False
+    ) -> ty.Optional[vconfig.LibvirtConfigGuestDisk]:
         """Returns the disk mounted at device
 
-        :returns LivirtConfigGuestDisk: mounted at device or None
+        :param device: the name of either the source or the target device
+        :param from_persistent_config: query the device from the persistent
+            domain (i.e. inactive XML configuration that'll be used on next
+            start of the domain) instead of the live domain configuration
+        :returns LibvirtConfigGuestDisk: mounted at device or None
         """
         flags = 0
         if from_persistent_config:
@@ -367,6 +379,8 @@ class Guest(object):
             conf.parse_dom(node)
             return conf
 
+        return None
+
     def get_all_disks(self):
         """Returns all the disks for a guest
 
@@ -375,7 +389,11 @@ class Guest(object):
 
         return self.get_all_devices(vconfig.LibvirtConfigGuestDisk)
 
-    def get_all_devices(self, devtype=None, from_persistent_config=False):
+    def get_all_devices(
+        self,
+        devtype: vconfig.LibvirtConfigGuestDevice = None,
+        from_persistent_config: bool = False
+    ) -> ty.List[vconfig.LibvirtConfigGuestDevice]:
         """Returns all devices for a guest
 
         :param devtype: a LibvirtConfigGuestDevice subclass class
