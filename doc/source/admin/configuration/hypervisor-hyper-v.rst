@@ -19,8 +19,9 @@ compute nodes:
 - Windows Server 2012 R2 Server and Core (with the Hyper-V role enabled)
 - Hyper-V Server
 
+
 Hyper-V configuration
-~~~~~~~~~~~~~~~~~~~~~
+---------------------
 
 The only OpenStack services required on a Hyper-V node are ``nova-compute`` and
 ``neutron-hyperv-agent``. Regarding the resources needed for this host you have
@@ -34,7 +35,7 @@ configuration information should work for the Windows 2012 and 2012 R2
 platforms.
 
 Local storage considerations
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The Hyper-V compute node needs to have ample storage for storing the virtual
 machine images running on the compute nodes. You may use a single volume for
@@ -43,7 +44,7 @@ all, or partition it into an OS volume and VM volume.
 .. _configure-ntp-windows:
 
 Configure NTP
--------------
+~~~~~~~~~~~~~
 
 Network time services must be configured to ensure proper operation of the
 OpenStack nodes. To set network time on your Windows host you must run the
@@ -61,7 +62,7 @@ server. Note that in case of an Active Directory environment, you may do this
 only for the AD Domain Controller.
 
 Configure Hyper-V virtual switching
------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Information regarding the Hyper-V virtual Switch can be found in the `Hyper-V
 Virtual Switch Overview`__.
@@ -83,7 +84,7 @@ following PowerShell may be used:
 __ https://technet.microsoft.com/en-us/library/hh831823.aspx
 
 Enable iSCSI initiator service
-------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To prepare the Hyper-V node to be able to attach to volumes provided by cinder
 you must first make sure the Windows iSCSI initiator service is running and
@@ -95,7 +96,7 @@ started automatically.
    PS C:\> Start-Service MSiSCSI
 
 Configure shared nothing live migration
----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Detailed information on the configuration of live migration can be found in
 `this guide`__
@@ -158,7 +159,7 @@ Additional Requirements:
 __ https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/manage/Use-live-migration-without-Failover-Clustering-to-move-a-virtual-machine
 
 How to setup live migration on Hyper-V
---------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To enable 'shared nothing live' migration, run the 3 instructions below on each
 Hyper-V host:
@@ -175,15 +176,16 @@ Hyper-V host:
    provide live migration.
 
 Additional Reading
-------------------
+~~~~~~~~~~~~~~~~~~
 
 This article clarifies the various live migration options in Hyper-V:
 
 `Hyper-V Live Migration of Yesterday
 <https://ariessysadmin.blogspot.ro/2012/04/hyper-v-live-migration-of-windows.html>`_
 
+
 Install nova-compute using OpenStack Hyper-V installer
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------------------------------
 
 In case you want to avoid all the manual setup, you can use Cloudbase
 Solutions' installer. You can find it here:
@@ -201,28 +203,26 @@ its features can be found here:
 
 `Cloudbase <https://www.cloudbase.it>`_
 
+
 .. _windows-requirements:
 
 Requirements
-~~~~~~~~~~~~
+------------
 
 Python
-------
-
-Python 2.7 32bit must be installed as most of the libraries are not working
-properly on the 64bit version.
+~~~~~~
 
 **Setting up Python prerequisites**
 
-#. Download and install Python 2.7 using the MSI installer from here:
+#. Download and install Python 3.8 using the MSI installer from the `Python
+   website`__.
 
-   `python-2.7.3.msi download
-   <https://www.python.org/ftp/python/2.7.3/python-2.7.3.msi>`_
+   .. __: https://www.python.org/downloads/windows/
 
    .. code-block:: none
 
-      PS C:\> $src = "https://www.python.org/ftp/python/2.7.3/python-2.7.3.msi"
-      PS C:\> $dest = "$env:temp\python-2.7.3.msi"
+      PS C:\> $src = "https://www.python.org/ftp/python/3.8.8/python-3.8.8.exe"
+      PS C:\> $dest = "$env:temp\python-3.8.8.exe"
       PS C:\> Invoke-WebRequest -Uri $src -OutFile $dest
       PS C:\> Unblock-File $dest
       PS C:\> Start-Process $dest
@@ -233,34 +233,18 @@ properly on the 64bit version.
    .. code-block:: none
 
       PS C:\> $oldPath = [System.Environment]::GetEnvironmentVariable("Path")
-      PS C:\> $newPath = $oldPath + ";C:\python27\;C:\python27\Scripts\"
+      PS C:\> $newPath = $oldPath + ";C:\python38\;C:\python38\Scripts\"
       PS C:\> [System.Environment]::SetEnvironmentVariable("Path", $newPath, [System.EnvironmentVariableTarget]::User
 
 Python dependencies
--------------------
-
-The following packages need to be downloaded and manually installed:
-
-``setuptools``
-  https://pypi.python.org/packages/2.7/s/setuptools/setuptools-0.6c11.win32-py2.7.exe
-
-``pip``
-  https://pip.pypa.io/en/latest/installing/
-
-``PyMySQL``
-  http://codegood.com/download/10/
-
-``PyWin32``
-  https://sourceforge.net/projects/pywin32/files/pywin32/Build%20217/pywin32-217.win32-py2.7.exe
-
-``Greenlet``
-  http://www.lfd.uci.edu/~gohlke/pythonlibs/#greenlet
-
-``PyCryto``
-  http://www.voidspace.org.uk/downloads/pycrypto26/pycrypto-2.6.win32-py2.7.exe
+~~~~~~~~~~~~~~~~~~~
 
 The following packages must be installed with pip:
 
+* ``pywin32``
+* ``pymysql``
+* ``greenlet``
+* ``pycryto``
 * ``ecdsa``
 * ``amqp``
 * ``wmi``
@@ -271,8 +255,9 @@ The following packages must be installed with pip:
    PS C:\> pip install amqp
    PS C:\> pip install wmi
 
+
 Other dependencies
-------------------
+~~~~~~~~~~~~~~~~~~
 
 ``qemu-img`` is required for some of the image related operations.  You can get
 it from here: http://qemu.weilnetz.de/.  You must make sure that the
@@ -281,7 +266,7 @@ it from here: http://qemu.weilnetz.de/.  You must make sure that the
 Some Python packages need to be compiled, so you may use MinGW or Visual
 Studio. You can get MinGW from here: http://sourceforge.net/projects/mingw/.
 You must configure which compiler is to be used for this purpose by using the
-``distutils.cfg`` file in ``$Python27\Lib\distutils``, which can contain:
+``distutils.cfg`` file in ``$Python38\Lib\distutils``, which can contain:
 
 .. code-block:: ini
 
@@ -291,28 +276,21 @@ You must configure which compiler is to be used for this purpose by using the
 As a last step for setting up MinGW, make sure that the MinGW binaries'
 directories are set up in PATH.
 
+
 Install nova-compute
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 
 Download the nova code
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 #. Use Git to download the necessary source code.  The installer to run Git on
    Windows can be downloaded here:
 
-   https://github.com/msysgit/msysgit/releases/download/Git-1.9.2-preview20140411/Git-1.9.2-preview20140411.exe
+   https://gitforwindows.org/
 
 #. Download the installer. Once the download is complete, run the installer and
    follow the prompts in the installation wizard.  The default should be
    acceptable for the purposes of this guide.
-
-   .. code-block:: none
-
-      PS C:\> $src = "https://github.com/msysgit/msysgit/releases/download/Git-1.9.2-preview20140411/Git-1.9.2-preview20140411.exe"
-      PS C:\> $dest = "$env:temp\Git-1.9.2-preview20140411.exe"
-      PS C:\> Invoke-WebRequest -Uri $src -OutFile $dest
-      PS C:\> Unblock-File $dest
-      PS C:\> Start-Process $dest
 
 #. Run the following to clone the nova code.
 
@@ -321,7 +299,7 @@ Download the nova code
       PS C:\> git.exe clone https://opendev.org/openstack/nova
 
 Install nova-compute service
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To install ``nova-compute``, run:
 
@@ -331,7 +309,7 @@ To install ``nova-compute``, run:
    PS C:\> python setup.py install
 
 Configure nova-compute
-----------------------
+~~~~~~~~~~~~~~~~~~~~~~
 
 The ``nova.conf`` file must be placed in ``C:\etc\nova`` for running OpenStack
 on Hyper-V. Below is a sample ``nova.conf`` for Windows:
@@ -393,7 +371,7 @@ on Hyper-V. Below is a sample ``nova.conf`` for Windows:
    html5_proxy_base_url = https://IP_ADDRESS:4430
 
 Prepare images for use with Hyper-V
------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Hyper-V currently supports only the VHD and VHDX file format for virtual
 machine instances. Detailed instructions for installing virtual machines on
@@ -407,8 +385,12 @@ image to `glance` using the `openstack-client`:
 
 .. code-block:: none
 
-   PS C:\> openstack image create --name "VM_IMAGE_NAME" --property hypervisor_type=hyperv --public \
-             --container-format bare --disk-format vhd
+   PS C:\> openstack image create \
+             --name "VM_IMAGE_NAME" \
+             --property hypervisor_type=hyperv \
+             --public \
+             --container-format bare \
+             --disk-format vhd
 
 .. note::
 
@@ -422,12 +404,12 @@ image to `glance` using the `openstack-client`:
       PS C:\> New-VHD DISK_NAME.vhd -SizeBytes VHD_SIZE
 
 Inject interfaces and routes
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The ``interfaces.template`` file describes the network interfaces and routes
 available on your system and how to activate them. You can specify the location
-of the file with the ``injected_network_template`` configuration option in
-``/etc/nova/nova.conf``.
+of the file with the :oslo.config:option:`injected_network_template`
+configuration option in ``nova.conf``.
 
 .. code-block:: ini
 
@@ -436,7 +418,7 @@ of the file with the ``injected_network_template`` configuration option in
 A default template exists in ``nova/virt/interfaces.template``.
 
 Run Compute with Hyper-V
-------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 To start the ``nova-compute`` service, run this command from a console in the
 Windows server:
@@ -445,8 +427,9 @@ Windows server:
 
    PS C:\> C:\Python27\python.exe c:\Python27\Scripts\nova-compute --config-file c:\etc\nova\nova.conf
 
-Troubleshoot Hyper-V configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Troubleshooting
+---------------
 
 * I ran the :command:`nova-manage service list` command from my controller;
   however, I'm not seeing smiley faces for Hyper-V compute nodes, what do I do?

@@ -2,9 +2,6 @@
 KVM
 ===
 
-.. todo:: Some of this is installation guide material and should probably be
-     moved.
-
 KVM is configured as the default hypervisor for Compute.
 
 .. note::
@@ -14,16 +11,6 @@ KVM is configured as the default hypervisor for Compute.
    before you install ``nova-compute``.  The ``nova-compute`` service depends
    on qemu-kvm, which installs ``/lib/udev/rules.d/45-qemu-kvm.rules``, which
    sets the correct permissions on the ``/dev/kvm`` device node.
-
-To enable KVM explicitly, add the following configuration options to the
-``/etc/nova/nova.conf`` file:
-
-.. code-block:: ini
-
-   compute_driver = libvirt.LibvirtDriver
-
-   [libvirt]
-   virt_type = kvm
 
 The KVM hypervisor supports the following virtual machine image formats:
 
@@ -35,38 +22,47 @@ The KVM hypervisor supports the following virtual machine image formats:
 This section describes how to enable KVM on your system.  For more information,
 see the following distribution-specific documentation:
 
-* `Fedora: Virtualization Getting Started Guide <http://docs.fedoraproject.org/
-  en-US/Fedora/22/html/Virtualization_Getting_Started_Guide/index.html>`_
-  from the Fedora 22 documentation.
-* `Ubuntu: KVM/Installation <https://help.ubuntu.com/community/KVM/
-  Installation>`_ from the Community Ubuntu documentation.
-* `Debian: Virtualization with KVM <http://static.debian-handbook.info/browse/
-  stable/sect.virtualization.html#idp11279352>`_ from the Debian handbook.
-* `Red Hat Enterprise Linux: Installing virtualization packages on an existing
-  Red Hat Enterprise Linux system <http://docs.redhat.com/docs/en-US/
-  Red_Hat_Enterprise_Linux/6/html/Virtualization_Host_Configuration_and_Guest_
-  Installation_Guide/sect-Virtualization_Host_Configuration_and_Guest_Installa
-  tion_Guide-Host_Installation-Installing_KVM_packages_on_an_existing_Red_Hat_
-  Enterprise_Linux_system.html>`_ from the ``Red Hat Enterprise Linux
-  Virtualization Host Configuration and Guest Installation Guide``.
-* `openSUSE: Installing KVM <http://doc.opensuse.org/documentation/html/
-  openSUSE/opensuse-kvm/cha.kvm.requires.html#sec.kvm.requires.install>`_
-  from the openSUSE Virtualization with KVM manual.
-* `SLES: Installing KVM <https://www.suse.com/documentation/sles-12/book_virt/
-  data/sec_vt_installation_kvm.html>`_ from the SUSE Linux Enterprise Server
-  ``Virtualization Guide``.
+* `Fedora: Virtualization Getting Started Guide`__
+* `Ubuntu: KVM/Installation`__
+* `Debian: KVM Guide`__
+* `Red Hat Enterprise Linux (RHEL): Getting started with virtualization`__
+* `openSUSE: Setting Up a KVM VM Host Server`__
+* `SLES: Virtualization with KVM`__.
+
+.. __: https://docs.fedoraproject.org/en-US/quick-docs/getting-started-with-virtualization/
+.. __: https://help.ubuntu.com/community/KVM/Installation
+.. __: https://wiki.debian.org/KVM
+.. __: https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/8/html/configuring_and_managing_virtualization/getting-started-with-virtualization-in-rhel-8_configuring-and-managing-virtualization
+.. __: https://doc.opensuse.org/documentation/leap/virtualization/html/book-virt/cha-qemu-host.html
+.. __: https://documentation.suse.com/sles/11-SP4/html/SLES-all/book-kvm.html
+
+
+Configuration
+-------------
+
+To enable KVM explicitly, add the following configuration options to the
+``/etc/nova/nova.conf`` file:
+
+.. code-block:: ini
+
+   [DEFAULT]
+   compute_driver = libvirt.LibvirtDriver
+
+   [libvirt]
+   virt_type = kvm
+
 
 .. _enable-kvm:
 
 Enable KVM
-~~~~~~~~~~
+----------
 
 The following sections outline how to enable KVM based hardware virtualization
 on different architectures and platforms.  To perform these steps, you must be
 logged in as the ``root`` user.
 
-For x86 based systems
----------------------
+For x86-based systems
+~~~~~~~~~~~~~~~~~~~~~
 
 #. To determine whether the ``svm`` or ``vmx`` CPU extensions are present, run
    this command:
@@ -175,8 +171,8 @@ Add these lines to ``/etc/modules`` file so that these modules load on reboot:
    kvm
    kvm-amd
 
-For POWER based systems
------------------------
+For POWER-based systems
+~~~~~~~~~~~~~~~~~~~~~~~
 
 KVM as a hypervisor is supported on POWER system's PowerNV platform.
 
@@ -224,8 +220,14 @@ KVM as a hypervisor is supported on POWER system's PowerNV platform.
    Because a KVM installation can change user group membership, you might need
    to log in again for changes to take effect.
 
+For AArch64-based systems
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. todo:: Populate this section.
+
+
 Configure Compute backing storage
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------
 
 Backing Storage is the storage used to provide the expanded operating system
 image, and any ephemeral storage. Inside the virtual machine, this is normally
@@ -259,8 +261,9 @@ Local `LVM volumes
 used. Set the :oslo.config:option:`libvirt.images_volume_group` configuration
 option to the name of the LVM group you have created.
 
+
 Direct download of images from Ceph
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------
 
 When the Glance image service is set up with the Ceph backend and Nova is using
 a local ephemeral store (``[libvirt]/images_type!=rbd``), it is possible to
@@ -291,7 +294,7 @@ On the Nova compute node in nova.conf:
 
 
 Nested guest support
-~~~~~~~~~~~~~~~~~~~~
+--------------------
 
 You may choose to enable support for nested guests --- that is, allow
 your Nova instances to themselves run hardware-accelerated virtual
@@ -299,7 +302,7 @@ machines with KVM. Doing so requires a module parameter on
 your KVM kernel module, and corresponding ``nova.conf`` settings.
 
 Host configuration
-------------------
+~~~~~~~~~~~~~~~~~~
 
 To enable nested KVM guests, your compute node must load the
 ``kvm_intel`` or ``kvm_amd`` module with ``nested=1``. You can enable
@@ -315,7 +318,7 @@ content:
 A reboot may be required for the change to become effective.
 
 Nova configuration
-------------------
+~~~~~~~~~~~~~~~~~~
 
 To support nested guests, you must set your
 :oslo.config:option:`libvirt.cpu_mode` configuration to one of the following
@@ -366,7 +369,7 @@ Custom (``custom``)
 More information on CPU models can be found in :doc:`/admin/cpu-models`.
 
 Limitations
------------
+~~~~~~~~~~~~
 
 When enabling nested guests, you should be aware of (and inform your
 users about) certain limitations that are currently inherent to nested
@@ -380,8 +383,9 @@ See `the KVM documentation
 <https://www.linux-kvm.org/page/Nested_Guests#Limitations>`_ for more
 information on these limitations.
 
+
 Guest agent support
-~~~~~~~~~~~~~~~~~~~
+-------------------
 
 Use guest agents to enable optional access between compute nodes and guests
 through a socket, using the QMP protocol.
@@ -391,8 +395,9 @@ parameter on the image you wish to use to create the guest-agent-capable
 instances from. You can explicitly disable the feature by setting
 ``hw_qemu_guest_agent=no`` in the image metadata.
 
+
 KVM performance tweaks
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 The `VHostNet <http://www.linux-kvm.org/page/VhostNet>`_ kernel module improves
 network performance. To load the kernel module, run the following command as
@@ -402,8 +407,9 @@ root:
 
    # modprobe vhost_net
 
-Troubleshoot KVM
-~~~~~~~~~~~~~~~~
+
+Troubleshooting
+---------------
 
 Trying to launch a new virtual machine instance fails with the ``ERROR`` state,
 and the following error appears in the ``/var/log/nova/nova-compute.log`` file:

@@ -1,6 +1,6 @@
-===============
- Configuration
-===============
+=============
+Configuration
+=============
 
 To configure your Compute installation, you must define configuration options
 in these files:

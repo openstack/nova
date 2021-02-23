@@ -19,17 +19,24 @@ The typical uses cases for QEMU are
   development or testing purposes, where the hypervisor does not
   support native virtualization for guests.
 
-To enable QEMU, add these settings to ``nova.conf``:
+
+Configuration
+-------------
+
+To enable QEMU, configure :oslo.config:option:`DEFAULT.compute_driver` =
+``libvirt.LibvirtDriver`` and :oslo.config:option:`libvirt.virt_type` =
+``qemu``. For example:
 
 .. code-block:: ini
 
+   [DEFAULT]
    compute_driver = libvirt.LibvirtDriver
 
    [libvirt]
    virt_type = qemu
 
-For some operations you may also have to install the
-:command:`guestmount` utility:
+For some operations you may also have to install the :command:`guestmount`
+utility:
 
 On Ubuntu:
 
