@@ -946,10 +946,16 @@ on compute host B.
 The configured maximum is not enforced on shelved offloaded servers, as they
 have no compute host.
 
+.. warning:: If this option is set to 0, the ``nova-compute`` service will fail
+             to start, as 0 disk devices is an invalid configuration that would
+             prevent instances from being able to boot.
+
 Possible values:
 
 * -1 means unlimited
-* Any integer >= 0 represents the maximum allowed
+* Any integer >= 1 represents the maximum allowed. A value of 0 will cause the
+  ``nova-compute`` service to fail to start, as 0 disk devices is an invalid
+  configuration that would prevent instances from being able to boot.
 """),
 ]
 
