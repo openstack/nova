@@ -29,3 +29,4 @@ MIGRATING_ATTR = 'migrating_to'
 L3_NETWORK_TYPES = ['vxlan', 'gre', 'geneve']
 ALLOCATION = 'allocation'
 RESOURCE_REQUEST = 'resource_request'
+SEGMENT = 'Segment'

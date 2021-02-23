@@ -1339,3 +1339,82 @@ def fill_provider_mapping_based_on_allocation(
     # allocation_request_version key of the Selection object.
     request_spec.map_requested_resources_to_providers(
         allocation, provider_traits)
+
+
+# FIXME(sbauza) : Move this method closer to the prefilter once split.
+def get_aggregates_for_routed_network(
+        context, network_api, report_client, network_uuid):
+    """Collects the aggregate UUIDs describing the segmentation of a routed
+    network from Nova perspective.
+
+    A routed network consists of multiple network segments. Each segment is
+    available on a given set of compute hosts. Such segmentation is modelled as
+    host aggregates from Nova perspective.
+
+    :param context: The security context
+    :param network_api: nova.network.neutron.API instance to be used to
+       communicate with Neutron
+    :param report_client: SchedulerReportClient instance to be used to
+        communicate with Placement
+    :param network_uuid: The UUID of the Neutron network to be translated to
+        aggregates
+    :returns: A list of aggregate UUIDs
+    :raises InvalidRoutedNetworkConfiguration: if something goes wrong when
+        try to find related aggregates
+    """
+    aggregates = []
+
+    segment_ids = network_api.get_segment_ids_for_network(
+        context, network_uuid)
+    # Each segment is a resource provider in placement and is in an
+    # aggregate for the routed network, so we have to get the
+    # aggregates for each segment provider - and those aggregates are
+    # mirrored as nova host aggregates.
+    # NOTE(sbauza): In case of a network with non-configured routed segments,
+    # we will get an empty list of segment UUIDs, so we won't enter the loop.
+    for segment_id in segment_ids:
+        # TODO(sbauza): Don't use a private method.
+        agg_info = report_client._get_provider_aggregates(context, segment_id)
+        # @safe_connect can return None but we also want to hard-stop here if
+        # we can't find the aggregate that Neutron created for the segment.
+        if agg_info is None or not agg_info.aggregates:
+            raise exception.InvalidRoutedNetworkConfiguration(
+                'Failed to find aggregate related to segment %s' % segment_id)
+        aggregates.extend(agg_info.aggregates)
+    return aggregates
+
+
+# FIXME(sbauza) : Move this method closer to the prefilter once split.
+def get_aggregates_for_routed_subnet(
+        context, network_api, report_client, subnet_id):
+    """Collects the aggregate UUIDs matching the segment that relates to a
+    particular subnet from a routed network.
+
+    A routed network consists of multiple network segments. Each segment is
+    available on a given set of compute hosts. Such segmentation is modelled as
+    host aggregates from Nova perspective.
+
+    :param context: The security context
+    :param network_api: nova.network.neutron.API instance to be used to
+       communicate with Neutron
+    :param report_client: SchedulerReportClient instance to be used to
+        communicate with Placement
+    :param subnet_id: The UUID of the Neutron subnet to be translated to
+        aggregate
+    :returns: A list of aggregate UUIDs
+    :raises InvalidRoutedNetworkConfiguration: if something goes wrong when
+        try to find related aggregates
+    """
+
+    segment_id = network_api.get_segment_id_for_subnet(
+        context, subnet_id)
+    if segment_id:
+        # TODO(sbauza): Don't use a private method.
+        agg_info = report_client._get_provider_aggregates(context, segment_id)
+        # @safe_connect can return None but we also want to hard-stop here if
+        # we can't find the aggregate that Neutron created for the segment.
+        if agg_info is None or not agg_info.aggregates:
+            raise exception.InvalidRoutedNetworkConfiguration(
+                'Failed to find aggregate related to segment %s' % segment_id)
+        return agg_info.aggregates
+    return []

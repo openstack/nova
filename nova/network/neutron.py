@@ -21,6 +21,7 @@ API and utilities for nova-network interactions.
 import copy
 import functools
 import time
+import typing as ty
 
 from keystoneauth1 import loading as ks_loading
 from neutronclient.common import exceptions as neutron_client_exc
@@ -1248,6 +1249,10 @@ class API(base.Base):
     def has_substr_port_filtering_extension(self, context):
         self._refresh_neutron_extensions_cache(context)
         return constants.SUBSTR_PORT_FILTERING in self.extensions
+
+    def _has_segment_extension(self, context, neutron=None):
+        self._refresh_neutron_extensions_cache(context, neutron=neutron)
+        return constants.SEGMENT in self.extensions
 
     def supports_port_binding_extension(self, context):
         """This is a simple check to see if the neutron "binding-extended"
@@ -3483,6 +3488,60 @@ class API(base.Base):
                     LOG.exception('Unable to update instance VNIC index '
                                   'for port %s.',
                                   vif['id'], instance=instance)
+
+    def get_segment_ids_for_network(
+        self,
+        context: nova.context.RequestContext,
+        network_id: str,
+    ) -> ty.List[str]:
+        """Query the segmentation ids for the given network.
+
+        :param context: The request context.
+        :param network_id: The UUID of the network to be queried.
+        :returns: The list of segment UUIDs of the network or an empty list if
+            either Segment extension isn't enabled in Neutron or if the network
+            isn't configured for routing.
+        """
+        if not self._has_segment_extension(context):
+            return []
+
+        client = get_client(context)
+        try:
+            # NOTE(sbauza): We can't use list_segments() directly because the
+            # API is borked and returns both segments but also segmentation IDs
+            # of a provider network if any.
+            subnets = client.list_subnets(network_id=network_id,
+                                          fields='segment_id')['subnets']
+        except neutron_client_exc.NeutronClientException as e:
+            raise exception.InvalidRoutedNetworkConfiguration(
+                'Failed to get segment IDs for network %s' % network_id) from e
+        # The segment field of an unconfigured subnet could be None
+        return [subnet['segment_id'] for subnet in subnets
+                                     if subnet['segment_id'] is not None]
+
+    def get_segment_id_for_subnet(
+        self,
+        context: nova.context.RequestContext,
+        subnet_id: str,
+    ) -> ty.Optional[str]:
+        """Query the segmentation id for the given subnet.
+
+        :param context: The request context.
+        :param subnet_id: The UUID of the subnet to be queried.
+        :returns: The segment UUID of the subnet or None if either Segment
+            extension isn't enabled in Neutron or the provided subnet doesn't
+            have segments (if the related network isn't configured for routing)
+        """
+        if not self._has_segment_extension(context):
+            return None
+
+        client = get_client(context)
+        try:
+            subnet = client.show_subnet(subnet_id)['subnet']
+        except neutron_client_exc.NeutronClientException as e:
+            raise exception.InvalidRoutedNetworkConfiguration(
+                'Subnet %s not found' % subnet_id) from e
+        return subnet.get('segment_id')
 
 
 def _ensure_requested_network_ordering(accessor, unordered, preferred):
