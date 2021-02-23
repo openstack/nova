@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    The scheduler can now verify if the requested networks or the port are
+    related to Neutron `routed networks`_ with some specific segments to use.
+    In this case, the routed networks prefilter will require the related
+    aggregates to be reported in Placement, so only hosts within the asked
+    aggregates would be accepted.
+    In order to support this behaviour, operators need to set the
+    ``[scheduler]/query_placement_for_routed_network_aggregates`` configuration
+    option which defaults to ``False``.
+
+    .. _`routed networks`: https://docs.openstack.org/neutron/latest/admin/config-routed-networks.html

@@ -17,9 +17,12 @@ from oslo_log import log as logging
 from oslo_utils import timeutils
 
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
+from nova.network import neutron
 from nova import objects
+from nova.scheduler.client import report
 from nova.scheduler import utils
 
 
@@ -267,6 +270,91 @@ def accelerators_filter(ctxt, request_spec):
     return True
 
 
+@trace_request_filter
+def routed_networks_filter(
+    ctxt: nova_context.RequestContext,
+    request_spec: 'objects.RequestSpec'
+) -> bool:
+    """Adds requested placement aggregates that match requested networks.
+
+    This will modify request_spec to request hosts in aggregates that
+    matches segment IDs related to requested networks.
+
+    :param ctxt: The usual suspect for a context object.
+    :param request_spec: a classic RequestSpec object containing the request.
+    :returns: True if the filter was used or False if not.
+    :raises: exception.InvalidRoutedNetworkConfiguration if something went
+             wrong when trying to get the related segment aggregates.
+    """
+    if not CONF.scheduler.query_placement_for_routed_network_aggregates:
+        return False
+
+    # NOTE(sbauza): On a create operation with no specific network request, we
+    # allocate the network only after scheduling when the nova-compute service
+    # calls Neutron. In this case, here we just want to accept any destination
+    # as fine.
+    # NOTE(sbauza): This could be also going from an old compute reschedule.
+    if 'requested_networks' not in request_spec:
+        return True
+
+    # This object field is not nullable
+    requested_networks = request_spec.requested_networks
+
+    # NOTE(sbauza): This field could be not created yet.
+    if (
+        'requested_destination' not in request_spec or
+        request_spec.requested_destination is None
+    ):
+        request_spec.requested_destination = objects.Destination()
+
+    # Get the clients we need
+    network_api = neutron.API()
+    report_api = report.SchedulerReportClient()
+
+    for requested_network in requested_networks:
+        network_id = None
+        # Check for a specifically requested network ID.
+        if "port_id" in requested_network and requested_network.port_id:
+            # We have to lookup the port to see which segment(s) to support.
+            port = network_api.show_port(ctxt, requested_network.port_id)[
+                "port"
+            ]
+            if port['fixed_ips']:
+                # The instance already exists with a related subnet. We need to
+                # stick on this subnet.
+                # NOTE(sbauza): In case of multiple IPs, we could have more
+                # subnets than only one but given they would be for the same
+                # port, just looking at the first subnet is needed.
+                subnet_id = port['fixed_ips'][0]['subnet_id']
+                aggregates = utils.get_aggregates_for_routed_subnet(
+                    ctxt, network_api, report_api, subnet_id)
+            else:
+                # The port was just created without a subnet.
+                network_id = port["network_id"]
+        elif (
+            "network_id" in requested_network and requested_network.network_id
+        ):
+            network_id = requested_network.network_id
+
+        if network_id:
+            # As the user only requested a network or a port unbound to a
+            # segment, we are free to choose any segment from the network.
+            aggregates = utils.get_aggregates_for_routed_network(
+                ctxt, network_api, report_api, network_id)
+
+        if aggregates:
+            LOG.debug(
+                'routed_networks_filter request filter added the following '
+                'aggregates for network ID %s: %s',
+                network_id, ', '.join(aggregates))
+            # NOTE(sbauza): All of the aggregates from this request will be
+            # accepted, but they will have an AND relationship with any other
+            # requested aggregate, like for another NIC request in this loop.
+            request_spec.requested_destination.require_aggregates(aggregates)
+
+    return True
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
     map_az_to_placement_aggregate,
@@ -275,6 +363,7 @@ ALL_REQUEST_FILTERS = [
     isolate_aggregates,
     transform_image_metadata,
     accelerators_filter,
+    routed_networks_filter,
 ]
 
 

@@ -1122,13 +1122,13 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
                 use_project_id_in_urls=self.USE_PROJECT_ID,
                 stub_keystone=self.STUB_KEYSTONE))
 
+        self.admin_api = self.api_fixture.admin_api
         # if the class needs to run as admin, make the api endpoint
         # the admin, otherwise it's safer to run as non admin user.
         if self.ADMIN_API:
             self.api = self.api_fixture.admin_api
         else:
             self.api = self.api_fixture.api
-            self.admin_api = self.api_fixture.admin_api
 
         if self.microversion:
             self.api.microversion = self.microversion

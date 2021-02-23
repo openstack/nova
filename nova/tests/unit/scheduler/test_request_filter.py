@@ -36,6 +36,8 @@ class TestRequestFilter(test.NoDBTestCase):
                    group='scheduler')
         self.flags(enable_isolated_aggregate_filtering=True,
                    group='scheduler')
+        self.flags(query_placement_for_routed_network_aggregates=True,
+                   group='scheduler')
 
     def test_process_reqspec(self):
         fake_filters = [mock.MagicMock(), mock.MagicMock()]
@@ -474,3 +476,107 @@ class TestRequestFilter(test.NoDBTestCase):
 
         # Assert about logging
         mock_log.assert_not_called()
+
+    def test_routed_networks_filter_not_enabled(self):
+        self.assertIn(request_filter.routed_networks_filter,
+                      request_filter.ALL_REQUEST_FILTERS)
+        self.flags(query_placement_for_routed_network_aggregates=False,
+                   group='scheduler')
+        reqspec = objects.RequestSpec(
+            requested_destination=objects.Destination())
+        self.assertFalse(request_filter.routed_networks_filter(
+                         self.context, reqspec))
+        # We don't add any aggregates
+        self.assertIsNone(reqspec.requested_destination.aggregates)
+
+    def test_routed_networks_filter_no_requested_nets(self):
+        reqspec = objects.RequestSpec()
+        self.assertTrue(request_filter.routed_networks_filter(
+                         self.context, reqspec))
+
+    @mock.patch('nova.scheduler.utils.get_aggregates_for_routed_subnet')
+    @mock.patch('nova.network.neutron.API.show_port')
+    def test_routed_networks_filter_with_requested_port_immediate(
+        self, mock_show_port, mock_get_aggs_subnet
+    ):
+        req_net = objects.NetworkRequest(port_id=uuids.port1)
+        reqspec = objects.RequestSpec(
+            requested_networks=objects.NetworkRequestList(objects=[req_net]))
+        # Check whether the port was already bound to a segment
+        mock_show_port.return_value = {
+            'port': {
+                'fixed_ips': [
+                    {
+                        'subnet_id': uuids.subnet1
+            }]}}
+        mock_get_aggs_subnet.return_value = [uuids.agg1]
+
+        self.assertTrue(request_filter.routed_networks_filter(
+                        self.context, reqspec))
+        self.assertEqual([uuids.agg1],
+                         reqspec.requested_destination.aggregates)
+        mock_show_port.assert_called_once_with(self.context, uuids.port1)
+        mock_get_aggs_subnet.assert_called_once_with(
+            self.context, mock.ANY, mock.ANY, uuids.subnet1)
+
+    @mock.patch('nova.scheduler.utils.get_aggregates_for_routed_network')
+    @mock.patch('nova.network.neutron.API.show_port')
+    def test_routed_networks_filter_with_requested_port_deferred(
+        self, mock_show_port, mock_get_aggs_network
+    ):
+        req_net = objects.NetworkRequest(port_id=uuids.port1)
+        reqspec = objects.RequestSpec(
+            requested_networks=objects.NetworkRequestList(objects=[req_net]))
+        # The port was created with a deferred allocation so for the moment,
+        # it's not bound to a specific segment.
+        mock_show_port.return_value = {
+            'port': {
+                'fixed_ips': [],
+                'network_id': uuids.net1}}
+        mock_get_aggs_network.return_value = [uuids.agg1]
+
+        self.assertTrue(request_filter.routed_networks_filter(
+                        self.context, reqspec))
+        self.assertEqual([uuids.agg1],
+                         reqspec.requested_destination.aggregates)
+        mock_show_port.assert_called_once_with(self.context, uuids.port1)
+        mock_get_aggs_network.assert_called_once_with(
+            self.context, mock.ANY, mock.ANY, uuids.net1)
+
+    @mock.patch('nova.scheduler.utils.get_aggregates_for_routed_network')
+    def test_routed_networks_filter_with_requested_net(
+        self, mock_get_aggs_network
+    ):
+        req_net = objects.NetworkRequest(network_id=uuids.net1)
+        reqspec = objects.RequestSpec(
+            requested_networks=objects.NetworkRequestList(objects=[req_net]))
+        mock_get_aggs_network.return_value = [uuids.agg1]
+
+        self.assertTrue(request_filter.routed_networks_filter(
+                        self.context, reqspec))
+        self.assertEqual([uuids.agg1],
+                         reqspec.requested_destination.aggregates)
+        mock_get_aggs_network.assert_called_once_with(
+            self.context, mock.ANY, mock.ANY, uuids.net1)
+
+    @mock.patch('nova.scheduler.utils.get_aggregates_for_routed_network')
+    def test_routed_networks_filter_with_two_requested_nets(
+        self, mock_get_aggs_network
+    ):
+        req_net1 = objects.NetworkRequest(network_id=uuids.net1)
+        req_net2 = objects.NetworkRequest(network_id=uuids.net2)
+        reqspec = objects.RequestSpec(
+            requested_networks=objects.NetworkRequestList(
+                objects=[req_net1, req_net2]))
+        mock_get_aggs_network.side_effect = ([uuids.agg1, uuids.agg2],
+                                             [uuids.agg3])
+
+        self.assertTrue(request_filter.routed_networks_filter(
+                        self.context, reqspec))
+        # require_aggregates() has a specific semantics here where multiple
+        # aggregates provided in the same call have their UUIDs being joined.
+        self.assertEqual([','.join([uuids.agg1, uuids.agg2]), uuids.agg3],
+                         reqspec.requested_destination.aggregates)
+        mock_get_aggs_network.assert_has_calls([
+            mock.call(self.context, mock.ANY, mock.ANY, uuids.net1),
+            mock.call(self.context, mock.ANY, mock.ANY, uuids.net2)])
