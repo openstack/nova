@@ -616,15 +616,37 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
         self.wh.do_proxy.assert_called_with('<socket>')
 
-    def test_tcp_rst_no_compute_rpcapi(self):
-        # Tests that we don't create a ComputeAPI object if we receive a
-        # TCP RST message. Simulate by raising the socket.err upon recv.
-        err = socket.error('[Errno 104] Connection reset by peer')
-        self.wh.socket.recv.side_effect = err
-        conn = mock.MagicMock()
-        address = mock.MagicMock()
-        self.wh.server.top_new_client(conn, address)
-        self.assertIsNone(self.wh._compute_rpcapi)
+    @mock.patch('nova.objects.ConsoleAuthToken.validate')
+    def test_no_compute_rpcapi_with_invalid_token(self, mock_validate):
+        """Tests that we don't create a ComputeAPI object until we actually
+        need to use it to call the internal compute RPC API after token
+        validation succeeds. This way, we will not perform expensive object
+        creations when we receive unauthenticated (via token) messages. In the
+        past, it was possible for unauthenticated requests such as TCP RST or
+        requests with invalid tokens to be used to DOS the console proxy
+        service.
+        """
+        # We will simulate a request with an invalid token and verify it
+        # will not trigger a ComputeAPI object creation.
+        mock_req = mock.MagicMock()
+        mock_req.makefile().readline.side_effect = [
+            b'GET /vnc.html?token=123-456-789 HTTP/1.1\r\n',
+            b''
+        ]
+        client_addr = ('8.8.8.8', 54321)
+        mock_server = mock.MagicMock()
+        handler = websocketproxy.NovaProxyRequestHandler(
+            mock_req, client_addr, mock_server)
+        # Internal ComputeAPI reference should be None when the request handler
+        # is initially created.
+        self.assertIsNone(handler._compute_rpcapi)
+        # Set up a token validation to fail when the new_websocket_client
+        # is called to handle the request.
+        mock_validate.side_effect = exception.InvalidToken(token='123-456-789')
+        # We expect InvalidToken to be raised during handling.
+        self.assertRaises(exception.InvalidToken, handler.new_websocket_client)
+        # And our internal ComputeAPI reference should still be None.
+        self.assertIsNone(handler._compute_rpcapi)
 
     @mock.patch('websockify.websocketproxy.select_ssl_version')
     def test_ssl_min_version_is_not_set(self, mock_select_ssl):
