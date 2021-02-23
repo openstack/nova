@@ -326,8 +326,13 @@ def routed_networks_filter(
                 # subnets than only one but given they would be for the same
                 # port, just looking at the first subnet is needed.
                 subnet_id = port['fixed_ips'][0]['subnet_id']
-                aggregates = utils.get_aggregates_for_routed_subnet(
-                    ctxt, network_api, report_api, subnet_id)
+                try:
+                    aggregates = utils.get_aggregates_for_routed_subnet(
+                        ctxt, network_api, report_api, subnet_id)
+                except exception.InvalidRoutedNetworkConfiguration as e:
+                    raise exception.RequestFilterFailed(
+                        reason=_('Aggregates not found for the subnet %s'
+                        ) % subnet_id) from e
             else:
                 # The port was just created without a subnet.
                 network_id = port["network_id"]
@@ -339,8 +344,13 @@ def routed_networks_filter(
         if network_id:
             # As the user only requested a network or a port unbound to a
             # segment, we are free to choose any segment from the network.
-            aggregates = utils.get_aggregates_for_routed_network(
-                ctxt, network_api, report_api, network_id)
+            try:
+                aggregates = utils.get_aggregates_for_routed_network(
+                    ctxt, network_api, report_api, network_id)
+            except exception.InvalidRoutedNetworkConfiguration as e:
+                raise exception.RequestFilterFailed(
+                    reason=_('Aggregates not found for the network %s'
+                    ) % network_id) from e
 
         if aggregates:
             LOG.debug(

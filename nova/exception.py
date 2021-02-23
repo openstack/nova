@@ -1195,7 +1195,7 @@ class RequestFilterFailed(NovaException):
     msg_fmt = _("Scheduling failed: %(reason)s")
 
 
-class InvalidRoutedNetworkConfiguration(RequestFilterFailed):
+class InvalidRoutedNetworkConfiguration(NovaException):
     msg_fmt = _("Neutron routed networks configuration is invalid: "
                 "%(reason)s.")
 
