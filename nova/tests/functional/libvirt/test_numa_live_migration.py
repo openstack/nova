@@ -118,12 +118,12 @@ class NUMALiveMigrationPositiveBase(NUMALiveMigrationBase):
         self.start_compute(
             hostname='host_a',
             host_info=fakelibvirt.HostInfo(
-                cpu_nodes=1, cpu_sockets=4, cpu_cores=1, cpu_threads=1,
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=1,
                 kB_mem=10740000))
         self.start_compute(
             hostname='host_b',
             host_info=fakelibvirt.HostInfo(
-                cpu_nodes=1, cpu_sockets=4, cpu_cores=1, cpu_threads=1,
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=1,
                 kB_mem=10740000))
 
         # Create a 2-CPU flavor
@@ -471,12 +471,12 @@ class NUMALiveMigrationLegacyBase(NUMALiveMigrationPositiveBase):
         self.start_compute(
             hostname='source',
             host_info=fakelibvirt.HostInfo(
-                cpu_nodes=1, cpu_sockets=2, cpu_cores=1, cpu_threads=1,
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=2, cpu_threads=1,
                 kB_mem=10740000))
         self.start_compute(
             hostname='dest',
             host_info=fakelibvirt.HostInfo(
-                cpu_nodes=1, cpu_sockets=2, cpu_cores=1, cpu_threads=1,
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=2, cpu_threads=1,
                 kB_mem=10740000))
 
         ctxt = context.get_admin_context()
@@ -597,12 +597,12 @@ class NUMALiveMigrationNegativeTests(NUMALiveMigrationBase):
         self.start_compute(
             hostname='host_a',
             host_info=fakelibvirt.HostInfo(
-                cpu_nodes=1, cpu_sockets=3, cpu_cores=1, cpu_threads=1,
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=3, cpu_threads=1,
                 kB_mem=10740000))
         self.start_compute(
             hostname='host_b',
             host_info=fakelibvirt.HostInfo(
-                cpu_nodes=2, cpu_sockets=2, cpu_cores=1, cpu_threads=1,
+                cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=1,
                 kB_mem=10740000))
 
         extra_spec = {'hw:numa_nodes': 1,
@@ -638,14 +638,14 @@ class NUMALiveMigrationNegativeTests(NUMALiveMigrationBase):
         self.start_compute(
             hostname='host_a',
             host_info=fakelibvirt.HostInfo(
-                cpu_nodes=1, cpu_sockets=2, cpu_cores=1, cpu_threads=1,
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=2, cpu_threads=1,
                 kB_mem=1024000, mempages={
                     0: fakelibvirt.create_mempages([(4, 256000), (1024, 1000)])
                 }))
         self.start_compute(
             hostname='host_b',
             host_info=fakelibvirt.HostInfo(
-                cpu_nodes=1, cpu_sockets=2, cpu_cores=1, cpu_threads=1,
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=2, cpu_threads=1,
                 kB_mem=1024000, mempages={
                     0: fakelibvirt.create_mempages([(4, 256000), (2048, 500)]),
                 }))

@@ -7575,6 +7575,20 @@ class LibvirtDriver(driver.ComputeDriver):
         for cell in topology.cells:
             cpus = set(cpu.id for cpu in cell.cpus)
 
+            # NOTE(artom) We assume we'll never see hardware with multipe
+            # sockets in a single NUMA node - IOW, the socket_id for all CPUs
+            # in a single cell will be the same. To make that assumption
+            # explicit, we leave the cell's socket_id as None if that's the
+            # case.
+            socket_id = None
+            sockets = set([cpu.socket_id for cpu in cell.cpus])
+            if len(sockets) == 1:
+                socket_id = sockets.pop()
+            else:
+                LOG.warning('This host appears to have multiple sockets per '
+                            'NUMA node. The `socket` PCI NUMA affinity '
+                            'will not be supported.')
+
             cpuset = cpus & available_shared_cpus
             pcpuset = cpus & available_dedicated_cpus
 
@@ -7609,6 +7623,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # loops through all instances and calculated usage accordingly
             cell = objects.NUMACell(
                 id=cell.id,
+                socket=socket_id,
                 cpuset=cpuset,
                 pcpuset=pcpuset,
                 memory=cell.memory / units.Ki,

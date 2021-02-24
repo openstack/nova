@@ -28,7 +28,8 @@ class NUMACell(base.NovaObject):
     # Version 1.2: Added mempages field
     # Version 1.3: Add network_metadata field
     # Version 1.4: Add pcpuset
-    VERSION = '1.4'
+    # Version 1.5: Add socket
+    VERSION = '1.5'
 
     fields = {
         'id': obj_fields.IntegerField(read_only=True),
@@ -41,11 +42,14 @@ class NUMACell(base.NovaObject):
         'siblings': obj_fields.ListOfSetsOfIntegersField(),
         'mempages': obj_fields.ListOfObjectsField('NUMAPagesTopology'),
         'network_metadata': obj_fields.ObjectField('NetworkMetadata'),
+        'socket': obj_fields.IntegerField(nullable=True),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(NUMACell, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 5):
+            primitive.pop('socket', None)
         if target_version < (1, 4):
             primitive.pop('pcpuset', None)
         if target_version < (1, 3):

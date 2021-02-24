@@ -17309,8 +17309,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(host.Host, 'has_min_version',
                        new=mock.Mock(return_value=True))
     def _test_get_host_numa_topology(self):
-        nodes = 4
-        sockets = 1
+        nodes = 1
+        sockets = 4
         cores = 1
         threads = 2
         total_cores = nodes * sockets * cores * threads
@@ -17351,6 +17351,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(set([]), got_topo.cells[1].pinned_cpus)
             self.assertEqual(set([]), got_topo.cells[2].pinned_cpus)
             self.assertEqual(set([]), got_topo.cells[3].pinned_cpus)
+
+            # Each cell should be in its own socket
+            self.assertEqual(0, got_topo.cells[0].socket)
+            self.assertEqual(1, got_topo.cells[1].socket)
+            self.assertEqual(2, got_topo.cells[2].socket)
+            self.assertEqual(3, got_topo.cells[3].socket)
 
             # return to caller for further checks
             return got_topo

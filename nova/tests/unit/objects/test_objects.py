@@ -1105,7 +1105,7 @@ object_data = {
     'MigrationList': '1.5-36793f8d65bae421bd5564d09a4de7be',
     'MonitorMetric': '1.1-53b1db7c4ae2c531db79761e7acc52ba',
     'MonitorMetricList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
-    'NUMACell': '1.4-7695303e820fa855d76954be2eb2680e',
+    'NUMACell': '1.5-2592de3c926a7840d763bcc85f81afa7',
     'NUMAPagesTopology': '1.1-edab9fa2dc43c117a38d600be54b4542',
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
     'NUMATopologyLimits': '1.1-4235c5da7a76c7e36075f0cd2f5cf922',
