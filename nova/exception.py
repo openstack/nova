@@ -2017,11 +2017,6 @@ class UsagesRetrievalFailed(NovaException):
                 "user '%(user_id)s'.")
 
 
-class UnsupportedPointerModelRequested(Invalid):
-    msg_fmt = _("Pointer model '%(model)s' requested is not supported by "
-                "host.")
-
-
 class NotSupportedWithOption(Invalid):
     msg_fmt = _("%(operation)s is not supported in conjunction with the "
                 "current %(option)s setting.  Please refer to the nova "

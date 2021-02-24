@@ -2746,11 +2746,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[5],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[7],
+        self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[9],
@@ -5146,11 +5146,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[5],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[7],
+        self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[9],
@@ -5630,11 +5630,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
+        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
@@ -5642,8 +5642,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-        self.assertEqual(cfg.devices[3].type, "tablet")
-        self.assertEqual(cfg.devices[4].type, "vnc")
+        self.assertEqual(cfg.devices[3].type, 'vnc')
+        self.assertEqual(cfg.devices[5].type, 'tablet')
 
     def test_get_guest_config_with_spice_and_tablet(self):
         self.flags(enabled=False, group='vnc')
@@ -5664,11 +5664,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
+        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
@@ -5676,10 +5676,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-        self.assertEqual(cfg.devices[3].type, 'tablet')
-        self.assertEqual(cfg.devices[4].type, 'spice')
-        self.assertEqual(cfg.devices[4].listen, '10.0.0.1')
-        self.assertIsNone(cfg.devices[4].keymap)
+        self.assertEqual(cfg.devices[3].type, 'spice')
+        self.assertEqual(cfg.devices[3].listen, '10.0.0.1')
+        self.assertIsNone(cfg.devices[3].keymap)
+        self.assertEqual(cfg.devices[5].type, 'tablet')
 
     def test_get_guest_config_with_spice_and_agent(self):
         self.flags(enabled=False, group='vnc')
@@ -5819,11 +5819,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
+        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
@@ -5861,11 +5861,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[5],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[7],
+        self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[9],
@@ -5923,11 +5923,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[5],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[7],
+        self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[9],
@@ -6195,15 +6195,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestChannel)
+        self.assertIsInstance(cfg.devices[4],
+                              vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[5],
                               vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(cfg.devices[6],
-                              vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[7],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[9],
@@ -6211,11 +6211,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[10],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-        self.assertEqual(cfg.devices[3].type, "tablet")
-        self.assertEqual(cfg.devices[4].target_name, "com.redhat.spice.0")
-        self.assertEqual(cfg.devices[4].type, 'spicevmc')
-        self.assertEqual(cfg.devices[5].type, "vnc")
-        self.assertEqual(cfg.devices[6].type, "spice")
+        self.assertEqual(cfg.devices[3].target_name, "com.redhat.spice.0")
+        self.assertEqual(cfg.devices[3].type, 'spicevmc')
+        self.assertEqual(cfg.devices[4].type, 'vnc')
+        self.assertEqual(cfg.devices[5].type, 'spice')
+        self.assertEqual(cfg.devices[7].type, 'tablet')
 
     def test_get_guest_config_with_watchdog_action_image_meta(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -6239,11 +6239,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
+        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
@@ -6255,96 +6255,85 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual("none", cfg.devices[8].action)
 
-    def _test_get_guest_usb_tablet(self, vnc_enabled, spice_enabled, os_type,
-                                   agent_enabled=False, image_meta=None):
-        self.flags(enabled=vnc_enabled, group='vnc')
-        self.flags(enabled=spice_enabled,
-                   agent_enabled=agent_enabled, group='spice')
+    def _test_guest_add_pointer_device(self, image_meta):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest = vconfig.LibvirtConfigGuest()
+        guest.os_type = fields.VMMode.HVM
         image_meta = objects.ImageMeta.from_dict(image_meta)
-        return drvr._get_guest_pointer_model(os_type, image_meta)
+        return drvr._guest_add_pointer_device(guest, image_meta)
 
-    def test_use_ps2_mouse(self):
-        self.flags(pointer_model='ps2mouse')
+    def test_guest_add_pointer_device(self):
+        """Check behavior with host-only configuration.
 
-        tablet = self._test_get_guest_usb_tablet(
-            True, True, fields.VMMode.HVM)
-        self.assertIsNone(tablet)
+        Mismatches between the host-level configuration and other attributes
+        should never result in an exception but rather no device additions.
+        """
+        self.flags(enabled=True, agent_enabled=False, group='spice')
 
-    def test_get_guest_usb_tablet_wipe(self):
-        self.flags(pointer_model='usbtablet')
+        image_meta = {'properties': {}}
 
-        tablet = self._test_get_guest_usb_tablet(
-            True, True, fields.VMMode.HVM)
-        self.assertIsNotNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(
-            True, False, fields.VMMode.HVM)
-        self.assertIsNotNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(
-            False, True, fields.VMMode.HVM)
-        self.assertIsNotNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(
-            False, False, fields.VMMode.HVM)
-        self.assertIsNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(
-            True, True, "foo")
-        self.assertIsNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(
-            False, True, fields.VMMode.HVM, True)
-        self.assertIsNone(tablet)
-
-    def test_get_guest_usb_tablet_image_meta(self):
-        self.flags(pointer_model='usbtablet')
-        image_meta = {"properties": {"hw_pointer_model": "usbtablet"}}
-
-        tablet = self._test_get_guest_usb_tablet(
-            True, True, fields.VMMode.HVM, image_meta=image_meta)
-        self.assertIsNotNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(
-            True, False, fields.VMMode.HVM, image_meta=image_meta)
-        self.assertIsNotNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(
-            False, True, fields.VMMode.HVM, image_meta=image_meta)
-        self.assertIsNotNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(
-            False, False, fields.VMMode.HVM, image_meta=image_meta)
-        self.assertIsNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(
-            True, True, "foo", image_meta=image_meta)
-        self.assertIsNone(tablet)
-
-        tablet = self._test_get_guest_usb_tablet(
-            False, True, fields.VMMode.HVM, True, image_meta=image_meta)
-        self.assertIsNone(tablet)
-
-    def test_get_guest_usb_tablet_image_meta_no_vnc(self):
         self.flags(pointer_model=None)
+        dev = self._test_guest_add_pointer_device(image_meta)
+        self.assertIsNone(dev)
 
-        image_meta = {"properties": {"hw_pointer_model": "usbtablet"}}
-        self.assertRaises(
-            exception.UnsupportedPointerModelRequested,
-            self._test_get_guest_usb_tablet,
-            False, False, fields.VMMode.HVM, True, image_meta=image_meta)
+        self.flags(pointer_model='ps2mouse')
+        dev = self._test_guest_add_pointer_device(image_meta)
+        self.assertIsNone(dev)
 
-    def test_get_guest_pointer_model_usb_tablet(self):
         self.flags(pointer_model='usbtablet')
-        tablet = self._test_get_guest_usb_tablet(True, True, fields.VMMode.HVM)
-        self.assertIsNotNone(tablet)
+        dev = self._test_guest_add_pointer_device(image_meta)
+        self.assertIsNotNone(dev)
 
-    def test_get_guest_pointer_model_usb_tablet_image(self):
-        image_meta = {"properties": {"hw_pointer_model": "usbtablet"}}
-        tablet = self._test_get_guest_usb_tablet(
-            True, True, fields.VMMode.HVM, image_meta=image_meta)
-        self.assertIsNotNone(tablet)
+        image_meta = {'properties': {'hw_pointer_model': 'usbtablet'}}
+
+        self.flags(pointer_model=None)
+        dev = self._test_guest_add_pointer_device(image_meta)
+        self.assertIsNotNone(dev)
+
+        self.flags(pointer_model='ps2mouse')
+        dev = self._test_guest_add_pointer_device(image_meta)
+        self.assertIsNotNone(dev)
+
+        self.flags(pointer_model='usbtablet')
+        dev = self._test_guest_add_pointer_device(image_meta)
+        self.assertIsNotNone(dev)
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_guest_add_pointer_device__fail_with_spice_agent(self, mock_warn):
+        self.flags(enabled=False, group='vnc')
+        self.flags(enabled=True, agent_enabled=True, group='spice')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest = vconfig.LibvirtConfigGuest()
+        guest.os_type = fields.VMMode.HVM
+        image_meta = objects.ImageMeta.from_dict(
+            {'properties': {'hw_pointer_model': 'usbtablet'}})
+        dev = drvr._guest_add_pointer_device(guest, image_meta)
+
+        self.assertIsNone(dev)
+        mock_warn.assert_called_once()
+        self.assertIn(
+            'USB tablet requested for guests but the SPICE agent is enabled',
+            str(mock_warn.call_args[0]),
+        )
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_guest_add_pointer_device__fail_with_non_hvm(self, mock_warn):
+        self.flags(enabled=True, agent_enabled=False, group='spice')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest = vconfig.LibvirtConfigGuest()
+        guest.os_type = fields.VMMode.EXE
+        image_meta = objects.ImageMeta.from_dict(
+            {'properties': {'hw_pointer_model': 'usbtablet'}})
+        dev = drvr._guest_add_pointer_device(guest, image_meta)
+
+        self.assertIsNone(dev)
+        mock_warn.assert_called_once()
+        self.assertIn(
+            'USB tablet requested for guests on non-HVM host',
+            str(mock_warn.call_args[0]),
+        )
 
     def test_get_guest_config_with_watchdog_action_flavor(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -6370,11 +6359,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[3],
-                            vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
+        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                            vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
@@ -6412,11 +6401,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
+        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
@@ -6448,11 +6437,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
+        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
@@ -6460,8 +6449,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-        self.assertEqual(cfg.devices[4].type, "vnc")
-        self.assertEqual(cfg.devices[5].type, "vmvga")
+        self.assertEqual(cfg.devices[3].type, "vnc")
+        self.assertEqual(cfg.devices[4].type, "vmvga")
 
     def test_get_guest_config_with_qga_through_image_meta(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -6484,11 +6473,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
+        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestChannel)
         self.assertIsInstance(cfg.devices[7],
@@ -6498,8 +6487,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[9],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-        self.assertEqual(cfg.devices[3].type, "tablet")
-        self.assertEqual(cfg.devices[4].type, "vnc")
+        self.assertEqual(cfg.devices[3].type, "vnc")
+        self.assertEqual(cfg.devices[5].type, "tablet")
         self.assertEqual(cfg.devices[6].type, "unix")
         self.assertEqual(cfg.devices[6].target_name, "org.qemu.guest_agent.0")
 
@@ -6546,11 +6535,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(
             cfg.devices[2], vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(
-            cfg.devices[3], vconfig.LibvirtConfigGuestInput)
+            cfg.devices[3], vconfig.LibvirtConfigGuestGraphics)
         self.assertIsInstance(
-            cfg.devices[4], vconfig.LibvirtConfigGuestGraphics)
+            cfg.devices[4], vconfig.LibvirtConfigGuestVideo)
         self.assertIsInstance(
-            cfg.devices[5], vconfig.LibvirtConfigGuestVideo)
+            cfg.devices[5], vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(
             cfg.devices[6], vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(
@@ -6560,8 +6549,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(
             cfg.devices[9], vconfig.LibvirtConfigMemoryBalloon)
 
-        self.assertEqual(cfg.devices[3].type, 'tablet')
-        self.assertEqual(cfg.devices[4].type, 'vnc')
+        self.assertEqual(cfg.devices[3].type, 'vnc')
+        self.assertEqual(cfg.devices[5].type, 'tablet')
         self.assertEqual(cfg.devices[7].version, '2.0')
         self.assertEqual(cfg.devices[7].model, 'tpm-crb')
         self.assertEqual(cfg.devices[7].secret_uuid, uuids.vtpm)
@@ -6773,11 +6762,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestSerial)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
+        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestRng)
         self.assertIsInstance(cfg.devices[7],
@@ -6785,8 +6774,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[8],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-        self.assertEqual(cfg.devices[3].type, "tablet")
-        self.assertEqual(cfg.devices[4].type, "vnc")
+        self.assertEqual(cfg.devices[3].type, 'vnc')
+        self.assertEqual(cfg.devices[5].type, 'tablet')
 
     def test_get_guest_config_with_rng_device(self):
         self.flags(virt_type='kvm', group='libvirt')
@@ -7779,13 +7768,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_get_guest_config_ppc64_through_image_meta_vnc_enabled(self):
         self.flags(enabled=True, group='vnc')
-        self._test_get_guest_config_ppc64(5)
+        self._test_get_guest_config_ppc64(4)
 
     def test_get_guest_config_ppc64_through_image_meta_spice_enabled(self):
         self.flags(enabled=True,
                    agent_enabled=True,
                    group='spice')
-        self._test_get_guest_config_ppc64(7)
+        self._test_get_guest_config_ppc64(6)
 
     def _test_get_guest_config_bootmenu(self, image_meta, extra_specs):
         self.flags(virt_type='kvm', group='libvirt')
@@ -19897,11 +19886,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestInterface)
         self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[5],
+        self.assertIsInstance(cfg.devices[4],
                               vconfig.LibvirtConfigGuestVideo)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestInput)
         self.assertIsInstance(cfg.devices[6],
                               vconfig.LibvirtConfigGuestUSBHostController)
 
