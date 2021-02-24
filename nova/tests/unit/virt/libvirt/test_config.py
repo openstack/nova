@@ -2473,7 +2473,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
             </domain>""",  # noqa: E501
         )
 
-    def test_config_uefi_autoconfigure(self):
+    def _test_config_uefi_autoconfigure(self, secure):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "kvm"
         obj.memory = 100 * units.Mi
@@ -2483,8 +2483,11 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_type = "hvm"
         obj.os_firmware = "efi"
         obj.os_mach_type = "pc-q35-5.1"
-        obj.os_loader_secure = True
-        xml = obj.to_xml()
+        obj.os_loader_secure = secure
+        return obj.to_xml()
+
+    def test_config_uefi_autoconfigure(self):
+        xml = self._test_config_uefi_autoconfigure(secure=False)
 
         self.assertXmlEqual(
             xml,
@@ -2496,7 +2499,25 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <vcpu>1</vcpu>
               <os firmware="efi">
                 <type machine="pc-q35-5.1">hvm</type>
-                <loader secure='yes'/>
+                <loader secure="no"/>
+              </os>
+            </domain>""",
+        )
+
+    def test_config_uefi_autoconfigure_secure(self):
+        xml = self._test_config_uefi_autoconfigure(secure=True)
+
+        self.assertXmlEqual(
+            xml,
+            """
+            <domain type="kvm">
+              <uuid>f01cf68d-515c-4daf-b85f-ef1424d93bfc</uuid>
+              <name>uefi</name>
+              <memory>104857600</memory>
+              <vcpu>1</vcpu>
+              <os firmware="efi">
+                <type machine="pc-q35-5.1">hvm</type>
+                <loader secure="yes"/>
               </os>
             </domain>""",
         )
