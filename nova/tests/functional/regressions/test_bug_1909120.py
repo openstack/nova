@@ -27,9 +27,6 @@ class TestDetachVolumeWhileComputeDown(integrated_helpers._IntegratedTestBase):
 
     def test_volume_detach_while_compute_down(self):
 
-        # _IntegratedTestBase uses CastAsCall so set the response timeout to 1
-        self.flags(rpc_response_timeout=1)
-
         # Launch a test instance
         server = self._create_server(networks='none')
 
