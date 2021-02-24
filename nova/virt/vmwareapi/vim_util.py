@@ -25,6 +25,11 @@ import nova.conf
 CONF = nova.conf.CONF
 
 
+class EmptyRetrieveResult(object):
+    def __init__(self):
+        self.objects = []
+
+
 def object_to_dict(obj, list_depth=1):
     """Convert Suds object into serializable format.
 
@@ -136,7 +141,7 @@ def get_properties_for_a_collection_of_objects(vim, type,
     """
     client_factory = vim.client.factory
     if len(obj_list) == 0:
-        return []
+        return EmptyRetrieveResult()
     prop_spec = get_prop_spec(client_factory, type, properties)
     lst_obj_specs = []
     for obj in obj_list:
