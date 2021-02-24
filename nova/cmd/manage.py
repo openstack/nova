@@ -2305,8 +2305,11 @@ class PlacementCommands(object):
         return 0
 
     @staticmethod
-    def _get_rp_uuid_for_host(ctxt, host):
-        """Finds the resource provider (compute node) UUID for the given host.
+    def _get_rp_uuids_for_host(ctxt, host):
+        """Finds the resource provider UUID(s) for the given host.
+
+        This is usually a single value, but we return a list as we must support
+        Ironic nodes, that have the same host but different node uuids.
 
         :param ctxt: cell-targeted nova RequestContext
         :param host: name of the compute host
@@ -2336,12 +2339,13 @@ class PlacementCommands(object):
             nodes = objects.ComputeNodeList.get_all_by_host(
                 cctxt, host)
 
-            if len(nodes) > 1:
-                # This shouldn't happen, so we need to bail since we
-                # won't know which node to use.
+            if len(nodes) > 1 and 'ironic' not in host:
+                # Multiple nodes for non-ironic hosts shouldn't happen, so
+                # we need to bail since we won't know which node to use.
                 raise exception.TooManyComputesForHost(
                     num_computes=len(nodes), host=host)
-            return nodes[0].uuid
+
+            return [node.uuid for node in nodes]
 
     @action_description(
         _("Mirrors compute host aggregates to resource provider aggregates "
@@ -2394,7 +2398,7 @@ class PlacementCommands(object):
         # Since hosts can be in more than one aggregate, keep track of the host
         # to its corresponding resource provider uuid to avoid redundant
         # lookups.
-        host_to_rp_uuid = {}
+        host_to_rp_uuids = {}
         unmapped_hosts = set()  # keep track of any missing host mappings
         computes_not_found = set()  # keep track of missing nodes
         providers_not_found = {}  # map of hostname to missing provider uuid
@@ -2402,18 +2406,24 @@ class PlacementCommands(object):
             output(_('Processing aggregate: %s') % aggregate.name)
             for host in aggregate.hosts:
                 output(_('Processing host: %s') % host)
-                rp_uuid = host_to_rp_uuid.get(host)
-                if not rp_uuid:
+                rp_uuids = host_to_rp_uuids.get(host)
+                if not rp_uuids:
                     try:
-                        rp_uuid = self._get_rp_uuid_for_host(ctxt, host)
-                        host_to_rp_uuid[host] = rp_uuid
+                        rp_uuids = self._get_rp_uuids_for_host(ctxt, host)
+                        host_to_rp_uuids[host] = rp_uuids
                     except exception.HostMappingNotFound:
                         # Don't fail on this now, we can dump it at the end.
                         unmapped_hosts.add(host)
                         continue
                     except exception.ComputeHostNotFound:
-                        # Don't fail on this now, we can dump it at the end.
-                        computes_not_found.add(host)
+                        # Don't fail on this now, we can dump it at the end. We
+                        # only need to dump it, if it's a non-ironic host
+                        # though, as for ironic there can be hosts that
+                        # currently don't have any node assigned e.g.
+                        # conductor-groups that are only used for
+                        # testing/during buildup.
+                        if 'ironic' not in host:
+                            computes_not_found.add(host)
                         continue
                     except exception.TooManyComputesForHost as e:
                         # TODO(mriedem): Should we treat this like the other
@@ -2425,30 +2435,33 @@ class PlacementCommands(object):
                 # the matching resource provider, found via compute node uuid,
                 # is in the same aggregate in placement, found via aggregate
                 # uuid.
-                try:
-                    placement.aggregate_add_host(ctxt, aggregate.uuid,
-                                                 rp_uuid=rp_uuid)
-                    output(_('Successfully added host (%(host)s) and '
-                             'provider (%(provider)s) to aggregate '
-                             '(%(aggregate)s).') %
-                           {'host': host, 'provider': rp_uuid,
-                            'aggregate': aggregate.uuid})
-                except exception.ResourceProviderNotFound:
-                    # The resource provider wasn't found. Store this for later.
-                    providers_not_found[host] = rp_uuid
-                except exception.ResourceProviderAggregateRetrievalFailed as e:
-                    print(e.message)
-                    return 2
-                except exception.NovaException as e:
-                    # The exception message is too generic in this case
-                    print(_('Failed updating provider aggregates for '
-                            'host (%(host)s), provider (%(provider)s) '
-                            'and aggregate (%(aggregate)s). Error: '
-                            '%(error)s') %
-                          {'host': host, 'provider': rp_uuid,
-                           'aggregate': aggregate.uuid,
-                           'error': e.message})
-                    return 3
+                for rp_uuid in rp_uuids:
+                    try:
+                        placement.aggregate_add_host(ctxt, aggregate.uuid,
+                                                     rp_uuid=rp_uuid)
+                        output(_('Successfully added host (%(host)s) and '
+                                 'provider (%(provider)s) to aggregate '
+                                 '(%(aggregate)s).') %
+                               {'host': host, 'provider': rp_uuid,
+                                'aggregate': aggregate.uuid})
+                    except exception.ResourceProviderNotFound:
+                        # The resource provider wasn't found. Store this for
+                        # later.
+                        providers_not_found[host] = rp_uuid
+                    except (exception.
+                            ResourceProviderAggregateRetrievalFailed) as e:
+                        print(e.message)
+                        return 2
+                    except exception.NovaException as e:
+                        # The exception message is too generic in this case
+                        print(_('Failed updating provider aggregates for '
+                                'host (%(host)s), provider (%(provider)s) '
+                                'and aggregate (%(aggregate)s). Error: '
+                                '%(error)s') %
+                              {'host': host, 'provider': rp_uuid,
+                               'aggregate': aggregate.uuid,
+                               'error': e.message})
+                        return 3
 
         # Now do our error handling. Note that there is no real priority on
         # the error code we return. We want to dump all of the issues we hit

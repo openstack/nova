@@ -2741,8 +2741,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         mock_agg_add.side_effect = (
             exception.ResourceProviderAggregateRetrievalFailed(
                 uuid=uuidsentinel.rp_uuid))
-        with mock.patch.object(self.cli, '_get_rp_uuid_for_host',
-                               return_value=uuidsentinel.rp_uuid):
+        with mock.patch.object(self.cli, '_get_rp_uuids_for_host',
+                               return_value=[uuidsentinel.rp_uuid]):
             result = self.cli.sync_aggregates(verbose=True)
         self.assertEqual(2, result)
         self.assertIn('Failed to get aggregates for resource provider with '
@@ -2764,8 +2764,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         """
         mock_agg_add.side_effect = exception.ResourceProviderNotFound(
             name_or_uuid=uuidsentinel.rp_uuid)
-        with mock.patch.object(self.cli, '_get_rp_uuid_for_host',
-                               return_value=uuidsentinel.rp_uuid):
+        with mock.patch.object(self.cli, '_get_rp_uuids_for_host',
+                               return_value=[uuidsentinel.rp_uuid]):
             result = self.cli.sync_aggregates(verbose=True)
         self.assertEqual(6, result)
         self.assertIn('Unable to find matching resource provider record in '
@@ -2790,8 +2790,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         """
         mock_agg_add.side_effect = exception.ResourceProviderUpdateConflict(
             uuid=uuidsentinel.rp_uuid, generation=1, error="Conflict!")
-        with mock.patch.object(self.cli, '_get_rp_uuid_for_host',
-                               return_value=uuidsentinel.rp_uuid):
+        with mock.patch.object(self.cli, '_get_rp_uuids_for_host',
+                               return_value=[uuidsentinel.rp_uuid]):
             result = self.cli.sync_aggregates(verbose=True)
         self.assertEqual(3, result)
         self.assertIn("Failed updating provider aggregates for "
