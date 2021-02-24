@@ -36,3 +36,9 @@ class VMwareVIMUtilTestCase(test.NoDBTestCase):
             self.vim, cluster_ref, 'datastore', 'Datastore', property)
         datastores = [oc.obj for oc in result.objects]
         self.assertEqual(expected_ds, datastores)
+
+    def test_get_properties_for_an_empty_collection_of_objects(self):
+        result = vim_util.get_properties_for_a_collection_of_objects(
+            self.vim, "Foo", [], ["bar", "baz"])
+        self.assertTrue(hasattr(result, "objects"))
+        self.assertTrue(hasattr(result.objects, "__iter__"))
