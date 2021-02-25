@@ -9393,7 +9393,7 @@ class LibvirtDriver(driver.ComputeDriver):
                        "(bytes processed=%(processed_disk)d, "
                        "remaining=%(remaining_disk)d, "
                        "total=%(total_disk)d).",
-                       {"secs": n / 2, "remaining": remaining,
+                       {"secs": elapsed, "remaining": remaining,
                         "processed_memory": info.memory_processed,
                         "remaining_memory": info.memory_remaining,
                         "total_memory": info.memory_total,
