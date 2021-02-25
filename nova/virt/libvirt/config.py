@@ -37,7 +37,7 @@ from nova.virt import hardware
 
 
 # Namespace to use for Nova specific metadata items in XML
-NOVA_NS = "http://openstack.org/xmlns/libvirt/nova/1.0"
+NOVA_NS = "http://openstack.org/xmlns/libvirt/nova/1.1"
 
 
 class LibvirtConfigObject(object):
@@ -3221,6 +3221,7 @@ class LibvirtConfigGuestMetaNovaInstance(LibvirtConfigObject):
         self.owner = None
         self.roottype = None
         self.rootid = None
+        self.ports = None
 
     def format_dom(self):
         meta = super(LibvirtConfigGuestMetaNovaInstance, self).format_dom()
@@ -3244,6 +3245,8 @@ class LibvirtConfigGuestMetaNovaInstance(LibvirtConfigObject):
             root.set("type", self.roottype)
             root.set("uuid", str(self.rootid))
             meta.append(root)
+        if self.ports is not None:
+            meta.append(self.ports.format_dom())
 
         return meta
 
@@ -3397,3 +3400,53 @@ class LibvirtConfigGuestVPMEM(LibvirtConfigGuestDevice):
                 for sub in list(c):
                     if sub.tag == "size":
                         self.target_size = sub.text
+
+
+class LibvirtConfigGuestMetaNovaPorts(LibvirtConfigObject):
+
+    def __init__(self, ports=None):
+        super(LibvirtConfigGuestMetaNovaPorts, self).__init__(
+            root_name="ports", ns_prefix="nova", ns_uri=NOVA_NS)
+
+        self.ports = ports
+
+    def format_dom(self):
+        meta = self._new_node("ports")
+        for port in self.ports or []:
+            meta.append(port.format_dom())
+        return meta
+
+
+class LibvirtConfigGuestMetaNovaPort(LibvirtConfigObject):
+
+    def __init__(self, uuid, ips=None):
+        super(LibvirtConfigGuestMetaNovaPort, self).__init__(
+            root_name="port", ns_prefix="nova", ns_uri=NOVA_NS)
+
+        self.uuid = uuid
+        self.ips = ips
+
+    def format_dom(self):
+        meta = self._new_node("port")
+        meta.set("uuid", str(self.uuid))
+        for ip in self.ips or []:
+            meta.append(ip.format_dom())
+        return meta
+
+
+class LibvirtConfigGuestMetaNovaIp(LibvirtConfigObject):
+
+    def __init__(self, ip_type, address, ip_version):
+        super(LibvirtConfigGuestMetaNovaIp, self).__init__(
+            root_name="ip", ns_prefix="nova", ns_uri=NOVA_NS)
+
+        self.ip_type = ip_type
+        self.address = address
+        self.ip_version = ip_version
+
+    def format_dom(self):
+        meta = self._new_node("ip")
+        meta.set("type", str(self.ip_type))
+        meta.set("address", str(self.address))
+        meta.set("ipVersion", str(self.ip_version))
+        return meta

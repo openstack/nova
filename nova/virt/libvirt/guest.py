@@ -303,6 +303,28 @@ class Guest(object):
         LOG.debug("attach device xml: %s", device_xml)
         self._domain.attachDeviceFlags(device_xml, flags=flags)
 
+    def set_metadata(self, metadata, persistent=False, live=False):
+        """Set metadata to the guest.
+
+        Please note that this function completely replaces the existing
+        metadata. The scope of the replacement is limited to the Nova-specific
+        XML Namespace.
+
+        :param metadata: A LibvirtConfigGuestMetaNovaInstance
+        :param persistent: A bool to indicate whether the change is
+                           persistent or not
+        :param live: A bool to indicate whether it affect the guest
+                     in running state
+        """
+        flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
+        flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
+
+        metadata_xml = metadata.to_xml()
+        LOG.debug("set metadata xml: %s", metadata_xml)
+        self._domain.setMetadata(libvirt.VIR_DOMAIN_METADATA_ELEMENT,
+                                 metadata_xml, "instance",
+                                 vconfig.NOVA_NS, flags=flags)
+
     def get_config(self):
         """Returns the config instance for a guest
 

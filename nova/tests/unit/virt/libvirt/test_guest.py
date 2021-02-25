@@ -713,6 +713,39 @@ class GuestTestCase(test.NoDBTestCase):
         self.guest.migrate_configure_max_downtime(1000)
         self.domain.migrateSetMaxDowntime.assert_called_once_with(1000)
 
+    def test_set_metadata(self):
+        meta = mock.Mock(spec=vconfig.LibvirtConfigGuestMetaNovaInstance)
+        meta.to_xml.return_value = "</xml>"
+        self.guest.set_metadata(meta)
+        self.domain.setMetadata.assert_called_once_with(
+            fakelibvirt.VIR_DOMAIN_METADATA_ELEMENT, "</xml>", "instance",
+            vconfig.NOVA_NS, flags=0)
+
+    def test_set_metadata_persistent(self):
+        meta = mock.Mock(spec=vconfig.LibvirtConfigGuestMetaNovaInstance)
+        meta.to_xml.return_value = "</xml>"
+        self.guest.set_metadata(meta, persistent=True)
+        self.domain.setMetadata.assert_called_once_with(
+            fakelibvirt.VIR_DOMAIN_METADATA_ELEMENT, "</xml>", "instance",
+            vconfig.NOVA_NS, flags=fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG)
+
+    def test_set_metadata_device_live(self):
+        meta = mock.Mock(spec=vconfig.LibvirtConfigGuestMetaNovaInstance)
+        meta.to_xml.return_value = "</xml>"
+        self.guest.set_metadata(meta, live=True)
+        self.domain.setMetadata.assert_called_once_with(
+            fakelibvirt.VIR_DOMAIN_METADATA_ELEMENT, "</xml>", "instance",
+            vconfig.NOVA_NS, flags=fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
+
+    def test_set_metadata_persistent_live(self):
+        meta = mock.Mock(spec=vconfig.LibvirtConfigGuestMetaNovaInstance)
+        meta.to_xml.return_value = "</xml>"
+        self.guest.set_metadata(meta, persistent=True, live=True)
+        self.domain.setMetadata.assert_called_once_with(
+            fakelibvirt.VIR_DOMAIN_METADATA_ELEMENT, "</xml>", "instance",
+            vconfig.NOVA_NS, flags=fakelibvirt.VIR_DOMAIN_AFFECT_LIVE |
+                                   fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG)
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 
