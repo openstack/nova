@@ -9139,12 +9139,18 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         """Tests the various ways that _get_neutron_events_for_live_migration
         will return an empty list.
         """
+        migration = mock.Mock()
+        migration.is_same_host = lambda: False
+        self.assertFalse(migration.is_same_host())
+
         # 1. no timeout
         self.flags(vif_plugging_timeout=0)
 
         with mock.patch.object(self.instance, 'get_network_info') as nw_info:
             nw_info.return_value = network_model.NetworkInfo(
-                [network_model.VIF(uuids.port1)])
+                [network_model.VIF(uuids.port1, details={
+                        network_model.VIF_DETAILS_OVS_HYBRID_PLUG: True})])
+            self.assertTrue(nw_info.return_value[0].is_hybrid_plug_enabled())
             self.assertEqual(
                 [], self.compute._get_neutron_events_for_live_migration(
                     self.instance))
@@ -9153,7 +9159,18 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.flags(vif_plugging_timeout=300)
 
         with mock.patch.object(self.instance, 'get_network_info') as nw_info:
-            nw_info.return_value = []
+            nw_info.return_value = network_model.NetworkInfo([])
+            self.assertEqual(
+                [], self.compute._get_neutron_events_for_live_migration(
+                    self.instance))
+
+        # 3. no plug time events
+        with mock.patch.object(self.instance, 'get_network_info') as nw_info:
+            nw_info.return_value = network_model.NetworkInfo(
+                [network_model.VIF(
+                    uuids.port1, details={
+                        network_model.VIF_DETAILS_OVS_HYBRID_PLUG: False})])
+            self.assertFalse(nw_info.return_value[0].is_hybrid_plug_enabled())
             self.assertEqual(
                 [], self.compute._get_neutron_events_for_live_migration(
                     self.instance))
@@ -9171,9 +9188,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             wait_for_vif_plugged=True)
         mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
         mock_pre_live_mig.return_value = migrate_data
+        details = {network_model.VIF_DETAILS_OVS_HYBRID_PLUG: True}
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
-                network_model.VIF(uuids.port1), network_model.VIF(uuids.port2)
+                network_model.VIF(uuids.port1, details=details),
+                network_model.VIF(uuids.port2, details=details)
             ]))
         self.compute._waiting_live_migrations[self.instance.uuid] = (
             self.migration, mock.MagicMock()
@@ -9203,11 +9222,12 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         of not waiting.
         """
         migrate_data = objects.LibvirtLiveMigrateData()
+        details = {network_model.VIF_DETAILS_OVS_HYBRID_PLUG: True}
         mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
         mock_pre_live_mig.return_value = migrate_data
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
-                network_model.VIF(uuids.port1)]))
+                network_model.VIF(uuids.port1, details=details)]))
         self.compute._waiting_live_migrations[self.instance.uuid] = (
             self.migration, mock.MagicMock()
         )
@@ -9351,9 +9371,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         mock_get_bdms.return_value = source_bdms
         migrate_data = objects.LibvirtLiveMigrateData(
             wait_for_vif_plugged=True)
+        details = {network_model.VIF_DETAILS_OVS_HYBRID_PLUG: True}
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
-                network_model.VIF(uuids.port1), network_model.VIF(uuids.port2)
+                network_model.VIF(uuids.port1, details=details),
+                network_model.VIF(uuids.port2, details=details)
             ]))
         self.compute._waiting_live_migrations = {}
         fake_migration = objects.Migration(
