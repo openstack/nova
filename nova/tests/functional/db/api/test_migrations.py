@@ -183,6 +183,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         ussuri_placeholders = list(range(73, 78))
         victoria_placeholders = list(range(78, 83))
         special_cases = [
+            self.INIT_VERSION + 1,  # initial change
             30,  # Enforcement migration, no changes to test
         ]
         return (mitaka_placeholders +
@@ -226,49 +227,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def assertTableNotExists(self, engine, table_name):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
                 db_utils.get_table, engine, table_name)
-
-    def _check_001(self, engine, data):
-        for column in ['created_at', 'updated_at', 'id', 'uuid', 'name',
-                'transport_url', 'database_connection']:
-            self.assertColumnExists(engine, 'cell_mappings', column)
-
-        self.assertIndexExists(engine, 'cell_mappings', 'uuid_idx')
-        self.assertUniqueConstraintExists(engine, 'cell_mappings',
-                ['uuid'])
-
-    def _check_002(self, engine, data):
-        for column in ['created_at', 'updated_at', 'id', 'instance_uuid',
-                'cell_id', 'project_id']:
-            self.assertColumnExists(engine, 'instance_mappings', column)
-
-        for index in ['instance_uuid_idx', 'project_id_idx']:
-            self.assertIndexExists(engine, 'instance_mappings', index)
-
-        self.assertUniqueConstraintExists(engine, 'instance_mappings',
-                ['instance_uuid'])
-
-        inspector = reflection.Inspector.from_engine(engine)
-        # There should only be one foreign key here
-        fk = inspector.get_foreign_keys('instance_mappings')[0]
-        self.assertEqual('cell_mappings', fk['referred_table'])
-        self.assertEqual(['id'], fk['referred_columns'])
-        self.assertEqual(['cell_id'], fk['constrained_columns'])
-
-    def _check_003(self, engine, data):
-        for column in ['created_at', 'updated_at', 'id',
-                'cell_id', 'host']:
-            self.assertColumnExists(engine, 'host_mappings', column)
-
-        self.assertIndexExists(engine, 'host_mappings', 'host_idx')
-        self.assertUniqueConstraintExists(engine, 'host_mappings',
-                ['host'])
-
-        inspector = reflection.Inspector.from_engine(engine)
-        # There should only be one foreign key here
-        fk = inspector.get_foreign_keys('host_mappings')[0]
-        self.assertEqual('cell_mappings', fk['referred_table'])
-        self.assertEqual(['id'], fk['referred_columns'])
-        self.assertEqual(['cell_id'], fk['constrained_columns'])
 
     def _check_004(self, engine, data):
         columns = ['created_at', 'updated_at', 'id', 'instance_uuid', 'spec']

@@ -19,13 +19,42 @@ from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy import String
 from sqlalchemy import Table
+from sqlalchemy import Text
 
 
 def upgrade(migrate_engine):
     meta = MetaData()
     meta.bind = migrate_engine
 
-    cell_mappings = Table('cell_mappings', meta, autoload=True)
+    cell_mappings = Table('cell_mappings', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('uuid', String(length=36), nullable=False),
+        Column('name', String(length=255)),
+        Column('transport_url', Text()),
+        Column('database_connection', Text()),
+        UniqueConstraint('uuid', name='uniq_cell_mappings0uuid'),
+        Index('uuid_idx', 'uuid'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    host_mappings = Table('host_mappings', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('cell_id', Integer, nullable=False),
+        Column('host', String(length=255), nullable=False),
+        UniqueConstraint(
+            'host', name='uniq_host_mappings0host'),
+        Index('host_idx', 'host'),
+        ForeignKeyConstraint(
+            columns=['cell_id'], refcolumns=[cell_mappings.c.id]),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
     instance_mappings = Table('instance_mappings', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -33,14 +62,20 @@ def upgrade(migrate_engine):
         Column('instance_uuid', String(length=36), nullable=False),
         Column('cell_id', Integer, nullable=False),
         Column('project_id', String(length=255), nullable=False),
-        UniqueConstraint('instance_uuid',
-            name='uniq_instance_mappings0instance_uuid'),
+        UniqueConstraint(
+            'instance_uuid', name='uniq_instance_mappings0instance_uuid'),
         Index('instance_uuid_idx', 'instance_uuid'),
         Index('project_id_idx', 'project_id'),
-        ForeignKeyConstraint(columns=['cell_id'],
-            refcolumns=[cell_mappings.c.id]),
+        ForeignKeyConstraint(
+            columns=['cell_id'], refcolumns=[cell_mappings.c.id]),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
 
-    instance_mappings.create(checkfirst=True)
+    tables = [
+        cell_mappings,
+        host_mappings,
+        instance_mappings,
+    ]
+    for table in tables:
+        table.create(checkfirst=True)
