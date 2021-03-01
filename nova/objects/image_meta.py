@@ -176,14 +176,23 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.25: Added 'hw_pci_numa_affinity_policy' field
     # Version 1.26: Added 'mixed' to 'hw_cpu_policy' field
     # Version 1.27: Added 'hw_tpm_model' and 'hw_tpm_version' fields
+    # Version 1.28: Added 'socket' to 'hw_pci_numa_affinity_policy'
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.27'
+    VERSION = '1.28'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 28):
+            policy = primitive.get('hw_pci_numa_affinity_policy', None)
+            if policy == fields.PCINUMAAffinityPolicy.SOCKET:
+                raise exception.ObjectActionError(
+                    action='obj_make_compatible',
+                    reason='hw_numa_affinity_policy=%s not supported '
+                           'in version %s' %
+                           (policy, target_version))
         if target_version < (1, 27):
             primitive.pop('hw_tpm_model', None)
             primitive.pop('hw_tpm_version', None)

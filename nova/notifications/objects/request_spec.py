@@ -240,7 +240,8 @@ class InstancePCIRequestsPayload(base.NotificationPayloadBase):
 @nova_base.NovaObjectRegistry.register_notification
 class InstancePCIRequestPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added 'socket' to numa_policy field
+    VERSION = '1.1'
 
     SCHEMA = {
         'count': ('pci_request', 'count'),

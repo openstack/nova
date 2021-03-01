@@ -423,3 +423,9 @@ class TestImageMetaProps(test.NoDBTestCase):
         primitive = obj.obj_to_primitive('1.26')
         self.assertNotIn('hw_tpm_model', primitive['nova_object.data'])
         self.assertNotIn('hw_tpm_version', primitive['nova_object.data'])
+
+    def test_obj_make_compatible_socket_policy(self):
+        obj = objects.ImageMetaProps(
+            hw_pci_numa_affinity_policy=fields.PCINUMAAffinityPolicy.SOCKET)
+        self.assertRaises(exception.ObjectActionError,
+                          obj.obj_to_primitive, '1.27')

@@ -223,6 +223,7 @@ numa_validators = [
                 'required',
                 'preferred',
                 'legacy',
+                'socket',
             ],
         },
     ),
