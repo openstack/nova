@@ -271,12 +271,15 @@ Related options:
 * ``compute_driver`` (libvirt)
 * ``[libvirt]/images_type`` (rbd)
 """),
-    # TODO(lyarwood): Remove this workaround in the W release once all
-    # supported distros have rebased to a version of libgcrypt that does not
-    # have the performance issues listed below.
     cfg.BoolOpt(
         'disable_native_luksv1',
         default=False,
+        deprecated_for_removal=True,
+        deprecated_since='23.0.0',
+        deprecated_reason="""
+The underlying performance regression within libgcrypt that prompted this
+workaround has been resolved as of 1.8.5
+""",
         help="""
 When attaching encrypted LUKSv1 Cinder volumes to instances the Libvirt driver
 configures the encrypted disks to be natively decrypted by QEMU.
@@ -302,11 +305,16 @@ Related options:
 * ``compute_driver`` (libvirt)
 * ``rbd_block_device`` (workarounds)
 """),
-    # TODO(lyarwood): Remove this workaround in the W release when the
-    # above disable_native_luksv1 configurable is removed.
-    cfg.BoolOpt('rbd_volume_local_attach',
-                default=False,
-                help="""
+    cfg.BoolOpt(
+        'rbd_volume_local_attach',
+        default=False,
+        deprecated_for_removal=True,
+        deprecated_since='23.0.0',
+        deprecated_reason="""
+The underlying performance regression within libgcrypt that prompted this
+workaround has been resolved as of 1.8.5
+""",
+        help="""
 Attach RBD Cinder volumes to the compute as host block devices.
 
 When enabled this option instructs os-brick to connect RBD volumes locally on
