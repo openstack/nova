@@ -25,14 +25,6 @@ from nova import safe_utils
 CONF = nova.conf.CONF
 
 
-def _emit_exception_notification(
-    notifier, context, exception, function_name, args, source,
-):
-    _emit_legacy_exception_notification(
-        notifier, context, exception, function_name, args)
-    _emit_versioned_exception_notification(context, exception, source)
-
-
 @rpc.if_notifications_enabled
 def _emit_versioned_exception_notification(context, exception, source):
     payload = exception_obj.ExceptionPayload.from_exception(exception)
@@ -50,13 +42,15 @@ def _emit_versioned_exception_notification(context, exception, source):
     notification.emit(context)
 
 
-def _emit_legacy_exception_notification(notifier, context, ex, function_name,
-                                       args):
-    payload = dict(exception=ex, args=args)
+def _emit_legacy_exception_notification(
+    context, exception, service, function_name, args,
+):
+    notifier = rpc.get_notifier(service)
+    payload = {'exception': exception, 'args': args}
     notifier.error(context, function_name, payload)
 
 
-def wrap_exception(notifier=None, get_notifier=None, binary=None):
+def wrap_exception(service, binary):
     """This decorator wraps a method to catch any exceptions that may
     get thrown. It also optionally sends the exception to the notification
     system.
@@ -69,14 +63,13 @@ def wrap_exception(notifier=None, get_notifier=None, binary=None):
                 return f(self, context, *args, **kw)
             except Exception as exc:
                 with excutils.save_and_reraise_exception():
-                    if notifier or get_notifier:
-                        call_dict = _get_call_dict(
-                            f, self, context, *args, **kw)
-                        function_name = f.__name__
-                        _emit_exception_notification(
-                            notifier or get_notifier(), context, exc,
-                            function_name, call_dict, binary)
+                    call_dict = _get_call_dict(f, self, context, *args, **kw)
+                    function_name = f.__name__
 
+                    _emit_legacy_exception_notification(
+                        context, exc, service, function_name, call_dict)
+                    _emit_versioned_exception_notification(
+                        context, exc, binary)
         return functools.wraps(f)(wrapped)
     return inner
 

@@ -85,7 +85,6 @@ from nova.objects import instance as obj_instance
 from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import request as pci_req_module
 from nova.pci import whitelist
-from nova import rpc
 from nova import safe_utils
 from nova.scheduler.client import query
 from nova.scheduler.client import report
@@ -104,10 +103,8 @@ CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
-get_notifier = functools.partial(rpc.get_notifier, service='compute')
-wrap_exception = functools.partial(exception_wrapper.wrap_exception,
-                                   get_notifier=get_notifier,
-                                   binary='nova-compute')
+wrap_exception = functools.partial(
+    exception_wrapper.wrap_exception, service='compute', binary='nova-compute')
 
 
 @contextlib.contextmanager
