@@ -27554,3 +27554,143 @@ class LibvirtDeviceRemoveEventTestCase(test.NoDBTestCase):
         drvr.emit_event(event)
         mock_base_handles.assert_not_called()
         mock_debug.assert_not_called()
+
+
+class AsyncDeviceEventsHandlerTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.handler = libvirt_driver.AsyncDeviceEventsHandler()
+
+    def assert_handler_clean(self):
+        self.assertEqual(set(), self.handler._waiters)
+
+    def _call_parallel_after_a_delay(self, func):
+        def run():
+            time.sleep(0.1)
+            func()
+
+        thread = threading.Thread(target=run)
+        thread.start()
+        return thread
+
+    def test_event_received_after_wait(self):
+        waiter = self.handler.create_waiter(
+            uuids.instance, 'virtio-1', {libvirtevent.DeviceRemovedEvent})
+
+        sent_event = libvirtevent.DeviceRemovedEvent(
+            uuids.instance, 'virtio-1')
+
+        thread = self._call_parallel_after_a_delay(
+            lambda: self.handler.notify_waiters(sent_event))
+        received_event = self.handler.wait(waiter, timeout=0.2)
+        thread.join()
+
+        self.assertEqual(sent_event, received_event)
+        self.assert_handler_clean()
+
+    def test_event_received_before_wait(self):
+        waiter = self.handler.create_waiter(
+            uuids.instance, 'virtio-1', {libvirtevent.DeviceRemovedEvent})
+        sent_event = libvirtevent.DeviceRemovedEvent(
+            uuids.instance, 'virtio-1')
+
+        had_waiter = self.handler.notify_waiters(sent_event)
+        received_event = self.handler.wait(waiter, timeout=0.1)
+
+        self.assertTrue(had_waiter)
+        self.assertEqual(sent_event, received_event)
+        self.assert_handler_clean()
+
+    def test_event_not_received(self):
+        waiter = self.handler.create_waiter(
+            uuids.instance, 'virtio-1', {libvirtevent.DeviceRemovedEvent})
+
+        received_event = self.handler.wait(waiter, timeout=0.1)
+
+        self.assertIsNone(received_event)
+        self.assert_handler_clean()
+
+    def test_event_received_without_waiter(self):
+        sent_event = libvirtevent.DeviceRemovedEvent(
+            uuids.instance, 'virtio-1')
+
+        had_waiter = self.handler.notify_waiters(sent_event)
+
+        self.assertFalse(had_waiter)
+        self.assert_handler_clean()
+
+    def test_create_remove_waiter_without_event(self):
+        waiter = self.handler.create_waiter(
+            uuids.instance, 'virtio-1', {libvirtevent.DeviceRemovedEvent})
+        self.handler.delete_waiter(waiter)
+
+        self.assert_handler_clean()
+
+    def test_waiter_cleanup(self):
+        inst1_dev1_waiter = self.handler.create_waiter(
+            uuids.instance1, 'virtio-1', {libvirtevent.DeviceRemovedEvent})
+        inst1_dev2_waiter = self.handler.create_waiter(
+            uuids.instance1,
+            'virtio-2',
+            {libvirtevent.DeviceRemovedEvent,
+             libvirtevent.DeviceRemovalFailedEvent})
+
+        inst2_waiter = self.handler.create_waiter(
+            uuids.instance2,
+            'virtio-1',
+            {libvirtevent.DeviceRemovalFailedEvent})
+
+        self.handler.notify_waiters(
+            libvirtevent.DeviceRemovedEvent(uuids.instance1, 'virtio-2'))
+        self.handler.notify_waiters(
+            libvirtevent.DeviceRemovedEvent(uuids.instance2, 'virtio-1'))
+
+        self.assertEqual(3, len(self.handler._waiters))
+
+        self.handler.delete_waiter(inst2_waiter)
+
+        self.assertEqual(2, len(self.handler._waiters))
+
+        self.handler.cleanup_waiters(uuids.instance1)
+
+        # we expect that the waiters are unblocked by the cleanup
+        self.assertTrue(inst1_dev1_waiter.threading_event.wait())
+        self.assertTrue(inst1_dev2_waiter.threading_event.wait())
+        self.assert_handler_clean()
+
+    def test_multiple_clients_for_the_same_event(self):
+        waiter1 = self.handler.create_waiter(
+            uuids.instance,
+            'virtio-1',
+            {libvirtevent.DeviceRemovedEvent,
+            libvirtevent.DeviceRemovalFailedEvent}
+        )
+
+        waiter2 = self.handler.create_waiter(
+            uuids.instance,
+            'virtio-1',
+            {libvirtevent.DeviceRemovedEvent}
+        )
+
+        waiter3 = self.handler.create_waiter(
+            uuids.instance,
+            'virtio-1',
+            {libvirtevent.DeviceRemovalFailedEvent}
+        )
+
+        sent_event = libvirtevent.DeviceRemovedEvent(
+            uuids.instance, 'virtio-1')
+
+        had_waiter = self.handler.notify_waiters(sent_event)
+
+        received_event1 = self.handler.wait(waiter1, timeout=0.1)
+        received_event2 = self.handler.wait(waiter2, timeout=0.1)
+        received_event3 = self.handler.wait(waiter3, timeout=0.1)
+
+        self.assertTrue(had_waiter)
+        self.assertEqual(sent_event, received_event1)
+        self.assertEqual(sent_event, received_event2)
+        # the third client timed out
+        self.assertIsNone(received_event3)
+        self.assert_handler_clean()
