@@ -106,12 +106,14 @@ from nova.virt import configdrive
 from nova.virt.disk import api as disk_api
 from nova.virt.disk.vfs import guestfs
 from nova.virt import driver
+from nova.virt import event as virtevent
 from nova.virt import hardware
 from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
+from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
@@ -2010,6 +2012,26 @@ class LibvirtDriver(driver.ComputeDriver):
                                       instance.image_meta,
                                       block_device_info=block_device_info)
         return xml
+
+    def emit_event(self, event: virtevent.InstanceEvent) -> None:
+        """Handles libvirt specific events locally and dispatches the rest to
+        the compute manager.
+        """
+        if isinstance(event, libvirtevent.LibvirtEvent):
+            # These are libvirt specific events handled here on the driver
+            # level instead of propagating them to the compute manager level
+            if isinstance(event, libvirtevent.DeviceEvent):
+                # TODO(gibi): handle it
+                pass
+            else:
+                LOG.debug(
+                    "Received event %s from libvirt but no handler is "
+                    "implemented for it in the libvirt driver so it is "
+                    "ignored", event)
+        else:
+            # Let the generic driver code dispatch the event to the compute
+            # manager
+            super().emit_event(event)
 
     def detach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):

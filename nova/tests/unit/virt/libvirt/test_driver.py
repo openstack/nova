@@ -109,6 +109,7 @@ from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
 from nova.virt.libvirt import driver as libvirt_driver
+from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt.host import SEV_KERNEL_PARAM_FILE
@@ -27532,3 +27533,24 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
               </devices>
             </domain>'''
         self.assertXmlEqual(expected, guest.to_xml())
+
+
+@ddt.ddt
+class LibvirtDeviceRemoveEventTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super().setUp()
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+
+    @mock.patch.object(libvirt_driver.LOG, 'debug')
+    @mock.patch('nova.virt.driver.ComputeDriver.emit_event')
+    @ddt.data(
+        libvirtevent.DeviceRemovedEvent,
+        libvirtevent.DeviceRemovalFailedEvent)
+    def test_libvirt_device_removal_events(
+        self, event_type, mock_base_handles, mock_debug
+    ):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        event = event_type(uuid=uuids.event, dev=mock.sentinel.dev_alias)
+        drvr.emit_event(event)
+        mock_base_handles.assert_not_called()
+        mock_debug.assert_not_called()
