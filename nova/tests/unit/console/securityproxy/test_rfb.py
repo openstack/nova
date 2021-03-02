@@ -210,10 +210,11 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
         self._expect_tenant_recv(1, "\x02")
 
         self.expected_manager_calls.append(
-            mock.call.proxy._fail(self.tenant_sock,
-                                  self.compute_sock,
-                                  "Only the security type "
-                                  "None (1) is supported"))
+            mock.call.proxy._fail(
+                self.tenant_sock, self.compute_sock,
+                "Only the security type 1 (NONE) is supported",
+            )
+        )
 
         self.assertRaises(exception.SecurityProxyNegotiationFailed,
                           self.proxy.connect,

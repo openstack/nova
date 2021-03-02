@@ -91,25 +91,35 @@ class RFBAuthSchemeVeNCrypt(auth.RFBAuthScheme):
             reason = _("Server could not use VeNCrypt version 0.2")
             raise exception.RFBAuthHandshakeFailed(reason=reason)
 
-        # get the supported sub-auth types
+        # get the supported auth subtypes
         sub_types_cnt = ord(recv(1))
         sub_types_raw = recv(sub_types_cnt * auth.SUBTYPE_LENGTH)
         sub_types = struct.unpack('!' + str(sub_types_cnt) + 'I',
                                   sub_types_raw)
 
-        LOG.debug("Server supports VeNCrypt sub-types %s", sub_types)
+        LOG.debug(
+            "Server supports VeNCrypt subtypes: %s",
+            ', '.join(
+                '%d (%s)' % (
+                    AuthVeNCryptSubtype(t).value, AuthVeNCryptSubtype(t).name,
+                ) for t in sub_types
+            ))
 
         # We use X509None as we're only seeking to encrypt the channel (ruling
         # out PLAIN) and prevent MITM (ruling out TLS*, which uses trivially
         # MITM'd Anonymous Diffie Hellmann (DH) cyphers)
         if AuthVeNCryptSubtype.X509NONE not in sub_types:
-            reason = _("Server does not support the x509None (%s) VeNCrypt"
-                       " sub-auth type") % \
-                       AuthVeNCryptSubtype.X509NONE
+            reason = _(
+                "Server does not support the %d (%s) VeNCrypt auth subtype"
+            ) % (
+                AuthVeNCryptSubtype.X509NONE.value,
+                AuthVeNCryptSubtype.X509NONE.name)
             raise exception.RFBAuthHandshakeFailed(reason=reason)
 
-        LOG.debug("Attempting to use the x509None (%s) auth sub-type",
-                  AuthVeNCryptSubtype.X509NONE)
+        LOG.debug(
+            "Attempting to use the %d (%s) VeNCrypt auth subtype",
+            AuthVeNCryptSubtype.X509NONE.value,
+            AuthVeNCryptSubtype.X509NONE.name)
 
         compute_sock.sendall(struct.pack(
             '!I', AuthVeNCryptSubtype.X509NONE))
@@ -119,13 +129,13 @@ class RFBAuthSchemeVeNCrypt(auth.RFBAuthScheme):
         # acceptance, 0 means failure (unlike the rest of RFB)
         auth_accepted = ord(recv(1))
         if auth_accepted == 0:
-            reason = _("Server didn't accept the requested auth sub-type")
+            reason = _(
+                "Server didn't accept the requested VeNCrypt auth subtype")
             raise exception.RFBAuthHandshakeFailed(reason=reason)
 
-        LOG.debug("Server accepted the requested sub-auth type")
+        LOG.debug("Server accepted the requested VeNCrypt auth subtype")
 
-        if (CONF.vnc.vencrypt_client_key and
-                CONF.vnc.vencrypt_client_cert):
+        if CONF.vnc.vencrypt_client_key and CONF.vnc.vencrypt_client_cert:
             client_key = CONF.vnc.vencrypt_client_key
             client_cert = CONF.vnc.vencrypt_client_cert
         else:
@@ -145,6 +155,5 @@ class RFBAuthSchemeVeNCrypt(auth.RFBAuthScheme):
             return wrapped_sock
 
         except ssl.SSLError as e:
-            reason = _("Error establishing TLS connection to server: %s") % (
-                str(e))
-            raise exception.RFBAuthHandshakeFailed(reason=reason)
+            reason = _("Error establishing TLS connection to server: %s")
+            raise exception.RFBAuthHandshakeFailed(reason=reason % str(e))

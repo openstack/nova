@@ -22,6 +22,7 @@ AUTH_STATUS_FAIL = b"\x00"
 AUTH_STATUS_PASS = b"\x01"
 
 
+@enum.unique
 class AuthType(enum.IntEnum):
 
     INVALID = 0
