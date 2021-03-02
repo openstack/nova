@@ -172,7 +172,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         return self.engine
 
     def _skippable_migrations(self):
-        mitaka_placeholders = list(range(8, 13))
         newton_placeholders = list(range(21, 26))
         ocata_placeholders = list(range(31, 41))
         pike_placeholders = list(range(45, 50))
@@ -186,8 +185,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
             self.INIT_VERSION + 1,  # initial change
             30,  # Enforcement migration, no changes to test
         ]
-        return (mitaka_placeholders +
-                newton_placeholders +
+        return (newton_placeholders +
                 ocata_placeholders +
                 pike_placeholders +
                 queens_placeholders +
@@ -227,144 +225,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def assertTableNotExists(self, engine, table_name):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
                 db_utils.get_table, engine, table_name)
-
-    def _check_013(self, engine, data):
-        for column in ['instance_uuid', 'instance']:
-            self.assertColumnExists(engine, 'build_requests', column)
-        self.assertIndexExists(engine, 'build_requests',
-            'build_requests_instance_uuid_idx')
-        self.assertUniqueConstraintExists(engine, 'build_requests',
-                ['instance_uuid'])
-
-    def _check_014(self, engine, data):
-        for column in ['name', 'public_key']:
-            self.assertColumnExists(engine, 'key_pairs', column)
-        self.assertUniqueConstraintExists(engine, 'key_pairs',
-                                          ['user_id', 'name'])
-
-    def _check_015(self, engine, data):
-        build_requests_table = db_utils.get_table(engine, 'build_requests')
-        for column in ['request_spec_id', 'user_id', 'security_groups',
-                'config_drive']:
-            self.assertTrue(build_requests_table.columns[column].nullable)
-        inspector = reflection.Inspector.from_engine(engine)
-        constrs = inspector.get_unique_constraints('build_requests')
-        constr_columns = [constr['column_names'] for constr in constrs]
-        self.assertNotIn(['request_spec_id'], constr_columns)
-
-    def _check_016(self, engine, data):
-        self.assertColumnExists(engine, 'resource_providers', 'id')
-        self.assertIndexExists(engine, 'resource_providers',
-                               'resource_providers_name_idx')
-        self.assertIndexExists(engine, 'resource_providers',
-                               'resource_providers_uuid_idx')
-
-        self.assertColumnExists(engine, 'inventories', 'id')
-        self.assertIndexExists(engine, 'inventories',
-                               'inventories_resource_class_id_idx')
-
-        self.assertColumnExists(engine, 'allocations', 'id')
-        self.assertColumnExists(engine, 'resource_provider_aggregates',
-                                'aggregate_id')
-
-    def _check_017(self, engine, data):
-        # aggregate_metadata
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'aggregate_id',
-                       'key',
-                       'value']:
-            self.assertColumnExists(engine, 'aggregate_metadata', column)
-
-        self.assertUniqueConstraintExists(engine, 'aggregate_metadata',
-                ['aggregate_id', 'key'])
-        self.assertIndexExists(engine, 'aggregate_metadata',
-            'aggregate_metadata_key_idx')
-
-        # aggregate_hosts
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'host',
-                       'aggregate_id']:
-            self.assertColumnExists(engine, 'aggregate_hosts', column)
-
-        self.assertUniqueConstraintExists(engine, 'aggregate_hosts',
-                ['host', 'aggregate_id'])
-
-        # aggregates
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'name']:
-            self.assertColumnExists(engine, 'aggregates', column)
-
-        self.assertIndexExists(engine, 'aggregates',
-            'aggregate_uuid_idx')
-        self.assertUniqueConstraintExists(engine, 'aggregates', ['name'])
-
-    def _check_018(self, engine, data):
-        # instance_groups
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'user_id',
-                       'project_id',
-                       'uuid',
-                       'name']:
-            self.assertColumnExists(engine, 'instance_groups', column)
-
-        self.assertUniqueConstraintExists(engine, 'instance_groups', ['uuid'])
-
-        # instance_group_policy
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'policy',
-                       'group_id']:
-            self.assertColumnExists(engine, 'instance_group_policy', column)
-
-        self.assertIndexExists(engine, 'instance_group_policy',
-                               'instance_group_policy_policy_idx')
-        # Ensure the foreign key still exists
-        inspector = reflection.Inspector.from_engine(engine)
-        # There should only be one foreign key here
-        fk = inspector.get_foreign_keys('instance_group_policy')[0]
-        self.assertEqual('instance_groups', fk['referred_table'])
-        self.assertEqual(['id'], fk['referred_columns'])
-
-        # instance_group_member
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'instance_uuid',
-                       'group_id']:
-            self.assertColumnExists(engine, 'instance_group_member', column)
-
-        self.assertIndexExists(engine, 'instance_group_member',
-                               'instance_group_member_instance_idx')
-
-    def _check_019(self, engine, data):
-        self.assertColumnExists(engine, 'build_requests',
-                                'block_device_mappings')
-
-    def _pre_upgrade_020(self, engine):
-        build_requests = db_utils.get_table(engine, 'build_requests')
-        fake_build_req = {'id': 2020,
-                          'project_id': 'fake_proj_id',
-                          'block_device_mappings': 'fake_BDM'}
-        build_requests.insert().execute(fake_build_req)
-
-    def _check_020(self, engine, data):
-        build_requests = db_utils.get_table(engine, 'build_requests')
-        if engine.name == 'mysql':
-            self.assertIsInstance(build_requests.c.block_device_mappings.type,
-                                  sqlalchemy.dialects.mysql.MEDIUMTEXT)
-
-        fake_build_req = build_requests.select(
-            build_requests.c.id == 2020).execute().first()
-        self.assertEqual('fake_BDM', fake_build_req.block_device_mappings)
 
     def _check_026(self, engine, data):
         self.assertColumnExists(engine, 'resource_classes', 'id')
