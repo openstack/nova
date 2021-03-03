@@ -10005,9 +10005,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._allow_native_luksv1')
-    def test_detach_encryptor_encrypted_volume_meta_missing(self,
-            mock_allow_native_luksv1, mock_get_encryptor, mock_get_metadata):
+    def test_detach_encryptor_encrypted_volume_meta_missing(
+        self, mock_get_encryptor, mock_get_metadata
+    ):
         """Assert that if missing the encryption metadata of an encrypted
         volume is fetched and then used to detach the encryptor for the volume.
         """
@@ -10016,8 +10016,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_encryptor.return_value = mock_encryptor
         encryption = {'provider': 'luks', 'control_location': 'front-end'}
         mock_get_metadata.return_value = encryption
-        connection_info = {'data': {'volume_id': uuids.volume_id}}
-        mock_allow_native_luksv1.return_value = False
+        connection_info = {
+            'data': {
+                'device_path': '/dev/foo',
+                'volume_id': uuids.volume_id
+            }
+        }
 
         drvr._detach_encryptor(self.context, connection_info, None)
 
@@ -10029,9 +10033,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._allow_native_luksv1')
-    def test_detach_encryptor_encrypted_volume_meta_provided(self,
-            mock_allow_native_luksv1, mock_get_encryptor, mock_get_metadata):
+    def test_detach_encryptor_encrypted_volume_meta_provided(
+        self,
+        mock_get_encryptor,
+        mock_get_metadata
+    ):
         """Assert that when provided there are no further attempts to fetch the
         encryption metadata for the volume and that the provided metadata is
         then used to detach the volume.
@@ -10040,8 +10046,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_encryptor = mock.MagicMock()
         mock_get_encryptor.return_value = mock_encryptor
         encryption = {'provider': 'luks', 'control_location': 'front-end'}
-        connection_info = {'data': {'volume_id': uuids.volume_id}}
-        mock_allow_native_luksv1.return_value = False
+        connection_info = {
+            'data': {
+                'device_path': '/dev/foo',
+                'volume_id': uuids.volume_id
+            }
+        }
 
         drvr._detach_encryptor(self.context, connection_info, encryption)
 
@@ -10051,20 +10061,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_encryptor.detach_volume.assert_called_once_with(**encryption)
 
     @mock.patch('nova.virt.libvirt.host.Host.find_secret')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._allow_native_luksv1')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
-    def test_detach_encryptor_native_luks_device_path_secret_missing(self,
-            mock_get_encryptor, mock_allow_native_luksv1, mock_find_secret):
-        """Assert that the encryptor is not built when native LUKS is
-        available, the associated volume secret is missing and device_path is
-        also missing from the connection_info.
+    def test_detach_encryptor_native_luks_device_path_secret_missing(
+        self, mock_get_encryptor, mock_find_secret
+    ):
+        """Assert that the encryptor is not built when the associated volume
+           secret is missing and device_path is also missing from the
+           connection_info.
         """
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         encryption = {'provider': 'luks', 'control_location': 'front-end',
                       'encryption_key_id': uuids.encryption_key_id}
         connection_info = {'data': {'volume_id': uuids.volume_id}}
         mock_find_secret.return_value = False
-        mock_allow_native_luksv1.return_value = True
 
         drvr._detach_encryptor(self.context, connection_info, encryption)
 
