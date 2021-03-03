@@ -173,26 +173,27 @@ def extract_flavor(instance, prefix=''):
 # NOTE(danms): This method is deprecated, do not use it!
 # Use instance.{old_,new_,}flavor instead, as instances no longer
 # have flavor information in system_metadata.
-def save_flavor_info(metadata, instance_type, prefix=''):
-    """Save properties from instance_type into instance's system_metadata,
+# NOTE(stephenfin): 'prefix' is unused and could be removed
+def save_flavor_info(metadata, flavor, prefix=''):
+    """Save properties from flavor into instance's system_metadata,
     in the format of:
 
       [prefix]instance_type_[key]
 
     This can be used to update system_metadata in place from a type, as well
-    as stash information about another instance_type for later use (such as
+    as stash information about another flavor for later use (such as
     during resize).
     """
 
     for key in system_metadata_flavor_props.keys():
         to_key = '%sinstance_type_%s' % (prefix, key)
-        metadata[to_key] = instance_type[key]
+        metadata[to_key] = flavor[key]
 
     # NOTE(danms): We do NOT save all of extra_specs here, but only the
     # NUMA-related ones that we need to avoid an uglier alternative. This
     # should be replaced by a general split-out of flavor information from
     # system_metadata very soon.
-    extra_specs = instance_type.get('extra_specs', {})
+    extra_specs = flavor.get('extra_specs', {})
     for extra_prefix in system_metadata_flavor_extra_props:
         for key in extra_specs:
             if key.startswith(extra_prefix):

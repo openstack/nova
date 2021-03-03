@@ -73,19 +73,18 @@ class DiskConfigTestCaseV21(test.TestCase):
 
         def fake_instance_create(context, inst_, session=None):
             inst = fake_instance.fake_db_instance(**{
-                    'id': 1,
-                    'uuid': AUTO_INSTANCE_UUID,
-                    'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
-                    'updated_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
-                    'progress': 0,
-                    'name': 'instance-1',  # this is a property
-                    'task_state': '',
-                    'vm_state': '',
-                    'auto_disk_config': inst_['auto_disk_config'],
-                    'security_groups': inst_['security_groups'],
-                    'instance_type': objects.Flavor.get_by_name(context,
-                                                                'm1.small'),
-                    })
+                'id': 1,
+                'uuid': AUTO_INSTANCE_UUID,
+                'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
+                'updated_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
+                'progress': 0,
+                'name': 'instance-1',  # this is a property
+                'task_state': '',
+                'vm_state': '',
+                'auto_disk_config': inst_['auto_disk_config'],
+                'security_groups': inst_['security_groups'],
+                'flavor': objects.Flavor.get_by_name(context, 'm1.small'),
+            })
 
             return inst
 

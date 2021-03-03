@@ -8739,8 +8739,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def post_claim_migrate_data(self, context, instance, migrate_data, claim):
         migrate_data.dst_numa_info = self._get_live_migrate_numa_info(
-                claim.claimed_numa_topology, claim.instance_type,
-                claim.image_meta)
+            claim.claimed_numa_topology, claim.flavor, claim.image_meta)
         return migrate_data
 
     def _get_resources(self, instance, prefix=None):

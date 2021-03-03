@@ -2180,20 +2180,15 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'save')
     def _test_rebuild(self, mock_save, mock_add_instance_info, mock_set_pstate,
                       mock_looping, mock_wait_active, preserve=False):
-        node_id = uuidutils.generate_uuid()
-        node = _get_cached_node(id=node_id, instance_id=self.instance_id,
-                                instance_type_id=5)
+        node_uuid = uuidutils.generate_uuid()
+        node = _get_cached_node(id=node_uuid, instance_id=self.instance_id)
         self.mock_conn.get_node.return_value = node
 
         image_meta = ironic_utils.get_test_image_meta()
-        flavor_id = 5
-        flavor = objects.Flavor(flavor_id=flavor_id, name='baremetal')
+        flavor = objects.Flavor(flavor_id=5, name='baremetal')
 
-        instance = fake_instance.fake_instance_obj(self.ctx,
-                                                   uuid=self.instance_uuid,
-                                                   node=node_id,
-                                                   instance_type_id=flavor_id)
-        instance.flavor = flavor
+        instance = fake_instance.fake_instance_obj(
+            self.ctx, uuid=self.instance_uuid, node=node_uuid, flavor=flavor)
 
         fake_looping_call = FakeLoopingCall()
         mock_looping.return_value = fake_looping_call
@@ -2210,9 +2205,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
             node, instance,
             test.MatchType(objects.ImageMeta),
             flavor, preserve)
-        mock_set_pstate.assert_called_once_with(node_id,
-                                                ironic_states.REBUILD,
-                                                configdrive=mock.ANY)
+        mock_set_pstate.assert_called_once_with(
+            node_uuid, ironic_states.REBUILD, configdrive=mock.ANY)
         mock_looping.assert_called_once_with(mock_wait_active, instance)
         fake_looping_call.start.assert_called_once_with(
             interval=CONF.ironic.api_retry_interval)
@@ -2256,21 +2250,16 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                               mock_configdrive):
         node_uuid = uuidutils.generate_uuid()
         node = _get_cached_node(
-                uuid=node_uuid, instance_uuid=self.instance_uuid,
-                instance_type_id=5)
+            uuid=node_uuid, instance_uuid=self.instance_uuid)
         mock_get.return_value = node
         mock_required_by.return_value = True
         mock_configdrive.side_effect = exception.NovaException()
 
         image_meta = ironic_utils.get_test_image_meta()
-        flavor_id = 5
-        flavor = objects.Flavor(flavor_id=flavor_id, name='baremetal')
+        flavor = objects.Flavor(flavor_id=5, name='baremetal')
 
-        instance = fake_instance.fake_instance_obj(self.ctx,
-                                                   uuid=self.instance_uuid,
-                                                   node=node_uuid,
-                                                   instance_type_id=flavor_id)
-        instance.flavor = flavor
+        instance = fake_instance.fake_instance_obj(
+            self.ctx, uuid=self.instance_uuid, node=node_uuid, flavor=flavor)
 
         self.assertRaises(exception.InstanceDeployFailure,
             self.driver.rebuild,
@@ -2291,20 +2280,15 @@ class IronicDriverTestCase(test.NoDBTestCase):
                               mock_required_by, mock_configdrive):
         node_uuid = uuidutils.generate_uuid()
         node = _get_cached_node(
-                uuid=node_uuid, instance_uuid=self.instance_uuid,
-                instance_type_id=5)
+            uuid=node_uuid, instance_uuid=self.instance_uuid)
         mock_get.return_value = node
         mock_required_by.return_value = False
 
         image_meta = ironic_utils.get_test_image_meta()
-        flavor_id = 5
-        flavor = objects.Flavor(flavor_id=flavor_id, name='baremetal')
+        flavor = objects.Flavor(flavor_id=5, name='baremetal')
 
-        instance = fake_instance.fake_instance_obj(self.ctx,
-                                                   uuid=self.instance_uuid,
-                                                   node=node_uuid,
-                                                   instance_type_id=flavor_id)
-        instance.flavor = flavor
+        instance = fake_instance.fake_instance_obj(
+            self.ctx, uuid=self.instance_uuid, node=node_uuid, flavor=flavor)
 
         exceptions = [
             exception.NovaException(),
@@ -2329,7 +2313,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                                    host=hostname)
         node = ironic_utils.get_test_node(uuid=node_uuid,
                                           instance_uuid=self.instance_uuid,
-                                          instance_type_id=5,
                                           network_interface='flat')
         mock_get.return_value = node
         host_id = self.driver.network_binding_host_id(self.ctx, instance)

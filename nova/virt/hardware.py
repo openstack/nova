@@ -1279,7 +1279,7 @@ def get_mem_encryption_constraint(
     cannot be called since it relies on being run from the compute
     node in order to retrieve CONF.libvirt.hw_machine_type.
 
-    :param instance_type: Flavor object
+    :param flavor: Flavor object
     :param image: an ImageMeta object
     :param machine_type: a string representing the machine type (optional)
     :raises: nova.exception.FlavorImageConflict

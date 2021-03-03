@@ -945,7 +945,7 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_prepare_image_mapping(self):
         swap_size = 1
         ephemeral_size = 1
-        instance_type = {'swap': swap_size,
+        flavor = {'swap': swap_size,
                          'ephemeral_gb': ephemeral_size}
         mappings = [
                 {'virtual': 'ami', 'device': 'sda1'},
@@ -958,7 +958,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         ]
 
         preped_bdm = self.compute_api._prepare_image_mapping(
-            instance_type, mappings)
+            flavor, mappings)
 
         expected_result = [
             {
@@ -1011,7 +1011,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         image_id = '77777777-aaaa-bbbb-cccc-555555555555'
 
         instance = self._create_fake_instance_obj()
-        instance_type = {'swap': 1, 'ephemeral_gb': 2}
+        flavor = {'swap': 1, 'ephemeral_gb': 2}
         mappings = [
             fake_block_device.FakeDbBlockDeviceDict({
                 'device_name': '/dev/sdb4',
@@ -1059,7 +1059,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             volume_id: fake_get(None, None, volume_id)
         }
         self.compute_api._validate_bdm(self.context, instance,
-                                       instance_type, mappings, {},
+                                       flavor, mappings, {},
                                        volumes)
         self.assertEqual(4, mappings[1].volume_size)
         self.assertEqual(6, mappings[2].volume_size)
@@ -1068,7 +1068,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         mappings[2].boot_index = 2
         self.assertRaises(exception.InvalidBDMBootSequence,
                           self.compute_api._validate_bdm,
-                          self.context, instance, instance_type,
+                          self.context, instance, flavor,
                           mappings, {}, volumes)
         mappings[2].boot_index = 0
 
@@ -1076,7 +1076,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.flags(max_local_block_devices=1)
         self.assertRaises(exception.InvalidBDMLocalsLimit,
                           self.compute_api._validate_bdm,
-                          self.context, instance, instance_type,
+                          self.context, instance, flavor,
                           mappings, {}, volumes)
         ephemerals = [
             fake_block_device.FakeDbBlockDeviceDict({
@@ -1106,7 +1106,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         mappings_ = mappings[:]
         mappings_.objects.extend(ephemerals)
         self.compute_api._validate_bdm(self.context, instance,
-                                       instance_type, mappings_, {},
+                                       flavor, mappings_, {},
                                        volumes)
 
         # Ephemerals over the size limit
@@ -1115,14 +1115,14 @@ class ComputeVolumeTestCase(BaseTestCase):
         mappings_.objects.extend(ephemerals)
         self.assertRaises(exception.InvalidBDMEphemeralSize,
                           self.compute_api._validate_bdm,
-                          self.context, instance, instance_type,
+                          self.context, instance, flavor,
                           mappings_, {}, volumes)
 
         # Swap over the size limit
         mappings[0].volume_size = 3
         self.assertRaises(exception.InvalidBDMSwapSize,
                           self.compute_api._validate_bdm,
-                          self.context, instance, instance_type,
+                          self.context, instance, flavor,
                           mappings, {}, volumes)
         mappings[0].volume_size = 1
 
@@ -1145,7 +1145,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         mappings_.objects.extend(additional_swap)
         self.assertRaises(exception.InvalidBDMFormat,
                           self.compute_api._validate_bdm,
-                          self.context, instance, instance_type,
+                          self.context, instance, flavor,
                           mappings_, {}, volumes)
 
         image_no_size = [
@@ -1164,7 +1164,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         mappings_.objects.extend(image_no_size)
         self.assertRaises(exception.InvalidBDM,
                           self.compute_api._validate_bdm,
-                          self.context, instance, instance_type,
+                          self.context, instance, flavor,
                           mappings_, {}, volumes)
 
         # blank device without a specified size fails
@@ -1183,11 +1183,11 @@ class ComputeVolumeTestCase(BaseTestCase):
         mappings_.objects.extend(blank_no_size)
         self.assertRaises(exception.InvalidBDM,
                           self.compute_api._validate_bdm,
-                          self.context, instance, instance_type,
+                          self.context, instance, flavor,
                           mappings_, {}, volumes)
 
     def test_validate_bdm_with_more_than_one_default(self):
-        instance_type = {'swap': 1, 'ephemeral_gb': 1}
+        flavor = {'swap': 1, 'ephemeral_gb': 1}
         all_mappings = [fake_block_device.FakeDbBlockDeviceDict({
                          'id': 1,
                          'no_device': None,
@@ -1218,13 +1218,13 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidBDMEphemeralSize,
                           self.compute_api._validate_bdm,
                           self.context, self.instance,
-                          instance_type, all_mappings, image_cache, volumes)
+                          flavor, all_mappings, image_cache, volumes)
 
     @mock.patch.object(cinder.API, 'attachment_create',
                        side_effect=exception.InvalidVolume(reason='error'))
     def test_validate_bdm_media_service_invalid_volume(self, mock_att_create):
         volume_id = uuids.volume_id
-        instance_type = {'swap': 1, 'ephemeral_gb': 1}
+        flavor = {'swap': 1, 'ephemeral_gb': 1}
         bdms = [fake_block_device.FakeDbBlockDeviceDict({
                         'id': 1,
                         'no_device': None,
@@ -1264,7 +1264,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.assertRaises(exception.InvalidVolume,
                               self.compute_api._validate_bdm,
                               self.context, self.instance_object,
-                              instance_type, bdms, {}, volumes)
+                              flavor, bdms, {}, volumes)
 
     @mock.patch.object(cinder.API, 'check_availability_zone')
     @mock.patch.object(cinder.API, 'attachment_create',
@@ -1272,7 +1272,7 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_validate_bdm_media_service_valid(self, mock_att_create,
                                               mock_check_av_zone):
         volume_id = uuids.volume_id
-        instance_type = {'swap': 1, 'ephemeral_gb': 1}
+        flavor = {'swap': 1, 'ephemeral_gb': 1}
         bdms = [fake_block_device.FakeDbBlockDeviceDict({
                          'id': 1,
                          'no_device': None,
@@ -1293,7 +1293,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         image_cache = {}
         volumes = {volume_id: volume}
         self.compute_api._validate_bdm(self.context, self.instance_object,
-                                       instance_type, bdms, image_cache,
+                                       flavor, bdms, image_cache,
                                        volumes)
         mock_check_av_zone.assert_not_called()
         mock_att_create.assert_called_once_with(
@@ -2931,13 +2931,13 @@ class ComputeTestCase(BaseTestCase,
                    power_state=10003,
                    vm_state=vm_states.ACTIVE,
                    task_state=expected_task,
-                   instance_type=self.default_flavor,
+                   flavor=self.default_flavor,
                    launched_at=timeutils.utcnow()))
         updated_dbinstance2 = fake_instance.fake_db_instance(
             **dict(uuid=uuids.db_instance_2,
                    power_state=10003,
                    vm_state=vm_states.ACTIVE,
-                   instance_type=self.default_flavor,
+                   flavor=self.default_flavor,
                    task_state=expected_task,
                    launched_at=timeutils.utcnow()))
 
@@ -4552,7 +4552,7 @@ class ComputeTestCase(BaseTestCase,
         migration.instance_uuid = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
         migration.uuid = uuids.migration_uuid
         migration.new_instance_type_id = '1'
-        instance_type = objects.Flavor()
+        flavor = objects.Flavor()
 
         actions = [
             ("reboot_instance", task_states.REBOOTING,
@@ -4594,7 +4594,7 @@ class ComputeTestCase(BaseTestCase,
                                'request_spec': {}}),
             ("prep_resize", task_states.RESIZE_PREP,
                             {'image': {},
-                             'flavor': instance_type,
+                             'flavor': flavor,
                              'request_spec': {},
                              'filter_properties': {},
                              'node': None,
@@ -4684,18 +4684,18 @@ class ComputeTestCase(BaseTestCase,
         instance = self._create_fake_instance_obj(params)
         image = {}
         disk_info = 'fake-disk-info'
-        instance_type = self.default_flavor
+        flavor = self.default_flavor
 
         if not resize_instance:
-            old_instance_type = self.tiny_flavor
-            instance_type['root_gb'] = old_instance_type['root_gb']
-            instance_type['swap'] = old_instance_type['swap']
-            instance_type['ephemeral_gb'] = old_instance_type['ephemeral_gb']
+            old_flavor = self.tiny_flavor
+            flavor['root_gb'] = old_flavor['root_gb']
+            flavor['swap'] = old_flavor['swap']
+            flavor['ephemeral_gb'] = old_flavor['ephemeral_gb']
 
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
-                                 flavor=instance_type,
+                                 flavor=flavor,
                                  image={}, request_spec={},
                                  filter_properties={}, node=None,
                                  migration=None, clean_shutdown=True,
@@ -4763,7 +4763,7 @@ class ComputeTestCase(BaseTestCase,
             def _instance_save0(expected_task_state=None):
                 self.assertEqual(task_states.RESIZE_MIGRATED,
                                  expected_task_state)
-                self.assertEqual(instance_type['id'],
+                self.assertEqual(flavor['id'],
                                  instance.instance_type_id)
                 self.assertEqual(task_states.RESIZE_FINISH,
                                  instance.task_state)
@@ -4933,11 +4933,11 @@ class ComputeTestCase(BaseTestCase,
                              jsonutils.dumps(connection_info))
 
         # begin resize
-        instance_type = self.default_flavor
+        flavor = self.default_flavor
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
-                                 flavor=instance_type,
+                                 flavor=flavor,
                                  image={}, request_spec=request_spec,
                                  filter_properties={}, node=None,
                                  clean_shutdown=True, migration=None,
@@ -4954,7 +4954,8 @@ class ComputeTestCase(BaseTestCase,
                 instance.uuid, 'pre-migrating')
         self.compute.resize_instance(self.context, instance=instance,
                 migration=migration, image={},
-                flavor=jsonutils.to_primitive(instance_type),
+                # TODO(stephenfin): Why a JSON string?
+                flavor=jsonutils.to_primitive(flavor),
                 clean_shutdown=True, request_spec=request_spec)
 
         # assert bdm is unchanged
@@ -5021,12 +5022,12 @@ class ComputeTestCase(BaseTestCase,
         old_flavor_name = 'm1.tiny'
         instance = self._create_fake_instance_obj(type_name=old_flavor_name)
 
-        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
+        flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
 
         request_spec = objects.RequestSpec()
 
         self.compute.prep_resize(self.context, instance=instance,
-                                 flavor=instance_type,
+                                 flavor=flavor,
                                  image={},
                                  request_spec=request_spec,
                                  filter_properties={},
@@ -5054,7 +5055,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(old_flavor['root_gb'], instance.root_gb)
         self.assertEqual(old_flavor['ephemeral_gb'], instance.ephemeral_gb)
         self.assertEqual(old_flavor['id'], instance.instance_type_id)
-        self.assertNotEqual(instance_type['id'], instance.instance_type_id)
+        self.assertNotEqual(flavor['id'], instance.instance_type_id)
 
     def test_set_instance_info(self):
         old_flavor_name = 'm1.tiny'
@@ -5483,10 +5484,10 @@ class ComputeTestCase(BaseTestCase,
         instance.numa_topology = numa_topology
         instance.save()
 
-        new_instance_type_ref = flavors.get_flavor_by_flavor_id(3)
+        new_flavor_ref = flavors.get_flavor_by_flavor_id(3)
         self.compute.prep_resize(self.context,
                 instance=instance,
-                flavor=new_instance_type_ref,
+                flavor=new_flavor_ref,
                 image={}, request_spec=request_spec,
                 filter_properties={}, node=None, clean_shutdown=True,
                 migration=None, host_list=None)
@@ -5494,7 +5495,7 @@ class ComputeTestCase(BaseTestCase,
         # Memory usage should increase after the resize as well
         self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
              memory_mb_used + flavor.memory_mb +
-             new_instance_type_ref.memory_mb)
+             new_flavor_ref.memory_mb)
 
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
@@ -5513,7 +5514,7 @@ class ComputeTestCase(BaseTestCase,
         self.compute.resize_instance(self.context, instance=instance,
                                      migration=migration,
                                      image={},
-                                     flavor=new_instance_type_ref,
+                                     flavor=new_flavor_ref,
                                      clean_shutdown=True,
                                      request_spec=request_spec)
         self.compute.finish_resize(self.context,
@@ -5524,7 +5525,7 @@ class ComputeTestCase(BaseTestCase,
         # Memory usage shouldn't had changed
         self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
              memory_mb_used + flavor.memory_mb +
-             new_instance_type_ref.memory_mb)
+             new_flavor_ref.memory_mb)
 
         # Prove that the instance size is now the new size
         flavor = objects.Flavor.get_by_id(self.context,
@@ -5549,7 +5550,7 @@ class ComputeTestCase(BaseTestCase,
         # Resources from the migration (based on initial flavor) should
         # be freed now
         self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
-                         memory_mb_used + new_instance_type_ref.memory_mb)
+                         memory_mb_used + new_flavor_ref.memory_mb)
 
         mock_notify.assert_has_calls([
             mock.call(self.context, instance,
@@ -5820,10 +5821,10 @@ class ComputeTestCase(BaseTestCase,
         instance.numa_topology = numa_topology
         instance.save()
 
-        new_instance_type_ref = flavors.get_flavor_by_flavor_id(3)
+        new_flavor_ref = flavors.get_flavor_by_flavor_id(3)
         self.compute.prep_resize(self.context,
                 instance=instance,
-                flavor=new_instance_type_ref,
+                flavor=new_flavor_ref,
                 image={}, request_spec=request_spec,
                 filter_properties={}, node=None,
                 migration=None, clean_shutdown=True, host_list=[])
@@ -5831,7 +5832,7 @@ class ComputeTestCase(BaseTestCase,
         # Memory usage should increase after the resize as well
         self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
             memory_mb_used + flavor.memory_mb +
-            new_instance_type_ref.memory_mb)
+            new_flavor_ref.memory_mb)
 
         migration = objects.Migration.get_by_instance_and_status(
                 self.context.elevated(),
@@ -5849,7 +5850,7 @@ class ComputeTestCase(BaseTestCase,
         self.compute.resize_instance(self.context, instance=instance,
                                      migration=migration,
                                      image={},
-                                     flavor=new_instance_type_ref,
+                                     flavor=new_flavor_ref,
                                      clean_shutdown=True,
                                      request_spec=request_spec)
         self.compute.finish_resize(self.context,
@@ -5860,11 +5861,11 @@ class ComputeTestCase(BaseTestCase,
         # Memory usage shouldn't had changed
         self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
             memory_mb_used + flavor.memory_mb +
-            new_instance_type_ref.memory_mb)
+            new_flavor_ref.memory_mb)
 
         # Prove that the instance size is now the new size
-        instance_type_ref = flavors.get_flavor_by_flavor_id(3)
-        self.assertEqual(instance_type_ref['flavorid'], '3')
+        flavor_ref = flavors.get_flavor_by_flavor_id(3)
+        self.assertEqual(flavor_ref['flavorid'], '3')
         # Prove that the NUMA topology has also been updated to that of the new
         # flavor - meaning None
         self.assertIsNone(instance.numa_topology)
@@ -5956,10 +5957,10 @@ class ComputeTestCase(BaseTestCase,
                                             request_spec, {},
                                             [], block_device_mapping=[])
 
-        new_instance_type_ref = flavors.get_flavor_by_flavor_id(3)
+        new_flavor_ref = flavors.get_flavor_by_flavor_id(3)
         self.compute.prep_resize(self.context,
                 instance=instance,
-                flavor=new_instance_type_ref,
+                flavor=new_flavor_ref,
                 image={}, request_spec=request_spec,
                 filter_properties={}, node=None,
                 clean_shutdown=True, migration=None,
@@ -5977,7 +5978,7 @@ class ComputeTestCase(BaseTestCase,
         self.compute.resize_instance(self.context, instance=instance,
                                      migration=migration,
                                      image={},
-                                     flavor=new_instance_type_ref,
+                                     flavor=new_flavor_ref,
                                      clean_shutdown=True,
                                      request_spec=request_spec)
         self.compute.finish_resize(self.context,
@@ -13084,13 +13085,13 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         self.compute_api = compute.API()
         self.inst_type = objects.Flavor.get_by_name(self.context, 'm1.small')
 
-    def test_can_build_instance_from_visible_instance_type(self):
+    def test_can_build_instance_from_visible_flavor(self):
         self.inst_type['disabled'] = False
         # Assert that exception.FlavorNotFound is not raised
         self.compute_api.create(self.context, self.inst_type,
                                 image_href=uuids.image_instance)
 
-    def test_cannot_build_instance_from_disabled_instance_type(self):
+    def test_cannot_build_instance_from_disabled_flavor(self):
         self.inst_type['disabled'] = True
         self.assertRaises(exception.FlavorNotFound,
             self.compute_api.create, self.context, self.inst_type, None)
@@ -13099,7 +13100,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
                 new=mock.Mock(return_value=obj_fields.HostStatus.UP))
     @mock.patch('nova.compute.api.API._validate_flavor_image_nostatus')
     @mock.patch('nova.objects.RequestSpec')
-    def test_can_resize_to_visible_instance_type(self, mock_reqspec,
+    def test_can_resize_to_visible_flavor(self, mock_reqspec,
                                                  mock_validate):
         instance = self._create_fake_instance_obj()
         orig_get_flavor_by_flavor_id =\
@@ -13107,11 +13108,11 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
 
         def fake_get_flavor_by_flavor_id(flavor_id, ctxt=None,
                                                 read_deleted="yes"):
-            instance_type = orig_get_flavor_by_flavor_id(flavor_id,
+            flavor = orig_get_flavor_by_flavor_id(flavor_id,
                                                                 ctxt,
                                                                 read_deleted)
-            instance_type['disabled'] = False
-            return instance_type
+            flavor['disabled'] = False
+            return flavor
 
         self.stub_out('nova.compute.flavors.get_flavor_by_flavor_id',
                        fake_get_flavor_by_flavor_id)
@@ -13121,18 +13122,18 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
 
     @mock.patch('nova.compute.api.API.get_instance_host_status',
                 new=mock.Mock(return_value=obj_fields.HostStatus.UP))
-    def test_cannot_resize_to_disabled_instance_type(self):
+    def test_cannot_resize_to_disabled_flavor(self):
         instance = self._create_fake_instance_obj()
         orig_get_flavor_by_flavor_id = \
                 flavors.get_flavor_by_flavor_id
 
         def fake_get_flavor_by_flavor_id(flavor_id, ctxt=None,
                                                 read_deleted="yes"):
-            instance_type = orig_get_flavor_by_flavor_id(flavor_id,
+            flavor = orig_get_flavor_by_flavor_id(flavor_id,
                                                                 ctxt,
                                                                 read_deleted)
-            instance_type['disabled'] = True
-            return instance_type
+            flavor['disabled'] = True
+            return flavor
 
         self.stub_out('nova.compute.flavors.get_flavor_by_flavor_id',
                        fake_get_flavor_by_flavor_id)
@@ -13153,7 +13154,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         super(ComputeRescheduleResizeOrReraiseTestCase, self).setUp()
         self.instance = self._create_fake_instance_obj()
         self.instance_uuid = self.instance['uuid']
-        self.instance_type = objects.Flavor.get_by_name(
+        self.flavor = objects.Flavor.get_by_name(
             context.get_admin_context(), 'm1.tiny')
         self.request_spec = objects.RequestSpec()
 
@@ -13169,14 +13170,14 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
 
         self.compute.prep_resize(self.context, image=None,
                                  instance=inst_obj,
-                                 flavor=self.instance_type,
+                                 flavor=self.flavor,
                                  request_spec=self.request_spec,
                                  filter_properties={}, migration=mock.Mock(),
                                  node=None,
                                  clean_shutdown=True, host_list=None)
 
         mock_res.assert_called_once_with(mock.ANY, inst_obj, mock.ANY,
-                                         self.instance_type,
+                                         self.flavor,
                                          self.request_spec, {}, None)
 
     def test_reschedule_resize_or_reraise_no_filter_properties(self):
@@ -13195,7 +13196,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         # because we're not retrying, we should re-raise the exception
         self.assertRaises(test.TestingException,
             self.compute._reschedule_resize_or_reraise, self.context,
-            self.instance, exc_info, self.instance_type,
+            self.instance, exc_info, self.flavor,
             self.request_spec, filter_properties, None)
 
     def test_reschedule_resize_or_reraise_no_retry_info(self):
@@ -13214,7 +13215,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         # because we're not retrying, we should re-raise the exception
         self.assertRaises(test.TestingException,
             self.compute._reschedule_resize_or_reraise, self.context,
-            self.instance, exc_info, self.instance_type,
+            self.instance, exc_info, self.flavor,
             self.request_spec, filter_properties, None)
 
     @mock.patch.object(compute_manager.ComputeManager, '_instance_update')
@@ -13236,14 +13237,14 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
 
         self.assertRaises(test.TestingException,
             self.compute._reschedule_resize_or_reraise, self.context,
-            self.instance, exc_info, self.instance_type,
+            self.instance, exc_info, self.flavor,
             self.request_spec, filter_properties, None)
 
         mock_update.assert_called_once_with(
             self.context, mock.ANY, task_state=task_states.RESIZE_PREP)
         mock_resize.assert_called_once_with(
             self.context, mock.ANY,
-            {'filter_properties': filter_properties}, self.instance_type,
+            {'filter_properties': filter_properties}, self.flavor,
             request_spec=self.request_spec, host_list=None)
         mock_notify.assert_called_once_with(
             self.context, self.instance, 'fake-mini', action='resize',
@@ -13266,14 +13267,14 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             exc_info = sys.exc_info()
 
         self.compute._reschedule_resize_or_reraise(
-            self.context, self.instance, exc_info, self.instance_type,
+            self.context, self.instance, exc_info, self.flavor,
             self.request_spec, filter_properties, None)
 
         mock_update.assert_called_once_with(
             self.context, mock.ANY, task_state=task_states.RESIZE_PREP)
         mock_resize.assert_called_once_with(
             self.context, mock.ANY,
-            {'filter_properties': filter_properties}, self.instance_type,
+            {'filter_properties': filter_properties}, self.flavor,
             request_spec=self.request_spec, host_list=None)
         mock_notify.assert_called_once_with(
             self.context, self.instance, 'fake-mini', action='resize',
@@ -13819,91 +13820,91 @@ class CheckRequestedImageTestCase(test.TestCase):
         self.context = context.RequestContext(
                 'fake_user_id', 'fake_project_id')
 
-        self.instance_type = objects.Flavor.get_by_name(self.context,
+        self.flavor = objects.Flavor.get_by_name(self.context,
                                                         'm1.small')
-        self.instance_type['memory_mb'] = 64
-        self.instance_type['root_gb'] = 1
+        self.flavor['memory_mb'] = 64
+        self.flavor['root_gb'] = 1
 
     def test_no_image_specified(self):
         self.compute_api._validate_flavor_image(self.context, None, None,
-                self.instance_type, None)
+                self.flavor, None)
 
     def test_image_status_must_be_active(self):
         image = dict(id=uuids.image_id, status='foo')
 
         self.assertRaises(exception.ImageNotActive,
                 self.compute_api._validate_flavor_image, self.context,
-                image['id'], image, self.instance_type, None)
+                image['id'], image, self.flavor, None)
 
         image['status'] = 'active'
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, None)
+                image, self.flavor, None)
 
     def test_image_min_ram_check(self):
         image = dict(id=uuids.image_id, status='active', min_ram='65')
 
         self.assertRaises(exception.FlavorMemoryTooSmall,
                 self.compute_api._validate_flavor_image, self.context,
-                image['id'], image, self.instance_type, None)
+                image['id'], image, self.flavor, None)
 
         image['min_ram'] = '64'
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, None)
+                image, self.flavor, None)
 
     def test_image_min_disk_check(self):
         image = dict(id=uuids.image_id, status='active', min_disk='2')
 
         self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
                 self.compute_api._validate_flavor_image, self.context,
-                image['id'], image, self.instance_type, None)
+                image['id'], image, self.flavor, None)
 
         image['min_disk'] = '1'
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, None)
+                image, self.flavor, None)
 
     def test_image_too_large(self):
         image = dict(id=uuids.image_id, status='active', size='1073741825')
 
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
                 self.compute_api._validate_flavor_image, self.context,
-                image['id'], image, self.instance_type, None)
+                image['id'], image, self.flavor, None)
 
         image['size'] = '1073741824'
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, None)
+                image, self.flavor, None)
 
     def test_root_gb_zero_disables_size_check(self):
         self.policy.set_rules({
             servers_policy.ZERO_DISK_FLAVOR: base_policy.RULE_ADMIN_OR_OWNER
         }, overwrite=False)
-        self.instance_type['root_gb'] = 0
+        self.flavor['root_gb'] = 0
         image = dict(id=uuids.image_id, status='active', size='1073741825')
 
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, None)
+                image, self.flavor, None)
 
     def test_root_gb_zero_disables_min_disk(self):
         self.policy.set_rules({
             servers_policy.ZERO_DISK_FLAVOR: base_policy.RULE_ADMIN_OR_OWNER
         }, overwrite=False)
-        self.instance_type['root_gb'] = 0
+        self.flavor['root_gb'] = 0
         image = dict(id=uuids.image_id, status='active', min_disk='2')
 
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, None)
+                image, self.flavor, None)
 
     def test_config_drive_option(self):
         image = {'id': uuids.image_id, 'status': 'active'}
         image['properties'] = {'img_config_drive': 'optional'}
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, None)
+                image, self.flavor, None)
         image['properties'] = {'img_config_drive': 'mandatory'}
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, None)
+                image, self.flavor, None)
         image['properties'] = {'img_config_drive': 'bar'}
         self.assertRaises(exception.InvalidImageConfigDrive,
                           self.compute_api._validate_flavor_image,
-                          self.context, image['id'], image, self.instance_type,
+                          self.context, image['id'], image, self.flavor,
                           None)
 
     def test_volume_blockdevicemapping(self):
@@ -13913,42 +13914,42 @@ class CheckRequestedImageTestCase(test.TestCase):
         # larger than the flavor root disk.
         image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
-                     size=self.instance_type.root_gb * units.Gi,
-                     min_disk=self.instance_type.root_gb + 1)
+                     size=self.flavor.root_gb * units.Gi,
+                     min_disk=self.flavor.root_gb + 1)
 
         volume_uuid = uuids.fake_2
         root_bdm = block_device_obj.BlockDeviceMapping(
             source_type='volume', destination_type='volume',
-            volume_id=volume_uuid, volume_size=self.instance_type.root_gb + 1)
+            volume_id=volume_uuid, volume_size=self.flavor.root_gb + 1)
 
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, root_bdm)
+                image, self.flavor, root_bdm)
 
     def test_volume_blockdevicemapping_min_disk(self):
         # A bdm object volume smaller than the image's min_disk should not be
         # allowed
         image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
-                     size=self.instance_type.root_gb * units.Gi,
-                     min_disk=self.instance_type.root_gb + 1)
+                     size=self.flavor.root_gb * units.Gi,
+                     min_disk=self.flavor.root_gb + 1)
 
         volume_uuid = uuids.fake_2
         root_bdm = block_device_obj.BlockDeviceMapping(
             source_type='image', destination_type='volume',
             image_id=image_uuid, volume_id=volume_uuid,
-            volume_size=self.instance_type.root_gb)
+            volume_size=self.flavor.root_gb)
 
         self.assertRaises(exception.VolumeSmallerThanMinDisk,
                           self.compute_api._validate_flavor_image,
-                          self.context, image_uuid, image, self.instance_type,
+                          self.context, image_uuid, image, self.flavor,
                           root_bdm)
 
     def test_volume_blockdevicemapping_min_disk_no_size(self):
         # We should allow a root volume whose size is not given
         image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
-                     size=self.instance_type.root_gb * units.Gi,
-                     min_disk=self.instance_type.root_gb)
+                     size=self.flavor.root_gb * units.Gi,
+                     min_disk=self.flavor.root_gb)
 
         volume_uuid = uuids.fake_2
         root_bdm = block_device_obj.BlockDeviceMapping(
@@ -13956,27 +13957,27 @@ class CheckRequestedImageTestCase(test.TestCase):
             volume_id=volume_uuid, volume_size=None)
 
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, root_bdm)
+                image, self.flavor, root_bdm)
 
     def test_image_blockdevicemapping(self):
         # Test that we can succeed when passing bdms, and the root bdm isn't a
         # volume
         image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
-                     size=self.instance_type.root_gb * units.Gi, min_disk=0)
+                     size=self.flavor.root_gb * units.Gi, min_disk=0)
 
         root_bdm = block_device_obj.BlockDeviceMapping(
             source_type='image', destination_type='local', image_id=image_uuid)
 
         self.compute_api._validate_flavor_image(self.context, image['id'],
-                image, self.instance_type, root_bdm)
+                image, self.flavor, root_bdm)
 
     def test_image_blockdevicemapping_too_big(self):
         # We should do a size check against flavor if we were passed bdms but
         # the root bdm isn't a volume
         image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
-                     size=(self.instance_type.root_gb + 1) * units.Gi,
+                     size=(self.flavor.root_gb + 1) * units.Gi,
                      min_disk=0)
 
         root_bdm = block_device_obj.BlockDeviceMapping(
@@ -13985,14 +13986,14 @@ class CheckRequestedImageTestCase(test.TestCase):
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
                           self.compute_api._validate_flavor_image,
                           self.context, image['id'],
-                          image, self.instance_type, root_bdm)
+                          image, self.flavor, root_bdm)
 
     def test_image_blockdevicemapping_min_disk(self):
         # We should do a min_disk check against flavor if we were passed bdms
         # but the root bdm isn't a volume
         image_uuid = uuids.fake
         image = dict(id=image_uuid, status='active',
-                     size=0, min_disk=self.instance_type.root_gb + 1)
+                     size=0, min_disk=self.flavor.root_gb + 1)
 
         root_bdm = block_device_obj.BlockDeviceMapping(
             source_type='image', destination_type='local', image_id=image_uuid)
@@ -14000,7 +14001,7 @@ class CheckRequestedImageTestCase(test.TestCase):
         self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
                           self.compute_api._validate_flavor_image,
                           self.context, image['id'],
-                          image, self.instance_type, root_bdm)
+                          image, self.flavor, root_bdm)
 
     @mock.patch('nova.virt.hardware.get_dedicated_cpu_constraint')
     def test_cpu_policy(self, dedicated_cpu_mock):
@@ -14014,11 +14015,11 @@ class CheckRequestedImageTestCase(test.TestCase):
                 dedicated_cpu_mock.return_value = None
 
             self.compute_api._validate_flavor_image(
-                self.context, image['id'], image, self.instance_type, None)
+                self.context, image['id'], image, self.flavor, None)
         image['properties'] = {'hw_cpu_policy': 'bar'}
         self.assertRaises(exception.InvalidRequest,
                           self.compute_api._validate_flavor_image,
-                          self.context, image['id'], image, self.instance_type,
+                          self.context, image['id'], image, self.flavor,
                           None)
 
     def test_cpu_thread_policy(self):
@@ -14028,11 +14029,11 @@ class CheckRequestedImageTestCase(test.TestCase):
         for v in obj_fields.CPUThreadAllocationPolicy.ALL:
             image['properties']['hw_cpu_thread_policy'] = v
             self.compute_api._validate_flavor_image(
-                self.context, image['id'], image, self.instance_type, None)
+                self.context, image['id'], image, self.flavor, None)
         image['properties']['hw_cpu_thread_policy'] = 'bar'
         self.assertRaises(exception.InvalidRequest,
                           self.compute_api._validate_flavor_image,
-                          self.context, image['id'], image, self.instance_type,
+                          self.context, image['id'], image, self.flavor,
                           None)
 
         image['properties'] = {
@@ -14041,5 +14042,5 @@ class CheckRequestedImageTestCase(test.TestCase):
                 obj_fields.CPUThreadAllocationPolicy.ISOLATE}
         self.assertRaises(exception.CPUThreadPolicyConfigurationInvalid,
                           self.compute_api._validate_flavor_image,
-                          self.context, image['id'], image, self.instance_type,
+                          self.context, image['id'], image, self.flavor,
                           None)

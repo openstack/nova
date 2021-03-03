@@ -914,12 +914,12 @@ class DisabledFlavorsWithRealDBTestV21(test.TestCase):
         self.context = self.req.environ['nova.context']
         self.admin_context = context.get_admin_context()
 
-        self.disabled_type = self._create_disabled_instance_type()
+        self.disabled_type = self._create_disabled_flavor()
         self.addCleanup(self.disabled_type.destroy)
         self.inst_types = objects.FlavorList.get_all(self.admin_context)
         self.controller = self.Controller()
 
-    def _create_disabled_instance_type(self):
+    def _create_disabled_flavor(self):
         flavor = objects.Flavor(context=self.admin_context,
                                 name='foo.disabled', flavorid='10.disabled',
                                 memory_mb=512, vcpus=2, root_gb=1,

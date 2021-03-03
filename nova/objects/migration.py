@@ -53,6 +53,8 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
         'source_node': fields.StringField(nullable=True),     # source nodename
         'dest_node': fields.StringField(nullable=True),       # dest nodename
         'dest_host': fields.StringField(nullable=True),       # dest host IP
+        # TODO(stephenfin): Rename these to old_flavor_id, new_flavor_id in
+        # v2.0
         'old_instance_type_id': fields.IntegerField(nullable=True),
         'new_instance_type_id': fields.IntegerField(nullable=True),
         'instance_uuid': fields.StringField(nullable=True),

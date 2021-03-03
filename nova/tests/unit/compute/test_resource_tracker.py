@@ -104,7 +104,7 @@ _COMPUTE_NODE_FIXTURES = [
         ),
 ]
 
-_INSTANCE_TYPE_FIXTURES = {
+_FLAVOR_FIXTURES = {
     1: {
         'id': 1,
         'flavorid': 'fakeid-1',
@@ -136,7 +136,7 @@ _INSTANCE_TYPE_FIXTURES = {
 }
 
 
-_INSTANCE_TYPE_OBJ_FIXTURES = {
+_FLAVOR_OBJ_FIXTURES = {
     1: objects.Flavor(id=1, flavorid='fakeid-1', name='fake1.small',
                       memory_mb=128, vcpus=1, root_gb=1,
                       ephemeral_gb=0, swap=0, rxtx_factor=0,
@@ -199,50 +199,50 @@ _INSTANCE_FIXTURES = [
         host=_HOSTNAME,
         node=_NODENAME,
         uuid='c17741a5-6f3d-44a8-ade8-773dc8c29124',
-        memory_mb=_INSTANCE_TYPE_FIXTURES[1]['memory_mb'],
-        vcpus=_INSTANCE_TYPE_FIXTURES[1]['vcpus'],
-        root_gb=_INSTANCE_TYPE_FIXTURES[1]['root_gb'],
-        ephemeral_gb=_INSTANCE_TYPE_FIXTURES[1]['ephemeral_gb'],
+        memory_mb=_FLAVOR_FIXTURES[1]['memory_mb'],
+        vcpus=_FLAVOR_FIXTURES[1]['vcpus'],
+        root_gb=_FLAVOR_FIXTURES[1]['root_gb'],
+        ephemeral_gb=_FLAVOR_FIXTURES[1]['ephemeral_gb'],
         numa_topology=_INSTANCE_NUMA_TOPOLOGIES['2mb'],
         pci_requests=None,
         pci_devices=None,
-        instance_type_id=1,
+        instance_type_id=_FLAVOR_OBJ_FIXTURES[1].id,
+        flavor=_FLAVOR_OBJ_FIXTURES[1],
+        old_flavor=_FLAVOR_OBJ_FIXTURES[1],
+        new_flavor=_FLAVOR_OBJ_FIXTURES[1],
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=None,
         os_type='fake-os',  # Used by the stats collector.
         project_id='fake-project',  # Used by the stats collector.
         user_id=uuids.user_id,
-        flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
-        old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
-        new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
-        deleted = False,
-        resources = None,
+        deleted=False,
+        resources=None,
     ),
     objects.Instance(
         id=2,
         host=_HOSTNAME,
         node=_NODENAME,
         uuid='33805b54-dea6-47b8-acb2-22aeb1b57919',
-        memory_mb=_INSTANCE_TYPE_FIXTURES[2]['memory_mb'],
-        vcpus=_INSTANCE_TYPE_FIXTURES[2]['vcpus'],
-        root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
-        ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
+        memory_mb=_FLAVOR_FIXTURES[2]['memory_mb'],
+        vcpus=_FLAVOR_FIXTURES[2]['vcpus'],
+        root_gb=_FLAVOR_FIXTURES[2]['root_gb'],
+        ephemeral_gb=_FLAVOR_FIXTURES[2]['ephemeral_gb'],
         numa_topology=None,
         pci_requests=None,
         pci_devices=None,
-        instance_type_id=2,
+        instance_type_id=_FLAVOR_OBJ_FIXTURES[2].id,
+        flavor=_FLAVOR_OBJ_FIXTURES[2],
+        old_flavor=_FLAVOR_OBJ_FIXTURES[2],
+        new_flavor=_FLAVOR_OBJ_FIXTURES[2],
         vm_state=vm_states.DELETED,
         power_state=power_state.SHUTDOWN,
         task_state=None,
         os_type='fake-os',
         project_id='fake-project-2',
         user_id=uuids.user_id,
-        flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
-        old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
-        new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
-        deleted = False,
-        resources = None,
+        deleted=False,
+        resources=None,
     ),
 ]
 
@@ -312,24 +312,24 @@ _MIGRATION_INSTANCE_FIXTURES = {
         host=None,  # prevent RT trying to lazy-load this
         node=None,
         uuid='f15ecfb0-9bf6-42db-9837-706eb2c4bf08',
-        memory_mb=_INSTANCE_TYPE_FIXTURES[1]['memory_mb'],
-        vcpus=_INSTANCE_TYPE_FIXTURES[1]['vcpus'],
-        root_gb=_INSTANCE_TYPE_FIXTURES[1]['root_gb'],
-        ephemeral_gb=_INSTANCE_TYPE_FIXTURES[1]['ephemeral_gb'],
+        memory_mb=_FLAVOR_FIXTURES[1]['memory_mb'],
+        vcpus=_FLAVOR_FIXTURES[1]['vcpus'],
+        root_gb=_FLAVOR_FIXTURES[1]['root_gb'],
+        ephemeral_gb=_FLAVOR_FIXTURES[1]['ephemeral_gb'],
         numa_topology=_INSTANCE_NUMA_TOPOLOGIES['2mb'],
         pci_requests=None,
         pci_devices=None,
-        instance_type_id=1,
+        instance_type_id=_FLAVOR_OBJ_FIXTURES[1].id,
+        flavor=_FLAVOR_OBJ_FIXTURES[1],
+        old_flavor=_FLAVOR_OBJ_FIXTURES[1],
+        new_flavor=_FLAVOR_OBJ_FIXTURES[2],
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=task_states.RESIZE_MIGRATING,
         system_metadata={},
         os_type='fake-os',
         project_id='fake-project',
-        flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
-        old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
-        new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
-        resources = None,
+        resources=None,
     ),
     # dest-only
     'f6ed631a-8645-4b12-8e1e-2fff55795765': objects.Instance(
@@ -337,23 +337,23 @@ _MIGRATION_INSTANCE_FIXTURES = {
         host=None,  # prevent RT trying to lazy-load this
         node=None,
         uuid='f6ed631a-8645-4b12-8e1e-2fff55795765',
-        memory_mb=_INSTANCE_TYPE_FIXTURES[2]['memory_mb'],
-        vcpus=_INSTANCE_TYPE_FIXTURES[2]['vcpus'],
-        root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
-        ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
+        memory_mb=_FLAVOR_FIXTURES[2]['memory_mb'],
+        vcpus=_FLAVOR_FIXTURES[2]['vcpus'],
+        root_gb=_FLAVOR_FIXTURES[2]['root_gb'],
+        ephemeral_gb=_FLAVOR_FIXTURES[2]['ephemeral_gb'],
         numa_topology=None,
         pci_requests=None,
         pci_devices=None,
-        instance_type_id=2,
+        instance_type_id=_FLAVOR_OBJ_FIXTURES[2].id,
+        flavor=_FLAVOR_OBJ_FIXTURES[2],
+        old_flavor=_FLAVOR_OBJ_FIXTURES[1],
+        new_flavor=_FLAVOR_OBJ_FIXTURES[2],
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=task_states.RESIZE_MIGRATING,
         system_metadata={},
         os_type='fake-os',
         project_id='fake-project',
-        flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
-        old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
-        new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
         resources=None,
     ),
     # source-and-dest
@@ -362,23 +362,23 @@ _MIGRATION_INSTANCE_FIXTURES = {
         host=None,  # prevent RT trying to lazy-load this
         node=None,
         uuid='f4f0bfea-fe7e-4264-b598-01cb13ef1997',
-        memory_mb=_INSTANCE_TYPE_FIXTURES[2]['memory_mb'],
-        vcpus=_INSTANCE_TYPE_FIXTURES[2]['vcpus'],
-        root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
-        ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
+        memory_mb=_FLAVOR_FIXTURES[2]['memory_mb'],
+        vcpus=_FLAVOR_FIXTURES[2]['vcpus'],
+        root_gb=_FLAVOR_FIXTURES[2]['root_gb'],
+        ephemeral_gb=_FLAVOR_FIXTURES[2]['ephemeral_gb'],
         numa_topology=None,
         pci_requests=None,
         pci_devices=None,
-        instance_type_id=2,
+        instance_type_id=_FLAVOR_OBJ_FIXTURES[2].id,
+        flavor=_FLAVOR_OBJ_FIXTURES[2],
+        old_flavor=_FLAVOR_OBJ_FIXTURES[1],
+        new_flavor=_FLAVOR_OBJ_FIXTURES[2],
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=task_states.RESIZE_MIGRATING,
         system_metadata={},
         os_type='fake-os',
         project_id='fake-project',
-        flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
-        old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
-        new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
         resources=None,
     ),
     # dest-only-evac
@@ -387,23 +387,23 @@ _MIGRATION_INSTANCE_FIXTURES = {
         host=None,  # prevent RT trying to lazy-load this
         node=None,
         uuid='077fb63a-bdc8-4330-90ef-f012082703dc',
-        memory_mb=_INSTANCE_TYPE_FIXTURES[2]['memory_mb'],
-        vcpus=_INSTANCE_TYPE_FIXTURES[2]['vcpus'],
-        root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
-        ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
+        memory_mb=_FLAVOR_FIXTURES[2]['memory_mb'],
+        vcpus=_FLAVOR_FIXTURES[2]['vcpus'],
+        root_gb=_FLAVOR_FIXTURES[2]['root_gb'],
+        ephemeral_gb=_FLAVOR_FIXTURES[2]['ephemeral_gb'],
         numa_topology=None,
         pci_requests=None,
         pci_devices=None,
-        instance_type_id=2,
+        instance_type_id=_FLAVOR_OBJ_FIXTURES[2].id,
+        flavor=_FLAVOR_OBJ_FIXTURES[2],
+        old_flavor=_FLAVOR_OBJ_FIXTURES[1],
+        new_flavor=_FLAVOR_OBJ_FIXTURES[2],
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
         task_state=task_states.REBUILDING,
         system_metadata={},
         os_type='fake-os',
         project_id='fake-project',
-        flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
-        old_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[1],
-        new_flavor=_INSTANCE_TYPE_OBJ_FIXTURES[2],
         resources=None,
     ),
 }
@@ -2388,7 +2388,7 @@ class TestResize(BaseTestCase):
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
 
         instance = _INSTANCE_FIXTURES[0].obj_clone()
-        instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        instance.new_flavor = _FLAVOR_OBJ_FIXTURES[2]
         # This migration context is fine, it points to the first instance
         # fixture and indicates a source-and-dest resize.
         mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[instance.uuid]
@@ -2409,7 +2409,7 @@ class TestResize(BaseTestCase):
             status='migrating',
             uuid=uuids.migration,
         )
-        new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        new_flavor = _FLAVOR_OBJ_FIXTURES[2]
 
         # not using mock.sentinel.ctx because resize_claim calls #elevated
         ctx = mock.MagicMock()
@@ -2499,7 +2499,7 @@ class TestResize(BaseTestCase):
 
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         old_flavor = instance.flavor
-        instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        instance.new_flavor = _FLAVOR_OBJ_FIXTURES[2]
         instance.pci_requests = objects.InstancePCIRequests(requests=[])
 
         # allocations for create
@@ -2559,7 +2559,7 @@ class TestResize(BaseTestCase):
             status='migrating',
             uuid=uuids.migration,
         )
-        new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        new_flavor = _FLAVOR_OBJ_FIXTURES[2]
 
         # Resize instance
         with test.nested(
@@ -2674,7 +2674,7 @@ class TestResize(BaseTestCase):
 
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.task_state = task_states.RESIZE_MIGRATING
-        instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        instance.new_flavor = _FLAVOR_OBJ_FIXTURES[2]
 
         # A destination-only migration
         migration = objects.Migration(
@@ -2698,7 +2698,7 @@ class TestResize(BaseTestCase):
             old_numa_topology=None,
         )
         instance.migration_context = mig_context_obj
-        new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        new_flavor = _FLAVOR_OBJ_FIXTURES[2]
 
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
@@ -2761,7 +2761,7 @@ class TestResize(BaseTestCase):
 
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.task_state = task_states.RESIZE_MIGRATING
-        instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        instance.new_flavor = _FLAVOR_OBJ_FIXTURES[2]
         instance.migration_context = objects.MigrationContext()
         instance.migration_context.new_pci_devices = objects.PciDeviceList(
             objects=pci_devs)
@@ -2835,7 +2835,7 @@ class TestResize(BaseTestCase):
         instance1.id = 1
         instance1.uuid = uuids.instance1
         instance1.task_state = task_states.RESIZE_MIGRATING
-        instance1.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        instance1.new_flavor = _FLAVOR_OBJ_FIXTURES[2]
 
         migration1 = objects.Migration(
             id=1,
@@ -2858,7 +2858,7 @@ class TestResize(BaseTestCase):
             old_numa_topology=None,
         )
         instance1.migration_context = mig_context_obj1
-        flavor1 = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        flavor1 = _FLAVOR_OBJ_FIXTURES[2]
 
         # Instance #2 is resizing to instance type 1 which has 1 vCPU, 128MB
         # RAM and 1GB root disk.
@@ -2866,8 +2866,8 @@ class TestResize(BaseTestCase):
         instance2.id = 2
         instance2.uuid = uuids.instance2
         instance2.task_state = task_states.RESIZE_MIGRATING
-        instance2.old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
-        instance2.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1]
+        instance2.old_flavor = _FLAVOR_OBJ_FIXTURES[2]
+        instance2.new_flavor = _FLAVOR_OBJ_FIXTURES[1]
 
         migration2 = objects.Migration(
             id=2,
@@ -2890,7 +2890,7 @@ class TestResize(BaseTestCase):
             old_numa_topology=None,
         )
         instance2.migration_context = mig_context_obj2
-        flavor2 = _INSTANCE_TYPE_OBJ_FIXTURES[1]
+        flavor2 = _FLAVOR_OBJ_FIXTURES[1]
 
         expected = self.rt.compute_nodes[_NODENAME].obj_clone()
         expected.vcpus_used = (expected.vcpus_used +
@@ -2990,23 +2990,23 @@ class TestRebuild(BaseTestCase):
             host=None,
             node=None,
             uuid='abef5b54-dea6-47b8-acb2-22aeb1b57919',
-            memory_mb=_INSTANCE_TYPE_FIXTURES[2]['memory_mb'],
-            vcpus=_INSTANCE_TYPE_FIXTURES[2]['vcpus'],
-            root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
-            ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
+            memory_mb=_FLAVOR_FIXTURES[2]['memory_mb'],
+            vcpus=_FLAVOR_FIXTURES[2]['vcpus'],
+            root_gb=_FLAVOR_FIXTURES[2]['root_gb'],
+            ephemeral_gb=_FLAVOR_FIXTURES[2]['ephemeral_gb'],
             numa_topology=None,
             pci_requests=None,
             pci_devices=None,
-            instance_type_id=2,
+            instance_type_id=_FLAVOR_OBJ_FIXTURES[2].id,
+            flavor=_FLAVOR_OBJ_FIXTURES[2],
+            old_flavor=_FLAVOR_OBJ_FIXTURES[2],
+            new_flavor=_FLAVOR_OBJ_FIXTURES[2],
             vm_state=vm_states.ACTIVE,
             power_state=power_state.RUNNING,
             task_state=task_states.REBUILDING,
             os_type='fake-os',
             project_id='fake-project',
-            flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
-            old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
-            new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
-            resources = None,
+            resources=None,
         )
 
         # not using mock.sentinel.ctx because resize_claim calls #elevated

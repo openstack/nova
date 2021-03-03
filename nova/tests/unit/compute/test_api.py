@@ -154,6 +154,9 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.host = 'fake_host'
         instance.node = NODENAME
         instance.instance_type_id = flavor.id
+        instance.flavor = flavor
+        instance.old_flavor = None
+        instance.new_flavor = None
         instance.ami_launch_index = 0
         instance.memory_mb = 0
         instance.vcpus = 0
@@ -168,8 +171,6 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.disable_terminate = False
         instance.info_cache = objects.InstanceInfoCache()
         instance.info_cache.network_info = model.NetworkInfo()
-        instance.flavor = flavor
-        instance.old_flavor = instance.new_flavor = None
         instance.numa_topology = None
 
         if params:

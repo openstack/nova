@@ -79,7 +79,7 @@ class ClaimTestCase(test.NoDBTestCase):
     def _claim(self, limits=None, requests=None, **kwargs):
         numa_topology = kwargs.pop('numa_topology', None)
         instance = self._fake_instance(**kwargs)
-        instance.flavor = self._fake_instance_type(**kwargs)
+        instance.flavor = self._fake_flavor(**kwargs)
         if numa_topology:
             db_numa_topology = {
                     'id': 1, 'created_at': None, 'updated_at': None,
@@ -114,8 +114,8 @@ class ClaimTestCase(test.NoDBTestCase):
         instance.update(**kwargs)
         return fake_instance.fake_instance_obj(self.context, **instance)
 
-    def _fake_instance_type(self, **kwargs):
-        instance_type = {
+    def _fake_flavor(self, **kwargs):
+        flavor = {
             'id': 1,
             'name': 'fakeitype',
             'memory_mb': 1024,
@@ -123,8 +123,8 @@ class ClaimTestCase(test.NoDBTestCase):
             'root_gb': 10,
             'ephemeral_gb': 5
         }
-        instance_type.update(**kwargs)
-        return objects.Flavor(**instance_type)
+        flavor.update(**kwargs)
+        return objects.Flavor(**flavor)
 
     def _fake_compute_node(self, values=None):
         compute_node = {
@@ -323,7 +323,7 @@ class MoveClaimTestCase(ClaimTestCase):
 
     def _claim(self, limits=None, requests=None,
                image_meta=None, **kwargs):
-        instance_type = self._fake_instance_type(**kwargs)
+        flavor = self._fake_flavor(**kwargs)
         numa_topology = kwargs.pop('numa_topology', None)
         image_meta = image_meta or {}
         self.instance = self._fake_instance(**kwargs)
@@ -347,7 +347,7 @@ class MoveClaimTestCase(ClaimTestCase):
                     return_value=self.db_numa_topology)
         def get_claim(mock_extra_get, mock_numa_get):
             return claims.MoveClaim(
-                self.context, self.instance, _NODENAME, instance_type,
+                self.context, self.instance, _NODENAME, flavor,
                 image_meta, self.tracker, self.compute_node, requests,
                 objects.Migration(migration_type='migration'), limits=limits)
         return get_claim()
@@ -371,20 +371,20 @@ class MoveClaimTestCase(ClaimTestCase):
 class LiveMigrationClaimTestCase(ClaimTestCase):
 
     def test_live_migration_claim_bad_pci_request(self):
-        instance_type = self._fake_instance_type()
+        flavor = self._fake_flavor()
         instance = self._fake_instance()
         instance.numa_topology = None
         self.assertRaisesRegex(
             exception.ComputeResourcesUnavailable,
             'PCI requests are not supported',
-            claims.MoveClaim, self.context, instance, _NODENAME, instance_type,
+            claims.MoveClaim, self.context, instance, _NODENAME, flavor,
             {}, self.tracker, self.compute_node,
             objects.InstancePCIRequests(requests=[
                 objects.InstancePCIRequest(alias_name='fake-alias')]),
             objects.Migration(migration_type='live-migration'), None)
 
     def test_live_migration_page_size(self):
-        instance_type = self._fake_instance_type()
+        flavor = self._fake_flavor()
         instance = self._fake_instance()
         instance.numa_topology = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(
@@ -399,12 +399,12 @@ class LiveMigrationClaimTestCase(ClaimTestCase):
                 exception.ComputeResourcesUnavailable,
                 'Requested page size is different',
                 claims.MoveClaim, self.context, instance, _NODENAME,
-                instance_type, {}, self.tracker, self.compute_node,
+                flavor, {}, self.tracker, self.compute_node,
                 self.empty_requests,
                 objects.Migration(migration_type='live-migration'), None)
 
     def test_claim_fails_page_size_not_called(self):
-        instance_type = self._fake_instance_type()
+        flavor = self._fake_flavor()
         instance = self._fake_instance()
         # This topology cannot fit in self.compute_node
         # (see _fake_compute_node())
@@ -422,16 +422,16 @@ class LiveMigrationClaimTestCase(ClaimTestCase):
                 exception.ComputeResourcesUnavailable,
                 'Requested instance NUMA topology',
                 claims.MoveClaim, self.context, instance, _NODENAME,
-                instance_type, {}, self.tracker, self.compute_node,
+                flavor, {}, self.tracker, self.compute_node,
                 self.empty_requests,
                 objects.Migration(migration_type='live-migration'), None)
             mock_test_page_size.assert_not_called()
 
     def test_live_migration_no_instance_numa_topology(self):
-        instance_type = self._fake_instance_type()
+        flavor = self._fake_flavor()
         instance = self._fake_instance()
         instance.numa_topology = None
         claims.MoveClaim(
-            self.context, instance, _NODENAME, instance_type, {}, self.tracker,
+            self.context, instance, _NODENAME, flavor, {}, self.tracker,
             self.compute_node, self.empty_requests,
             objects.Migration(migration_type='live-migration'), None)

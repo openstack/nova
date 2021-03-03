@@ -47,8 +47,9 @@ class ForcedHostMissingReScheduleTestCase(
         claim_calls = []
 
         def fake_orig_claim(
-                _self, context, instance, instance_type, nodename,
-                *args, **kwargs):
+            _self, context, instance, flavor, nodename,
+            *args, **kwargs,
+        ):
             if not claim_calls:
                 claim_calls.append(nodename)
                 raise exception.ComputeResourcesUnavailable(
@@ -56,7 +57,7 @@ class ForcedHostMissingReScheduleTestCase(
             else:
                 claim_calls.append(nodename)
                 return orig_claim(
-                    _self, context, instance, instance_type, nodename, *args,
+                    _self, context, instance, flavor, nodename, *args,
                     **kwargs)
 
         with mock.patch(
