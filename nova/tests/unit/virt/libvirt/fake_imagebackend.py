@@ -119,6 +119,9 @@ class ImageBackendFixture(fixtures.Fixture):
         disk.libvirt_info.side_effect = functools.partial(
             self._fake_libvirt_info, disk)
 
+        disk.direct_snapshot.side_effect = (
+            NotImplementedError('direct_snapshot() is not implemented'))
+
         return disk
 
     def _mock_backend(self, backend_self, image_type=None):
