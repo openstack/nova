@@ -1,0 +1,4 @@
+features:
+  - |
+    The Hyper-V driver can now attach Cinder RBD volumes. The minimum
+    requirements are Ceph 16 (Pacific) and Windows Server 2016.

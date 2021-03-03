@@ -599,3 +599,28 @@ class SMBFSVolumeDriverTestCase(test_base.HyperVBaseTestCase):
         mock_set_qos_specs.assert_called_once_with(
             mock.sentinel.disk_path,
             fake_total_iops_sec)
+
+
+class RBDVolumeDriver(test_base.HyperVBaseTestCase):
+    def test_get_vol_driver(self):
+        self._volumeops = volumeops.VolumeOps()
+        self._volumeops._volutils = mock.MagicMock()
+        self._volumeops._vmutils = mock.Mock()
+
+        connection_info = get_fake_connection_info()
+        connection_info['driver_volume_type'] = 'rbd'
+
+        drv = self._volumeops._get_volume_driver(connection_info)
+
+        # Not much to test here. The Hyper-V driver volume attach code
+        # is mostly generic and all the RBD related plumbing is handled
+        # by os-brick.
+        #
+        # We'll just ensure that the RBD driver can be retrieved and that it
+        # has the right fields.
+        self.assertTrue(drv._is_block_dev)
+        self.assertEqual('rbd', drv._protocol)
+        # Hyper-V requires a virtual SCSI disk so we'll ask for a
+        # local attach.
+        self.assertEqual(dict(do_local_attach=True),
+                         drv._extra_connector_args)

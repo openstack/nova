@@ -64,7 +64,7 @@ os-resource-classes==0.4.0
 os-service-types==1.7.0
 os-traits==2.5.0
 os-vif==1.14.0
-os-win==5.1.0
+os-win==5.4.0
 os-xenapi==0.3.4
 osc-lib==1.10.0
 oslo.cache==1.26.0
