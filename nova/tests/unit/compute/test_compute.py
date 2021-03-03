@@ -8484,44 +8484,44 @@ class ComputeAPITestCase(BaseTestCase):
     def test_create_with_too_little_ram(self):
         # Test an instance type with too little memory.
 
-        inst_type = self.default_flavor
-        inst_type['memory_mb'] = 1
+        flavor = self.default_flavor
+        flavor['memory_mb'] = 1
 
         self.fake_image['min_ram'] = 2
         self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.assertRaises(exception.FlavorMemoryTooSmall,
             self.compute_api.create, self.context,
-            inst_type, self.fake_image['id'])
+            flavor, self.fake_image['id'])
 
-        # Now increase the inst_type memory and make sure all is fine.
-        inst_type['memory_mb'] = 2
-        (refs, resv_id) = self.compute_api.create(self.context,
-                inst_type, self.fake_image['id'])
+        # Now increase the flavor memory and make sure all is fine.
+        flavor['memory_mb'] = 2
+        refs, resv_id = self.compute_api.create(
+            self.context, flavor, self.fake_image['id'])
 
     def test_create_with_too_little_disk(self):
         # Test an instance type with too little disk space.
 
-        inst_type = self.default_flavor
-        inst_type['root_gb'] = 1
+        flavor = self.default_flavor
+        flavor['root_gb'] = 1
 
         self.fake_image['min_disk'] = 2
         self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
         self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
             self.compute_api.create, self.context,
-            inst_type, self.fake_image['id'])
+            flavor, self.fake_image['id'])
 
-        # Now increase the inst_type disk space and make sure all is fine.
-        inst_type['root_gb'] = 2
-        (refs, resv_id) = self.compute_api.create(self.context,
-                inst_type, self.fake_image['id'])
+        # Now increase the flavor disk space and make sure all is fine.
+        flavor['root_gb'] = 2
+        refs, resv_id = self.compute_api.create(
+            self.context, flavor, self.fake_image['id'])
 
     def test_create_with_too_large_image(self):
         # Test an instance type with too little disk space.
 
-        inst_type = self.default_flavor
-        inst_type['root_gb'] = 1
+        flavor = self.default_flavor
+        flavor['root_gb'] = 1
 
         self.fake_image['size'] = '1073741825'
 
@@ -8529,39 +8529,39 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
             self.compute_api.create, self.context,
-            inst_type, self.fake_image['id'])
+            flavor, self.fake_image['id'])
 
         # Reduce image to 1 GB limit and ensure it works
         self.fake_image['size'] = '1073741824'
-        (refs, resv_id) = self.compute_api.create(self.context,
-                inst_type, self.fake_image['id'])
+        refs, resv_id = self.compute_api.create(
+            self.context, flavor, self.fake_image['id'])
 
     def test_create_just_enough_ram_and_disk(self):
         # Test an instance type with just enough ram and disk space.
 
-        inst_type = self.default_flavor
-        inst_type['root_gb'] = 2
-        inst_type['memory_mb'] = 2
+        flavor = self.default_flavor
+        flavor['root_gb'] = 2
+        flavor['memory_mb'] = 2
 
         self.fake_image['min_ram'] = 2
         self.fake_image['min_disk'] = 2
         self.fake_image['name'] = 'fake_name'
         self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
-        (refs, resv_id) = self.compute_api.create(self.context,
-                inst_type, self.fake_image['id'])
+        refs, resv_id = self.compute_api.create(
+            self.context, flavor, self.fake_image['id'])
 
     def test_create_with_no_ram_and_disk_reqs(self):
         # Test an instance type with no min_ram or min_disk.
 
-        inst_type = self.default_flavor
-        inst_type['root_gb'] = 1
-        inst_type['memory_mb'] = 1
+        flavor = self.default_flavor
+        flavor['root_gb'] = 1
+        flavor['memory_mb'] = 1
 
         self.stub_out('nova.tests.fixtures.GlanceFixture.show', self.fake_show)
 
-        (refs, resv_id) = self.compute_api.create(self.context,
-                inst_type, self.fake_image['id'])
+        refs, resv_id = self.compute_api.create(
+            self.context, flavor, self.fake_image['id'])
 
     def test_create_with_deleted_image(self):
         # If we're given a deleted image by glance, we should not be able to
@@ -9746,24 +9746,22 @@ class ComputeAPITestCase(BaseTestCase):
                       'destination_type': 'volume'}
         blank_bdm = {'source_type': 'blank', 'destination_type': 'volume'}
 
-        inst_type = {'ephemeral_gb': ephemeral_size, 'swap': swap_size}
+        flavor = {'ephemeral_gb': ephemeral_size, 'swap': swap_size}
         self.assertEqual(
-            self.compute_api._volume_size(inst_type, ephemeral_bdm),
+            self.compute_api._volume_size(flavor, ephemeral_bdm),
             ephemeral_size)
         ephemeral_bdm['volume_size'] = 42
         self.assertEqual(
-            self.compute_api._volume_size(inst_type, ephemeral_bdm), 42)
+            self.compute_api._volume_size(flavor, ephemeral_bdm), 42)
         self.assertEqual(
-            self.compute_api._volume_size(inst_type, swap_bdm),
-            swap_size)
+            self.compute_api._volume_size(flavor, swap_bdm), swap_size)
         swap_bdm['volume_size'] = 42
         self.assertEqual(
-                self.compute_api._volume_size(inst_type, swap_bdm), 42)
+            self.compute_api._volume_size(flavor, swap_bdm), 42)
         self.assertEqual(
-            self.compute_api._volume_size(inst_type, volume_bdm),
-            volume_size)
+            self.compute_api._volume_size(flavor, volume_bdm), volume_size)
         self.assertIsNone(
-            self.compute_api._volume_size(inst_type, blank_bdm))
+            self.compute_api._volume_size(flavor, blank_bdm))
 
     def test_reservation_id_one_instance(self):
         """Verify building an instance has a reservation_id that
@@ -13083,18 +13081,18 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
     def setUp(self):
         super(DisabledInstanceTypesTestCase, self).setUp()
         self.compute_api = compute.API()
-        self.inst_type = objects.Flavor.get_by_name(self.context, 'm1.small')
+        self.flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
 
     def test_can_build_instance_from_visible_flavor(self):
-        self.inst_type['disabled'] = False
+        self.flavor['disabled'] = False
         # Assert that exception.FlavorNotFound is not raised
-        self.compute_api.create(self.context, self.inst_type,
-                                image_href=uuids.image_instance)
+        self.compute_api.create(
+            self.context, self.flavor, image_href=uuids.image_instance)
 
     def test_cannot_build_instance_from_disabled_flavor(self):
-        self.inst_type['disabled'] = True
+        self.flavor['disabled'] = True
         self.assertRaises(exception.FlavorNotFound,
-            self.compute_api.create, self.context, self.inst_type, None)
+            self.compute_api.create, self.context, self.flavor, None)
 
     @mock.patch('nova.compute.api.API.get_instance_host_status',
                 new=mock.Mock(return_value=obj_fields.HostStatus.UP))
@@ -13300,11 +13298,12 @@ class ComputeInactiveImageTestCase(BaseTestCase):
 
     def test_create_instance_with_deleted_image(self):
         # Make sure we can't start an instance with a deleted image.
-        inst_type = objects.Flavor.get_by_name(context.get_admin_context(),
-                                               'm1.tiny')
-        self.assertRaises(exception.ImageNotActive,
-                          self.compute_api.create,
-                          self.context, inst_type, uuids.image_instance)
+        flavor = objects.Flavor.get_by_name(
+            context.get_admin_context(), 'm1.tiny')
+        self.assertRaises(
+            exception.ImageNotActive,
+            self.compute_api.create,
+            self.context, flavor, uuids.image_instance)
 
 
 class EvacuateHostTestCase(BaseTestCase):

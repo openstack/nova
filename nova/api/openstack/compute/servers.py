@@ -680,14 +680,15 @@ class ServersController(wsgi.Controller):
 
         flavor_id = self._flavor_id_from_req_data(body)
         try:
-            inst_type = flavors.get_flavor_by_flavor_id(
-                    flavor_id, ctxt=context, read_deleted="no")
+            flavor = flavors.get_flavor_by_flavor_id(
+                flavor_id, ctxt=context, read_deleted="no")
 
             supports_multiattach = common.supports_multiattach_volume(req)
             supports_port_resource_request = \
                 common.supports_port_resource_request(req)
-            (instances, resv_id) = self.compute_api.create(context,
-                inst_type,
+            instances, resv_id = self.compute_api.create(
+                context,
+                flavor,
                 image_uuid,
                 display_name=name,
                 display_description=description,

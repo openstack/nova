@@ -456,8 +456,8 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
     else:
         metadata = []
 
-    inst_type = flavors.get_flavor_by_flavor_id(int(flavor_id))
-    sys_meta = flavors.save_flavor_info({}, inst_type)
+    sys_meta = flavors.save_flavor_info(
+        {}, flavors.get_flavor_by_flavor_id(int(flavor_id)))
     sys_meta.update(system_metadata or {})
 
     if host is not None:

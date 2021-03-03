@@ -118,9 +118,9 @@ def stub_out_db_instance_api(test, injected=True):
 
     @classmethod
     def fake_flavor_get(cls, context, id):
-        for inst_type in FLAVORS.values():
-            if str(inst_type['id']) == str(id):
-                return inst_type
+        for flavor in FLAVORS.values():
+            if str(flavor['id']) == str(id):
+                return flavor
         return None
 
     funcs = {

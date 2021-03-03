@@ -48,28 +48,30 @@ START = NOW - datetime.timedelta(hours=HOURS)
 STOP = NOW
 
 
-FAKE_INST_TYPE = {'id': 1,
-                  'vcpus': VCPUS,
-                  'root_gb': ROOT_GB,
-                  'ephemeral_gb': EPHEMERAL_GB,
-                  'memory_mb': MEMORY_MB,
-                  'name': 'fakeflavor',
-                  'flavorid': 'foo',
-                  'rxtx_factor': 1.0,
-                  'vcpu_weight': 1,
-                  'swap': 0,
-                  'created_at': None,
-                  'updated_at': None,
-                  'deleted_at': None,
-                  'deleted': 0,
-                  'disabled': False,
-                  'is_public': True,
-                  'extra_specs': {'foo': 'bar'}}
+FAKE_FLAVOR = {
+    'id': 1,
+    'vcpus': VCPUS,
+    'root_gb': ROOT_GB,
+    'ephemeral_gb': EPHEMERAL_GB,
+    'memory_mb': MEMORY_MB,
+    'name': 'fakeflavor',
+    'flavorid': 'foo',
+    'rxtx_factor': 1.0,
+    'vcpu_weight': 1,
+    'swap': 0,
+    'created_at': None,
+    'updated_at': None,
+    'deleted_at': None,
+    'deleted': 0,
+    'disabled': False,
+    'is_public': True,
+    'extra_specs': {'foo': 'bar'},
+}
 
 
 def _fake_instance(start, end, instance_id, tenant_id,
                    vm_state=vm_states.ACTIVE):
-    flavor = objects.Flavor(**FAKE_INST_TYPE)
+    flavor = objects.Flavor(**FAKE_FLAVOR)
     return objects.Instance(
         deleted=False,
         id=instance_id,
@@ -100,7 +102,7 @@ def _fake_instance_deleted_flavorless(context, start, end, instance_id,
         project_id=tenant_id,
         user_id='fakeuser',
         display_name='name',
-        instance_type_id=FAKE_INST_TYPE['id'],
+        instance_type_id=FAKE_FLAVOR['id'],
         launched_at=start,
         terminated_at=end,
         deleted_at=start,
@@ -610,7 +612,7 @@ class SimpleTenantUsageControllerTestV21(test.TestCase):
         self.inst_obj.deleted = 1
         flavor = self.controller._get_flavor(self.context, self.inst_obj, {})
         self.assertEqual(objects.Flavor, type(flavor))
-        self.assertEqual(FAKE_INST_TYPE['id'], flavor.id)
+        self.assertEqual(FAKE_FLAVOR['id'], flavor.id)
 
     @mock.patch('nova.objects.Instance.get_flavor',
                 side_effect=exception.NotFound())
