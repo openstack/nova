@@ -217,15 +217,18 @@ class PciDeviceStats(object):
 
         In case the device is a PF, all of it's dependent VFs should
         be removed from pools count, if these are present.
-        When the device is a VF, it's parent PF pool count should be
-        decreased, unless it is no longer in a pool.
+        When the device is a VF, or a VDPA device, it's parent PF
+        pool count should be decreased, unless it is no longer in a pool.
         """
         if pci_dev.dev_type == fields.PciDeviceType.SRIOV_PF:
             vfs_list = pci_dev.child_devices
             if vfs_list:
                 for vf in vfs_list:
                     self.remove_device(vf)
-        elif pci_dev.dev_type == fields.PciDeviceType.SRIOV_VF:
+        elif pci_dev.dev_type in (
+            fields.PciDeviceType.SRIOV_VF,
+            fields.PciDeviceType.VDPA,
+        ):
             try:
                 parent = pci_dev.parent_device
                 # Make sure not to decrease PF pool count if this parent has
@@ -387,6 +390,28 @@ class PciDeviceStats(object):
             ]
         return pools
 
+    def _filter_pools_for_unrequested_vdpa_devices(self, pools, request):
+        """Filter out pools with VDPA devices, unless these are required.
+
+        This is necessary as vdpa devices require special handling and
+        should not be allocated to generic pci device requests.
+
+        :param pools: A list of PCI device pool dicts
+        :param request: An InstancePCIRequest object describing the type,
+            quantity and required NUMA affinity of device(s) we want.
+        :returns: A list of pools that can be used to support the request if
+            this is possible.
+        """
+        if all(
+            spec.get('dev_type') != fields.PciDeviceType.VDPA
+            for spec in request.spec
+        ):
+            pools = [
+                pool for pool in pools
+                if not pool.get('dev_type') == fields.PciDeviceType.VDPA
+            ]
+        return pools
+
     def _filter_pools(self, pools, request, numa_cells):
         """Determine if an individual PCI request can be met.
 
@@ -421,7 +446,7 @@ class PciDeviceStats(object):
             )
 
         if after_count < request.count:
-            LOG.debug('Not enough PCI devices left to satify request')
+            LOG.debug('Not enough PCI devices left to satisfy request')
             return None
 
         # Next, let's exclude all devices that aren't on the correct NUMA node
@@ -438,10 +463,10 @@ class PciDeviceStats(object):
             )
 
         if after_count < request.count:
-            LOG.debug('Not enough PCI devices left to satify request')
+            LOG.debug('Not enough PCI devices left to satisfy request')
             return None
 
-        # Finally, if we're not requesting PFs then we should not use these.
+        # If we're not requesting PFs then we should not use these.
         # Exclude them.
         before_count = after_count
         pools = self._filter_pools_for_unrequested_pfs(pools, request)
@@ -455,7 +480,24 @@ class PciDeviceStats(object):
             )
 
         if after_count < request.count:
-            LOG.debug('Not enough PCI devices left to satify request')
+            LOG.debug('Not enough PCI devices left to satisfy request')
+            return None
+
+        # If we're not requesting VDPA devices then we should not use these
+        # either. Exclude them.
+        before_count = after_count
+        pools = self._filter_pools_for_unrequested_vdpa_devices(pools, request)
+        after_count = sum([pool['count'] for pool in pools])
+
+        if after_count < before_count:
+            LOG.debug(
+                'Dropped %d devices as they are VDPA devices which we have '
+                'not requested',
+                before_count - after_count
+            )
+
+        if after_count < request.count:
+            LOG.debug('Not enough PCI devices left to satisfy request')
             return None
 
         return pools
