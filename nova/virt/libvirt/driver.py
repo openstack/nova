@@ -6342,6 +6342,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 membacking = vconfig.LibvirtConfigGuestMemoryBacking()
             membacking.locked = True
 
+        if hardware.get_locked_memory_constraint(flavor, image_meta):
+            if not membacking:
+                membacking = vconfig.LibvirtConfigGuestMemoryBacking()
+            membacking.locked = True
+
         return membacking
 
     def _get_memory_backing_hugepages_support(self, inst_topology, numatune):

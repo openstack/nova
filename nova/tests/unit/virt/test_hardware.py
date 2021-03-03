@@ -2814,6 +2814,54 @@ class NumberOfSerialPortsTest(test.NoDBTestCase):
                           flavor, image_meta)
 
 
+class VirtLockMemoryTestCase(test.NoDBTestCase):
+    def _test_get_locked_memory_constraint(self, spec=None, props=None):
+        flavor = objects.Flavor(vcpus=16, memory_mb=2048,
+                                extra_specs=spec or {})
+        image_meta = objects.ImageMeta.from_dict({"properties": props or {}})
+        return hw.get_locked_memory_constraint(flavor, image_meta)
+
+    def test_get_locked_memory_constraint_image(self):
+        self.assertTrue(
+            self._test_get_locked_memory_constraint(
+                spec={"hw:mem_page_size": "small"},
+                props={"hw_locked_memory": "True"}))
+
+    def test_get_locked_memory_conflict(self):
+        ex = self.assertRaises(
+            exception.FlavorImageLockedMemoryConflict,
+            self._test_get_locked_memory_constraint,
+            spec={
+                "hw:locked_memory": "False",
+                "hw:mem_page_size": "small"
+            },
+            props={"hw_locked_memory": "True"}
+        )
+        ex_msg = ("locked_memory value in image (True) and flavor (False) "
+                  "conflict. A consistent value is expected if both "
+                  "specified.")
+        self.assertEqual(ex_msg, str(ex))
+
+    def test_get_locked_memory_constraint_forbidden(self):
+        self.assertRaises(
+            exception.LockMemoryForbidden,
+            self._test_get_locked_memory_constraint,
+            {"hw:locked_memory": "True"})
+
+        self.assertRaises(
+            exception.LockMemoryForbidden,
+            self._test_get_locked_memory_constraint,
+            {},
+            {"hw_locked_memory": "True"})
+
+    def test_get_locked_memory_constraint_image_false(self):
+        # False value of locked_memory will not raise LockMemoryForbidden
+        self.assertFalse(
+            self._test_get_locked_memory_constraint(
+                spec=None,
+                props={"hw_locked_memory": "False"}))
+
+
 class VirtMemoryPagesTestCase(test.NoDBTestCase):
     def test_cell_instance_pagesize(self):
         cell = objects.InstanceNUMACell(

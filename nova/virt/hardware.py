@@ -1337,6 +1337,48 @@ def _get_constraint_mappings_from_flavor(flavor, key, func):
     return hw_numa_map or None
 
 
+def get_locked_memory_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[bool]:
+    """Validate and return the requested locked memory.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: exception.LockMemoryForbidden if mem_page_size is not set
+        while provide locked_memory value in image or flavor.
+    :returns: The locked memory flag requested.
+    """
+    mem_page_size_flavor, mem_page_size_image = _get_flavor_image_meta(
+        'mem_page_size', flavor, image_meta)
+
+    locked_memory_flavor, locked_memory_image = _get_flavor_image_meta(
+        'locked_memory', flavor, image_meta)
+
+    if locked_memory_flavor is not None:
+        # locked_memory_image is boolean type already
+        locked_memory_flavor = strutils.bool_from_string(locked_memory_flavor)
+
+        if locked_memory_image is not None and (
+                locked_memory_flavor != locked_memory_image
+        ):
+            # We don't allow provide different value to flavor and image
+            raise exception.FlavorImageLockedMemoryConflict(
+                image=locked_memory_image, flavor=locked_memory_flavor)
+
+        locked_memory = locked_memory_flavor
+
+    else:
+        locked_memory = locked_memory_image
+
+    if locked_memory and not (
+            mem_page_size_flavor or mem_page_size_image
+    ):
+        raise exception.LockMemoryForbidden()
+
+    return locked_memory
+
+
 def _get_numa_cpu_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
@@ -2106,6 +2148,8 @@ def numa_get_constraints(flavor, image_meta):
     nodes = _get_numa_node_count_constraint(flavor, image_meta)
     pagesize = _get_numa_pagesize_constraint(flavor, image_meta)
     vpmems = get_vpmems(flavor)
+
+    get_locked_memory_constraint(flavor, image_meta)
 
     # If 'hw:cpu_dedicated_mask' is not found in flavor extra specs, the
     # 'dedicated_cpus' variable is None, while we hope it being an empty set.

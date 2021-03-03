@@ -128,7 +128,8 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.9: Added 'hw_emulation_architecture' field
     # Version 1.10: Added 'hw_ephemeral_encryption' and
     #                     'hw_ephemeral_encryption_format' fields
-    VERSION = '1.10'
+    # Version 1.11: Added 'hw_locked_memory' field
+    VERSION = '1.11'
 
     SCHEMA = {
         k: ('image_meta_props', k) for k in image_meta.ImageMetaProps.fields}

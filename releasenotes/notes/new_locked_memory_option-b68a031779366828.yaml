@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Add new ``hw:locked_memory`` extra spec and ``hw_locked_memory`` image
+    property to lock memory on libvirt guest. Locking memory marks the guest
+    memory allocations as unmovable and unswappable.
+    ``hw:locked_memory`` extra spec and ``hw_locked_memory`` image property
+    accept boolean values in string format like 'Yes' or 'false' value.
+    Exception `LockMemoryForbidden` will raise, if you set lock memory value
+    but not set either flavor extra spec
+    ``hw:mem_page_size`` or image property ``hw_mem_page_size``,
+    so we can ensure that the scheduler can actually account for this correctly
+    and prevent out of memory events.

@@ -1861,6 +1861,17 @@ class MemoryPageSizeNotSupported(Invalid):
     msg_fmt = _("Page size %(pagesize)s is not supported by the host.")
 
 
+class LockMemoryForbidden(Forbidden):
+    msg_fmt = _("locked_memory value in image or flavor is forbidden when "
+                "mem_page_size is not set.")
+
+
+class FlavorImageLockedMemoryConflict(NovaException):
+    msg_fmt = _("locked_memory value in image (%(image)s) and flavor "
+                "(%(flavor)s) conflict. A consistent value is expected if "
+                "both specified.")
+
+
 class CPUPinningInvalid(Invalid):
     msg_fmt = _("CPU set to pin %(requested)s must be a subset of "
                 "free CPU set %(available)s")

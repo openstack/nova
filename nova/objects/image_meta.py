@@ -190,14 +190,17 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.31: Added 'hw_emulation_architecture' field
     # Version 1.32: Added 'hw_ephemeral_encryption' and
     #                     'hw_ephemeral_encryption_format' fields
+    # Version 1.33: Added 'hw_locked_memory' field
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.32'
+    VERSION = '1.33'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 33):
+            primitive.pop('hw_locked_memory', None)
         if target_version < (1, 32):
             primitive.pop('hw_ephemeral_encryption', None)
             primitive.pop('hw_ephemeral_encryption_format', None)
@@ -367,6 +370,10 @@ class ImageMetaProps(base.NovaObject):
         # boolean - used to trigger code to inject networking when booting a CD
         # image with a network boot image
         'hw_ipxe_boot': fields.FlexibleBooleanField(),
+
+        # string - make sure ``locked`` element is present in the
+        # ``memoryBacking``.
+        'hw_locked_memory': fields.FlexibleBooleanField(),
 
         # There are sooooooooooo many possible machine types in
         # QEMU - several new ones with each new release - that it
