@@ -9478,12 +9478,20 @@ class ComputeManager(manager.Manager):
             if timeutils.is_older_than(shelved_at, CONF.shelved_offload_time):
                 to_gc.append(instance)
 
+        cyclient = cyborg.get_client(context)
         for instance in to_gc:
             try:
                 instance.task_state = task_states.SHELVING_OFFLOADING
                 instance.save(expected_task_state=(None,))
-                self.shelve_offload_instance(context, instance,
-                                             clean_shutdown=False)
+                accel_uuids = []
+                if instance.flavor.extra_specs.get('accel:device_profile'):
+                    # TODO(brinzhang): After cyborg support batch query ARQs
+                    # for more than one instances, we will improve efficiency
+                    # with this implemention.
+                    accel_uuids = cyclient.get_arq_uuids_for_instance(instance)
+                self.shelve_offload_instance(
+                    context, instance, clean_shutdown=False,
+                    accel_uuids=accel_uuids)
             except Exception:
                 LOG.exception('Periodic task failed to offload instance.',
                               instance=instance)
