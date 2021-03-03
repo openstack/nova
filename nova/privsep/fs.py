@@ -130,12 +130,6 @@ def remove_device_maps(device):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def get_filesystem_type(device):
-    return processutils.execute('blkid', '-o', 'value', '-s', 'TYPE', device,
-                                check_exit_code=[0, 2])
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
 def e2fsck(image, flags='-fp'):
     unprivileged_e2fsck(image, flags=flags)
 
