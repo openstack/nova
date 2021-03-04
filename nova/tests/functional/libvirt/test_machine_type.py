@@ -18,6 +18,7 @@ from oslo_utils.fixture import uuidsentinel
 from nova import context as nova_context
 from nova import objects
 from nova.tests.functional.libvirt import base
+from nova.virt.libvirt import machine_type_utils
 
 
 class LibvirtMachineTypeTest(base.ServersTestBase):
@@ -78,6 +79,14 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
             self.guest_configs[server_id].os_mach_type
         )
 
+    def _unset_machine_type(self, server_id):
+        instance = objects.Instance.get_by_uuid(
+            self.context,
+            server_id,
+        )
+        instance.system_metadata.pop('image_hw_machine_type')
+        instance.save()
+
     def test_init_host_register_machine_type(self):
         """Assert that the machine type of an instance is recorded during
            init_host if not already captured by an image prop.
@@ -91,12 +100,7 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
         # Stop n-cpu and clear the recorded machine type from server_without to
         # allow init_host to register the machine type.
         self.computes['compute1'].stop()
-        instance_without = objects.Instance.get_by_uuid(
-            self.context,
-            server_without['id'],
-        )
-        instance_without.system_metadata.pop('image_hw_machine_type')
-        instance_without.save()
+        self._unset_machine_type(server_without['id'])
 
         self.flags(hw_machine_type='x86_64=pc-q35-1.2.3', group='libvirt')
 
@@ -178,3 +182,20 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
 
     def test_machine_type_after_server_hard_reboot(self):
         self._test_machine_type_after_server_reboot(hard=True)
+
+    def test_machine_type_get(self):
+        self.flags(hw_machine_type='x86_64=pc', group='libvirt')
+
+        server_with, server_without = self._create_servers()
+        self.assertEqual(
+            'q35',
+            machine_type_utils.get_machine_type(
+                self.context, server_with['id']
+            )
+        )
+        self.assertEqual(
+            'pc',
+            machine_type_utils.get_machine_type(
+                self.context, server_without['id']
+            )
+        )
