@@ -2264,6 +2264,21 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         self.assertNotIsInstance(obj.device_addr,
                              config.LibvirtConfigGuestDeviceAddressDrive)
 
+    def test_config_interface_alias(self):
+        xml = """
+            <interface type='network'>
+                <mac address='52:54:00:14:6f:50'/>
+                <source network='default' bridge='virbr0'/>
+                <target dev='vnet0'/>
+                <model type='virtio'/>
+                <alias name='net0'/>
+            </interface>"""
+
+        obj = config.LibvirtConfigGuestInterface()
+        obj.parse_str(xml)
+
+        self.assertEqual('net0', obj.alias)
+
 
 class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
 
@@ -2791,6 +2806,21 @@ class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):
         obj.parse_dom(xmldoc)
 
         self.assertTrue(obj.driver_iommu)
+
+    def test_config_alias_parse(self):
+        xml = """
+            <disk type="file" device="disk">
+              <source file="/tmp/hello.qcow2"/>
+              <target bus="virtio" dev="/dev/sda"/>
+              <serial>7a97c4a3-6f59-41d4-bf47-191d7f97f8e9</serial>
+               <alias name='virtio-disk0'/>
+            </disk>"""
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual('virtio-disk0', obj.alias)
 
 
 class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):

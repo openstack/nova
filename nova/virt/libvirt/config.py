@@ -1036,6 +1036,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.boot_order = None
         self.mirror = None
         self.encryption = None
+        self.alias = None
 
     def _format_iotune(self, dev):
         iotune = etree.Element("iotune")
@@ -1245,6 +1246,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 e = LibvirtConfigGuestDiskEncryption()
                 e.parse_dom(c)
                 self.encryption = e
+            elif c.tag == 'alias':
+                self.alias = c.get('name')
 
 
 class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):
@@ -1687,6 +1690,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vlan = None
         self.device_addr = None
         self.mtu = None
+        self.alias = None
 
     def __eq__(self, other):
         if not isinstance(other, LibvirtConfigGuestInterface):
@@ -1913,6 +1917,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                 self.device_addr = obj
             elif c.tag == 'mtu':
                 self.mtu = int(c.get('size'))
+            elif c.tag == 'alias':
+                self.alias = c.get('name')
 
     def add_filter_param(self, key, value):
         self.filterparams.append({'key': key, 'value': value})
