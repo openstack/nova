@@ -56,7 +56,12 @@ class DummyTracker(object):
 
     def new_pci_tracker(self):
         ctxt = context.RequestContext('testuser', 'testproject')
-        self.pci_tracker = pci_manager.PciDevTracker(ctxt)
+        with mock.patch.object(
+            objects.PciDeviceList, 'get_by_compute_node',
+            return_value=objects.PciDeviceList()
+        ):
+            self.pci_tracker = pci_manager.PciDevTracker(
+                ctxt, objects.ComputeNode(id=1))
 
 
 class ClaimTestCase(test.NoDBTestCase):
