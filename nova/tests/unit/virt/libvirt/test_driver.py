@@ -1475,6 +1475,36 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_register_instance_machine_type', new=mock.Mock())
+    def test__prepare_cpu_flag(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        # The `+` means the guest "require[s]" (i.e. enable in libvirt
+        # parlance) the said CPU feature; and `-` will disable it
+        feat1 = drvr._prepare_cpu_flag('+md-clear')
+        feat2 = drvr._prepare_cpu_flag('pdpe1gb')
+        feat3 = drvr._prepare_cpu_flag('-ssbd')
+
+        self.assertIsInstance(feat1, vconfig.LibvirtConfigGuestCPUFeature)
+        self.assertIsInstance(feat2, vconfig.LibvirtConfigGuestCPUFeature)
+        self.assertIsInstance(feat3, vconfig.LibvirtConfigGuestCPUFeature)
+
+        cpu = vconfig.LibvirtConfigGuestCPU()
+        cpu.add_feature(feat1)
+        cpu.add_feature(feat2)
+        cpu.add_feature(feat3)
+
+        # Verify that the resulting guest XML records both enabled
+        # _and_ disabled CPU features
+        expected_xml = '''
+              <cpu match='exact'>
+                <feature policy='require' name='md-clear'/>
+                <feature policy='require' name='pdpe1gb'/>
+                <feature policy='disable' name='ssbd'/>
+              </cpu>'''
+        self.assertXmlEqual(expected_xml, cpu.to_xml())
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_register_instance_machine_type', new=mock.Mock())
     def test__check_cpu_compatibility_start_ok(self):
         self.flags(cpu_mode="custom",
                    cpu_models=["Penryn"],
@@ -1529,11 +1559,27 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
     def test__check_cpu_compatibility_wrong_flag(self, mocked_compare):
+        # here, and in the surrounding similar tests, the non-zero error
+        # code in the compareCPU() side effect indicates error
         mocked_compare.side_effect = (2, 0)
         self.flags(cpu_mode="custom",
                    cpu_models=["Broadwell-noTSX"],
                    cpu_model_extra_flags = ["a v x"],
                    group="libvirt")
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(exception.InvalidCPUInfo,
+                          drvr.init_host, "dummyhost")
+
+    @mock.patch('nova.virt.libvirt.host.libvirt.Connection.compareCPU')
+    def test__check_cpu_compatibility_enabled_and_disabled_flags(
+            self, mocked_compare
+    ):
+        mocked_compare.side_effect = (2, 0)
+        self.flags(
+            cpu_mode="custom",
+            cpu_models=["Cascadelake-Server"],
+            cpu_model_extra_flags = ["-hle", "-rtm", "+ssbd", "mttr"],
+            group="libvirt")
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertRaises(exception.InvalidCPUInfo,
                           drvr.init_host, "dummyhost")
@@ -8102,6 +8148,43 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(conf.cpu.model, "IvyBridge")
         self.assertIn("pcid", features)
         self.assertIn("vmx", features)
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
+        mock_warn.assert_not_called()
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_guest_cpu_config_custom_flags_enabled_and_disabled(
+            self, mock_warn
+    ):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        self.flags(
+            cpu_mode="custom",
+            cpu_models=["Cascadelake-Server"],
+            cpu_model_extra_flags=['-hle', '-rtm', '+ssbd', 'mtrr'],
+            group='libvirt')
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type,
+            instance_ref,
+            image_meta)
+        conf = drvr._get_guest_config(
+            instance_ref,
+            _fake_network_info(self),
+            image_meta, disk_info)
+        features = [(feature.name, feature.policy)
+                    for feature in conf.cpu.features]
+        self.assertIsInstance(
+            conf.cpu,
+            vconfig.LibvirtConfigGuestCPU)
+        self.assertEqual(conf.cpu.mode, "custom")
+        self.assertEqual(conf.cpu.model, "Cascadelake-Server")
+        self.assertIn(("ssbd", 'require'), features)
+        self.assertIn(("mtrr", 'require'), features)
+        self.assertIn(("hle", 'disable'), features)
+        self.assertIn(("rtm", 'disable'), features)
         self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)

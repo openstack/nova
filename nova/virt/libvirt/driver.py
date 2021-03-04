@@ -818,6 +818,25 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug("Instance machine_type updated to %s", hw_machine_type,
                       instance=instance)
 
+    def _prepare_cpu_flag(self, flag):
+        # NOTE(kchamart) This helper method will be used while computing
+        # guest CPU compatibility.  It will take into account a
+        # comma-separated list of CPU flags from
+        # `[libvirt]cpu_model_extra_flags`.  If the CPU flag starts
+        # with '+', it is enabled for the guest; if it starts with '-',
+        # it is disabled.  If neither '+' nor '-' is specified, the CPU
+        # flag is enabled.
+        if flag.startswith('-'):
+            flag = flag.lstrip('-')
+            policy_value = 'disable'
+        else:
+            flag = flag.lstrip('+')
+            policy_value = 'require'
+
+        cpu_feature = vconfig.LibvirtConfigGuestCPUFeature(
+                        flag, policy=policy_value)
+        return cpu_feature
+
     def _check_cpu_compatibility(self):
         mode = CONF.libvirt.cpu_mode
         models = CONF.libvirt.cpu_models
@@ -857,7 +876,8 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu = vconfig.LibvirtConfigGuestCPU()
         cpu.model = self._host.get_capabilities().host.cpu.model
         for flag in set(x.lower() for x in CONF.libvirt.cpu_model_extra_flags):
-            cpu.add_feature(vconfig.LibvirtConfigCPUFeature(flag))
+            cpu_feature = self._prepare_cpu_flag(flag)
+            cpu.add_feature(cpu_feature)
             try:
                 self._compare_cpu(cpu, self._get_cpu_info(), None)
             except exception.InvalidCPUInfo as e:
@@ -4749,9 +4769,15 @@ class LibvirtDriver(driver.ComputeDriver):
         # do fine-grained validation of a certain CPU model + CPU flags
         # against a specific QEMU binary (the libvirt RFE bug for that:
         # https://bugzilla.redhat.com/show_bug.cgi?id=1559832).
+        #
+        # NOTE(kchamart) Similar to what was done in
+        # _check_cpu_compatibility(), the below parses a comma-separated
+        # list of CPU flags from `[libvirt]cpu_model_extra_flags` and
+        # will selectively enable or disable a given CPU flag for the
+        # guest, before it is launched by Nova.
         for flag in extra_flags:
-            cpu.add_feature(vconfig.LibvirtConfigGuestCPUFeature(flag))
-
+            cpu_feature = self._prepare_cpu_flag(flag)
+            cpu.add_feature(cpu_feature)
         return cpu
 
     def _match_cpu_model_by_flags(self, models, flags):

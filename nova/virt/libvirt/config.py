@@ -818,10 +818,10 @@ class LibvirtConfigCPU(LibvirtConfigObject):
 
 class LibvirtConfigGuestCPUFeature(LibvirtConfigCPUFeature):
 
-    def __init__(self, name=None, **kwargs):
+    def __init__(self, name=None, policy="require", **kwargs):
         super(LibvirtConfigGuestCPUFeature, self).__init__(name, **kwargs)
 
-        self.policy = "require"
+        self.policy = policy
 
     def format_dom(self):
         ft = super(LibvirtConfigGuestCPUFeature, self).format_dom()

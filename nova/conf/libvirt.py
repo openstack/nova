@@ -532,9 +532,8 @@ richer that the previous CPU model.
 
 Possible values:
 
-* The named CPU models listed in ``/usr/share/libvirt/cpu_map.xml`` for
-  libvirt prior to version 4.7.0 or ``/usr/share/libvirt/cpu_map/*.xml``
-  for version 4.7.0 and higher.
+* The named CPU models can be found via ``virsh cpu-models ARCH``, where
+  ARCH is your host architecture.
 
 Related options:
 
@@ -554,53 +553,60 @@ Related options:
         ),
         default=[],
         help="""
-This allows specifying granular CPU feature flags when configuring CPU
-models.  For example, to explicitly specify the ``pcid``
-(Process-Context ID, an Intel processor feature -- which is now required
-to address the guest performance degradation as a result of applying the
-"Meltdown" CVE fixes to certain Intel CPU models) flag to the
-"IvyBridge" virtual CPU model::
+Enable or disable guest CPU flags.
+
+To explicitly enable or disable CPU flags, use the ``+flag`` or
+``-flag`` notation -- the ``+`` sign will enable the CPU flag for the
+guest, while a ``-`` sign will disable it.  If neither ``+`` nor ``-``
+is specified, the flag will be enabled, which is the default behaviour.
+For example, if you specify the following (assuming the said CPU model
+and features are supported by the host hardware and software)::
 
     [libvirt]
     cpu_mode = custom
-    cpu_models = IvyBridge
-    cpu_model_extra_flags = pcid
+    cpu_models = Cascadelake-Server
+    cpu_model_extra_flags = -hle, -rtm, +ssbd, mtrr
 
-To specify multiple CPU flags (e.g. the Intel ``VMX`` to expose the
-virtualization extensions to the guest, or ``pdpe1gb`` to configure 1GB
-huge pages for CPU models that do not provide it)::
+Nova will disable the ``hle`` and ``rtm`` flags for the guest; and it
+will enable ``ssbd`` and ``mttr`` (because it was specified with neither
+``+`` nor ``-`` prefix).
+
+The CPU flags are case-insensitive.  In the following example, the
+``pdpe1gb`` flag will be disabled for the guest; ``vmx`` and ``pcid``
+flags will be enabled::
 
     [libvirt]
     cpu_mode = custom
     cpu_models = Haswell-noTSX-IBRS
-    cpu_model_extra_flags = PCID, VMX, pdpe1gb
+    cpu_model_extra_flags = -PDPE1GB, +VMX, pcid
 
-As it can be noticed from above, the ``cpu_model_extra_flags`` config
-attribute is case insensitive.  And specifying extra flags is valid in
-combination with all the three possible values for ``cpu_mode``:
-``custom`` (this also requires an explicit ``cpu_models`` to be
-specified), ``host-model``, or ``host-passthrough``.  A valid example
-for allowing extra CPU flags even for ``host-passthrough`` mode is that
-sometimes QEMU may disable certain CPU features -- e.g. Intel's
-"invtsc", Invariable Time Stamp Counter, CPU flag.  And if you need to
-expose that CPU flag to the Nova instance, the you need to explicitly
-ask for it.
+Specifying extra CPU flags is valid in combination with all the three
+possible values of ``cpu_mode`` config attribute: ``custom`` (this also
+requires an explicit CPU model to be specified via the ``cpu_models``
+config attribute), ``host-model``, or ``host-passthrough``.
+
+There can be scenarios where you may need to configure extra CPU flags
+even for ``host-passthrough`` CPU mode, because sometimes QEMU may
+disable certain CPU features.  An example of this is Intel's "invtsc"
+(Invariable Time Stamp Counter) CPU flag -- if you need to expose this
+flag to a Nova instance, you need to explicitly enable it.
 
 The possible values for ``cpu_model_extra_flags`` depends on the CPU
-model in use. Refer to ``/usr/share/libvirt/cpu_map.xml`` for libvirt
-prior to version 4.7.0 or ``/usr/share/libvirt/cpu_map/*.xml`` thereafter
-for possible CPU feature flags for a given CPU model.
+model in use.  Refer to `/usr/share/libvirt/cpu_map/*.xml`` for possible
+CPU feature flags for a given CPU model.
 
-Note that when using this config attribute to set the 'PCID' CPU flag
-with the ``custom`` CPU mode, not all virtual (i.e. libvirt / QEMU) CPU
-models need it:
+A special note on a particular CPU flag: ``pcid`` (an Intel processor
+feature that alleviates guest performance degradation as a result of
+applying the 'Meltdown' CVE fixes).  When configuring this flag with the
+``custom`` CPU mode, not all CPU models (as defined by QEMU and libvirt)
+need it:
 
-* The only virtual CPU models that include the 'PCID' capability are
+* The only virtual CPU models that include the ``pcid`` capability are
   Intel "Haswell", "Broadwell", and "Skylake" variants.
 
 * The libvirt / QEMU CPU models "Nehalem", "Westmere", "SandyBridge",
-  and "IvyBridge" will _not_ expose the 'PCID' capability by default,
-  even if the host CPUs by the same name include it.  I.e.  'PCID' needs
+  and "IvyBridge" will _not_ expose the ``pcid`` capability by default,
+  even if the host CPUs by the same name include it.  I.e. 'PCID' needs
   to be explicitly specified when using the said virtual CPU models.
 
 The libvirt driver's default CPU mode, ``host-model``, will do the right
