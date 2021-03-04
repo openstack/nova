@@ -659,6 +659,10 @@ DOMCAPABILITIES_SPARC = """
         <value>yes</value>
         <value>no</value>
       </enum>
+      <enum name='secure'>
+        <value>yes</value>
+        <value>no</value>
+      </enum>
     </loader>
   </os>
   <cpu>
@@ -729,6 +733,10 @@ DOMCAPABILITIES_ARMV7L = """
         <value>pflash</value>
       </enum>
       <enum name='readonly'>
+        <value>yes</value>
+        <value>no</value>
+      </enum>
+      <enum name='secure'>
         <value>yes</value>
         <value>no</value>
       </enum>
@@ -845,6 +853,10 @@ DOMCAPABILITIES_PPC = """
         <value>yes</value>
         <value>no</value>
       </enum>
+      <enum name='secure'>
+        <value>yes</value>
+        <value>no</value>
+      </enum>
     </loader>
   </os>
   <cpu>
@@ -921,6 +933,10 @@ DOMCAPABILITIES_MIPS = """
         <value>pflash</value>
       </enum>
       <enum name='readonly'>
+        <value>yes</value>
+        <value>no</value>
+      </enum>
+      <enum name='secure'>
         <value>yes</value>
         <value>no</value>
       </enum>
@@ -1005,6 +1021,10 @@ DOMCAPABILITIES_MIPSEL = """
         <value>yes</value>
         <value>no</value>
       </enum>
+      <enum name='secure'>
+        <value>yes</value>
+        <value>no</value>
+      </enum>
     </loader>
   </os>
   <cpu>
@@ -1086,6 +1106,10 @@ DOMCAPABILITIES_I686 = """
         <value>pflash</value>
       </enum>
       <enum name='readonly'>
+        <value>yes</value>
+        <value>no</value>
+      </enum>
+      <enum name='secure'>
         <value>yes</value>
         <value>no</value>
       </enum>
@@ -1231,14 +1255,21 @@ DOMCAPABILITIES_X86_64_TEMPLATE = """
   <arch>x86_64</arch>
   <vcpu max='255'/>
   <os supported='yes'>
+    <enum name='firmware'>
+      <value>efi</value>
+    </enum>
     <loader supported='yes'>
-      <value>/usr/share/qemu/ovmf-x86_64-ms-4m-code.bin</value>
-      <value>/usr/share/qemu/ovmf-x86_64-ms-code.bin</value>
+      <value>/usr/share/edk2/ovmf/OVMF_CODE.fd</value>
+      <value>/usr/share/edk2/ovmf/OVMF_CODE.secboot.fd</value>
       <enum name='type'>
         <value>rom</value>
         <value>pflash</value>
       </enum>
       <enum name='readonly'>
+        <value>yes</value>
+        <value>no</value>
+      </enum>
+      <enum name='secure'>
         <value>yes</value>
         <value>no</value>
       </enum>

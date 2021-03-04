@@ -122,6 +122,7 @@ class LibvirtConfigDomainCaps(LibvirtConfigObject):
         self._machine = None
         self._alias = None
         self._devices = None
+        self._os = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigDomainCaps, self).parse_dom(xmldoc)
@@ -137,6 +138,10 @@ class LibvirtConfigDomainCaps(LibvirtConfigObject):
                 devices = LibvirtConfigDomainCapsDevices()
                 devices.parse_dom(c)
                 self._devices = devices
+            elif c.tag == "os":
+                os = LibvirtConfigDomainCapsOS()
+                os.parse_dom(c)
+                self._os = os
 
     @property
     def features(self):
@@ -165,6 +170,10 @@ class LibvirtConfigDomainCaps(LibvirtConfigObject):
         if self._devices is None:
             return []
         return self._devices
+
+    @property
+    def os(self):
+        return self._os
 
 
 class LibvirtConfigDomainCapsVideoModels(LibvirtConfigObject):
@@ -285,6 +294,50 @@ class LibvirtConfigDomainCapsFeatureSev(LibvirtConfigObject):
                 self.reduced_phys_bits = int(c.text)
             elif c.tag == 'cbitpos':
                 self.cbitpos = int(c.text)
+
+
+class LibvirtConfigDomainCapsOS(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super().__init__(root_name='os', **kwargs)
+
+        self.supported = False
+        self.loader_supported = None
+        self.uefi_autoconfig_supported = None
+        self.loader_paths = []
+        self.uefi_supported = None
+        self.secure_boot_supported = None
+
+    def parse_dom(self, xmldoc):
+        super().parse_dom(xmldoc)
+
+        self.supported = xmldoc.get('supported')
+
+        for c in xmldoc:
+            self.loader_supported = c.get('supported')
+
+            if c.tag == 'enum':
+                if c.get('name') == 'firmware':
+                    # theoretically we can also do autoconfiguration of BIOS
+                    # but it's unlikely that anything supports this yet
+                    self.uefi_autoconfig_supported = 'efi' in [
+                        child.text for child in c if child.tag == 'value'
+                    ]
+            elif c.tag == 'loader':
+                for c2 in c:
+                    if c2.tag == 'value':
+                        self.loader_paths.append(c2.text)
+                    elif c2.tag == 'enum':
+                        if c2.get('name') == 'type':
+                            self.uefi_supported = 'pflash' in [
+                                val.text for val in c2 if val.tag == 'value'
+                            ]
+                        elif c2.get('name') == 'secure':
+                            # we might want to ensure 'no' is also supported,
+                            # but a platform that only supports SB sounds odd
+                            self.secure_boot_supported = 'yes' in [
+                                val.text for val in c2 if val.tag == 'value'
+                            ]
 
 
 class LibvirtConfigCapsNUMATopology(LibvirtConfigObject):
