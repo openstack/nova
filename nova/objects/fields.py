@@ -177,7 +177,7 @@ class Architecture(BaseNovaEnum):
         :returns: the canonicalized host architecture
         """
 
-        return cls.canonicalize(os.uname()[4])
+        return cls.canonicalize(os.uname().machine)
 
     @classmethod
     def is_valid(cls, name):

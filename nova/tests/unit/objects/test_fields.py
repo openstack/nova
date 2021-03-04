@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import datetime
 import os
 
@@ -26,6 +27,10 @@ from nova.objects import fields
 from nova import test
 from nova.tests.unit import fake_instance
 from nova import utils
+
+os_uname = collections.namedtuple(
+    'uname_result', ['sysname', 'nodename', 'release', 'version', 'machine'],
+)
 
 
 class FakeFieldType(fields.FieldType):
@@ -187,7 +192,7 @@ class TestEnum(TestField):
 class TestArchitecture(TestField):
     @mock.patch.object(os, 'uname')
     def test_host(self, mock_uname):
-        mock_uname.return_value = (
+        mock_uname.return_value = os_uname(
             'Linux',
             'localhost.localdomain',
             '3.14.8-200.fc20.x86_64',
