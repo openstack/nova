@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    `Bug #1829479 <https://bugs.launchpad.net/nova/+bug/1829479>`_: Now
+    deleting a nova-compute service removes allocations of successfully
+    evacuated instances. This allows the associated resource provider to be
+    deleted automatically even if the nova-compute service cannot recover after
+    all instances on the node have been successfully evacuated.
