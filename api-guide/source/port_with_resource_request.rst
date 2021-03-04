@@ -30,7 +30,8 @@ neutron ports having resource requests if both the source and destination
 compute services are upgraded to 20.0.0 (Train) and the
 ``[upgrade_levels]/compute`` configuration does not prevent the computes from
 using the latest RPC version. However cross cell resize and cross cell migrate
-operations are still not supported with such ports.
+operations are still not supported with such ports and Nova will fall back to
+same-cell resize if the server has such ports.
 
 As of 21.0.0 (Ussuri), nova supports evacuating, live migrating and unshelving
 servers with neutron ports having resource requests.
