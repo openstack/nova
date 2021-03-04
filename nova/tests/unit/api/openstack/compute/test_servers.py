@@ -4190,70 +4190,12 @@ class ServersControllerCreateTest(test.TestCase):
         super(ServersControllerCreateTest, self).setUp()
 
         self.flags(enable_instance_password=True, group='api')
-        self.instance_cache_num = 0
-        self.instance_cache_by_id = {}
-        self.instance_cache_by_uuid = {}
-
         fakes.stub_out_nw_api(self)
+        fakes.stub_out_key_pair_funcs(self)
 
         self.controller = servers.ServersController()
 
-        def instance_create(context, inst):
-            flavor = flavors.get_flavor_by_flavor_id(3)
-            image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-            def_image_ref = 'http://localhost/%s/images/%s' % (self.project_id,
-                                                               image_uuid)
-            self.instance_cache_num += 1
-            instance = fake_instance.fake_db_instance(**{
-                'id': self.instance_cache_num,
-                'display_name': inst['display_name'] or 'test',
-                'display_description': inst['display_description'] or '',
-                'uuid': FAKE_UUID,
-                'flavor': flavor,
-                'image_ref': inst.get('image_ref', def_image_ref),
-                'user_id': 'fake',
-                'project_id': fakes.FAKE_PROJECT_ID,
-                'reservation_id': inst['reservation_id'],
-                "created_at": datetime.datetime(2010, 10, 10, 12, 0, 0),
-                "updated_at": datetime.datetime(2010, 11, 11, 11, 0, 0),
-                "config_drive": None,
-                "progress": 0,
-                "fixed_ips": [],
-                "task_state": "",
-                "vm_state": "",
-                "root_device_name": inst.get('root_device_name', 'vda'),
-            })
-
-            self.instance_cache_by_id[instance['id']] = instance
-            self.instance_cache_by_uuid[instance['uuid']] = instance
-            return instance
-
-        def instance_get(context, instance_id):
-            """Stub for compute/api create() pulling in instance after
-            scheduling
-            """
-            return self.instance_cache_by_id[instance_id]
-
-        def instance_update(context, uuid, values):
-            instance = self.instance_cache_by_uuid[uuid]
-            instance.update(values)
-            return instance
-
-        def server_update_and_get_original(
-                context, instance_uuid, params, columns_to_join=None):
-            inst = self.instance_cache_by_uuid[instance_uuid]
-            inst.update(params)
-            return (inst, inst)
-
-        fakes.stub_out_key_pair_funcs(self)
         self.useFixture(nova_fixtures.GlanceFixture(self))
-        self.stub_out('nova.db.api.instance_create', instance_create)
-        self.stub_out('nova.db.api.instance_system_metadata_update',
-                      lambda *a, **kw: None)
-        self.stub_out('nova.db.api.instance_get', instance_get)
-        self.stub_out('nova.db.api.instance_update', instance_update)
-        self.stub_out('nova.db.api.instance_update_and_get_original',
-                server_update_and_get_original)
         self.body = {
             'server': {
                 'name': 'server_test',
@@ -4294,8 +4236,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def _check_admin_password_len(self, server_dict):
         """utility function - check server_dict for admin_password length."""
-        self.assertEqual(CONF.password_length,
-                         len(server_dict["adminPass"]))
+        self.assertEqual(CONF.password_length, len(server_dict["adminPass"]))
 
     def _check_admin_password_missing(self, server_dict):
         """utility function - check server_dict for admin_password absence."""
@@ -5847,6 +5788,8 @@ class ServersControllerCreateTest(test.TestCase):
         """Test creating multiple instances but not asking for
         reservation_id
         """
+        self.instance_cache_by_uuid = {}
+
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
@@ -5878,6 +5821,8 @@ class ServersControllerCreateTest(test.TestCase):
         reservation_id
         """
         self.flags(enable_instance_password=False, group='api')
+        self.instance_cache_by_uuid = {}
+
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
@@ -5908,6 +5853,8 @@ class ServersControllerCreateTest(test.TestCase):
         """Test creating multiple instances with asking for
         reservation_id
         """
+        self.instance_cache_by_uuid = {}
+
         def _populate_instance_for_create(*args, **kwargs):
             instance = args[2]
             self.instance_cache_by_uuid[instance.uuid] = instance
@@ -6025,6 +5972,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, self.req, body=body)
 
     def test_create_multiple_instance_max_count_overquota_min_count_ok(self):
+        self.instance_cache_by_uuid = {}
         self.flags(instances=3, group='quota')
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/123/flavors/3'
@@ -7045,9 +6993,6 @@ class ServersControllerCreateTestWithMock(test.TestCase):
         super(ServersControllerCreateTestWithMock, self).setUp()
 
         self.flags(enable_instance_password=True, group='api')
-        self.instance_cache_num = 0
-        self.instance_cache_by_id = {}
-        self.instance_cache_by_uuid = {}
 
         self.controller = servers.ServersController()
 
