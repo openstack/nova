@@ -2228,12 +2228,14 @@ class LibvirtDriver(driver.ComputeDriver):
         # that is only available since python 3.8
         get_device_conf_func: ty.Callable,
         device_name: str,
-        live: bool,
     ) -> None:
         """Detaches a device from the guest
 
-        If live detach is requested then this call will wait for the libvirt
-        event signalling the end of the detach process.
+        If the guest is a running state then the detach is performed on both
+        the persistent and live domains.
+
+        In case of live detach this call will wait for the libvirt event
+        signalling the end of the detach process.
 
         If the live detach times out then it will retry the detach. Detach from
         the persistent config is not retried as it is:
@@ -2251,10 +2253,6 @@ class LibvirtDriver(driver.ComputeDriver):
         :param device_name: This is the name of the device used solely for
             error messages. Note that it is not the same as the device alias
             used by libvirt to identify the device.
-        :param live: bool to indicate whether it affects the guest in running
-            state. If live is True then the device is detached from both the
-            persistent and the live config. If live is False the device only
-            detached from the persistent config.
         :raises exception.DeviceNotFound: if the device does not exist in the
             domain even before we try to detach or if libvirt reported that the
             device is missing from the domain synchronously.
@@ -2264,6 +2262,9 @@ class LibvirtDriver(driver.ComputeDriver):
         :raises libvirt.libvirtError: for any other errors reported by libvirt
             synchronously.
         """
+        state = guest.get_power_state(self._host)
+        live = state in (power_state.RUNNING, power_state.PAUSED)
+
         persistent = guest.has_persistent_configuration()
 
         if not persistent and not live:
@@ -2278,13 +2279,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if live:
             live_dev = get_device_conf_func()
 
-        if live and live_dev is None:
-            # caller requested a live detach but device is not present
-            raise exception.DeviceNotFound(device=device_name)
-
-        if not live and persistent_dev is None:
-            # caller requested detach from the persistent domain but device is
-            # not present
+        # didn't find the device in either domain
+        if persistent_dev is None and live_dev is None:
             raise exception.DeviceNotFound(device=device_name)
 
         if persistent_dev:
@@ -2293,19 +2289,19 @@ class LibvirtDriver(driver.ComputeDriver):
                     guest, instance_uuid, persistent_dev, get_device_conf_func,
                     device_name)
             except exception.DeviceNotFound:
-                if live:
+                if live_dev:
                     # ignore the error so that we can do the live detach
                     LOG.warning(
                         'Libvirt reported sync error while detaching '
                         'device %s from instance %s from the persistent '
                         'domain config. Ignoring the error to proceed with '
-                        'live detach as that was also requested.',
+                        'live detach as the device exists in the live domain.',
                         device_name, instance_uuid)
                 else:
                     # if only persistent detach was requested then give up
                     raise
 
-        if live and live_dev:
+        if live_dev:
             self._detach_from_live_with_retry(
                 guest, instance_uuid, live_dev, get_device_conf_func,
                 device_name)
@@ -2541,8 +2537,6 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             guest = self._host.get_guest(instance)
 
-            state = guest.get_power_state(self._host)
-            live = state in (power_state.RUNNING, power_state.PAUSED)
             # NOTE(lyarwood): The volume must be detached from the VM before
             # detaching any attached encryptors or disconnecting the underlying
             # volume in _disconnect_volume. Otherwise, the encryptor or volume
@@ -2553,7 +2547,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 instance.uuid,
                 get_dev,
                 device_name=disk_dev,
-                live=live
             )
         except exception.InstanceNotFound:
             # NOTE(zhaoqin): If the instance does not exist, _lookup_by_name()
@@ -2759,15 +2752,12 @@ class LibvirtDriver(driver.ComputeDriver):
                             {'mac': mac}, instance=instance)
                 return
 
-            state = guest.get_power_state(self._host)
-            live = state in (power_state.RUNNING, power_state.PAUSED)
             get_dev = functools.partial(guest.get_interface_by_cfg, cfg)
             self._detach_with_retry(
                 guest,
                 instance.uuid,
                 get_dev,
                 device_name=self.vif_driver.get_vif_devname(vif),
-                live=live,
             )
         except exception.DeviceDetachFailed:
             # We failed to detach the device even with the retry loop, so let's
