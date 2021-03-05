@@ -2,34 +2,6 @@
 # for job naming conventions.
 
 - job:
-    name: nova-dsvm-multinode-base
-    parent: legacy-dsvm-base-multinode
-    description: |
-      Base job for multinode nova devstack/tempest jobs.
-      Will setup firewall rules on all the nodes allowing them to talk to
-      each other.
-    timeout: 10800
-    required-projects:
-      - openstack/devstack-gate
-      - openstack/nova
-      - openstack/tempest
-    irrelevant-files: &dsvm-irrelevant-files
-      - ^api-.*$
-      - ^(test-|)requirements.txt$
-      - ^.*\.rst$
-      - ^.git.*$
-      - ^doc/.*$
-      - ^nova/hacking/.*$
-      - ^nova/locale/.*$
-      - ^nova/policies/.*$
-      - ^nova/tests/.*$
-      - ^nova/test.py$
-      - ^releasenotes/.*$
-      - ^setup.cfg$
-      - ^tools/.*$
-      - ^tox.ini$
-
-- job:
     name: nova-tox-functional-py38
     parent: openstack-tox-functional-py38
     description: |
@@ -84,7 +56,22 @@
     description: |
       Run tempest live migration tests against local qcow2 ephemeral storage
       and shared LVM/iSCSI cinder volumes.
-    irrelevant-files: *dsvm-irrelevant-files
+    irrelevant-files: &nova-base-irrelevant-files
+      - ^api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/policies/.*$
+      - ^nova/tests/.*$
+      - ^nova/test.py$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tools/.*$
+      - ^tox.ini$
+
     vars:
       tox_envlist: all
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
@@ -105,7 +92,7 @@
     description: |
       Run tempest live migration tests against ceph ephemeral storage and
       cinder volumes.
-    irrelevant-files: *dsvm-irrelevant-files
+    irrelevant-files: *nova-base-irrelevant-files
     vars:
       tox_envlist: all
       tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
@@ -191,7 +178,7 @@
       Starting in Ussuri, the job was changed to multinode.
       Starting in Wallaby, the job defaults to the q35 machine type.
       Runs all tempest compute API and most scenario tests concurrently.
-    irrelevant-files: *dsvm-irrelevant-files
+    irrelevant-files: *nova-base-irrelevant-files
     # Run post-tempest tests like for nova-manage commands.
     post-run: playbooks/nova-next/post.yaml
     vars:
@@ -335,7 +322,7 @@
       tests with the controller upgraded and the compute on the older release.
       The former names for this job were "nova-grenade-live-migration" and
       "legacy-grenade-dsvm-neutron-multinode-live-migration".
-    irrelevant-files: *dsvm-irrelevant-files
+    irrelevant-files: *nova-base-irrelevant-files
     vars:
       devstack_local_conf:
         test-config:
@@ -355,7 +342,7 @@
       Multi-node python3 job which runs with two nodes and two non-cell0
       cells. The compute on the controller runs in cell1 and the compute
       on the subnode runs in cell2.
-    irrelevant-files: *dsvm-irrelevant-files
+    irrelevant-files: *nova-base-irrelevant-files
     vars:
       # We use the "all" environment for tempest_test_regex and
       # tempest_test_exclude_list.
@@ -413,7 +400,7 @@
     description: |
       Runs osprofiler with the Redis collector on a subset of compute-specific
       tempest-full-py3 smoke tests.
-    irrelevant-files: *dsvm-irrelevant-files
+    irrelevant-files: *nova-base-irrelevant-files
     required-projects:
       - openstack/nova
     vars:
@@ -427,7 +414,7 @@
     parent: devstack-plugin-ceph-tempest-py3
     description: |
       Just like the normal ceph job, but with glance multistore
-    irrelevant-files: *dsvm-irrelevant-files
+    irrelevant-files: *nova-base-irrelevant-files
     required-projects:
       - openstack/nova
     pre-run:
@@ -489,9 +476,9 @@
         # on things like nova docs-only changes.
         - ironic-tempest-ipa-wholedisk-bios-agent_ipmitool-tinyipa:
             voting: false
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - nova-ceph-multistore:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - neutron-tempest-linuxbridge:
             irrelevant-files:
               # NOTE(mriedem): This job has its own irrelevant-files section
@@ -528,14 +515,14 @@
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - cyborg-tempest:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
             voting: false
         - barbican-tempest-plugin-simple-crypto:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
             voting: false
     gate:
       jobs:
@@ -545,7 +532,7 @@
         - nova-multi-cell
         - nova-next
         - nova-ceph-multistore:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - neutron-tempest-linuxbridge:
             irrelevant-files:
               # NOTE(mriedem): This job has its own irrelevant-files section
@@ -557,35 +544,35 @@
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
     experimental:
       jobs:
         - ironic-tempest-bfv:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - devstack-plugin-nfs-tempest-full:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - nova-osprofiler-redis
         - tempest-full-py3-opensuse15:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - tempest-pg-full:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - nova-tempest-full-oslo.versionedobjects:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - nova-tempest-v2-api:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - neutron-tempest-dvr-ha-multinode-full:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - neutron-tempest-iptables_hybrid:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - os-vif-ovs:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - devstack-platform-fedora-latest:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - devstack-platform-fedora-latest-virt-preview:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
         - devstack-plugin-ceph-compute-local-ephemeral:
-            irrelevant-files: *dsvm-irrelevant-files
+            irrelevant-files: *nova-base-irrelevant-files
