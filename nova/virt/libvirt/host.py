@@ -28,6 +28,8 @@ the other libvirt related classes
 """
 
 from collections import defaultdict
+import fnmatch
+import glob
 import inspect
 import operator
 import os
@@ -41,6 +43,7 @@ from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import units
@@ -81,6 +84,36 @@ HV_DRIVER_QEMU = "QEMU"
 
 SEV_KERNEL_PARAM_FILE = '/sys/module/kvm_amd/parameters/sev'
 
+# These are taken from the spec
+# https://github.com/qemu/qemu/blob/v5.2.0/docs/interop/firmware.json
+QEMU_FIRMWARE_DESCRIPTOR_PATHS = [
+    '/usr/share/qemu/firmware',
+    '/etc/qemu/firmware',
+    # we intentionally ignore '$XDG_CONFIG_HOME/qemu/firmware'
+]
+
+
+def _get_loaders():
+    if not any(
+        os.path.exists(path) for path in QEMU_FIRMWARE_DESCRIPTOR_PATHS
+    ):
+        msg = _("Failed to locate firmware descriptor files")
+        raise exception.InternalError(msg)
+
+    _loaders = []
+
+    for path in QEMU_FIRMWARE_DESCRIPTOR_PATHS:
+        if not os.path.exists(path):
+            continue
+
+        for spec_path in sorted(glob.glob(f'{path}/*.json')):
+            with open(spec_path) as fh:
+                spec = jsonutils.load(fh)
+
+            _loaders.append(spec)
+
+    return _loaders
+
 
 class Host(object):
 
@@ -117,6 +150,8 @@ class Host(object):
         self._initialized = False
         self._libvirt_proxy_classes = self._get_libvirt_proxy_classes(libvirt)
         self._libvirt_proxy = self._wrap_libvirt_proxy(libvirt)
+
+        self._loaders: ty.Optional[ty.List[dict]] = None
 
         # A number of features are conditional on support in the hardware,
         # kernel, QEMU, and/or libvirt. These are determined on demand and
@@ -1247,6 +1282,34 @@ class Host(object):
         except IOError:
             return False
 
+    def get_canonical_machine_type(self, arch, machine) -> str:
+        """Resolve a machine type to its canonical representation.
+
+        Libvirt supports machine type aliases. On an x86 host the 'pc' machine
+        type is an alias for e.g. 'pc-1440fx-5.1'. Resolve the provided machine
+        type to its canonical representation so that it can be used for other
+        operations.
+
+        :param arch: The guest arch.
+        :param machine: The guest machine type.
+        :returns: The canonical machine type.
+        :raises: exception.InternalError if the machine type cannot be resolved
+            to its canonical representation.
+        """
+        for guest in self.get_capabilities().guests:
+            if guest.arch != arch:
+                continue
+
+            for domain in guest.domains:
+                if machine in guest.domains[domain].machines:
+                    return machine
+
+                if machine in guest.domains[domain].aliases:
+                    return guest.domains[domain].aliases[machine]['canonical']
+
+        msg = _('Invalid machine type: %s')
+        raise exception.InternalError(msg % machine)
+
     @property
     def has_hyperthreading(self) -> bool:
         """Determine if host CPU has SMT, a.k.a. HyperThreading.
@@ -1376,3 +1439,68 @@ class Host(object):
 
         LOG.debug("No AMD SEV support detected for any (arch, machine_type)")
         return self._supports_amd_sev
+
+    @property
+    def loaders(self) -> ty.List[dict]:
+        """Retrieve details of loader configuration for the host.
+
+        Inspect the firmware metadata files provided by QEMU [1] to retrieve
+        information about the firmware supported by this host. Note that most
+        distros only publish this information for UEFI loaders currently.
+
+        This should be removed when libvirt correctly supports switching
+        between loaders with or without secure boot enabled [2].
+
+        [1] https://github.com/qemu/qemu/blob/v5.2.0/docs/interop/firmware.json
+        [2] https://bugzilla.redhat.com/show_bug.cgi?id=1906500
+
+        :returns: An ordered list of loader configuration dictionaries.
+        """
+        if self._loaders is not None:
+            return self._loaders
+
+        self._loaders = _get_loaders()
+        return self._loaders
+
+    def get_loader(
+        self,
+        arch: str,
+        machine: str,
+        has_secure_boot: bool,
+    ) -> ty.Tuple[str, str]:
+        """Get loader for the specified architecture and machine type.
+
+        :returns: A tuple of the bootloader executable path and the NVRAM
+            template path.
+        """
+
+        machine = self.get_canonical_machine_type(arch, machine)
+
+        for loader in self.loaders:
+            for target in loader['targets']:
+                if arch != target['architecture']:
+                    continue
+
+                for machine_glob in target['machines']:
+                    # the 'machines' attribute supports glob patterns (e.g.
+                    # 'pc-q35-*') so we need to resolve these
+                    if fnmatch.fnmatch(machine, machine_glob):
+                        break
+                else:
+                    continue
+
+                # if we've got this far, we have a match on the target
+                break
+            else:
+                continue
+
+            # if we request secure boot then we should get it and vice versa
+            if has_secure_boot != ('secure-boot' in loader['features']):
+                continue
+
+            return (
+                loader['mapping']['executable']['filename'],
+                loader['mapping']['nvram-template']['filename'],
+            )
+
+        raise exception.UEFINotSupported()

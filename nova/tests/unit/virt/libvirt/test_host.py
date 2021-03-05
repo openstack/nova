@@ -20,6 +20,7 @@ import eventlet
 from eventlet import greenthread
 from eventlet import tpool
 import mock
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import testtools
@@ -1209,6 +1210,21 @@ cg /cgroup/memory cg opt1,opt2 0 0
     def test_is_cpu_control_policy_capable_ioerror(self, mock_open):
         self.assertFalse(self.host.is_cpu_control_policy_capable())
 
+    def test_get_canonical_machine_type(self):
+        # this test relies on configuration from the FakeLibvirtFixture
+
+        machine_type = self.host.get_canonical_machine_type('x86_64', 'pc')
+        self.assertEqual('pc-i440fx-2.11', machine_type)
+
+        machine_type = self.host.get_canonical_machine_type(
+            'x86_64', 'pc-i440fx-2.11')
+        self.assertEqual('pc-i440fx-2.11', machine_type)
+
+        self.assertRaises(
+            exception.InternalError,
+            self.host.get_canonical_machine_type,
+            'x86_64', 'pc-foo-1.2')
+
     @mock.patch('nova.virt.libvirt.host.libvirt.Connection.getCapabilities')
     def test_has_hyperthreading__true(self, mock_cap):
         mock_cap.return_value = """
@@ -1442,6 +1458,86 @@ cg /cgroup/memory cg opt1,opt2 0 0
         """
         self.assertTrue(self.host.supports_secure_boot)
 
+    @mock.patch.object(host.Host, 'loaders', new_callable=mock.PropertyMock)
+    @mock.patch.object(host.Host, 'get_canonical_machine_type')
+    def test_get_loader(self, mock_get_mtype, mock_loaders):
+        loaders = [
+            {
+                'description': 'Sample descriptor',
+                'interface-types': ['uefi'],
+                'mapping': {
+                    'device': 'flash',
+                    'executable': {
+                        'filename': '/usr/share/edk2/ovmf/OVMF_CODE.fd',
+                        'format': 'raw',
+                    },
+                    'nvram-template': {
+                        'filename': '/usr/share/edk2/ovmf/OVMF_VARS.fd',
+                        'format': 'raw',
+                    },
+                },
+                'targets': [
+                    {
+                        'architecture': 'x86_64',
+                        'machines': ['pc-q35-*'],  # exclude pc-i440fx-*
+                    },
+                ],
+                'features': ['acpi-s3', 'amd-sev', 'verbose-dynamic'],
+                'tags': [],
+            },
+        ]
+
+        def fake_get_mtype(arch, machine):
+            return {
+                'x86_64': {
+                    'pc': 'pc-i440fx-5.1',
+                    'q35': 'pc-q35-5.1',
+                },
+                'aarch64': {
+                    'virt': 'virt-5.1',
+                },
+            }[arch][machine]
+
+        mock_get_mtype.side_effect = fake_get_mtype
+        mock_loaders.return_value = loaders
+
+        # this should pass because we're not reporting the secure-boot feature
+        # which is what we don't want
+        loader = self.host.get_loader('x86_64', 'q35', has_secure_boot=False)
+        self.assertIsNotNone(loader)
+
+        # while it should fail here since we want it now
+        self.assertRaises(
+            exception.UEFINotSupported,
+            self.host.get_loader,
+            'x86_64', 'q35', has_secure_boot=True)
+
+        # it should also fail for an unsupported architecture
+        self.assertRaises(
+            exception.UEFINotSupported,
+            self.host.get_loader,
+            'aarch64', 'virt', has_secure_boot=False)
+
+        # or an unsupported machine type
+        self.assertRaises(
+            exception.UEFINotSupported,
+            self.host.get_loader,
+            'x86_64', 'pc', has_secure_boot=False)
+
+        # add the secure-boot feature flag
+        loaders[0]['features'].append('secure-boot')
+
+        # this should pass because we're reporting the secure-boot feature
+        # which is what we want
+        loader = self.host.get_loader('x86_64', 'q35', has_secure_boot=True)
+        self.assertIsNotNone(loader)
+
+        # while it should fail here since we don't want it now
+        self.assertRaises(
+            exception.UEFINotSupported,
+            self.host.get_loader,
+            'x86_64', 'q35', has_secure_boot=False)
+
 
 vc = fakelibvirt.virConnect
 
@@ -1566,3 +1662,51 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
         for domain in domains:
             self.assertIsInstance(domain, tpool.Proxy)
             self.assertIn(domain.UUIDString(), (uuids.vm1, uuids.vm2))
+
+
+class LoadersTestCase(test.NoDBTestCase):
+
+    def test_loaders(self):
+        loader = {
+            'description': 'Sample descriptor',
+            'interface-types': ['uefi'],
+            'mapping': {
+                'device': 'flash',
+                'executable': {
+                    'filename': '/usr/share/edk2/ovmf/OVMF_CODE.fd',
+                    'format': 'raw',
+                },
+                'nvram-template': {
+                    'filename': '/usr/share/edk2/ovmf/OVMF_VARS.fd',
+                    'format': 'raw',
+                },
+            },
+            'targets': [
+                {
+                    'architecture': 'x86_64',
+                    'machines': ['pc-i440fx-*', 'pc-q35-*'],
+                },
+            ],
+            'features': ['acpi-s3', 'amd-sev', 'verbose-dynamic'],
+            'tags': [],
+        }
+
+        m = mock.mock_open(read_data=jsonutils.dumps(loader).encode('utf-8'))
+        with test.nested(
+            mock.patch.object(
+                os.path, 'exists',
+                side_effect=lambda path: path == '/usr/share/qemu/firmware'),
+            mock.patch('glob.glob', return_value=['10_fake.json']),
+            mock.patch('builtins.open', m, create=True),
+        ) as (mock_exists, mock_glob, mock_open):
+            loaders = host._get_loaders()
+
+            self.assertEqual(loaders, [loader])
+
+            mock_exists.assert_has_calls([
+                mock.call('/usr/share/qemu/firmware'),
+                mock.call('/etc/qemu/firmware'),
+            ])
+            mock_glob.assert_called_once_with(
+                '/usr/share/qemu/firmware/*.json')
+            mock_open.assert_called_once_with('10_fake.json')
