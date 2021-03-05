@@ -2526,6 +2526,13 @@ class LibvirtDriver(driver.ComputeDriver):
                     'still being in progress.', device_name, instance_uuid)
                 return
 
+            if code == libvirt.VIR_ERR_NO_DOMAIN:
+                LOG.warning(
+                    "During device detach, instance disappeared.",
+                    instance_uuid=instance_uuid)
+                # if the domain has disappeared then we have nothing to detach
+                return
+
             LOG.warning(
                 'Unexpected libvirt error while detaching device %s from '
                 'instance %s: %s', device_name, instance_uuid, str(ex))
@@ -2560,17 +2567,6 @@ class LibvirtDriver(driver.ComputeDriver):
             # call.
             LOG.info("Device %s not found in instance.",
                      disk_dev, instance=instance)
-        except libvirt.libvirtError as ex:
-            # NOTE(vish): This is called to cleanup volumes after live
-            #             migration, so we should still disconnect even if
-            #             the instance doesn't exist here anymore.
-            error_code = ex.get_error_code()
-            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
-                # NOTE(vish):
-                LOG.warning("During detach_volume, instance disappeared.",
-                            instance=instance)
-            else:
-                raise
 
         self._disconnect_volume(context, connection_info, instance,
                                 encryption=encryption)
@@ -2737,21 +2733,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                          instance.image_meta,
                                          instance.flavor,
                                          CONF.libvirt.virt_type)
-        interface = guest.get_interface_by_cfg(cfg)
         try:
-            # NOTE(mriedem): When deleting an instance and using Neutron,
-            # we can be racing against Neutron deleting the port and
-            # sending the vif-deleted event which then triggers a call to
-            # detach the interface, so if the interface is not found then
-            # we can just log it as a warning.
-            if not interface:
-                mac = vif.get('address')
-                # The interface is gone so just log it as a warning.
-                LOG.warning('Detaching interface %(mac)s failed because '
-                            'the device is no longer found on the guest.',
-                            {'mac': mac}, instance=instance)
-                return
-
             get_dev = functools.partial(guest.get_interface_by_cfg, cfg)
             self._detach_with_retry(
                 guest,
@@ -2759,61 +2741,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 get_dev,
                 device_name=self.vif_driver.get_vif_devname(vif),
             )
-        except exception.DeviceDetachFailed:
-            # We failed to detach the device even with the retry loop, so let's
-            # dump some debug information to the logs before raising back up.
-            with excutils.save_and_reraise_exception():
-                devname = self.vif_driver.get_vif_devname(vif)
-                interface = guest.get_interface_by_cfg(cfg)
-                if interface:
-                    LOG.warning(
-                        'Failed to detach interface %(devname)s after '
-                        'repeated attempts. Final interface xml:\n'
-                        '%(interface_xml)s\nFinal guest xml:\n%(guest_xml)s',
-                        {'devname': devname,
-                         'interface_xml': interface.to_xml(),
-                         'guest_xml': guest.get_xml_desc()},
-                        instance=instance)
         except exception.DeviceNotFound:
             # The interface is gone so just log it as a warning.
             LOG.warning('Detaching interface %(mac)s failed because '
                         'the device is no longer found on the guest.',
                         {'mac': vif.get('address')}, instance=instance)
-        except libvirt.libvirtError as ex:
-            error_code = ex.get_error_code()
-            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
-                LOG.warning("During detach_interface, instance disappeared.",
-                            instance=instance)
-            else:
-                # NOTE(mriedem): When deleting an instance and using Neutron,
-                # we can be racing against Neutron deleting the port and
-                # sending the vif-deleted event which then triggers a call to
-                # detach the interface, so we might have failed because the
-                # network device no longer exists. Libvirt will fail with
-                # "operation failed: no matching network device was found"
-                # which unfortunately does not have a unique error code so we
-                # need to look up the interface by config and if it's not found
-                # then we can just log it as a warning rather than tracing an
-                # error.
-                mac = vif.get('address')
-                # Get a fresh instance of the guest in case it is gone.
-                try:
-                    guest = self._host.get_guest(instance)
-                except exception.InstanceNotFound:
-                    LOG.info("Instance disappeared while detaching interface "
-                             "%s", vif['id'], instance=instance)
-                    return
-                interface = guest.get_interface_by_cfg(cfg)
-                if interface:
-                    LOG.error('detaching network adapter failed.',
-                              instance=instance, exc_info=True)
-                    raise exception.InterfaceDetachFailed(
-                            instance_uuid=instance.uuid)
-
-                # The interface is gone so just log it as a warning.
-                LOG.warning('Detaching interface %(mac)s failed because '
-                            'the device is no longer found on the guest.',
-                            {'mac': mac}, instance=instance)
         finally:
             # NOTE(gibi): we need to unplug the vif _after_ the detach is done
             # on the libvirt side as otherwise libvirt will still manage the
