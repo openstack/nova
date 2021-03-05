@@ -14,9 +14,7 @@
 #    under the License.
 
 import binascii
-from collections import defaultdict
-from collections import deque
-from collections import OrderedDict
+import collections
 import contextlib
 import copy
 import datetime
@@ -122,7 +120,6 @@ from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt.libvirt.volume import fs as fs_drivers
 from nova.virt.libvirt.volume import volume as volume_drivers
-
 
 CONF = nova.conf.CONF
 
@@ -391,7 +388,7 @@ _fake_NodeDevXml_parents = {
     for name, xml in _fake_NodeDevXml.items()
 }
 
-_fake_NodeDevXml_children = defaultdict(list)
+_fake_NodeDevXml_children = collections.defaultdict(list)
 for key, val in _fake_NodeDevXml_parents.items():
     _fake_NodeDevXml_children[val].append(key)
 
@@ -570,14 +567,14 @@ def fake_disk_info_byname(instance, type='qcow2'):
     :param instance: The instance we're generating fake disk_info for.
     :param type: libvirt's disk type.
     :return: disk_info
-    :rtype: OrderedDict
+    :rtype: collections.OrderedDict
     """
     instance_dir = os.path.join(CONF.instances_path, instance.uuid)
 
     def instance_path(name):
         return os.path.join(instance_dir, name)
 
-    disk_info = OrderedDict()
+    disk_info = collections.OrderedDict()
 
     # root disk
     if (instance.image_ref is not None and
@@ -1007,11 +1004,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 
-        # ensure tests perform the same on all host architectures
-        _p = mock.patch(
-            'nova.virt.libvirt.utils.get_arch',
-            return_value=fields.Architecture.X86_64)
-        self.mock_get_arch = _p.start()
+        # ensure tests perform the same on all host architectures; this is
+        # already done by the fakelibvirt fixture but we want to change the
+        # architecture in some tests
+        _p = mock.patch('os.uname')
+        self.mock_uname = _p.start()
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.X86_64)
         self.addCleanup(_p.stop)
 
         self.test_instance = _create_test_instance()
@@ -1407,14 +1406,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_register_instance_machine_type', new=mock.Mock())
     def test_min_version_ppc_ok(self):
-        self.mock_get_arch.return_value = fields.Architecture.PPC64
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.PPC64)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_register_instance_machine_type', new=mock.Mock())
     def test_min_version_s390_ok(self):
-        self.mock_get_arch.return_value = fields.Architecture.S390X
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.S390X)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
@@ -3465,7 +3466,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         domain_caps = vconfig.LibvirtConfigDomainCaps()
         domain_caps._features = vconfig.LibvirtConfigDomainCapsFeatures()
         domain_caps._features.features = [sev_feature]
-        fake_domain_caps.return_value = defaultdict(
+        fake_domain_caps.return_value = collections.defaultdict(
             dict, {'x86_64': {'q35': domain_caps}})
 
     @mock.patch.object(host.Host, 'get_domain_capabilities')
@@ -4909,7 +4910,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             }
 
         for guestarch, expect_hpet in hpet_map.items():
-            self.mock_get_arch.return_value = guestarch
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guestarch)
 
             cfg = drvr._get_guest_config(
                 instance_ref, [], image_meta, disk_info)
@@ -4953,7 +4955,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             }
 
         for guestarch, expect_hpet in hpet_map.items():
-            self.mock_get_arch.return_value = guestarch
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guestarch)
 
             cfg = drvr._get_guest_config(
                 instance_ref, [], image_meta, disk_info)
@@ -4998,7 +5001,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             }
 
         for guestarch, expect_hpet in hpet_map.items():
-            self.mock_get_arch.return_value = guestarch
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guestarch)
+
             cfg = drvr._get_guest_config(
                 instance_ref, [], image_meta, disk_info)
             self.assertIsInstance(
@@ -5041,7 +5046,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             }
 
         for guestarch, expect_hpet in hpet_map.items():
-            self.mock_get_arch.return_value = guestarch
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guestarch)
 
             cfg = drvr._get_guest_config(
                 instance_ref, [], image_meta, disk_info)
@@ -5068,7 +5074,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual(2, len(cfg.clock.timers))
 
     def test_get_guest_config_windows_timer(self):
-        self.mock_get_arch.return_value = fields.Architecture.I686
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.I686)
+
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref['os_type'] = 'windows'
@@ -5406,7 +5414,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             fields.Architecture.AARCH64: 'sda',
         }
         for guestarch, disk in disk_map.items():
-            self.mock_get_arch.return_value = guestarch
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guestarch)
 
             disk_info = blockinfo.get_disk_info(
                 CONF.libvirt.virt_type, instance_ref, image_meta)
@@ -5782,7 +5791,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             fields.Architecture.AARCH64: 'virtio',
         }
         for guestarch, video_type in video_map.items():
-            self.mock_get_arch.return_value = guestarch
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guestarch)
 
             cfg = self._get_guest_config_with_graphics()
 
@@ -5830,9 +5840,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
           fields.Architecture.S390X: vconfig.LibvirtConfigGuestConsole}
 
         for guest_arch, device_type in expected.items():
-            self.mock_get_arch.return_value = guest_arch
-            guest = vconfig.LibvirtConfigGuest()
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guest_arch)
 
+            guest = vconfig.LibvirtConfigGuest()
             drvr._create_consoles(virt_type="kvm", guest_cfg=guest,
                                   instance=instance, flavor={},
                                   image_meta={})
@@ -5852,33 +5863,36 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(enabled=True, group='serial_console')
         self.flags(virt_type="qemu", group='libvirt')
         flavor = 'fake_flavor'
-        image_meta = objects.ImageMeta()
+        image_meta = objects.ImageMeta.from_dict({})
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         guest = vconfig.LibvirtConfigGuest()
         instance = objects.Instance(**self.test_instance)
 
-        self.mock_get_arch.return_value = fields.Architecture.X86_64
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.X86_64)
         self.assertRaises(
             exception.SerialPortNumberLimitExceeded,
             drvr._create_consoles,
             "kvm", guest, instance, flavor, image_meta)
-        self.mock_get_arch.assert_called_with(image_meta)
+        self.mock_uname.assert_called_once()
         mock_get_port_number.assert_called_with(flavor, image_meta)
 
-        self.mock_get_arch.reset_mock()
+        self.mock_uname.reset_mock()
         mock_get_port_number.reset_mock()
 
-        self.mock_get_arch.return_value = fields.Architecture.S390
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.S390)
         drvr._create_consoles("kvm", guest, instance, flavor, image_meta)
-        self.mock_get_arch.assert_called_with(image_meta)
+        self.mock_uname.assert_called_once()
         mock_get_port_number.assert_called_with(flavor, image_meta)
 
-        self.mock_get_arch.reset_mock()
+        self.mock_uname.reset_mock()
         mock_get_port_number.reset_mock()
 
-        self.mock_get_arch.return_value = fields.Architecture.S390X
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.S390X)
         drvr._create_consoles("kvm", guest, instance, flavor, image_meta)
-        self.mock_get_arch.assert_called_with(image_meta)
+        self.mock_uname.assert_called_once()
         mock_get_port_number.assert_called_with(flavor, image_meta)
 
     @mock.patch('nova.console.serial.acquire_port')
@@ -6038,9 +6052,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         def _test_consoles(arch_to_mock, serial_enabled,
                            expected_device_type, expected_device_cls,
                            virt_type='qemu'):
-            guest_cfg = vconfig.LibvirtConfigGuest()
-            self.mock_get_arch.return_value = arch_to_mock
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', arch_to_mock)
             self.flags(enabled=serial_enabled, group='serial_console')
+            guest_cfg = vconfig.LibvirtConfigGuest()
             instance = objects.Instance(**self.test_instance)
 
             drvr._create_consoles(virt_type, guest_cfg, instance=instance,
@@ -6218,7 +6233,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_with_type_kvm_on_s390(self):
         self.flags(enabled=False, group='vnc')
         self.flags(virt_type='kvm', group='libvirt')
-        self.mock_get_arch.return_value = fields.Architecture.S390X
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.S390X)
 
         self._stub_host_capabilities_cpu_arch(fields.Architecture.S390X)
 
@@ -7581,7 +7597,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             return caps
 
         self.flags(virt_type="kvm", group="libvirt")
-        self.mock_get_arch.return_value = fields.Architecture.ARMV7
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.ARMV7)
 
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -7623,7 +7640,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.flags(virt_type="kvm",
                    group="libvirt")
-        self.mock_get_arch.return_value = fields.Architecture.AARCH64
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
 
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -7674,7 +7692,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             caps.host.cpu = cpu
             return caps
 
-        self.mock_get_arch.return_value = fields.Architecture.AARCH64
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
         self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
                       get_host_capabilities_stub)
         self.flags(enabled=True, server_listen='10.0.0.1', group='vnc')
@@ -7844,7 +7863,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         expected = (fields.Architecture.PPC64, fields.Architecture.PPC)
         for guestarch in expected:
-            self.mock_get_arch.return_value = guestarch
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guestarch)
 
             cfg = drvr._get_guest_config(
                 instance_ref, [], image_meta, disk_info)
@@ -8588,7 +8608,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.fail('Did not find a USB host controller')
 
         # while PPC64 should always get a USB controller, regardless of config
-        self.mock_get_arch.return_value = fields.Architecture.PPC64
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.PPC64)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         disk_info = blockinfo.get_disk_info(
             CONF.libvirt.virt_type, instance_ref, image_meta)
@@ -8704,7 +8725,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         }
 
         for guestarch, expected_disk in expected.items():
-            self.mock_get_arch.return_value = guestarch
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guestarch)
 
             image_meta = objects.ImageMeta.from_dict({"disk_format": "iso"})
             self._check_xml_and_disk_bus(image_meta, None, (expected_disk,))
@@ -8747,7 +8769,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "disk_format": "iso"})
 
         for guestarch, expected_disk in expected.items():
-            self.mock_get_arch.return_value = guestarch
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guestarch)
 
             self._check_xml_and_disk_bus(
                 image_meta,
@@ -9278,9 +9301,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
               {'mountpoint': u'/dev/vdb',
                'attachment_id': u'd6128a7b-19c8-4a3e-8036-011396df95ac'})])
 
-        mock_volume_get.return_value = (
-            {'attachments': OrderedDict(attachments), 'multiattach': True,
-             'id': 'd30559cf-f092-4693-8589-0d0a1e7d9b1f'})
+        mock_volume_get.return_value = {
+            'attachments': collections.OrderedDict(attachments),
+            'multiattach': True,
+            'id': 'd30559cf-f092-4693-8589-0d0a1e7d9b1f',
+        }
 
         fake_connection_info = {
             'multiattach': True,
@@ -9317,9 +9342,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
               {'mountpoint': u'/dev/vdb',
                'attachment_id': u'd6128a7b-19c8-4a3e-8036-011396df95ac'})])
 
-        mock_volume_get.return_value = (
-            {'attachments': OrderedDict(attachments), 'multiattach': True,
-             'id': 'd30559cf-f092-4693-8589-0d0a1e7d9b1f'})
+        mock_volume_get.return_value = {
+            'attachments': collections.OrderedDict(attachments),
+            'multiattach': True,
+            'id': 'd30559cf-f092-4693-8589-0d0a1e7d9b1f',
+        }
 
         fake_connection_info = {
             'multiattach': True,
@@ -12697,7 +12724,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                         expected_switch=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
-        drvr.active_migrations[instance.uuid] = deque()
+        drvr.active_migrations[instance.uuid] = collections.deque()
         dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", True)
         guest = libvirt_guest.Guest(dom)
         finish_event = eventlet.event.Event()
@@ -19915,7 +19942,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance = fake_instance.fake_instance_obj(
             None, name='instancename', id=1,
             uuid='c83a75d4-4d53-4be5-9a40-04d9c0389ff8')
-        drvr.active_migrations[instance.uuid] = deque()
+        drvr.active_migrations[instance.uuid] = collections.deque()
         drvr.live_migration_force_complete(instance)
         self.assertEqual(
             1, drvr.active_migrations[instance.uuid].count("force-complete"))

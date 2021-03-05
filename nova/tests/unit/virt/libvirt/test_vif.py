@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import collections
-
 import fixtures
 from lxml import etree
 import mock
@@ -36,11 +34,6 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import vif
 
 CONF = cfg.CONF
-
-
-os_uname = collections.namedtuple(
-    'uname_result', ['sysname', 'nodename', 'release', 'version', 'machine'],
-)
 
 
 class LibvirtVifTestCase(test.NoDBTestCase):
@@ -514,7 +507,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         # multiqueue configuration is host OS specific
         _a = mock.patch('os.uname')
         self.mock_uname = _a.start()
-        self.mock_uname.return_value = os_uname(
+        self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '5.10.13-200-generic', '', 'x86_64')
         self.addCleanup(_a.stop)
 
@@ -653,34 +646,34 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self._test_virtio_multiqueue(4, '4')
 
     def test_virtio_multiqueue_in_kernel_2(self):
-        self.mock_uname.return_value = os_uname(
+        self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '2.6.32-21-generic', '', '')
         self._test_virtio_multiqueue(10, '1')
 
     def test_virtio_multiqueue_in_kernel_3(self):
-        self.mock_uname.return_value = os_uname(
+        self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '3.19.0-47-generic', '', '')
         self._test_virtio_multiqueue(10, '8')
 
     def test_virtio_multiqueue_in_kernel_4(self):
-        self.mock_uname.return_value = os_uname(
+        self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '4.2.0-35-generic', '', '')
         self._test_virtio_multiqueue(10, '10')
 
     def test_virtio_multiqueue_in_kernel_2_max_queues(self):
-        self.mock_uname.return_value = os_uname(
+        self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '2.6.32-21-generic', '', '')
         self.flags(max_queues=2, group='libvirt')
         self._test_virtio_multiqueue(10, '2')
 
     def test_virtio_multiqueue_in_kernel_3_max_queues(self):
-        self.mock_uname.return_value = os_uname(
+        self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '3.19.0-47-generic', '', '')
         self.flags(max_queues=2, group='libvirt')
         self._test_virtio_multiqueue(10, '2')
 
     def test_virtio_multiqueue_in_kernel_4_max_queues(self):
-        self.mock_uname.return_value = os_uname(
+        self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '4.2.0-35-generic', '', '')
         self.flags(max_queues=2, group='libvirt')
         self._test_virtio_multiqueue(10, '2')

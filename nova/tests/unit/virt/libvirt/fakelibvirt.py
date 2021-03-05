@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
 import sys
 import textwrap
 import time
@@ -228,6 +229,10 @@ NVIDIA_12_VGPU_TYPE = 'nvidia-12'
 PGPU1_PCI_ADDR = 'pci_0000_81_00_0'
 PGPU2_PCI_ADDR = 'pci_0000_81_01_0'
 PGPU3_PCI_ADDR = 'pci_0000_81_02_0'
+
+os_uname = collections.namedtuple(
+    'uname_result', ['sysname', 'nodename', 'release', 'version', 'machine'],
+)
 
 
 class FakePCIDevice(object):
@@ -1931,9 +1936,10 @@ class FakeLibvirtFixture(fixtures.Fixture):
             'nova.virt.libvirt.host.Host._log_host_capabilities'))
 
         # Ensure tests perform the same on all host architectures
-        self.useFixture(fixtures.MockPatch(
-            'nova.virt.libvirt.utils.get_arch',
-            return_value=obj_fields.Architecture.X86_64))
+        fake_uname = os_uname(
+            'Linux', '', '5.4.0-0-generic', '', obj_fields.Architecture.X86_64)
+        self.useFixture(
+            fixtures.MockPatch('os.uname', return_value=fake_uname))
 
         disable_event_thread(self)
 
