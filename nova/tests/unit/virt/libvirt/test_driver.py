@@ -18589,6 +18589,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                       lambda self, instance: FakeVirtDomain())
 
         instance = objects.Instance(**self.test_instance)
+        instance.info_cache = None
         network_info = _fake_network_info(self)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
@@ -23013,7 +23014,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             # This will trigger _detach_with_retry to raise
             # DeviceNotFound
             get_interface_calls = [
-                expected_cfg,  # detach_interface() itself gets the config
                 expected_cfg,  # _detach_with_retry: persistent config
                 None,  # _detach_with_retry: no device in live config
                 None,  # _detach_with_retry: persistent config gone as detached
@@ -23021,7 +23021,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         else:
             if state in (power_state.RUNNING, power_state.PAUSED):
                 get_interface_calls = [
-                    expected_cfg,  # detach_interface() itself gets the config
                     expected_cfg,  # _detach_with_retry: persistent config
                     expected_cfg,  # _detach_with_retry: live config
                     None,  # _detach_with_retry: persistent config gone
@@ -23029,7 +23028,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 ]
             else:
                 get_interface_calls = [
-                    expected_cfg,  # detach_interface() itself gets the config
                     expected_cfg,  # _detach_with_retry: persistent config
                     None,  # _detach_with_retry: persistent config gone
                 ]
@@ -23064,7 +23062,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 flags=fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG)
             mock_get_interface.assert_has_calls(
                 [
-                    mock.call(expected_cfg),
                     mock.call(expected_cfg, from_persistent_config=True),
                     mock.call(expected_cfg),
                     mock.call(expected_cfg, from_persistent_config=True),
@@ -23082,7 +23079,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 ])
                 mock_get_interface.assert_has_calls(
                 [
-                    mock.call(expected_cfg),
                     mock.call(expected_cfg, from_persistent_config=True),
                     mock.call(expected_cfg),
                     mock.call(expected_cfg, from_persistent_config=True),
@@ -23094,7 +23090,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                     flags=fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG)
                 mock_get_interface.assert_has_calls(
                 [
-                    mock.call(expected_cfg),
                     mock.call(expected_cfg, from_persistent_config=True),
                     mock.call(expected_cfg, from_persistent_config=True),
                 ])
@@ -23120,6 +23115,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # Asserts that we don't log an error when the interface device is not
         # found on the guest after a libvirt error during detach.
         instance = self._create_instance()
+        instance.info_cache = None
         vif = _fake_network_info(self)[0]
         guest = mock.Mock(spec=libvirt_guest.Guest)
         guest.get_power_state = mock.Mock()
@@ -23136,36 +23132,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertEqual(1, mock_log.warning.call_count)
         self.assertIn('the device is no longer found on the guest',
                       str(mock_log.warning.call_args[0]))
-
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_detach_with_retry')
-    @mock.patch('nova.virt.libvirt.driver.LOG')
-    def test_detach_interface_guest_not_found_after_detach(
-        self, mock_log, mock_detach_with_retry
-    ):
-        # Asserts that we don't raise an exception when the guest is gone
-        # after a libvirt error during detach.
-        instance = self._create_instance()
-        vif = _fake_network_info(self, 1)[0]
-        guest = mock.MagicMock()
-        guest.get_power_state.return_value = power_state.RUNNING
-        guest.get_interface_by_cfg.return_value = (
-            vconfig.LibvirtConfigGuestInterface())
-        get_guest_mock = mock.Mock()
-        # Host.get_guest should be called twice: the first time it is found,
-        # the second time it is gone.
-        get_guest_mock.side_effect = (
-            guest, exception.InstanceNotFound(instance_id=instance.uuid))
-        self.drvr._host.get_guest = get_guest_mock
-        error = fakelibvirt.libvirtError(
-            'internal error: End of file from qemu monitor')
-        error.err = (fakelibvirt.VIR_ERR_OPERATION_FAILED,)
-        mock_detach_with_retry.side_effect = error
-        self.drvr.detach_interface(self.context, instance, vif)
-        self.assertEqual(1, mock_log.info.call_count)
-        self.assertIn('Instance disappeared while detaching interface',
-                      mock_log.info.call_args[0][0])
-        get_guest_mock.assert_has_calls([mock.call(instance)] * 2)
 
     @mock.patch('threading.Event.wait', new=mock.Mock())
     @mock.patch.object(FakeVirtDomain, 'info')
@@ -23210,7 +23176,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock.patch.object(
                 libvirt_guest.Guest, 'get_interface_by_cfg',
                 side_effect=[
-                    expected,  # detach_interface gets the config
                     expected,  # _detach_with_retry: persistent config
                     expected,  # _detach_with_retry: live config
                     None,  # _detach_with_retry: persistent gone
@@ -23224,14 +23189,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
             mock_get_interface.assert_has_calls(
                 [
-                    mock.call(expected, ),
                     mock.call(expected, from_persistent_config=True),
                     mock.call(expected),
                     mock.call(expected, from_persistent_config=True),
                     mock.call(expected),
                 ]
             )
-            self.assertEqual(5, mock_get_interface.call_count)
             mock_get_config.assert_called_once_with(
                 instance, network_info[0], test.MatchType(objects.ImageMeta),
                 test.MatchType(objects.Flavor), CONF.libvirt.virt_type)
@@ -23253,7 +23216,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         instance = self._create_instance()
         network_info = _fake_network_info(self, num_networks=3)
         vif = network_info[0]
-        interface = vconfig.LibvirtConfigGuestInterface()
         image_meta = objects.ImageMeta.from_dict({})
         disk_info = blockinfo.get_disk_info(
             CONF.libvirt.virt_type, instance, image_meta)
@@ -23267,8 +23229,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock.patch.object(
                 self.drvr.vif_driver, 'get_config', return_value=cfg),
             mock.patch.object(
-                guest, 'get_interface_by_cfg', return_value=interface),
-            mock.patch.object(
                 instance, 'get_network_info', return_value=network_info),
             mock.patch.object(
                 self.drvr, '_detach_with_retry'),
@@ -23276,16 +23236,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 self.drvr, '_get_guest_config_meta', return_value=config_meta),
             mock.patch.object(guest, 'set_metadata')
         ) as (
-            mock_get_guest, mock_get_config, mock_get_interface_by_cfg,
-            mock_get_network_info, mock_detach_with_retry,
-            mock_get_guest_config_meta, mock_set_metadata
+            mock_get_guest, mock_get_config, mock_get_network_info,
+            mock_detach_with_retry, mock_get_guest_config_meta,
+            mock_set_metadata
         ):
             self.drvr.detach_interface(self.context, instance, vif)
             mock_get_guest.assert_called_once_with(instance)
             mock_get_config.assert_called_once_with(
                 instance, vif, test.MatchType(objects.ImageMeta),
                 test.MatchType(objects.Flavor), CONF.libvirt.virt_type)
-            mock_get_interface_by_cfg.assert_called_once_with(cfg)
             mock_detach_with_retry.assert_called_once_with(
                 guest, instance.uuid, mock.ANY, device_name=None)
             mock_get_network_info.assert_called_once_with()
@@ -23847,6 +23806,56 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_guest.detach_device.assert_called_once_with(
             mock_dev, persistent=True, live=False)
 
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test__detach_with_retry_libvirt_reports_domain_not_found(
+        self, mock_warning
+    ):
+        """Test that libvirt reports that the domain is not found and assert
+        that it is only logged.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_guest.get_power_state.return_value = power_state.SHUTDOWN
+
+        mock_dev = mock.Mock(spec=vconfig.LibvirtConfigGuestDisk)
+        mock_dev.alias = 'virtio-disk1'
+
+        mock_get_device_conf_func = mock.Mock(
+            # The first call is to get the device from the persistent domain
+            # before the detach. The second calls to double check that the
+            # device is gone after libvirt returned. This second call is
+            # pointless in the current case as libvirt returned that the domain
+            # does not exists. So the code could know that there is no device.
+            # Still for simplicity the call is made and expected to return None
+            side_effect=[
+                mock_dev,
+                None,
+            ]
+        )
+
+        mock_guest.detach_device.side_effect = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            msg='error',
+            error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
+
+        drvr._detach_with_retry(
+            mock_guest,
+            uuids.instance_uuid,
+            mock_get_device_conf_func,
+            device_name='vdb',
+        )
+
+        mock_guest.has_persistent_configuration.assert_called_once_with()
+        mock_get_device_conf_func.assert_has_calls([
+            mock.call(from_persistent_config=True),
+            mock.call(from_persistent_config=True),
+        ])
+        mock_guest.detach_device.assert_called_once_with(
+            mock_dev, persistent=True, live=False)
+        mock_warning.assert_called_once_with(
+            'During device detach, instance disappeared.',
+            instance_uuid=uuids.instance_uuid)
+
     @ddt.data(power_state.RUNNING, power_state.PAUSED)
     def test__detach_with_retry_other_sync_libvirt_error(self, state):
         """Test that libvirt reports non device related error during detach
@@ -23865,7 +23874,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_guest.detach_device.side_effect = fakelibvirt.make_libvirtError(
             fakelibvirt.libvirtError,
             msg='error',
-            error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
 
         self.assertRaises(
             fakelibvirt.libvirtError,
