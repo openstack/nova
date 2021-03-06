@@ -3174,5 +3174,16 @@ class GenericPoisonFixture(fixtures.Fixture):
 
         super(GenericPoisonFixture, self).setUp()
         for meth, why in self.POISON_THESE:
-            self.useFixture(fixtures.MonkeyPatch(
-                meth, poison_configure(meth, why)))
+            # attempt to mock only if not already mocked
+            location, attribute = meth.rsplit('.', 1)
+            components = location.split('.')
+            try:
+                current = __import__(components[0], {}, {})
+                for component in components[1:]:
+                    current = getattr(current, component)
+                if not isinstance(getattr(current, attribute), mock.Mock):
+                    self.useFixture(fixtures.MonkeyPatch(
+                        meth, poison_configure(meth, why)))
+            except ImportError:
+                self.useFixture(fixtures.MonkeyPatch(
+                    meth, poison_configure(meth, why)))

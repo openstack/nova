@@ -13,6 +13,7 @@
 #    under the License.
 
 from lxml import etree
+import mock
 from oslo_utils import uuidutils
 
 from nova.objects import fields as obj_fields
@@ -274,7 +275,10 @@ class FakeLibvirtTests(test.NoDBTestCase):
 
     def test_getCapabilities(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        etree.fromstring(conn.getCapabilities())
+        with mock.patch('os.uname') as mock_uname:
+            mock_uname.return_value = libvirt.os_uname(
+                'Linux', '', '5.10.13-200-generic', '', 'x86_64')
+            etree.fromstring(conn.getCapabilities())
 
     def test_getDomainCapabilities(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')

@@ -249,8 +249,7 @@ FAKE_KVM_GUEST = """
     </launchSecurity>
   </domain>"""
 
-
-CAPABILITIES_HOST_TEMPLATE = '''
+CAPABILITIES_HOST_X86_64_TEMPLATE = """
   <host>
     <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
     <cpu>
@@ -271,6 +270,9 @@ CAPABILITIES_HOST_TEMPLATE = '''
       <feature name='acpi'/>
       <feature name='ds'/>
       <feature name='vme'/>
+      <pages unit='KiB' size='4'/>
+      <pages unit='KiB' size='2048'/>
+      <pages unit='KiB' size='1048576'/>
     </cpu>
     <migration_features>
       <live/>
@@ -283,7 +285,114 @@ CAPABILITIES_HOST_TEMPLATE = '''
       <model>apparmor</model>
       <doi>0</doi>
     </secmodel>
-  </host>'''
+  </host>"""
+
+# NOTE(stephenfin): This is incomplete
+CAPABILITIES_HOST_I686_TEMPLATE = """
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>i686</arch>
+    </cpu>
+    <power_management/>
+    <iommu support='no'/>
+  </host>"""
+
+CAPABILITIES_HOST_AARCH64_TEMPLATE = """
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>aarch64</arch>
+      <model>host</model>
+      <topology sockets='1' cores='48' threads='1'/>
+      <pages unit='KiB' size='4'/>
+      <pages unit='KiB' size='2048'/>
+    </cpu>
+    <power_management/>
+    <migration_features>
+      <live/>
+      <uri_transports>
+        <uri_transport>tcp</uri_transport>
+        <uri_transport>rdma</uri_transport>
+      </uri_transports>
+    </migration_features>
+    %(topology)s
+    <secmodel>
+      <model>apparmor</model>
+      <doi>0</doi>
+    </secmodel>
+    <secmodel>
+      <model>dac</model>
+      <doi>0</doi>
+      <baselabel type='kvm'>+0:+0</baselabel>
+      <baselabel type='qemu'>+0:+0</baselabel>
+    </secmodel>
+  </host>"""
+
+# NOTE(stephenfin): This is incomplete
+CAPABILITIES_HOST_ARMV7_TEMPLATE = """
+  <host>
+    <cpu>
+      <arch>armv7l</arch>
+    </cpu>
+    <power_management/>
+    <iommu support='no'/>
+  </host>"""
+
+# NOTE(stephenfin): This is incomplete
+CAPABILITIES_HOST_PPC_TEMPLATE = """
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>ppc</arch>
+    </cpu>
+    <power_management/>
+    <iommu support='no'/>
+  </host>"""
+
+# NOTE(stephenfin): This is incomplete
+CAPABILITIES_HOST_PPC64_TEMPLATE = """
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>ppc64</arch>
+    </cpu>
+    <power_management/>
+    <iommu support='no'/>
+  </host>"""
+
+# NOTE(stephenfin): This is incomplete
+CAPABILITIES_HOST_PPC64LE_TEMPLATE = """
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>ppc64le</arch>
+    </cpu>
+    <power_management/>
+    <iommu support='no'/>
+  </host>"""
+
+# NOTE(stephenfin): This is incomplete
+CAPABILITIES_HOST_S390X_TEMPLATE = """
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>s390x</arch>
+    </cpu>
+    <power_management/>
+    <iommu support='no'/>
+  </host>"""
+
+CAPABILITIES_HOST_TEMPLATES = {
+    Architecture.X86_64: CAPABILITIES_HOST_X86_64_TEMPLATE,
+    Architecture.I686: CAPABILITIES_HOST_I686_TEMPLATE,
+    Architecture.AARCH64: CAPABILITIES_HOST_AARCH64_TEMPLATE,
+    Architecture.ARMV7: CAPABILITIES_HOST_ARMV7_TEMPLATE,
+    Architecture.PPC: CAPABILITIES_HOST_PPC_TEMPLATE,
+    Architecture.PPC64: CAPABILITIES_HOST_PPC64_TEMPLATE,
+    Architecture.PPC64LE: CAPABILITIES_HOST_PPC64LE_TEMPLATE,
+    Architecture.S390X: CAPABILITIES_HOST_S390X_TEMPLATE,
+}
 
 # NOTE(aspiers): HostTestCase has tests which assert that for any
 # given (arch, domain) listed in the guest capabilities here, all
@@ -500,6 +609,100 @@ CAPABILITIES_GUEST = {
           </features>
         </guest>''',
 
+    'aarch64': '''
+        <guest>
+          <os_type>hvm</os_type>
+          <arch name='aarch64'>
+            <wordsize>64</wordsize>
+            <emulator>/usr/bin/qemu-system-aarch64</emulator>
+            <machine maxCpus='1'>integratorcp</machine>
+            <machine maxCpus='2'>ast2600-evb</machine>
+            <machine maxCpus='1'>borzoi</machine>
+            <machine maxCpus='1'>spitz</machine>
+            <machine maxCpus='255'>virt-2.7</machine>
+            <machine maxCpus='2'>nuri</machine>
+            <machine maxCpus='2'>mcimx7d-sabre</machine>
+            <machine maxCpus='1'>romulus-bmc</machine>
+            <machine maxCpus='512'>virt-3.0</machine>
+            <machine maxCpus='512'>virt-5.0</machine>
+            <machine maxCpus='255'>virt-2.10</machine>
+            <machine maxCpus='255'>virt-2.8</machine>
+            <machine maxCpus='2'>musca-b1</machine>
+            <machine maxCpus='4'>realview-pbx-a9</machine>
+            <machine maxCpus='1'>versatileab</machine>
+            <machine maxCpus='1'>kzm</machine>
+            <machine maxCpus='2'>musca-a</machine>
+            <machine maxCpus='512'>virt-3.1</machine>
+            <machine maxCpus='1'>mcimx6ul-evk</machine>
+            <machine maxCpus='512'>virt-5.1</machine>
+            <machine canonical='virt-5.1' maxCpus='512'>virt</machine>
+            <machine maxCpus='2'>smdkc210</machine>
+            <machine maxCpus='1'>sx1</machine>
+            <machine maxCpus='4'>raspi2</machine>
+            <machine maxCpus='255'>virt-2.11</machine>
+            <machine maxCpus='1'>imx25-pdk</machine>
+            <machine maxCpus='255'>virt-2.9</machine>
+            <machine maxCpus='4'>orangepi-pc</machine>
+            <machine maxCpus='1'>z2</machine>
+            <machine maxCpus='1'>xilinx-zynq-a9</machine>
+            <machine maxCpus='6'>xlnx-zcu102</machine>
+            <machine maxCpus='4'>raspi3</machine>
+            <machine maxCpus='1'>tosa</machine>
+            <machine maxCpus='255'>virt-2.12</machine>
+            <machine maxCpus='2'>mps2-an521</machine>
+            <machine maxCpus='4'>sabrelite</machine>
+            <machine maxCpus='1'>mps2-an511</machine>
+            <machine maxCpus='1'>canon-a1100</machine>
+            <machine maxCpus='1'>realview-eb</machine>
+            <machine maxCpus='1'>emcraft-sf2</machine>
+            <machine maxCpus='1'>realview-pb-a8</machine>
+            <machine maxCpus='512'>sbsa-ref</machine>
+            <machine maxCpus='512'>virt-4.0</machine>
+            <machine maxCpus='1'>palmetto-bmc</machine>
+            <machine maxCpus='1'>sx1-v1</machine>
+            <machine maxCpus='1'>n810</machine>
+            <machine maxCpus='2'>tacoma-bmc</machine>
+            <machine maxCpus='1'>n800</machine>
+            <machine maxCpus='512'>virt-4.1</machine>
+            <machine maxCpus='1'>versatilepb</machine>
+            <machine maxCpus='1'>terrier</machine>
+            <machine maxCpus='1'>mainstone</machine>
+            <machine maxCpus='4'>realview-eb-mpcore</machine>
+            <machine maxCpus='512'>virt-4.2</machine>
+            <machine maxCpus='1'>witherspoon-bmc</machine>
+            <machine maxCpus='1'>swift-bmc</machine>
+            <machine maxCpus='4'>vexpress-a9</machine>
+            <machine maxCpus='4'>midway</machine>
+            <machine maxCpus='1'>musicpal</machine>
+            <machine maxCpus='1'>lm3s811evb</machine>
+            <machine maxCpus='1'>lm3s6965evb</machine>
+            <machine maxCpus='1'>microbit</machine>
+            <machine maxCpus='1'>mps2-an505</machine>
+            <machine maxCpus='1'>mps2-an385</machine>
+            <machine maxCpus='1'>cubieboard</machine>
+            <machine maxCpus='1'>verdex</machine>
+            <machine maxCpus='1'>netduino2</machine>
+            <machine maxCpus='2'>xlnx-versal-virt</machine>
+            <machine maxCpus='4'>vexpress-a15</machine>
+            <machine maxCpus='1'>sonorapass-bmc</machine>
+            <machine maxCpus='1'>cheetah</machine>
+            <machine maxCpus='255'>virt-2.6</machine>
+            <machine maxCpus='1'>ast2500-evb</machine>
+            <machine maxCpus='4'>highbank</machine>
+            <machine maxCpus='1'>akita</machine>
+            <machine maxCpus='1'>connex</machine>
+            <machine maxCpus='1'>netduinoplus2</machine>
+            <machine maxCpus='1'>collie</machine>
+            <domain type='qemu'/>
+          </arch>
+          <features>
+            <acpi default='on' toggle='yes'/>
+            <cpuselection/>
+            <deviceboot/>
+            <disksnapshot default='on' toggle='no'/>
+          </features>
+        </guest>''',
+
     'armv7l': '''
         <guest>
           <os_type>hvm</os_type>
@@ -628,20 +831,6 @@ CAPABILITIES_GUEST = {
         </guest>'''
 }
 
-CAPABILITIES_TEMPLATE = (
-    "<capabilities>\n" +
-    CAPABILITIES_HOST_TEMPLATE +
-    CAPABILITIES_GUEST['i686'] +
-    CAPABILITIES_GUEST['x86_64'] +
-    CAPABILITIES_GUEST['armv7l'] +
-    CAPABILITIES_GUEST['mips'] +
-    CAPABILITIES_GUEST['mipsel'] +
-    CAPABILITIES_GUEST['sparc'] +
-    CAPABILITIES_GUEST['ppc'] +
-    "</capabilities>\n"
-)
-
-
 DOMCAPABILITIES_SPARC = """
 <domainCapabilities>
   <path>/usr/bin/qemu-system-sparc</path>
@@ -719,7 +908,7 @@ DOMCAPABILITIES_SPARC = """
 </domainCapabilities>
 """
 
-DOMCAPABILITIES_ARMV7L = """
+DOMCAPABILITIES_ARMV7 = """
 <domainCapabilities>
   <path>/usr/bin/qemu-system-arm</path>
   <domain>qemu</domain>
@@ -832,6 +1021,164 @@ DOMCAPABILITIES_ARMV7L = """
         <value>3</value>
       </enum>
     </gic>
+  </features>
+</domainCapabilities>
+"""
+
+DOMCAPABILITIES_AARCH64 = """
+<domainCapabilities>
+  <path>/usr/bin/qemu-system-aarch64</path>
+  <domain>qemu</domain>
+  <machine>virt-5.1</machine>
+  <arch>aarch64</arch>
+  <vcpu max='512'/>
+  <iothreads supported='yes'/>
+  <os supported='yes'>
+    <enum name='firmware'>
+      <value>efi</value>
+    </enum>
+    <loader supported='yes'>
+      <value>/usr/share/AAVMF/AAVMF_CODE.fd</value>
+      <enum name='type'>
+        <value>rom</value>
+        <value>pflash</value>
+      </enum>
+      <enum name='readonly'>
+        <value>yes</value>
+        <value>no</value>
+      </enum>
+      <enum name='secure'>
+        <value>no</value>
+        <value>yes</value>
+      </enum>
+    </loader>
+  </os>
+  <cpu>
+    <mode name='host-passthrough' supported='no'/>
+    <mode name='host-model' supported='no'/>
+    <mode name='custom' supported='yes'>
+      <model usable='unknown'>pxa270-c0</model>
+      <model usable='unknown'>cortex-a15</model>
+      <model usable='unknown'>pxa270-b0</model>
+      <model usable='unknown'>cortex-a57</model>
+      <model usable='unknown'>cortex-m4</model>
+      <model usable='unknown'>pxa270-a0</model>
+      <model usable='unknown'>arm1176</model>
+      <model usable='unknown'>pxa270-b1</model>
+      <model usable='unknown'>cortex-a7</model>
+      <model usable='unknown'>pxa270-a1</model>
+      <model usable='unknown'>cortex-a8</model>
+      <model usable='unknown'>cortex-r5</model>
+      <model usable='unknown'>ti925t</model>
+      <model usable='unknown'>cortex-r5f</model>
+      <model usable='unknown'>arm1026</model>
+      <model usable='unknown'>cortex-a9</model>
+      <model usable='unknown'>cortex-m7</model>
+      <model usable='unknown'>pxa270</model>
+      <model usable='unknown'>pxa260</model>
+      <model usable='unknown'>pxa250</model>
+      <model usable='unknown'>pxa270-c5</model>
+      <model usable='unknown'>pxa261</model>
+      <model usable='unknown'>pxa262</model>
+      <model usable='unknown'>sa1110</model>
+      <model usable='unknown'>sa1100</model>
+      <model usable='unknown'>max</model>
+      <model usable='unknown'>cortex-a53</model>
+      <model usable='unknown'>cortex-m0</model>
+      <model usable='unknown'>cortex-m33</model>
+      <model usable='unknown'>cortex-a72</model>
+      <model usable='unknown'>arm946</model>
+      <model usable='unknown'>pxa255</model>
+      <model usable='unknown'>arm11mpcore</model>
+      <model usable='unknown'>arm926</model>
+      <model usable='unknown'>arm1136</model>
+      <model usable='unknown'>arm1136-r2</model>
+      <model usable='unknown'>cortex-m3</model>
+    </mode>
+  </cpu>
+  <devices>
+    <disk supported='yes'>
+      <enum name='diskDevice'>
+        <value>disk</value>
+        <value>cdrom</value>
+        <value>floppy</value>
+        <value>lun</value>
+      </enum>
+      <enum name='bus'>
+        <value>fdc</value>
+        <value>scsi</value>
+        <value>virtio</value>
+        <value>usb</value>
+        <value>sata</value>
+      </enum>
+      <enum name='model'>
+        <value>virtio</value>
+        <value>virtio-transitional</value>
+        <value>virtio-non-transitional</value>
+      </enum>
+    </disk>
+    <graphics supported='yes'>
+      <enum name='type'>
+        <value>sdl</value>
+        <value>vnc</value>
+        <value>spice</value>
+      </enum>
+    </graphics>
+    <video supported='yes'>
+      <enum name='modelType'>
+        <value>vga</value>
+        <value>cirrus</value>
+        <value>vmvga</value>
+        <value>qxl</value>
+        <value>virtio</value>
+        <value>none</value>
+        <value>bochs</value>
+        <value>ramfb</value>
+      </enum>
+    </video>
+    <hostdev supported='yes'>
+      <enum name='mode'>
+        <value>subsystem</value>
+      </enum>
+      <enum name='startupPolicy'>
+        <value>default</value>
+        <value>mandatory</value>
+        <value>requisite</value>
+        <value>optional</value>
+      </enum>
+      <enum name='subsysType'>
+        <value>usb</value>
+        <value>pci</value>
+        <value>scsi</value>
+      </enum>
+      <enum name='capsType'/>
+      <enum name='pciBackend'/>
+    </hostdev>
+    <rng supported='yes'>
+      <enum name='model'>
+        <value>virtio</value>
+        <value>virtio-transitional</value>
+        <value>virtio-non-transitional</value>
+      </enum>
+      <enum name='backendModel'>
+        <value>random</value>
+        <value>egd</value>
+        <value>builtin</value>
+      </enum>
+    </rng>
+  </devices>
+  <features>
+    <gic supported='yes'>
+      <enum name='version'>
+        <value>2</value>
+        <value>3</value>
+      </enum>
+    </gic>
+    <vmcoreinfo supported='yes'/>
+    <genid supported='no'/>
+    <backingStoreInput supported='yes'/>
+    <backup supported='no'/>
+    <sev supported='no'/>
   </features>
 </domainCapabilities>
 """
@@ -1234,7 +1581,8 @@ DOMCAPABILITIES_I686 = """
 """
 
 STATIC_DOMCAPABILITIES = {
-    Architecture.ARMV7: DOMCAPABILITIES_ARMV7L,
+    Architecture.ARMV7: DOMCAPABILITIES_ARMV7,
+    Architecture.AARCH64: DOMCAPABILITIES_AARCH64,
     Architecture.SPARC: DOMCAPABILITIES_SPARC,
     Architecture.PPC: DOMCAPABILITIES_PPC,
     Architecture.MIPS: DOMCAPABILITIES_MIPS,
