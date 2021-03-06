@@ -36,9 +36,14 @@ from nova.db.sqlalchemy import api as db_session
 from nova import exception
 from nova.i18n import _
 from nova.objects import cell_mapping as cell_mapping_obj
+# NOTE(lyarwood): The following are imported as machine_type_utils expects them
+# to be registered under nova.objects when called via _check_machine_type_set
+from nova.objects import image_meta as image_meta_obj  # noqa: F401
+from nova.objects import instance as instance_obj  # noqa: F401
 from nova import policy
 from nova import utils
 from nova import version
+from nova.virt.libvirt import machine_type_utils
 from nova.volume import cinder
 
 CONF = nova.conf.CONF
@@ -307,6 +312,19 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
 
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
+    def _check_machine_type_set(self):
+        ctxt = nova_context.get_admin_context()
+        if machine_type_utils.get_instances_without_type(ctxt):
+            msg = (_("""
+Instances found without hw_machine_type set. This warning can be ignored if
+your environment does not contain libvirt based compute hosts.
+Use the `nova-manage machine_type list_unset` command to list these instances.
+For more details see the following:
+https://docs.openstack.org/latest/nova/admin/hw_machine_type.html"""))
+            return upgradecheck.Result(upgradecheck.Code.WARNING, msg)
+
+        return upgradecheck.Result(upgradecheck.Code.SUCCESS)
+
     # The format of the check functions is to return an upgradecheck.Result
     # object with the appropriate upgradecheck.Code and details set. If the
     # check hits warnings or failures then those should be stored in the
@@ -329,7 +347,9 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
             (common_checks.check_policy_json, {'conf': CONF})
         ),
         # Added in Wallaby
-        (_('Older than N-1 computes'), _check_old_computes)
+        (_('Older than N-1 computes'), _check_old_computes),
+        # Added in Wallaby
+        (_('hw_machine_type unset'), _check_machine_type_set),
     )
 
 
