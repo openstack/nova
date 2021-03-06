@@ -305,3 +305,88 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
             server_without['id'],
             instances[0].uuid
         )
+
+    def test_hw_machine_type_config_update_workflow(self):
+        """Mimic a real world [libvirt]hw_machine_type config update workflow
+
+        This test ties together various bits tested above into a complete
+        workflow that should be typical of an operator attempting to update
+        the host [libvirt]hw_machine_type configurable within their env.
+        """
+        self.flags(hw_machine_type='x86_64=pc', group='libvirt')
+
+        # Launch some instances and assert their machine type
+        server_with, server_without = self._create_servers()
+        self._assert_machine_type(server_with['id'], 'q35')
+        self._assert_machine_type(server_without['id'], 'pc')
+
+        # Launch and shelve some additional instances
+        server_shelved_with, server_shelved_without = self._create_servers()
+        self._shelve_server(server_shelved_with)
+        self._shelve_server(server_shelved_without)
+
+        # Unset the machine type of the _without instances to mimic an existing
+        # instance without a machine type set
+        self._unset_machine_type(server_without['id'])
+        self._unset_machine_type(server_shelved_without['id'])
+
+        # Assert that both _without instances are listed by
+        # get_instances_without_type as used by `nova-manage machine_type
+        # list_unset` and `nova-status upgrade check`
+        instances = machine_type_utils.get_instances_without_type(self.context)
+        instance_uuids = [i.uuid for i in instances]
+        self.assertIn(
+            server_without['id'],
+            instance_uuids
+        )
+        self.assertIn(
+            server_shelved_without['id'],
+            instance_uuids
+        )
+
+        # Restart the compute service
+        self.computes['compute1'].stop()
+        self.computes['compute1'].start()
+
+        # Assert that after a service restart only server_shelved_without
+        # remains listed by get_instances_without_type as init_host has
+        # populated a machine type for server_without
+        instances = machine_type_utils.get_instances_without_type(self.context)
+        self.assertEqual(
+            server_shelved_without['id'],
+            instances[0].uuid
+        )
+
+        # Manually update the machine type of server_shelved_without using
+        # machine_type_utils as used by `nova-manage machine_type update`
+        machine_type_utils.update_machine_type(
+            self.context,
+            server_shelved_without['id'],
+            'pc',
+        )
+
+        # Assert that no instances are listed so we can go ahead and change the
+        # [libvirt]hw_machine_type config on the compute
+        self.assertFalse(
+            machine_type_utils.get_instances_without_type(self.context)
+        )
+
+        # Change the actual config on the compute
+        self.flags(hw_machine_type='x86_64=pc-q35-1.2', group='libvirt')
+
+        # Assert the existing instances remain the same after being rebooted or
+        # unshelved, rebuilding their domain configs
+        self._reboot_server(server_with, hard=True)
+        self._reboot_server(server_without, hard=True)
+        self._assert_machine_type(server_with['id'], 'q35')
+        self._assert_machine_type(server_without['id'], 'pc')
+
+        self._unshelve_server(server_shelved_with)
+        self._unshelve_server(server_shelved_without)
+        self._assert_machine_type(server_shelved_with['id'], 'q35')
+        self._assert_machine_type(server_shelved_without['id'], 'pc')
+
+        # Assert that new instances are spawned with the expected machine types
+        server_with_new, server_without_new = self._create_servers()
+        self._assert_machine_type(server_with_new['id'], 'q35')
+        self._assert_machine_type(server_without_new['id'], 'pc-q35-1.2')
