@@ -16,6 +16,7 @@ import fixtures
 from oslo_utils.fixture import uuidsentinel
 
 from nova import context as nova_context
+from nova import exception
 from nova import objects
 from nova.tests.functional.libvirt import base
 from nova.virt.libvirt import machine_type_utils
@@ -199,3 +200,96 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
                 self.context, server_without['id']
             )
         )
+
+    def test_machine_type_update_stopped(self):
+        self.flags(hw_machine_type='x86_64=pc-1.2.3', group='libvirt')
+
+        server = self._create_server(networks='none')
+        self._assert_machine_type(server['id'], 'pc-1.2.3')
+
+        self._stop_server(server)
+        machine_type_utils.update_machine_type(
+            self.context,
+            server['id'],
+            'pc-1.2.4'
+        )
+
+        self._start_server(server)
+        self._assert_machine_type(server['id'], 'pc-1.2.4')
+
+    def test_machine_type_update_blocked_active(self):
+        self.flags(hw_machine_type='x86_64=pc-1.2.3', group='libvirt')
+
+        server = self._create_server(networks='none')
+        self._assert_machine_type(server['id'], 'pc-1.2.3')
+
+        self.assertRaises(
+            exception.InstanceInvalidState,
+            machine_type_utils.update_machine_type,
+            self.context,
+            server['id'],
+            'pc-1.2.4'
+        )
+
+    def test_machine_type_update_blocked_between_alias_and_versioned(self):
+        self.flags(hw_machine_type='x86_64=pc', group='libvirt')
+
+        server = self._create_server(networks='none')
+        self._assert_machine_type(server['id'], 'pc')
+        self._stop_server(server)
+
+        self.assertRaises(
+            exception.InvalidMachineTypeUpdate,
+            machine_type_utils.update_machine_type,
+            self.context,
+            server['id'],
+            'pc-1.2.4'
+        )
+
+    def test_machine_type_update_blocked_between_versioned_and_alias(self):
+        self.flags(hw_machine_type='x86_64=pc-1.2.3', group='libvirt')
+
+        server = self._create_server(networks='none')
+        self._assert_machine_type(server['id'], 'pc-1.2.3')
+        self._stop_server(server)
+
+        self.assertRaises(
+            exception.InvalidMachineTypeUpdate,
+            machine_type_utils.update_machine_type,
+            self.context,
+            server['id'],
+            'pc'
+        )
+
+    def test_machine_type_update_blocked_between_types(self):
+        self.flags(hw_machine_type='x86_64=pc', group='libvirt')
+
+        server = self._create_server(networks='none')
+        self._assert_machine_type(server['id'], 'pc')
+        self._stop_server(server)
+
+        self.assertRaises(
+            exception.InvalidMachineTypeUpdate,
+            machine_type_utils.update_machine_type,
+            self.context,
+            server['id'],
+            'q35'
+        )
+
+    def test_machine_type_update_force(self):
+        self.flags(hw_machine_type='x86_64=pc', group='libvirt')
+
+        server = self._create_server(networks='none')
+        self._assert_machine_type(server['id'], 'pc')
+
+        # Force through the update on an ACTIVE instance
+        machine_type_utils.update_machine_type(
+            self.context,
+            server['id'],
+            'q35',
+            force=True
+        )
+
+        # Reboot the server so the config is updated so we can assert
+        self._reboot_server(server, hard=True)
+        self._assert_machine_type(server['id'], 'q35')
