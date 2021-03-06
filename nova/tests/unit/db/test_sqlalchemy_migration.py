@@ -12,22 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import importlib
-
 from migrate import exceptions as versioning_exceptions
 from migrate.versioning import api as versioning_api
 import mock
-from oslo_db.sqlalchemy import utils as db_utils
-from oslo_utils.fixture import uuidsentinel
 import sqlalchemy
 
-from nova import context
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import migration
-from nova import exception
-from nova import objects
 from nova import test
-from nova.tests import fixtures as nova_fixtures
 
 
 @mock.patch.object(migration, 'db_version', return_value=2)
@@ -163,96 +155,3 @@ class TestGetEngine(test.NoDBTestCase):
             engine = migration.get_engine('api')
             self.assertEqual('api_engine', engine)
             mock_get_engine.assert_called_once_with()
-
-
-class TestNewtonCellsCheck(test.NoDBTestCase):
-    USES_DB_SELF = True
-
-    def setUp(self):
-        super(TestNewtonCellsCheck, self).setUp()
-        self.useFixture(nova_fixtures.Database('api', 28))
-        self.context = context.get_admin_context()
-        self.migration = importlib.import_module(
-            'nova.db.sqlalchemy.api_migrations.migrate_repo.versions.'
-            '030_require_cell_setup')
-        self.engine = db_api.get_api_engine()
-
-    def _flavor_me(self):
-        # We can't use the Flavor object or model to create the flavor because
-        # the model and object have the description field now but at this point
-        # we have not run the migration schema to add the description column.
-        flavors = db_utils.get_table(self.engine, 'flavors')
-        values = dict(name='foo', memory_mb=123,
-                      vcpus=1, root_gb=1,
-                      flavorid='m1.foo', swap=0)
-        flavors.insert().execute(values)
-
-    def _create_cell_mapping(self, **values):
-        mappings = db_utils.get_table(self.engine, 'cell_mappings')
-        return mappings.insert().execute(**values).inserted_primary_key[0]
-
-    def _create_host_mapping(self, **values):
-        mappings = db_utils.get_table(self.engine, 'host_mappings')
-        return mappings.insert().execute(**values).inserted_primary_key[0]
-
-    def test_upgrade_with_no_cell_mappings(self):
-        self._flavor_me()
-        self.assertRaisesRegex(exception.ValidationError,
-                               'Cell mappings',
-                               self.migration.upgrade, self.engine)
-
-    def test_upgrade_with_only_cell0(self):
-        self._flavor_me()
-        self._create_cell_mapping(uuid=objects.CellMapping.CELL0_UUID,
-                                  name='cell0',
-                                  transport_url='fake',
-                                  database_connection='fake')
-        self.assertRaisesRegex(exception.ValidationError,
-                               'Cell mappings',
-                               self.migration.upgrade, self.engine)
-
-    def test_upgrade_without_cell0(self):
-        self._flavor_me()
-        self._create_cell_mapping(uuid=uuidsentinel.cell1,
-                                  name='cell1',
-                                  transport_url='fake',
-                                  database_connection='fake')
-        self._create_cell_mapping(uuid=uuidsentinel.cell2,
-                                  name='cell2',
-                                  transport_url='fake',
-                                  database_connection='fake')
-        self.assertRaisesRegex(exception.ValidationError,
-                               'Cell0',
-                               self.migration.upgrade, self.engine)
-
-    def test_upgrade_with_no_host_mappings(self):
-        self._flavor_me()
-        self._create_cell_mapping(uuid=objects.CellMapping.CELL0_UUID,
-                                  name='cell0',
-                                  transport_url='fake',
-                                  database_connection='fake')
-        self._create_cell_mapping(uuid=uuidsentinel.cell1,
-                                  name='cell1',
-                                  transport_url='fake',
-                                  database_connection='fake')
-
-        with mock.patch.object(self.migration, 'LOG') as log:
-            self.migration.upgrade(self.engine)
-            self.assertTrue(log.warning.called)
-
-    def test_upgrade_with_required_mappings(self):
-        self._flavor_me()
-        self._create_cell_mapping(uuid=objects.CellMapping.CELL0_UUID,
-                                  name='cell0',
-                                  transport_url='fake',
-                                  database_connection='fake')
-        cell1_id = self._create_cell_mapping(uuid=uuidsentinel.cell1,
-                                             name='cell1',
-                                             transport_url='fake',
-                                             database_connection='fake')
-        self._create_host_mapping(cell_id=cell1_id, host='foo')
-
-        self.migration.upgrade(self.engine)
-
-    def test_upgrade_new_deploy(self):
-        self.migration.upgrade(self.engine)

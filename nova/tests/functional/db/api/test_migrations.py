@@ -172,7 +172,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         return self.engine
 
     def _skippable_migrations(self):
-        newton_placeholders = list(range(21, 26))
         ocata_placeholders = list(range(31, 41))
         pike_placeholders = list(range(45, 50))
         queens_placeholders = list(range(53, 58))
@@ -183,10 +182,8 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         victoria_placeholders = list(range(78, 83))
         special_cases = [
             self.INIT_VERSION + 1,  # initial change
-            30,  # Enforcement migration, no changes to test
         ]
-        return (newton_placeholders +
-                ocata_placeholders +
+        return (ocata_placeholders +
                 pike_placeholders +
                 queens_placeholders +
                 stein_placeholders +
@@ -225,119 +222,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def assertTableNotExists(self, engine, table_name):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
                 db_utils.get_table, engine, table_name)
-
-    def _check_026(self, engine, data):
-        self.assertColumnExists(engine, 'resource_classes', 'id')
-        self.assertColumnExists(engine, 'resource_classes', 'name')
-
-    def _check_027(self, engine, data):
-        # quota_classes
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'class_name',
-                       'resource',
-                       'hard_limit']:
-            self.assertColumnExists(engine, 'quota_classes', column)
-
-        self.assertIndexExists(engine, 'quota_classes',
-            'quota_classes_class_name_idx')
-
-        # quota_usages
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'project_id',
-                       'resource',
-                       'in_use',
-                       'reserved',
-                       'until_refresh',
-                       'user_id']:
-            self.assertColumnExists(engine, 'quota_usages', column)
-
-        self.assertIndexExists(engine, 'quota_usages',
-            'quota_usages_project_id_idx')
-        self.assertIndexExists(engine, 'quota_usages',
-            'quota_usages_user_id_idx')
-
-        # quotas
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'project_id',
-                       'resource',
-                       'hard_limit']:
-            self.assertColumnExists(engine, 'quotas', column)
-
-        self.assertUniqueConstraintExists(engine, 'quotas',
-                                        ['project_id', 'resource'])
-
-        # project_user_quotas
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'user_id',
-                       'project_id',
-                       'resource',
-                       'hard_limit']:
-            self.assertColumnExists(engine, 'project_user_quotas', column)
-
-        self.assertUniqueConstraintExists(engine, 'project_user_quotas',
-                                        ['user_id', 'project_id', 'resource'])
-        self.assertIndexExists(engine, 'project_user_quotas',
-            'project_user_quotas_project_id_idx')
-        self.assertIndexExists(engine, 'project_user_quotas',
-            'project_user_quotas_user_id_idx')
-
-        # reservations
-        for column in ['created_at',
-                       'updated_at',
-                       'id',
-                       'uuid',
-                       'usage_id',
-                       'project_id',
-                       'resource',
-                       'delta',
-                       'expire',
-                       'user_id']:
-            self.assertColumnExists(engine, 'reservations', column)
-
-        self.assertIndexExists(engine, 'reservations',
-                                       'reservations_project_id_idx')
-        self.assertIndexExists(engine, 'reservations',
-                                       'reservations_uuid_idx')
-        self.assertIndexExists(engine, 'reservations',
-                                       'reservations_expire_idx')
-        self.assertIndexExists(engine, 'reservations',
-                                       'reservations_user_id_idx')
-        # Ensure the foreign key still exists
-        inspector = reflection.Inspector.from_engine(engine)
-        # There should only be one foreign key here
-        fk = inspector.get_foreign_keys('reservations')[0]
-        self.assertEqual('quota_usages', fk['referred_table'])
-        self.assertEqual(['id'], fk['referred_columns'])
-
-    def _pre_upgrade_028(self, engine):
-        build_requests = db_utils.get_table(engine, 'build_requests')
-        fake_build_req = {'id': 2021,
-                          'project_id': 'fake_proj_id',
-                          'instance': '{"uuid": "foo", "name": "bar"}'}
-        build_requests.insert().execute(fake_build_req)
-
-    def _check_028(self, engine, data):
-        build_requests = db_utils.get_table(engine, 'build_requests')
-        if engine.name == 'mysql':
-            self.assertIsInstance(build_requests.c.block_device_mappings.type,
-                                  sqlalchemy.dialects.mysql.MEDIUMTEXT)
-
-        fake_build_req = build_requests.select(
-            build_requests.c.id == 2021).execute().first()
-        self.assertEqual('{"uuid": "foo", "name": "bar"}',
-                         fake_build_req.instance)
-
-    def _check_029(self, engine, data):
-        for column in ['created_at', 'updated_at', 'id', 'uuid']:
-            self.assertColumnExists(engine, 'placement_aggregates', column)
 
     def _check_041(self, engine, data):
         self.assertColumnExists(engine, 'traits', 'id')
