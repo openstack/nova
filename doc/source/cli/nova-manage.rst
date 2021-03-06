@@ -775,6 +775,30 @@ libvirt
        * - 5
          - The provided machine type is unsupported
 
+``nova-manage libvirt list_unset_machine_type [--cell-uuid]``
+    List the UUID of any instance without ``hw_machine_type`` set.
+
+    This command is useful for operators attempting to determine when it is
+    safe to change the :oslo.config:option:`libvirt.hw_machine_type` option
+    within an environment.
+
+    **Return Codes**
+
+    .. list-table::
+       :widths: 20 80
+       :header-rows: 1
+
+       * - Return code
+         - Description
+       * - 0
+         - Completed successfully, no instances found without hw_machine_type
+       * - 1
+         - An unexpected error occurred
+       * - 2
+         - Unable to find cell mapping
+       * - 3
+         - Instances found without hw_machine_type set
+
 See Also
 ========
 

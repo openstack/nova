@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
 import re
 import typing as ty
 
@@ -178,3 +179,48 @@ def update_machine_type(
         instance.save()
 
         return machine_type, existing_mtype
+
+
+def _get_instances_without_mtype(
+    context: 'nova_context.RequestContext',
+) -> ty.List[objects.instance.Instance]:
+    """Fetch a list of instance UUIDs from the DB without hw_machine_type set
+
+    :param meta: 'sqlalchemy.MetaData' pointing to a given cell DB
+    :returns: A list of Instance objects or an empty list
+    """
+    instances = objects.InstanceList.get_all(
+        context, expected_attrs=['system_metadata'])
+    instances_without = []
+    for instance in instances:
+        if instance.deleted == 0 and instance.vm_state != vm_states.BUILDING:
+            if instance.image_meta.properties.get('hw_machine_type') is None:
+                instances_without.append(instance)
+    return instances_without
+
+
+def get_instances_without_type(
+    context: 'nova_context.RequestContext',
+    cell_uuid: ty.Optional[str] = None,
+) -> ty.List[objects.instance.Instance]:
+    """Find instances without hw_machine_type set, optionally within a cell.
+
+    :param context: Request context
+    :param cell_uuid: Optional cell UUID to look within
+    :returns: A list of Instance objects or an empty list
+    """
+    if cell_uuid:
+        cell_mapping = objects.CellMapping.get_by_uuid(context, cell_uuid)
+        results = nova_context.scatter_gather_single_cell(
+            context,
+            cell_mapping,
+            _get_instances_without_mtype
+        )
+
+    results = nova_context.scatter_gather_skip_cell0(
+        context,
+        _get_instances_without_mtype
+    )
+
+    # Flatten the returned list of results into a single list of instances
+    return list(itertools.chain(*[r for c, r in results.items()]))

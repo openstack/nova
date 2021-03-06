@@ -13,11 +13,14 @@
 import ddt
 import mock
 from oslo_utils.fixture import uuidsentinel
+from oslo_utils import uuidutils
 
 from nova.compute import vm_states
+from nova import context as nova_context
 from nova import exception
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.virt.libvirt import machine_type_utils
 
 
@@ -295,3 +298,163 @@ class TestMachineTypeUtils(test.NoDBTestCase):
             instance.system_metadata.get('image_hw_machine_type')
         )
         mock_instance_save.assert_called_once()
+
+
+class TestMachineTypeUtilsListUnset(test.NoDBTestCase):
+
+    USES_DB_SELF = True
+    NUMBER_OF_CELLS = 2
+
+    def setUp(self):
+        super().setUp()
+        self.useFixture(nova_fixtures.Database(database='api'))
+        self.context = nova_context.get_admin_context()
+
+    @staticmethod
+    def _create_node_in_cell(ctxt, cell, hypervisor_type, nodename):
+        with nova_context.target_cell(ctxt, cell) as cctxt:
+            cn = objects.ComputeNode(
+                context=cctxt,
+                hypervisor_type=hypervisor_type,
+                hypervisor_hostname=nodename,
+                # The rest of these values are fakes.
+                host=uuidsentinel.host,
+                vcpus=4,
+                memory_mb=8 * 1024,
+                local_gb=40,
+                vcpus_used=2,
+                memory_mb_used=2 * 1024,
+                local_gb_used=10,
+                hypervisor_version=1,
+                cpu_info='{"arch": "x86_64"}')
+            cn.create()
+            return cn
+
+    @staticmethod
+    def _create_instance_in_cell(
+        ctxt,
+        cell,
+        node,
+        is_deleted=False,
+        hw_machine_type=None
+    ):
+        with nova_context.target_cell(ctxt, cell) as cctxt:
+            inst = objects.Instance(
+                context=cctxt,
+                host=node.host,
+                node=node.hypervisor_hostname,
+                uuid=uuidutils.generate_uuid())
+            inst.create()
+
+            if hw_machine_type:
+                inst.system_metadata = {
+                    'image_hw_machine_type': hw_machine_type
+                }
+
+            if is_deleted:
+                inst.destroy()
+
+            return inst
+
+    def _setup_instances(self):
+        # Setup the required cells
+        self._setup_cells()
+
+        # Track and return the created instances so the tests can assert
+        instances = {}
+
+        # Create a node in each cell
+        node1_cell1 = self._create_node_in_cell(
+            self.context,
+            self.cell_mappings['cell1'],
+            'kvm',
+            uuidsentinel.node_cell1_uuid
+        )
+        node2_cell2 = self._create_node_in_cell(
+            self.context,
+            self.cell_mappings['cell2'],
+            'kvm',
+            uuidsentinel.node_cell2_uuid
+        )
+
+        # Create some instances with and without machine types defined in cell1
+        instances['cell1_without_mtype'] = self._create_instance_in_cell(
+            self.context,
+            self.cell_mappings['cell1'],
+            node1_cell1
+        )
+        instances['cell1_with_mtype'] = self._create_instance_in_cell(
+            self.context,
+            self.cell_mappings['cell1'],
+            node1_cell1,
+            hw_machine_type='pc'
+        )
+        instances['cell1_with_mtype_deleted'] = self._create_instance_in_cell(
+            self.context,
+            self.cell_mappings['cell1'],
+            node1_cell1,
+            hw_machine_type='pc',
+            is_deleted=True
+        )
+
+        # Repeat for cell2
+        instances['cell2_without_mtype'] = self._create_instance_in_cell(
+            self.context,
+            self.cell_mappings['cell2'],
+            node2_cell2
+        )
+        instances['cell2_with_mtype'] = self._create_instance_in_cell(
+            self.context,
+            self.cell_mappings['cell2'],
+            node2_cell2,
+            hw_machine_type='pc'
+        )
+        instances['cell2_with_mtype_deleted'] = self._create_instance_in_cell(
+            self.context,
+            self.cell_mappings['cell2'],
+            node2_cell2,
+            hw_machine_type='pc',
+            is_deleted=True
+        )
+        return instances
+
+    def test_fresh_install_no_cell_mappings(self):
+        self.assertEqual(
+            [],
+            machine_type_utils.get_instances_without_type(self.context)
+        )
+
+    def test_fresh_install_no_computes(self):
+        self._setup_cells()
+        self.assertEqual(
+            [],
+            machine_type_utils.get_instances_without_type(self.context)
+        )
+
+    def test_get_from_specific_cell(self):
+        instances = self._setup_instances()
+        # Assert that we only see the uuid for instance cell1_without_mtype
+        instance_list = machine_type_utils.get_instances_without_type(
+            self.context,
+            cell_uuid=self.cell_mappings['cell1'].uuid
+        )
+        self.assertEqual(
+            instances['cell1_without_mtype'].uuid,
+            instance_list[0].uuid
+        )
+
+    def test_get_multi_cell(self):
+        instances = self._setup_instances()
+        # Assert that we see both undeleted _without_mtype instances
+        instance_list = machine_type_utils.get_instances_without_type(
+            self.context,
+        )
+        instance_uuids = [i.uuid for i in instance_list]
+        self.assertIn(
+            instances['cell1_without_mtype'].uuid,
+            instance_uuids
+        )
+        self.assertIn(
+            instances['cell2_without_mtype'].uuid,
+            instance_uuids
+        )
