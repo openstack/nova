@@ -176,6 +176,7 @@ def upgrade(migrate_engine):
         Column('instance_uuid', String(length=36)),
         Column('instance', MediumText()),
         Column('block_device_mappings', MediumText()),
+        Column('tags', Text()),
         UniqueConstraint(
             'instance_uuid', name='uniq_build_requests0instance_uuid'),
         Index('build_requests_project_id_idx', 'project_id'),
@@ -199,6 +200,30 @@ def upgrade(migrate_engine):
             'user_id', 'name', name='uniq_key_pairs0user_id0name'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
+    )
+
+    projects = Table('projects', meta,
+        Column(
+            'id', Integer, primary_key=True, nullable=False,
+            autoincrement=True),
+        Column('external_id', String(length=255), nullable=False),
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        UniqueConstraint('external_id', name='uniq_projects0external_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1',
+    )
+
+    users = Table('users', meta,
+        Column(
+            'id', Integer, primary_key=True, nullable=False,
+            autoincrement=True),
+        Column('external_id', String(length=255), nullable=False),
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        UniqueConstraint('external_id', name='uniq_users0external_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1',
     )
 
     resource_classes = Table('resource_classes', meta,
@@ -259,6 +284,19 @@ def upgrade(migrate_engine):
         mysql_charset='latin1'
     )
 
+    traits = Table(
+        'traits', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column(
+            'id', Integer, primary_key=True, nullable=False,
+            autoincrement=True),
+        Column('name', Unicode(255, **nameargs), nullable=False),
+        UniqueConstraint('name', name='uniq_traits0name'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1',
+    )
+
     allocations = Table(
         'allocations', meta,
         Column('created_at', DateTime),
@@ -278,6 +316,25 @@ def upgrade(migrate_engine):
         mysql_charset='latin1'
     )
 
+    consumers = Table(
+        'consumers', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column(
+            'id', Integer, primary_key=True, nullable=False,
+            autoincrement=True),
+        Column('uuid', String(length=36), nullable=False),
+        Column('project_id', Integer, nullable=False),
+        Column('user_id', Integer, nullable=False),
+        Index('consumers_project_id_uuid_idx', 'project_id', 'uuid'),
+        Index(
+            'consumers_project_id_user_id_uuid_idx', 'project_id', 'user_id',
+            'uuid'),
+        UniqueConstraint('uuid', name='uniq_consumers0uuid'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1',
+    )
+
     resource_provider_aggregates = Table(
         'resource_provider_aggregates', meta,
         Column('created_at', DateTime),
@@ -289,6 +346,25 @@ def upgrade(migrate_engine):
             'resource_provider_aggregates_aggregate_id_idx', 'aggregate_id'),
         mysql_engine='InnoDB',
         mysql_charset='latin1'
+    )
+
+    resource_provider_traits = Table(
+        'resource_provider_traits', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column(
+            'trait_id', Integer, ForeignKey('traits.id'), primary_key=True,
+            nullable=False),
+        Column(
+            'resource_provider_id', Integer, primary_key=True, nullable=False),
+        Index(
+            'resource_provider_traits_resource_provider_trait_idx',
+            'resource_provider_id', 'trait_id'),
+        ForeignKeyConstraint(
+            columns=['resource_provider_id'],
+            refcolumns=[resource_providers.c.id]),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1',
     )
 
     placement_aggregates = Table('placement_aggregates', meta,
@@ -476,11 +552,16 @@ def upgrade(migrate_engine):
         request_specs,
         build_requests,
         keypairs,
+        projects,
+        users,
         resource_classes,
         resource_providers,
         inventories,
+        traits,
         allocations,
+        consumers,
         resource_provider_aggregates,
+        resource_provider_traits,
         placement_aggregates,
         aggregates,
         aggregate_hosts,
