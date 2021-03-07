@@ -22,31 +22,6 @@ scheduler_group = cfg.OptGroup(name="scheduler",
                                title="Scheduler configuration")
 
 scheduler_opts = [
-    cfg.IntOpt("periodic_task_interval",
-        default=60,
-        help="""
-Periodic task interval.
-
-This value controls how often (in seconds) to run periodic tasks in the
-scheduler. The specific tasks that are run for each period are determined by
-the particular scheduler being used. Currently there are no in-tree scheduler
-driver that use this option.
-
-If this is larger than the nova-service 'service_down_time' setting, the
-ComputeFilter (if enabled) may think the compute service is down. As each
-scheduler can work a little differently than the others, be sure to test this
-with your selected scheduler.
-
-Possible values:
-
-* An integer, where the integer corresponds to periodic task interval in
-  seconds. 0 uses the default interval (60 seconds). A negative value disables
-  periodic tasks.
-
-Related options:
-
-* ``nova-service service_down_time``
-"""),
     cfg.IntOpt("max_attempts",
         default=3,
         min=1,

@@ -85,11 +85,6 @@ class SchedulerManager(manager.Manager):
             else:
                 LOG.debug(msg)
 
-    @periodic_task.periodic_task(spacing=CONF.scheduler.periodic_task_interval,
-                                 run_immediately=True)
-    def _run_periodic_tasks(self, context):
-        self.driver.run_periodic_tasks(context)
-
     def reset(self):
         # NOTE(tssurya): This is a SIGHUP handler which will reset the cells
         # and enabled cells caches in the host manager. So every time an
