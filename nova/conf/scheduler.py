@@ -22,39 +22,6 @@ scheduler_group = cfg.OptGroup(name="scheduler",
                                title="Scheduler configuration")
 
 scheduler_opts = [
-    cfg.StrOpt("driver",
-        default="filter_scheduler",
-        deprecated_name="scheduler_driver",
-        deprecated_group="DEFAULT",
-        deprecated_for_removal=True,
-        deprecated_since='21.0.0',
-        deprecated_reason="""
-nova no longer provides any in-tree filters except for the 'filter_scheduler'
-scheduler. This filter is considered flexible and pluggable enough for all use
-cases and can be extended through the use of custom, out-of-tree filters and
-weighers along with powerful, in-tree filters like the
-'AggregateInstanceExtraSpecsFilter' and 'ComputeCapabilitiesFilter' filters.
-""",
-        help="""
-The class of the driver used by the scheduler. This should be chosen from one
-of the entrypoints under the namespace 'nova.scheduler.driver' of file
-'setup.cfg'. If nothing is specified in this option, the 'filter_scheduler' is
-used.
-
-Possible values:
-
-* Any of the drivers included in Nova:
-
-  * filter_scheduler
-
-* You may also set this to the entry point name of a custom scheduler driver,
-  but you will be responsible for creating and maintaining it in your
-  ``setup.cfg`` file.
-
-Related options:
-
-* workers
-"""),
     cfg.IntOpt("periodic_task_interval",
         default=60,
         help="""

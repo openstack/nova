@@ -81,7 +81,6 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         enabled_filters = CONF.filter_scheduler.enabled_filters
         enabled_filters += self.ADDITIONAL_FILTERS
 
-        self.flags(driver='filter_scheduler', group='scheduler')
         self.flags(enabled_filters=enabled_filters, group='filter_scheduler')
 
         return self.start_service('scheduler')

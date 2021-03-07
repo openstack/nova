@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    Support for custom scheduler drivers, deprecated since the 21.0.0 (Ussuri)
+    release, has been removed. The default ``filter_scheduler`` is now
+    considered performant enough to suit all use cases. Users with specific
+    requirements that they feel are not met by the filter scheduler should
+    contact the nova developers to discuss their issue.
+  - |
+    The ``[scheduler] scheduler_driver`` config option has been removed, along
+    with the ``nova.scheduler.driver`` setuptools entrypoint.
