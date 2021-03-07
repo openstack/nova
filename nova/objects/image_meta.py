@@ -177,14 +177,17 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.26: Added 'mixed' to 'hw_cpu_policy' field
     # Version 1.27: Added 'hw_tpm_model' and 'hw_tpm_version' fields
     # Version 1.28: Added 'socket' to 'hw_pci_numa_affinity_policy'
+    # Version 1.29: Added 'hw_input_bus' field
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.28'
+    VERSION = '1.29'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 29):
+            primitive.pop('hw_input_bus', None)
         if target_version < (1, 28):
             policy = primitive.get('hw_pci_numa_affinity_policy', None)
             if policy == fields.PCINUMAAffinityPolicy.SOCKET:
@@ -329,6 +332,9 @@ class ImageMetaProps(base.NovaObject):
 
         # This indicates the guest needs UEFI firmware
         'hw_firmware_type': fields.FirmwareTypeField(),
+
+        # name of the input bus type to use, e.g. usb, virtio
+        'hw_input_bus': fields.InputBusField(),
 
         # boolean - used to trigger code to inject networking when booting a CD
         # image with a network boot image

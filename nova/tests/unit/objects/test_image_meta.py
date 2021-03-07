@@ -349,6 +349,22 @@ class TestImageMetaProps(test.NoDBTestCase):
             self.assertRaises(exception.ObjectActionError,
                               obj.obj_to_primitive, '1.0')
 
+    def test_obj_make_compatible_input_bus(self):
+        """Check 'hw_input_bus' compatibility."""
+        # assert that 'hw_input_bus' is supported on a suitably new version
+        obj = objects.ImageMetaProps(
+            hw_input_bus=objects.fields.InputBus.VIRTIO,
+        )
+        primitive = obj.obj_to_primitive('1.29')
+        self.assertIn('hw_input_bus', primitive['nova_object.data'])
+        self.assertEqual(
+            objects.fields.InputBus.VIRTIO,
+            primitive['nova_object.data']['hw_input_bus'])
+
+        # and is absent on older versions
+        primitive = obj.obj_to_primitive('1.28')
+        self.assertNotIn('hw_input_bus', primitive['nova_object.data'])
+
     def test_obj_make_compatible_video_model(self):
         # assert that older video models are preserved.
         obj = objects.ImageMetaProps(
