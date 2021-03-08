@@ -2451,22 +2451,55 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.vcpus = 1
         obj.name = "uefi"
         obj.uuid = "f01cf68d-515c-4daf-b85f-ef1424d93bfc"
-        obj.os_type = "x86_64"
-        obj.os_loader = '/tmp/OVMF_CODE.fd'
+        obj.os_type = "hvm"
+        obj.os_mach_type = "pc-q35-5.1"
+        obj.os_loader = '/tmp/OVMF_CODE.secboot.fd'
         obj.os_loader_type = 'pflash'
+        obj.os_loader_secure = True
         xml = obj.to_xml()
 
-        self.assertXmlEqual(xml, """
+        self.assertXmlEqual(
+            xml,
+            """
             <domain type="kvm">
               <uuid>f01cf68d-515c-4daf-b85f-ef1424d93bfc</uuid>
               <name>uefi</name>
               <memory>104857600</memory>
               <vcpu>1</vcpu>
               <os>
-                <type>x86_64</type>
-                <loader readonly='yes' type='pflash'>/tmp/OVMF_CODE.fd</loader>
+                <type machine="pc-q35-5.1">hvm</type>
+                <loader secure='yes' readonly='yes' type='pflash'>/tmp/OVMF_CODE.secboot.fd</loader>
               </os>
-            </domain>""")
+            </domain>""",  # noqa: E501
+        )
+
+    def test_config_uefi_autoconfigure(self):
+        obj = config.LibvirtConfigGuest()
+        obj.virt_type = "kvm"
+        obj.memory = 100 * units.Mi
+        obj.vcpus = 1
+        obj.name = "uefi"
+        obj.uuid = "f01cf68d-515c-4daf-b85f-ef1424d93bfc"
+        obj.os_type = "hvm"
+        obj.os_firmware = "efi"
+        obj.os_mach_type = "pc-q35-5.1"
+        obj.os_loader_secure = True
+        xml = obj.to_xml()
+
+        self.assertXmlEqual(
+            xml,
+            """
+            <domain type="kvm">
+              <uuid>f01cf68d-515c-4daf-b85f-ef1424d93bfc</uuid>
+              <name>uefi</name>
+              <memory>104857600</memory>
+              <vcpu>1</vcpu>
+              <os firmware="efi">
+                <type machine="pc-q35-5.1">hvm</type>
+                <loader secure='yes'/>
+              </os>
+            </domain>""",
+        )
 
     def test_config_boot_menu(self):
         obj = config.LibvirtConfigGuest()
@@ -2475,7 +2508,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.vcpus = 2
         obj.name = "bootmenu"
         obj.uuid = "f01cf68d-515c-4daf-b85f-ef1424d93bfc"
-        obj.os_type = "fake"
+        obj.os_type = "hvm"
         obj.os_bootmenu = True
         xml = obj.to_xml()
 
@@ -2486,7 +2519,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <memory>104857600</memory>
               <vcpu>2</vcpu>
               <os>
-                <type>fake</type>
+                <type>hvm</type>
                 <bootmenu enable="yes"/>
               </os>
             </domain>""")
@@ -2498,7 +2531,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.vcpus = 2
         obj.name = "perf"
         obj.uuid = "f01cf68d-515c-4daf-b85f-ef1424d93bfc"
-        obj.os_type = "fake"
+        obj.os_type = "hvm"
         obj.perf_events = ['cmt', 'mbml']
         xml = obj.to_xml()
 
@@ -2509,7 +2542,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <memory>104857600</memory>
               <vcpu>2</vcpu>
               <os>
-                <type>fake</type>
+                <type>hvm</type>
               </os>
               <perf>
                 <event enabled="yes" name="cmt"/>
@@ -2641,7 +2674,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         xmldoc = """
           <domain>
             <os>
-              <type>x86_64</type>
+              <type>hvm</type>
               <loader readonly='yes' type='pflash'>/tmp/OVMF_CODE.fd</loader>
             </os>
           </domain>
@@ -2650,7 +2683,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.parse_str(xmldoc)
 
         self.assertIsNone(obj.virt_type)
-        self.assertEqual('x86_64', obj.os_type)
+        self.assertEqual('hvm', obj.os_type)
         self.assertIsNone(obj.os_mach_type)
         self.assertIsNone(obj.os_kernel)
         self.assertEqual('/tmp/OVMF_CODE.fd', obj.os_loader)

@@ -59,8 +59,12 @@ class LibvirtConfigObject(object):
 
     def _text_node(self, node_name, value, **kwargs):
         child = self._new_node(node_name, **kwargs)
-        child.text = str(value)
+        if value is not None:
+            child.text = str(value)
         return child
+
+    def get_yes_no_str(self, value):
+        return 'yes' if value else 'no'
 
     def format_dom(self):
         return self._new_node(self.root_name)
@@ -682,10 +686,7 @@ class LibvirtConfigGuestTimer(LibvirtConfigObject):
         if self.tickpolicy is not None:
             tm.set("tickpolicy", self.tickpolicy)
         if self.present is not None:
-            if self.present:
-                tm.set("present", "yes")
-            else:
-                tm.set("present", "no")
+            tm.set("present", self.get_yes_no_str(self.present))
 
         return tm
 
@@ -2016,10 +2017,7 @@ class LibvirtConfigGuestGraphics(LibvirtConfigGuestDevice):
         dev = super(LibvirtConfigGuestGraphics, self).format_dom()
 
         dev.set("type", self.type)
-        if self.autoport:
-            dev.set("autoport", "yes")
-        else:
-            dev.set("autoport", "no")
+        dev.set("autoport", self.get_yes_no_str(self.autoport))
         if self.keymap:
             dev.set("keymap", self.keymap)
         if self.listen:
@@ -2783,7 +2781,9 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.sysinfo = None
         self.os_type = None
         self.os_loader = None
+        self.os_firmware = None
         self.os_loader_type = None
+        self.os_loader_secure = None
         self.os_kernel = None
         self.os_initrd = None
         self.os_cmdline = None
@@ -2829,21 +2829,32 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
     def _format_os(self, root):
         os = etree.Element("os")
+
+        if self.os_firmware is not None:
+            os.set("firmware", self.os_firmware)
+
         type_node = self._text_node("type", self.os_type)
         if self.os_mach_type is not None:
             type_node.set("machine", self.os_mach_type)
         os.append(type_node)
+
         if self.os_kernel is not None:
             os.append(self._text_node("kernel", self.os_kernel))
-        if self.os_loader is not None:
-            # Generate XML nodes for UEFI boot.
-            if self.os_loader_type == "pflash":
-                loader = self._text_node("loader", self.os_loader)
+
+        # Generate XML nodes for UEFI boot.
+        if (
+            self.os_loader_type is not None or
+            self.os_loader_secure is not None
+        ):
+            loader = self._text_node("loader", self.os_loader)
+            if self.os_loader_type is not None:
                 loader.set("type", "pflash")
                 loader.set("readonly", "yes")
-                os.append(loader)
-            else:
-                os.append(self._text_node("loader", self.os_loader))
+            if self.os_loader_secure is not None:
+                loader.set(
+                    "secure", self.get_yes_no_str(self.os_loader_secure))
+            os.append(loader)
+
         if self.os_initrd is not None:
             os.append(self._text_node("initrd", self.os_initrd))
         if self.os_cmdline is not None:
@@ -2950,6 +2961,9 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                 self.cpuset = hardware.parse_cpu_spec(xmldoc.get('cpuset'))
 
     def _parse_os(self, xmldoc):
+        if xmldoc.get('firmware'):
+            self.os_firmware = xmldoc.get('firmware')
+
         # smbios is skipped just because LibvirtConfigGuestSMBIOS
         # does not implement parse_dom method
         for c in xmldoc:
@@ -3378,11 +3392,6 @@ class LibvirtConfigSecret(LibvirtConfigObject):
         self.uuid = None
         self.usage_type = None
         self.usage_id = None
-
-    def get_yes_no_str(self, value):
-        if value:
-            return 'yes'
-        return 'no'
 
     def format_dom(self):
         root = super(LibvirtConfigSecret, self).format_dom()
