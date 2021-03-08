@@ -37,7 +37,6 @@ from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 from sqlalchemy import Column
-from sqlalchemy.dialects import sqlite
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import inspect
@@ -6182,18 +6181,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def _check_sqlite_version_less_than_3_7(self):
         # SQLite doesn't enforce foreign key constraints without a pragma.
-        dialect = self.engine.url.get_dialect()
-        if dialect == sqlite.dialect:
-            # We're seeing issues with foreign key support in SQLite 3.6.20
-            # SQLAlchemy doesn't support it at all with < SQLite 3.6.19
-            # It works fine in SQLite 3.7.
-            # So return early to skip this test if running SQLite < 3.7
-            import sqlite3
-            tup = sqlite3.sqlite_version_info
-            if tup[0] < 3 or (tup[0] == 3 and tup[1] < 7):
-                self.skipTest(
-                    'sqlite version too old for reliable SQLA foreign_keys')
-            self.conn.execute("PRAGMA foreign_keys = ON")
+        self.enforce_fk_constraints(engine=self.engine)
 
     def test_archive_deleted_rows_for_migrations(self):
         # migrations.instance_uuid depends on instances.uuid

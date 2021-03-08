@@ -1645,6 +1645,7 @@ class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
 
     def setUp(self):
         super(TestDBArchiveDeletedRows, self).setUp()
+        self.enforce_fk_constraints()
         self.cli = manage.DbCommands()
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
@@ -1690,6 +1691,7 @@ class TestDBArchiveDeletedRowsMultiCell(integrated_helpers.InstanceHelperMixin,
 
     def setUp(self):
         super(TestDBArchiveDeletedRowsMultiCell, self).setUp()
+        self.enforce_fk_constraints()
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
