@@ -81,6 +81,7 @@ class PowerVMDriver(driver.ComputeDriver):
             'supports_accelerators': False,
             'supports_vtpm': False,
             'supports_secure_boot': False,
+            'supports_socket_pci_numa_affinity': False,
 
             # Supported image types
             "supports_image_type_aki": False,

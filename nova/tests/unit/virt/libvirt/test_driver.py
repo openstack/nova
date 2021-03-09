@@ -814,6 +814,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             drvr.capabilities['supports_vtpm'],
             "Driver capabilities for 'supports_vtpm' is invalid",
         )
+        self.assertTrue(
+            drvr.capabilities['supports_socket_pci_numa_affinity'],
+            "Driver capabilities for 'supports_socket_pci_numa_affinity' "
+            "is invalid",
+        )
 
     def test_driver_capabilities_qcow2_with_rbd(self):
         self.flags(images_type='rbd', group='libvirt')
@@ -965,7 +970,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
             'COMPUTE_SECURITY_TPM_1_2': False,
             'COMPUTE_SECURITY_TPM_2_0': False,
-            'COMPUTE_SOCKET_PCI_NUMA_AFFINITY': True,
         }
 
         static_traits = drvr.static_traits
@@ -1011,7 +1015,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
             'COMPUTE_SECURITY_TPM_1_2': False,
             'COMPUTE_SECURITY_TPM_2_0': False,
-            'COMPUTE_SOCKET_PCI_NUMA_AFFINITY': True,
         }
 
         static_traits = drvr.static_traits
