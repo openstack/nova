@@ -7224,27 +7224,20 @@ class LibvirtDriver(driver.ComputeDriver):
         return [('network-vif-plugged', vif['id'])
                 for vif in network_info if vif.get('active', True) is False]
 
-    def _cleanup_failed_start(self, context, instance, network_info,
-                              block_device_info, guest,
-                              cleanup_instance_dir=False,
-                              cleanup_instance_disks=False):
-        try:
-            if guest and guest.is_active():
-                guest.poweroff()
-        finally:
-            self._cleanup(context, instance, network_info,
-                          block_device_info=block_device_info,
-                          destroy_vifs=True,
-                          cleanup_instance_dir=cleanup_instance_dir,
-                          cleanup_instance_disks=cleanup_instance_disks)
-
-    def _create_guest_with_network(self, context, xml, instance, network_info,
-                                   block_device_info, power_on=True,
-                                   vifs_already_plugged=False,
-                                   post_xml_callback=None,
-                                   external_events=None,
-                                   cleanup_instance_dir=False,
-                                   cleanup_instance_disks=False):
+    def _create_guest_with_network(
+        self,
+        context: nova_context.RequestContext,
+        xml: str,
+        instance: 'objects.Instance',
+        network_info: network_model.NetworkInfo,
+        block_device_info: ty.Optional[ty.Dict[str, ty.Any]],
+        power_on: bool = True,
+        vifs_already_plugged: bool = False,
+        post_xml_callback: ty.Callable = None,
+        external_events: ty.Optional[ty.List[str]] = None,
+        cleanup_instance_dir: bool = False,
+        cleanup_instance_disks: bool = False,
+    ) -> libvirt_guest.Guest:
         """Do required network setup and create domain."""
 
         timeout = CONF.vif_plugging_timeout
@@ -7258,39 +7251,39 @@ class LibvirtDriver(driver.ComputeDriver):
             events = []
 
         pause = bool(events)
-        guest: ty.Optional[libvirt_guest.Guest] = None
         try:
             with self.virtapi.wait_for_instance_event(
-                    instance, events, deadline=timeout,
-                    error_callback=self._neutron_failed_callback):
+                instance, events, deadline=timeout,
+                error_callback=self._neutron_failed_callback,
+            ):
                 self.plug_vifs(instance, network_info)
-                with self._lxc_disk_handler(context, instance,
-                                            instance.image_meta,
-                                            block_device_info):
+                with self._lxc_disk_handler(
+                    context, instance, instance.image_meta, block_device_info,
+                ):
                     guest = self._create_guest(
                         context, xml, instance,
                         pause=pause, power_on=power_on,
                         post_xml_callback=post_xml_callback)
-        except exception.VirtualInterfaceCreateException:
-            # Neutron reported failure and we didn't swallow it, so
-            # bail here
-            with excutils.save_and_reraise_exception():
-                self._cleanup_failed_start(
-                    context, instance, network_info, block_device_info, guest,
-                    cleanup_instance_dir=cleanup_instance_dir,
-                    cleanup_instance_disks=cleanup_instance_disks)
         except eventlet.timeout.Timeout:
             # We never heard from Neutron
-            LOG.warning('Timeout waiting for %(events)s for '
-                        'instance with vm_state %(vm_state)s and '
-                        'task_state %(task_state)s.',
-                        {'events': events,
-                         'vm_state': instance.vm_state,
-                         'task_state': instance.task_state},
-                        instance=instance)
+            LOG.warning(
+                'Timeout waiting for %(events)s for instance with '
+                'vm_state %(vm_state)s and task_state %(task_state)s',
+                {
+                    'events': events,
+                    'vm_state': instance.vm_state,
+                    'task_state': instance.task_state,
+                },
+                instance=instance)
+
             if CONF.vif_plugging_is_fatal:
-                self._cleanup_failed_start(
-                    context, instance, network_info, block_device_info, guest,
+                # NOTE(stephenfin): don't worry, guest will be in scope since
+                # we can only hit this branch if the VIF plug timed out
+                if guest.is_active():
+                    guest.poweroff()
+                self._cleanup(
+                    context, instance, network_info, block_device_info,
+                    destroy_vifs=True,
                     cleanup_instance_dir=cleanup_instance_dir,
                     cleanup_instance_disks=cleanup_instance_disks)
                 raise exception.VirtualInterfaceCreateException()
@@ -7298,14 +7291,16 @@ class LibvirtDriver(driver.ComputeDriver):
             # Any other error, be sure to clean up
             LOG.error('Failed to start libvirt guest', instance=instance)
             with excutils.save_and_reraise_exception():
-                self._cleanup_failed_start(
-                    context, instance, network_info, block_device_info, guest,
+                self._cleanup(
+                    context, instance, network_info, block_device_info,
+                    destroy_vifs=True,
                     cleanup_instance_dir=cleanup_instance_dir,
                     cleanup_instance_disks=cleanup_instance_disks)
+
         # Resume only if domain has been paused
         if pause:
-            assert guest is not None
             guest.resume()
+
         return guest
 
     def _get_pcpu_available(self):
