@@ -36,7 +36,6 @@ from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as db_utils
-from oslo_serialization import jsonutils
 import sqlalchemy
 from sqlalchemy.engine import reflection
 import testtools
@@ -172,7 +171,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         return self.engine
 
     def _skippable_migrations(self):
-        pike_placeholders = list(range(45, 50))
         queens_placeholders = list(range(53, 58))
         # We forgot to add the rocky placeholders
         stein_placeholders = list(range(63, 68))
@@ -182,8 +180,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         special_cases = [
             self.INIT_VERSION + 1,  # initial change
         ]
-        return (pike_placeholders +
-                queens_placeholders +
+        return (queens_placeholders +
                 stein_placeholders +
                 train_placeholders +
                 ussuri_placeholders +
@@ -220,45 +217,6 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def assertTableNotExists(self, engine, table_name):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
                 db_utils.get_table, engine, table_name)
-
-    def _check_050(self, engine, data):
-        self.assertColumnExists(engine, 'flavors', 'description')
-
-    def _check_051(self, engine, data):
-        for column in ['root_provider_id', 'parent_provider_id']:
-            self.assertColumnExists(engine, 'resource_providers', column)
-        self.assertIndexExists(engine, 'resource_providers',
-            'resource_providers_root_provider_id_idx')
-        self.assertIndexExists(engine, 'resource_providers',
-            'resource_providers_parent_provider_id_idx')
-
-    def _pre_upgrade_052(self, engine):
-        request_specs = db_utils.get_table(engine, 'request_specs')
-        # The spec value is a serialized json blob.
-        spec = jsonutils.dumps(
-            {"instance_group": {"id": 42,
-                                "members": ["uuid1",
-                                            "uuid2",
-                                            "uuid3"]}})
-        fake_request_spec = {
-            'id': 42, 'spec': spec, 'instance_uuid': uuids.instance}
-        request_specs.insert().execute(fake_request_spec)
-
-    def _check_052(self, engine, data):
-        request_specs = db_utils.get_table(engine, 'request_specs')
-        if engine.name == 'mysql':
-            self.assertIsInstance(request_specs.c.spec.type,
-                                  sqlalchemy.dialects.mysql.MEDIUMTEXT)
-
-        expected_spec = {"instance_group": {"id": 42,
-                                            "members": ["uuid1",
-                                                        "uuid2",
-                                                        "uuid3"]}}
-        from_db_request_spec = request_specs.select(
-            request_specs.c.id == 42).execute().first()
-        self.assertEqual(uuids.instance, from_db_request_spec['instance_uuid'])
-        db_spec = jsonutils.loads(from_db_request_spec['spec'])
-        self.assertDictEqual(expected_spec, db_spec)
 
     def _check_058(self, engine, data):
         self.assertColumnExists(engine, 'cell_mappings', 'disabled')
