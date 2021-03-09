@@ -2113,7 +2113,12 @@ class TestInstanceClaim(BaseTestCase):
 
         # TODO(jaypipes): Remove once the PCI tracker is always created
         # upon the resource tracker being initialized...
-        self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
+        with mock.patch.object(
+            objects.PciDeviceList, 'get_by_compute_node',
+            return_value=objects.PciDeviceList()
+        ):
+            self.rt.pci_tracker = pci_manager.PciDevTracker(
+                mock.sentinel.ctx, _COMPUTE_NODE_FIXTURES[0])
 
         pci_dev = pci_device.PciDevice.create(
             None, fake_pci_device.dev_dict)
@@ -2478,7 +2483,6 @@ class TestResize(BaseTestCase):
                                     pci_get_by_instance_mock,
                                     is_bfv_mock,
                                     revert=False):
-
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
         virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
@@ -2652,7 +2656,8 @@ class TestResize(BaseTestCase):
 
         # TODO(jaypipes): Remove once the PCI tracker is always created
         # upon the resource tracker being initialized...
-        self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
+        self.rt.pci_tracker = pci_manager.PciDevTracker(
+            mock.sentinel.ctx, _COMPUTE_NODE_FIXTURES[0])
 
         pci_dev = pci_device.PciDevice.create(
             None, fake_pci_device.dev_dict)
@@ -2743,7 +2748,12 @@ class TestResize(BaseTestCase):
 
         # TODO(jaypipes): Remove once the PCI tracker is always created
         # upon the resource tracker being initialized...
-        self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
+        with mock.patch.object(
+            objects.PciDeviceList, 'get_by_compute_node',
+            return_value=objects.PciDeviceList()
+        ):
+            self.rt.pci_tracker = pci_manager.PciDevTracker(
+                mock.sentinel.ctx, cn)
 
         pci_dev = pci_device.PciDevice.create(
             None, fake_pci_device.dev_dict)
@@ -3030,7 +3040,12 @@ class TestLiveMigration(BaseTestCase):
         migration = objects.Migration(id=42, migration_type='live-migration',
                                       status='accepted')
         image_meta = objects.ImageMeta(properties=objects.ImageMetaProps())
-        self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
+        with mock.patch.object(
+            objects.PciDeviceList, 'get_by_compute_node',
+            return_value=objects.PciDeviceList()
+        ):
+            self.rt.pci_tracker = pci_manager.PciDevTracker(
+                mock.sentinel.ctx, _COMPUTE_NODE_FIXTURES[0])
         with test.nested(
             mock.patch.object(objects.ImageMeta, 'from_instance',
                               return_value=image_meta),

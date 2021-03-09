@@ -763,8 +763,7 @@ class ResourceTracker(object):
 
     def _setup_pci_tracker(self, context, compute_node, resources):
         if not self.pci_tracker:
-            n_id = compute_node.id
-            self.pci_tracker = pci_manager.PciDevTracker(context, node_id=n_id)
+            self.pci_tracker = pci_manager.PciDevTracker(context, compute_node)
             if 'pci_passthrough_devices' in resources:
                 dev_json = resources.pop('pci_passthrough_devices')
                 self.pci_tracker.update_devices_from_hypervisor_resources(

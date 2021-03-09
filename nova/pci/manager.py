@@ -51,25 +51,22 @@ class PciDevTracker(object):
     are saved.
     """
 
-    def __init__(self, context, node_id=None):
+    def __init__(self, context, compute_node):
         """Create a pci device tracker.
 
-        If a node_id is passed in, it will fetch pci devices information
-        from database, otherwise, it will create an empty devices list
-        and the resource tracker will update the node_id information later.
+        :param context: The request context.
+        :param compute_node: The object.ComputeNode whose PCI devices we're
+                             tracking.
         """
 
         super(PciDevTracker, self).__init__()
         self.stale = {}
-        self.node_id = node_id
+        self.node_id = compute_node.id
         self.dev_filter = whitelist.Whitelist(CONF.pci.passthrough_whitelist)
         self.stats = stats.PciDeviceStats(dev_filter=self.dev_filter)
         self._context = context
-        if node_id:
-            self.pci_devs = objects.PciDeviceList.get_by_compute_node(
-                    context, node_id)
-        else:
-            self.pci_devs = objects.PciDeviceList(objects=[])
+        self.pci_devs = objects.PciDeviceList.get_by_compute_node(
+            context, self.node_id)
         self._build_device_tree(self.pci_devs)
         self._initial_instance_usage()
 
