@@ -96,8 +96,7 @@ class VPMEMTestBase(integrated_helpers.LibvirtProviderUsageBaseTestCase):
         fake_connection = self._get_connection(
             # Need a host to support creating more servers with vpmems
             host_info=fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                           cpu_cores=2, cpu_threads=2,
-                                           kB_mem=15740000),
+                                           cpu_cores=2, cpu_threads=2),
             hostname=hostname)
         self.mock_conn.return_value = fake_connection
         compute = self._start_compute(host=hostname)

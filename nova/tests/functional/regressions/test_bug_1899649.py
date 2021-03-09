@@ -39,8 +39,7 @@ class TestVolAttachmentsAfterFailureToScheduleOrBuild(base.ServersTestBase):
         super().setUp()
 
         # Launch a single libvirt based compute service with a single NUMA node
-        host_info = fakelibvirt.HostInfo(
-            cpu_nodes=1, cpu_sockets=1, cpu_cores=2, kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo()
         self.start_compute(host_info=host_info, hostname='compute1')
 
         # Use a flavor requesting 2 NUMA nodes that we know will always fail

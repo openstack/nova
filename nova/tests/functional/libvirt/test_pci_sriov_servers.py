@@ -615,8 +615,7 @@ class SRIOVAttachDetachTest(_PCIServersTestBase):
         # second port and asserts that it fails as no free PCI device left on
         # the host.
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
+                                         cpu_cores=2, cpu_threads=2)
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
         fake_connection = self._get_connection(host_info, pci_info)
         self.mock_conn.return_value = fake_connection
