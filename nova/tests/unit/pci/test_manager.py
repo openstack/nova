@@ -144,7 +144,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
     def _create_tracker(self, fake_devs):
         self.fake_devs = fake_devs
         self.tracker = manager.PciDevTracker(
-            self.fake_context, objects.ComputeNode(id=1))
+            self.fake_context, objects.ComputeNode(id=1, numa_topology=None))
 
     def setUp(self):
         super(PciDevTrackerTestCase, self).setUp()
@@ -222,7 +222,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         fake_pci_devs = [copy.deepcopy(fake_pci_4), copy.deepcopy(fake_pci_5)]
         fake_pci_devs_json = jsonutils.dumps(fake_pci_devs)
         tracker = manager.PciDevTracker(
-            self.fake_context, objects.ComputeNode(id=1))
+            self.fake_context, objects.ComputeNode(id=1, numa_topology=None))
         tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
         self.assertEqual(5, len(tracker.pci_devs))
 
@@ -251,7 +251,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         fake_pci_devs = [fake_pci]
         fake_pci_devs_json = jsonutils.dumps(fake_pci_devs)
         tracker = manager.PciDevTracker(
-            self.fake_context, objects.ComputeNode(id=1))
+            self.fake_context, objects.ComputeNode(id=1, numa_topology=None))
         # We expect that the device with 32bit PCI domain is ignored, so we'll
         # have only the 3 original fake devs
         tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
@@ -426,7 +426,8 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         fake_devs_numa = copy.deepcopy(fake_db_devs)
         fake_devs_numa.append(fake_db_dev_3)
         self.tracker = manager.PciDevTracker(
-            mock.sentinel.context, objects.ComputeNode(id=1))
+            mock.sentinel.context,
+            objects.ComputeNode(id=1, numa_topology=None))
         self.tracker._set_hvdevs(fake_devs_numa)
         pci_requests = copy.deepcopy(fake_pci_requests)[:1]
         pci_requests[0]['count'] = 2

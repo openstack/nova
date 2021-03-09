@@ -227,6 +227,7 @@ class HostState(object):
         self.numa_topology = objects.NUMATopology.obj_from_db_obj(
             compute.numa_topology) if compute.numa_topology else None
         self.pci_stats = pci_stats.PciDeviceStats(
+            self.numa_topology,
             stats=compute.pci_device_pools)
 
         # All virt drivers report host_ip
