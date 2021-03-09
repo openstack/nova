@@ -18963,7 +18963,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         @mock.patch.object(drvr, 'plug_vifs')
         @mock.patch.object(drvr, '_create_guest')
-        @mock.patch.object(drvr, '_cleanup_failed_start')
+        @mock.patch.object(drvr, '_cleanup')
         def the_test(mock_cleanup, mock_create, mock_plug):
             instance = objects.Instance(**self.test_instance)
             mock_create.side_effect = test.TestingException
@@ -18973,66 +18973,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 cleanup_instance_dir=mock.sentinel.cleanup_instance_dir,
                 cleanup_instance_disks=mock.sentinel.cleanup_instance_disks)
             mock_cleanup.assert_called_once_with(
-                self.context, instance, [], None, None,
+                self.context, instance, [], None, destroy_vifs=True,
                 cleanup_instance_dir=mock.sentinel.cleanup_instance_dir,
                 cleanup_instance_disks=mock.sentinel.cleanup_instance_disks)
         the_test()
-
-    def test_cleanup_failed_start_no_guest(self):
-        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
-        with mock.patch.object(drvr, '_cleanup') as mock_cleanup:
-            drvr._cleanup_failed_start(
-                None, None, None, None, None, False, False)
-            self.assertTrue(mock_cleanup.called)
-
-    def test_cleanup_failed_start_inactive_guest(self):
-        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
-        guest = mock.MagicMock()
-        guest.is_active.return_value = False
-        with mock.patch.object(drvr, '_cleanup') as mock_cleanup:
-            drvr._cleanup_failed_start(
-                None, None, None, None, guest, False, False)
-            self.assertTrue(mock_cleanup.called)
-            self.assertFalse(guest.poweroff.called)
-
-    def test_cleanup_failed_start_active_guest(self):
-        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
-        guest = mock.MagicMock()
-        guest.is_active.return_value = True
-        with mock.patch.object(drvr, '_cleanup') as mock_cleanup:
-            drvr._cleanup_failed_start(
-                None, None, None, None, guest, False, False)
-            self.assertTrue(mock_cleanup.called)
-            self.assertTrue(guest.poweroff.called)
-
-    def test_cleanup_failed_start_failed_poweroff(self):
-        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
-        guest = mock.MagicMock()
-        guest.is_active.return_value = True
-        guest.poweroff.side_effect = test.TestingException
-        with mock.patch.object(drvr, '_cleanup') as mock_cleanup:
-            self.assertRaises(test.TestingException,
-                              drvr._cleanup_failed_start,
-                              None, None, None, None, guest, False, False)
-            self.assertTrue(mock_cleanup.called)
-            self.assertTrue(guest.poweroff.called)
-
-    def test_cleanup_failed_start_failed_poweroff_destroy_disks(self):
-        drvr = libvirt_driver.LibvirtDriver(mock.MagicMock(), False)
-        guest = mock.MagicMock()
-        guest.is_active.return_value = True
-        guest.poweroff.side_effect = test.TestingException
-        with mock.patch.object(drvr, '_cleanup') as mock_cleanup:
-            self.assertRaises(
-                test.TestingException, drvr._cleanup_failed_start,
-                None, None, None, None, guest,
-                cleanup_instance_dir=mock.sentinel.cleanup_instance_dir,
-                cleanup_instance_disks=mock.sentinel.cleanup_instance_disks)
-            mock_cleanup.assert_called_once_with(
-                None, None, None, block_device_info=None, destroy_vifs=True,
-                cleanup_instance_dir=mock.sentinel.cleanup_instance_dir,
-                cleanup_instance_disks=mock.sentinel.cleanup_instance_disks)
-            self.assertTrue(guest.poweroff.called)
 
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
