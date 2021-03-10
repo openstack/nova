@@ -19,6 +19,7 @@
 """VIF drivers for libvirt."""
 
 import os
+import typing as ty
 
 import os_vif
 from os_vif import exception as osv_exception
@@ -40,6 +41,7 @@ from nova import profiler
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
+from nova.virt.libvirt import host as libvirt_host
 from nova.virt import osinfo
 
 
@@ -147,6 +149,10 @@ def ensure_vlan(vlan_num, bridge_interface, mac_address=None, mtu=None,
 @profiler.trace_cls("vif_driver")
 class LibvirtGenericVIFDriver(object):
     """Generic VIF driver for libvirt networking."""
+
+    def __init__(self, host: libvirt_host.Host = None):
+        super().__init__()
+        self.host = host
 
     def get_vif_devname(self, vif):
         if 'devname' in vif:
@@ -490,6 +496,13 @@ class LibvirtGenericVIFDriver(object):
             raise exception.InternalError(
                 _('Unsupported VIF port profile type %s') % profile_name)
 
+    def _get_vdpa_dev_path(self, pci_address: ty.Text) -> ty.Text:
+        if self.host is not None:
+            return self.host.get_vdpa_device_path(pci_address)
+        # TODO(sean-k-mooney) this should never be raised remove when host
+        # is not optional in __init__.
+        raise TypeError("self.host must set to use this function.")
+
     def _get_config_os_vif(self, instance, vif, image_meta, inst_type,
                            virt_type, vnic_type):
         """Get the domain config for a VIF
@@ -518,7 +531,13 @@ class LibvirtGenericVIFDriver(object):
         elif isinstance(vif, osv_vifs.VIFVHostUser):
             self._set_config_VIFVHostUser(instance, vif, conf)
         elif isinstance(vif, osv_vifs.VIFHostDevice):
-            self._set_config_VIFHostDevice(instance, vif, conf)
+            if vnic_type != network_model.VNIC_TYPE_VDPA:
+                self._set_config_VIFHostDevice(instance, vif, conf)
+            else:
+                dev_path = self._get_vdpa_dev_path(vif.dev_address)
+                designer.set_vif_host_backend_vdpa_config(
+                    conf, dev_path, CONF.libvirt.rx_queue_size,
+                    CONF.libvirt.tx_queue_size)
         else:
             raise exception.InternalError(
                 _("Unsupported VIF type %s") % vif.obj_name())

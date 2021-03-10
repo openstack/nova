@@ -442,7 +442,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                conn_event_handler=self._handle_conn_event)
         self._supported_perf_events = []
 
-        self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver()
+        self.vif_driver = libvirt_vif.LibvirtGenericVIFDriver(self._host)
 
         # NOTE(lyarwood): Volume drivers are loaded on-demand
         self.volume_drivers: ty.Dict[str, volume.LibvirtBaseVolumeDriver] = {}

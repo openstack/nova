@@ -151,6 +151,22 @@ def set_vif_host_backend_vhostuser_config(conf, mode, path, rx_queue_size,
         conf.target_dev = tapname
 
 
+def set_vif_host_backend_vdpa_config(
+    conf, dev_path, rx_queue_size=None, tx_queue_size=None,
+):
+    """Populate a LibvirtConfigGuestInterface instance
+    with host backend details for a vdpa device.
+
+    NOTE: @rx_queue_size and @tx_queue_size can be None
+    """
+    conf.net_type = "vdpa"
+    conf.source_dev = dev_path
+    if rx_queue_size:
+        conf.vhost_rx_queue_size = rx_queue_size
+    if tx_queue_size:
+        conf.vhost_tx_queue_size = tx_queue_size
+
+
 def set_vif_mtu_config(conf, mtu):
     """Populate a LibvirtConfigGuestInterface instance
     with network mtu.
