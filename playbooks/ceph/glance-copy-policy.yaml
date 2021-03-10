@@ -11,5 +11,5 @@
           # here to allow everyone and every type of image (private
           # or public) to copy. This way we will be able to test copy
           # image via non-admin as well as on private images.
-          echo $'{"copy_image": ""}' > /etc/glance/policy.json
+          echo $'"copy_image": ""' >> /etc/glance/policy.yaml
           sudo systemctl restart 'devstack@g-*'
