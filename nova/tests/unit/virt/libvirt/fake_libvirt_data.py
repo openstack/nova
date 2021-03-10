@@ -10,6 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+
+from lxml import etree
 from oslo_utils import units
 
 from nova.objects.fields import Architecture
@@ -1392,3 +1395,270 @@ DOMCAPABILITIES_X86_64_TEMPLATE = """
 %(features)s
 </domainCapabilities>
 """
+
+_fake_NodeDevXml = {
+    "pci_0000_04_00_3": """
+        <device>
+        <name>pci_0000_04_00_3</name>
+        <parent>pci_0000_00_01_1</parent>
+        <driver>
+            <name>igb</name>
+        </driver>
+        <capability type='pci'>
+            <domain>0</domain>
+            <bus>4</bus>
+            <slot>0</slot>
+            <function>3</function>
+            <product id='0x1521'>I350 Gigabit Network Connection</product>
+            <vendor id='0x8086'>Intel Corporation</vendor>
+            <capability type='virt_functions'>
+              <address domain='0x0000' bus='0x04' slot='0x10' function='0x3'/>
+              <address domain='0x0000' bus='0x04' slot='0x10' function='0x7'/>
+              <address domain='0x0000' bus='0x04' slot='0x11' function='0x3'/>
+              <address domain='0x0000' bus='0x04' slot='0x11' function='0x7'/>
+            </capability>
+        </capability>
+      </device>""",
+    "pci_0000_04_10_7": """
+      <device>
+         <name>pci_0000_04_10_7</name>
+         <parent>pci_0000_04_00_3</parent>
+         <driver>
+         <name>igbvf</name>
+         </driver>
+         <capability type='pci'>
+          <domain>0</domain>
+          <bus>4</bus>
+          <slot>16</slot>
+          <function>7</function>
+          <product id='0x1520'>I350 Ethernet Controller Virtual Function
+            </product>
+          <vendor id='0x8086'>Intel Corporation</vendor>
+          <capability type='phys_function'>
+             <address domain='0x0000' bus='0x04' slot='0x00' function='0x3'/>
+          </capability>
+          <capability type='virt_functions'>
+          </capability>
+        </capability>
+    </device>""",
+    "pci_0000_04_11_7": """
+      <device>
+         <name>pci_0000_04_11_7</name>
+         <parent>pci_0000_04_00_3</parent>
+         <driver>
+         <name>igbvf</name>
+         </driver>
+         <capability type='pci'>
+          <domain>0</domain>
+          <bus>4</bus>
+          <slot>17</slot>
+          <function>7</function>
+          <product id='0x1520'>I350 Ethernet Controller Virtual Function
+            </product>
+          <vendor id='0x8086'>Intel Corporation</vendor>
+          <numa node='0'/>
+          <capability type='phys_function'>
+             <address domain='0x0000' bus='0x04' slot='0x00' function='0x3'/>
+          </capability>
+          <capability type='virt_functions'>
+          </capability>
+        </capability>
+    </device>""",
+    "pci_0000_04_00_1": """
+    <device>
+      <name>pci_0000_04_00_1</name>
+      <path>/sys/devices/pci0000:00/0000:00:02.0/0000:04:00.1</path>
+      <parent>pci_0000_00_02_0</parent>
+      <driver>
+        <name>mlx5_core</name>
+      </driver>
+      <capability type='pci'>
+        <domain>0</domain>
+        <bus>4</bus>
+        <slot>0</slot>
+        <function>1</function>
+        <product id='0x1013'>MT27700 Family [ConnectX-4]</product>
+        <vendor id='0x15b3'>Mellanox Technologies</vendor>
+        <iommuGroup number='15'>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x0'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x1'/>
+        </iommuGroup>
+        <numa node='0'/>
+        <pci-express>
+          <link validity='cap' port='0' speed='8' width='16'/>
+          <link validity='sta' speed='8' width='16'/>
+        </pci-express>
+      </capability>
+    </device>""",
+    # libvirt  >= 1.3.0 nodedev-dumpxml
+    "pci_0000_03_00_0": """
+    <device>
+        <name>pci_0000_03_00_0</name>
+        <path>/sys/devices/pci0000:00/0000:00:02.0/0000:03:00.0</path>
+        <parent>pci_0000_00_02_0</parent>
+        <driver>
+        <name>mlx5_core</name>
+        </driver>
+        <capability type='pci'>
+        <domain>0</domain>
+        <bus>3</bus>
+        <slot>0</slot>
+        <function>0</function>
+        <product id='0x1013'>MT27700 Family [ConnectX-4]</product>
+        <vendor id='0x15b3'>Mellanox Technologies</vendor>
+        <capability type='virt_functions' maxCount='16'>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x2'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x3'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x4'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x5'/>
+        </capability>
+        <iommuGroup number='15'>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x0'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x1'/>
+        </iommuGroup>
+        <numa node='0'/>
+        <pci-express>
+          <link validity='cap' port='0' speed='8' width='16'/>
+          <link validity='sta' speed='8' width='16'/>
+        </pci-express>
+      </capability>
+    </device>""",
+    "pci_0000_03_00_1": """
+    <device>
+      <name>pci_0000_03_00_1</name>
+      <path>/sys/devices/pci0000:00/0000:00:02.0/0000:03:00.1</path>
+      <parent>pci_0000_00_02_0</parent>
+      <driver>
+        <name>mlx5_core</name>
+      </driver>
+      <capability type='pci'>
+        <domain>0</domain>
+        <bus>3</bus>
+        <slot>0</slot>
+        <function>1</function>
+        <product id='0x1013'>MT27700 Family [ConnectX-4]</product>
+        <vendor id='0x15b3'>Mellanox Technologies</vendor>
+        <capability type='virt_functions' maxCount='16'/>
+        <iommuGroup number='15'>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x0'/>
+          <address domain='0x0000' bus='0x03' slot='0x00' function='0x1'/>
+        </iommuGroup>
+        <numa node='0'/>
+        <pci-express>
+          <link validity='cap' port='0' speed='8' width='16'/>
+          <link validity='sta' speed='8' width='16'/>
+        </pci-express>
+      </capability>
+    </device>""",
+        "net_enp2s1_02_9a_a1_37_be_54": """
+    <device>
+      <name>net_enp2s1_02_9a_a1_37_be_54</name>
+      <path>/sys/devices/pci0000:00/0000:04:00.3/0000:04:10.7/net/enp2s1</path>
+      <parent>pci_0000_04_10_7</parent>
+      <capability type='net'>
+        <interface>enp2s1</interface>
+        <address>02:9a:a1:37:be:54</address>
+        <link state='down'/>
+        <feature name='rx'/>
+        <feature name='tx'/>
+        <feature name='sg'/>
+        <feature name='tso'/>
+        <feature name='gso'/>
+        <feature name='gro'/>
+        <feature name='rxvlan'/>
+        <feature name='txvlan'/>
+        <capability type='80203'/>
+      </capability>
+    </device>""",
+    "net_enp2s2_02_9a_a1_37_be_54": """
+    <device>
+      <name>net_enp2s2_02_9a_a1_37_be_54</name>
+      <path>/sys/devices/pci0000:00/0000:00:02.0/0000:02:02.0/net/enp2s2</path>
+      <parent>pci_0000_04_11_7</parent>
+      <capability type='net'>
+        <interface>enp2s2</interface>
+        <address>02:9a:a1:37:be:54</address>
+        <link state='down'/>
+        <feature name='rx'/>
+        <feature name='tx'/>
+        <feature name='sg'/>
+        <feature name='tso'/>
+        <feature name='gso'/>
+        <feature name='gro'/>
+        <feature name='rxvlan'/>
+        <feature name='txvlan'/>
+        <capability type='80203'/>
+      </capability>
+    </device>""",
+     "pci_0000_06_00_0": """
+    <device>
+      <name>pci_0000_06_00_0</name>
+      <path>/sys/devices/pci0000:00/0000:00:06.0</path>
+      <parent></parent>
+      <driver>
+        <name>nvidia</name>
+      </driver>
+      <capability type="pci">
+        <domain>0</domain>
+        <bus>10</bus>
+        <slot>1</slot>
+        <function>5</function>
+        <product id="0x0FFE">GRID M60-0B</product>
+        <vendor id="0x10DE">Nvidia</vendor>
+        <numa node="8"/>
+        <capability type='mdev_types'>
+          <type id='nvidia-11'>
+            <name>GRID M60-0B</name>
+            <deviceAPI>vfio-pci</deviceAPI>
+            <availableInstances>16</availableInstances>
+          </type>
+        </capability>
+      </capability>
+    </device>""",
+     "pci_0000_06_00_1": """
+    <device>
+      <name>pci_0000_06_00_1</name>
+      <path>/sys/devices/pci0000:00/0000:00:06.1</path>
+      <parent></parent>
+      <driver>
+        <name>i915</name>
+      </driver>
+      <capability type="pci">
+        <domain>0</domain>
+        <bus>6</bus>
+        <slot>0</slot>
+        <function>1</function>
+        <product id="0x591d">HD Graphics P630</product>
+        <vendor id="0x8086">Intel Corporation</vendor>
+        <capability type='mdev_types'>
+          <type id='i915-GVTg_V5_8'>
+            <deviceAPI>vfio-pci</deviceAPI>
+            <availableInstances>2</availableInstances>
+          </type>
+        </capability>
+      </capability>
+    </device>""",
+     "mdev_4b20d080_1b54_4048_85b3_a6a62d165c01": """
+    <device>
+      <name>mdev_4b20d080_1b54_4048_85b3_a6a62d165c01</name>
+      <path>/sys/devices/pci0000:00/0000:00:02.0/4b20d080-1b54-4048-85b3-a6a62d165c01</path>
+      <parent>pci_0000_00_02_0</parent>
+      <driver>
+        <name>vfio_mdev</name>
+      </driver>
+      <capability type='mdev'>
+        <type id='nvidia-11'/>
+        <iommuGroup number='12'/>
+      </capability>
+    </device>
+    """,
+}
+
+_fake_NodeDevXml_parents = {
+    name: etree.fromstring(xml).find("parent").text
+    for name, xml in _fake_NodeDevXml.items()
+}
+
+_fake_NodeDevXml_children = collections.defaultdict(list)
+for key, val in _fake_NodeDevXml_parents.items():
+    _fake_NodeDevXml_children[val].append(key)
