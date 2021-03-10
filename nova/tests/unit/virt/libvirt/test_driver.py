@@ -5857,9 +5857,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 'Linux', '', '5.4.0-0-generic', '', guest_arch)
 
             guest = vconfig.LibvirtConfigGuest()
-            drvr._create_consoles(virt_type="kvm", guest_cfg=guest,
-                                  instance=instance, flavor={},
-                                  image_meta={})
+            drvr._create_consoles(
+                guest_cfg=guest, instance=instance, flavor={}, image_meta={})
             self.assertEqual(1, len(guest.devices))
             console_device = guest.devices[0]
             self.assertIsInstance(console_device, device_type)
@@ -5886,7 +5885,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(
             exception.SerialPortNumberLimitExceeded,
             drvr._create_consoles,
-            "kvm", guest, instance, flavor, image_meta)
+            guest, instance, flavor, image_meta)
         self.mock_uname.assert_called_once()
         mock_get_port_number.assert_called_with(flavor, image_meta)
 
@@ -5895,7 +5894,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '5.4.0-0-generic', '', fields.Architecture.S390)
-        drvr._create_consoles("kvm", guest, instance, flavor, image_meta)
+        drvr._create_consoles(guest, instance, flavor, image_meta)
         self.mock_uname.assert_called_once()
         mock_get_port_number.assert_called_with(flavor, image_meta)
 
@@ -5904,7 +5903,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '5.4.0-0-generic', '', fields.Architecture.S390X)
-        drvr._create_consoles("kvm", guest, instance, flavor, image_meta)
+        drvr._create_consoles(guest, instance, flavor, image_meta)
         self.mock_uname.assert_called_once()
         mock_get_port_number.assert_called_with(flavor, image_meta)
 
@@ -6067,12 +6066,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                            virt_type='qemu'):
             self.mock_uname.return_value = fakelibvirt.os_uname(
                 'Linux', '', '5.4.0-0-generic', '', arch_to_mock)
+            self.flags(virt_type=virt_type, group='libvirt')
             self.flags(enabled=serial_enabled, group='serial_console')
             guest_cfg = vconfig.LibvirtConfigGuest()
             instance = objects.Instance(**self.test_instance)
 
-            drvr._create_consoles(virt_type, guest_cfg, instance=instance,
-                                  flavor=None, image_meta=None)
+            drvr._create_consoles(
+                guest_cfg, instance=instance, flavor=None, image_meta=None)
 
             self.assertEqual(1, len(guest_cfg.devices))
             device = guest_cfg.devices[0]
@@ -7507,7 +7507,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                            'quota:cpu_period': '20000'}
         self.assertRaises(
             exception.UnsupportedHostCPUControlPolicy,
-            drvr._update_guest_cputune, {}, instance_ref.flavor, "kvm")
+            drvr._update_guest_cputune, {}, instance_ref.flavor)
 
     def _create_fake_service_compute(self):
         service_info = {
