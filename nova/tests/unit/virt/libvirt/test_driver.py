@@ -27455,19 +27455,16 @@ class TestLibvirtSEV(test.NoDBTestCase):
 @mock.patch.object(os.path, 'exists', new=mock.Mock(return_value=False))
 class TestLibvirtSEVUnsupported(TestLibvirtSEV):
     def test_get_mem_encrypted_slots_no_config(self):
-        self.driver._host._set_amd_sev_support()
         self.assertEqual(0, self.driver._get_memory_encrypted_slots())
 
     def test_get_mem_encrypted_slots_config_zero(self):
         self.flags(num_memory_encrypted_guests=0, group='libvirt')
-        self.driver._host._set_amd_sev_support()
         self.assertEqual(0, self.driver._get_memory_encrypted_slots())
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_mem_encrypted_slots_config_non_zero_unsupported(
             self, mock_log):
         self.flags(num_memory_encrypted_guests=16, group='libvirt')
-        self.driver._host._set_amd_sev_support()
         # Still zero without mocked SEV support
         self.assertEqual(0, self.driver._get_memory_encrypted_slots())
         mock_log.assert_called_with(
@@ -27475,7 +27472,6 @@ class TestLibvirtSEVUnsupported(TestLibvirtSEV):
             'set to %d, but is not SEV-capable.', 16)
 
     def test_get_mem_encrypted_slots_unsupported(self):
-        self.driver._host._set_amd_sev_support()
         self.assertEqual(0, self.driver._get_memory_encrypted_slots())
 
 
@@ -27486,7 +27482,6 @@ class TestLibvirtSEVSupported(TestLibvirtSEV):
     @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
     def test_get_mem_encrypted_slots_unlimited(self):
-        self.driver._host._set_amd_sev_support()
         self.assertEqual(db_const.MAX_INT,
                          self.driver._get_memory_encrypted_slots())
 
@@ -27494,14 +27489,12 @@ class TestLibvirtSEVSupported(TestLibvirtSEV):
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
     def test_get_mem_encrypted_slots_config_non_zero_supported(self):
         self.flags(num_memory_encrypted_guests=16, group='libvirt')
-        self.driver._host._set_amd_sev_support()
         self.assertEqual(16, self.driver._get_memory_encrypted_slots())
 
     @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
     def test_get_mem_encrypted_slots_config_zero_supported(self):
         self.flags(num_memory_encrypted_guests=0, group='libvirt')
-        self.driver._host._set_amd_sev_support()
         self.assertEqual(0, self.driver._get_memory_encrypted_slots())
 
 

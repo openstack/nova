@@ -1876,8 +1876,11 @@ def get_emulator_thread_policy_constraint(
     return emu_threads_policy
 
 
-def get_pci_numa_policy_constraint(flavor, image_meta):
-    """Return pci numa affinity policy or None.
+def get_pci_numa_policy_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> str:
+    """Validate and return the requested PCI NUMA affinity policy.
 
     :param flavor: a flavor object to read extra specs from
     :param image_meta: nova.objects.ImageMeta object instance
