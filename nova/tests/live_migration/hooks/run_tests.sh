@@ -46,6 +46,11 @@ echo '2. NFS testing is skipped due to setup failures with Ubuntu 16.04'
 echo '3. test with Ceph for root + ephemeral disks'
 # Discover and set variables for the OS version so the devstack-plugin-ceph
 # scripts can find the correct repository to install the ceph packages.
+# NOTE(lyarwood): Pin the CEPH_RELEASE to nautilus here as was the case
+# prior to https://review.opendev.org/c/openstack/devstack-plugin-ceph/+/777232
+# landing in the branchless plugin, we also have to pin in ceph.sh when
+# configuring ceph on a remote node via ansible.
+export CEPH_RELEASE=nautilus
 GetOSVersion
 prepare_ceph
 GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
