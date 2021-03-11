@@ -413,6 +413,24 @@ class InstanceHelperMixin:
         fake_notifier.wait_for_versioned_notifications('instance.reboot.end')
         return self._wait_for_state_change(server, expected_state)
 
+    def _attach_interface(self, server, port_uuid):
+        """attach a neutron port to a server."""
+        body = {
+            "interfaceAttachment": {
+                "port_id": port_uuid
+            }
+        }
+        attachment = self.api.attach_interface(server['id'], body)
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.interface_attach.end')
+        return attachment
+
+    def _detach_interface(self, server, port_uuid):
+        """detach a neutron port form a server."""
+        self.api.detach_interface(server['id'], port_uuid)
+        fake_notifier.wait_for_versioned_notifications(
+            'instance.interface_detach.end')
+
     def _rebuild_server(self, server, image_uuid, expected_state='ACTIVE'):
         """Rebuild a server."""
         self.api.post_server_action(

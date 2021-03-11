@@ -441,7 +441,7 @@ class PciDeviceStats(object):
 
         if after_count < before_count:
             LOG.debug(
-                'Dropped %d devices due to mismatched PCI attribute(s)',
+                'Dropped %d device(s) due to mismatched PCI attribute(s)',
                 before_count - after_count
             )
 
@@ -458,7 +458,7 @@ class PciDeviceStats(object):
 
         if after_count < before_count:
             LOG.debug(
-                'Dropped %d devices as they are on the wrong NUMA node(s)',
+                'Dropped %d device(s) as they are on the wrong NUMA node(s)',
                 before_count - after_count
             )
 
@@ -474,7 +474,7 @@ class PciDeviceStats(object):
 
         if after_count < before_count:
             LOG.debug(
-                'Dropped %d devices as they are PFs which we have not '
+                'Dropped %d device(s) as they are PFs which we have not '
                 'requested',
                 before_count - after_count
             )
@@ -491,7 +491,7 @@ class PciDeviceStats(object):
 
         if after_count < before_count:
             LOG.debug(
-                'Dropped %d devices as they are VDPA devices which we have '
+                'Dropped %d device(s) as they are VDPA devices which we have '
                 'not requested',
                 before_count - after_count
             )

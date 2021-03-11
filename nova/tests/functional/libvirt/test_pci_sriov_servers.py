@@ -23,6 +23,7 @@ import mock
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 
 import nova
@@ -275,9 +276,7 @@ class SRIOVServersTest(_PCIServersTestBase):
         self.assertNotIn('binding:profile', port)
 
         # create a server using the VF via neutron
-        flavor_id = self._create_flavor()
         self._create_server(
-            flavor_id=flavor_id,
             networks=[
                 {'port': base.LibvirtNeutronFixture.network_4_port_1['id']},
             ],
@@ -548,9 +547,7 @@ class SRIOVServersTest(_PCIServersTestBase):
         self.neutron.create_port({'port': self.neutron.network_4_port_1})
 
         # create a server using the VF via neutron
-        flavor_id = self._create_flavor()
         self._create_server(
-            flavor_id=flavor_id,
             networks=[
                 {'port': base.LibvirtNeutronFixture.network_4_port_1['id']},
             ],
@@ -670,6 +667,222 @@ class SRIOVAttachDetachTest(_PCIServersTestBase):
         self._test_detach_attach(
             self.neutron.sriov_pf_port['id'],
             self.neutron.sriov_pf_port2['id'])
+
+
+class VDPAServersTest(_PCIServersTestBase):
+
+    # this is needed for os_compute_api:os-migrate-server:migrate policy
+    ADMIN_API = True
+    microversion = 'latest'
+
+    # Whitelist both the PF and VF; in reality, you probably wouldn't do this
+    # but we want to make sure that the PF is correctly taken off the table
+    # once any VF is used
+    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+        {
+            'vendor_id': '15b3',
+            'product_id': '101d',
+            'physical_network': 'physnet4',
+        },
+        {
+            'vendor_id': '15b3',
+            'product_id': '101e',
+            'physical_network': 'physnet4',
+        },
+    )]
+    # No need for aliases as these test will request SRIOV via neutron
+    PCI_ALIAS = []
+
+    NUM_PFS = 1
+    NUM_VFS = 4
+
+    FAKE_LIBVIRT_VERSION = 6_009_000  # 6.9.0
+    FAKE_QEMU_VERSION = 5_001_000  # 5.1.0
+
+    def setUp(self):
+        super().setUp()
+
+        # The ultimate base class _IntegratedTestBase uses NeutronFixture but
+        # we need a bit more intelligent neutron for these tests. Applying the
+        # new fixture here means that we re-stub what the previous neutron
+        # fixture already stubbed.
+        self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
+
+    def start_compute(self):
+        vf_ratio = self.NUM_VFS // self.NUM_PFS
+
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=0, num_vfs=0)
+        vdpa_info = fakelibvirt.HostVDPADevicesInfo()
+
+        pci_info.add_device(
+            dev_type='PF',
+            bus=0x6,
+            slot=0x0,
+            function=0,
+            iommu_group=40,  # totally arbitrary number
+            numa_node=0,
+            vf_ratio=vf_ratio,
+            vend_id='15b3',
+            vend_name='Mellanox Technologies',
+            prod_id='101d',
+            prod_name='MT2892 Family [ConnectX-6 Dx]',
+            driver_name='mlx5_core')
+
+        for idx in range(self.NUM_VFS):
+            vf = pci_info.add_device(
+                dev_type='VF',
+                bus=0x6,
+                slot=0x0,
+                function=idx + 1,
+                iommu_group=idx + 41,  # totally arbitrary number + offset
+                numa_node=0,
+                vf_ratio=vf_ratio,
+                parent=(0x6, 0x0, 0),
+                vend_id='15b3',
+                vend_name='Mellanox Technologies',
+                prod_id='101e',
+                prod_name='ConnectX Family mlx5Gen Virtual Function',
+                driver_name='mlx5_core')
+            vdpa_info.add_device(f'vdpa_vdpa{idx}', idx, vf)
+
+        return super().start_compute(
+            pci_info=pci_info, vdpa_info=vdpa_info,
+            libvirt_version=self.FAKE_LIBVIRT_VERSION,
+            qemu_version=self.FAKE_QEMU_VERSION)
+
+    def create_vdpa_port(self):
+        vdpa_port = {
+            'id': uuids.vdpa_port,
+            'network_id': self.neutron.network_4['id'],
+            'status': 'ACTIVE',
+            'mac_address': 'b5:bc:2e:e7:51:ee',
+            'fixed_ips': [
+                {
+                    'ip_address': '192.168.4.6',
+                    'subnet_id': self.neutron.subnet_4['id']
+                }
+            ],
+            'binding:vif_details': {},
+            'binding:vif_type': 'ovs',
+            'binding:vnic_type': 'vdpa',
+        }
+
+        # create the port
+        self.neutron.create_port({'port': vdpa_port})
+        return vdpa_port
+
+    def test_create_server(self):
+        """Create an instance using a neutron-provisioned vDPA VIF."""
+
+        orig_create = nova.virt.libvirt.guest.Guest.create
+
+        def fake_create(cls, xml, host):
+            tree = etree.fromstring(xml)
+            elem = tree.find('./devices/interface/[@type="vdpa"]')
+
+            # compare source device
+            # the MAC address is derived from the neutron port, while the
+            # source dev path assumes we attach vDPA devs in order
+            expected = """
+                <interface type="vdpa">
+                  <mac address="b5:bc:2e:e7:51:ee"/>
+                  <model type="virtio"/>
+                  <source dev="/dev/vhost-vdpa-3"/>
+                </interface>"""
+            actual = etree.tostring(elem, encoding='unicode')
+
+            self.assertXmlEqual(expected, actual)
+
+            return orig_create(xml, host)
+
+        self.stub_out(
+            'nova.virt.libvirt.guest.Guest.create',
+            fake_create,
+        )
+
+        hostname = self.start_compute()
+        num_pci = self.NUM_PFS + self.NUM_VFS
+
+        # both the PF and VF with vDPA capabilities (dev_type=vdpa) should have
+        # been counted
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci)
+
+        # create the port
+        vdpa_port = self.create_vdpa_port()
+
+        # ensure the binding details are currently unset
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertNotIn('binding:profile', port)
+
+        # create a server using the vDPA device via neutron
+        self._create_server(networks=[{'port': vdpa_port['id']}])
+
+        # ensure there is one less VF available and that the PF is no longer
+        # usable
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci - 2)
+
+        # ensure the binding details sent to "neutron" were correct
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '15b3:101e',
+                'pci_slot': '0000:06:00.4',
+                'physical_network': 'physnet4',
+            },
+            port['binding:profile'],
+        )
+
+    def _test_common(self, op, *args, **kwargs):
+        self.start_compute()
+
+        # create the port and a server, with the port attached to the server
+        vdpa_port = self.create_vdpa_port()
+        server = self._create_server(networks=[{'port': vdpa_port['id']}])
+
+        # attempt the unsupported action and ensure it fails
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            op, server, *args, **kwargs)
+        self.assertIn(
+            'not supported for instance with vDPA ports',
+            ex.response.text)
+
+    def test_attach_interface(self):
+        self.start_compute()
+
+        # create the port and a server, but don't attach the port to the server
+        # yet
+        vdpa_port = self.create_vdpa_port()
+        server = self._create_server(networks='none')
+
+        # attempt to attach the port to the server
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._attach_interface, server, vdpa_port['id'])
+        self.assertIn(
+            'not supported for instance with vDPA ports',
+            ex.response.text)
+
+    def test_detach_interface(self):
+        self._test_common(self._detach_interface, uuids.vdpa_port)
+
+    def test_shelve(self):
+        self._test_common(self._shelve_server)
+
+    def test_suspend(self):
+        self._test_common(self._suspend_server)
+
+    def test_evacute(self):
+        self._test_common(self._evacuate_server)
+
+    def test_resize(self):
+        flavor_id = self._create_flavor()
+        self._test_common(self._resize_server, flavor_id)
+
+    def test_cold_migrate(self):
+        self._test_common(self._migrate_server)
 
 
 class PCIServersTest(_PCIServersTestBase):

@@ -85,7 +85,7 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         return self.start_service('scheduler')
 
     def _get_connection(
-        self, host_info=None, pci_info=None, mdev_info=None,
+        self, host_info=None, pci_info=None, mdev_info=None, vdpa_info=None,
         libvirt_version=None, qemu_version=None, hostname=None,
     ):
         if not host_info:
@@ -107,12 +107,14 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
             host_info=host_info,
             pci_info=pci_info,
             mdev_info=mdev_info,
+            vdpa_info=vdpa_info,
             hostname=hostname)
         return fake_connection
 
     def start_compute(
         self, hostname='compute1', host_info=None, pci_info=None,
-        mdev_info=None, libvirt_version=None, qemu_version=None,
+        mdev_info=None, vdpa_info=None, libvirt_version=None,
+        qemu_version=None,
     ):
         """Start a compute service.
 
@@ -129,8 +131,8 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
 
         def _start_compute(hostname, host_info):
             fake_connection = self._get_connection(
-                host_info, pci_info, mdev_info, libvirt_version, qemu_version,
-                hostname,
+                host_info, pci_info, mdev_info, vdpa_info, libvirt_version,
+                qemu_version, hostname,
             )
             # This is fun. Firstly we need to do a global'ish mock so we can
             # actually start the service.
@@ -299,8 +301,8 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
                 'subnet_id': subnet_4['id']
             }
         ],
-        'binding:vif_type': 'hw_veb',
         'binding:vif_details': {'vlan': 42},
+        'binding:vif_type': 'hw_veb',
         'binding:vnic_type': 'direct',
     }
 
