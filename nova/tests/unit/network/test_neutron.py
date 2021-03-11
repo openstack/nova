@@ -5910,15 +5910,21 @@ class TestAPI(TestAPIBase):
                 port_resource_request=mock.sentinel.resource_request2),
         ])
 
+    @mock.patch(
+        'nova.accelerator.cyborg._CyborgClient.get_device_request_groups')
+    @mock.patch(
+        'nova.accelerator.cyborg._CyborgClient.get_device_profile_groups')
     @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
-    @mock.patch('nova.accelerator.cyborg.get_device_profile_request_groups')
+    @mock.patch('nova.accelerator.cyborg.get_device_amount_of_dp_groups')
     @mock.patch('nova.objects.request_spec.RequestGroup.from_port_request')
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
     @mock.patch.object(neutronapi, 'get_client')
     def test_create_resource_requests_with_arq(self, getclient,
             mock_get_port_vnic_info, mock_from_port_request,
-            mock_get_device_profile,
-            mock_get_physnet_tunneled_info):
+            mock_get_device_num,
+            mock_get_physnet_tunneled_info,
+            mock_get_dp_group,
+            mock_get_rg):
         requested_networks = objects.NetworkRequestList(
                 objects = [
                         objects.NetworkRequest(port_id=uuids.portid_1)
@@ -5935,11 +5941,15 @@ class TestAPI(TestAPIBase):
          ]
         rg = objects.RequestGroup(requester_id='request_group_1')
         rg.add_resource(rclass='CUSTOM_NIC_TRAIT', amount=1)
-        mock_get_device_profile.return_value = [rg]
+        mock_get_rg.return_value = [rg]
+        mock_get_device_num.return_value = 1
         result = self.api.create_resource_requests(
             self.context, requested_networks, pci_requests=None)
 
         network_metadata, port_resource_requests = result
+        mock_get_dp_group.assert_called_once_with('smat_nic')
+        mock_get_physnet_tunneled_info.assert_called_once_with(
+            self.context, mock.ANY, 'netN')
         self.assertEqual({'physnet1'}, network_metadata.physnets)
         self.assertEqual([rg], port_resource_requests)
 
@@ -5961,6 +5971,35 @@ class TestAPI(TestAPIBase):
             ('physnet1', False), ('physnet2', False)
          ]
 
+        self.assertRaises(exception.DeviceProfileError,
+            self.api.create_resource_requests,
+            self.context, requested_networks, pci_requests=None)
+
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
+    @mock.patch('nova.accelerator.cyborg.get_device_amount_of_dp_groups')
+    @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_create_resource_requests_arq_reject_multi_devices(self,
+            getclient,
+            mock_get_port_vnic_info,
+            mock_get_device_num,
+            mock_get_physnet_tunneled_info):
+        requested_networks = objects.NetworkRequestList(
+                objects = [
+                        objects.NetworkRequest(port_id=uuids.portid_1)
+                ])
+
+        mock_get_port_vnic_info.side_effect = [
+            (model.VNIC_TYPE_ACCELERATOR_DIRECT, None, 'netN',
+                 None, None, 'smat_nic'),
+            (model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL, None,
+                'netN', None, None, 'smat_nic')
+        ]
+        mock_get_physnet_tunneled_info.side_effect = [
+            ('physnet1', False), ('physnet2', False)
+         ]
+
+        mock_get_device_num.return_value = 2
         self.assertRaises(exception.DeviceProfileError,
             self.api.create_resource_requests,
             self.context, requested_networks, pci_requests=None)

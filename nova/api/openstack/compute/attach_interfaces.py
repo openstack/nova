@@ -176,7 +176,8 @@ class InterfaceAttachmentController(wsgi.Controller):
                 exception.NetworkInterfaceTaggedAttachNotSupported,
                 exception.NetworksWithQoSPolicyNotSupported,
                 exception.InterfaceAttachPciClaimFailed,
-                exception.InterfaceAttachResourceAllocationFailed) as e:
+                exception.InterfaceAttachResourceAllocationFailed,
+                exception.ForbiddenPortsWithAccelerator) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except (
             exception.OperationNotSupportedForVDPAInterface,
@@ -200,7 +201,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         return self.show(req, server_id, vif['id'])
 
     @wsgi.response(202)
-    @wsgi.expected_errors((404, 409, 501))
+    @wsgi.expected_errors((400, 404, 409, 501))
     def delete(self, req, server_id, id):
         """Detach an interface from an instance."""
         context = req.environ['nova.context']
@@ -227,3 +228,5 @@ class InterfaceAttachmentController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'detach_interface', server_id)
+        except exception.ForbiddenPortsWithAccelerator as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())

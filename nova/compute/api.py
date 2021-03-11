@@ -108,6 +108,8 @@ MIN_VER_NOVA_COMPUTE_MIXED_POLICY = 52
 
 SUPPORT_ACCELERATOR_SERVICE_FOR_REBUILD = 53
 
+SUPPORT_VNIC_TYPE_ACCELERATOR = 57
+
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
 # trigger.
@@ -328,6 +330,23 @@ def block_accelerators(until_service=None):
                     service_support = True
             if not service_support:
                 raise exception.ForbiddenWithAccelerators()
+            return func(self, context, instance, *args, **kwargs)
+        return wrapper
+    return inner
+
+
+def block_port_accelerators():
+    def inner(func):
+        @functools.wraps(func)
+        def wrapper(self, context, instance, *args, **kwargs):
+            # Catch a request operating a instance with accelerators
+            # attach to ports.
+            nw_info = instance.get_network_info()
+            for vif in nw_info:
+                vnic_type = vif['vnic_type']
+                if vnic_type in (network_model.VNIC_TYPE_ACCELERATOR_DIRECT,
+                    network_model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL):
+                    raise exception.ForbiddenPortsWithAccelerator()
             return func(self, context, instance, *args, **kwargs)
         return wrapper
     return inner
@@ -964,6 +983,19 @@ class API:
                                     flavor, root_bdm,
                                     validate_numa=validate_numa)
 
+    def _check_support_vnic_accelerator(self, context, requested_networks):
+        if requested_networks:
+            for request_net in requested_networks:
+                if request_net.device_profile:
+                    min_version = (objects.service.
+                        get_minimum_version_all_cells(
+                            context,
+                            ['nova-compute']))
+                    if min_version < SUPPORT_VNIC_TYPE_ACCELERATOR:
+                        msg = ("Port with cyborg profile is not avaliable"
+                            " until upgrade finished.")
+                        raise exception.ForbiddenPortsWithAccelerator(msg)
+
     def _validate_and_build_base_options(
         self, context, flavor, boot_meta, image_href, image_id, kernel_id,
         ramdisk_id, display_name, display_description, key_name,
@@ -1032,6 +1064,8 @@ class API:
             context, requested_networks, pci_request_info,
             affinity_policy=pci_numa_affinity_policy)
         network_metadata, port_resource_requests = result
+
+        self._check_support_vnic_accelerator(context, requested_networks)
 
         # Creating servers with ports that have resource requests, like QoS
         # minimum bandwidth rules, is only supported in a requested minimum
@@ -3949,6 +3983,7 @@ class API:
     # finally split resize and cold migration into separate code paths
     # FIXME(sean-k-mooney): Cold migrate and resize to different hosts
     # probably works but they have not been tested so block them for now
+    @block_port_accelerators()
     @reject_vdpa_instances(instance_actions.RESIZE)
     @block_accelerators()
     @check_instance_lock
@@ -4170,6 +4205,7 @@ class API:
 
     # FIXME(sean-k-mooney): Shelve works but unshelve does not due to bug
     # #1851545, so block it for now
+    @block_port_accelerators()
     @reject_vdpa_instances(instance_actions.SHELVE)
     @reject_vtpm_instances(instance_actions.SHELVE)
     @block_accelerators(until_service=54)
@@ -4212,6 +4248,7 @@ class API:
                 context, instance=instance, clean_shutdown=clean_shutdown,
                 accel_uuids=accel_uuids)
 
+    @block_port_accelerators()
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SHELVED])
     def shelve_offload(self, context, instance, clean_shutdown=True):
@@ -4360,6 +4397,7 @@ class API:
     # FIXME(sean-k-mooney): Suspend does not work because we do not unplug
     # the vDPA devices before calling managed save as we do with SR-IOV
     # devices
+    @block_port_accelerators()
     @reject_vdpa_instances(instance_actions.SUSPEND)
     @block_accelerators()
     @reject_sev_instances(instance_actions.SUSPEND)
@@ -5045,6 +5083,11 @@ class API:
                     instance_uuid=instance.uuid,
                     operation=instance_actions.ATTACH_INTERFACE)
 
+            if port.get('binding:vnic_type', 'normal') in (
+                network_model.VNIC_TYPE_ACCELERATOR_DIRECT,
+                network_model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL):
+                raise exception.ForbiddenPortsWithAccelerator()
+
         return self.compute_rpcapi.attach_interface(context,
             instance=instance, network_id=network_id, port_id=port_id,
             requested_ip=requested_ip, tag=tag)
@@ -5067,6 +5110,10 @@ class API:
                     raise exception.OperationNotSupportedForVDPAInterface(
                         instance_uuid=instance.uuid,
                         operation=instance_actions.DETACH_INTERFACE)
+                if vif['vnic_type'] in (
+                    network_model.VNIC_TYPE_ACCELERATOR_DIRECT,
+                    network_model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL):
+                    raise exception.ForbiddenPortsWithAccelerator()
                 break
         else:
             # NOTE(sean-k-mooney) This should never happen but just in case the
@@ -5119,6 +5166,7 @@ class API:
 
         return _metadata
 
+    @block_port_accelerators()
     @reject_vdpa_instances(instance_actions.LIVE_MIGRATION)
     @block_accelerators()
     @reject_vtpm_instances(instance_actions.LIVE_MIGRATION)
@@ -5252,6 +5300,7 @@ class API:
                 instance, migration.id)
 
     # FIXME(sean-k-mooney): rebuild works but we have not tested evacuate yet
+    @block_port_accelerators()
     @reject_vdpa_instances(instance_actions.EVACUATE)
     @reject_vtpm_instances(instance_actions.EVACUATE)
     @block_accelerators(until_service=SUPPORT_ACCELERATOR_SERVICE_FOR_REBUILD)

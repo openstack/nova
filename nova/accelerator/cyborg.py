@@ -89,7 +89,26 @@ def get_arq_pci_device_profile(arq):
 
 def get_device_profile_request_groups(context, dp_name, owner=None):
     cyclient = get_client(context)
-    return cyclient.get_device_profile_groups(dp_name, owner)
+    dp_groups = cyclient.get_device_profile_groups(dp_name)
+    return cyclient.get_device_request_groups(dp_groups, owner)
+
+
+def get_device_amount_of_dp_groups(dp_groups):
+    """Get requested devices amount for the groups of
+       a device_profile.
+
+       :param dp_groups: list of request groups in a device profile.
+    """
+    devices_amount = 0
+    for _ignore, dp_group in enumerate(dp_groups):
+        for key, val in dp_group.items():
+            match = schedutils.ResourceRequest.XS_KEYPAT.match(key)
+            if not match:
+                continue  # could be 'accel:foo=bar', skip it
+            prefix, _, _ = match.groups()
+            if prefix == schedutils.ResourceRequest.XS_RES_PREFIX:
+                devices_amount += int(val)
+    return devices_amount
 
 
 class _CyborgClient(object):
@@ -125,18 +144,14 @@ class _CyborgClient(object):
 
         return resp.json().get('device_profiles')
 
-    def get_device_profile_groups(self, dp_name, owner):
-        """Get list of profile group objects from the device profile.
-
-           Cyborg API returns: {"device_profiles": [<device_profile>]}
-           See module notes above for further details.
+    def get_device_profile_groups(self, dp_name):
+        """Get device groups from a device profile.
 
            :param dp_name: string: device profile name
                 Expected to be valid, not None or ''.
-           :param owner: string: Port UUID that create the arq
-                Expected to be valid or None.
-           :returns: [objects.RequestGroup]
+           :returns: [device profile group dict]
            :raises: DeviceProfileError
+               Expected to be valid, not None or ''.
         """
         dp_list = self._get_device_profile_list(dp_name)
         if not dp_list:
@@ -145,8 +160,16 @@ class _CyborgClient(object):
         if len(dp_list) != 1:
             err = _('Expected 1 device profile but got %s.') % len(dp_list)
             raise exception.DeviceProfileError(name=dp_name, msg=err)
+        return dp_list[0]['groups']
 
-        dp_groups = dp_list[0]['groups']
+    def get_device_request_groups(self, dp_groups, owner):
+        """Get list of profile group objects from the device profile.
+
+           :param dp_groups: device groups of a device profile.
+           :param owner: The port UUID if the dp requested by port.
+           :returns: [objects.RequestGroup]
+           :raises: DeviceProfileError
+        """
         request_groups = []
         for dp_group_id, dp_group in enumerate(dp_groups):
             req_id = get_device_profile_group_requester_id(dp_group_id, owner)

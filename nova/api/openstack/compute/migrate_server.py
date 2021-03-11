@@ -75,7 +75,8 @@ class MigrateServerController(wsgi.Controller):
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.ComputeHostNotFound,
-                exception.CannotMigrateToSameHost) as e:
+                exception.CannotMigrateToSameHost,
+                exception.ForbiddenPortsWithAccelerator) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(202)
@@ -132,7 +133,8 @@ class MigrateServerController(wsgi.Controller):
                 exception.InvalidLocalStorage,
                 exception.InvalidSharedStorage,
                 exception.HypervisorUnavailable,
-                exception.MigrationPreCheckError) as ex:
+                exception.MigrationPreCheckError,
+                exception.ForbiddenPortsWithAccelerator) as ex:
             if async_:
                 with excutils.save_and_reraise_exception():
                     LOG.error("Unexpected exception received from "

@@ -762,7 +762,8 @@ class ServersController(wsgi.Controller):
                 exception.CertificateValidationFailed,
                 exception.CreateWithPortResourceRequestOldVersion,
                 exception.DeviceProfileError,
-                exception.ComputeHostNotFound) as error:
+                exception.ComputeHostNotFound,
+                exception.ForbiddenPortsWithAccelerator) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except INVALID_FLAVOR_IMAGE_EXCEPTIONS as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
@@ -974,7 +975,8 @@ class ServersController(wsgi.Controller):
         except (exception.AutoDiskConfigDisabledByImage,
                 exception.CannotResizeDisk,
                 exception.CannotResizeToSameFlavor,
-                exception.FlavorNotFound) as e:
+                exception.FlavorNotFound,
+                exception.ForbiddenPortsWithAccelerator) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except INVALID_FLAVOR_IMAGE_EXCEPTIONS as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())

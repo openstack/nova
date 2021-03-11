@@ -1245,7 +1245,7 @@ class ServersPolicyTest(base.BasePolicyTest):
                 self.project_member_context,
                 id=1, uuid=uuids.fake_id, project_id=self.project_id,
                 user_id='fake-user', vm_state=vm_states.ACTIVE,
-                expected_attrs=['system_metadata'],
+                expected_attrs=['system_metadata', 'info_cache'],
                 launched_at=timeutils.utcnow())
 
         mock_get.side_effect = fake_get
