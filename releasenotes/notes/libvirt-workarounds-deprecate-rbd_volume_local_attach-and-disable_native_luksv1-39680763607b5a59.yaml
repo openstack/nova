@@ -1,0 +1,13 @@
+---
+deprecations:
+  - |
+    The ``[workarounds]rbd_volume_local_attach`` and
+    ``[workarounds]disable_native_luksv1`` options have been deprecated as of
+    the 23.0.0 release ahead of removal in the future as the underlying
+    ``libgcrypt`` performance regressions that prompted their introduction have
+    been resolved.
+
+    Any remaining users of these workarounds should plan to disable these
+    workarounds as soon as possible. Note that this requires that any instances
+    on compute hosts using the workaround be shutdown ahead of the value of the
+    workaround changing, before being restarted.
