@@ -53,6 +53,11 @@ if [ "$GRENADE_OLD_BRANCH" ]; then
     echo '2. test with Ceph is skipped due to bug 1813216'
 else
     echo '3. test with Ceph for root + ephemeral disks'
+    # NOTE(lyarwood): Pin the CEPH_RELEASE to nautilus here as was the case
+    # prior to https://review.opendev.org/c/openstack/devstack-plugin-ceph/+/777232
+    # landing in the branchless plugin, we also have to pin in ceph.sh when
+    # configuring ceph on a remote node via ansible.
+    export CEPH_RELEASE=nautilus
     GetOSVersion
     prepare_ceph
     GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
