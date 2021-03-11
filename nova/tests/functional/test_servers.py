@@ -6406,12 +6406,22 @@ class PortResourceRequestBasedSchedulingTest(
         self.assertComputeAllocationMatchesFlavor(
             allocations, self.compute1_rp_uuid, self.flavor)
 
-        sriov_allocations = allocations[
-            self.sriov_dev_rp_per_host[
-                self.compute1_rp_uuid][self.PF2]]['resources']
+        sriov_dev_rp = self.sriov_dev_rp_per_host[
+            self.compute1_rp_uuid][self.PF2]
+        sriov_allocations = allocations[sriov_dev_rp]['resources']
 
         # this is the leaked allocation in placement
         self.assertPortMatchesAllocation(sriov_port, sriov_allocations)
+
+        allocations[sriov_dev_rp].pop('generation')
+        leaked_allocation = {sriov_dev_rp: allocations[sriov_dev_rp]}
+        self.assertIn(
+            f'Failed to update allocations for consumer {server["id"]}. '
+            f'Error: Cannot remove resources {leaked_allocation} from the '
+            f'allocation due to multiple successive generation conflicts in '
+            f'placement. To clean up the leaked resource allocation you can '
+            f'use nova-manage placement audit.',
+            self.stdlog.logger.output)
 
         # We expect that the port binding is not updated with any RP uuid as
         # the attach failed.

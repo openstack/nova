@@ -1755,7 +1755,9 @@ class SchedulerReportClient(object):
                 context, consumer_uuid, resources):
             error_reason = _("Cannot remove resources %s from the allocation "
                              "due to multiple successive generation conflicts "
-                             "in placement.")
+                             "in placement. To clean up the leaked resource "
+                             "allocation you can use nova-manage placement "
+                             "audit.")
             raise exception.AllocationUpdateFailed(
                 consumer_uuid=consumer_uuid,
                 error=error_reason % resources)

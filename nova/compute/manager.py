@@ -7599,6 +7599,13 @@ class ComputeManager(manager.Manager):
         if not request_groups:
             return None, None
 
+        # NOTE(gibi): we assume a single RequestGroup here as:
+        # 1) there can only be a single port per interface attach request
+        # 2) a single port can only request resources in a single RequestGroup
+        #    as per the current neutron API.
+        # #2) might change in the future so both
+        # nova.network.neutron.API.create_resource_requests() and this function
+        # takes a list of groups
         request_group = request_groups[0]
 
         # restrict the resource request to the current compute node. The
