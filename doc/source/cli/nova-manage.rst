@@ -216,7 +216,7 @@ db archive_deleted_rows
 .. code-block:: shell
 
     nova-manage db archive_deleted_rows [--max_rows <rows>] [--verbose]
-      [--until-complete] [--before <date>] [--purge] [--all-cells]
+      [--until-complete] [--before <date>] [--purge] [--all-cells] [--task-log]
 
 Move deleted rows from production tables to shadow tables. Note that the
 corresponding rows in the ``instance_mappings``, ``request_specs`` and
@@ -227,6 +227,10 @@ file.
 
 If automating, this should be run continuously while the result is 1,
 stopping at 0, or use the :option:`--until-complete` option.
+
+.. versionchanged:: 24.0.0 (Xena)
+
+    Added :option:`--task-log` option.
 
 .. rubric:: Options
 
@@ -271,6 +275,17 @@ stopping at 0, or use the :option:`--until-complete` option.
 .. option:: --all-cells
 
     Run command across all cells.
+
+.. option:: --task-log
+
+    Also archive ``task_log`` table records. Note that ``task_log`` records are
+    never deleted, so archiving them will move all of the ``task_log`` records
+    up to now into the shadow tables. It is recommended to also specify the
+    :option:`--before` option to avoid races for those consuming ``task_log``
+    record data via the `/os-instance_usage_audit_log`__ API (example:
+    Telemetry).
+
+.. __: https://docs.openstack.org/api-ref/compute/#server-usage-audit-log-os-instance-usage-audit-log
 
 .. rubric:: Return codes
 

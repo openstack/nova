@@ -1288,7 +1288,8 @@ def task_log_get(context, task_name, period_beginning,
 ####################
 
 
-def archive_deleted_rows(context=None, max_rows=None, before=None):
+def archive_deleted_rows(context=None, max_rows=None, before=None,
+                         task_log=None):
     """Move up to max_rows rows from production tables to the corresponding
     shadow tables.
 
@@ -1296,6 +1297,7 @@ def archive_deleted_rows(context=None, max_rows=None, before=None):
     :param max_rows: Maximum number of rows to archive (required)
     :param before: optional datetime which when specified filters the records
         to only archive those records deleted before the given date
+    :param task_log: Optional for whether to archive task_log table records
     :returns: 3-item tuple:
 
         - dict that maps table name to number of rows archived from that table,
@@ -1310,7 +1312,7 @@ def archive_deleted_rows(context=None, max_rows=None, before=None):
         - total number of rows that were archived
     """
     return IMPL.archive_deleted_rows(context=context, max_rows=max_rows,
-                                     before=before)
+                                     before=before, task_log=task_log)
 
 
 def pcidevice_online_data_migration(context, max_count):

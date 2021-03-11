@@ -5917,6 +5917,9 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.migrations = models.Migration.__table__
         self.shadow_migrations = sqlalchemyutils.get_table(
             self.engine, "shadow_migrations")
+        self.task_log = models.TaskLog.__table__
+        self.shadow_task_log = sqlalchemyutils.get_table(
+            self.engine, "shadow_task_log")
 
         self.uuidstrs = []
         for _ in range(6):
@@ -6162,7 +6165,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
                                                        tablename,
                                                        max_rows=2,
-                                                       before=None)
+                                                       before=None,
+                                                       task_log=False)
         # Verify we have 4 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 4)
@@ -6173,7 +6177,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
                                                        tablename,
                                                        max_rows=2,
-                                                       before=None)
+                                                       before=None,
+                                                       task_log=False)
         # Verify we have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 2)
@@ -6184,7 +6189,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
                                                        tablename,
                                                        max_rows=2,
-                                                       before=None)
+                                                       before=None,
+                                                       task_log=False)
         # Verify we still have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 2)
@@ -6245,7 +6251,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
                                                              "instances",
                                                              max_rows=None,
-                                                             before=None)
+                                                             before=None,
+                                                             task_log=False)
         self.assertEqual(1, num[0])
         self._assert_shadow_tables_empty_except(
             'shadow_instances',
@@ -6321,6 +6328,76 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'shadow_instances',
             'shadow_instance_id_mappings'
         )
+
+    def test_archive_deleted_rows_task_log(self):
+        # Add 6 rows to each table
+        for i in range(1, 7):
+            ins_stmt = self.task_log.insert().values(
+                id=i, task_name='instance_usage_audit', state='DONE',
+                host='host', message='message')
+            self.conn.execute(ins_stmt)
+        # Set 1 to updated before 2017-01-01
+        updated_at = timeutils.parse_strtime('2017-01-01T00:00:00.0')
+        update_statement = self.task_log.update().where(
+            self.task_log.c.id == 1).values(updated_at=updated_at)
+        self.conn.execute(update_statement)
+        # Set 1 to updated before 2017-01-02
+        updated_at = timeutils.parse_strtime('2017-01-02T00:00:00.0')
+        update_statement = self.task_log.update().where(
+            self.task_log.c.id == 2).values(updated_at=updated_at)
+        self.conn.execute(update_statement)
+        # Set 2 to updated now
+        update_statement = self.task_log.update().where(
+            self.task_log.c.id.in_(range(3, 5))).values(
+            updated_at=timeutils.utcnow())
+        self.conn.execute(update_statement)
+        # Verify we have 6 in main
+        qtl = sql.select([self.task_log]).where(
+            self.task_log.c.id.in_(range(1, 7)))
+        rows = self.conn.execute(qtl).fetchall()
+        self.assertEqual(len(rows), 6)
+        # Verify we have 0 in shadow
+        qstl = sql.select([self.shadow_task_log]).where(
+            self.shadow_task_log.c.id.in_(range(1, 7)))
+        rows = self.conn.execute(qstl).fetchall()
+        self.assertEqual(len(rows), 0)
+        # Make sure 'before' comparison is for < not <=
+        before_date = dateutil_parser.parse('2017-01-01', fuzzy=True)
+        _, _, rows = db.archive_deleted_rows(
+            max_rows=1, task_log=True, before=before_date)
+        self.assertEqual(0, rows)
+        # Archive rows updated before 2017-01-02
+        before_date = dateutil_parser.parse('2017-01-02', fuzzy=True)
+        results = db.archive_deleted_rows(
+            max_rows=100, task_log=True, before=before_date)
+        expected = dict(task_log=1)
+        self._assertEqualObjects(expected, results[0])
+        # Archive 1 row updated before 2017-01-03
+        before_date = dateutil_parser.parse('2017-01-03', fuzzy=True)
+        results = db.archive_deleted_rows(
+            max_rows=1, task_log=True, before=before_date)
+        expected = dict(task_log=1)
+        self._assertEqualObjects(expected, results[0])
+        # Archive 2 rows
+        results = db.archive_deleted_rows(max_rows=2, task_log=True)
+        expected = dict(task_log=2)
+        self._assertEqualObjects(expected, results[0])
+        # Verify we have 2 left in main
+        rows = self.conn.execute(qtl).fetchall()
+        self.assertEqual(len(rows), 2)
+        # Verify we have 4 in shadow
+        rows = self.conn.execute(qstl).fetchall()
+        self.assertEqual(len(rows), 4)
+        # Archive the rest
+        results = db.archive_deleted_rows(max_rows=100, task_log=True)
+        expected = dict(task_log=2)
+        self._assertEqualObjects(expected, results[0])
+        # Verify we have 0 left in main
+        rows = self.conn.execute(qtl).fetchall()
+        self.assertEqual(len(rows), 0)
+        # Verify we have 6 in shadow
+        rows = self.conn.execute(qstl).fetchall()
+        self.assertEqual(len(rows), 6)
 
 
 class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):

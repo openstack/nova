@@ -4164,7 +4164,8 @@ def _get_fk_stmts(metadata, conn, table, column, records):
     return inserts, deletes
 
 
-def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before):
+def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before,
+                                    task_log):
     """Move up to max_rows rows from one tables to the corresponding
     shadow table.
 
@@ -4209,8 +4210,19 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before):
 
     select = sql.select([column],
                         deleted_column != deleted_column.default.arg)
+
+    if tablename == "task_log" and task_log:
+        # task_log table records are never deleted by anything, so we won't
+        # base our select statement on the 'deleted' column status.
+        select = sql.select([column])
+
     if before:
-        select = select.where(table.c.deleted_at < before)
+        if tablename != "task_log":
+            select = select.where(table.c.deleted_at < before)
+        elif task_log:
+            # task_log table records are never deleted by anything, so we won't
+            # base our select statement on the 'deleted_at' column status.
+            select = select.where(table.c.updated_at < before)
 
     select = select.order_by(column).limit(max_rows)
     rows = conn.execute(select).fetchall()
@@ -4271,7 +4283,8 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before):
     return rows_archived, deleted_instance_uuids, extras
 
 
-def archive_deleted_rows(context=None, max_rows=None, before=None):
+def archive_deleted_rows(context=None, max_rows=None, before=None,
+                         task_log=False):
     """Move up to max_rows rows from production tables to the corresponding
     shadow tables.
 
@@ -4279,6 +4292,7 @@ def archive_deleted_rows(context=None, max_rows=None, before=None):
     :param max_rows: Maximum number of rows to archive (required)
     :param before: optional datetime which when specified filters the records
         to only archive those records deleted before the given date
+    :param task_log: Optional for whether to archive task_log table records
     :returns: 3-item tuple:
 
         - dict that maps table name to number of rows archived from that table,
@@ -4315,7 +4329,8 @@ def archive_deleted_rows(context=None, max_rows=None, before=None):
             _archive_deleted_rows_for_table(
                 meta, tablename,
                 max_rows=max_rows - total_rows_archived,
-                before=before))
+                before=before,
+                task_log=task_log))
         total_rows_archived += rows_archived
         if tablename == 'instances':
             deleted_instance_uuids = _deleted_instance_uuids
@@ -4353,6 +4368,7 @@ def purge_shadow_tables(context, before_date, status_fn=None):
     overrides = {
         'shadow_instance_actions': 'created_at',
         'shadow_instance_actions_events': 'created_at',
+        'shadow_task_log': 'updated_at',
     }
 
     for table in _purgeable_tables(metadata):

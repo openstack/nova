@@ -143,10 +143,14 @@ class DbCommandsTestCase(test.NoDBTestCase):
                                                     purge=purge)
         mock_db_archive.assert_has_calls([
             # Called with max_rows=30 but only 15 were archived.
-            mock.call(test.MatchType(context.RequestContext), 30, before=None),
+            mock.call(
+                test.MatchType(context.RequestContext), 30, before=None,
+                task_log=False),
             # So the total from the last call was 15 and the new max_rows=15
             # for the next call in the second cell.
-            mock.call(test.MatchType(context.RequestContext), 15, before=None)
+            mock.call(
+                test.MatchType(context.RequestContext), 15, before=None,
+                task_log=False)
         ])
         output = self.output.getvalue()
         expected = '''\
@@ -218,18 +222,28 @@ class DbCommandsTestCase(test.NoDBTestCase):
                                                     until_complete=True)
         mock_db_archive.assert_has_calls([
             # Called with max_rows=30 but only 15 were archived.
-            mock.call(test.MatchType(context.RequestContext), 30, before=None),
+            mock.call(
+                test.MatchType(context.RequestContext), 30, before=None,
+                task_log=False),
             # Called with max_rows=30 but 0 were archived (nothing left to
             # archive in this cell)
-            mock.call(test.MatchType(context.RequestContext), 30, before=None),
+            mock.call(
+                test.MatchType(context.RequestContext), 30, before=None,
+                task_log=False),
             # So the total from the last call was 0 and the new max_rows=30
             # because until_complete=True.
-            mock.call(test.MatchType(context.RequestContext), 30, before=None),
+            mock.call(
+                test.MatchType(context.RequestContext), 30, before=None,
+                task_log=False),
             # Called with max_rows=30 but 0 were archived (nothing left to
             # archive in this cell)
-            mock.call(test.MatchType(context.RequestContext), 30, before=None),
+            mock.call(
+                test.MatchType(context.RequestContext), 30, before=None,
+                task_log=False),
             # Called one final time with max_rows=30
-            mock.call(test.MatchType(context.RequestContext), 30, before=None)
+            mock.call(
+                test.MatchType(context.RequestContext), 30, before=None,
+                task_log=False)
         ])
         output = self.output.getvalue()
         expected = '''\
@@ -252,7 +266,8 @@ Archiving.....complete
     def _test_archive_deleted_rows(self, mock_db_archive, verbose=False):
         result = self.commands.archive_deleted_rows(20, verbose=verbose)
         mock_db_archive.assert_called_once_with(
-            test.MatchType(context.RequestContext), 20, before=None)
+            test.MatchType(context.RequestContext), 20, before=None,
+            task_log=False)
         output = self.output.getvalue()
         if verbose:
             expected = '''\
@@ -304,9 +319,15 @@ Archiving.....complete
 
         self.assertEqual(expected, self.output.getvalue())
         mock_db_archive.assert_has_calls([
-            mock.call(test.MatchType(context.RequestContext), 20, before=None),
-            mock.call(test.MatchType(context.RequestContext), 20, before=None),
-            mock.call(test.MatchType(context.RequestContext), 20, before=None),
+            mock.call(
+                test.MatchType(context.RequestContext), 20, before=None,
+                task_log=False),
+            mock.call(
+                test.MatchType(context.RequestContext), 20, before=None,
+                task_log=False),
+            mock.call(
+                test.MatchType(context.RequestContext), 20, before=None,
+                task_log=False),
         ])
 
     def test_archive_deleted_rows_until_complete_quiet(self):
@@ -344,9 +365,15 @@ Rows were archived, running purge...
 
         self.assertEqual(expected, self.output.getvalue())
         mock_db_archive.assert_has_calls([
-            mock.call(test.MatchType(context.RequestContext), 20, before=None),
-            mock.call(test.MatchType(context.RequestContext), 20, before=None),
-            mock.call(test.MatchType(context.RequestContext), 20, before=None),
+            mock.call(
+                test.MatchType(context.RequestContext), 20, before=None,
+                task_log=False),
+            mock.call(
+                test.MatchType(context.RequestContext), 20, before=None,
+                task_log=False),
+            mock.call(
+                test.MatchType(context.RequestContext), 20, before=None,
+                task_log=False),
         ])
         mock_db_purge.assert_called_once_with(mock.ANY, None,
                                               status_fn=mock.ANY)
@@ -405,8 +432,12 @@ Archiving....stopped
 
         self.assertEqual(expected, self.output.getvalue())
         mock_db_archive.assert_has_calls([
-            mock.call(test.MatchType(context.RequestContext), 20, before=None),
-            mock.call(test.MatchType(context.RequestContext), 20, before=None)
+            mock.call(
+                test.MatchType(context.RequestContext), 20, before=None,
+                task_log=False),
+            mock.call(
+                test.MatchType(context.RequestContext), 20, before=None,
+                task_log=False)
         ])
 
     def test_archive_deleted_rows_until_stopped_quiet(self):
@@ -422,7 +453,8 @@ Archiving....stopped
         result = self.commands.archive_deleted_rows(20, before='2017-01-13')
         mock_db_archive.assert_called_once_with(
                 test.MatchType(context.RequestContext), 20,
-                before=datetime.datetime(2017, 1, 13))
+                before=datetime.datetime(2017, 1, 13),
+                task_log=False)
         self.assertEqual(1, result)
 
     @mock.patch.object(db, 'archive_deleted_rows', return_value=({}, [], 0))
@@ -432,7 +464,8 @@ Archiving....stopped
         result = self.commands.archive_deleted_rows(20, verbose=True,
                                                     purge=True)
         mock_db_archive.assert_called_once_with(
-            test.MatchType(context.RequestContext), 20, before=None)
+            test.MatchType(context.RequestContext), 20, before=None,
+            task_log=False)
         output = self.output.getvalue()
         # If nothing was archived, there should be no purge messages
         self.assertIn('Nothing was archived.', output)
@@ -474,7 +507,9 @@ Archiving....stopped
 
         self.assertEqual(1, result)
         mock_db_archive.assert_has_calls([
-            mock.call(test.MatchType(context.RequestContext), 20, before=None)
+            mock.call(
+                test.MatchType(context.RequestContext), 20, before=None,
+                task_log=False)
         ])
         self.assertEqual(1, mock_reqspec_destroy.call_count)
         mock_members_destroy.assert_called_once()
