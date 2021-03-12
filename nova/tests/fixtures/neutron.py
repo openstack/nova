@@ -558,6 +558,90 @@ class NeutronFixture(fixtures.Fixture):
         'port_security_enabled': False,
     }
 
+    ports_with_accelerator = [
+        {
+        'id': '7970ec1f-7ce0-4293-a2a3-92cbce8048b4',
+        'name': '',
+        'description': '',
+        'network_id': network_1['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c3',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.1.43',
+                'subnet_id': subnet_1['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+        'device_id': '',
+        'device_profile': 'fakedev-dp-port',
+        'binding:profile': {},
+        'binding:vif_details': {},
+        'binding:vif_type': 'hw_veb',
+        'binding:vnic_type': 'accelerator-direct',
+        'resource_request': {},
+        'port_security_enabled': True,
+        'security_groups': [],
+        },
+        {
+        'id': '7e95fbcc-1d5f-4a99-9f43-c6aa592bcf81',
+        'name': '',
+        'description': '',
+        'network_id': network_1['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c4',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.1.44',
+                'subnet_id': subnet_1['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+        'device_id': '',
+        'device_profile': 'fakedev-dp-port',
+        'binding:profile': {},
+        'binding:vif_details': {},
+        'binding:vif_type': 'hw_veb',
+        'binding:vnic_type': 'accelerator-direct',
+        'resource_request': {},
+        'port_security_enabled': True,
+        'security_groups': [],
+        }
+    ]
+
+    ports_with_multi_accelerators = [
+        {
+        'id': '19fb99fd-0b64-4f06-af1a-68eeb2bca95a',
+        'name': '',
+        'description': '',
+        'network_id': network_1['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c3',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.1.43',
+                'subnet_id': subnet_1['id']
+            }
+        ],
+        'tenant_id': tenant_id,
+        'project_id': tenant_id,
+        'device_id': '',
+        'device_profile': 'fakedev-dp-multi',
+        'binding:profile': {},
+        'binding:vif_details': {},
+        'binding:vif_type': 'hw_veb',
+        'binding:vnic_type': 'accelerator-direct',
+        'resource_request': {},
+        'port_security_enabled': True,
+        'security_groups': [],
+        },
+    ]
+
     nw_info = [{
         "profile": {},
         "ovs_interfaceid": "b71f1699-42be-4515-930a-f3ef01f94aa7",

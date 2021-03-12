@@ -7807,16 +7807,38 @@ class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
 
     def _setup_compute_nodes_and_device_rps(self):
         self.compute_services = []
+        # all device rp uuids
+        self.device_rp_uuids = []
+        # device_rp_map[host_rp_uuid]: device rp uuid belong to host
+        self.device_rp_map = {}
+
         for i in range(self.NUM_HOSTS):
             svc = self._start_compute(host='accel_host' + str(i))
             self.compute_services.append(svc)
+        # host index map to compute rp uuid
         self.compute_rp_uuids = [
            rp['uuid'] for rp in self._get_all_providers()
            if rp['uuid'] == rp['root_provider_uuid']]
-        for index, uuid in enumerate(self.compute_rp_uuids):
-            device_rp_uuid = self._create_device_rp(index, uuid)
-            self.device_rp_map[uuid] = device_rp_uuid
-        self.device_rp_uuids = list(self.device_rp_map.values())
+
+        # host0 have most arqs setup, except the last one
+        # host1 have the last arq of cyborg arqs list
+        # only 2 host is supported now
+        for host_index, host_rp_uuid in enumerate(self.compute_rp_uuids):
+            if host_index == 0:
+                host_dev_rps = []
+                # host0 have most arqs setup, except the last one
+                for i, _ in enumerate(self.cyborg.arq_list[0:-1]):
+                    device_rp = self._create_device_rp(i, host_rp_uuid)
+                    host_dev_rps.append(device_rp)
+                self.device_rp_map[host_rp_uuid] = host_dev_rps
+                self.device_rp_uuids.extend(host_dev_rps)
+            else:
+                # second host have only the last one arq
+                host0_devs_num = len(self.cyborg.arq_list[0:-1])
+                device_rp = self._create_device_rp(
+                    host_index + host0_devs_num, host_rp_uuid)
+                self.device_rp_uuids.append(device_rp)
+                self.device_rp_map[host_rp_uuid] = [device_rp]
 
     def _create_device_rp(self, index, compute_rp_uuid,
                           resource='FPGA', res_amt=2):
@@ -7861,59 +7883,101 @@ class AcceleratorServerBase(integrated_helpers.ProviderUsageBaseTestCase):
                                         extra_spec=extra_specs)
         return flavor_id
 
-    def _check_allocations_usage(self, server, check_other_host_alloc=True):
+    def _check_allocations_usage(
+        self, server, check_other_host_alloc=True, dev_alloced=1):
         # Check allocations on host where instance is running
+        # This is also works for port with accelerator device
         server_uuid = server['id']
-
+        allocated_device_rps = []
         hostname = server['OS-EXT-SRV-ATTR:host']
         server_host_rp_uuid = self._get_provider_uuid_by_host(hostname)
         expected_host_alloc = {
             'resources': {'VCPU': 2, 'MEMORY_MB': 2048, 'DISK_GB': 20},
         }
-        expected_device_alloc = {'resources': {'FPGA': 1}}
 
-        for i in range(self.NUM_HOSTS):
-            compute_uuid = self.compute_rp_uuids[i]
-            device_uuid = self.device_rp_map[compute_uuid]
-            host_alloc = self._get_allocations_by_provider_uuid(compute_uuid)
-            device_alloc = self._get_allocations_by_provider_uuid(device_uuid)
-            if compute_uuid == server_host_rp_uuid:
-                self.assertEqual(expected_host_alloc, host_alloc[server_uuid])
-                self.assertEqual(expected_device_alloc,
-                                 device_alloc[server_uuid])
-            else:
-                if check_other_host_alloc:
-                    self.assertEqual({}, host_alloc)
-                self.assertEqual({}, device_alloc)
+        alloc_dev_nums = 0
+        # host regular resources assert
+        host_alloc = self._get_allocations_by_provider_uuid(
+            server_host_rp_uuid)
+        self.assertEqual(expected_host_alloc, host_alloc[server_uuid])
+
+        for device_rp_uuid in self.device_rp_map[server_host_rp_uuid]:
+            device_alloc = (
+                self._get_allocations_by_provider_uuid(device_rp_uuid))
+            if device_alloc:
+                res = device_alloc[server_uuid]['resources']
+                alloc_dev_nums += res.get('FPGA', 0)
+                # placement may allocated multi devices in same
+                # device_rp or use different device_rp for each
+                # ports. we get resources report in either:
+                # ------- {'resources': {'FPGA': 2}}
+                # or:
+                # ------- {'resources': {'FPGA': 1}}
+                # ------- {'resources': {'FPGA': 1}}
+                for i in range(res.get('FPGA', 0)):
+                    allocated_device_rps.append(device_rp_uuid)
+
+        # allocated smartnic devices asserts
+        self.assertEqual(dev_alloced, alloc_dev_nums)
 
         # NOTE(Sundar): ARQs for an instance could come from different
-        # devices in the same host, in general. But, in this test case,
-        # there is only one device in the host. So, we check for that.
-        device_rp_uuid = self.device_rp_map[server_host_rp_uuid]
-        expected_arq_bind_info = set([('Bound', hostname,
-                                       device_rp_uuid, server_uuid)])
+        # devices in the same host, in general.
+        expected_arq_bind_info = []
+        for rp in allocated_device_rps:
+            expected_arq_bind_info.append(('Bound', hostname,
+                                       rp, server_uuid))
+
         arqs = nova_fixtures.CyborgFixture.fake_get_arqs_for_instance(
             server_uuid)
         # The state is hardcoded but other fields come from the test case.
-        arq_bind_info = {(arq['state'], arq['hostname'],
+        arq_bind_info = [(arq['state'], arq['hostname'],
                           arq['device_rp_uuid'], arq['instance_uuid'])
-                         for arq in arqs}
-        self.assertSetEqual(expected_arq_bind_info, arq_bind_info)
+                         for arq in arqs]
+        self.assertListEqual(sorted(expected_arq_bind_info),
+            sorted(arq_bind_info))
+
+        # ensure another host did not alloc anything
+        if check_other_host_alloc:
+            for i in range(self.NUM_HOSTS):
+                compute_uuid = self.compute_rp_uuids[i]
+                if compute_uuid != server_host_rp_uuid:
+                    host_alloc = self._get_allocations_by_provider_uuid(
+                        compute_uuid)
+                    self.assertEqual({}, host_alloc)
 
     def _check_no_allocs_usage(self, server_uuid):
         allocs = self._get_allocations_by_server_uuid(server_uuid)
         self.assertEqual({}, allocs)
 
+    def _check_resource_released(self, server):
+        hostname = server['OS-EXT-SRV-ATTR:host']
+        server_host_rp_uuid = self._get_provider_uuid_by_host(hostname)
         for i in range(self.NUM_HOSTS):
-            host_alloc = self._get_allocations_by_provider_uuid(
-                    self.compute_rp_uuids[i])
-            self.assertEqual({}, host_alloc)
-            device_alloc = self._get_allocations_by_provider_uuid(
-                    self.device_rp_uuids[i])
-            self.assertEqual({}, device_alloc)
-            usage = self._get_provider_usages(
-                self.device_rp_uuids[i]).get('FPGA')
-            self.assertEqual(0, usage)
+            compute_uuid = self.compute_rp_uuids[i]
+            host_alloc = self._get_allocations_by_provider_uuid(compute_uuid)
+            device_rp_uuids = self.device_rp_map[compute_uuid]
+            if compute_uuid == server_host_rp_uuid:
+                self.assertEqual({}, host_alloc)
+            for dev_rp_uuid in device_rp_uuids:
+                dev_alloc = self._get_allocations_by_provider_uuid(dev_rp_uuid)
+                self.assertEqual({}, dev_alloc)
+        # checking ARQ for server is released
+        alloc_arqs = self.cyborg.fake_get_arqs_for_instance(server['id'])
+        self.assertEqual([], alloc_arqs)
+
+    def _test_evacuate(self, server, num_hosts):
+        server_hostname = server['OS-EXT-SRV-ATTR:host']
+        for i in range(num_hosts):
+            if self.compute_services[i].host == server_hostname:
+                compute_to_stop = self.compute_services[i]
+            else:
+                compute_to_evacuate = self.compute_services[i]
+        # Stop and force down the compute service.
+        compute_id = self.admin_api.get_services(
+            host=server_hostname, binary='nova-compute')[0]['id']
+        compute_to_stop.stop()
+        self.admin_api.put_service(compute_id, {'forced_down': 'true'})
+        return compute_to_stop, compute_to_evacuate
 
 
 class AcceleratorServerTest(AcceleratorServerBase):
@@ -7936,8 +8000,9 @@ class AcceleratorServerTest(AcceleratorServerBase):
         # Verify that the host name and the device rp UUID are set properly.
         # Other fields in the ARQ are hardcoded data from the fixture.
         arqs = self.cyborg.fake_get_arqs_for_instance(server['id'])
-        self.assertEqual(self.device_rp_uuids[0], arqs[0]['device_rp_uuid'])
-        self.assertEqual(server['OS-EXT-SRV-ATTR:host'], arqs[0]['hostname'])
+        for arq in arqs:
+            self.assertIn(arq['device_rp_uuid'], self.device_rp_uuids)
+            self.assertEqual(server['OS-EXT-SRV-ATTR:host'], arq['hostname'])
 
         # Check allocations and usage
         self._check_allocations_usage(server)
@@ -8073,20 +8138,6 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             networks='none', expected_state='ACTIVE')
 
-    def _test_evacuate(self, server, num_hosts):
-        server_hostname = server['OS-EXT-SRV-ATTR:host']
-        for i in range(num_hosts):
-            if self.compute_services[i].host == server_hostname:
-                compute_to_stop = self.compute_services[i]
-            else:
-                compute_to_evacuate = self.compute_services[i]
-        # Stop and force down the compute service.
-        compute_id = self.admin_api.get_services(
-            host=server_hostname, binary='nova-compute')[0]['id']
-        compute_to_stop.stop()
-        self.admin_api.put_service(compute_id, {'forced_down': 'true'})
-        return compute_to_stop, compute_to_evacuate
-
     def test_soft_reboot_ok(self):
         self._reboot_server(self.server)
         self._check_allocations_usage(self.server)
@@ -8201,6 +8252,7 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
         self.assertEqual(len(arqs), 1)
         self._shelve_server(self.server, 'SHELVED')
+        # arq deleted during shelve_offload_server
         self._shelve_offload_server(self.server)
         arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
         self.assertEqual(len(arqs), 0)
@@ -8341,6 +8393,360 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         body = {'unshelve': None}
         self._test_unshelve_instance_with_compute_rpc_pin(
                 '5.13', body=body)
+
+
+class TwoPortsAcceleratorServerOpsTest(AcceleratorServerBase):
+    def setUp(self):
+        super(TwoPortsAcceleratorServerOpsTest, self).setUp()
+        self.NUM_HOSTS = 1
+        self.flavor_id = self._create_flavor(name='tiny')
+        self.server_name = 'two_ports_accel_server'
+        self.neutron._networks[
+            self.neutron.network_2['id']] = self.neutron.network_2
+        self.neutron._subnets[
+            self.neutron.subnet_2['id']] = self.neutron.subnet_2
+        for port in self.neutron.ports_with_accelerator:
+            self.neutron._ports[port['id']] = copy.deepcopy(port)
+        self.ports = self.neutron.ports_with_accelerator
+
+    def _check_neutron_binding_info_cleaned(self):
+        for port in self.neutron.ports_with_accelerator:
+            updated_port = self.neutron.show_port(port['id'])['port']
+            binding_profile = neutronapi.get_binding_profile(updated_port)
+            self.assertNotIn('arq_uuid', binding_profile)
+            self.assertNotIn('pci_slot', binding_profile)
+
+    def test_create_with_two_accels_ok(self):
+        ports = self.neutron.ports_with_accelerator
+        server_name = self.flavor_id
+        server = self._create_server(
+                  server_name, flavor_id=self.flavor_id,
+                  image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                  networks=[
+                      {'port': ports[0]['id']},
+                      {'port': ports[1]['id']}
+                    ],
+                  expected_state='ACTIVE')
+        self._check_allocations_usage(server, dev_alloced=2)
+        # Clean up
+        self._delete_server(server)
+        self._check_no_allocs_usage(server['id'])
+        self._check_resource_released(server)
+        # check neutron binding cleared
+        self._check_neutron_binding_info_cleaned()
+
+    def test_create_with_two_accels_all_binding_error(self):
+        def throw_error(*args, **kwargs):
+            raise exception.AcceleratorRequestOpFailed(reason='',
+                    instance_uuid='fake')
+        self.stub_out('nova.accelerator.cyborg._CyborgClient.bind_arqs',
+            throw_error)
+        ports = self.neutron.ports_with_accelerator
+        server_name = self.flavor_id
+        server = self._create_server(
+                  server_name, flavor_id=self.flavor_id,
+                  image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                  networks=[
+                      {'port': ports[0]['id']},
+                      {'port': ports[1]['id']}
+                    ],
+                  expected_state='ERROR')
+
+        # Clean up, no need to delete
+        self._delete_server(server)
+        self._check_no_allocs_usage(server["id"])
+        self._check_neutron_binding_info_cleaned()
+
+
+class PortAcceleratorServerOpsTest(AcceleratorServerBase):
+
+    def setUp(self):
+        self.NUM_HOSTS = 2  # 2nd host needed for evacuate
+        super(PortAcceleratorServerOpsTest, self).setUp()
+        self.flavor_id = self._create_flavor(name='tiny')
+        self.server_name = 'port_accel_server'
+        # add extra port for accelerator
+        self.neutron._networks[
+            self.neutron.network_2['id']] = self.neutron.network_2
+        self.neutron._subnets[
+            self.neutron.subnet_2['id']] = self.neutron.subnet_2
+        self.port = self.neutron.ports_with_accelerator[0]
+        self.neutron._ports[self.port['id']] = copy.deepcopy(self.port)
+        self.server = self._create_server(
+            self.server_name, flavor_id=self.flavor_id,
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks=[{'port': self.port['id']}], expected_state='ACTIVE')
+
+        # check allocation and cyborg arq bind info
+        self._check_allocations_usage(self.server)
+
+        # check neutron binding info
+        updated_port = self.neutron.show_port(self.port['id'])['port']
+        binding_profile = neutronapi.get_binding_profile(updated_port)
+        arqs = nova_fixtures.CyborgFixture.fake_get_arqs_for_instance(
+            self.server['id'])
+        pci = arqs[0]['attach_handle_info']
+        pci_addr = "%s:%s:%s.%s" % (pci['domain'], pci['bus'],
+            pci['device'], pci['function'])
+        bind_info = {
+              'physical_network': pci['physical_network'],
+              'arq_uuid': arqs[0]['uuid'],
+              'pci_slot': pci_addr}
+
+        self.assertEqual(bind_info, binding_profile)
+
+    def test_delete_server(self):
+        self._delete_server(self.server)
+        self._check_resource_released(self.server)
+        self._check_no_allocs_usage(self.server['id'])
+        # check neutron binding cleared
+        port = self.neutron.ports_with_accelerator[0]
+        updated_port = self.neutron.show_port(port['id'])['port']
+        binding_profile = neutronapi.get_binding_profile(updated_port)
+        self.assertNotIn('arq_uuid', binding_profile)
+        self.assertNotIn('pci_slot', binding_profile)
+
+    def test_soft_reboot_ok(self):
+        self._reboot_server(self.server)
+        self._check_allocations_usage(self.server)
+
+    def test_hard_reboot_ok(self):
+        self._reboot_server(self.server, hard=True)
+        self._check_allocations_usage(self.server)
+
+    def test_pause_unpause_ok(self):
+        # pause and unpause should work with accelerators backed port.
+        # This is not a general test of un/pause functionality.
+        self.api.post_server_action(self.server['id'], {'pause': {}})
+        self._wait_for_state_change(self.server, 'PAUSED')
+        self._check_allocations_usage(self.server)
+        # ARQs didn't get deleted (and so didn't have to be re-created).
+        self.cyborg.mock_del_arqs.assert_not_called()
+
+        self.api.post_server_action(self.server['id'], {'unpause': {}})
+        self._wait_for_state_change(self.server, 'ACTIVE')
+        self._check_allocations_usage(self.server)
+
+    def test_stop_start_ok(self):
+        # Stop and start should work with accelerators backed port.
+        self.api.post_server_action(self.server['id'], {'os-stop': {}})
+        self._wait_for_state_change(self.server, 'SHUTOFF')
+        self._check_allocations_usage(self.server)
+        # ARQs didn't get deleted (and so didn't have to be re-created).
+        self.cyborg.mock_del_arqs.assert_not_called()
+        self.api.post_server_action(self.server['id'], {'os-start': {}})
+        self._wait_for_state_change(self.server, 'ACTIVE')
+        self._check_allocations_usage(self.server)
+
+    def test_lock_unlock_ok(self):
+        # Lock/unlock are no-ops for accelerators.
+        self.api.post_server_action(self.server['id'], {'lock': {}})
+        server = self.api.get_server(self.server['id'])
+        self.assertTrue(server['locked'])
+        self._check_allocations_usage(self.server)
+
+        self.api.post_server_action(self.server['id'], {'unlock': {}})
+        server = self.api.get_server(self.server['id'])
+        self.assertTrue(not server['locked'])
+        self._check_allocations_usage(self.server)
+
+    def test_backup_ok(self):
+        self.api.post_server_action(self.server['id'],
+            {'createBackup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1}})
+        self._check_allocations_usage(self.server)
+
+    def test_create_image_ok(self):  # snapshot
+        self.api.post_server_action(self.server['id'],
+            {'createImage': {
+                'name': 'foo-image',
+                'metadata': {'meta_var': 'meta_val'}}})
+        self._check_allocations_usage(self.server)
+
+    def test_rescue_unrescue_ok(self):
+        self.api.post_server_action(self.server['id'],
+            {'rescue': {
+                'adminPass': 'MySecretPass',
+                'rescue_image_ref': '70a599e0-31e7-49b7-b260-868f441e862b'}})
+        self._check_allocations_usage(self.server)
+        # ARQs didn't get deleted (and so didn't have to be re-created).
+        self.cyborg.mock_del_arqs.assert_not_called()
+        self._wait_for_state_change(self.server, 'RESCUE')
+
+        self.api.post_server_action(self.server['id'], {'unrescue': {}})
+        self._check_allocations_usage(self.server)
+
+    def test_rebuild_ok(self):
+        rebuild_image_ref = self.glance.auto_disk_config_enabled_image['id']
+        self.api.post_server_action(self.server['id'],
+            {'rebuild': {
+                'imageRef': rebuild_image_ref,
+                'OS-DCF:diskConfig': 'AUTO'}})
+        self.notifier.wait_for_versioned_notifications('instance.rebuild.end')
+        self._wait_for_state_change(self.server, 'ACTIVE')
+        self._check_allocations_usage(self.server)
+
+    def test_resize_reject(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'],
+            {'resize': {'flavorRef': '2', 'OS-DCF:diskConfig': 'AUTO'}})
+        self.assertEqual(400, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def test_suspend_reject(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'], {'suspend': {}})
+        self.assertEqual(400, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def test_migrate_reject(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'], {'migrate': {}})
+        self.assertEqual(400, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def test_live_migrate_reject(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'],
+            {'live-migration': {'host': 'accel_host1'}})
+        self.assertEqual(400, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def test_shelve_reject(self):
+        compute_rpcapi.reset_globals()
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.post_server_action,
+            self.server['id'], {'shelve': {}})
+        self.assertEqual(400, ex.response.status_code)
+
+    def test_shelve_offload_reject(self):
+        compute_rpcapi.reset_globals()
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.post_server_action,
+            self.server['id'], {'shelveOffload': {}})
+        self.assertEqual(400, ex.response.status_code)
+
+    def test_evacuate_reject(self):
+        _, compute_to_evacuate = self._test_evacuate(
+            self.server, self.NUM_HOSTS)
+        ex = self.assertRaises(client.OpenStackApiException,
+            self.api.post_server_action, self.server['id'],
+            {'evacuate': {
+                 'host': compute_to_evacuate.host,
+                 'adminPass': 'MySecretPass'}})
+        self.assertEqual(400, ex.response.status_code)
+        self._check_allocations_usage(self.server)
+
+    def test_port_attach_interface_reject(self):
+        # try to add a port with resource request
+        post = {
+                'interfaceAttachment': {
+                    'port_id': self.port['id']
+                }}
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.attach_interface,
+                self.server['id'], post)
+        self.assertEqual(400, ex.response.status_code)
+
+    def test_port_detach_interface_reject(self):
+        # try to add a port with resource request
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.detach_interface,
+                self.server['id'], self.port['id'])
+        self.assertEqual(400, ex.response.status_code)
+
+
+class PortAcceleratorServerCreateRejectTest(AcceleratorServerBase):
+
+    def setUp(self):
+        self.NUM_HOSTS = 1
+        super(PortAcceleratorServerCreateRejectTest, self).setUp()
+        self.flavor_id = self._create_flavor(name='tiny')
+        self.server_name = 'port_accel_server'
+        # add extra port for accelerator
+        self.neutron._networks[
+            self.neutron.network_2['id']] = self.neutron.network_2
+        self.neutron._subnets[
+            self.neutron.subnet_2['id']] = self.neutron.subnet_2
+        self.port = self.neutron.ports_with_multi_accelerators[0]
+        self.neutron._ports[self.port['id']] = copy.deepcopy(self.port)
+
+    def test_reject_multi_device_port(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+            self._create_server,
+            self.server_name, flavor_id=self.flavor_id,
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks=[{'port': self.port['id']}], expected_state='ACTIVE')
+        self.assertEqual(400, ex.response.status_code)
+
+    def test_reject_if_have_old_version_service(self):
+        def get_min_version(*args, **kwargs):
+            return 56
+        self.stub_out('nova.objects.service.get_minimum_version_all_cells',
+            get_min_version)
+        ex = self.assertRaises(client.OpenStackApiException,
+            self._create_server,
+            self.server_name, flavor_id=self.flavor_id,
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks=[{'port': self.port['id']}], expected_state='ACTIVE')
+        self.assertEqual(400, ex.response.status_code)
+
+
+class PortAndFlavorAccelsServerCreateTest(AcceleratorServerBase):
+
+    def setUp(self):
+        self.NUM_HOSTS = 1
+        super(PortAndFlavorAccelsServerCreateTest, self).setUp()
+
+        # accelerator from flavor: device profile 'fakedev-dp'
+        self.flavor_id = self._create_acc_flavor()
+        self.server_name = 'port_accel_server'
+
+        # accelerator from port: device profile 'fakedev-dp-port'
+        self.neutron._networks[
+            self.neutron.network_2['id']] = self.neutron.network_2
+        self.neutron._subnets[
+            self.neutron.subnet_2['id']] = self.neutron.subnet_2
+        self.port = self.neutron.ports_with_accelerator[0]
+        self.neutron._ports[self.port['id']] = copy.deepcopy(self.port)
+
+    def test_accels_from_both_port_and_flavor(self):
+        self.server = self._create_server(
+            self.server_name, flavor_id=self.flavor_id,
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks=[{'port': self.port['id']}], expected_state='ACTIVE')
+
+        # check allocation and cyborg arq bind info
+        self._check_allocations_usage(self.server, dev_alloced=2)
+
+        # check neutron binding info
+        updated_port = self.neutron.show_port(self.port['id'])['port']
+        binding_profile = neutronapi.get_binding_profile(updated_port)
+        arqs = nova_fixtures.CyborgFixture.fake_get_arqs_for_instance(
+            self.server['id'])
+
+        for arq in arqs:
+            # find which args belong to port
+            if arq["device_profile_name"] == 'fakedev-dp-port':
+                pci = arqs['attach_handle_info']
+                pci_addr = "%s:%s:%s.%s" % (pci['domain'], pci['bus'],
+                    pci['device'], pci['function'])
+                bind_info = {
+                    'physical_network': pci['physical_network'],
+                    'arq_uuid': arqs['uuid'],
+                    'pci_slot': pci_addr}
+                self.assertEqual(bind_info, binding_profile)
+
+        self._delete_server(self.server)
+        self._check_resource_released(self.server)
+        self._check_no_allocs_usage(self.server['id'])
+        # check neutron binding cleared
+        updated_port = self.neutron.show_port(self.port['id'])['port']
+        binding_profile = neutronapi.get_binding_profile(updated_port)
+        self.assertNotIn('arq_uuid', binding_profile)
+        self.assertNotIn('pci_slot', binding_profile)
 
 
 class CrossCellResizeWithQoSPort(PortResourceRequestBasedSchedulingTestBase):
