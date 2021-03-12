@@ -17,15 +17,13 @@ import time
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
-from nova.tests.unit import cast_as_call
-from nova.tests.unit import policy_fixture
 
 
 class TestListServersIpFilter(test.TestCase):
 
     def setUp(self):
         super(TestListServersIpFilter, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.GlanceFixture(self))
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         # Add a 2nd port to the neutron fixture to have multiple ports
@@ -42,7 +40,7 @@ class TestListServersIpFilter(test.TestCase):
         self.start_service('scheduler')
         self.start_service('compute')
 
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(nova_fixtures.CastAsCallFixture(self))
 
         self.image_id = self.api.get_images()[0]['id']
         self.flavor_id = self.api.get_flavors()[0]['id']

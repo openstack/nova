@@ -22,7 +22,6 @@ from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers as helper
-from nova.tests.unit import policy_fixture
 
 
 def rand_flavor(**kwargs):
@@ -89,7 +88,7 @@ class FlavorManageFullstack(testscenarios.WithScenarios, test.TestCase):
         for fix in self._additional_fixtures:
             self.useFixture(fix())
 
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         api_fixture = self.useFixture(
             nova_fixtures.OSAPIFixture(
                 api_version=self.api_major_version))

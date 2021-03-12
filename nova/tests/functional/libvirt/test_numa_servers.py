@@ -1193,8 +1193,8 @@ class NUMAServersWithNetworksTest(NUMAServersTestBase):
         ex = self.assertRaises(client.OpenStackApiException,
                                self.api.post_server_action, server['id'], post)
         # NOTE(danms): This wouldn't happen in a real deployment since rebuild
-        # is a cast, but since we are using CastAsCall this will bubble to the
-        # API.
+        # is a cast, but since we are using CastAsCallFixture this will bubble
+        # to the API.
         self.assertEqual(500, ex.response.status_code)
         self.assertIn('NoValidHost', str(ex))
 

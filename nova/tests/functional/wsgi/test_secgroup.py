@@ -17,7 +17,6 @@ import testscenarios
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.unit import policy_fixture
 
 LOG = logging.getLogger(__name__)
 
@@ -44,7 +43,7 @@ class SecgroupsFullstack(testscenarios.WithScenarios, test.TestCase):
 
     def setUp(self):
         super(SecgroupsFullstack, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.GlanceFixture(self))
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture())
 

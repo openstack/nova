@@ -20,10 +20,10 @@ from nova.compute import vm_states
 from nova import exception
 from nova.policies import attach_interfaces as ai_policies
 from nova.policies import base as base_policy
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.policies import base
-from nova.tests.unit import policy_fixture
 
 
 class AttachInterfacesPolicyTest(base.BasePolicyTest):
@@ -166,7 +166,7 @@ class AttachInterfacesDeprecatedPolicyTest(base.BasePolicyTest):
         # Oslo.policy will consider the overridden rules if:
         #  1. overridden deprecated rule's checks are different than defaults
         #  2. new rules are not present in policy file
-        self.policy = self.useFixture(policy_fixture.OverridePolicyFixture(
+        self.policy = self.useFixture(nova_fixtures.OverridePolicyFixture(
                                       rules_in_file=override_rules))
 
     @mock.patch('nova.compute.api.API.get')

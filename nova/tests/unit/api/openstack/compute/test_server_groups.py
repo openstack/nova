@@ -28,7 +28,6 @@ from nova.policies import server_groups as sg_policies
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import policy_fixture
 
 
 class AttrDict(dict):
@@ -91,7 +90,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
         self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
         self.foo_req = fakes.HTTPRequest.blank('', project_id='foo')
-        self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
+        self.policy = self.useFixture(fixtures.RealPolicyFixture())
 
         self.useFixture(fixtures.Database(database='api'))
         cells = fixtures.CellDatabases()

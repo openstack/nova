@@ -20,8 +20,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import fixtures as func_fixtures
-from nova.tests.unit import cast_as_call
-from nova.tests.unit import policy_fixture
 
 LOG = logging.getLogger(__name__)
 
@@ -42,7 +40,7 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
 
     def setUp(self):
         super(TestLocalDeleteAttachedVolumes, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         # We need the CinderFixture to stub out the volume API.
         self.cinder = self.useFixture(
             nova_fixtures.CinderFixture(self))
@@ -65,7 +63,7 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         self.start_service('scheduler')
         self.start_service('compute')
 
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(nova_fixtures.CastAsCallFixture(self))
 
         self.flavor_id = self.api.get_flavors()[0]['id']
 

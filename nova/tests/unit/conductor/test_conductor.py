@@ -54,7 +54,6 @@ from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import cast_as_call
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_build_request
 from nova.tests.unit import fake_instance
@@ -486,7 +485,7 @@ class _BaseTaskTestCase(object):
                                         'hosts': [['host2', 'node2']]}}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         mock_getaz.return_value = 'myaz'
         mock_create_bind_arqs.return_value = mock.sentinel
@@ -581,7 +580,7 @@ class _BaseTaskTestCase(object):
         mock_schedule.return_value = sched_return
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         mock_getaz.return_value = 'myaz'
         mock_create_bind_arqs.side_effect = (
@@ -645,7 +644,7 @@ class _BaseTaskTestCase(object):
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         self.conductor.build_instances(
             self.context,
@@ -689,7 +688,7 @@ class _BaseTaskTestCase(object):
                   set_vm_state_and_notify, cleanup_mock):
             # build_instances() is a cast, we need to wait for it to
             # complete
-            self.useFixture(cast_as_call.CastAsCall(self))
+            self.useFixture(fixtures.CastAsCallFixture(self))
 
             populate_retry.side_effect = exc.MaxRetriesExceeded(
                 reason="Too many try")
@@ -736,7 +735,7 @@ class _BaseTaskTestCase(object):
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         self.conductor.build_instances(
                           context=self.context,
@@ -779,7 +778,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         with mock.patch.object(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance'):
@@ -808,7 +807,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         self.conductor.build_instances(
             context=self.context,
@@ -845,7 +844,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
         with mock.patch.object(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance'):
             self.conductor.build_instances(context=self.context,
@@ -884,7 +883,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         with mock.patch.object(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance'):
@@ -933,7 +932,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         with mock.patch.object(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance'):
@@ -977,7 +976,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         @mock.patch.object(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance', new=mock.MagicMock())
@@ -1018,7 +1017,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         @mock.patch.object(self.conductor_manager.compute_rpcapi,
                            'build_and_run_instance')
@@ -1082,7 +1081,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         @mock.patch('nova.scheduler.utils.'
                     'fill_provider_mapping')
@@ -1159,7 +1158,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         @mock.patch('nova.scheduler.utils.'
                     'fill_provider_mapping')
@@ -1356,7 +1355,7 @@ class _BaseTaskTestCase(object):
         host = {'host': 'host1', 'nodename': 'node1', 'limits': {}}
 
         # unshelve_instance() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
         @mock.patch.object(self.conductor_manager.compute_rpcapi,
@@ -1889,7 +1888,7 @@ class _BaseTaskTestCase(object):
         sig_mock.side_effect = exception
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         # Create the migration record (normally created by the compute API).
         migration = objects.Migration(self.context,
@@ -3665,7 +3664,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                         'hosts': [['host2', 'node2']]}}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(fixtures.CastAsCallFixture(self))
 
         self.conductor.build_instances(self.context,
                 instances=instances,
@@ -3729,7 +3728,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                         build_and_run_instance, get_buildreq):
 
             # build_instances() is a cast, we need to wait for it to complete
-            self.useFixture(cast_as_call.CastAsCall(self))
+            self.useFixture(fixtures.CastAsCallFixture(self))
 
             self.conductor.build_instances(self.context,
                     instances=instances,

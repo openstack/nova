@@ -19,14 +19,13 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import policy_fixture
 
 
 class TestLocalDeleteAllocations(test.TestCase,
                                  integrated_helpers.InstanceHelperMixin):
     def setUp(self):
         super(TestLocalDeleteAllocations, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         # The NeutronFixture is needed to show security groups for a server.
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.GlanceFixture(self))

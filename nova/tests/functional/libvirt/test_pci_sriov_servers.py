@@ -322,8 +322,8 @@ class SRIOVServersTest(_PCIServersTestBase):
             self._live_migrate,
             server, 'completed')
         # NOTE(stephenfin): this wouldn't happen in a real deployment since
-        # live migration is a cast, but since we are using CastAsCall this will
-        # bubble to the API
+        # live migration is a cast, but since we are using CastAsCallFixture
+        # this will bubble to the API
         self.assertEqual(500, ex.response.status_code)
         self.assertIn('NoValidHost', str(ex))
 
@@ -353,8 +353,8 @@ class SRIOVServersTest(_PCIServersTestBase):
             self._live_migrate,
             server, 'completed')
         # NOTE(stephenfin): this wouldn't happen in a real deployment since
-        # live migration is a cast, but since we are using CastAsCall this will
-        # bubble to the API
+        # live migration is a cast, but since we are using CastAsCallFixture
+        # this will bubble to the API
         self.assertEqual(500, ex.response.status_code)
         self.assertIn('NoValidHost', str(ex))
 
@@ -1089,8 +1089,8 @@ class PCIServersTest(_PCIServersTestBase):
             self._live_migrate,
             server, 'completed')
         # NOTE(stephenfin): this wouldn't happen in a real deployment since
-        # live migration is a cast, but since we are using CastAsCall this will
-        # bubble to the API
+        # live migration is a cast, but since we are using CastAsCallFixture
+        # this will bubble to the API
         self.assertEqual(500, ex.response.status_code)
         self.assertIn('NoValidHost', str(ex))
 

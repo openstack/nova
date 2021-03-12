@@ -17,7 +17,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import policy_fixture
 
 
 class ServersPreSchedulingTestCase(test.TestCase,
@@ -40,7 +39,7 @@ class ServersPreSchedulingTestCase(test.TestCase,
 
     def setUp(self):
         super(ServersPreSchedulingTestCase, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.NoopConductorFixture())
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
@@ -267,8 +266,8 @@ class ServersPreSchedulingTestCase(test.TestCase,
             }
         })
 
-        # Since _IntegratedTestBase uses the CastAsCall fixture, when we
-        # get the server back we know all of the volume stuff should be done.
+        # Since _IntegratedTestBase uses the CastAsCallFixture, when we get the
+        # server back we know all of the volume stuff should be done.
         self.assertIn(volume_id,
                       cinder.volume_ids_for_instance(server['id']))
 
@@ -324,7 +323,7 @@ class EnforceVolumeBackedForZeroDiskFlavorTestCase(
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.policy_fixture = (
-            self.useFixture(policy_fixture.RealPolicyFixture()))
+            self.useFixture(nova_fixtures.RealPolicyFixture()))
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 

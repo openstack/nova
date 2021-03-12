@@ -16,7 +16,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
-from nova.tests.unit import policy_fixture
 
 
 class TestRescheduleWithServerGroup(test.TestCase,
@@ -35,7 +34,7 @@ class TestRescheduleWithServerGroup(test.TestCase,
     def setUp(self):
         super(TestRescheduleWithServerGroup, self).setUp()
 
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
 
         # The NeutronFixture is needed to stub out validate_networks in API.
         self.useFixture(nova_fixtures.NeutronFixture(self))

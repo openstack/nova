@@ -9,8 +9,9 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import cast_as_call
 
 
 class ComputeVersion5xPinnedRpcTests(integrated_helpers._IntegratedTestBase):
@@ -22,7 +23,7 @@ class ComputeVersion5xPinnedRpcTests(integrated_helpers._IntegratedTestBase):
 
     def setUp(self):
         super(ComputeVersion5xPinnedRpcTests, self).setUp()
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(nova_fixtures.CastAsCallFixture(self))
 
         self.compute1 = self._start_compute(host='host1')
 

@@ -17,8 +17,6 @@ import time
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
-from nova.tests.unit import cast_as_call
-from nova.tests.unit import policy_fixture
 
 
 class TestServerGet(test.TestCase):
@@ -26,10 +24,10 @@ class TestServerGet(test.TestCase):
 
     def setUp(self):
         super(TestServerGet, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.GlanceFixture(self))
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(nova_fixtures.CastAsCallFixture(self))
 
         # The non-admin API client is fine to stay at 2.1 since it just creates
         # and deletes the server.

@@ -18,7 +18,7 @@ import testscenarios
 
 import nova.conf
 from nova.tests import fixtures
-from nova.tests.functional import api_paste_fixture
+from nova.tests.fixtures import api_paste as api_paste_fixture
 from nova.tests.functional import api_samples_test_base
 
 CONF = nova.conf.CONF

@@ -31,7 +31,6 @@ from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_notifier
 from nova import utils
 
@@ -1022,11 +1021,11 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         cell = self.cell_mappings[self.host_to_cell_mappings[target_host]]
         nova_context.set_target_cell(ctxt, cell)
         # Simulate not being able to query the API DB by poisoning calls to
-        # the instance_mappings table. Use the CastAsCall fixture so we can
+        # the instance_mappings table. Use CastAsCallFixture so we can
         # trap and log errors for assertions in the test.
         with test.nested(
             osloutils_fixture.TimeFixture(future),
-            cast_as_call.CastAsCall(self),
+            nova_fixtures.CastAsCallFixture(self),
             mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
                        side_effect=oslo_db_exc.CantStartEngineError)
         ) as (

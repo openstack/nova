@@ -14,7 +14,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import policy_fixture
 
 
 class TestMultiCreateServerGroupMemberOverQuota(
@@ -38,7 +37,7 @@ class TestMultiCreateServerGroupMemberOverQuota(
     def setUp(self):
         super(TestMultiCreateServerGroupMemberOverQuota, self).setUp()
         self.flags(server_group_members=2, group='quota')
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())

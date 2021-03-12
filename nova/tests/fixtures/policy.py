@@ -152,7 +152,7 @@ class OverridePolicyFixture(RealPolicyFixture):
         # Oslo.policy will consider the overridden rules if:
         #  1. overridden checks are different than defaults
         #  2. new rules for deprecated rules are not present in policy file
-        self.policy = self.useFixture(policy_fixture.OverridePolicyFixture(
+        self.policy = self.useFixture(nova_fixtures.OverridePolicyFixture(
                                       rules_in_file=override_rules))
 
     """

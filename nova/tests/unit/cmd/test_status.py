@@ -43,7 +43,6 @@ from nova.objects import service
 from nova import policy
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.unit import policy_fixture
 
 
 CONF = nova.conf.CONF
@@ -433,7 +432,7 @@ class TestUpgradeCheckPolicy(test.NoDBTestCase):
                          self.cmd._check_policy().code)
 
     def test_policy_checks_with_fresh_init_and_no_policy_override(self):
-        self.policy = self.useFixture(policy_fixture.OverridePolicyFixture(
+        self.policy = self.useFixture(nova_fixtures.OverridePolicyFixture(
                                       rules_in_file={}))
         policy.reset()
         self.assertEqual(upgradecheck.Code.SUCCESS,
