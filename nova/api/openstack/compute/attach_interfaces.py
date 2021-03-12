@@ -178,9 +178,12 @@ class InterfaceAttachmentController(wsgi.Controller):
                 exception.InterfaceAttachPciClaimFailed,
                 exception.InterfaceAttachResourceAllocationFailed) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-        except (exception.InstanceIsLocked,
-                exception.FixedIpAlreadyInUse,
-                exception.PortInUse) as e:
+        except (
+            exception.OperationNotSupportedForVDPAInterface,
+            exception.InstanceIsLocked,
+            exception.FixedIpAlreadyInUse,
+            exception.PortInUse,
+        ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except (exception.PortNotFound,
                 exception.NetworkNotFound) as e:
@@ -214,7 +217,10 @@ class InterfaceAttachmentController(wsgi.Controller):
                 instance, port_id=port_id)
         except exception.PortNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstanceIsLocked as e:
+        except (
+            exception.OperationNotSupportedForVDPAInterface,
+            exception.InstanceIsLocked,
+        ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
             common.raise_feature_not_supported()

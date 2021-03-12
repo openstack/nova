@@ -167,6 +167,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.launched_at = now
         instance.disable_terminate = False
         instance.info_cache = objects.InstanceInfoCache()
+        instance.info_cache.network_info = model.NetworkInfo()
         instance.flavor = flavor
         instance.old_flavor = instance.new_flavor = None
         instance.numa_topology = None
@@ -7189,10 +7190,16 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'detach_interface')
     def test_detach_interface(self, mock_detach, mock_record):
-        instance = self._create_instance_obj()
-        self.compute_api.detach_interface(self.context, instance, None)
+        instance = self._create_instance_obj(params={
+            'info_cache': objects.InstanceInfoCache(
+                network_info=model.NetworkInfo([
+                    model.VIF(id=uuids.port, address='foo'),
+                ]),
+            ),
+        })
+        self.compute_api.detach_interface(self.context, instance, uuids.port)
         mock_detach.assert_called_with(self.context, instance=instance,
-                                       port_id=None)
+                                       port_id=uuids.port)
         mock_record.assert_called_once_with(
             self.context, instance, instance_actions.DETACH_INTERFACE)
 

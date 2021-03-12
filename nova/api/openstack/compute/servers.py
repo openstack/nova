@@ -951,6 +951,7 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPForbidden(
                 explanation=error.format_message())
         except (
+            exception.OperationNotSupportedForVDPAInterface,
             exception.InstanceIsLocked,
             exception.InstanceNotReady,
             exception.MixedInstanceNotSupportByComputeService,
@@ -1106,6 +1107,7 @@ class ServersController(wsgi.Controller):
         except (
             exception.InstanceIsLocked,
             exception.OperationNotSupportedForVTPM,
+            exception.OperationNotSupportedForVDPAInterface,
         ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:

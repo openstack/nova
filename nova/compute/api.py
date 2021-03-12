@@ -265,6 +265,27 @@ def reject_vtpm_instances(operation):
     return outer
 
 
+def reject_vdpa_instances(operation):
+    """Reject requests to decorated function if instance has vDPA interfaces.
+
+    Raise OperationNotSupportedForVDPAInterfaces if operations involves one or
+        more vDPA interfaces.
+    """
+
+    def outer(f):
+        @functools.wraps(f)
+        def inner(self, context, instance, *args, **kw):
+            if any(
+                vif['vnic_type'] == network_model.VNIC_TYPE_VDPA
+                for vif in instance.get_network_info()
+            ):
+                raise exception.OperationNotSupportedForVDPAInterface(
+                    instance_uuid=instance.uuid, operation=operation)
+            return f(self, context, instance, *args, **kw)
+        return inner
+    return outer
+
+
 def load_cells():
     global CELLS
     if not CELLS:
@@ -3948,6 +3969,9 @@ class API(base.Base):
 
     # TODO(stephenfin): This logic would be so much easier to grok if we
     # finally split resize and cold migration into separate code paths
+    # FIXME(sean-k-mooney): Cold migrate and resize to different hosts
+    # probably works but they have not been tested so block them for now
+    @reject_vdpa_instances(instance_actions.RESIZE)
     @block_accelerators()
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
@@ -3962,6 +3986,7 @@ class API(base.Base):
         host_name is always None in the resize case.
         host_name can be set in the cold migration case only.
         """
+
         allow_cross_cell_resize = self._allow_cross_cell_resize(
             context, instance)
 
@@ -4165,6 +4190,9 @@ class API(base.Base):
             allow_same_host = CONF.allow_resize_to_same_host
         return allow_same_host
 
+    # FIXME(sean-k-mooney): Shelve works but unshelve does not due to bug
+    # #1851545, so block it for now
+    @reject_vdpa_instances(instance_actions.SHELVE)
     @reject_vtpm_instances(instance_actions.SHELVE)
     @block_accelerators(until_service=54)
     @check_instance_lock
@@ -4184,7 +4212,6 @@ class API(base.Base):
         instance.system_metadata.update(
                 {'image_base_image_ref': instance.image_ref}
         )
-
         instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.SHELVE)
@@ -4352,6 +4379,10 @@ class API(base.Base):
         return self.compute_rpcapi.get_instance_diagnostics(context,
                                                             instance=instance)
 
+    # FIXME(sean-k-mooney): Suspend does not work because we do not unplug
+    # the vDPA devices before calling managed save as we do with SR-IOV
+    # devices
+    @reject_vdpa_instances(instance_actions.SUSPEND)
     @block_accelerators()
     @reject_sev_instances(instance_actions.SUSPEND)
     @check_instance_lock
@@ -5015,18 +5046,26 @@ class API(base.Base):
         self._record_action_start(
             context, instance, instance_actions.ATTACH_INTERFACE)
 
-        # NOTE(gibi): Checking if the requested port has resource request as
-        # such ports are only supported if the compute service version is >= 55
-        # TODO(gibi): Remove this check in X as there we can be sure that all
-        # computes are new enough
         if port_id:
-            port = self.network_api.show_port(context, port_id)
-            if port['port'].get(constants.RESOURCE_REQUEST):
+            port = self.network_api.show_port(context, port_id)['port']
+            # NOTE(gibi): Checking if the requested port has resource request
+            # as such ports are only supported if the compute service version
+            # is >= 55.
+            # TODO(gibi): Remove this check in X as there we can be sure
+            # that all computes are new enough.
+            if port.get(constants.RESOURCE_REQUEST):
                 svc = objects.Service.get_by_host_and_binary(
                     context, instance.host, 'nova-compute')
                 if svc.version < 55:
                     raise exception.AttachInterfaceWithQoSPolicyNotSupported(
                         instance_uuid=instance.uuid)
+
+            if port.get('binding:vnic_type', "normal") == "vdpa":
+                # FIXME(sean-k-mooney): Attach works but detach results in a
+                # QEMU error; blocked until this is resolved
+                raise exception.OperationNotSupportedForVDPAInterface(
+                    instance_uuid=instance.uuid,
+                    operation=instance_actions.ATTACH_INTERFACE)
 
         return self.compute_rpcapi.attach_interface(context,
             instance=instance, network_id=network_id, port_id=port_id,
@@ -5038,6 +5077,29 @@ class API(base.Base):
                           task_state=[None])
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""
+
+        # FIXME(sean-k-mooney): Detach currently results in a failure to remove
+        # the interface from the live libvirt domain, so while the networking
+        # is torn down on the host the vDPA device is still attached to the VM.
+        # This is likely a libvirt/qemu bug so block detach until that is
+        # resolved.
+        for vif in instance.get_network_info():
+            if vif['id'] == port_id:
+                if vif['vnic_type'] == 'vdpa':
+                    raise exception.OperationNotSupportedForVDPAInterface(
+                        instance_uuid=instance.uuid,
+                        operation=instance_actions.DETACH_INTERFACE)
+                break
+        else:
+            # NOTE(sean-k-mooney) This should never happen but just in case the
+            # info cache does not have the port we are detaching we can fall
+            # back to neutron.
+            port = self.network_api.show_port(context, port_id)['port']
+            if port.get('binding:vnic_type', 'normal') == 'vdpa':
+                raise exception.OperationNotSupportedForVDPAInterface(
+                    instance_uuid=instance.uuid,
+                    operation=instance_actions.DETACH_INTERFACE)
+
         self._record_action_start(
             context, instance, instance_actions.DETACH_INTERFACE)
         self.compute_rpcapi.detach_interface(context, instance=instance,
@@ -5079,6 +5141,7 @@ class API(base.Base):
 
         return _metadata
 
+    @reject_vdpa_instances(instance_actions.LIVE_MIGRATION)
     @block_accelerators()
     @reject_vtpm_instances(instance_actions.LIVE_MIGRATION)
     @reject_sev_instances(instance_actions.LIVE_MIGRATION)
@@ -5210,6 +5273,8 @@ class API(base.Base):
         self.compute_rpcapi.live_migration_abort(context,
                 instance, migration.id)
 
+    # FIXME(sean-k-mooney): rebuild works but we have not tested evacuate yet
+    @reject_vdpa_instances(instance_actions.EVACUATE)
     @reject_vtpm_instances(instance_actions.EVACUATE)
     @block_accelerators(until_service=SUPPORT_ACCELERATOR_SERVICE_FOR_REBUILD)
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,

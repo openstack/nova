@@ -21,6 +21,7 @@ from nova.api.openstack.compute import servers
 from nova.compute import api as compute
 from nova.compute import vm_states
 from nova import exception
+from nova.network import model
 from nova.network import neutron
 from nova import objects
 from nova.objects import fields
@@ -79,6 +80,10 @@ class ServersPolicyTest(base.BasePolicyTest):
         self.mock_get_instance = self.useFixture(fixtures.MockPatchObject(
             self.controller, '_get_instance')).mock
         self.mock_get_instance.return_value = self.instance
+
+        self.mock_get_network_info = self.useFixture(
+            fixtures.MockPatch('nova.objects.Instance.get_network_info')).mock
+        self.mock_get_network_info.return_value = model.NetworkInfo()
 
         self.servers = [fakes.stub_instance_obj(
             1, vm_state=vm_states.ACTIVE, uuid=uuids.fake,

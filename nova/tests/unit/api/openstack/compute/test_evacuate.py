@@ -119,6 +119,15 @@ class EvacuateTestV21(test.NoDBTestCase):
             webob.exc.HTTPConflict,
             {'host': 'foo', 'onSharedStorage': 'False', 'adminPass': 'bar'})
 
+    @mock.patch('nova.compute.api.API.evacuate')
+    def test_evacuate__with_vdpa_interface(self, mock_evacuate):
+        mock_evacuate.side_effect = \
+            exception.OperationNotSupportedForVDPAInterface(
+                instance_uuid=uuids.instance, operation='foo')
+        self._check_evacuate_failure(
+            webob.exc.HTTPConflict,
+            {'host': 'foo', 'onSharedStorage': 'False', 'adminPass': 'bar'})
+
     def test_evacuate_with_active_service(self):
         def fake_evacuate(*args, **kwargs):
             raise exception.ComputeServiceInUse("Service still in use")

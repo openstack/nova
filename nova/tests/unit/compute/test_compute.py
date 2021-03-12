@@ -294,6 +294,8 @@ class BaseTestCase(test.TestCase):
         inst.os_type = 'Linux'
         inst.system_metadata = (
             params and params.get('system_metadata', {}) or {})
+        inst.info_cache = objects.InstanceInfoCache()
+        inst.info_cache.network_info = network_model.NetworkInfo()
         inst.locked = False
         inst.created_at = timeutils.utcnow()
         inst.updated_at = timeutils.utcnow()

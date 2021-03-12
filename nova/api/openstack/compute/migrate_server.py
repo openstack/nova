@@ -66,6 +66,7 @@ class MigrateServerController(wsgi.Controller):
             exception.InstanceIsLocked,
             exception.InstanceNotReady,
             exception.ServiceUnavailable,
+            exception.OperationNotSupportedForVDPAInterface,
         ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
@@ -142,6 +143,7 @@ class MigrateServerController(wsgi.Controller):
         except (
             exception.OperationNotSupportedForSEV,
             exception.OperationNotSupportedForVTPM,
+            exception.OperationNotSupportedForVDPAInterface,
         ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceIsLocked as e:

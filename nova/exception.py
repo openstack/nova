@@ -537,6 +537,14 @@ class OperationNotSupportedForVTPM(NovaException):
     code = 409
 
 
+class OperationNotSupportedForVDPAInterface(NovaException):
+    msg_fmt = _(
+        "Operation '%(operation)s' not supported for instance with "
+        "vDPA ports ((instance_uuid)s)."
+    )
+    code = 409
+
+
 class InvalidHypervisorType(Invalid):
     msg_fmt = _("The supplied hypervisor type of is invalid.")
 

@@ -66,6 +66,7 @@ class RescueController(wsgi.Controller):
         except (
             exception.InstanceIsLocked,
             exception.OperationNotSupportedForVTPM,
+            exception.OperationNotSupportedForVDPAInterface,
             exception.InvalidVolume,
         ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())

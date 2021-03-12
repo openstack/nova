@@ -69,6 +69,8 @@ class RescueTestV21(test.NoDBTestCase):
         exception.InstanceIsLocked(instance_uuid=uuids.instance),
         exception.OperationNotSupportedForVTPM(
             instance_uuid=uuids.instance, operation='foo'),
+        exception.OperationNotSupportedForVDPAInterface(
+            instance_uuid=uuids.instance, operation='foo'),
         exception.InvalidVolume(reason='foo'),
     )
     @mock.patch.object(compute.api.API, 'rescue')

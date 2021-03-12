@@ -52,6 +52,7 @@ class ShelveController(wsgi.Controller):
         except (
             exception.InstanceIsLocked,
             exception.OperationNotSupportedForVTPM,
+            exception.OperationNotSupportedForVDPAInterface,
             exception.UnexpectedTaskStateError,
         ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
