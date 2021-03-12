@@ -39,15 +39,14 @@ class LibvirtNVMEVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
 
         device_info = self.connector.connect_volume(
             connection_info['data'])
-        LOG.debug(
-            "Connecting NVMe volume with device_info %s",
-            device_info)
+        LOG.debug("Connecting NVMe volume with device_info %s",
+                  device_info, instance=instance)
 
         connection_info['data']['device_path'] = device_info['path']
 
     def disconnect_volume(self, connection_info, instance):
         """Detach the volume from the instance."""
-        LOG.debug("Disconnecting NVMe disk")
+        LOG.debug("Disconnecting NVMe disk", instance=instance)
         self.connector.disconnect_volume(
             connection_info['data'], None)
         super(LibvirtNVMEVolumeDriver,

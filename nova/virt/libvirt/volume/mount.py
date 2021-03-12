@@ -290,15 +290,17 @@ class _HostMountState(object):
                   'options=%(options)s) generation %(gen)s',
                   {'fstype': fstype, 'export': export, 'vol_name': vol_name,
                    'mountpoint': mountpoint, 'options': options,
-                   'gen': self.generation})
+                   'gen': self.generation}, instance=instance)
         with self._get_locked(mountpoint) as mount:
             if os.path.ismount(mountpoint):
                 LOG.debug(('Mounting %(mountpoint)s generation %(gen)s, '
                            'mountpoint already mounted'),
-                          {'mountpoint': mountpoint, 'gen': self.generation})
+                          {'mountpoint': mountpoint, 'gen': self.generation},
+                          instance=instance)
             else:
                 LOG.debug('Mounting %(mountpoint)s generation %(gen)s',
-                          {'mountpoint': mountpoint, 'gen': self.generation})
+                          {'mountpoint': mountpoint, 'gen': self.generation},
+                          instance=instance)
 
                 fileutils.ensure_tree(mountpoint)
 
@@ -316,7 +318,7 @@ class _HostMountState(object):
                             '%(mountpoint)s. Continuing because mountpount is '
                             'mounted despite this.',
                             {'fstype': fstype, 'export': export,
-                             'mountpoint': mountpoint})
+                             'mountpoint': mountpoint}, instance=instance)
                     else:
                         # If the mount failed there's no reason for us to keep
                         # a record of it. It will be created again if the
@@ -331,7 +333,8 @@ class _HostMountState(object):
 
         LOG.debug('_HostMountState.mount() for %(mountpoint)s '
                   'generation %(gen)s completed successfully',
-                  {'mountpoint': mountpoint, 'gen': self.generation})
+                  {'mountpoint': mountpoint, 'gen': self.generation},
+                  instance=instance)
 
     def umount(self, vol_name, mountpoint, instance):
         """Mark an attachment as no longer in use, and unmount its mountpoint
@@ -345,16 +348,15 @@ class _HostMountState(object):
         LOG.debug('_HostMountState.umount(vol_name=%(vol_name)s, '
                   'mountpoint=%(mountpoint)s) generation %(gen)s',
                   {'vol_name': vol_name, 'mountpoint': mountpoint,
-                   'gen': self.generation})
+                   'gen': self.generation}, instance=instance)
         with self._get_locked(mountpoint) as mount:
             try:
                 mount.remove_attachment(vol_name, instance.uuid)
             except KeyError:
-                LOG.warning("Request to remove attachment "
-                            "(%(vol_name)s, %(instance)s) from "
+                LOG.warning("Request to remove attachment (%(vol_name)s from "
                             "%(mountpoint)s, but we don't think it's in use.",
-                            {'vol_name': vol_name, 'instance': instance.uuid,
-                             'mountpoint': mountpoint})
+                            {'vol_name': vol_name, 'mountpoint': mountpoint},
+                            instance=instance)
 
             if not mount.in_use():
                 mounted = os.path.ismount(mountpoint)
@@ -368,7 +370,8 @@ class _HostMountState(object):
 
             LOG.debug('_HostMountState.umount() for %(mountpoint)s '
                       'generation %(gen)s completed successfully',
-                      {'mountpoint': mountpoint, 'gen': self.generation})
+                      {'mountpoint': mountpoint, 'gen': self.generation},
+                      instance=instance)
 
     def _real_umount(self, mountpoint):
         # Unmount and delete a mountpoint.

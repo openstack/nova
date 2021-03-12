@@ -158,9 +158,9 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
     def connect_volume(self, connection_info, instance):
         """Connect the volume."""
         if is_systemd():
-            LOG.debug("systemd detected.")
+            LOG.debug("systemd detected.", instance=instance)
         else:
-            LOG.debug("No systemd detected.")
+            LOG.debug("No systemd detected.", instance=instance)
 
         data = connection_info['data']
         quobyte_volume = self._normalize_export(data['export'])
@@ -171,7 +171,7 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         except nova_exception.StaleVolumeMount:
             mounted = False
             LOG.info('Fixing previous mount %s which was not '
-                     'unmounted correctly.', mount_path)
+                     'unmounted correctly.', mount_path, instance=instance)
             umount_volume(mount_path)
         except nova_exception.InvalidVolume:
             mounted = False
@@ -185,7 +185,8 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             validate_volume(mount_path)
         except (nova_exception.InvalidVolume,
                 nova_exception.StaleVolumeMount) as nex:
-            LOG.error("Could not mount Quobyte volume: %s", nex)
+            LOG.error("Could not mount Quobyte volume: %s", nex,
+                      instance=instance)
 
     @utils.synchronized('connect_qb_volume')
     def disconnect_volume(self, connection_info, instance):
@@ -196,7 +197,8 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             validate_volume(mount_path)
         except (nova_exception.InvalidVolume,
                 nova_exception.StaleVolumeMount) as exc:
-            LOG.warning("Could not disconnect Quobyte volume mount: %s", exc)
+            LOG.warning("Could not disconnect Quobyte volume mount: %s", exc,
+                        instance=instance)
         else:
             umount_volume(mount_path)
 
