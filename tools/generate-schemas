@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+#
+# Script to generate schemas for the various versions.
+#
+# Some setup is required, similar to the opportunistic tests.
+#
+# MySQL ->
+#
+# $ mysql -uroot
+# MariaDB [(none)]> CREATE DATABASE nova
+# MariaDB [(none)]> GRANT ALL PRIVILEGES ON nova.* TO 'nova'@'localhost' IDENTIFIED BY 'password';
+# MariaDB [(none)]> quit;
+#
+# Postgres ->
+#
+# $ sudo -u postgres psql
+# postgres=# create user nova with createdb login password 'password';
+# postgres=# create database nova with owner nova;
+# postgres=# quit;
+#
+# Note that you may also have to configure 'pg_hba.conf' to use password-based
+# auth instead of "ident", if you haven't done so already. You can locate this
+# with 'locate pg_hba.conf'. More details at
+# https://ubuntu.com/server/docs/databases-postgresql
+
+set -o xtrace
+set -e
+
+source .tox/py36/bin/activate
+pushd nova/db/sqlalchemy/migrate_repo
+
+INIT_VERSION=$(ls -1 versions/ | head -1 | awk -F_ '{print $1}')
+INIT_VERSION=$(($INIT_VERSION-1))
+
+echo "Detected init version of $INIT_VERSION"
+
+mkdir -p schemas
+rm -f "schemas/$INIT_VERSION-*.sql"
+
+#
+# sqlite
+#
+
+# cleanup from previous runs
+
+rm -f nova.db
+
+# sync schema
+
+python manage.py version_control \
+    --database 'sqlite:///nova.db' \
+    --version $INIT_VERSION
+
+python manage.py upgrade \
+    --database 'sqlite:///nova.db'
+
+# dump the schema
+
+sqlite3 nova.db << EOF
+.output "schemas/${INIT_VERSION}-sqlite.sql"
+.schema
+.quit
+EOF
+
+rm -f nova.db
+
+#
+# mysql
+#
+
+# cleanup from previous runs
+
+mysql -u nova -ppassword << EOF
+DROP DATABASE IF EXISTS nova;
+CREATE DATABASE nova;
+EOF
+
+# sync schema
+
+python manage.py version_control \
+    --database 'mysql+pymysql://nova:password@localhost/nova' \
+    --version "$INIT_VERSION"
+
+python manage.py upgrade \
+    --database 'mysql+pymysql://nova:password@localhost/nova'
+
+# dump the schema
+
+mysqldump --no-data --skip-comments -u nova -ppassword \
+    nova > "schemas/${INIT_VERSION}-mysql.sql"
+
+mysql -u nova -ppassword << EOF
+DROP DATABASE IF EXISTS nova;
+EOF
+
+
+#
+# postgres
+#
+
+# cleanup from previous runs
+
+sudo -u postgres dropdb --if-exists nova
+sudo -u postgres createdb --owner=nova nova
+
+# sync to initial version
+
+python manage.py version_control \
+    --database 'postgresql://nova:password@localhost/nova' \
+    --version "$INIT_VERSION"
+
+python manage.py upgrade \
+    --database 'postgresql://nova:password@localhost/nova'
+
+# dump the schema
+
+pg_dump postgresql://nova:password@localhost/nova \
+    --schema-only > "schemas/${INIT_VERSION}-postgres.sql"
+
+sudo -u postgres dropdb --if-exists nova
+
+popd
+deactivate
