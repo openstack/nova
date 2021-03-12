@@ -1210,6 +1210,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
             'COMPUTE_SECURITY_TPM_1_2': False,
             'COMPUTE_SECURITY_TPM_2_0': False,
+            'COMPUTE_SOCKET_PCI_NUMA_AFFINITY': True,
         }
 
         static_traits = drvr.static_traits
@@ -1255,6 +1256,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
             'COMPUTE_SECURITY_TPM_1_2': False,
             'COMPUTE_SECURITY_TPM_2_0': False,
+            'COMPUTE_SOCKET_PCI_NUMA_AFFINITY': True,
         }
 
         static_traits = drvr.static_traits
