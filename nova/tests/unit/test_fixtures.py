@@ -42,7 +42,6 @@ from nova.objects import base as obj_base
 from nova.objects import service as service_obj
 from nova import test
 from nova.tests import fixtures
-from nova.tests.unit import conf_fixture
 from nova.tests.unit import fake_instance
 from nova import utils
 
@@ -95,7 +94,7 @@ class TestOSAPIFixture(testtools.TestCase):
         """Ensure the OSAPI server responds to calls sensibly."""
         self.useFixture(output.CaptureOutput())
         self.useFixture(fixtures.StandardLogging())
-        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.ConfFixture())
         self.useFixture(fixtures.RPCFixture('nova.test'))
         api = self.useFixture(fixtures.OSAPIFixture()).api
 
@@ -120,7 +119,7 @@ class TestOSAPIFixture(testtools.TestCase):
 class TestDatabaseFixture(testtools.TestCase):
     def test_fixture_reset(self):
         # because this sets up reasonable db connection strings
-        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.ConfFixture())
         self.useFixture(fixtures.Database())
         engine = session.get_engine()
         conn = engine.connect()
@@ -151,7 +150,7 @@ class TestDatabaseFixture(testtools.TestCase):
 
     def test_api_fixture_reset(self):
         # This sets up reasonable db connection strings
-        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.ConfFixture())
         self.useFixture(fixtures.Database(database='api'))
         engine = session.get_api_engine()
         conn = engine.connect()
@@ -179,7 +178,7 @@ class TestDatabaseFixture(testtools.TestCase):
 
     def test_fixture_cleanup(self):
         # because this sets up reasonable db connection strings
-        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.ConfFixture())
         fix = fixtures.Database()
         self.useFixture(fix)
 
@@ -194,7 +193,7 @@ class TestDatabaseFixture(testtools.TestCase):
 
     def test_api_fixture_cleanup(self):
         # This sets up reasonable db connection strings
-        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.ConfFixture())
         fix = fixtures.Database(database='api')
         self.useFixture(fix)
 
@@ -221,7 +220,7 @@ class TestDatabaseFixture(testtools.TestCase):
 class TestDefaultFlavorsFixture(testtools.TestCase):
     @mock.patch("nova.objects.flavor.Flavor._send_notification")
     def test_flavors(self, mock_send_notification):
-        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.ConfFixture())
         self.useFixture(fixtures.Database())
         self.useFixture(fixtures.Database(database='api'))
 

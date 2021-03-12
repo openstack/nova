@@ -19,7 +19,6 @@ import fixtures as fx
 import testtools
 
 from nova.tests import fixtures
-from nova.tests.unit import conf_fixture
 
 """Test request logging middleware under various conditions.
 
@@ -59,7 +58,7 @@ class TestRequestLogMiddleware(testtools.TestCase):
         """
 
         emit.return_value = True
-        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.ConfFixture())
         self.useFixture(fixtures.RPCFixture('nova.test'))
         api = self.useFixture(fixtures.OSAPIFixture()).api
 
@@ -83,7 +82,7 @@ class TestRequestLogMiddleware(testtools.TestCase):
         """
 
         emit.return_value = True
-        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.ConfFixture())
         # NOTE(sdague): all these tests are using the
         self.useFixture(
             fx.MonkeyPatch(
@@ -115,7 +114,7 @@ class TestRequestLogMiddleware(testtools.TestCase):
 
         emit.return_value = True
         v_index.side_effect = Exception("Unexpected Error")
-        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.ConfFixture())
         self.useFixture(fixtures.RPCFixture('nova.test'))
         api = self.useFixture(fixtures.OSAPIFixture()).api
 
@@ -137,7 +136,7 @@ class TestRequestLogMiddleware(testtools.TestCase):
         """
 
         emit.return_value = False
-        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.ConfFixture())
         self.useFixture(fixtures.RPCFixture('nova.test'))
         api = self.useFixture(fixtures.OSAPIFixture()).api
 

@@ -10,4 +10,5 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from .conf import *  # noqa: F401, F403
 from .nova import *  # noqa: F401, F403

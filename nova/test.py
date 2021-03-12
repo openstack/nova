@@ -62,7 +62,6 @@ from nova import objects
 from nova.objects import base as objects_base
 from nova import quota
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.unit import conf_fixture
 from nova.tests.unit import matchers
 from nova.tests.unit import policy_fixture
 from nova import utils
@@ -206,7 +205,7 @@ class TestCase(base.BaseTestCase):
             self.fixture.config(lock_path=lock_path,
                                 group='oslo_concurrency')
 
-        self.useFixture(conf_fixture.ConfFixture(CONF))
+        self.useFixture(nova_fixtures.ConfFixture(CONF))
 
         if self.STUB_RPC:
             self.useFixture(nova_fixtures.RPCFixture('nova.test'))
