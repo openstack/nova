@@ -4207,7 +4207,11 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before):
     # NOTE(jake): instance_actions_events doesn't have a instance_uuid column
     # but still needs to be archived as it is a FK constraint
     if ((max_rows is None or rows_archived < max_rows) and
-            ('instance_uuid' in columns or
+            # NOTE(melwitt): The pci_devices table uses the 'instance_uuid'
+            # column to track the allocated association of a PCI device and its
+            # records are not tied to the lifecycles of instance records.
+            (tablename != 'pci_devices' and
+             'instance_uuid' in columns or
              tablename == 'instance_actions_events')):
         instances = models.BASE.metadata.tables['instances']
         limit = max_rows - rows_archived if max_rows is not None else None
