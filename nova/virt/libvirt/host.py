@@ -1269,7 +1269,12 @@ class Host(object):
 
     @property
     def supports_uefi(self) -> bool:
-        """Returns whether the host supports UEFI guests."""
+        """Determine if the host supports UEFI bootloaders for guests.
+
+        This checks whether the feature is supported by *any* machine type.
+        This is only used for trait-reporting purposes and a machine
+        type-specific check should be used when creating guests.
+        """
 
         if self._supports_uefi is not None:
             return self._supports_uefi
@@ -1292,13 +1297,18 @@ class Host(object):
 
     @property
     def supports_secure_boot(self) -> bool:
-        """Determine if the host supports Secure Boot for guests."""
+        """Determine if the host supports UEFI Secure Boot for guests.
+
+        This checks whether the feature is supported by *any* machine type.
+        This is only used for trait-reporting purposes and a machine
+        type-specific check should be used when creating guests.
+        """
 
         if self._supports_secure_boot is not None:
             return self._supports_secure_boot
 
-        # we only check the host architecture since nova doesn't support
-        # non-host architectures currently
+        # we only check the host architecture since the libvirt driver doesn't
+        # truely support non-host architectures currently
         arch = self.get_capabilities().host.cpu.arch
         domain_caps = self.get_domain_capabilities()
         for machine_type in domain_caps[arch]:
@@ -1328,15 +1338,15 @@ class Host(object):
 
     @property
     def supports_amd_sev(self) -> bool:
-        """Returns a boolean indicating whether AMD SEV (Secure Encrypted
+        """Determine if the host supports AMD SEV for guests.
+
+        Returns a boolean indicating whether AMD SEV (Secure Encrypted
         Virtualization) is supported.  This is conditional on support
         in the hardware, kernel, qemu, and libvirt.
 
-        The result is memoized, since it is not expected to change
-        during the lifetime of a running nova-compute service; if the
-        hypervisor stack is changed or reconfigured in a way which
-        would affect the support, nova-compute should be restarted
-        anyway.
+        This checks whether the feature is supported by *any* machine type.
+        This is only used for trait-reporting purposes and a machine
+        type-specific check should be used when creating guests.
         """
         if self._supports_amd_sev is not None:
             return self._supports_amd_sev
