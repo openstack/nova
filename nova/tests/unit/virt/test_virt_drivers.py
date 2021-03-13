@@ -34,9 +34,9 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import utils as test_utils
-from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import block_device as driver_block_device
 from nova.virt import event as virtevent
 from nova.virt import fake
@@ -82,13 +82,10 @@ class _FakeDriverBackendTestCase(object):
         else:
             self.saved_libvirt = None
 
-        from nova.tests.unit.virt.libvirt import fake_imagebackend
-        from nova.tests.unit.virt.libvirt import fakelibvirt
-
         from nova.tests.unit.virt.libvirt import fake_os_brick_connector
 
-        self.useFixture(fake_imagebackend.ImageBackendFixture())
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.ImageBackendFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
 
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.connector',
@@ -570,7 +567,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertIsInstance(mks_console, ctype.ConsoleMKS)
 
     @mock.patch(
-        'nova.tests.unit.virt.libvirt.fakelibvirt.Domain.jobStats',
+        'nova.tests.fixtures.libvirt.Domain.jobStats',
         new=mock.Mock(return_value={
             'type': fakelibvirt.VIR_DOMAIN_JOB_COMPLETED}))
     def test_live_migration(self):

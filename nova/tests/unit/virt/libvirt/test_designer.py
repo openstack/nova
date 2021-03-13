@@ -16,8 +16,8 @@ import mock
 
 from nova.pci import utils as pci_utils
 from nova import test
+from nova.tests.fixtures import libvirt_data as fake_libvirt_data
 from nova.tests.unit import matchers
-from nova.tests.unit.virt.libvirt import fake_libvirt_data
 from nova.virt.libvirt import config
 from nova.virt.libvirt import designer
 

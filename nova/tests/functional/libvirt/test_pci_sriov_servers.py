@@ -32,11 +32,11 @@ from nova.network import constants
 from nova import objects
 from nova.objects import fields
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.virt.libvirt import fake_os_brick_connector
-from nova.tests.unit.virt.libvirt import fakelibvirt
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -126,7 +126,7 @@ class SRIOVServersTest(_PCIServersTestBase):
             'nova.virt.libvirt.driver.connector',
             fake_os_brick_connector))
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.tests.unit.virt.libvirt.fakelibvirt.Domain.migrateToURI3',
+            'nova.tests.fixtures.libvirt.Domain.migrateToURI3',
             self._migrate_stub))
 
     def _migrate_stub(self, domain, destination, params, flags):

@@ -26,7 +26,8 @@ from nova import exception
 from nova.network import model as network_model
 from nova import objects
 from nova import test
-from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
@@ -926,7 +927,7 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
     def setUp(self):
         super(MigrationMonitorTestCase, self).setUp()
 
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
 
         flavor = objects.Flavor(memory_mb=2048,
                                 swap=0,

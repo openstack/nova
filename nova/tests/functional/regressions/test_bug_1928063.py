@@ -16,9 +16,9 @@ import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import test
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
-from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt.host import SEV_KERNEL_PARAM_FILE
 
 

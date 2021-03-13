@@ -21,9 +21,8 @@ import mock
 
 from nova import conf
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.virt.libvirt import fake_imagebackend
-from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
 CONF = conf.CONF
@@ -42,8 +41,8 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
 
         super(ServersTestBase, self).setUp()
 
-        self.useFixture(fake_imagebackend.ImageBackendFixture())
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.ImageBackendFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
 
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.LibvirtDriver._create_image',

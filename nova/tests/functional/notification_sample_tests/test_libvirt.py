@@ -17,10 +17,11 @@ import mock
 
 import nova.conf
 from nova import exception
+from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
 from nova.tests.unit import fake_notifier
-from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import host
 
 
@@ -32,7 +33,7 @@ class TestLibvirtErrorNotificationSample(
 
     def setUp(self):
         self.flags(compute_driver='libvirt.LibvirtDriver')
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         self.useFixture(fixtures.MockPatchObject(host.Host, 'initialize'))
         super(TestLibvirtErrorNotificationSample, self).setUp()
 

@@ -13,8 +13,8 @@
 import fixtures
 
 from nova import conf
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
 CONF = conf.CONF
@@ -31,7 +31,7 @@ class LibvirtProviderUsageBaseTestCase(
 
     def setUp(self):
         super(LibvirtProviderUsageBaseTestCase, self).setUp()
-        self.useFixture(fakelibvirt.FakeLibvirtFixture(stub_os_vif=False))
+        self.useFixture(nova_fixtures.LibvirtFixture(stub_os_vif=False))
         if self.STUB_INIT_HOST:
             self.useFixture(
                 fixtures.MockPatch(

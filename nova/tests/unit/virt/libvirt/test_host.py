@@ -31,8 +31,9 @@ from nova import objects
 from nova.objects import fields as obj_fields
 from nova.pci import utils as pci_utils
 from nova import test
-from nova.tests.unit.virt.libvirt import fake_libvirt_data
-from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
+from nova.tests.fixtures import libvirt_data as fake_libvirt_data
 from nova.virt import event
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import event as libvirtevent
@@ -67,7 +68,7 @@ class HostTestCase(test.NoDBTestCase):
     def setUp(self):
         super(HostTestCase, self).setUp()
 
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         self.host = host.Host("qemu:///system")
 
     @mock.patch("nova.virt.libvirt.host.Host._init_events")
@@ -1809,7 +1810,7 @@ class TestLibvirtSEV(test.NoDBTestCase):
     def setUp(self):
         super(TestLibvirtSEV, self).setUp()
 
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         self.host = host.Host("qemu:///system")
 
 
@@ -1876,7 +1877,7 @@ class LibvirtTpoolProxyTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtTpoolProxyTestCase, self).setUp()
 
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         self.host = host.Host("qemu:///system")
 
         def _stub_xml(uuid):

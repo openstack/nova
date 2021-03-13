@@ -24,10 +24,10 @@ from nova.conf import neutron as neutron_conf
 from nova import context as nova_context
 from nova import objects
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.tests.unit import fake_notifier
-from nova.tests.unit.virt.libvirt import fakelibvirt
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)

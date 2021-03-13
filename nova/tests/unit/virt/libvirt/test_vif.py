@@ -28,8 +28,9 @@ from nova.network import model as network_model
 from nova import objects
 from nova.pci import utils as pci_utils
 from nova import test
+from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.unit.virt import fakelibosinfo
-from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import vif
 
@@ -500,7 +501,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtVifTestCase, self).setUp()
 
-        self.useFixture(fakelibvirt.FakeLibvirtFixture(stub_os_vif=False))
+        self.useFixture(nova_fixtures.LibvirtFixture(stub_os_vif=False))
 
         # os_vif.initialize is typically done in nova-compute startup
         os_vif.initialize()

@@ -27,17 +27,17 @@ from nova.virt.libvirt import utils as libvirt_utils
 
 
 class ImageBackendFixture(fixtures.Fixture):
+
     def __init__(self, got_files=None, imported_files=None, exists=None):
         """This fixture mocks imagebackend.Backend.backend, which is the
         only entry point to libvirt.imagebackend from libvirt.driver.
 
         :param got_files: A list of {'filename': path, 'size': size} for every
-                         file which was created.
+            file which was created.
         :param imported_files: A list of (local_filename, remote_filename) for
-                               every invocation of import_file().
+            every invocation of import_file().
         :param exists: An optional lambda which takes the disk name as an
-                       argument, and returns True if the disk exists,
-                       False otherwise.
+            argument, and returns True if the disk exists, False otherwise.
         """
         self.got_files = got_files
         self.imported_files = imported_files
@@ -49,27 +49,27 @@ class ImageBackendFixture(fixtures.Fixture):
         self._exists = exists
 
     def setUp(self):
-        super(ImageBackendFixture, self).setUp()
+        super().setUp()
 
         # Mock template functions passed to cache
         self.mock_fetch_image = mock.create_autospec(libvirt_utils.fetch_image)
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.utils.fetch_image', self.mock_fetch_image))
 
-        self.mock_fetch_raw_image = \
-            mock.create_autospec(libvirt_utils.fetch_raw_image)
+        self.mock_fetch_raw_image = mock.create_autospec(
+            libvirt_utils.fetch_raw_image)
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.utils.fetch_raw_image',
             self.mock_fetch_raw_image))
 
-        self.mock_create_ephemeral = \
-            mock.create_autospec(driver.LibvirtDriver._create_ephemeral)
+        self.mock_create_ephemeral = mock.create_autospec(
+            driver.LibvirtDriver._create_ephemeral)
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.LibvirtDriver._create_ephemeral',
             self.mock_create_ephemeral))
 
-        self.mock_create_swap = \
-            mock.create_autospec(driver.LibvirtDriver._create_swap)
+        self.mock_create_swap = mock.create_autospec(
+            driver.LibvirtDriver._create_swap)
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.LibvirtDriver._create_swap',
             self.mock_create_swap))
@@ -84,10 +84,11 @@ class ImageBackendFixture(fixtures.Fixture):
         """disks, filtered to contain only disks which were actually created
         by calling a relevant method.
         """
-
         # A disk was created iff either cache() or import_file() was called.
-        return {name: disk for name, disk in self.disks.items()
-                if any([disk.cache.called, disk.import_file.called])}
+        return {
+            name: disk for name, disk in self.disks.items()
+            if any([disk.cache.called, disk.import_file.called])
+        }
 
     def _mock_disk(self):
         # This is the generator passed to the disks defaultdict. It returns
@@ -119,8 +120,8 @@ class ImageBackendFixture(fixtures.Fixture):
         disk.libvirt_info.side_effect = functools.partial(
             self._fake_libvirt_info, disk)
 
-        disk.direct_snapshot.side_effect = (
-            NotImplementedError('direct_snapshot() is not implemented'))
+        disk.direct_snapshot.side_effect = NotImplementedError(
+            'direct_snapshot() is not implemented')
 
         return disk
 
@@ -196,8 +197,8 @@ class ImageBackendFixture(fixtures.Fixture):
             return False
 
         setattr(image_init, 'is_shared_block_storage', is_shared_block_storage)
-        setattr(image_init, 'is_file_in_instance_path',
-                is_file_in_instance_path)
+        setattr(
+            image_init, 'is_file_in_instance_path', is_file_in_instance_path)
 
         return image_init
 

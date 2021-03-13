@@ -18,9 +18,9 @@ from urllib import parse as urlparse
 from nova import context
 from nova.network import constants as neutron_constants
 from nova.network import neutron
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import base as libvirt_base
 from nova.tests.unit.virt.libvirt import fake_os_brick_connector
-from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
 class TestLiveMigrationWithoutMultiplePortBindings(
@@ -73,7 +73,7 @@ class TestLiveMigrationWithoutMultiplePortBindings(
         self.ctxt = context.get_admin_context()
         # TODO(sean-k-mooney): remove this when it is part of ServersTestBase
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.tests.unit.virt.libvirt.fakelibvirt.Domain.migrateToURI3',
+            'nova.tests.fixtures.libvirt.Domain.migrateToURI3',
             self._migrate_stub))
 
     def _migrate_stub(self, domain, destination, params, flags):

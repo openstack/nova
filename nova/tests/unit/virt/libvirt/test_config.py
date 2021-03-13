@@ -18,7 +18,7 @@ from oslo_utils import units
 
 from nova.objects import fields as obj_fields
 from nova import test
-from nova.tests.unit.virt.libvirt import fake_libvirt_data
+from nova.tests.fixtures import libvirt_data as fake_libvirt_data
 from nova.virt import hardware
 from nova.virt.libvirt import config
 

@@ -21,8 +21,8 @@ import os_traits as ost
 from nova import conf
 from nova.db import constants as db_const
 from nova import test
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import integrated_helpers
-from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt.host import SEV_KERNEL_PARAM_FILE
 
 CONF = conf.CONF

@@ -20,8 +20,8 @@ import mock
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional import fixtures as func_fixtures
-from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import guest as libvirt_guest
 
 
@@ -46,7 +46,7 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         self.useFixture(fixtures.MonkeyPatch(
            'nova.virt.libvirt.guest.libvirt',
            fakelibvirt))
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
 
         self.admin_api = api_fixture.admin_api
         self.api = api_fixture.api

@@ -17,9 +17,9 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova import objects
+from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import integrated_helpers
-from nova.tests.unit.virt.libvirt import fake_imagebackend
-from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
 CONF = cfg.CONF
@@ -74,7 +74,7 @@ class VPMEMTestBase(integrated_helpers.LibvirtProviderUsageBaseTestCase):
         self.useFixture(fixtures.MockPatch(
             'nova.privsep.libvirt.get_pmem_namespaces',
             return_value=self.fake_pmem_namespaces))
-        self.useFixture(fake_imagebackend.ImageBackendFixture())
+        self.useFixture(nova_fixtures.ImageBackendFixture())
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
             return_value={'total': 128,

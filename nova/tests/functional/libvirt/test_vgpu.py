@@ -24,8 +24,8 @@ from nova.compute import instance_actions
 import nova.conf
 from nova import context
 from nova import objects
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import base
-from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import utils as libvirt_utils
 

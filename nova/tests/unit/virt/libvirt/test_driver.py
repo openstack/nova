@@ -83,6 +83,8 @@ import nova.privsep.libvirt
 from nova.storage import rbd_utils
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
+from nova.tests.fixtures import libvirt_data as fake_libvirt_data
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_flavor
@@ -94,9 +96,6 @@ from nova.tests.unit.objects import test_diagnostics
 from nova.tests.unit.objects import test_pci_device
 from nova.tests.unit.objects import test_vcpu_model
 from nova.tests.unit import utils as test_utils
-from nova.tests.unit.virt.libvirt import fake_imagebackend
-from nova.tests.unit.virt.libvirt import fake_libvirt_data
-from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
@@ -743,7 +742,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                       'resolve_driver_format',
                       imagebackend.Image._get_driver_format)
 
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
 
         # ensure tests perform the same on all host architectures; this is
         # already done by the fakelibvirt fixture but we want to change the
@@ -13491,7 +13490,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_create_images_and_backing_disk_info_none(self):
         instance = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+        fake_backend = self.useFixture(nova_fixtures.ImageBackendFixture())
 
         drvr._create_images_and_backing(self.context, instance,
                                         "/fake/instance/dir", None)
@@ -14440,7 +14439,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance.config_drive = ''
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
-        self.useFixture(fake_imagebackend.ImageBackendFixture())
+        self.useFixture(nova_fixtures.ImageBackendFixture())
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         with test.nested(
@@ -14556,7 +14555,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             post_xml_callback()
 
         fake_backend = self.useFixture(
-            fake_imagebackend.ImageBackendFixture(exists=lambda _: False))
+            nova_fixtures.ImageBackendFixture(exists=lambda _: False))
 
         mock_get_info.return_value = instance_info
         mock_create_guest_with_network.side_effect = \
@@ -14576,7 +14575,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+        fake_backend = self.useFixture(nova_fixtures.ImageBackendFixture())
 
         self.stub_out('nova.virt.libvirt.driver.LibvirtDriver._get_guest_xml',
                       lambda *a, **kw: None)
@@ -14604,7 +14603,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance.root_device_name = '/dev/vda'
         instance.uuid = uuids.instance_uuid
 
-        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+        backend = self.useFixture(nova_fixtures.ImageBackendFixture())
 
         with test.nested(
                 mock.patch.object(drvr, '_get_guest_xml'),
@@ -14781,7 +14780,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
-        self.useFixture(fake_imagebackend.ImageBackendFixture())
+        self.useFixture(nova_fixtures.ImageBackendFixture())
 
         with mock.patch.object(drvr, '_get_connection',
                                return_value=mock_connection):
@@ -14803,7 +14802,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance.
         """
         self.flags(swtpm_enabled=True, group='libvirt')
-        self.useFixture(fake_imagebackend.ImageBackendFixture())
+        self.useFixture(nova_fixtures.ImageBackendFixture())
 
         mock_get_info.return_value = hardware.InstanceInfo(
             state=power_state.RUNNING)
@@ -14848,7 +14847,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             image_meta)
 
         self.useFixture(
-            fake_imagebackend.ImageBackendFixture(got_files=gotFiles))
+            nova_fixtures.ImageBackendFixture(got_files=gotFiles))
 
         drvr._create_image(self.context, instance, disk_info['mapping'])
         drvr._get_guest_xml(self.context, instance, None,
@@ -14906,7 +14905,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         fake_backend = self.useFixture(
-            fake_imagebackend.ImageBackendFixture(got_files=gotFiles))
+            nova_fixtures.ImageBackendFixture(got_files=gotFiles))
 
         with test.nested(
             mock.patch.object(driver, '_get_guest_xml'),
@@ -14960,7 +14959,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance.config_drive = 'True'
 
         backend = self.useFixture(
-            fake_imagebackend.ImageBackendFixture(exists=lambda path: False))
+            nova_fixtures.ImageBackendFixture(exists=lambda path: False))
 
         mock_build_device_metadata.return_value = None
         injection_info = get_injection_info(
@@ -15013,7 +15012,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             instance, image_meta,
                                             block_device_info=bdi)
 
-        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+        backend = self.useFixture(nova_fixtures.ImageBackendFixture())
         drvr._create_image(self.context, instance, disk_info['mapping'],
                            block_device_info=bdi, **create_image_kwargs)
 
@@ -15094,7 +15093,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             instance, image_meta,
                                             block_device_info=bdi)
         mock_get_ext.return_value = mock.sentinel.file_ext
-        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+        backend = self.useFixture(nova_fixtures.ImageBackendFixture())
 
         drvr._create_image(self.context, instance, disk_info['mapping'],
                            block_device_info=bdi)
@@ -15119,7 +15118,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             instance,
                                             image_meta)
 
-        fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+        fake_backend = self.useFixture(nova_fixtures.ImageBackendFixture())
 
         drvr._create_image(self.context, instance, disk_info['mapping'])
 
@@ -15968,7 +15967,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_disk_info.return_value = \
             fake_disk_info_byname(instance).values()
 
-        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+        backend = self.useFixture(nova_fixtures.ImageBackendFixture())
 
         accel_info = [{'k1': 'v1', 'k2': 'v2'}]
         with mock.patch('os.path.exists', return_value=True):
@@ -16560,7 +16559,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stub_out('nova.virt.libvirt.host.Host._get_domain',
                       lambda self, instance: mock_virdomain)
-        self.stub_out('nova.tests.unit.virt.libvirt.fakelibvirt.libvirtError.'
+        self.stub_out('nova.tests.fixtures.libvirt.libvirtError.'
                       'get_error_code',
                       lambda self: fakelibvirt.VIR_ERR_OPERATION_TIMEOUT)
         instance = objects.Instance(**self.test_instance)
@@ -20299,7 +20298,7 @@ class HostStateTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(HostStateTestCase, self).setUp()
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
 
     @mock.patch.object(fakelibvirt, "openAuth")
     def test_update_status(self, mock_open):
@@ -20344,7 +20343,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
 
     def setUp(self):
         super(TestUpdateProviderTree, self).setUp()
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         self.driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         # create compute node resource provider
         self.cn_rp = dict(
@@ -21114,7 +21113,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         super(LibvirtDriverTestCase, self).setUp()
         self.flags(sysinfo_serial="none", group="libvirt")
         self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         os_vif.initialize()
 
         self.drvr = libvirt_driver.LibvirtDriver(
@@ -21719,7 +21718,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         disk_info = list(fake_disk_info_byname(instance, type='raw').values())
         disk_info_text = jsonutils.dumps(disk_info)
 
-        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+        backend = self.useFixture(nova_fixtures.ImageBackendFixture())
         mock_create_guest_with_network.return_value = \
             libvirt_guest.Guest('fake_dom')
 
@@ -23910,7 +23909,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_get_mdev.return_value = {uuids.mdev1: uuids.inst1}
 
         backend = self.useFixture(
-            fake_imagebackend.ImageBackendFixture(exists=exists))
+            nova_fixtures.ImageBackendFixture(exists=exists))
 
         if not image_meta_dict:
             image_meta_dict = {'id': uuids.image_id, 'name': 'fake'}
@@ -26208,7 +26207,7 @@ class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtVolumeUsageTestCase, self).setUp()
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         self.drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.c = context.get_admin_context()
 
@@ -26259,7 +26258,7 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtNonblockingTestCase, self).setUp()
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         self.flags(connection_uri="test:///default",
                    group='libvirt')
 
@@ -26309,7 +26308,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtVolumeSnapshotTestCase, self).setUp()
 
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         self.drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.c = context.get_admin_context()
 
@@ -27216,7 +27215,7 @@ class _BaseSnapshotTests(test.NoDBTestCase):
         self.flags(snapshots_directory='./', group='libvirt')
         self.context = context.get_admin_context()
 
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
 
         self.image_service = self.useFixture(nova_fixtures.GlanceFixture(self))
 
@@ -27629,7 +27628,7 @@ class TestLibvirtSEV(test.NoDBTestCase):
 
     def setUp(self):
         super(TestLibvirtSEV, self).setUp()
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         self.driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
 
@@ -27683,7 +27682,7 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtPMEMNamespaceTests, self).setUp()
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         self.context = context.get_admin_context()
         self.vpmem_0 = objects.LibvirtVPMEMDevice(
                 label='4GB',
@@ -27926,7 +27925,7 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
 class LibvirtDeviceRemoveEventTestCase(test.NoDBTestCase):
     def setUp(self):
         super().setUp()
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     @mock.patch('nova.virt.driver.ComputeDriver.emit_event')

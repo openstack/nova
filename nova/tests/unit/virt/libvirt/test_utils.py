@@ -36,7 +36,6 @@ import nova.privsep.qemu
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_instance
-from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt import images
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import utils as libvirt_utils
@@ -492,7 +491,7 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
                 self.assertFalse(libvirt_utils.is_mounted(mount_path, source))
 
     def test_find_disk_file_device(self):
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         xml = """
           <domain type='kvm'>
             <os>
@@ -514,7 +513,7 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         self.assertEqual('qcow2', format)
 
     def test_find_disk_block_device(self):
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         xml = """
           <domain type='kvm'>
             <os>
@@ -536,7 +535,7 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         self.assertEqual('raw', format)
 
     def test_find_disk_rbd(self):
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         xml = """
           <domain type='kvm'>
             <os>
@@ -560,7 +559,7 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         self.assertEqual('raw', format)
 
     def test_find_disk_lxc(self):
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         xml = """
           <domain type='lxc'>
             <os>
@@ -581,7 +580,7 @@ sunrpc /var/lib/nfs/rpc_pipefs rpc_pipefs rw,relatime 0 0
         self.assertIsNone(format)
 
     def test_find_disk_parallels(self):
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         xml = """
           <domain type='parallels'>
             <os>

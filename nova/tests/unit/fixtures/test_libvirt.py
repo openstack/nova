@@ -18,7 +18,7 @@ from oslo_utils import uuidutils
 
 from nova.objects import fields as obj_fields
 from nova import test
-import nova.tests.unit.virt.libvirt.fakelibvirt as libvirt
+from nova.tests.fixtures import libvirt
 from nova.virt.libvirt import config as vconfig
 
 

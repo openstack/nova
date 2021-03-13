@@ -19,7 +19,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova import test
-from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.tests import fixtures as nova_fixtures
 from nova.virt import fake
 from nova.virt.libvirt import driver
 from nova.virt.libvirt import host
@@ -56,7 +56,7 @@ class LibvirtBaseVolumeDriverSubclassSignatureTestCase(
     def _get_base_class(self):
         # We do this because it has the side-effect of loading all the
         # volume drivers
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
         driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         return volume.LibvirtBaseVolumeDriver
@@ -68,7 +68,7 @@ class LibvirtVolumeBaseTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtVolumeBaseTestCase, self).setUp()
 
-        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.useFixture(nova_fixtures.LibvirtFixture())
 
         self.fake_host = host.Host("qemu:///system")
 

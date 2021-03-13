@@ -28,7 +28,7 @@ from oslo_utils import versionutils
 
 from nova import conf
 from nova.objects import fields as obj_fields
-from nova.tests.unit.virt.libvirt import fake_libvirt_data
+from nova.tests.fixtures import libvirt_data as fake_libvirt_data
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
 
@@ -2118,14 +2118,14 @@ class FakeHandler(object):
 _EventAddHandleFunc = FakeHandler
 
 
-class FakeLibvirtFixture(fixtures.Fixture):
+class LibvirtFixture(fixtures.Fixture):
     """Performs global setup/stubbing for all libvirt tests.
     """
     def __init__(self, stub_os_vif=True):
         self.stub_os_vif = stub_os_vif
 
     def setUp(self):
-        super(FakeLibvirtFixture, self).setUp()
+        super().setUp()
 
         # Some modules load the libvirt library in a strange way
         for module in ('driver', 'host', 'guest', 'migration'):

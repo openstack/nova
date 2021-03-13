@@ -13,8 +13,8 @@
 # under the License.
 
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import base
-from nova.tests.unit.virt.libvirt import fakelibvirt
 
 
 class TestVolAttachmentsAfterFailureToScheduleOrBuild(base.ServersTestBase):
