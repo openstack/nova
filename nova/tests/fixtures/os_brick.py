@@ -10,9 +10,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 
-def get_connector_properties(root_helper, my_ip, multipath, enforce_multipath,
-                             host=None):
+
+def get_connector_properties(
+    root_helper, my_ip, multipath, enforce_multipath, host=None, execute=None,
+):
     """Fake os-brick."""
 
     props = {}
@@ -31,12 +34,22 @@ def get_connector_properties(root_helper, my_ip, multipath, enforce_multipath,
 class ISCSIConnector(object):
     """Mimick the iSCSI connector."""
 
-    def __init__(self, root_helper, driver=None,
-                 execute=None, use_multipath=False,
-                 device_scan_attempts=3,
-                 *args, **kwargs):
+    def __init__(
+        self, root_helper, driver=None, execute=None, use_multipath=False,
+        device_scan_attempts=3, *args, **kwargs,
+    ):
         self.root_herlp = root_helper,
         self.execute = execute
 
     def get_initiator(self):
         return "fake_iscsi.iqn"
+
+
+class OSBrickFixture(fixtures.Fixture):
+
+    def setUp(self):
+        super().setUp()
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'os_brick.initiator.connector.get_connector_properties',
+            get_connector_properties))

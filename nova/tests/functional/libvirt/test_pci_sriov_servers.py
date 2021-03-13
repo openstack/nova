@@ -36,7 +36,6 @@ from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.tests.unit import fake_notifier
-from nova.tests.unit.virt.libvirt import fake_os_brick_connector
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -122,9 +121,7 @@ class SRIOVServersTest(_PCIServersTestBase):
         # fixture already stubbed.
         self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
 
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.connector',
-            fake_os_brick_connector))
+        self.useFixture(nova_fixtures.OSBrickFixture())
         self.useFixture(fixtures.MonkeyPatch(
             'nova.tests.fixtures.libvirt.Domain.migrateToURI3',
             self._migrate_stub))

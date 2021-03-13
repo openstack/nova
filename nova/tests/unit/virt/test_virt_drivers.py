@@ -82,14 +82,9 @@ class _FakeDriverBackendTestCase(object):
         else:
             self.saved_libvirt = None
 
-        from nova.tests.unit.virt.libvirt import fake_os_brick_connector
-
+        self.useFixture(nova_fixtures.OSBrickFixture())
         self.useFixture(nova_fixtures.ImageBackendFixture())
         self.useFixture(nova_fixtures.LibvirtFixture())
-
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.connector',
-            fake_os_brick_connector))
 
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.host.Host._conn_event_thread',

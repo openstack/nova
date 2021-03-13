@@ -18,9 +18,9 @@ from urllib import parse as urlparse
 from nova import context
 from nova.network import constants as neutron_constants
 from nova.network import neutron
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import base as libvirt_base
-from nova.tests.unit.virt.libvirt import fake_os_brick_connector
 
 
 class TestLiveMigrationWithoutMultiplePortBindings(
@@ -54,12 +54,8 @@ class TestLiveMigrationWithoutMultiplePortBindings(
         super().setUp()
         self.neutron.list_extensions = self.list_extensions
         self.neutron_api = neutron.API()
-        # TODO(sean-k-mooney): remove after
-        # I275509eb0e0eb9eaf26fe607b7d9a67e1edc71f8
-        # has merged.
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.connector',
-            fake_os_brick_connector))
+
+        self.useFixture(nova_fixtures.OSBrickFixture())
 
         self.start_compute(
             hostname='start_host',
