@@ -1141,8 +1141,10 @@ Validation is only used for recognized extra spec namespaces, currently:
 Adds support for rescuing boot from volume instances when the compute host
 reports the ``COMPUTE_BFV_RESCUE`` capability trait.
 
-2.88
-----
+.. _microversion 2.88:
+
+2.88 (Maximum in Wallaby)
+-------------------------
 
 The following fields are no longer included in responses for the
 ``GET /os-hypervisors/detail`` and ``GET /os-hypervisors/{hypervisor_id}``
