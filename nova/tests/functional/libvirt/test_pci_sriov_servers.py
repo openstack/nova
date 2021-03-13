@@ -27,6 +27,7 @@ from oslo_utils import units
 
 import nova
 from nova import context
+from nova.network import constants
 from nova import objects
 from nova.objects import fields
 from nova.tests import fixtures as nova_fixtures
@@ -1096,4 +1097,239 @@ class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
         flavor_id = self._create_flavor(vcpu=6, memory_mb=3144,
                                         extra_spec=extra_spec)
         self._create_server(flavor_id=flavor_id)
+        self.assertTrue(self.mock_filter.called)
+
+
+@ddt.ddt
+class PCIServersWithPortNUMAPoliciesTest(_PCIServersTestBase):
+
+    ALIAS_NAME = 'a1'
+    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PF_PROD_ID,
+            'physical_network': 'physnet4',
+        },
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.VF_PROD_ID,
+            'physical_network': 'physnet4',
+        },
+    )]
+    # we set the numa_affinity policy to required to ensure strict affinity
+    # between pci devices and the guest cpu and memory will be enforced.
+    PCI_ALIAS = [jsonutils.dumps(
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PCI_PROD_ID,
+            'name': ALIAS_NAME,
+            'device_type': fields.PciDeviceType.STANDARD,
+            'numa_policy': fields.PCINUMAAffinityPolicy.REQUIRED,
+        }
+    )]
+
+    def setUp(self):
+        super().setUp()
+
+        # The ultimate base class _IntegratedTestBase uses NeutronFixture but
+        # we need a bit more intelligent neutron for these tests. Applying the
+        # new fixture here means that we re-stub what the previous neutron
+        # fixture already stubbed.
+        self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
+        self.flags(disable_fallback_pcpu_query=True, group='workarounds')
+
+    def _create_port_with_policy(self, policy):
+        port_data = copy.deepcopy(
+            base.LibvirtNeutronFixture.network_4_port_1)
+        port_data[constants.NUMA_POLICY] = policy
+        # create the port
+        new_port = self.neutron.create_port({'port': port_data})
+        port_id = new_port['port']['id']
+        port = self.neutron.show_port(port_id)['port']
+        self.assertEqual(port[constants.NUMA_POLICY], policy)
+        return port_id
+
+    # NOTE(sean-k-mooney): i could just apply the ddt decorators
+    # to this function for the most part but i have chosen to
+    # keep one top level function per policy to make documenting
+    # the test cases simpler.
+    def _test_policy(self, pci_numa_node, status, policy):
+        # only allow cpus on numa node 1 to be used for pinning
+        self.flags(cpu_dedicated_set='4-7', group='compute')
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=2, numa_node=pci_numa_node)
+        self.start_compute(pci_info=pci_info)
+
+        # request cpu pinning to create a numa toplogy and allow the test to
+        # force which numa node the vm would have to be pinned too.
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        port_id = self._create_port_with_policy(policy)
+        # create a server using the VF via neutron
+        self._create_server(
+            flavor_id=flavor_id,
+            networks=[
+                {'port': port_id},
+            ],
+            expected_state=status
+        )
+
+        if status == 'ACTIVE':
+            self.assertTrue(self.mock_filter.called)
+        else:
+            # the PciPassthroughFilter should not have been called, since the
+            # NUMATopologyFilter should have eliminated the filter first
+            self.assertFalse(self.mock_filter.called)
+
+    @ddt.unpack  # unpacks each sub-tuple e.g. *(pci_numa_node, status)
+    # the preferred policy should always pass regardless of numa affinity
+    @ddt.data((-1, 'ACTIVE'), (0, 'ACTIVE'), (1, 'ACTIVE'))
+    def test_create_server_with_sriov_numa_affinity_policy_preferred(
+            self, pci_numa_node, status):
+        """Validate behavior of 'preferred' PCI NUMA affinity policy.
+
+        This test ensures that it *is* possible to allocate CPU and memory
+        resources from one NUMA node and a PCI device from another *if*
+        the port NUMA affinity policy is set to preferred.
+        """
+        self._test_policy(pci_numa_node, status, 'preferred')
+
+    @ddt.unpack  # unpacks each sub-tuple e.g. *(pci_numa_node, status)
+    # the legacy policy allow a PCI device to be used if it has NUMA
+    # affinity or if no NUMA info is available so we set the NUMA
+    # node for this device to -1 which is the sentinel value use by the
+    # Linux kernel for a device with no NUMA affinity.
+    @ddt.data((-1, 'ACTIVE'), (0, 'ERROR'), (1, 'ACTIVE'))
+    def test_create_server_with_sriov_numa_affinity_policy_legacy(
+            self, pci_numa_node, status):
+        """Validate behavior of 'legacy' PCI NUMA affinity policy.
+
+        This test ensures that it *is* possible to allocate CPU and memory
+        resources from one NUMA node and a PCI device from another *if*
+        the port NUMA affinity policy is set to legacy and the device
+        does not report NUMA information.
+        """
+        self._test_policy(pci_numa_node, status, 'legacy')
+
+    @ddt.unpack  # unpacks each sub-tuple e.g. *(pci_numa_node, status)
+    # The required policy requires a PCI device to both report a NUMA
+    # and for the guest cpus and ram to be affinitized to the same
+    # NUMA node so we create 1 pci device in the first NUMA node.
+    @ddt.data((-1, 'ERROR'), (0, 'ERROR'), (1, 'ACTIVE'))
+    def test_create_server_with_sriov_numa_affinity_policy_required(
+            self, pci_numa_node, status):
+        """Validate behavior of 'required' PCI NUMA affinity policy.
+
+        This test ensures that it *is not* possible to allocate CPU and memory
+        resources from one NUMA node and a PCI device from another *if*
+        the port NUMA affinity policy is set to required and the device
+        does reports NUMA information.
+        """
+
+        # we set the numa_affinity policy to preferred to allow the PCI device
+        # to be selected from any numa node so we can prove the flavor
+        # overrides the alias.
+        alias = [jsonutils.dumps(
+            {
+                'vendor_id': fakelibvirt.PCI_VEND_ID,
+                'product_id': fakelibvirt.PCI_PROD_ID,
+                'name': self.ALIAS_NAME,
+                'device_type': fields.PciDeviceType.STANDARD,
+                'numa_policy': fields.PCINUMAAffinityPolicy.PREFERRED,
+            }
+        )]
+
+        self.flags(passthrough_whitelist=self.PCI_PASSTHROUGH_WHITELIST,
+                   alias=alias,
+                   group='pci')
+
+        self._test_policy(pci_numa_node, status, 'required')
+
+    def test_socket_policy_pass(self):
+        # With 1 socket containing 2 NUMA nodes, make the first node's CPU
+        # available for pinning, but affine the PCI device to the second node.
+        # This should pass.
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2,
+            kB_mem=(16 * units.Gi) // units.Ki)
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1)
+        self.flags(cpu_dedicated_set='0-3', group='compute')
+        self.start_compute(host_info=host_info, pci_info=pci_info)
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        port_id = self._create_port_with_policy('socket')
+        # create a server using the VF via neutron
+        self._create_server(
+            flavor_id=flavor_id,
+            networks=[
+                {'port': port_id},
+            ],
+        )
+        self.assertTrue(self.mock_filter.called)
+
+    def test_socket_policy_fail(self):
+        # With 2 sockets containing 1 NUMA node each, make the first socket's
+        # CPUs available for pinning, but affine the PCI device to the second
+        # NUMA node in the second socket. This should fail.
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=1, cpu_sockets=2, cpu_cores=2, cpu_threads=2,
+            kB_mem=(16 * units.Gi) // units.Ki)
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=1)
+        self.flags(cpu_dedicated_set='0-3', group='compute')
+        self.start_compute(host_info=host_info, pci_info=pci_info)
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        port_id = self._create_port_with_policy('socket')
+        # create a server using the VF via neutron
+        server = self._create_server(
+            flavor_id=flavor_id,
+            networks=[
+                {'port': port_id},
+            ],
+            expected_state='ERROR'
+        )
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
+        self.assertFalse(self.mock_filter.called)
+
+    def test_socket_policy_multi_numa_pass(self):
+        # 2 sockets, 2 NUMA nodes each, with the PCI device on NUMA 0 and
+        # socket 0. If we restrict cpu_dedicated_set to NUMA 1, 2 and 3, we
+        # should still be able to boot an instance with hw:numa_nodes=3 and the
+        # `socket` policy, because one of the instance's NUMA nodes will be on
+        # the same socket as the PCI device (even if there is no direct NUMA
+        # node affinity).
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=2, cpu_cores=2, cpu_threads=1,
+            kB_mem=(16 * units.Gi) // units.Ki)
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=1, numa_node=0)
+        self.flags(cpu_dedicated_set='2-7', group='compute')
+        self.start_compute(host_info=host_info, pci_info=pci_info)
+
+        extra_spec = {
+            'hw:numa_nodes': '3',
+            'hw:cpu_policy': 'dedicated',
+        }
+        flavor_id = self._create_flavor(vcpu=6, memory_mb=3144,
+                                        extra_spec=extra_spec)
+        port_id = self._create_port_with_policy('socket')
+        # create a server using the VF via neutron
+        self._create_server(
+            flavor_id=flavor_id,
+            networks=[
+                {'port': port_id},
+            ],
+        )
         self.assertTrue(self.mock_filter.called)

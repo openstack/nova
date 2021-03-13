@@ -2026,6 +2026,8 @@ class API(base.Base):
             # the port binding profile and we can handle it as a boolean.
             return strutils.bool_from_string(value)
 
+    # NOTE(sean-k-mooney): we might want to have this return a
+    # nova.network.model.VIF object instead in the future.
     def _get_port_vnic_info(self, context, neutron, port_id):
         """Retrieve port vNIC info
 
@@ -2033,14 +2035,17 @@ class API(base.Base):
         :param neutron: The Neutron client
         :param port_id: The id of port to be queried
 
-        :return: A tuple of vNIC type, trusted status, network ID and resource
-                 request of the port if any. Trusted status only affects SR-IOV
-                 ports and will always be None for other port types.
+        :return: A tuple of vNIC type, trusted status, network ID, resource
+            request of the port if any and port numa affintiy policy.
+            Trusted status only affects SR-IOV ports and will always be
+            None for other port types. If no port numa policy is
+            requested by a port, None will be returned.
         """
+        fields = ['binding:vnic_type', constants.BINDING_PROFILE,
+                  'network_id', constants.RESOURCE_REQUEST,
+                  constants.NUMA_POLICY]
         port = self._show_port(
-            context, port_id, neutron_client=neutron,
-            fields=['binding:vnic_type', constants.BINDING_PROFILE,
-                    'network_id', constants.RESOURCE_REQUEST])
+            context, port_id, neutron_client=neutron, fields=fields)
         network_id = port.get('network_id')
         trusted = None
         vnic_type = port.get('binding:vnic_type',
@@ -2053,7 +2058,8 @@ class API(base.Base):
         # applied to the port/network and the port-resource-request API
         # extension is enabled.
         resource_request = port.get(constants.RESOURCE_REQUEST, None)
-        return vnic_type, trusted, network_id, resource_request
+        numa_policy = port.get(constants.NUMA_POLICY, None)
+        return vnic_type, trusted, network_id, resource_request, numa_policy
 
     def create_resource_requests(
             self, context, requested_networks, pci_requests=None,
@@ -2091,11 +2097,12 @@ class API(base.Base):
             vnic_type = network_model.VNIC_TYPE_NORMAL
             pci_request_id = None
             requester_id = None
+            port_numa_policy = None
 
             if request_net.port_id:
-                result = self._get_port_vnic_info(
-                    context, neutron, request_net.port_id)
-                vnic_type, trusted, network_id, resource_request = result
+                (vnic_type, trusted, network_id, resource_request,
+                 port_numa_policy) = self._get_port_vnic_info(
+                     context, neutron, request_net.port_id)
                 physnet, tunneled_ = self._get_physnet_tunneled_info(
                     context, neutron, network_id)
 
@@ -2149,8 +2156,11 @@ class API(base.Base):
                     spec=[spec],
                     request_id=uuidutils.generate_uuid(),
                     requester_id=requester_id)
-                if affinity_policy:
-                    request.numa_policy = affinity_policy
+                # NOTE(sean-k-mooney): port NUMA policies take precedence
+                # over image and flavor policies.
+                numa_policy = port_numa_policy or affinity_policy
+                if numa_policy:
+                    request.numa_policy = numa_policy
                 pci_requests.requests.append(request)
                 pci_request_id = request.request_id
 
@@ -3049,7 +3059,8 @@ class API(base.Base):
             ovs_interfaceid=ovs_interfaceid,
             devname=devname,
             active=vif_active,
-            preserve_on_delete=preserve_on_delete)
+            preserve_on_delete=preserve_on_delete
+        )
 
     def _build_network_info_model(self, context, instance, networks=None,
                                   port_ids=None, admin_client=None,

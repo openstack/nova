@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    Support was added to specify a port NUMA affinity policy
+    for SR-IOV ports. This feature allows users to set a NUMA affinity
+    policy between a neutron port and a NUMA guest's CPUs and memory.
+    This feature supports the same policies as the existing VM Scoped
+    PCI NUMA Affinity policy and take precedence over the
+    flavor and image policy. This allows operators to set a default
+    affinity policy in the flavor or image while end users can
+    express a more granular affinity policy.
+    To use this feature operators must enable the
+    ``port-numa-affinity-policy`` neutron extension and configure the
+    service plugin in neutron. By default the extension
+    is listed as available but is not enabled.

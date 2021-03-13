@@ -30,3 +30,4 @@ L3_NETWORK_TYPES = ['vxlan', 'gre', 'geneve']
 ALLOCATION = 'allocation'
 RESOURCE_REQUEST = 'resource_request'
 SEGMENT = 'Segment'
+NUMA_POLICY = 'numa_affinity_policy'
