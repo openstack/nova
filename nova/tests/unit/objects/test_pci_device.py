@@ -224,6 +224,24 @@ class _TestPciDeviceObject(object):
         self.assertIsNotNone(dev.uuid)
         self.assertEqual(1, mock_create_uuid.call_count)
 
+    def test_dev_type_vdpa_1_6_fails(self):
+        ctxt = context.get_admin_context()
+        fake_dev = copy.deepcopy(fake_db_dev)
+        fake_dev['dev_type'] = fields.PciDeviceType.VDPA
+        dev = pci_device.PciDevice._from_db_object(
+            ctxt, pci_device.PciDevice(), fake_dev)
+        self.assertRaises(exception.ObjectActionError,
+                          dev.obj_to_primitive, '1.6')
+
+    def test_dev_type_vdpa_1_6(self):
+        ctxt = context.get_admin_context()
+        fake_dev = copy.deepcopy(fake_db_dev)
+        fake_dev['dev_type'] = fields.PciDeviceType.STANDARD
+        dev = pci_device.PciDevice._from_db_object(
+            ctxt, pci_device.PciDevice(), fake_dev)
+        dev.obj_make_compatible(dev.obj_to_primitive(), '1.6')
+        self.assertEqual(dev.dev_type, fake_dev['dev_type'])
+
     def test_save_empty_parent_addr(self):
         ctxt = context.get_admin_context()
         dev = pci_device.PciDevice._from_db_object(

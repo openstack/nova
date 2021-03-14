@@ -757,8 +757,12 @@ class PciDeviceType(BaseNovaEnum):
     STANDARD = "type-PCI"
     SRIOV_PF = "type-PF"
     SRIOV_VF = "type-VF"
+    # NOTE(sean-k-mooney): The DB field is Column(String(8), nullable=False)
+    # type-vdpa is 9 long...and as Jay notes above the prefix is silly so
+    # for the new vdpa value we drop the prefix to avoid a DB migration
+    VDPA = "vdpa"
 
-    ALL = (STANDARD, SRIOV_PF, SRIOV_VF)
+    ALL = (STANDARD, SRIOV_PF, SRIOV_VF, VDPA)
 
 
 class PCINUMAAffinityPolicy(BaseNovaEnum):

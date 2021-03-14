@@ -98,7 +98,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     # Version 1.4: Added parent_addr field
     # Version 1.5: Added 2 new device statuses: UNCLAIMABLE and UNAVAILABLE
     # Version 1.6: Added uuid field
-    VERSION = '1.6'
+    # Version 1.7: Added 'vdpa' to 'dev_type' field
+    VERSION = '1.7'
 
     fields = {
         'id': fields.IntegerField(),
@@ -140,6 +141,13 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                         status, target_version))
         if target_version < (1, 6) and 'uuid' in primitive:
             del primitive['uuid']
+        if target_version < (1, 7) and 'dev_type' in primitive:
+            dev_type = primitive['dev_type']
+            if dev_type == fields.PciDeviceType.VDPA:
+                raise exception.ObjectActionError(
+                    action='obj_make_compatible',
+                    reason='dev_type=%s not supported in version %s' % (
+                        dev_type, target_version))
 
     def update_device(self, dev_dict):
         """Sync the content from device dictionary to device object.

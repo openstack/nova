@@ -128,6 +128,13 @@ class PciRequestTestCase(test.NoDBTestCase):
         })
         self._test_get_alias_from_config_invalid(fake_alias)
 
+    def test_get_alias_from_config_device_type_vdpa(self):
+        fake_alias = jsonutils.dumps({
+            "name": "xxx",
+            "device_type": "vdpa",
+        })
+        self._test_get_alias_from_config_invalid(fake_alias)
+
     def test_get_alias_from_config_invalid_product_id(self):
         fake_alias = jsonutils.dumps({
             "name": "xxx",

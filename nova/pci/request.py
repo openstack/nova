@@ -86,7 +86,13 @@ _ALIAS_SCHEMA = {
         },
         "device_type": {
             "type": "string",
-            "enum": list(obj_fields.PciDeviceType.ALL),
+            # NOTE(sean-k-mooney): vDPA devices cannot currently be used with
+            # alias-based PCI passthrough so we exclude it here
+            "enum": [
+                obj_fields.PciDeviceType.STANDARD,
+                obj_fields.PciDeviceType.SRIOV_PF,
+                obj_fields.PciDeviceType.SRIOV_VF,
+            ],
         },
         "numa_policy": {
             "type": "string",
