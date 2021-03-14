@@ -102,6 +102,7 @@ class HyperVDriver(driver.ComputeDriver):
         "supports_trusted_certs": False,
         "supports_pcpus": False,
         "supports_accelerators": False,
+        "supports_secure_boot": True,
 
         # Supported image types
         "supports_image_type_vhd": True,

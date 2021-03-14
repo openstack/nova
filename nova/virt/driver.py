@@ -101,7 +101,6 @@ def block_device_info_get_mapping(block_device_info):
 # trait, it needs to be (made) standard, and must be prefixed with
 # "COMPUTE_".
 CAPABILITY_TRAITS_MAP = {
-    # Added in os-traits 0.7.0.
     "supports_attach_interface": os_traits.COMPUTE_NET_ATTACH_INTERFACE,
     "supports_device_tagging": os_traits.COMPUTE_DEVICE_TAGGING,
     "supports_tagged_attach_interface":
@@ -109,11 +108,8 @@ CAPABILITY_TRAITS_MAP = {
     "supports_tagged_attach_volume": os_traits.COMPUTE_VOLUME_ATTACH_WITH_TAG,
     "supports_extend_volume": os_traits.COMPUTE_VOLUME_EXTEND,
     "supports_multiattach": os_traits.COMPUTE_VOLUME_MULTI_ATTACH,
-    # Added in os-traits 0.8.0.
     "supports_trusted_certs": os_traits.COMPUTE_TRUSTED_CERTS,
     "supports_accelerators": os_traits.COMPUTE_ACCELERATORS,
-
-    # Image type support flags, added in os-traits 0.12.0
     "supports_image_type_aki": os_traits.COMPUTE_IMAGE_TYPE_AKI,
     "supports_image_type_ami": os_traits.COMPUTE_IMAGE_TYPE_AMI,
     "supports_image_type_ari": os_traits.COMPUTE_IMAGE_TYPE_ARI,
@@ -124,12 +120,10 @@ CAPABILITY_TRAITS_MAP = {
     "supports_image_type_vhd": os_traits.COMPUTE_IMAGE_TYPE_VHD,
     "supports_image_type_vhdx": os_traits.COMPUTE_IMAGE_TYPE_VHDX,
     "supports_image_type_vmdk": os_traits.COMPUTE_IMAGE_TYPE_VMDK,
-    # Added in os-traits 2.0.0
     "supports_image_type_ploop": os_traits.COMPUTE_IMAGE_TYPE_PLOOP,
-    # Added in os-traits 2.1.0.
     "supports_migrate_to_same_host": os_traits.COMPUTE_SAME_HOST_COLD_MIGRATE,
-    # Added in os-traits 2.2.0.
     "supports_bfv_rescue": os_traits.COMPUTE_RESCUE_BFV,
+    "supports_secure_boot": os_traits.COMPUTE_SECURITY_UEFI_SECURE_BOOT,
 }
 
 
@@ -196,6 +190,7 @@ class ComputeDriver(object):
         "supports_accelerators": False,
         "supports_bfv_rescue": False,
         "supports_vtpm": False,
+        "supports_secure_boot": False,
 
         # Image type support flags
         "supports_image_type_aki": False,
