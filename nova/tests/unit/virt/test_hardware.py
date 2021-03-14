@@ -5653,6 +5653,52 @@ class VTPMConfigTest(test.NoDBTestCase):
 
 
 @ddt.ddt
+class SecureBootPolicyTest(test.NoDBTestCase):
+
+    @ddt.unpack
+    @ddt.data(
+        # pass: no configuration
+        (None, None, None),
+        # pass: flavor-only configuration
+        ('required', None, 'required'),
+        # pass: image-only configuration
+        (None, 'optional', 'optional'),
+        # pass: identical image and flavor configuration
+        ('required', 'required', 'required'),
+        # fail: mismatched image and flavor configuration
+        ('required', 'disabled', exception.FlavorImageConflict),
+        # fail: invalid value
+        ('foobar', None, exception.Invalid),
+    )
+    def test_get_secure_boot_constraint(
+        self, flavor_policy, image_policy, expected,
+    ):
+        extra_specs = {}
+
+        if flavor_policy:
+            extra_specs['os:secure_boot'] = flavor_policy
+
+        image_meta_props = {}
+
+        if image_policy:
+            image_meta_props['os_secure_boot'] = image_policy
+
+        flavor = objects.Flavor(
+            name='foo', vcpus=1, memory_mb=1024, extra_specs=extra_specs)
+        image_meta = objects.ImageMeta.from_dict(
+            {'name': 'bar', 'properties': image_meta_props})
+
+        if isinstance(expected, type) and issubclass(expected, Exception):
+            self.assertRaises(
+                expected, hw.get_secure_boot_constraint, flavor, image_meta,
+            )
+        else:
+            self.assertEqual(
+                expected, hw.get_secure_boot_constraint(flavor, image_meta),
+            )
+
+
+@ddt.ddt
 class RescuePropertyTestCase(test.NoDBTestCase):
 
     @ddt.unpack

@@ -1205,10 +1205,11 @@ def _get_flavor_image_meta(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
     default: ty.Any = None,
+    prefix: str = 'hw',
 ) -> ty.Tuple[ty.Any, ty.Any]:
     """Extract both flavor- and image-based variants of metadata."""
-    flavor_key = ':'.join(['hw', key])
-    image_key = '_'.join(['hw', key])
+    flavor_key = ':'.join([prefix, key])
+    image_key = '_'.join([prefix, key])
 
     flavor_value = flavor.get('extra_specs', {}).get(flavor_key, default)
     image_value = image_meta.properties.get(image_key, default)
@@ -1220,20 +1221,23 @@ def _get_unique_flavor_image_meta(
     key: str,
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
-    default: ty.Any = None
+    default: ty.Any = None,
+    prefix: str = 'hw',
 ) -> ty.Any:
     """A variant of '_get_flavor_image_meta' that errors out on conflicts."""
     flavor_value, image_value = _get_flavor_image_meta(
-        key, flavor, image_meta, default,
+        key, flavor, image_meta, default, prefix,
     )
     if image_value and flavor_value and image_value != flavor_value:
         msg = _(
-            "Flavor %(flavor_name)s has hw:%(key)s extra spec explicitly "
-            "set to %(flavor_val)s, conflicting with image %(image_name)s "
-            "which has hw_%(key)s explicitly set to %(image_val)s."
+            "Flavor %(flavor_name)s has %(prefix)s:%(key)s extra spec "
+            "explicitly set to %(flavor_val)s, conflicting with image "
+            "%(image_name)s which has %(prefix)s_%(key)s explicitly set to "
+            "%(image_val)s."
         )
         raise exception.FlavorImageConflict(
             msg % {
+                'prefix': prefix,
                 'key': key,
                 'flavor_name': flavor.name,
                 'flavor_val': flavor_value,
@@ -1940,6 +1944,36 @@ def get_vtpm_constraint(
         )
 
     return VTPMConfig(version, model)
+
+
+def get_secure_boot_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[str]:
+    """Validate and return the requested secure boot policy.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: nova.exception.Invalid if a value or combination of values is
+        invalid
+    :returns: The secure boot configuration requested, if any.
+    """
+    policy = _get_unique_flavor_image_meta(
+        'secure_boot', flavor, image_meta, prefix='os',
+    )
+    if policy is None:
+        return None
+
+    if policy not in fields.SecureBoot.ALL:
+        msg = _(
+            'Invalid secure boot policy %(policy)r. Allowed values: %(valid)s.'
+        )
+        raise exception.Invalid(msg % {
+            'policy': policy,
+            'valid': ', '.join(fields.SecureBoot.ALL)
+        })
+
+    return policy
 
 
 def numa_get_constraints(flavor, image_meta):
