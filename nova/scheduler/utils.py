@@ -190,6 +190,8 @@ class ResourceRequest(object):
 
         res_req._translate_pci_numa_affinity_policy(request_spec.flavor, image)
 
+        res_req._translate_secure_boot_request(request_spec.flavor, image)
+
         res_req.strip_zeros()
 
         return res_req
@@ -248,6 +250,15 @@ class ResourceRequest(object):
             # unsuffixed request group, granular request groups are not
             # supported in image traits
             self._add_trait(trait, 'required')
+
+    def _translate_secure_boot_request(self, flavor, image):
+        sb_policy = hardware.get_secure_boot_constraint(flavor, image)
+        if sb_policy != obj_fields.SecureBoot.REQUIRED:
+            return
+
+        trait = os_traits.COMPUTE_SECURITY_UEFI_SECURE_BOOT
+        self._add_trait(trait, 'required')
+        LOG.debug("Requiring secure boot support via trait %s.", trait)
 
     def _translate_vtpm_request(self, flavor, image):
         vtpm_config = hardware.get_vtpm_constraint(flavor, image)
