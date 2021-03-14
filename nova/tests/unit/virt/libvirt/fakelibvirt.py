@@ -13,6 +13,7 @@
 #    under the License.
 
 import collections
+import os
 import sys
 import textwrap
 import time
@@ -1607,11 +1608,22 @@ class Connection(object):
         cpu_map = [True for cpu_num in range(total_cpus)]
         return (total_cpus, cpu_map, total_cpus)
 
-    def getDomainCapabilities(self, emulatorbin, arch, machine_type,
-                              virt_type, flags):
+    def getDomainCapabilities(
+        self, emulatorbin, arch, machine_type, virt_type, flags,
+    ):
         """Return spoofed domain capabilities."""
         if arch in fake_libvirt_data.STATIC_DOMCAPABILITIES:
-            return fake_libvirt_data.STATIC_DOMCAPABILITIES[arch]
+            xml = fake_libvirt_data.STATIC_DOMCAPABILITIES[arch]
+            if machine_type:
+                # if we request a specific machine type, we should get
+                # information on that and not something else
+                tree = etree.fromstring(xml)
+                if machine_type not in tree.find('./machine').text:
+                    raise Exception(
+                        'Expected machine type of ~%s but got %s' % (
+                            machine_type, tree.find('./machine').text,
+                        ))
+            return xml
 
         if arch == 'x86_64':
             aliases = {'pc': 'pc-i440fx-2.11', 'q35': 'pc-q35-2.11'}
@@ -1706,11 +1718,21 @@ class Connection(object):
         if isinstance(numa_topology, vconfig.LibvirtConfigCapsNUMATopology):
             numa_topology = numa_topology.to_xml()
 
-        return (fake_libvirt_data.CAPABILITIES_TEMPLATE
-                % {'sockets': self.host_info.cpu_sockets,
-                   'cores': self.host_info.cpu_cores,
-                   'threads': self.host_info.cpu_threads,
-                   'topology': numa_topology})
+        # we rely on os.uname() having been mocked already to ensure we have
+        # the correct "host" architecture
+        _capabilities = [
+            '<capabilities>\n',
+            fake_libvirt_data.CAPABILITIES_HOST_TEMPLATES[os.uname().machine],
+        ] + list(fake_libvirt_data.CAPABILITIES_GUEST.values()) + [
+            '</capabilities>',
+        ]
+
+        return ''.join(_capabilities) % {
+            'sockets': self.host_info.cpu_sockets,
+            'cores': self.host_info.cpu_cores,
+            'threads': self.host_info.cpu_threads,
+            'topology': numa_topology,
+        }
 
     def compareCPU(self, xml, flags):
         tree = etree.fromstring(xml)
@@ -1940,6 +1962,14 @@ class FakeLibvirtFixture(fixtures.Fixture):
             'Linux', '', '5.4.0-0-generic', '', obj_fields.Architecture.X86_64)
         self.useFixture(
             fixtures.MockPatch('os.uname', return_value=fake_uname))
+
+        # Ensure UEFI checks don't actually check the host
+        def fake_has_uefi_support():
+            return os.uname().machine == obj_fields.Architecture.AARCH64
+
+        self.useFixture(fixtures.MockPatch(
+            'nova.virt.libvirt.driver.LibvirtDriver._has_uefi_support',
+            side_effect=fake_has_uefi_support))
 
         disable_event_thread(self)
 

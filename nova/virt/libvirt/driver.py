@@ -4703,16 +4703,23 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return self.cpu_models_mapping.get(model.lower())
 
-    def _get_guest_cpu_model_config(self, flavor=None):
+    # TODO(stephenfin): Libvirt exposes information about possible CPU models
+    # via 'getDomainCapabilities' and we should use it
+    def _get_guest_cpu_model_config(self, flavor=None, arch=None):
         mode = CONF.libvirt.cpu_mode
         models = [self._get_cpu_model_mapping(model)
                   for model in CONF.libvirt.cpu_models]
         extra_flags = set([flag.lower() for flag in
             CONF.libvirt.cpu_model_extra_flags])
 
-        if (CONF.libvirt.virt_type == "kvm" or
-            CONF.libvirt.virt_type == "qemu"):
+        if not arch:
             caps = self._host.get_capabilities()
+            arch = caps.host.cpu.arch
+
+        if (
+            CONF.libvirt.virt_type == "kvm" or
+            CONF.libvirt.virt_type == "qemu"
+        ):
             if mode is None:
                 # AArch64 lacks 'host-model' support because neither libvirt
                 # nor QEMU are able to tell what the host CPU model exactly is.
@@ -4722,7 +4729,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Also worth noting: 'host-passthrough' mode will completely
                 # break live migration, *unless* all the Compute nodes (running
                 # libvirtd) have *identical* CPUs.
-                if caps.host.cpu.arch == fields.Architecture.AARCH64:
+                if arch == fields.Architecture.AARCH64:
                     mode = "host-passthrough"
                     LOG.info('CPU mode "host-passthrough" was chosen. Live '
                              'migration can break unless all compute nodes '
@@ -4735,7 +4742,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # On AArch64 platform the return of _get_cpu_model_mapping will not
             # return the default CPU model.
             if mode == "custom":
-                if caps.host.cpu.arch == fields.Architecture.AARCH64:
+                if arch == fields.Architecture.AARCH64:
                     if not models:
                         models = ['max']
 
@@ -4801,7 +4808,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_cpu_config(self, flavor, image_meta,
                               guest_cpu_numa_config, instance_numa_topology):
-        cpu = self._get_guest_cpu_model_config(flavor)
+        arch = libvirt_utils.get_arch(image_meta)
+        cpu = self._get_guest_cpu_model_config(flavor, arch)
 
         if cpu is None:
             return None
@@ -5878,16 +5886,14 @@ class LibvirtDriver(driver.ComputeDriver):
         flavor: 'objects.Flavor',
     ) -> None:
         if CONF.libvirt.virt_type in ("kvm", "qemu"):
-            caps = self._host.get_capabilities()
-            if caps.host.cpu.arch in (
-                fields.Architecture.I686, fields.Architecture.X86_64,
-            ):
+            arch = libvirt_utils.get_arch(image_meta)
+            if arch in (fields.Architecture.I686, fields.Architecture.X86_64):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
 
             hw_firmware_type = image_meta.properties.get('hw_firmware_type')
 
-            if caps.host.cpu.arch == fields.Architecture.AARCH64:
+            if arch == fields.Architecture.AARCH64:
                 if not hw_firmware_type:
                     hw_firmware_type = fields.FirmwareType.UEFI
 
@@ -5899,7 +5905,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                     "functional testing and therefore "
                                     "considered experimental.")
                         uefi_logged = True
-                    for lpath in DEFAULT_UEFI_LOADER_PATH[caps.host.cpu.arch]:
+                    for lpath in DEFAULT_UEFI_LOADER_PATH[arch]:
                         if os.path.exists(lpath):
                             guest.os_loader = lpath
                     guest.os_loader_type = "pflash"

@@ -5254,26 +5254,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsInstance(cfg.devices[10],
                               vconfig.LibvirtConfigMemoryBalloon)
 
-    def test_has_uefi_support_not_supported_arch(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self._stub_host_capabilities_cpu_arch(fields.Architecture.ALPHA)
-        self.assertFalse(drvr._has_uefi_support())
-
-    @mock.patch('os.path.exists', return_value=False)
-    def test_has_uefi_support_with_no_loader_existed(self, mock_exist):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertFalse(drvr._has_uefi_support())
-
-    @mock.patch('os.path.exists', return_value=True)
-    def test_has_uefi_support(self, mock_has_version):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-
-        self._stub_host_capabilities_cpu_arch(fields.Architecture.X86_64)
-
-        with mock.patch.object(drvr._host,
-                               'has_min_version', return_value=True):
-            self.assertTrue(drvr._has_uefi_support())
-
     def test_get_guest_config_with_uefi(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
@@ -5292,11 +5272,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_support.assert_called_once_with()
             self.assertEqual(cfg.os_loader_type, "pflash")
 
-    @mock.patch('os.path.exists', return_value=True)
-    def test_check_uefi_support_aarch64(self, mock_exist):
+    def test_check_uefi_support_aarch64(self):
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self._stub_host_capabilities_cpu_arch(fields.Architecture.AARCH64)
-        self.assertTrue(drvr._has_uefi_support())
+        drvr._has_uefi_support = mock.Mock(return_value=True)
         self.assertTrue(drvr._check_uefi_support(None))
 
     def test_get_guest_config_with_block_device(self):
@@ -7655,16 +7635,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
     def test_get_guest_config_armv7(self, mock_numa, mock_storage):
-
-        def get_host_capabilities_stub(self):
-            cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.arch = fields.Architecture.ARMV7
-
-            caps = vconfig.LibvirtConfigCaps()
-            caps.host = vconfig.LibvirtConfigCapsHost()
-            caps.host.cpu = cpu
-            return caps
-
         self.flags(virt_type="kvm", group="libvirt")
         self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '5.4.0-0-generic', '', fields.Architecture.ARMV7)
@@ -7675,9 +7645,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
                                             image_meta)
-
-        self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
-                      get_host_capabilities_stub)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         cfg = drvr._get_guest_config(instance_ref,
@@ -7693,22 +7660,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_aarch64(
         self, mock_path_exists, mock_numa, mock_storage,
     ):
-
-        def get_host_capabilities_stub(self):
-            cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.arch = fields.Architecture.AARCH64
-
-            caps = vconfig.LibvirtConfigCaps()
-            caps.host = vconfig.LibvirtConfigCapsHost()
-            caps.host.cpu = cpu
-            return caps
-
         TEST_AMOUNT_OF_PCIE_SLOTS = 8
         CONF.set_override("num_pcie_ports", TEST_AMOUNT_OF_PCIE_SLOTS,
                 group='libvirt')
 
-        self.flags(virt_type="kvm",
-                   group="libvirt")
+        self.flags(virt_type="kvm", group="libvirt")
         self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
 
@@ -7718,9 +7674,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
                                             image_meta)
-
-        self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
-                      get_host_capabilities_stub)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         cfg = drvr._get_guest_config(instance_ref,
@@ -7751,20 +7704,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_get_guest_config_aarch64_with_graphics(
         self, mock_path_exists, mock_numa, mock_storage,
     ):
-
-        def get_host_capabilities_stub(self):
-            cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.arch = fields.Architecture.AARCH64
-
-            caps = vconfig.LibvirtConfigCaps()
-            caps.host = vconfig.LibvirtConfigCapsHost()
-            caps.host.cpu = cpu
-            return caps
-
         self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
-        self.stub_out('nova.virt.libvirt.host.Host.get_capabilities',
-                      get_host_capabilities_stub)
         self.flags(enabled=True, server_listen='10.0.0.1', group='vnc')
         self.flags(virt_type='kvm', group='libvirt')
         self.flags(enabled=False, group='spice')
@@ -8063,27 +8004,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             fields.Architecture.AARCH64: "host-passthrough",
         }
         for guestarch, expect_mode in expected.items():
-            caps = vconfig.LibvirtConfigCaps()
-            caps.host = vconfig.LibvirtConfigCapsHost()
-            caps.host.cpu = vconfig.LibvirtConfigCPU()
-            caps.host.cpu.arch = guestarch
-            with mock.patch.object(host.Host, "get_capabilities",
-                                   return_value=caps):
-                drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-                if caps.host.cpu.arch == fields.Architecture.AARCH64:
-                    drvr._has_uefi_support = mock.Mock(return_value=True)
-                instance_ref = objects.Instance(**self.test_instance)
-                image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+            self.mock_uname.return_value = fakelibvirt.os_uname(
+                'Linux', '', '5.4.0-0-generic', '', guestarch)
 
-                disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                                    instance_ref,
-                                                    image_meta)
-                conf = drvr._get_guest_config(instance_ref,
-                                              _fake_network_info(self),
-                                              image_meta, disk_info)
-                self.assertIsInstance(conf.cpu,
-                                      vconfig.LibvirtConfigGuestCPU)
-                self.assertEqual(conf.cpu.mode, expect_mode)
+            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+            instance_ref = objects.Instance(**self.test_instance)
+            image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+            disk_info = blockinfo.get_disk_info(
+                CONF.libvirt.virt_type, instance_ref, image_meta)
+            conf = drvr._get_guest_config(
+                instance_ref, _fake_network_info(self), image_meta, disk_info)
+            self.assertIsInstance(conf.cpu, vconfig.LibvirtConfigGuestCPU)
+            self.assertEqual(conf.cpu.mode, expect_mode)
 
     def test_get_guest_cpu_config_host_model(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -8128,34 +8061,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(conf.cpu.threads, 1)
 
     def test_get_guest_cpu_config_qemu_custom_aarch64(self):
-        self.flags(cpu_mode="custom", group='libvirt',
-                   cpu_models=["max"])
-        expected = {
-            fields.Architecture.AARCH64: "custom",
-        }
+        self.flags(cpu_mode='custom', group='libvirt', cpu_models=['max'])
+        self.mock_uname.return_value = fakelibvirt.os_uname(
+            'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
 
-        for guestarch, expect_mode in expected.items():
-            caps = vconfig.LibvirtConfigCaps()
-            caps.host = vconfig.LibvirtConfigCapsHost()
-            caps.host.cpu = vconfig.LibvirtConfigCPU()
-            caps.host.cpu.arch = guestarch
-            with mock.patch.object(host.Host, "get_capabilities",
-                                   return_value=caps):
-                drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-                if caps.host.cpu.arch == fields.Architecture.AARCH64:
-                    drvr._has_uefi_support = mock.Mock(return_value=True)
-                instance_ref = objects.Instance(**self.test_instance)
-                image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
-                disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                                    instance_ref,
-                                                    image_meta)
-                conf = drvr._get_guest_config(instance_ref,
-                                              _fake_network_info(self),
-                                              image_meta, disk_info)
-                self.assertIsInstance(conf.cpu,
-                                      vconfig.LibvirtConfigGuestCPU)
-                self.assertEqual(conf.cpu.mode, expect_mode)
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance_ref, image_meta)
+        conf = drvr._get_guest_config(
+            instance_ref, _fake_network_info(self), image_meta, disk_info)
+        self.assertIsInstance(conf.cpu, vconfig.LibvirtConfigGuestCPU)
+        self.assertEqual(conf.cpu.mode, 'custom')
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_guest_cpu_config_custom_with_extra_flags(self,
@@ -16887,10 +16806,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_domain.assert_called_once_with(instance)
         mock_get_error.assert_not_called()
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_uefi_support")
     @mock.patch.object(host.Host, "get_guest")
-    def test_undefine_domain_handles_libvirt_errors(self, mock_get,
-            mock_has_uefi):
+    def test_undefine_domain_handles_libvirt_errors(self, mock_get):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         fake_guest = mock.Mock()
