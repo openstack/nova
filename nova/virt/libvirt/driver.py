@@ -7284,110 +7284,7 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu_info['features'] = features
         return cpu_info
 
-    def _get_pcinet_info(
-        self,
-        dev: 'libvirt.virNodeDevice',
-        net_devs: ty.List['libvirt.virNodeDevice']
-    ) -> ty.Optional[ty.List[str]]:
-        """Returns a dict of NET device."""
-        net_dev = {dev.parent(): dev for dev in net_devs}.get(dev.name(), None)
-        if net_dev is None:
-            return None
-        xmlstr = net_dev.XMLDesc(0)
-        cfgdev = vconfig.LibvirtConfigNodeDevice()
-        cfgdev.parse_str(xmlstr)
-        return cfgdev.pci_capability.features
-
-    def _get_pcidev_info(
-        self,
-        devname: str,
-        dev: 'libvirt.virNodeDevice',
-        net_devs: ty.List['libvirt.virNodeDevice']
-    ) -> ty.Dict[str, ty.Union[str, dict]]:
-        """Returns a dict of PCI device."""
-
-        def _get_device_type(
-            cfgdev: vconfig.LibvirtConfigNodeDevice,
-            pci_address: str,
-            device: 'libvirt.virNodeDevice',
-            net_devs: ty.List['libvirt.virNodeDevice']
-        ) -> ty.Dict[str, str]:
-            """Get a PCI device's device type.
-
-            An assignable PCI device can be a normal PCI device,
-            a SR-IOV Physical Function (PF), or a SR-IOV Virtual
-            Function (VF).
-            """
-            net_dev_parents = {dev.parent() for dev in net_devs}
-            for fun_cap in cfgdev.pci_capability.fun_capability:
-                if fun_cap.type == 'virt_functions':
-                    return {
-                        'dev_type': fields.PciDeviceType.SRIOV_PF,
-                    }
-                if (fun_cap.type == 'phys_function' and
-                    len(fun_cap.device_addrs) != 0):
-                    phys_address = "%04x:%02x:%02x.%01x" % (
-                        fun_cap.device_addrs[0][0],
-                        fun_cap.device_addrs[0][1],
-                        fun_cap.device_addrs[0][2],
-                        fun_cap.device_addrs[0][3])
-                    result = {
-                        'dev_type': fields.PciDeviceType.SRIOV_VF,
-                        'parent_addr': phys_address,
-                    }
-                    parent_ifname = None
-                    # NOTE(sean-k-mooney): if the VF is a parent of a netdev
-                    # the PF should also have a netdev.
-                    if device.name() in net_dev_parents:
-                        parent_ifname = pci_utils.get_ifname_by_pci_address(
-                            pci_address, pf_interface=True)
-                        result['parent_ifname'] = parent_ifname
-                    return result
-
-            return {'dev_type': fields.PciDeviceType.STANDARD}
-
-        def _get_device_capabilities(
-            device_dict: dict,
-            device: 'libvirt.virNodeDevice',
-            net_devs: ty.List['libvirt.virNodeDevice']
-        ) -> ty.Dict[str, ty.Dict[str, ty.Optional[ty.List[str]]]]:
-            """Get PCI VF device's additional capabilities.
-
-            If a PCI device is a virtual function, this function reads the PCI
-            parent's network capabilities (must be always a NIC device) and
-            appends this information to the device's dictionary.
-            """
-            if device_dict.get('dev_type') == fields.PciDeviceType.SRIOV_VF:
-                pcinet_info = self._get_pcinet_info(device, net_devs)
-                if pcinet_info:
-                    return {'capabilities': {'network': pcinet_info}}
-            return {}
-
-        xmlstr = dev.XMLDesc(0)
-        cfgdev = vconfig.LibvirtConfigNodeDevice()
-        cfgdev.parse_str(xmlstr)
-
-        address = "%04x:%02x:%02x.%1x" % (
-            cfgdev.pci_capability.domain,
-            cfgdev.pci_capability.bus,
-            cfgdev.pci_capability.slot,
-            cfgdev.pci_capability.function)
-
-        device = {
-            "dev_id": cfgdev.name,
-            "address": address,
-            "product_id": "%04x" % cfgdev.pci_capability.product_id,
-            "vendor_id": "%04x" % cfgdev.pci_capability.vendor_id,
-            }
-
-        device["numa_node"] = cfgdev.pci_capability.numa_node
-
-        # requirement by DataBase Model
-        device['label'] = 'label_%(vendor_id)s_%(product_id)s' % device
-        device.update(_get_device_type(cfgdev, address, dev, net_devs))
-        device.update(_get_device_capabilities(device, dev, net_devs))
-        return device
-
+    # TODO(stephenfin): Move this to 'host.py'
     def _get_pci_passthrough_devices(self):
         """Get host PCI devices information.
 
@@ -7405,11 +7302,15 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         dev_flags = (libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_NET |
                      libvirt.VIR_CONNECT_LIST_NODE_DEVICES_CAP_PCI_DEV)
-        devices = {dev.name(): dev for dev in
-                   self._host.list_all_devices(flags=dev_flags)}
+        devices = {
+            dev.name(): dev for dev in
+            self._host.list_all_devices(flags=dev_flags)
+        }
         net_devs = [dev for dev in devices.values() if "net" in dev.listCaps()]
-        pci_info = [self._get_pcidev_info(name, dev, net_devs) for name, dev
-                    in devices.items() if "pci" in dev.listCaps()]
+        pci_info = [
+            self._host._get_pcidev_info(name, dev, net_devs)
+            for name, dev in devices.items() if "pci" in dev.listCaps()
+        ]
 
         return jsonutils.dumps(pci_info)
 

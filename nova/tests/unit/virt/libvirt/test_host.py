@@ -29,6 +29,7 @@ from nova.compute import vm_states
 from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
+from nova.pci import utils as pci_utils
 from nova import test
 from nova.tests.unit.virt.libvirt import fake_libvirt_data
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -1080,6 +1081,145 @@ Active:          8381604 kB
     def test_device_lookup_by_name(self, mock_nodeDeviceLookupByName):
         self.host.device_lookup_by_name("foo")
         mock_nodeDeviceLookupByName.assert_called_once_with("foo")
+
+    def test_get_pcinet_info(self):
+        dev_name = "net_enp2s2_02_9a_a1_37_be_54"
+        parent_address = "pci_0000_04_11_7"
+        net_dev = fakelibvirt.NodeDevice(
+            self.host._get_connection(),
+            xml=fake_libvirt_data._fake_NodeDevXml[dev_name])
+        pci_dev = fakelibvirt.NodeDevice(
+            self.host._get_connection(),
+            xml=fake_libvirt_data._fake_NodeDevXml[parent_address])
+        actualvf = self.host._get_pcinet_info(pci_dev, [net_dev])
+        expect_vf = ["rx", "tx", "sg", "tso", "gso", "gro", "rxvlan", "txvlan"]
+        self.assertEqual(expect_vf, actualvf)
+
+    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address')
+    def test_get_pcidev_info_non_nic(self, mock_get_ifname):
+        dev_name = "pci_0000_04_11_7"
+        pci_dev = fakelibvirt.NodeDevice(
+            self.host._get_connection(),
+            xml=fake_libvirt_data._fake_NodeDevXml[dev_name])
+        actual_vf = self.host._get_pcidev_info(dev_name, pci_dev, [])
+        expect_vf = {
+            "dev_id": dev_name, "address": "0000:04:11.7",
+            "product_id": '1520', "numa_node": 0,
+            "vendor_id": '8086', "label": 'label_8086_1520',
+            "dev_type": obj_fields.PciDeviceType.SRIOV_VF,
+            'parent_addr': '0000:04:00.3',
+        }
+        self.assertEqual(expect_vf, actual_vf)
+        mock_get_ifname.assert_not_called()
+
+    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
+                return_value='ens1')
+    def test_get_pcidev_info(self, mock_get_ifname):
+        devs = {
+            "pci_0000_04_00_3", "pci_0000_04_10_7", "pci_0000_04_11_7",
+            "pci_0000_04_00_1", "pci_0000_03_00_0", "pci_0000_03_00_1"
+        }
+        node_devs = {}
+        for dev_name in devs:
+            node_devs[dev_name] = (
+                fakelibvirt.NodeDevice(
+                    self.host._get_connection(),
+                    xml=fake_libvirt_data._fake_NodeDevXml[dev_name]))
+            for child in fake_libvirt_data._fake_NodeDevXml_children[dev_name]:
+                node_devs[child] = (
+                    fakelibvirt.NodeDevice(
+                        self.host._get_connection(),
+                        xml=fake_libvirt_data._fake_NodeDevXml[child]))
+        net_devs = [
+            dev for dev in node_devs.values() if dev.name() not in devs]
+
+        name = "pci_0000_04_00_3"
+        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        expect_vf = {
+            "dev_id": "pci_0000_04_00_3",
+            "address": "0000:04:00.3",
+            "product_id": '1521',
+            "numa_node": None,
+            "vendor_id": '8086',
+            "label": 'label_8086_1521',
+            "dev_type": obj_fields.PciDeviceType.SRIOV_PF,
+            }
+        self.assertEqual(expect_vf, actual_vf)
+
+        name = "pci_0000_04_10_7"
+        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        expect_vf = {
+            "dev_id": "pci_0000_04_10_7",
+            "address": "0000:04:10.7",
+            "product_id": '1520',
+            "numa_node": None,
+            "vendor_id": '8086',
+            "label": 'label_8086_1520',
+            "dev_type": obj_fields.PciDeviceType.SRIOV_VF,
+            "parent_addr": '0000:04:00.3',
+            "parent_ifname": "ens1",
+            "capabilities": {
+                "network": ["rx", "tx", "sg", "tso", "gso", "gro",
+                            "rxvlan", "txvlan"]},
+            }
+        self.assertEqual(expect_vf, actual_vf)
+
+        name = "pci_0000_04_11_7"
+        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        expect_vf = {
+            "dev_id": "pci_0000_04_11_7",
+            "address": "0000:04:11.7",
+            "product_id": '1520',
+            "vendor_id": '8086',
+            "numa_node": 0,
+            "label": 'label_8086_1520',
+            "dev_type": obj_fields.PciDeviceType.SRIOV_VF,
+            "parent_addr": '0000:04:00.3',
+            "capabilities": {
+                "network": ["rx", "tx", "sg", "tso", "gso", "gro",
+                            "rxvlan", "txvlan"]},
+            "parent_ifname": "ens1",
+        }
+        self.assertEqual(expect_vf, actual_vf)
+
+        name = "pci_0000_04_00_1"
+        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        expect_vf = {
+            "dev_id": "pci_0000_04_00_1",
+            "address": "0000:04:00.1",
+            "product_id": '1013',
+            "numa_node": 0,
+            "vendor_id": '15b3',
+            "label": 'label_15b3_1013',
+            "dev_type": obj_fields.PciDeviceType.STANDARD,
+            }
+        self.assertEqual(expect_vf, actual_vf)
+
+        name = "pci_0000_03_00_0"
+        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        expect_vf = {
+            "dev_id": "pci_0000_03_00_0",
+            "address": "0000:03:00.0",
+            "product_id": '1013',
+            "numa_node": 0,
+            "vendor_id": '15b3',
+            "label": 'label_15b3_1013',
+            "dev_type": obj_fields.PciDeviceType.SRIOV_PF,
+            }
+        self.assertEqual(expect_vf, actual_vf)
+
+        name = "pci_0000_03_00_1"
+        actual_vf = self.host._get_pcidev_info(name, node_devs[name], net_devs)
+        expect_vf = {
+            "dev_id": "pci_0000_03_00_1",
+            "address": "0000:03:00.1",
+            "product_id": '1013',
+            "numa_node": 0,
+            "vendor_id": '15b3',
+            "label": 'label_15b3_1013',
+            "dev_type": obj_fields.PciDeviceType.SRIOV_PF,
+            }
+        self.assertEqual(expect_vf, actual_vf)
 
     def test_list_pci_devices(self):
         with mock.patch.object(self.host, "_list_devices") as mock_listDevices:
