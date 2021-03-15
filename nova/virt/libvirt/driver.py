@@ -140,14 +140,6 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
-DEFAULT_UEFI_LOADER_PATH = {
-    "x86_64": ['/usr/share/OVMF/OVMF_CODE.fd',
-               '/usr/share/OVMF/OVMF_CODE.secboot.fd',
-               '/usr/share/qemu/ovmf-x86_64-code.bin'],
-    "aarch64": ['/usr/share/AAVMF/AAVMF_CODE.fd',
-                '/usr/share/qemu/aavmf-aarch64-code.bin']
-}
-
 MAX_CONSOLE_BYTES = 100 * units.Ki
 VALID_DISK_CACHEMODES = [
     "default", "none", "writethrough", "writeback", "directsync", "unsafe",
@@ -5823,40 +5815,12 @@ class LibvirtDriver(driver.ComputeDriver):
             return flavor
         return instance.flavor
 
-    def _has_uefi_support(self):
-        # This means that the host can support UEFI booting for guests
-        supported_archs = [fields.Architecture.X86_64,
-                           fields.Architecture.AARCH64]
-        caps = self._host.get_capabilities()
-        # TODO(dmllr, kchamart): Get rid of probing the OVMF binary file
-        # paths, it is not robust, because nothing but the binary's
-        # filename is reported, which means you have to detect its
-        # architecture and features by other means.  To solve this,
-        # query the libvirt's getDomainCapabilities() to get the
-        # firmware paths (as reported in the 'loader' value).  Nova now
-        # has a wrapper method for this, get_domain_capabilities().
-        # This is a more reliable way to detect UEFI boot support.
-        #
-        # Further, with libvirt 5.3 onwards, support for UEFI boot is
-        # much more simplified by the "firmware auto-selection" feature.
-        # When using this, Nova doesn't need to query OVMF file paths at
-        # all; libvirt will take care of it.  This is done by taking
-        # advantage of the so-called firmware "descriptor files" --
-        # small JSON files (which will be shipped by Linux
-        # distributions) that describe a UEFI firmware binary's
-        # "characteristics", such as the binary's file path, its
-        # features, architecture, supported machine type, NVRAM template
-        # and so forth.
-
-        return ((caps.host.cpu.arch in supported_archs) and
-                any((os.path.exists(p)
-                     for p in DEFAULT_UEFI_LOADER_PATH[caps.host.cpu.arch])))
-
     def _check_uefi_support(self, hw_firmware_type):
         caps = self._host.get_capabilities()
-        return (self._has_uefi_support() and
-                (hw_firmware_type == fields.FirmwareType.UEFI or
-                 caps.host.cpu.arch == fields.Architecture.AARCH64))
+        return self._host.supports_uefi and (
+            hw_firmware_type == fields.FirmwareType.UEFI or
+            caps.host.cpu.arch == fields.Architecture.AARCH64
+        )
 
     def _get_supported_perf_events(self):
         if not len(CONF.libvirt.enabled_perf_events):
@@ -5895,6 +5859,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
 
+            mach_type = libvirt_utils.get_machine_type(image_meta)
+            guest.os_mach_type = mach_type
+
             hw_firmware_type = image_meta.properties.get('hw_firmware_type')
 
             if arch == fields.Architecture.AARCH64:
@@ -5902,22 +5869,30 @@ class LibvirtDriver(driver.ComputeDriver):
                     hw_firmware_type = fields.FirmwareType.UEFI
 
             if hw_firmware_type == fields.FirmwareType.UEFI:
-                if self._has_uefi_support():
-                    global uefi_logged
-                    if not uefi_logged:
-                        LOG.warning("uefi support is without some kind of "
-                                    "functional testing and therefore "
-                                    "considered experimental.")
-                        uefi_logged = True
-                    for lpath in DEFAULT_UEFI_LOADER_PATH[arch]:
-                        if os.path.exists(lpath):
-                            guest.os_loader = lpath
-                    guest.os_loader_type = "pflash"
-                else:
+                global uefi_logged
+                if not uefi_logged:
+                    LOG.warning("uefi support is without some kind of "
+                                "functional testing and therefore "
+                                "considered experimental.")
+                    uefi_logged = True
+
+                if not self._host.supports_uefi:
                     raise exception.UEFINotSupported()
 
-            mtype = libvirt_utils.get_machine_type(image_meta)
-            guest.os_mach_type = mtype
+                # TODO(stephenfin): Drop this when we drop support for legacy
+                # architectures
+                if not mach_type:
+                    # loaders are specific to arch and machine type - if we
+                    # don't have a machine type here, we're on a legacy
+                    # architecture that we have no default machine type for
+                    raise exception.UEFINotSupported()
+
+                loader, nvram_template = self._host.get_loader(
+                    arch, mach_type, has_secure_boot=False)
+
+                guest.os_loader = loader
+                guest.os_loader_type = 'pflash'
+                guest.os_nvram_template = nvram_template
 
             # NOTE(lyarwood): If the machine type isn't recorded in the stashed
             # image metadata then record it through the system metadata table.
@@ -5929,7 +5904,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # nova.objects.ImageMeta.from_instance and the
             # nova.utils.get_image_from_system_metadata function.
             if image_meta.properties.get('hw_machine_type') is None:
-                instance.system_metadata['image_hw_machine_type'] = mtype
+                instance.system_metadata['image_hw_machine_type'] = mach_type
 
             if image_meta.properties.get('hw_boot_menu') is None:
                 guest.os_bootmenu = strutils.bool_from_string(
