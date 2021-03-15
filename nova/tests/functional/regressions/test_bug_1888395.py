@@ -64,13 +64,11 @@ class TestLiveMigrationWithoutMultiplePortBindings(
         self.start_compute(
             hostname='start_host',
             host_info=fakelibvirt.HostInfo(
-                cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=2,
-                kB_mem=10740000))
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=2))
         self.start_compute(
             hostname='end_host',
             host_info=fakelibvirt.HostInfo(
-                cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=2,
-                kB_mem=10740000))
+                cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=2))
 
         self.ctxt = context.get_admin_context()
         # TODO(sean-k-mooney): remove this when it is part of ServersTestBase

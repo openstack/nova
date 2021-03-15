@@ -102,7 +102,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
                                obj_fields.Architecture.X86_64))
 
         self.assertLessEqual(1024, res[1], "Memory unusually high.")
-        self.assertGreaterEqual(16384, res[1], "Memory unusually low.")
+        self.assertGreaterEqual(17000000, res[1], "Memory unusually low.")
         self.assertLessEqual(1, res[2], "Active CPU count unusually high.")
         self.assertGreaterEqual(32, res[2], "Active CPU count unusually low.")
         self.assertLessEqual(800, res[3], "CPU speed unusually high.")

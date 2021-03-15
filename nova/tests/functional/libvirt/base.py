@@ -18,7 +18,6 @@ import io
 
 import fixtures
 import mock
-from oslo_utils import units
 
 from nova import conf
 from nova.tests import fixtures as nova_fixtures
@@ -91,9 +90,7 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
     ):
         if not host_info:
             host_info = fakelibvirt.HostInfo(
-                cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2,
-                kB_mem=(16 * units.Gi) // units.Ki,
-            )
+                cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2)
 
         # sanity check
         self.assertGreater(16, host_info.cpus,

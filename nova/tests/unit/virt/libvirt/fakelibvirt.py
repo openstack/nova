@@ -579,7 +579,7 @@ class HostMdevDevicesInfo(object):
 class HostInfo(object):
 
     def __init__(self, cpu_nodes=1, cpu_sockets=1, cpu_cores=2, cpu_threads=1,
-                 kB_mem=4096, mempages=None):
+                 kB_mem=16780000, mempages=None):
         """Create a new Host Info object
 
         :param cpu_nodes: (int) the number of NUMA cell, 1 for unusual

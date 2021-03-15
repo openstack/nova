@@ -105,8 +105,7 @@ class NUMAServersTest(NUMAServersTestBase):
         """
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
+                                         cpu_cores=2, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {'hw:numa_nodes': '2'}
@@ -128,8 +127,7 @@ class NUMAServersTest(NUMAServersTestBase):
         separate host NUMA node.
         """
 
-        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
-                                         cpu_cores=2, kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo()
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {'hw:numa_nodes': '2'}
@@ -145,8 +143,7 @@ class NUMAServersTest(NUMAServersTestBase):
         """
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=2,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=(1024 * 1024 * 16))  # GB
+                                         cpu_cores=2, cpu_threads=2)
         # create 1024 * 2 MB huge pages, and allocate the rest of the 16 GB as
         # small pages
         for cell in host_info.numa_topology.cells:
@@ -177,8 +174,7 @@ class NUMAServersTest(NUMAServersTestBase):
         """
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=2,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=(1024 * 1024 * 16))  # GB
+                                         cpu_cores=2, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         # create 512 * 2 MB huge pages, and allocate the rest of the 16 GB as
@@ -207,8 +203,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
-                                         cpu_cores=5, cpu_threads=2,
-                                         kB_mem=15740000)
+                                         cpu_cores=5, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {
@@ -240,8 +235,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(
-            cpu_nodes=2, cpu_sockets=1, cpu_cores=4, cpu_threads=1,
-            kB_mem=15740000)
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=4, cpu_threads=1)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         # sanity check the created host topology object; this is really just a
@@ -297,8 +291,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(
-            cpu_nodes=2, cpu_sockets=1, cpu_cores=4, cpu_threads=1,
-            kB_mem=15740000)
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=4, cpu_threads=1)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         # sanity check the created host topology object; this is really just a
@@ -338,8 +331,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.flags(vcpu_pin_set='0-7')
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
+                                         cpu_cores=2, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {
@@ -367,9 +359,7 @@ class NUMAServersTest(NUMAServersTestBase):
         # host has hyperthreads, which means we're going to end up consuming
         # $flavor.vcpu hosts cores plus the thread sibling(s) for each core
         host_info = fakelibvirt.HostInfo(
-            cpu_nodes=1, cpu_sockets=1, cpu_cores=2, cpu_threads=2,
-            kB_mem=(1024 * 1024 * 16),  # GB
-        )
+            cpu_nodes=1, cpu_sockets=1, cpu_cores=2, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {
@@ -402,8 +392,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
-                                         cpu_cores=5, cpu_threads=2,
-                                         kB_mem=15740000)
+                                         cpu_cores=5, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {
@@ -423,8 +412,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
+                                         cpu_cores=2, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {
@@ -454,9 +442,7 @@ class NUMAServersTest(NUMAServersTestBase):
 
         # host has hyperthreads, which means it should be rejected
         host_info = fakelibvirt.HostInfo(
-            cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2,
-            kB_mem=(1024 * 1024 * 16),  # GB
-        )
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {
@@ -478,8 +464,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
+                                         cpu_cores=2, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {'resources:PCPU': '2'}
@@ -506,8 +491,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
-                                         cpu_cores=5, cpu_threads=2,
-                                         kB_mem=15740000)
+                                         cpu_cores=5, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {'resources:PCPU': 2}
@@ -526,8 +510,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.flags(vcpu_pin_set=None)
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
+                                         cpu_cores=2, cpu_threads=2)
         self.start_compute(host_info=host_info, hostname='compute1')
 
         extra_spec = {'resources:PCPU': '2'}
@@ -575,8 +558,7 @@ class NUMAServersTest(NUMAServersTestBase):
         self.flags(vif_plugging_timeout=0)
 
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
-                                         cpu_cores=2, cpu_threads=2,
-                                         kB_mem=15740000)
+                                         cpu_cores=2, cpu_threads=2)
 
         # Start services
         self.start_compute(host_info=host_info, hostname='test_compute0')
@@ -1300,7 +1282,7 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
         # the free space to ensure the numa topology filter does not
         # eliminate the host.
         host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
-                                         cpu_cores=4, kB_mem=15740000)
+                                         cpu_cores=4)
         self.start_compute(host_info=host_info)
 
         server = self._create_active_server(
@@ -1324,8 +1306,7 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
         # cpu_cores is set to 2 to ensure that we have enough space
         # to boot the vm but not enough space to rebuild
         # by doubling the resource use during scheduling.
-        host_info = fakelibvirt.HostInfo(
-            cpu_nodes=1, cpu_sockets=1, cpu_cores=2, kB_mem=15740000)
+        host_info = fakelibvirt.HostInfo()
         self.start_compute(host_info=host_info)
 
         server = self._create_active_server(
@@ -1344,7 +1325,7 @@ class NUMAServersRebuildTests(NUMAServersTestBase):
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
         host_info = fakelibvirt.HostInfo(
-            cpu_nodes=2, cpu_sockets=1, cpu_cores=4, kB_mem=15740000)
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=4)
         self.start_compute(host_info=host_info)
 
         server = self._create_active_server(
