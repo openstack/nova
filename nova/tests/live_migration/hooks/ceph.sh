@@ -8,6 +8,7 @@ function prepare_ceph {
     configure_ceph
     #install ceph-common package on compute nodes
     $ANSIBLE subnodes --become -f 5 -i "$WORKSPACE/inventory" -m raw -a "executable=/bin/bash
+    export CEPH_RELEASE=nautilus
     source $BASE/new/devstack/functions
     source $BASE/new/devstack/functions-common
     git clone https://git.openstack.org/openstack/devstack-plugin-ceph /tmp/devstack-plugin-ceph
