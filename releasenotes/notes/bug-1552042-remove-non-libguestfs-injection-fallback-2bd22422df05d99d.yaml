@@ -1,0 +1,41 @@
+---
+upgrade:
+  - |
+    Be sure to read the **Security** release notes about upgrade impacts for
+    resolving bug 1552042.
+security:
+  - |
+    When using the *libvirt* compute driver, the **libguestfs** package is now
+    **required** for file injection, if you are supporting that in your cloud
+    (see the ``[libvirt]/inject_partition`` config option).
+
+    Previously, if the libguestfs package was not installed, the nova-compute
+    service would fallback to mounting to the local compute host file system
+    which is a security exposure. This has been discussed for years in several
+    forums:
+
+    http://lists.openstack.org/pipermail/openstack-dev/2014-September/046764.html
+
+    http://lists.openstack.org/pipermail/openstack-dev/2016-July/098703.html
+
+    http://lists.openstack.org/pipermail/openstack-dev/2016-November/107233.html
+
+    Furthermore, the `2.57 compute REST API microversion`_ deprecated the use
+    of personality files for file injection. For more history on deprecating
+    file injection, see the `spec`__.
+
+    There are some known caveats with this:
+
+    * If running on s390x, you will need libguestfs >= 1.37.14.
+    * At this time, FreeBSD does not have a libguestfs package, therefore
+      file injection cannot be supported with the libvirt driver on a FreeBSD
+      compute host.
+    * ``[libvirt]/virt_type`` config option values other than ``kvm`` or
+      ``qemu`` may be impacted, like ``lxc``, where libguestfs was not
+      previously required.
+
+    For more background on this change, see
+    https://bugs.launchpad.net/nova/+bug/1552042.
+
+    .. _2.57 compute REST API microversion: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#id51
+    .. __: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/deprecate-file-injection.html

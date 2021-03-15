@@ -192,13 +192,12 @@ Related options:
                default=-2,
                min=-2,
                help="""
-Determines the way how the file system is chosen to inject data into it.
+Determines how the file system is chosen to inject data into it.
 
-*libguestfs* will be used a first solution to inject data. If that's not
-available on the host, the image will be locally mounted on the host as a
-fallback solution. If libguestfs is not able to determine the root partition
-(because there are more or less than one root partition) or cannot mount the
-file system it will result in an error and the instance won't be boot.
+*libguestfs* is used to inject data. If libguestfs is not able to determine
+the root partition (because there are more or less than one root partition) or
+cannot mount the file system it will result in an error and the instance won't
+boot.
 
 Possible values:
 
@@ -215,8 +214,8 @@ Related options:
   on value greater or equal to -1 for ``inject_partition``.
 * ``inject_password``: If this option allows the injection of an admin password
   it depends on value greater or equal to -1 for ``inject_partition``.
-* ``guestfs`` You can enable the debug log level of libguestfs with this
-  config option. A more verbose output will help in debugging issues.
+* ``[guestfs]/debug`` You can enable the debug log level of libguestfs with
+  this config option. A more verbose output will help in debugging issues.
 * ``virt_type``: If you use ``lxc`` as virt_type it will be treated as a
   single partition image
 """),

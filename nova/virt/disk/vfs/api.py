@@ -15,8 +15,6 @@
 from oslo_log import log as logging
 from oslo_utils import importutils
 
-from nova import exception
-
 LOG = logging.getLogger(__name__)
 
 
@@ -49,31 +47,16 @@ class VFS(object):
                   "partition=%(partition)s",
                   {'image': image, 'partition': partition})
 
-        vfs = None
-        try:
-            LOG.debug("Using primary VFSGuestFS")
-            vfs = importutils.import_object(
-                "nova.virt.disk.vfs.guestfs.VFSGuestFS",
-                image, partition)
-            if not VFS.guestfs_ready:
-                # Inspect for capabilities and keep
-                # track of the result only if succeeded.
-                vfs.inspect_capabilities()
-                VFS.guestfs_ready = True
-            return vfs
-        except exception.NovaException:
-            if vfs is not None:
-                # We are able to load libguestfs but
-                # something wrong happens when trying to
-                # check for capabilities.
-                raise
-            else:
-                LOG.info("Unable to import guestfs, "
-                         "falling back to VFSLocalFS")
-
-        return importutils.import_object(
-            "nova.virt.disk.vfs.localfs.VFSLocalFS",
+        LOG.debug("Using primary VFSGuestFS")
+        vfs = importutils.import_object(
+            "nova.virt.disk.vfs.guestfs.VFSGuestFS",
             image, partition)
+        if not VFS.guestfs_ready:
+            # Inspect for capabilities and keep
+            # track of the result only if succeeded.
+            vfs.inspect_capabilities()
+            VFS.guestfs_ready = True
+        return vfs
 
     def __init__(self, image, partition):
         """Create a new local VFS instance
