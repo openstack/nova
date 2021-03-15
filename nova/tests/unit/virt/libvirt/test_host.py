@@ -366,7 +366,7 @@ class HostTestCase(test.NoDBTestCase):
         get_conn_currency(self.host)
         get_conn_currency(self.host)
         self.assertEqual(self.connect_calls, 1)
-        self.assertEqual(self.register_calls, 1)
+        self.assertEqual(self.register_calls, 3)
 
     @mock.patch.object(fakelibvirt.virConnect, "domainEventRegisterAny")
     @mock.patch.object(host.Host, "_connect")
@@ -400,7 +400,7 @@ class HostTestCase(test.NoDBTestCase):
         thr1.wait()
         thr2.wait()
         self.assertEqual(self.connect_calls, 1)
-        self.assertEqual(self.register_calls, 1)
+        self.assertEqual(self.register_calls, 3)
 
     @mock.patch.object(host.Host, "_connect")
     def test_conn_event(self, mock_conn):

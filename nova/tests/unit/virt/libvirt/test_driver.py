@@ -26021,13 +26021,20 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
         conn = fakelibvirt.virConnect()
         conn.is_expected = True
 
-        side_effect = [conn, None]
+        side_effect = [conn, None, None, None]
         expected_calls = [
             mock.call(fakelibvirt.openAuth, 'test:///default',
                       mock.ANY, mock.ANY),
             mock.call(conn.domainEventRegisterAny, None,
                       fakelibvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
-                      mock.ANY, mock.ANY)]
+                      mock.ANY, mock.ANY),
+            mock.call(conn.domainEventRegisterAny, None,
+                      fakelibvirt.VIR_DOMAIN_EVENT_ID_DEVICE_REMOVED,
+                      mock.ANY, mock.ANY),
+            mock.call(conn.domainEventRegisterAny, None,
+                      fakelibvirt.VIR_DOMAIN_EVENT_ID_DEVICE_REMOVAL_FAILED,
+                      mock.ANY, mock.ANY),
+        ]
         if hasattr(fakelibvirt.virConnect, 'registerCloseCallback'):
             side_effect.append(None)
             expected_calls.append(mock.call(
