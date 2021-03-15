@@ -3118,6 +3118,26 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
         self.assertEqual("nvidia-11", obj.mdev_information.type)
         self.assertEqual(12, obj.mdev_information.iommu_group)
 
+    def test_config_vdpa_device(self):
+        xmlin = """
+        <device>
+          <name>vdpa_vdpa0</name>
+          <path>/sys/devices/pci0000:00/0000:00:02.2/0000:06:00.2/vdpa0</path>
+          <parent>pci_0000_06_00_2</parent>
+          <driver>
+            <name>vhost_vdpa</name>
+          </driver>
+          <capability type='vdpa'>
+            <chardev>/dev/vhost-vdpa-0</chardev>
+          </capability>
+        </device>"""
+
+        obj = config.LibvirtConfigNodeDevice()
+        obj.parse_str(xmlin)
+        self.assertIsInstance(
+            obj.vdpa_capability, config.LibvirtConfigNodeDeviceVDPACap)
+        self.assertEqual("/dev/vhost-vdpa-0", obj.vdpa_capability.dev_path)
+
 
 class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
 
