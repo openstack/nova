@@ -133,26 +133,6 @@ class VTPMServersTest(base.ServersTestBase):
 
         self.key_mgr = crypto._get_key_manager()
 
-    # TODO(stephenfin): This should be moved to the base class
-    def start_compute(self, hostname='compute1'):
-        fake_connection = self._get_connection(hostname=hostname)
-
-        # This is fun. Firstly we need to do a global'ish mock so we can
-        # actually start the service.
-        with mock.patch(
-            'nova.virt.libvirt.host.Host.get_connection',
-            return_value=fake_connection,
-        ):
-            compute = self.start_service('compute', host=hostname)
-            # Once that's done, we need to tweak the compute "service" to
-            # make sure it returns unique objects. We do this inside the
-            # mock context to avoid a small window between the end of the
-            # context and the tweaking where get_connection would revert to
-            # being an autospec mock.
-            compute.driver._host.get_connection = lambda: fake_connection
-
-        return compute
-
     def _create_server_with_vtpm(self):
         extra_specs = {'hw:tpm_model': 'tpm-tis', 'hw:tpm_version': '1.2'}
         flavor_id = self._create_flavor(extra_spec=extra_specs)
@@ -180,11 +160,10 @@ class VTPMServersTest(base.ServersTestBase):
         self.assertEqual(0, len(self.key_mgr._passphrases))
 
     def test_create_server(self):
-        self.compute = self.start_compute()
+        compute = self.start_compute()
 
         # ensure we are reporting the correct traits
-        root_rp_uuid = self._get_provider_uuid_by_name(self.compute.host)
-        traits = self._get_provider_traits(root_rp_uuid)
+        traits = self._get_provider_traits(self.compute_rp_uuids[compute])
         for trait in ('COMPUTE_SECURITY_TPM_1_2', 'COMPUTE_SECURITY_TPM_2_0'):
             self.assertIn(trait, traits)
 
@@ -202,7 +181,7 @@ class VTPMServersTest(base.ServersTestBase):
         self.assertEqual(0, len(self.key_mgr._passphrases))
 
     def test_suspend_resume_server(self):
-        self.compute = self.start_compute()
+        self.start_compute()
 
         # create a server with vTPM
         server = self._create_server_with_vtpm()
@@ -223,7 +202,7 @@ class VTPMServersTest(base.ServersTestBase):
         self.assertInstanceHasSecret(server)
 
     def test_soft_reboot_server(self):
-        self.compute = self.start_compute()
+        self.start_compute()
 
         # create a server with vTPM
         server = self._create_server_with_vtpm()
@@ -237,7 +216,7 @@ class VTPMServersTest(base.ServersTestBase):
         self.assertInstanceHasSecret(server)
 
     def test_hard_reboot_server(self):
-        self.compute = self.start_compute()
+        self.start_compute()
 
         # create a server with vTPM
         server = self._create_server_with_vtpm()
@@ -251,9 +230,8 @@ class VTPMServersTest(base.ServersTestBase):
         self.assertInstanceHasSecret(server)
 
     def test_resize_server__no_vtpm_to_vtpm(self):
-        self.computes = {}
         for host in ('test_compute0', 'test_compute1'):
-            self.computes[host] = self.start_compute(host)
+            self.start_compute(host)
 
         # create a server without vTPM
         server = self._create_server_without_vtpm()
@@ -296,9 +274,8 @@ class VTPMServersTest(base.ServersTestBase):
         self.assertInstanceHasNoSecret(server)
 
     def test_resize_server__vtpm_to_no_vtpm(self):
-        self.computes = {}
         for host in ('test_compute0', 'test_compute1'):
-            self.computes[host] = self.start_compute(host)
+            self.start_compute(host)
 
         # create a server with vTPM
         server = self._create_server_with_vtpm()
@@ -339,9 +316,8 @@ class VTPMServersTest(base.ServersTestBase):
         self.assertInstanceHasNoSecret(server)
 
     def test_migrate_server(self):
-        self.computes = {}
         for host in ('test_compute0', 'test_compute1'):
-            self.computes[host] = self.start_compute(host)
+            self.start_compute(host)
 
         # create a server with vTPM
         server = self._create_server_with_vtpm()
@@ -363,9 +339,8 @@ class VTPMServersTest(base.ServersTestBase):
         self.assertInstanceHasSecret(server)
 
     def test_live_migrate_server(self):
-        self.computes = {}
         for host in ('test_compute0', 'test_compute1'):
-            self.computes[host] = self.start_compute(host)
+            self.start_compute(host)
 
         # create a server with vTPM
         server = self._create_server_with_vtpm()
@@ -380,9 +355,8 @@ class VTPMServersTest(base.ServersTestBase):
             self._live_migrate_server, server)
 
     def test_shelve_server(self):
-        self.computes = {}
         for host in ('test_compute0', 'test_compute1'):
-            self.computes[host] = self.start_compute(host)
+            self.start_compute(host)
 
         # create a server with vTPM
         server = self._create_server_with_vtpm()
