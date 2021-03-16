@@ -94,14 +94,16 @@ Description
 Extra Specs
 ~~~~~~~~~~~
 
-.. TODO: Consider adding a table of contents here for the various extra specs
-         or make them sub-sections.
-
 .. todo::
 
    A lot of these need investigation - for example, I can find no reference to
    the ``cpu_shares_level`` option outside of documentation and (possibly)
    useless tests. We should assess which drivers each option actually apply to.
+
+.. todo::
+
+   This is now documented in :doc:`/configuration/extra-specs`, so this should
+   be removed and the documentation moved to those specs.
 
 .. _extra-specs-CPU-limits:
 
@@ -798,8 +800,8 @@ Hiding hypervisor signature
 .. _extra-specs-secure-boot:
 
 Secure Boot
-  When your Compute services use the Hyper-V hypervisor, you can enable secure
-  boot for Windows and Linux instances.
+  :doc:`Secure Boot </admin/secure-boot>` can help ensure the bootloader used
+  for your instances is trusted, preventing a possible attack vector.
 
   .. code:: console
 
@@ -812,136 +814,146 @@ Secure Boot
   - ``disabled`` or ``optional``: (default) Disable Secure Boot for instances
     running with this flavor.
 
+  .. note::
+
+     Supported by the Hyper-V and libvirt drivers.
+
+  .. versionchanged:: 23.0.0 (Wallaby)
+
+     Added support for secure boot to the libvirt driver.
+
 .. _extra-specs-required-resources:
 
 Custom resource classes and standard resource classes to override
-    Added in the 16.0.0 Pike release.
+  Specify custom resource classes to require or override quantity values of
+  standard resource classes.
 
-    Specify custom resource classes to require or override quantity values of
-    standard resource classes.
+  The syntax of the extra spec is ``resources:<resource_class_name>=VALUE``
+  (``VALUE`` is integer).
+  The name of custom resource classes must start with ``CUSTOM_``.
+  Standard resource classes to override are ``VCPU``, ``MEMORY_MB`` or
+  ``DISK_GB``. In this case, you can disable scheduling based on standard
+  resource classes by setting the value to ``0``.
 
-    The syntax of the extra spec is ``resources:<resource_class_name>=VALUE``
-    (``VALUE`` is integer).
-    The name of custom resource classes must start with ``CUSTOM_``.
-    Standard resource classes to override are ``VCPU``, ``MEMORY_MB`` or
-    ``DISK_GB``. In this case, you can disable scheduling based on standard
-    resource classes by setting the value to ``0``.
+  For example:
 
-    For example:
+  - ``resources:CUSTOM_BAREMETAL_SMALL=1``
+  - ``resources:VCPU=0``
 
-    - resources:CUSTOM_BAREMETAL_SMALL=1
-    - resources:VCPU=0
+  See :ironic-doc:`Create flavors for use with the Bare Metal service
+  <install/configure-nova-flavors>` for more examples.
 
-    See :ironic-doc:`Create flavors for use with the Bare Metal service
-    <install/configure-nova-flavors>` for more examples.
+  .. versionadded:: 16.0.0 (Pike)
 
 .. _extra-specs-required-traits:
 
 Required traits
-    Added in the 17.0.0 Queens release.
+  Required traits allow specifying a server to build on a compute node with
+  the set of traits specified in the flavor. The traits are associated with
+  the resource provider that represents the compute node in the Placement
+  API. See the resource provider traits API reference for more details:
+  https://docs.openstack.org/api-ref/placement/#resource-provider-traits
 
-    Required traits allow specifying a server to build on a compute node with
-    the set of traits specified in the flavor. The traits are associated with
-    the resource provider that represents the compute node in the Placement
-    API. See the resource provider traits API reference for more details:
-    https://docs.openstack.org/api-ref/placement/#resource-provider-traits
+  The syntax of the extra spec is ``trait:<trait_name>=required``, for
+  example:
 
-    The syntax of the extra spec is ``trait:<trait_name>=required``, for
-    example:
+  - ``trait:HW_CPU_X86_AVX2=required``
+  - ``trait:STORAGE_DISK_SSD=required``
 
-    - trait:HW_CPU_X86_AVX2=required
-    - trait:STORAGE_DISK_SSD=required
+  The scheduler will pass required traits to the
+  ``GET /allocation_candidates`` endpoint in the Placement API to include
+  only resource providers that can satisfy the required traits. In 17.0.0
+  the only valid value is ``required``. In 18.0.0 ``forbidden`` is added (see
+  below). Any other value will be considered
+  invalid.
 
-    The scheduler will pass required traits to the
-    ``GET /allocation_candidates`` endpoint in the Placement API to include
-    only resource providers that can satisfy the required traits. In 17.0.0
-    the only valid value is ``required``. In 18.0.0 ``forbidden`` is added (see
-    below). Any other value will be considered
-    invalid.
+  The FilterScheduler is currently the only scheduler driver that supports
+  this feature.
 
-    The FilterScheduler is currently the only scheduler driver that supports
-    this feature.
+  Traits can be managed using the `osc-placement plugin`__.
 
-    Traits can be managed using the `osc-placement plugin`_.
+  __ https://docs.openstack.org/osc-placement/latest/index.html
+
+  .. versionadded:: 17.0.0 (Queens)
 
 .. _extra-specs-forbidden-traits:
 
 Forbidden traits
-    Added in the 18.0.0 Rocky release.
+  Forbidden traits are similar to required traits, described above, but
+  instead of specifying the set of traits that must be satisfied by a compute
+  node, forbidden traits must **not** be present.
 
-    Forbidden traits are similar to required traits, described above, but
-    instead of specifying the set of traits that must be satisfied by a compute
-    node, forbidden traits must **not** be present.
+  The syntax of the extra spec is ``trait:<trait_name>=forbidden``, for
+  example:
 
-    The syntax of the extra spec is ``trait:<trait_name>=forbidden``, for
-    example:
+  - ``trait:HW_CPU_X86_AVX2=forbidden``
+  - ``trait:STORAGE_DISK_SSD=forbidden``
 
-    - trait:HW_CPU_X86_AVX2=forbidden
-    - trait:STORAGE_DISK_SSD=forbidden
+  The FilterScheduler is currently the only scheduler driver that supports
+  this feature.
 
-    The FilterScheduler is currently the only scheduler driver that supports
-    this feature.
+  Traits can be managed using the `osc-placement plugin`__.
 
-    Traits can be managed using the `osc-placement plugin`_.
+  __ https://docs.openstack.org/osc-placement/latest/index.html
 
-.. _osc-placement plugin: https://docs.openstack.org/osc-placement/latest/index.html
+  .. versionadded:: 18.0.0 (Rocky)
 
 .. _extra-specs-numbered-resource-groupings:
 
 Numbered groupings of resource classes and traits
-    Added in the 18.0.0 Rocky release.
+  Specify numbered groupings of resource classes and traits.
 
-    Specify numbered groupings of resource classes and traits.
+  The syntax is as follows (``N`` and ``VALUE`` are integers):
 
-    The syntax is as follows (``N`` and ``VALUE`` are integers):
+  .. parsed-literal::
 
-    .. parsed-literal::
+    resources\ *N*:*<resource_class_name>*\ =\ *VALUE*
+    trait\ *N*:*<trait_name>*\ =required
 
-      resources\ *N*:*<resource_class_name>*\ =\ *VALUE*
-      trait\ *N*:*<trait_name>*\ =required
+  A given numbered ``resources`` or ``trait`` key may be repeated to
+  specify multiple resources/traits in the same grouping,
+  just as with the un-numbered syntax.
 
-    A given numbered ``resources`` or ``trait`` key may be repeated to
-    specify multiple resources/traits in the same grouping,
-    just as with the un-numbered syntax.
+  Specify inter-group affinity policy via the ``group_policy`` key,
+  which may have the following values:
 
-    Specify inter-group affinity policy via the ``group_policy`` key,
-    which may have the following values:
+  * ``isolate``: Different numbered request groups will be satisfied by
+    *different* providers.
+  * ``none``: Different numbered request groups may be satisfied
+    by different providers *or* common providers.
 
-    * ``isolate``: Different numbered request groups will be satisfied by
-      *different* providers.
-    * ``none``: Different numbered request groups may be satisfied
-      by different providers *or* common providers.
+  .. note::
 
-    .. note::
+      If more than one group is specified then the ``group_policy`` is
+      mandatory in the request. However such groups might come from other
+      sources than flavor extra_spec (e.g. from Neutron ports with QoS
+      minimum bandwidth policy). If the flavor does not specify any groups
+      and ``group_policy`` but more than one group is coming from other
+      sources then nova will default the ``group_policy`` to ``none`` to
+      avoid scheduler failure.
 
-        If more than one group is specified then the ``group_policy`` is
-        mandatory in the request. However such groups might come from other
-        sources than flavor extra_spec (e.g. from Neutron ports with QoS
-        minimum bandwidth policy). If the flavor does not specify any groups
-        and ``group_policy`` but more than one group is coming from other
-        sources then nova will default the ``group_policy`` to ``none`` to
-        avoid scheduler failure.
+  For example, to create a server with the following VFs:
 
-    For example, to create a server with the following VFs:
+  * One SR-IOV virtual function (VF) on NET1 with bandwidth 10000 bytes/sec
+  * One SR-IOV virtual function (VF) on NET2 with bandwidth 20000 bytes/sec
+    on a *different* NIC with SSL acceleration
 
-    * One SR-IOV virtual function (VF) on NET1 with bandwidth 10000 bytes/sec
-    * One SR-IOV virtual function (VF) on NET2 with bandwidth 20000 bytes/sec
-      on a *different* NIC with SSL acceleration
+  It is specified in the extra specs as follows::
 
-    It is specified in the extra specs as follows::
+    resources1:SRIOV_NET_VF=1
+    resources1:NET_EGRESS_BYTES_SEC=10000
+    trait1:CUSTOM_PHYSNET_NET1=required
+    resources2:SRIOV_NET_VF=1
+    resources2:NET_EGRESS_BYTES_SEC:20000
+    trait2:CUSTOM_PHYSNET_NET2=required
+    trait2:HW_NIC_ACCEL_SSL=required
+    group_policy=isolate
 
-      resources1:SRIOV_NET_VF=1
-      resources1:NET_EGRESS_BYTES_SEC=10000
-      trait1:CUSTOM_PHYSNET_NET1=required
-      resources2:SRIOV_NET_VF=1
-      resources2:NET_EGRESS_BYTES_SEC:20000
-      trait2:CUSTOM_PHYSNET_NET2=required
-      trait2:HW_NIC_ACCEL_SSL=required
-      group_policy=isolate
+  See `Granular Resource Request Syntax`__ for more details.
 
-    See `Granular Resource Request Syntax`_ for more details.
+  __ https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/granular-resource-requests.html
 
-.. _Granular Resource Request Syntax: https://specs.openstack.org/openstack/nova-specs/specs/rocky/implemented/granular-resource-requests.html
+  .. versionadded:: 18.0.0 (Rocky)
 
 .. _vtpm-flavor:
 

@@ -213,7 +213,7 @@ class NovaDomain(domains.Domain):
         self, env, fromdocname, builder, typ, target, node, contnode,
     ):
         """Resolve cross-references"""
-        if typ == 'option':
+        if typ == 'extra-spec':
             return sphinx_nodes.make_refnode(
                 builder,
                 fromdocname,
