@@ -1,0 +1,16 @@
+---
+deprecations:
+  - |
+    The ``[libvirt]live_migration_tunnelled`` option is deprecated as of
+    Wallaby (23.0.0) release.
+
+    The "tunnelled live migration" has two inherent limitations: (a) it
+    cannot handle live migration of disks in a non-shared storage setup,
+    and (b) it has a huge performance overhead and latency, because it
+    burns more CPU and memory during live migration.
+
+    Both these problems are addressed by the QEMU-native support in Nova
+    -- this is the recommended approach for securing all live migration
+    streams (guest RAM, device state, and disks).  Assuming TLS
+    environment is setup, this can be enabled by setting the config
+    attribiute ``[libvirt]live_migration_with_native_tls``.

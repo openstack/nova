@@ -285,6 +285,15 @@ Related options:
 """),
     cfg.BoolOpt('live_migration_tunnelled',
                 default=False,
+                deprecated_for_removal=True,
+                deprecated_since='23.0.0',
+                deprecated_reason="""
+The "tunnelled live migration" has two inherent limitations: it cannot
+handle live migration of disks in a non-shared storage setup; and it has
+a huge performance cost.  Both these problems are solved by
+``live_migration_with_native_tls`` (requires a pre-configured TLS
+environment), which is the recommended approach for securing all live
+migration streams.""",
                 help="""
 Enable tunnelled migration.
 
