@@ -1817,6 +1817,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         elif self.net_type == "direct":
             dev.append(etree.Element("source", dev=self.source_dev,
                                      mode=self.source_mode))
+        elif self.net_type == "vdpa":
+            dev.append(etree.Element("source", dev=self.source_dev))
         elif self.net_type == "hostdev":
             source_elem = etree.Element("source")
             domain, bus, slot, func = \

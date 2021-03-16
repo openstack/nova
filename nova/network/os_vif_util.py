@@ -332,7 +332,7 @@ def _nova_to_osvif_vif_ovs(vif):
         interface_id=vif.get('ovs_interfaceid') or vif['id'],
         datapath_type=vif['details'].get(
             model.VIF_DETAILS_OVS_DATAPATH_TYPE))
-    if vnic_type == model.VNIC_TYPE_DIRECT:
+    if vnic_type in (model.VNIC_TYPE_DIRECT, model.VNIC_TYPE_VDPA):
         obj = _get_vnic_direct_vif_instance(
             vif,
             port_profile=_get_ovs_representor_port_profile(vif),

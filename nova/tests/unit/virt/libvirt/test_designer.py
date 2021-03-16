@@ -174,6 +174,25 @@ class DesignerTestCase(test.NoDBTestCase):
         self.assertIsNone(conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
 
+    def test_set_vif_host_backend_vdpa_config(self):
+        conf = config.LibvirtConfigGuestInterface()
+        designer.set_vif_host_backend_vdpa_config(
+            conf, '/dev/vdpa_vdpa0')
+        self.assertEqual('vdpa', conf.net_type)
+        self.assertEqual('/dev/vdpa_vdpa0', conf.source_dev)
+        self.assertIsNone(conf.vhost_rx_queue_size)
+        self.assertIsNone(conf.vhost_tx_queue_size)
+
+    def test_set_vif_host_backend_vdpa_config_queue_size(self):
+        conf = config.LibvirtConfigGuestInterface()
+        designer.set_vif_host_backend_vdpa_config(
+            conf, '/dev/vdpa_vdpa0', rx_queue_size=512,
+            tx_queue_size=1024)
+        self.assertEqual('vdpa', conf.net_type)
+        self.assertEqual('/dev/vdpa_vdpa0', conf.source_dev)
+        self.assertEqual(512, conf.vhost_rx_queue_size)
+        self.assertEqual(1024, conf.vhost_tx_queue_size)
+
     def test_set_vif_host_backend_vhostuser_config_queue_size(self):
         conf = config.LibvirtConfigGuestInterface()
         designer.set_vif_host_backend_vhostuser_config(conf, 'fake-mode',
