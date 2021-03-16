@@ -688,6 +688,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def init_host(self, host):
         self._host.initialize()
 
+        self._update_host_specific_capabilities()
+
         self._check_cpu_set_configuration()
 
         self._do_quality_warnings()
@@ -784,6 +786,14 @@ class LibvirtDriver(driver.ComputeDriver):
         self._check_vtpm_support()
 
         self._register_instance_machine_type()
+
+    def _update_host_specific_capabilities(self) -> None:
+        """Update driver capabilities based on capabilities of the host."""
+        # TODO(stephenfin): We should also be reporting e.g. SEV functionality
+        # or UEFI bootloader support in this manner
+        self.capabilities.update({
+            'supports_secure_boot': self._host.supports_secure_boot,
+        })
 
     def _register_instance_machine_type(self):
         """Register the machine type of instances on this host

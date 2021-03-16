@@ -864,6 +864,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             "'swtpm_enabled=True'"
         )
 
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_register_instance_machine_type',
+        new=mock.Mock())
+    @mock.patch.object(
+        host.Host, 'supports_secure_boot', new_callable=mock.PropertyMock)
+    def test_driver_capabilities_secure_boot(self, mock_supports):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.init_host("dummyhost")
+        self.assertTrue(
+            drvr.capabilities['supports_secure_boot'],
+            "Driver capabilities for 'supports_secure_boot' is invalid when "
+            "host should support this feature"
+        )
+        mock_supports.assert_called_once_with()
+
     def test_driver_raises_on_non_linux_platform(self):
         with utils.temporary_mutation(sys, platform='darwin'):
             self.assertRaises(
@@ -2447,8 +2462,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         test_init_host()
         # NOTE(dkliban): Will fail if get_host_capabilities is called before
         # registerErrorHandler
-        self.assertEqual(['fake_registerErrorHandler',
-                          'fake_get_host_capabilities'], calls)
+        self.assertEqual('fake_registerErrorHandler', calls[0])
+        self.assertEqual('fake_get_host_capabilities', calls[1])
 
     def test_sanitize_log_to_xml(self):
         # setup fake data
