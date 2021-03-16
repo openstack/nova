@@ -274,6 +274,14 @@
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
+            vars:
+              devstack_localrc:
+                # To workaround https://bugs.launchpad.net/neutron/+bug/1914037
+                # tempest is pinned to 26.0.0 on stable/stein in devstack, so
+                # we cannot consume the tempest fix.
+                IPV6_PUBLIC_RANGE: 2001:db8:0:10::/64
+                IPV6_PUBLIC_NETWORK_GATEWAY: 2001:db8:0:10::2
+                IPV6_ROUTER_GW_IP: 2001:db8:0:10::1
         - grenade-py3:
             irrelevant-files: *dsvm-irrelevant-files
     gate:
@@ -287,6 +295,14 @@
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-slow-py3:
             irrelevant-files: *dsvm-irrelevant-files
+            vars:
+              devstack_localrc:
+                # To workaround https://bugs.launchpad.net/neutron/+bug/1914037
+                # tempest is pinned to 26.0.0 on stable/stein in devstack, so
+                # we cannot consume the tempest fix.
+                IPV6_PUBLIC_RANGE: 2001:db8:0:10::/64
+                IPV6_PUBLIC_NETWORK_GATEWAY: 2001:db8:0:10::2
+                IPV6_ROUTER_GW_IP: 2001:db8:0:10::1
         - grenade-py3:
             irrelevant-files: *dsvm-irrelevant-files
     experimental:
