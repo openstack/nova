@@ -26,26 +26,11 @@ import nova.privsep
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def readfile(path):
-    if not os.path.exists(path):
-        raise exception.FileNotFound(file_path=path)
-    with open(path, 'r') as f:
-        return f.read()
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
 def writefile(path, mode, content):
     if not os.path.exists(os.path.dirname(path)):
         raise exception.FileNotFound(file_path=path)
     with open(path, mode) as f:
         f.write(content)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def readlink(path):
-    if not os.path.exists(path):
-        raise exception.FileNotFound(file_path=path)
-    return os.readlink(path)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -100,13 +85,6 @@ def rmdir(path):
     if not os.path.exists(path):
         raise exception.FileNotFound(file_path=path)
     os.rmdir(path)
-
-
-class path(object):
-    @staticmethod
-    @nova.privsep.sys_admin_pctxt.entrypoint
-    def exists(path):
-        return os.path.exists(path)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint

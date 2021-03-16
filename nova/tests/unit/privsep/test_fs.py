@@ -143,13 +143,6 @@ class PrivsepFilesystemHelpersTestCase(test.NoDBTestCase):
         mock_execute.assert_called_with('kpartx', '-d', '/dev/nosuch')
 
     @mock.patch('oslo_concurrency.processutils.execute')
-    def test_get_filesystem_type(self, mock_execute):
-        nova.privsep.fs.get_filesystem_type('/dev/nosuch')
-        mock_execute.assert_called_with('blkid', '-o', 'value', '-s',
-                                        'TYPE', '/dev/nosuch',
-                                        check_exit_code=[0, 2])
-
-    @mock.patch('oslo_concurrency.processutils.execute')
     def test_privileged_e2fsck(self, mock_execute):
         nova.privsep.fs.e2fsck('/path/nosuch')
         mock_execute.assert_called_with('e2fsck', '-fp', '/path/nosuch',
