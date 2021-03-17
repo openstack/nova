@@ -56,7 +56,8 @@ PCI_TRUSTED_TAG = 'trusted'
 PCI_DEVICE_TYPE_TAG = 'dev_type'
 
 DEVICE_TYPE_FOR_VNIC_TYPE = {
-    network_model.VNIC_TYPE_DIRECT_PHYSICAL: obj_fields.PciDeviceType.SRIOV_PF
+    network_model.VNIC_TYPE_DIRECT_PHYSICAL: obj_fields.PciDeviceType.SRIOV_PF,
+    network_model.VNIC_TYPE_VDPA: obj_fields.PciDeviceType.VDPA,
 }
 
 CONF = nova.conf.CONF

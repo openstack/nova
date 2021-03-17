@@ -354,7 +354,9 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             self._bulk_update_status(vfs_list,
                                            fields.PciDeviceStatus.UNCLAIMABLE)
 
-        elif self.dev_type == fields.PciDeviceType.SRIOV_VF:
+        elif self.dev_type in (
+            fields.PciDeviceType.SRIOV_VF, fields.PciDeviceType.VDPA
+        ):
             # Update VF status to CLAIMED if it's parent has not been
             # previously allocated or claimed
             # When claiming/allocating a VF, it's parent PF becomes
@@ -414,7 +416,9 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             self._bulk_update_status(vfs_list,
                                      fields.PciDeviceStatus.UNAVAILABLE)
 
-        elif (self.dev_type == fields.PciDeviceType.SRIOV_VF):
+        elif self.dev_type in (
+            fields.PciDeviceType.SRIOV_VF, fields.PciDeviceType.VDPA
+        ):
             parent = self.parent_device
             if parent:
                 if parent.status not in parent_ok_statuses:
@@ -473,7 +477,9 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             self._bulk_update_status(vfs_list,
                                      fields.PciDeviceStatus.AVAILABLE)
             free_devs.extend(vfs_list)
-        if self.dev_type == fields.PciDeviceType.SRIOV_VF:
+        if self.dev_type in (
+            fields.PciDeviceType.SRIOV_VF, fields.PciDeviceType.VDPA
+        ):
             # Set PF status to AVAILABLE if all of it's VFs are free
             parent = self.parent_device
             if not parent:

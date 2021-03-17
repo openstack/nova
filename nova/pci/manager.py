@@ -189,7 +189,9 @@ class PciDevTracker(object):
             if dev.dev_type == fields.PciDeviceType.SRIOV_PF:
                 dev.child_devices = []
                 parents[dev.address] = dev
-            elif dev.dev_type == fields.PciDeviceType.SRIOV_VF:
+            elif dev.dev_type in (
+                fields.PciDeviceType.SRIOV_VF, fields.PciDeviceType.VDPA
+            ):
                 dev.parent_device = parents.get(dev.parent_addr)
                 if dev.parent_device:
                     parents[dev.parent_addr].child_devices.append(dev)

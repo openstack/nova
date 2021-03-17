@@ -629,37 +629,75 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
     def _create_pci_devices(self, vf_product_id=1515, pf_product_id=1528):
         self.sriov_pf_devices = []
         for dev in range(2):
-            pci_dev = {'compute_node_id': 1,
-                       'address': '0000:81:00.%d' % dev,
-                       'vendor_id': '8086',
-                       'product_id': '%d' % pf_product_id,
-                       'status': 'available',
-                       'request_id': None,
-                       'dev_type': fields.PciDeviceType.SRIOV_PF,
-                       'parent_addr': None,
-                       'numa_node': 0}
+            pci_dev = {
+                'compute_node_id': 1,
+                'address': '0000:81:00.%d' % dev,
+                'vendor_id': '8086',
+                'product_id': '%d' % pf_product_id,
+                'status': 'available',
+                'request_id': None,
+                'dev_type': fields.PciDeviceType.SRIOV_PF,
+                'parent_addr': None,
+                'numa_node': 0
+            }
             dev_obj = objects.PciDevice.create(None, pci_dev)
             dev_obj.child_devices = []
             self.sriov_pf_devices.append(dev_obj)
 
         self.sriov_vf_devices = []
         for dev in range(8):
-            pci_dev = {'compute_node_id': 1,
-                       'address': '0000:81:10.%d' % dev,
-                       'vendor_id': '8086',
-                       'product_id': '%d' % vf_product_id,
-                       'status': 'available',
-                       'request_id': None,
-                       'dev_type': fields.PciDeviceType.SRIOV_VF,
-                       'parent_addr': '0000:81:00.%d' % int(dev / 4),
-                       'numa_node': 0}
+            pci_dev = {
+                'compute_node_id': 1,
+                'address': '0000:81:10.%d' % dev,
+                'vendor_id': '8086',
+                'product_id': '%d' % vf_product_id,
+                'status': 'available',
+                'request_id': None,
+                'dev_type': fields.PciDeviceType.SRIOV_VF,
+                'parent_addr': '0000:81:00.%d' % int(dev / 4),
+                'numa_node': 0
+            }
             dev_obj = objects.PciDevice.create(None, pci_dev)
             dev_obj.parent_device = self.sriov_pf_devices[int(dev / 4)]
             dev_obj.parent_device.child_devices.append(dev_obj)
             self.sriov_vf_devices.append(dev_obj)
 
+        self.vdpa_devices = []
+        for dev in range(8):
+            pci_dev = {
+                'compute_node_id': 1,
+                'address': '0000:82:10.%d' % dev,
+                'vendor_id': '8086',
+                'product_id': '%d' % vf_product_id,
+                'status': 'available',
+                'request_id': None,
+                'dev_type': fields.PciDeviceType.VDPA,
+                'parent_addr': '0000:81:00.%d' % int(dev / 4),
+                'numa_node': 0
+            }
+            dev_obj = objects.PciDevice.create(None, pci_dev)
+            dev_obj.parent_device = self.sriov_pf_devices[int(dev / 4)]
+            dev_obj.parent_device.child_devices.append(dev_obj)
+            self.vdpa_devices.append(dev_obj)
+
         list(map(self.pci_stats.add_device, self.sriov_pf_devices))
         list(map(self.pci_stats.add_device, self.sriov_vf_devices))
+        list(map(self.pci_stats.add_device, self.vdpa_devices))
+
+    def test_consume_VDPA_requests(self):
+        self._create_pci_devices()
+        pci_requests = [
+            objects.InstancePCIRequest(
+                count=8, spec=[{'dev_type': 'vdpa'}])]
+        devs = self.pci_stats.consume_requests(pci_requests)
+        self.assertEqual(8, len(devs))
+        self.assertEqual('vdpa', devs[0].dev_type)
+        free_devs = self.pci_stats.get_free_devs()
+        # Validate that the parents of these devs has been removed
+        # from pools.
+        for dev in devs:
+            self.assertNotIn(dev.parent_addr,
+                             [free_dev.address for free_dev in free_devs])
 
     def test_consume_VF_requests(self):
         self._create_pci_devices()
