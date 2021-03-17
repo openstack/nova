@@ -162,7 +162,6 @@
               - ^tests-py3.txt$
               - ^tools/.*$
               - ^tox.ini$
-        - nova-grenade-live-migration
         - nova-live-migration
         - tempest-slow:
             irrelevant-files:
@@ -181,21 +180,6 @@
               - ^tox.ini$
         - nova-tox-functional
         - nova-tox-functional-py35
-        - neutron-grenade-multinode:
-            irrelevant-files:
-              - ^(placement-)?api-.*$
-              - ^(test-|)requirements.txt$
-              - ^.*\.rst$
-              - ^.git.*$
-              - ^doc/.*$
-              - ^nova/hacking/.*$
-              - ^nova/locale/.*$
-              - ^nova/tests/.*$
-              - ^releasenotes/.*$
-              - ^setup.cfg$
-              - ^tests-py3.txt$
-              - ^tools/.*$
-              - ^tox.ini$
         - neutron-tempest-linuxbridge:
             irrelevant-files:
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
@@ -229,21 +213,6 @@
               - ^tools/.*$
               - ^tox.ini$
         - tempest-full:
-            irrelevant-files:
-              - ^(placement-)?api-.*$
-              - ^(test-|)requirements.txt$
-              - ^.*\.rst$
-              - ^.git.*$
-              - ^doc/.*$
-              - ^nova/hacking/.*$
-              - ^nova/locale/.*$
-              - ^nova/tests/.*$
-              - ^releasenotes/.*$
-              - ^setup.cfg$
-              - ^tests-py3.txt$
-              - ^tools/.*$
-              - ^tox.ini$
-        - neutron-grenade:
             irrelevant-files:
               - ^(placement-)?api-.*$
               - ^(test-|)requirements.txt$
@@ -293,6 +262,27 @@
               - ^tests-py3.txt$
               - ^tools/.*$
               - ^tox.ini$
+    post:
+      jobs:
+        - openstack-tox-cover
+    experimental:
+      jobs:
+        - nova-grenade-live-migration
+        - neutron-grenade-multinode:
+            irrelevant-files:
+              - ^(placement-)?api-.*$
+              - ^(test-|)requirements.txt$
+              - ^.*\.rst$
+              - ^.git.*$
+              - ^doc/.*$
+              - ^nova/hacking/.*$
+              - ^nova/locale/.*$
+              - ^nova/tests/.*$
+              - ^releasenotes/.*$
+              - ^setup.cfg$
+              - ^tests-py3.txt$
+              - ^tools/.*$
+              - ^tox.ini$
         - neutron-grenade:
             irrelevant-files:
               - ^(placement-)?api-.*$
@@ -308,11 +298,6 @@
               - ^tests-py3.txt$
               - ^tools/.*$
               - ^tox.ini$
-    post:
-      jobs:
-        - openstack-tox-cover
-    experimental:
-      jobs:
         - tempest-nova-v2-api:
             irrelevant-files:
               - ^(placement-)?api-.*$
