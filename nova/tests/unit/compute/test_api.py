@@ -3601,23 +3601,29 @@ class _ComputeAPIUnitTestMixIn(object):
                     'boot_index': -1})
         fake_bdm['instance'] = fake_instance.fake_db_instance(
             launched_at=timeutils.utcnow(),
-            vm_state=vm_states.STOPPED)
+            vm_state=vm_states.ACTIVE)
         fake_bdm['instance_uuid'] = fake_bdm['instance']['uuid']
         fake_bdm = objects.BlockDeviceMapping._from_db_object(
                 self.context, objects.BlockDeviceMapping(),
                 fake_bdm, expected_attrs=['instance'])
 
         mock_get_bdm.return_value = fake_bdm
+        delete_info = {
+            'merge_target_file': 'foo.qcow2',
+        }
 
-        with mock.patch.object(self.compute_api.compute_rpcapi,
-                               'volume_snapshot_delete') as mock_snapshot:
-            self.compute_api.volume_snapshot_delete(self.context, volume_id,
-                snapshot_id, {})
-
+        with mock.patch.object(
+            self.compute_api.compute_rpcapi, 'volume_snapshot_delete'
+        ) as mock_snapshot:
+            self.compute_api.volume_snapshot_delete(
+                self.context, volume_id, snapshot_id, delete_info
+            )
         mock_get_bdm.assert_called_once_with(self.context, volume_id,
                                              expected_attrs=['instance'])
         mock_snapshot.assert_called_once_with(
-            self.context, fake_bdm['instance'], volume_id, snapshot_id, {})
+            self.context, fake_bdm['instance'], volume_id, snapshot_id,
+            delete_info
+        )
 
     @mock.patch.object(
         objects.BlockDeviceMapping, 'get_by_volume',
@@ -3650,6 +3656,43 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.volume_snapshot_delete,
                           self.context, mock.sentinel.volume_id,
                           mock.sentinel.snapshot_id, mock.sentinel.delete_info)
+
+    @mock.patch.object(compute_api.API, '_get_bdm_by_volume_id')
+    def test_volume_snapshot_delete_intermediary_commit(self, mock_get_bdm):
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict({
+            'id': 123,
+            'device_name': '/dev/sda2',
+            'source_type': 'volume',
+            'destination_type': 'volume',
+            'connection_info': "{'fake': 'connection_info'}",
+            'volume_id': uuids.volume_id,
+            'boot_index': -1
+        })
+        fake_bdm['instance'] = fake_instance.fake_db_instance(
+            launched_at=timeutils.utcnow(),
+            vm_state=vm_states.STOPPED)
+        fake_bdm['instance_uuid'] = fake_bdm['instance']['uuid']
+        fake_bdm = objects.BlockDeviceMapping._from_db_object(
+                self.context, objects.BlockDeviceMapping(),
+                fake_bdm, expected_attrs=['instance'])
+        mock_get_bdm.return_value = fake_bdm
+
+        # c-vol can provide delete_info with merge_target_file pointing to
+        # an intermediary snapshot to commit into it's base. This is only
+        # supported while the instance is running at present.
+        delete_info = {
+            'merge_target_file': 'snap.img'
+        }
+
+        # Assert that the request is rejected as offline commit isn't supported
+        self.assertRaises(
+            exception.InstanceInvalidState,
+            self.compute_api.volume_snapshot_delete,
+            self.context,
+            uuids.volume_id,
+            uuids.snapshot_id,
+            delete_info
+        )
 
     def _create_instance_with_disabled_disk_config(self, object=False):
         sys_meta = {"image_auto_disk_config": "Disabled"}
