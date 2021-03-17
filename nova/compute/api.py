@@ -5483,11 +5483,25 @@ class API(base.Base):
         bdm = self._get_bdm_by_volume_id(
             context, volume_id, expected_attrs=['instance'])
 
-        # We allow deleting the snapshot in any vm_state as long as there is
-        # no task being performed on the instance and it has a host.
         @check_instance_host()
         @check_instance_state(vm_state=None)
         def do_volume_snapshot_delete(self, context, instance):
+            # FIXME(lyarwood): Avoid bug #1919487 by rejecting the request
+            # to delete an intermediary volume snapshot offline as this isn't
+            # currently implemented within the libvirt driver and will fail.
+            # This should be fixed in a future release but as it is essentially
+            # a new feature wouldn't be something we could backport. As such
+            # reject the request here so n-api can respond correctly to c-vol.
+            if (delete_info.get('merge_target_file') is not None and
+                instance.vm_state != vm_states.ACTIVE
+            ):
+                raise exception.InstanceInvalidState(
+                    attr='vm_state',
+                    instance_uuid=instance.uuid,
+                    state=instance.vm_state,
+                    method='volume_snapshot_delete'
+                )
+
             self.compute_rpcapi.volume_snapshot_delete(context, instance,
                     volume_id, snapshot_id, delete_info)
 
