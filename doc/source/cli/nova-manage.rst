@@ -1379,9 +1379,12 @@ libvirt get_machine_type
 
     nova-manage libvirt get_machine_type [INSTANCE_UUID]
 
-Fetch and display the recorded machine type of a libvirt instance.
+Fetch and display the recorded machine type of a libvirt instance identified
+by ``INSTANCE_UUID``.
 
-**Return Codes**
+.. versionadded:: 23.0.0 (Wallaby)
+
+.. rubric:: Return codes
 
 .. list-table::
    :widths: 20 80
@@ -1408,14 +1411,15 @@ libvirt update_machine_type
     nova-manage libvirt update_machine_type \
         [INSTANCE_UUID] [MACHINE_TYPE] [--force]
 
-Set or update the recorded machine type of an instance.
+Set or update the recorded machine type of instance ``INSTANCE_UUID`` to
+machine type ``MACHINE_TYPE``.
 
-The following criteria must also be met when using this command:
+The following criteria must be met when using this command:
 
 * The instance must have a ``vm_state`` of ``STOPPED``, ``SHELVED`` or
   ``SHELVED_OFFLOADED``.
 
-* The machine type is supported. The supported list includes alias and
+* The machine type must be supported. The supported list includes alias and
   versioned types of ``pc``, ``pc-i440fx``, ``pc-q35``, ``q35``, ``virt``
   or ``s390-ccw-virtio``.
 
@@ -1430,7 +1434,15 @@ A ``--force`` flag is provided to skip the above checks but caution
 should be taken as this could easily lead to the underlying ABI of the
 instance changing when moving between machine types.
 
-**Return Codes**
+.. versionadded:: 23.0.0 (Wallaby)
+
+.. rubric:: Options
+
+.. option:: --force
+
+    Skip machine type compatability checks and force machine type update.
+
+.. rubric:: Return codes
 
 .. list-table::
    :widths: 20 80
@@ -1445,7 +1457,7 @@ instance changing when moving between machine types.
    * - 2
      - Unable to find instance or instance mapping
    * - 3
-     - The instance has an invalid vm_state
+     - The instance has an invalid ``vm_state``
    * - 4
      - The proposed update of the machine type is invalid
    * - 5
@@ -1466,7 +1478,15 @@ This command is useful for operators attempting to determine when it is
 safe to change the :oslo.config:option:`libvirt.hw_machine_type` option
 within an environment.
 
-**Return Codes**
+.. versionadded:: 23.0.0 (Wallaby)
+
+.. rubric:: Options
+
+.. option:: --cell_uuid <cell_uuid>
+
+    The UUID of the cell to list instances from.
+
+.. rubric:: Return codes
 
 .. list-table::
    :widths: 20 80
@@ -1475,13 +1495,14 @@ within an environment.
    * - Return code
      - Description
    * - 0
-     - Completed successfully, no instances found without hw_machine_type
+     - Completed successfully, no instances found without ``hw_machine_type``
+       set
    * - 1
      - An unexpected error occurred
    * - 2
      - Unable to find cell mapping
    * - 3
-     - Instances found without hw_machine_type set
+     - Instances found without ``hw_machine_type`` set
 
 
 See Also
