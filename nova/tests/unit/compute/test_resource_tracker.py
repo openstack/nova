@@ -568,6 +568,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
+        update_mock.assert_called_once()
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -608,6 +609,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
+        update_mock.assert_called_once()
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -655,6 +657,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
+        update_mock.assert_called_once()
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -718,6 +721,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
+        update_mock.assert_called_once()
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -780,6 +784,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
+        update_mock.assert_called_once()
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -839,6 +844,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
+        update_mock.assert_called_once()
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -894,6 +900,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
+        update_mock.assert_called_once()
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
@@ -962,6 +969,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         actual_resources = update_mock.call_args[0][1]
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  actual_resources))
+        update_mock.assert_called_once()
 
 
 class TestInitComputeNode(BaseTestCase):
@@ -987,7 +995,7 @@ class TestInitComputeNode(BaseTestCase):
         self.assertFalse(get_mock.called)
         self.assertFalse(create_mock.called)
         self.assertTrue(pci_mock.called)
-        self.assertTrue(update_mock.called)
+        self.assertFalse(update_mock.called)
 
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
@@ -1011,7 +1019,7 @@ class TestInitComputeNode(BaseTestCase):
         get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
                                          _NODENAME)
         self.assertFalse(create_mock.called)
-        self.assertTrue(update_mock.called)
+        self.assertFalse(update_mock.called)
 
     @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
@@ -1165,7 +1173,7 @@ class TestInitComputeNode(BaseTestCase):
         create_mock.assert_called_once_with()
         self.assertTrue(obj_base.obj_equal_prims(expected_compute, cn))
         setup_pci.assert_called_once_with(mock.sentinel.ctx, cn, resources)
-        self.assertTrue(update_mock.called)
+        self.assertFalse(update_mock.called)
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_setup_pci_tracker')
@@ -1195,11 +1203,8 @@ class TestInitComputeNode(BaseTestCase):
             _cn.uuid = uuids.cn_uuid
             return original_copy_resources(_cn, _resources)
 
-        with test.nested(
-            mock.patch.object(self.rt, '_copy_resources',
-                              fake_copy_resources),
-            mock.patch.object(self.rt, '_update')
-        ) as (mock_copy_resources, mock_update):
+        with mock.patch.object(self.rt, '_copy_resources',
+                               fake_copy_resources):
             self.rt._init_compute_node(ctxt, resources)
         self.assertIn(_NODENAME, self.rt.compute_nodes)
         mock_get.assert_has_calls([mock.call(
@@ -1207,8 +1212,6 @@ class TestInitComputeNode(BaseTestCase):
         self.assertEqual(2, mock_create.call_count)
         mock_setup_pci.assert_called_once_with(
             ctxt, test.MatchType(objects.ComputeNode), resources)
-        mock_update.assert_called_once_with(
-            ctxt, self.rt.compute_nodes[_NODENAME])
 
     @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
     @mock.patch('nova.objects.ComputeNode.create')
