@@ -120,16 +120,25 @@ Performing the migration
 
 (1) On all relevant compute nodes, enable the
     :oslo.config:option:`libvirt.live_migration_with_native_tls`
-    configuration attribute::
+    configuration attribute and set the
+    :oslo.config:option:`libvirt.live_migration_scheme`
+    configuration attribute to tls::
 
        [libvirt]
        live_migration_with_native_tls = true
+       live_migration_scheme = tls
 
     .. note::
         Setting both
         :oslo.config:option:`libvirt.live_migration_with_native_tls` and
         :oslo.config:option:`libvirt.live_migration_tunnelled` at the
         same time is invalid (and disallowed).
+
+    .. note::
+        Not setting
+        :oslo.config:option:`libvirt.live_migration_scheme` to ``tls``
+        will result in libvirt using the unencrypted TCP connection
+        without displaying any error or a warning in the logs.
 
     And restart the ``nova-compute`` service::
 
