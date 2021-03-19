@@ -13,4 +13,4 @@ deprecations:
     -- this is the recommended approach for securing all live migration
     streams (guest RAM, device state, and disks).  Assuming TLS
     environment is setup, this can be enabled by setting the config
-    attribiute ``[libvirt]live_migration_with_native_tls``.
+    attribute ``[libvirt]live_migration_with_native_tls``.
