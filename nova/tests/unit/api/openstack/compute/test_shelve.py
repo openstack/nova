@@ -42,6 +42,8 @@ class ShelveControllerTest(test.NoDBTestCase):
         exception.InstanceIsLocked(instance_uuid=uuids.instance),
         exception.OperationNotSupportedForVTPM(
             instance_uuid=uuids.instance, operation='foo'),
+        exception.OperationNotSupportedForVDPAInterface(
+            instance_uuid=uuids.instance, operation='foo'),
         exception.UnexpectedTaskStateError(
             instance_uuid=uuids.instance, expected=None,
             actual=task_states.SHELVING),

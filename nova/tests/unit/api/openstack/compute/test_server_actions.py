@@ -386,6 +386,8 @@ class ServerActionsControllerTestV21(test.TestCase):
         exception.InstanceIsLocked(instance_uuid=uuids.instance),
         exception.OperationNotSupportedForVTPM(
             instance_uuid=uuids.instance, operation='foo'),
+        exception.OperationNotSupportedForVDPAInterface(
+            instance_uuid=uuids.instance, operation='foo'),
     )
     @mock.patch('nova.compute.api.API.rebuild')
     def test_rebuild__http_conflict_error(self, exc, mock_rebuild):

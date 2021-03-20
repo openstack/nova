@@ -283,9 +283,23 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
             expected_exc=webob.exc.HTTPConflict,
             check_response=False)
 
+    def test_migrate_live_sev_not_supported(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.OperationNotSupportedForSEV(
+                instance_uuid=uuids.instance, operation='foo'),
+            expected_exc=webob.exc.HTTPConflict,
+            check_response=False)
+
     def test_migrate_live_vtpm_not_supported(self):
         self._test_migrate_live_failed_with_exception(
             exception.OperationNotSupportedForVTPM(
+                instance_uuid=uuids.instance, operation='foo'),
+            expected_exc=webob.exc.HTTPConflict,
+            check_response=False)
+
+    def test_migrate_live_vdpa_interfaces_not_supported(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.OperationNotSupportedForVDPAInterface(
                 instance_uuid=uuids.instance, operation='foo'),
             expected_exc=webob.exc.HTTPConflict,
             check_response=False)
@@ -593,22 +607,6 @@ class MigrateServerTestsV268(MigrateServerTestsV256):
         self._test_actions(['_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
                            args_map=args_map)
-
-    @mock.patch('nova.virt.hardware.get_mem_encryption_constraint',
-                new=mock.Mock(return_value=True))
-    @mock.patch.object(
-        objects.instance.Instance, 'image_meta',
-        new=objects.ImageMeta.from_dict({}))
-    def test_live_migrate_sev_rejected(self):
-        instance = self._stub_instance_get()
-        body = {'os-migrateLive': {'host': 'hostname',
-                                   'block_migration': 'auto'}}
-        ex = self.assertRaises(webob.exc.HTTPConflict,
-                               self.controller._migrate_live,
-                               self.req, fakes.FAKE_UUID, body=body)
-        self.assertIn("Operation 'live-migration' not supported for "
-                      "SEV-enabled instance (%s)" % instance.uuid,
-                      str(ex))
 
     def test_live_migrate_with_forced_host(self):
         body = {'os-migrateLive': {'host': 'hostname',

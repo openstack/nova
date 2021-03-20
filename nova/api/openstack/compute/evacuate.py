@@ -130,7 +130,10 @@ class EvacuateController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.ForbiddenWithAccelerators as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
-        except exception.OperationNotSupportedForVTPM as e:
+        except (
+            exception.OperationNotSupportedForVTPM,
+            exception.OperationNotSupportedForVDPAInterface,
+        ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
 
         if (not api_version_request.is_supported(req, min_version='2.14') and
