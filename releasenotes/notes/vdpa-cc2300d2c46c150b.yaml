@@ -1,0 +1,43 @@
+---
+features:
+  - |
+    The libvirt driver has added support for hardware-offloaded OVS
+    with vDPA (vhost Data Path Acceleration) type interfaces.
+    vDPA allows virtio net interfaces to be presented to the guest while
+    the datapath can be offloaded to a software or hardware implementation.
+    This enables high performance networking with the portablity of standard
+    virtio interfaces.
+issues:
+  - |
+    Nova currenly does not support the following livecycle operations when
+    combined with a instance using vDPA ports: shelve, resize, cold migration,
+    live migration, evacuate, suspend or interface attach/detach.
+    Attempting to use one of the above operations will result in a HTTP 409
+    (Conflict) error. While some operations like "resize to same host",
+    shelve or attach interface technically work, they have been blocked since
+    unshelve and detach interface currently do not. Resize to a different
+    host has been blocked since its untested, evacuate has also been blocked
+    for the same reason. These limitation may be removed in the future as
+    testing is improved. Live migration is currently not supported with vDPA
+    interfaces by QEMU and therefore cannot be enabled in openstack at this
+    time.
+
+    Like SR-IOV, vDPA leverages DMA transfer between the guest and hardware.
+    This requires the DMA buffers to be locked in memory. As the DMA buffers
+    are allocated by the guest and can be allocated anywhere in the guest RAM,
+    QEMU locks **all** guest RAM. By default the ``RLIMIT_MEMLOCK`` for a
+    normal QEMU intance is set to 0 and qemu is not allowed to lock guest
+    memory. In the case of SR-IOV, libvirt automatically set the limit to guest
+    RAM + 1G which enables QEMU to lock the memory. This does not happen today
+    with vDPA ports. As a result if you use VDPA ports without enabling locking
+    of the guest memory you will get DMA errors. To workaround this issues
+    until libvirt is updated, you must set ``hw:cpu_realtime=yes`` and define a
+    valid ``CPU-REALTIME-MASK`` e.g ``hw:cpu_realtime_mask=^0`` or define
+    ``hw:emulator_threads_policy=share|isolate``. Note that since we are just
+    using ``hw:cpu_realtime`` for its side-effect of locking the guest memory,
+    this usage does not require the guest or host to use realtime kernels.
+    However, all other requirements of ``hw:cpu_realtime`` such as requiring
+    hw:cpu_policy=dedicated still apply. It is also stongly recommended that
+    hugpages be enabled for all instnace with locked memory. This can be done
+    by setting ``hw:mem_page_size``. This will enable nova to correctly account
+    for the fact that the memory is unswapable.
