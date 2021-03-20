@@ -1406,7 +1406,8 @@ class Host(object):
                 raise
 
     def list_all_devices(
-            self, flags: int = 0) -> ty.List['libvirt.virNodeDevice']:
+        self, flags: int = 0,
+    ) -> ty.List['libvirt.virNodeDevice']:
         """Lookup devices.
 
         :param flags: a bitmask of flags to filter the returned devices.
