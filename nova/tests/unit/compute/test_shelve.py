@@ -762,6 +762,34 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             self.assertTrue(soi.called)
             self.assertEqual([instance2.uuid], data)
 
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arq_uuids_for_instance')
+    @mock.patch('oslo_utils.timeutils.is_older_than')
+    @mock.patch('oslo_utils.timeutils.parse_strtime')
+    def test_shelved_poll_with_accel_uuids(self, mock_parse, mock_older,
+                                           mock_get_arq_uuids):
+        self.flags(shelved_offload_time=1)
+        mock_older.return_value = True
+        instance = self._create_fake_instance_obj()
+        instance.task_state = None
+        instance.vm_state = vm_states.SHELVED
+        instance.host = self.compute.host
+        instance.system_metadata = {'shelved_at': ''}
+        instance.flavor.extra_specs['accel:device_profile'] = 'dp_test'
+        mock_get_arq_uuids.return_value = [uuids.fake]
+        instance.save()
+
+        data = []
+
+        def fake_soi(context, instance, **kwargs):
+            data.append(instance.uuid)
+
+        with mock.patch.object(self.compute, 'shelve_offload_instance') as soi:
+            soi.side_effect = fake_soi
+            self.compute._poll_shelved_instances(self.context)
+            self.assertTrue(soi.called)
+            self.assertEqual([instance.uuid], data)
+
     @mock.patch('oslo_utils.timeutils.is_older_than')
     @mock.patch('oslo_utils.timeutils.parse_strtime')
     def test_shelved_poll_checks_task_state_on_save(self, mock_parse,
