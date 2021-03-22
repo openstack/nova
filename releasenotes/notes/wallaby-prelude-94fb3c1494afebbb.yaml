@@ -1,0 +1,46 @@
+---
+prelude: |
+    The 23.0.0 release includes many new features and bug fixes. Please be
+    sure to read the upgrade section which describes the required actions to
+    upgrade your cloud from 22.0.0 (Victoria) to 23.0.0 (Wallaby).
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for Wallaby is v2.88.
+      Details on REST API microversions added since the 22.0.0 Victoria release
+      can be found in the `REST API Version History`__ page.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html
+
+    - `Support for accelerators`__ in Nova servers has been improved. Now
+      shelving and unshelving instances using Cyborg accelerators is supported.
+
+      .. __: https://docs.openstack.org/api-guide/compute/accelerator-support.html
+
+    - Attaching `neutron ports with QoS minimum bandwidth rules`__ to existing
+      instances is now possible.
+
+      .. __: https://docs.openstack.org/api-guide/compute/port_with_resource_request.html
+
+    - The nova-scheduler service now verifies which compute nodes can be used
+      for instances having `requested networks or ports`__ by looking at the
+      network segments related to the compute nodes.
+
+      .. __:  https://docs.openstack.org/neutron/latest/admin/config-routed-networks.html
+
+    - The Hyper-V virt driver can now attach Cinder RBD volumes.
+
+    - The libvirt virt driver now supports new features :
+
+      - You can `change the default machine type`__ on a compute node safely
+
+        .. __: https://docs.openstack.org/nova/latest/admin/hw-machine-type.html
+
+      - You can enable `UEFI secure boot`__ for new instances
+
+        .. __: https://docs.openstack.org/nova/latest/admin/secure-boot.html
+
+      - `vDPA (vHost data path acceleration)`__ usage is now possible
+
+        .. __: https://specs.openstack.org/openstack/nova-specs/specs/wallaby/approved/libvirt-vdpa-support.html
