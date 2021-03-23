@@ -6075,17 +6075,24 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
                         instance_actions_events=1)
         self._assertEqualObjects(expected, results[0])
 
-        # Archive 1 row deleted before 2017-01-03. instance_action_events
-        # should be the table with row deleted due to FK contraints
+        # Archive 1 row deleted before 2017-01-03
+        # Because the instances table will be processed first, tables that
+        # refer to it (instance_actions and instance_action_events) will be
+        # visited and archived in the same transaction as the instance, to
+        # avoid orphaning the instance record (archive dependent records in one
+        # transaction)
         before_date = dateutil_parser.parse('2017-01-03', fuzzy=True)
         results = db.archive_deleted_rows(max_rows=1, before=before_date)
-        expected = dict(instance_actions_events=1)
+        expected = dict(instances=1,
+                        instance_actions=1,
+                        instance_actions_events=1)
         self._assertEqualObjects(expected, results[0])
-        # Archive all other rows deleted before 2017-01-03. This should
-        # delete row in instance_actions, then row in instances due to FK
-        # constraints
+        # Try to archive all other rows deleted before 2017-01-03. This should
+        # not archive anything because the instances table and tables that
+        # refer to it (instance_actions and instance_action_events) were all
+        # archived in the last run.
         results = db.archive_deleted_rows(max_rows=100, before=before_date)
-        expected = dict(instances=1, instance_actions=1)
+        expected = {}
         self._assertEqualObjects(expected, results[0])
 
         # Verify we have 4 left in main
@@ -6233,19 +6240,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         ins_stmt = self.migrations.insert().values(instance_uuid=instance_uuid,
                                                    deleted=0)
         self.conn.execute(ins_stmt)
-        # The first try to archive instances should fail, due to FK.
-        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
-                                                             "instances",
-                                                             max_rows=None,
-                                                             before=None)
-        self.assertEqual(0, num[0])
-        # Then archiving migrations should work.
-        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
-                                                             "migrations",
-                                                             max_rows=None,
-                                                             before=None)
-        self.assertEqual(1, num[0])
-        # Then archiving instances should work.
+        # Archiving instances should result in migrations related to the
+        # instances also being archived.
         num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
                                                              "instances",
                                                              max_rows=None,
