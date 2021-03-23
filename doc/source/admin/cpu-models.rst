@@ -44,20 +44,37 @@ Host model
 ~~~~~~~~~~
 
 If :oslo.config:option:`cpu_mode=host-model <libvirt.cpu_mode>`, the CPU model
-in ``/usr/share/libvirt/cpu_map/*.xml`` that most closely matches the host, and
-requests additional CPU flags to complete the match. This configuration
-provides the maximum functionality and performance and maintains good
-reliability.
+in ``/usr/share/libvirt/cpu_map/*.xml`` that most closely matches the host and
+requests additional CPU flags to complete the match. This CPU model has a
+number of advantages:
 
-With regard to enabling and facilitating live migration between
-compute nodes, you should assess whether ``host-model`` is suitable
-for your compute architecture. In general, using ``host-model`` is a
-safe choice if your compute node CPUs are largely identical. However,
-if your compute nodes span multiple processor generations, you may be
-better advised to select a ``custom`` CPU model.
+* It provides almost all of the host CPU features to the guest, thus providing
+  close to the maximum functionality and performance possible.
+
+* It auto-adds critical guest CPU flags for mitigation from certain security
+  flaws, *provided* the CPU microcode, kernel, QEMU, and libvirt are all
+  updated.
+
+* It computes live migration compatibility, with the caveat that live migration
+  in both directions is not always possible.
+
+In general, using ``host-model`` is a safe choice if your compute node CPUs are
+largely identical. However, if your compute nodes span multiple processor
+generations, you may be better advised to select a ``custom`` CPU model.
 
 The ``host-model`` CPU model is the default for the KVM & QEMU hypervisors
 (:oslo.config:option:`libvirt.virt_type`\ =``kvm``/``qemu``)
+
+.. note::
+
+   As noted above, live migration is not always possible in both directions
+   when using ``host-model``. During live migration, the source CPU model
+   definition is transferred to the destination host as-is. This results in the
+   migrated guest on the destination seeing exactly the same CPU model as on
+   source even if the destination compute host is capable of providing more CPU
+   features. However, shutting down and restarting the guest on the may present
+   different hardware to the guest, as per the new capabilities of the
+   destination compute.
 
 Host passthrough
 ~~~~~~~~~~~~~~~~
@@ -69,19 +86,22 @@ every last detail of the host CPU is matched. This gives the best performance,
 and can be important to some apps which check low level CPU details, but it
 comes at a cost with respect to migration.
 
-In ``host-passthrough`` mode, the guest can only be live-migrated to a
-target host that matches the source host extremely closely. This
-definitely includes the physical CPU model and running microcode, and
-may even include the running kernel. Use this mode only if:
+In ``host-passthrough`` mode, the guest can only be live-migrated to a target
+host that matches the source host extremely closely. This includes the physical
+CPU model and running microcode, and may even include the running kernel. Use
+this mode only if your compute nodes have a very large degree of homogeneity
+(i.e. substantially all of your compute nodes use the exact same CPU generation
+and model), and you make sure to only live-migrate between hosts with exactly
+matching kernel versions. Failure to do so will result in an inability to
+support any form of live migration.
 
-* Your compute nodes have a very large degree of homogeneity
-  (i.e. substantially all of your compute nodes use the exact same CPU
-  generation and model), and you make sure to only live-migrate
-  between hosts with exactly matching kernel versions, *or*
+.. note::
 
-* You decide, for some reason and against established best practices,
-  that your compute infrastructure should not support any live
-  migration at all.
+   The reason for that it is necessary for the CPU microcode versions to match
+   is that hardware performance counters are exposed to an instance and it is
+   likely that they may vary between different CPU models. There may also be
+   other reasons due to security fixes for some hardware security flaws being
+   included in CPU microcode.
 
 Custom
 ~~~~~~
