@@ -151,6 +151,5 @@ Additional guides
    ssh-configuration
    support-compute
    secure-live-migration-with-qemu-native-tls
-   mitigation-for-Intel-MDS-security-flaws
    vendordata
    hw-machine-type

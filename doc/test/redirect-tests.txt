@@ -77,3 +77,4 @@
 /nova/latest/admin/system-admin.html 301 /nova/latest/admin/index.html
 /nova/latest/admin/port_with_resource_request.html 301 /nova/latest/admin/ports-with-resource-requests.html
 /nova/latest/admin/manage-users.html 301 /nova/latest/admin/arch.html
+/nova/latest/admin/mitigation-for-Intel-MDS-security-flaws.html 301 /nova/latest/admin/cpu-models.html
