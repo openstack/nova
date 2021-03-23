@@ -139,7 +139,7 @@ The allocation of instance vCPUs and memory from different host NUMA nodes can
 be configured. This allows for asymmetric allocation of vCPUs and memory, which
 can be important for some workloads. You can configure the allocation of
 instance vCPUs and memory across each **guest** NUMA node using the
-:nova:extra-spec:`hw:numa_cpus.{id}` and :nova:extra-spec:`hw:numa_mem.{id}`
+:nova:extra-spec:`hw:numa_cpus.{num}` and :nova:extra-spec:`hw:numa_mem.{num}`
 extra specs respectively.
 For example, to spread the 6 vCPUs and 6 GB of memory
 of an instance across two NUMA nodes and create an asymmetric 1:2 vCPU and

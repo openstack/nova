@@ -22,10 +22,10 @@ EXTRA_SPEC_VALIDATORS = [
         name='hide_hypervisor_id',
         description=(
             'Determine whether the hypervisor ID should be hidden from the '
-            'guest. Only supported by the libvirt driver. This extra spec is '
-            'not compatible with the AggregateInstanceExtraSpecsFilter '
-            'scheduler filter. The ``hw:hide_hypervisor_id`` extra spec '
-            'should be used instead.'
+            'guest. Only supported by the libvirt virt driver. '
+            'This extra spec is not compatible with the '
+            'AggregateInstanceExtraSpecsFilter scheduler filter. '
+            'The ``hw:hide_hypervisor_id`` extra spec should be used instead.'
         ),
         value={
             'type': bool,

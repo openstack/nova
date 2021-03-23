@@ -22,12 +22,17 @@ EXTRA_SPEC_VALIDATORS = [
         name='pci_passthrough:alias',
         description=(
             'Specify the number of ``$alias`` PCI device(s) to attach to the '
-            'instance. Must be of format ``$alias:$number``. Use commas to '
-            'specify multiple values.'
+            'instance. '
+            'Must be of format ``$alias:$count``, where ``$alias`` '
+            'corresponds to a particular PCI device class (as configured in '
+            '``nova.conf``) and ``$count`` is the amount of PCI devices of '
+            'type ``$alias`` to be assigned to the instance. '
+            'Use commas to specify multiple values. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': str,
-            # one or more comma-separated '$alias:$num' values
+            # one or more comma-separated '$alias:$count' values
             'pattern': r'[^:]+:\d+(?:\s*,\s*[^:]+:\d+)*',
         },
     ),
