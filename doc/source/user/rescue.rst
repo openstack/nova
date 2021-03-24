@@ -80,7 +80,7 @@ command:
    how much time they need to shut down cleanly.
 
 To rescue an instance that boots from a volume you need to use the
-:ref:`2.87 microversion or later <2.87-microversion>`.
+:ref:`2.87 microversion or later <microversion 2.87>`.
 
 .. code-block:: console
 
