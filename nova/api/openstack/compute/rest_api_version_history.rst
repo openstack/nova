@@ -1135,6 +1135,8 @@ Validation is only used for recognized extra spec namespaces, currently:
 ``hw_rng``, ``hw_video``, ``os``, ``pci_passthrough``, ``powervm``, ``quota``,
 ``resources``, ``trait``, and ``vmware``.
 
+.. _2.87-microversion:
+
 2.87 (Maximum in Ussuri and Victoria)
 -------------------------------------
 

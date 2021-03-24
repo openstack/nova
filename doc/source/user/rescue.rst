@@ -79,6 +79,13 @@ command:
    setting allowing different types of operating systems to specify
    how much time they need to shut down cleanly.
 
+To rescue an instance that boots from a volume you need to use the
+:ref:`2.87 microversion or later <2.87-microversion>`.
+
+.. code-block:: console
+
+   $ openstack --os-compute-api-version 2.87 server rescue SERVER
+
 If you want to rescue an instance with a specific image, rather than the
 default one, use the ``--image`` parameter:
 
