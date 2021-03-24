@@ -1970,4 +1970,4 @@ class LoadersTestCase(test.NoDBTestCase):
             ])
             mock_glob.assert_called_once_with(
                 '/usr/share/qemu/firmware/*.json')
-            mock_open.assert_called_once_with('10_fake.json')
+            mock_open.assert_called_once_with('10_fake.json', 'rb')

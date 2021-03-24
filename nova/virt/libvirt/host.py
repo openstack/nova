@@ -108,7 +108,7 @@ def _get_loaders():
             continue
 
         for spec_path in sorted(glob.glob(f'{path}/*.json')):
-            with open(spec_path) as fh:
+            with open(spec_path, 'rb') as fh:
                 spec = jsonutils.load(fh)
 
             _loaders.append(spec)
