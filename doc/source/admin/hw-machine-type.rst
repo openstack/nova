@@ -15,6 +15,16 @@
 hw_machine_type - Configuring and updating QEMU instance machine types
 ======================================================================
 
+.. versionadded:: 12.0.0 (Liberty)
+
+.. versionchanged:: 23.0.0 (Wallaby)
+
+   The libvirt driver now records the machine type of an instance at start up
+   allowing the ``[libvirt]hw_machine_type`` configurable to change over time
+   without impacting existing instances.
+
+   Added ``nova-manage`` commands to control the machine_type of an instance.
+
 .. note::
 
    The following only applies to environments using libvirt compute hosts.
