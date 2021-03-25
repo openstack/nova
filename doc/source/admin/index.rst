@@ -116,6 +116,7 @@ instance for these kind of workloads.
    emulated-tpm
    uefi
    secure-boot
+   sev
    managing-resource-providers
    resource-limits
 
