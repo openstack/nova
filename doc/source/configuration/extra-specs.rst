@@ -114,9 +114,8 @@ driver-specific.
 ~~~~~~~~~
 
 The following extra specs are used to configure quotas for various
-paravirtualized devices.
-
-They are only supported by the libvirt virt driver.
+paravirtualized devices. Different quotas are supported by different virt
+drivers, as noted below.
 
 .. extra-specs:: quota
 

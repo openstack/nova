@@ -187,8 +187,9 @@ with ``provider:physical_network=foo`` must be scheduled on host cores from
 NUMA nodes 0, while instances using one or more networks with
 ``provider:physical_network=bar`` must be scheduled on host cores from both
 NUMA nodes 2 and 3. For the latter case, it will be necessary to split the
-guest across two or more host NUMA nodes using the ``hw:numa_nodes``
-:ref:`flavor extra spec <extra-specs-numa-topology>`.
+guest across two or more host NUMA nodes using the
+:nova:extra-spec:`hw:numa_nodes` extra spec, as discussed :ref:`here
+<numa-topologies>`.
 
 Now, take an example for a deployment using L3 networks.
 

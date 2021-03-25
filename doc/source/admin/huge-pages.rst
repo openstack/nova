@@ -56,6 +56,7 @@ Enabling huge pages on the host
 -------------------------------
 
 .. important::
+
    Huge pages may not be used on a host configured for file-backed memory. See
    :doc:`file-backed-memory` for details
 
@@ -163,7 +164,7 @@ By default, an instance does not use huge pages for its underlying memory.
 However, huge pages can bring important or required performance improvements
 for some workloads. Huge pages must be requested explicitly through the use of
 flavor extra specs or image metadata. To request an instance use huge pages,
-run:
+you can use the :nova:extra-spec:`hw:mem_page_size` flavor extra spec:
 
 .. code-block:: console
 
@@ -205,7 +206,7 @@ run:
    $ openstack flavor set m1.large --property hw:mem_page_size=any
 
 For more information about the syntax for ``hw:mem_page_size``, refer to
-:doc:`flavors`.
+:nova:extra-spec:`the documentation <hw:mem_page_size>`.
 
 Applications are frequently packaged as images. For applications that require
 the IO performance improvements that huge pages provides, configure image

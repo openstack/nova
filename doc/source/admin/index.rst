@@ -107,6 +107,7 @@ instance for these kind of workloads.
 
    pci-passthrough
    cpu-topologies
+   real-time
    huge-pages
    virtual-gpu
    file-backed-memory
