@@ -422,6 +422,12 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
         opt.value = CONF.vmware.smbios_asset_tag
         extra_config.append(opt)
 
+    if CONF.vmware.mirror_instance_logs_to_syslog:
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'vmx.log.syslogID'
+        opt.value = instance.uuid + '_vmx_log'
+        extra_config.append(opt)
+
     # big VMs need to prefer HT threads to stay in NUMA nodes
     if extra_specs.numa_prefer_ht is not None:
         opt = client_factory.create('ns0:OptionValue')

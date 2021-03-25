@@ -178,6 +178,12 @@ For spawning a VM on a prepared empty host, we need all other VMs to be in a
 DRS VM group that prohibits them from running on the prepared host. This
 setting configures the name of that VM group.
 """),
+    cfg.BoolOpt('mirror_instance_logs_to_syslog',
+        default=False,
+        help="""
+Forward the "vmware.log" files for all instances to the syslog monitoring
+service. The syslog ID string is: [instance UUID] + '_vmx_log'.
+"""),
 ]
 
 vmwareapi_opts = [
