@@ -7654,8 +7654,9 @@ class ComputeTestCase(BaseTestCase,
         mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
         mock_check_local.assert_called_once_with(fake_context,
                                                  evacuated_instance)
-        mock_check.assert_called_once_with(fake_context, evacuated_instance,
+        mock_check.assert_called_once_with(fake_context,
                                            {'filename': 'tmpfilename'},
+                                           instance=evacuated_instance,
                                            host=None)
         mock_check_clean.assert_called_once_with(fake_context,
                                                  {'filename': 'tmpfilename'})

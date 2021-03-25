@@ -794,7 +794,7 @@ class ComputeManager(manager.Manager):
             if data:
                 shared_storage = (self.compute_rpcapi.
                                   check_instance_shared_storage(context,
-                                  instance, data, host=host))
+                                  data, instance=instance, host=host))
         except NotImplementedError:
             LOG.debug('Hypervisor driver does not support '
                       'instance shared storage check, '
