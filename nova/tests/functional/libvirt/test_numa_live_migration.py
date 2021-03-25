@@ -479,9 +479,21 @@ class NUMALiveMigrationLegacyBase(NUMALiveMigrationPositiveBase):
         if pin_source:
             src_mgr.compute_rpcapi = integrated_helpers.StubComputeRPCAPI(
                 '5.2')
+        else:
+            # Since we upgraded the RPC API to 6.0, we somehow need to pin the
+            # compute service here to 5.max to verify the legacy behaviours.
+            # TODO(sbauza): Remove this cruft
+            src_mgr.compute_rpcapi = integrated_helpers.StubComputeRPCAPI(
+                '5.13')
         if pin_cond:
             cond_mgr.compute_rpcapi = integrated_helpers.StubComputeRPCAPI(
                 '5.2')
+        else:
+            # Since we upgraded the RPC API to 6.0, we somehow need to pin the
+            # compute service here to 5.max to verify the legacy behaviours.
+            # TODO(sbauza): Remove this cruft
+            cond_mgr.compute_rpcapi = integrated_helpers.StubComputeRPCAPI(
+                '5.13')
 
         self.assertEqual(
             not pin_source,

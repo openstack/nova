@@ -525,7 +525,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='5.13')
+    target = messaging.Target(version='6.0')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -570,6 +570,9 @@ class ComputeManager(manager.Manager):
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
+
+        # TODO(sbauza): Remove this call once we delete the V5Proxy class
+        self.additional_endpoints.append(_ComputeV5Proxy(self))
 
         # NOTE(russellb) Load the driver last.  It may call back into the
         # compute manager via the virtapi, so we want it to be fully
@@ -1561,34 +1564,6 @@ class ComputeManager(manager.Manager):
         except exception.InstanceNotFound:
             return power_state.NOSTATE
 
-    # TODO(stephenfin): Remove this once we bump the compute API to v6.0
-    def get_console_topic(self, context):
-        """Retrieves the console host for a project on this host.
-
-        Currently this is just set in the flags for each compute host.
-
-        """
-        # TODO(mdragon): perhaps make this variable by console_type?
-        return 'console.%s' % CONF.console_host
-
-    # TODO(stephenfin): Remove this once we bump the compute API to v6.0
-    @wrap_exception()
-    def get_console_pool_info(self, context, console_type):
-        raise NotImplementedError()
-
-    # TODO(stephenfin): Remove this as it's nova-network only
-    @wrap_exception()
-    def refresh_instance_security_rules(self, context, instance):
-        """Tell the virtualization driver to refresh security rules for
-        an instance.
-
-        Passes straight through to the virtualization driver.
-
-        Synchronize the call because we may still be in the middle of
-        creating the instance.
-        """
-        pass
-
     def _await_block_device_map_created(self, context, vol_id):
         # TODO(yamahata): creating volume simultaneously
         #                 reduces creation time?
@@ -2092,10 +2067,10 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_fault
     def build_and_run_instance(self, context, instance, image, request_spec,
-                     filter_properties, admin_password=None,
+                     filter_properties, accel_uuids, admin_password=None,
                      injected_files=None, requested_networks=None,
                      security_groups=None, block_device_mapping=None,
-                     node=None, limits=None, host_list=None, accel_uuids=None):
+                     node=None, limits=None, host_list=None):
 
         @utils.synchronized(instance.uuid)
         def _locked_do_build_and_run_instance(*args, **kwargs):
@@ -2313,6 +2288,8 @@ class ComputeManager(manager.Manager):
         port_id, to resource provider UUID that provides resource for that
         RequestGroup. Or None if the request_spec was None.
         """
+        # TODO(sbauza): Remove this conditional once we only support
+        # RPC API 6.0
         if request_spec:
             return request_spec.get_request_group_mapping()
         else:
@@ -3320,8 +3297,7 @@ class ComputeManager(manager.Manager):
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate, on_shared_storage,
                          preserve_ephemeral, migration,
-                         scheduled_node, limits, request_spec,
-                         accel_uuids=None):
+                         scheduled_node, limits, request_spec, accel_uuids):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -3352,8 +3328,7 @@ class ComputeManager(manager.Manager):
         :param limits: Overcommit limits set by the scheduler. If a host was
                        specified by the user, this will be None
         :param request_spec: a RequestSpec object used to schedule the instance
-        :param accel_uuids: a list of cyborg ARQ uuids or None if the RPC API
-                            is <=5.11
+        :param accel_uuids: a list of cyborg ARQ uuids
 
         """
         # recreate=True means the instance is being evacuated from a failed
@@ -4222,12 +4197,6 @@ class ComputeManager(manager.Manager):
             self.host, action=fields.NotificationAction.UNRESCUE,
             phase=fields.NotificationPhase.END)
 
-    # TODO(stephenfin): Remove this once we bump the compute API to v6.0
-    @wrap_exception()
-    @wrap_instance_fault
-    def change_instance_metadata(self, context, diff, instance):
-        raise NotImplementedError()
-
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @errors_out_migration
@@ -4817,7 +4786,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
-    def revert_resize(self, context, instance, migration, request_spec=None):
+    def revert_resize(self, context, instance, migration, request_spec):
         """Destroys the new instance on the destination machine.
 
         Reverts the model changes, and powers on the old instance on the
@@ -4909,8 +4878,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
-    def finish_revert_resize(
-            self, context, instance, migration, request_spec=None):
+    def finish_revert_resize(self, context, instance, migration, request_spec):
         """Finishes the second half of reverting a resize on the source host.
 
         Bring the original source instance state back (active/shutoff) and
@@ -5033,6 +5001,8 @@ class ComputeManager(manager.Manager):
             provider_mappings = self._get_request_group_mapping(
                 request_spec)
         else:
+            # TODO(sbauza): Remove this conditional once we only support RPC
+            # API 6.0
             # NOTE(gibi): The compute RPC is pinned to be older than 5.2
             # and therefore request_spec is not sent. We cannot calculate
             # the provider mappings. If the instance has ports with
@@ -5180,7 +5150,7 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
-    def prep_resize(self, context, image, instance, instance_type,
+    def prep_resize(self, context, image, instance, flavor,
                     request_spec, filter_properties, node,
                     clean_shutdown, migration, host_list):
         """Initiates the process of moving a running instance to another host.
@@ -5206,10 +5176,10 @@ class ComputeManager(manager.Manager):
                 errors_out_migration_ctxt(migration):
             self._send_prep_resize_notifications(
                 context, instance, fields.NotificationPhase.START,
-                instance_type)
+                flavor)
             try:
                 self._prep_resize(context, image, instance,
-                                  instance_type, filter_properties,
+                                  flavor, filter_properties,
                                   node, migration, request_spec,
                                   clean_shutdown)
             except exception.BuildAbortException:
@@ -5227,12 +5197,12 @@ class ComputeManager(manager.Manager):
                 # try to re-schedule the resize elsewhere:
                 exc_info = sys.exc_info()
                 self._reschedule_resize_or_reraise(context, instance,
-                        exc_info, instance_type, request_spec,
+                        exc_info, flavor, request_spec,
                         filter_properties, host_list)
             finally:
                 self._send_prep_resize_notifications(
                     context, instance, fields.NotificationPhase.END,
-                    instance_type)
+                    flavor)
 
     def _reschedule_resize_or_reraise(self, context, instance, exc_info,
             instance_type, request_spec, filter_properties, host_list):
@@ -5308,14 +5278,12 @@ class ComputeManager(manager.Manager):
                 raise exc.with_traceback(exc_info[2])
             raise exc
 
-    # TODO(stephenfin): Remove unused request_spec parameter in API v6.0
     @messaging.expected_exceptions(exception.MigrationPreCheckError)
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def prep_snapshot_based_resize_at_dest(
-            self, ctxt, instance, flavor, nodename, migration, limits,
-            request_spec):
+            self, ctxt, instance, flavor, nodename, migration, limits):
         """Performs pre-cross-cell resize resource claim on the dest host.
 
         This runs on the destination host in a cross-cell resize operation
@@ -5338,7 +5306,6 @@ class ComputeManager(manager.Manager):
         :param nodename: Name of the target compute node
         :param migration: nova.objects.Migration object for the operation
         :param limits: nova.objects.SchedulerLimits object of resource limits
-        :param request_spec: nova.objects.RequestSpec object for the operation
         :returns: nova.objects.MigrationContext; the migration context created
             on the destination host during the resize_claim.
         :raises: nova.exception.MigrationPreCheckError if the pre-check
@@ -5523,8 +5490,8 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def resize_instance(self, context, instance, image,
-                        migration, instance_type, clean_shutdown,
-                        request_spec=None):
+                        migration, flavor, clean_shutdown,
+                        request_spec):
         """Starts the migration of a running instance to another host.
 
         This is initiated from the destination host's ``prep_resize`` routine
@@ -5532,7 +5499,7 @@ class ComputeManager(manager.Manager):
         """
         try:
             self._resize_instance(context, instance, image, migration,
-                                  instance_type, clean_shutdown, request_spec)
+                                  flavor, clean_shutdown, request_spec)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._revert_allocation(context, instance, migration)
@@ -5791,7 +5758,7 @@ class ComputeManager(manager.Manager):
     @errors_out_migration
     @wrap_instance_fault
     def finish_resize(self, context, disk_info, image, instance,
-                      migration, request_spec=None):
+                      migration, request_spec):
         """Completes the migration process.
 
         Sets up the newly transferred disk and turns on the instance at its
@@ -5866,14 +5833,13 @@ class ComputeManager(manager.Manager):
             action=fields.NotificationAction.RESIZE_FINISH, phase=phase,
             bdms=bdms)
 
-    # TODO(stephenfin): Remove unused request_spec parameter in API v6.0
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
     def finish_snapshot_based_resize_at_dest(
-            self, ctxt, instance, migration, snapshot_id, request_spec):
+            self, ctxt, instance, migration, snapshot_id):
         """Finishes the snapshot-based resize at the destination compute.
 
         Sets up block devices and networking on the destination compute and
@@ -5890,7 +5856,6 @@ class ComputeManager(manager.Manager):
             be "finished".
         :param snapshot_id: ID of the image snapshot created for a
             non-volume-backed instance, else None.
-        :param request_spec: nova.objects.RequestSpec object for the operation
         """
         LOG.info('Finishing snapshot based resize on destination host %s.',
                  self.host, instance=instance)
@@ -6333,7 +6298,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def shelve_instance(self, context, instance, image_id,
-                        clean_shutdown, accel_uuids=None):
+                        clean_shutdown, accel_uuids):
         """Shelve an instance.
 
         This should be used when you want to take a snapshot of the instance.
@@ -6418,7 +6383,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def shelve_offload_instance(self, context, instance, clean_shutdown,
-            accel_uuids=None):
+            accel_uuids):
         """Remove a shelved instance from the hypervisor.
 
         This frees up those resources for use by other instances, but may lead
@@ -6509,9 +6474,8 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
-    def unshelve_instance(
-            self, context, instance, image, filter_properties, node,
-            request_spec=None, accel_uuids=None):
+    def unshelve_instance(self, context, instance, image,
+                          filter_properties, node, request_spec, accel_uuids):
         """Unshelve the instance.
 
         :param context: request context
@@ -6652,12 +6616,6 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.UNSHELVE,
                 phase=fields.NotificationPhase.END, bdms=bdms)
-
-    # TODO(stephenfin): Remove this in RPC 6.0 since it's nova-network only
-    @messaging.expected_exceptions(NotImplementedError)
-    def reset_network(self, context, instance):
-        """Reset networking on the given instance."""
-        raise NotImplementedError()
 
     def _inject_network_info(self, instance, network_info):
         """Inject network info for the given instance."""
@@ -7907,13 +7865,11 @@ class ComputeManager(manager.Manager):
         return objects.ComputeNode.get_first_node_by_host_for_old_compat(
             context, host)
 
-    # TODO(stephenfin): Remove the unused instance argument in RPC version 6.0
     @wrap_exception()
-    def check_instance_shared_storage(self, ctxt, instance, data):
+    def check_instance_shared_storage(self, ctxt, data):
         """Check if the instance files are shared
 
         :param ctxt: security context
-        :param instance: dict of instance data
         :param data: result of driver.check_instance_shared_storage_local
 
         Returns True if instance disks located on shared storage and
@@ -7937,7 +7893,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def check_can_live_migrate_destination(self, ctxt, instance,
                                            block_migration, disk_over_commit,
-                                           migration=None, limits=None):
+                                           migration, limits):
         """Check if it is possible to execute live migration.
 
         This runs checks on the destination host, and then calls
@@ -8075,18 +8031,14 @@ class ComputeManager(manager.Manager):
         LOG.debug('source check data is %s', result)
         return result
 
-    # TODO(mriedem): Remove the block_migration argument in v6.0 of the compute
-    # RPC API.
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
-    def pre_live_migration(self, context, instance, block_migration, disk,
-                           migrate_data):
+    def pre_live_migration(self, context, instance, disk, migrate_data):
         """Preparations for live migration at dest host.
 
         :param context: security context
         :param instance: dict of instance data
-        :param block_migration: if true, prepare for block migration
         :param disk: disk info of instance
         :param migrate_data: A dict or LiveMigrateData object holding data
                              required for live migration without shared
@@ -10157,18 +10109,6 @@ class ComputeManager(manager.Manager):
                 # NOTE(mriedem): Why don't we pass clean_task_state=True here?
                 self._set_instance_obj_error_state(instance)
 
-    # TODO(stephenfin): Remove this once we bump the compute API to v6.0
-    @wrap_exception()
-    def add_aggregate_host(self, context, aggregate, host, slave_info):
-        """(REMOVED) Notify hypervisor of change (for hypervisor pools)."""
-        raise NotImplementedError()
-
-    # TODO(stephenfin): Remove this once we bump the compute API to v6.0
-    @wrap_exception()
-    def remove_aggregate_host(self, context, host, slave_info, aggregate):
-        """(REMOVED) Removes a host from a physical hypervisor pool."""
-        raise NotImplementedError()
-
     def _process_instance_event(self, instance, event):
         _event = self.instance_events.pop_instance_event(instance, event)
         if _event:
@@ -10714,3 +10654,144 @@ class ComputeManager(manager.Manager):
             LOG.debug("Updating migrate VIF profile for port %(port_id)s:"
                       "%(profile)s", {'port_id': port_id,
                                       'profile': profile})
+
+
+# TODO(sbauza): Remove this proxy class in the X release once we drop the 5.x
+# support.
+# NOTE(sbauza): This proxy class will support the existing <=5.13 RPC calls
+# from any RPC client but will also make sure that the new 6.0 RPC calls will
+# be supported.
+class _ComputeV5Proxy(object):
+
+    target = messaging.Target(version='5.13')
+
+    def __init__(self, manager):
+        self.manager = manager
+
+    def __getattr__(self, name):
+        # NOTE(sbauza): Proxying all the other methods but the V5 ones.
+        return getattr(self.manager, name)
+
+    # 5.0 support for block_migration argument
+    def pre_live_migration(self, context, instance, block_migration, disk,
+                           migrate_data):
+        return self.manager.pre_live_migration(context, instance, disk,
+                                               migrate_data)
+
+    # 5.1 support for legacy request_spec argument
+    def prep_resize(self, context, image, instance, instance_type,
+                    request_spec, filter_properties, node,
+                    clean_shutdown, migration, host_list):
+        if not isinstance(request_spec, objects.RequestSpec):
+            # Prior to compute RPC API 5.1 conductor would pass a legacy dict
+            # version of the request spec to compute and since Stein compute
+            # could be sending that back to conductor on reschedule, so if we
+            # got a dict convert it to an object.
+            # TODO(mriedem): We can drop this compat code when we only support
+            # compute RPC API >=6.0.
+            request_spec = objects.RequestSpec.from_primitives(
+                context, request_spec, filter_properties)
+            # We don't have to set the new flavor on the request spec because
+            # if we got here it was due to a reschedule from the compute and
+            # the request spec would already have the new flavor in it from the
+            # else block below.
+        self.manager.prep_resize(context, image, instance, instance_type,
+                                 request_spec, filter_properties, node,
+                                 clean_shutdown, migration, host_list)
+
+    # 5.2 support for optional request_spec argument
+    def resize_instance(self, context, instance, image,
+                        migration, instance_type, clean_shutdown,
+                        request_spec=None):
+        self.manager.resize_instance(context, instance, image,
+                                    migration, instance_type, clean_shutdown,
+                                    request_spec)
+
+    # 5.2 support for optional request_spec argument
+    def finish_resize(self, context, disk_info, image, instance,
+                      migration, request_spec=None):
+        self.manager.finish_resize(context, disk_info, image, instance,
+                                   migration, request_spec)
+
+    # 5.2 support for optional request_spec argument
+    def revert_resize(self, context, instance, migration, request_spec=None):
+        self.manager.revert_resize(context, instance, migration, request_spec)
+
+    # 5.2 support for optional request_spec argument
+    def finish_revert_resize(
+            self, context, instance, migration, request_spec=None):
+        self.manager.finish_revert_resize(context, instance, migration,
+                                          request_spec)
+
+    # 5.2 support for optional request_spec argument
+    # 5.13 support for optional accel_uuids argument
+    def unshelve_instance(self, context, instance, image, filter_properties,
+                          node, request_spec=None, accel_uuids=None):
+        self.manager.unshelve_instance(context, instance, image,
+                                       filter_properties, node, request_spec,
+                                       accel_uuids or [])
+
+    # 5.3 support for optional migration and limits arguments
+    def check_can_live_migrate_destination(self, ctxt, instance,
+                                           block_migration, disk_over_commit,
+                                           migration=None, limits=None):
+        return self.manager.check_can_live_migrate_destination(
+            ctxt, instance, block_migration, disk_over_commit,
+            migration, limits)
+
+    # 5.11 support for optional accel_uuids argument
+    def build_and_run_instance(self, context, instance, image, request_spec,
+                     filter_properties, admin_password=None,
+                     injected_files=None, requested_networks=None,
+                     security_groups=None, block_device_mapping=None,
+                     node=None, limits=None, host_list=None, accel_uuids=None):
+        self.manager.build_and_run_instance(
+            context, instance, image, request_spec,
+            filter_properties, accel_uuids, admin_password,
+            injected_files, requested_networks,
+            security_groups, block_device_mapping,
+            node, limits, host_list)
+
+    # 5.12 support for optional accel_uuids argument
+    def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
+                         injected_files, new_pass, orig_sys_metadata,
+                         bdms, recreate, on_shared_storage,
+                         preserve_ephemeral, migration,
+                         scheduled_node, limits, request_spec,
+                         accel_uuids=None):
+        self.manager.rebuild_instance(
+            context, instance, orig_image_ref, image_ref,
+            injected_files, new_pass, orig_sys_metadata,
+            bdms, recreate, on_shared_storage,
+            preserve_ephemeral, migration,
+            scheduled_node, limits, request_spec,
+            accel_uuids)
+
+    # 5.13 support for optional accel_uuids argument
+    def shelve_instance(self, context, instance, image_id,
+                        clean_shutdown, accel_uuids=None):
+        self.manager.shelve_instance(context, instance, image_id,
+                                     clean_shutdown, accel_uuids)
+
+    # 5.13 support for optional accel_uuids argument
+    def shelve_offload_instance(self, context, instance, clean_shutdown,
+            accel_uuids=None):
+        self.manager.shelve_offload_instance(
+            context, instance, clean_shutdown, accel_uuids)
+
+    # 6.0 drop unused request_spec argument
+    def prep_snapshot_based_resize_at_dest(
+            self, ctxt, instance, flavor, nodename, migration, limits,
+            request_spec):
+        return self.manager.prep_snapshot_based_resize_at_dest(
+            ctxt, instance, flavor, nodename, migration, limits)
+
+    # 6.0 drop unused request_spec argument
+    def finish_snapshot_based_resize_at_dest(
+            self, ctxt, instance, migration, snapshot_id, request_spec):
+        self.manager.finish_snapshot_based_resize_at_dest(
+            ctxt, instance, migration, snapshot_id)
+
+    # 6.0 drop unused instance argument
+    def check_instance_shared_storage(self, ctxt, instance, data):
+        return self.manager.check_instance_shared_storage(ctxt, data)

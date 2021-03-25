@@ -718,7 +718,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.compute.build_and_run_instance(self.context, instance,
                                                     mock.sentinel.image,
                                                     mock.sentinel.request_spec,
-                                                    {})
+                                                    {}, [])
             self.assertEqual(3, mock_sem.__enter__.call_count)
 
     def test_max_concurrent_builds_limited(self):
@@ -6092,6 +6092,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                             'hosts': [[self.compute.host,
                                                        'fake-node']]}}
         self.resource_provider_mapping = None
+        self.accel_uuids = []
 
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
@@ -6480,6 +6481,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
+                accel_uuids=self.accel_uuids,
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
                 requested_networks=self.requested_networks,
@@ -6506,6 +6508,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute.build_and_run_instance(self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
+                accel_uuids = self.accel_uuids,
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
                 requested_networks=[objects.NetworkRequest(
@@ -6555,6 +6558,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
+                accel_uuids = self.accel_uuids,
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
                 requested_networks=self.requested_networks,
@@ -6614,6 +6618,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
+                accel_uuids=self.accel_uuids,
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
                 requested_networks=self.requested_networks,
@@ -6706,7 +6711,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 requested_networks=self.requested_networks,
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits, host_list=fake_host_list)
+                limits=self.limits, host_list=fake_host_list,
+                accel_uuids=self.accel_uuids)
 
         mock_build_and_run.assert_called_once_with(self.context,
             instance,
@@ -6750,7 +6756,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             requested_networks=self.requested_networks,
             security_groups=self.security_groups,
             block_device_mapping=self.block_device_mapping, node=self.node,
-            limits=self.limits, host_list=fake_host_list)
+            limits=self.limits, host_list=fake_host_list,
+            accel_uuids=self.accel_uuids)
 
         mock_build_and_run.assert_called_once_with(self.context,
             instance,
@@ -6804,7 +6811,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             requested_networks=self.requested_networks,
             security_groups=self.security_groups,
             block_device_mapping=self.block_device_mapping, node=self.node,
-            limits=self.limits, host_list=fake_host_list)
+            limits=self.limits, host_list=fake_host_list,
+            accel_uuids=self.accel_uuids)
 
         mock_build_and_run.assert_called_once_with(self.context,
             instance,
@@ -6852,6 +6860,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties={},
+                accel_uuids=[],
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
                 requested_networks=self.requested_networks,
@@ -6905,6 +6914,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
+                accel_uuids=self.accel_uuids,
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
                 requested_networks=self.requested_networks,
@@ -6958,6 +6968,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
+                accel_uuids=self.accel_uuids,
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
                 requested_networks=self.requested_networks,
@@ -7016,6 +7027,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
+                accel_uuids=self.accel_uuids,
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
                 requested_networks=self.requested_networks,
@@ -7073,7 +7085,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         instance = objects.Instance(uuid=uuids.instance)
         for i in range(0, 10):
             self.compute.build_and_run_instance(self.context, instance, None,
-                                                None, None)
+                                                None, None, [])
 
         self.assertEqual(10, mock_failed.call_count)
 
@@ -7086,7 +7098,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         instance = objects.Instance(uuid=uuids.instance)
         for i in range(0, 10):
             self.compute.build_and_run_instance(self.context, instance, None,
-                                                None, None)
+                                                None, None, [])
 
         mock_failed.assert_not_called()
 
@@ -7110,7 +7122,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         instance = objects.Instance(uuid=uuids.instance)
         for i in range(0, 10):
             self.compute.build_and_run_instance(self.context, instance, None,
-                                                None, None)
+                                                None, None, [])
 
         self.assertEqual(2, mock_failed.call_count)
         self.assertEqual(8, mock_succeeded.call_count)
@@ -7125,7 +7137,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         instance = objects.Instance(uuid=uuids.instance)
         for i in range(0, 10):
             self.compute.build_and_run_instance(self.context, instance, None,
-                                                None, None)
+                                                None, None, [])
 
         self.assertEqual(10, mock_failed.call_count)
         mock_succeeded.assert_not_called()
@@ -7151,7 +7163,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.assertRaises(test.TestingException,
                               self.compute.build_and_run_instance,
                               self.context, instance, None,
-                              None, None)
+                              None, None, [])
 
         self.assertEqual(10, mock_failed.call_count)
         mock_succeeded.assert_not_called()
@@ -7368,6 +7380,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.context, self.instance,
                 self.image, request_spec={},
                 filter_properties=self.filter_properties,
+                accel_uuids=self.accel_uuids,
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
                 requested_networks=self.requested_networks,
@@ -7407,7 +7420,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                           self.admin_pass, self.requested_networks,
                           self.security_groups, self.block_device_mapping,
                           self.node, self.limits, self.filter_properties,
-                          self.accel_uuids)
+                          request_spec=[], accel_uuids=self.accel_uuids)
 
         mock_save.assert_called_once_with()
         mock_notify.assert_has_calls([
@@ -8380,7 +8393,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.TestResizeError, self.compute.resize_instance,
                 context=self.context, instance=self.instance, image=self.image,
                 migration=self.migration,
-                instance_type='type', clean_shutdown=True,
+                flavor='type', clean_shutdown=True,
                 request_spec=objects.RequestSpec())
 
         # Assert that we set the migration to an error state
@@ -8402,7 +8415,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 exception.ResizeError, self.compute.resize_instance,
                 context=self.context, instance=self.instance, image=self.image,
                 migration=self.migration,
-                instance_type='type', clean_shutdown=True,
+                flavor='type', clean_shutdown=True,
                 request_spec=objects.RequestSpec())
 
         # Assert the instance vm_state was unchanged.
@@ -8422,7 +8435,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.TestResizeError, self.compute.resize_instance,
                 context=self.context, instance=self.instance, image=self.image,
                 migration=self.migration,
-                instance_type='type', clean_shutdown=True,
+                flavor='type', clean_shutdown=True,
                 request_spec=objects.RequestSpec())
 
         # Assert that we did not set the migration to an error state
@@ -9112,7 +9125,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             connector = compute.driver.get_volume_connector(instance)
 
             r = compute.pre_live_migration(self.context, instance,
-                                           False, {}, migrate_data)
+                                           {}, migrate_data)
 
             mock_notify_about_inst.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
@@ -9186,7 +9199,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
             self.assertRaises(test.TestingException,
                               compute.pre_live_migration,
-                              self.context, instance, False, {}, migrate_data)
+                              self.context, instance, {}, migrate_data)
 
             self.assertEqual(vol1_orig_attachment_id, vol1_bdm.attachment_id)
             self.assertEqual(vol2_orig_attachment_id, vol2_bdm.attachment_id)
@@ -9249,7 +9262,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
             self.assertRaises(test.TestingException,
                               compute.pre_live_migration,
-                              self.context, instance, False, {}, migrate_data)
+                              self.context, instance, {}, migrate_data)
 
             self.assertEqual(2, mock_vol_api.attachment_create.call_count)
 
@@ -10815,7 +10828,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # Setup mocks.
         flavor = self.instance.flavor
         limits = objects.SchedulerLimits()
-        request_spec = objects.RequestSpec()
         # resize_claim normally sets instance.migration_context and returns
         # a MoveClaim which is a context manager. Rather than deal with
         # mocking a context manager we just set the migration_context on the
@@ -10830,7 +10842,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             # Run the code.
             mc = self.compute.prep_snapshot_based_resize_at_dest(
                 self.context, self.instance, flavor, 'nodename',
-                self.migration, limits, request_spec)
+                self.migration, limits)
             self.assertIs(mc, self.instance.migration_context)
         # Assert the mock calls.
         _send_prep_resize_notifications.assert_has_calls([
@@ -10854,7 +10866,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # Setup mocks.
         flavor = self.instance.flavor
         limits = objects.SchedulerLimits()
-        request_spec = objects.RequestSpec()
         ex1 = exception.ConsumerAllocationRetrievalFailed(
             consumer_uuid=self.instance.uuid, error='oops')
         get_allocs.side_effect = ex1
@@ -10870,7 +10881,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 messaging.ExpectedException,
                 self.compute.prep_snapshot_based_resize_at_dest,
                 self.context, self.instance, flavor, 'nodename',
-                self.migration, limits, request_spec)
+                self.migration, limits)
             wrapped_exc = ex2.exc_info[1]
             # The original error should be in the MigrationPreCheckError which
             # itself is in the ExpectedException.
@@ -10904,7 +10915,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         # Setup mocks.
         flavor = self.instance.flavor
         limits = objects.SchedulerLimits()
-        request_spec = objects.RequestSpec()
         ex1 = exception.ComputeResourcesUnavailable(reason='numa')
         with test.nested(
             mock.patch.object(self.compute, '_send_prep_resize_notifications'),
@@ -10917,7 +10927,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 messaging.ExpectedException,
                 self.compute.prep_snapshot_based_resize_at_dest,
                 self.context, self.instance, flavor, 'nodename',
-                self.migration, limits, request_spec)
+                self.migration, limits)
             wrapped_exc = ex2.exc_info[1]
             # The original error should be in the MigrationPreCheckError which
             # itself is in the ExpectedException.
@@ -11147,7 +11157,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         """Tests the error handling on the finish_snapshot_based_resize_at_dest
         method.
         """
-        request_spec = objects.RequestSpec()
         self.instance.task_state = task_states.RESIZE_MIGRATED
         with mock.patch.object(
                 self.compute, '_finish_snapshot_based_resize_at_dest',
@@ -11155,8 +11164,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             ex = self.assertRaises(
                 test.TestingException,
                 self.compute.finish_snapshot_based_resize_at_dest,
-                self.context, self.instance, self.migration, uuids.snapshot_id,
-                request_spec)
+                self.context, self.instance, self.migration, uuids.snapshot_id)
         # Assert the non-decorator mock calls.
         _finish.assert_called_once_with(
             self.context, self.instance, self.migration, uuids.snapshot_id)
@@ -11194,7 +11202,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             inst_save, apply_migration_context, get_bdms, snapshot_id=None):
         """Happy path test for finish_snapshot_based_resize_at_dest."""
         # Setup the fake instance.
-        request_spec = objects.RequestSpec()
         self.instance.task_state = task_states.RESIZE_MIGRATED
         nwinfo = network_model.NetworkInfo([
             network_model.VIF(id=uuids.port_id)])
@@ -11214,8 +11221,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             network_api.get_instance_nw_info.return_value = nwinfo
             # Run that big beautiful code!
             self.compute.finish_snapshot_based_resize_at_dest(
-                self.context, self.instance, self.migration, snapshot_id,
-                request_spec)
+                self.context, self.instance, self.migration, snapshot_id)
         # Check the changes to the instance and migration object.
         self.assertEqual(vm_states.RESIZED, self.instance.vm_state)
         self.assertIsNone(self.instance.task_state)

@@ -80,6 +80,6 @@ class ComputeManagerTestCase(test.TestCase):
                 filter_properties)
             self.compute.manager.build_and_run_instance(
                     self.context, instance, {}, request_spec,
-                    filter_properties, block_device_mapping=[])
+                    filter_properties, accel_uuids=[], block_device_mapping=[])
         _test()
         self.assertIn('Preserve this', instance.fault.message)
