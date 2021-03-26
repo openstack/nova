@@ -819,9 +819,15 @@ class API(base.Base):
         # TODO(arosen) Should optimize more to do direct query for security
         # group if len(security_groups) == 1
         if len(security_groups):
+            # NOTE(slaweq): fields other than name and id aren't really needed
+            # so asking only about those fields will allow Neutron to not
+            # prepare list of rules for each found security group. That may
+            # speed processing of this request a lot in case when tenant has
+            # got many security groups
+            sg_fields = ['id', 'name']
             search_opts = {'tenant_id': instance.project_id}
             user_security_groups = neutron.list_security_groups(
-                **search_opts).get('security_groups')
+                fields=sg_fields, **search_opts).get('security_groups')
 
             for security_group in security_groups:
                 name_match = None
