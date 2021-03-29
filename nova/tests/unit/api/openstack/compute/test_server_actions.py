@@ -39,16 +39,6 @@ CONF = nova.conf.CONF
 FAKE_UUID = fakes.FAKE_UUID
 
 
-class MockSetAdminPassword(object):
-    def __init__(self):
-        self.instance_id = None
-        self.password = None
-
-    def __call__(self, context, instance, password):
-        self.instance_id = instance['uuid']
-        self.password = password
-
-
 @ddt.ddt
 class ServerActionsControllerTestV21(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
