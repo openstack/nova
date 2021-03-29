@@ -23,7 +23,9 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova.objects import flavor as flavor_obj
+from nova import test
 from nova.tests.unit.objects import test_objects
 
 
@@ -447,3 +449,124 @@ class TestFlavorList(test_objects._LocalTest, _TestFlavorList):
 
 class TestFlavorListRemote(test_objects._RemoteTest, _TestFlavorList):
     pass
+
+
+class TestFlavorExtraSpecs(test.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.context = nova_context.get_admin_context()
+        flavor = objects.Flavor(
+            context=self.context,
+            name="cg1.4xlarge",
+            memory_mb=22000,
+            vcpus=8,
+            root_gb=1690,
+            ephemeral_gb=2000,
+            flavorid=105)
+        self.specs = {
+            'cpu_arch': fields.Architecture.X86_64,
+            'cpu_model': 'Nehalem',
+            'xpu_arch': 'fermi',
+            'xpus': '2',
+            'xpu_model': 'Tesla 2050',
+        }
+        flavor.extra_specs = self.specs
+        flavor.create()
+        self.flavor = flavor
+        self.flavorid = flavor.flavorid
+
+    def tearDown(self):
+        # Remove the instance type from the database
+        self.flavor.destroy()
+        super().tearDown()
+
+    def test_flavor_extra_specs_get(self):
+        flavor = objects.Flavor.get_by_flavor_id(self.context, self.flavorid)
+        self.assertEqual(self.specs, flavor.extra_specs)
+
+    def test_flavor_extra_specs_delete(self):
+        del self.specs["xpu_model"]
+        del self.flavor.extra_specs['xpu_model']
+        self.flavor.save()
+        flavor = objects.Flavor.get_by_flavor_id(self.context, self.flavorid)
+        self.assertEqual(self.specs, flavor.extra_specs)
+
+    def test_flavor_extra_specs_update(self):
+        self.specs["cpu_model"] = "Sandy Bridge"
+        self.flavor.extra_specs["cpu_model"] = "Sandy Bridge"
+        self.flavor.save()
+        flavor = objects.Flavor.get_by_flavor_id(self.context, self.flavorid)
+        self.assertEqual(self.specs, flavor.extra_specs)
+
+    def test_flavor_extra_specs_create(self):
+        net_attrs = {
+            "net_arch": "ethernet",
+            "net_mbps": "10000"
+        }
+        self.specs.update(net_attrs)
+        self.flavor.extra_specs.update(net_attrs)
+        self.flavor.save()
+        flavor = objects.Flavor.get_by_flavor_id(self.context, self.flavorid)
+        self.assertEqual(self.specs, flavor.extra_specs)
+
+    def test_flavor_get_with_extra_specs(self):
+        flavor = objects.Flavor.get_by_id(self.context, 5)
+        self.assertEqual(flavor.extra_specs, {})
+
+    def test_flavor_get_by_name_with_extra_specs(self):
+        flavor = objects.Flavor.get_by_name(self.context, "cg1.4xlarge")
+        self.assertEqual(flavor.extra_specs, self.specs)
+        flavor = objects.Flavor.get_by_name(self.context, "m1.small")
+        self.assertEqual(flavor.extra_specs, {})
+
+    def test_flavor_get_by_flavor_id_with_extra_specs(self):
+        flavor = objects.Flavor.get_by_flavor_id(self.context, 105)
+        self.assertEqual(flavor.extra_specs, self.specs)
+        flavor = objects.Flavor.get_by_flavor_id(self.context, 2)
+        self.assertEqual(flavor.extra_specs, {})
+
+    def test_flavor_get_all(self):
+        flavors = objects.FlavorList.get_all(self.context)
+
+        name2specs = {flavor.name: flavor.extra_specs
+                      for flavor in flavors}
+
+        self.assertEqual(name2specs['cg1.4xlarge'], self.specs)
+        self.assertEqual(name2specs['m1.small'], {})
+
+
+class TestFlavorFiltering(test.TestCase):
+    """Test cases for the filter option available for FlavorList.get_all."""
+    def setUp(self):
+        super().setUp()
+        self.context = nova_context.get_admin_context()
+
+    def assertFilterResults(self, filters, expected):
+        flavors = objects.FlavorList.get_all(self.context, filters=filters)
+        inst_names = [i.name for i in flavors]
+        self.assertEqual(inst_names, expected)
+
+    def test_no_filters(self):
+        filters = None
+        expected = ['m1.tiny', 'm1.small', 'm1.medium', 'm1.large',
+                    'm1.xlarge', 'm1.tiny.specs']
+        self.assertFilterResults(filters, expected)
+
+    def test_min_memory_mb_filter(self):
+        # Exclude tiny instance which is 512 MB.
+        filters = {'min_memory_mb': 513}
+        expected = ['m1.small', 'm1.medium', 'm1.large', 'm1.xlarge']
+        self.assertFilterResults(filters, expected)
+
+    def test_min_root_gb_filter(self):
+        # Exclude everything but large and xlarge which have >= 80 GB.
+        filters = {'min_root_gb': 80}
+        expected = ['m1.large', 'm1.xlarge']
+        self.assertFilterResults(filters, expected)
+
+    def test_min_memory_mb_AND_root_gb_filter(self):
+        # Exclude everything but large and xlarge which have >= 80 GB.
+        filters = {'min_memory_mb': 16384, 'min_root_gb': 80}
+        expected = ['m1.xlarge']
+        self.assertFilterResults(filters, expected)
