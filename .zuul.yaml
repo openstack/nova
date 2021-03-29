@@ -99,19 +99,24 @@
               block_migrate_cinder_iscsi: true
     post-run: playbooks/nova-live-migration/post-run.yaml
 
-# TODO(lyarwood): The following jobs need to be written as part of the
-# migration to zuulv3 before nova-live-migration can be removed:
-#
-#- job:
-#    name: nova-multinode-live-migration-ceph
-#    description: |
-#      Run tempest live migration tests against ceph ephemeral storage and
-#      cinder volumes.
-#- job:
-#    name: nova-multinode-evacuate-ceph
-#    description: |
-#       Verifiy the evacuation of instances with ceph ephemeral disks
-#       from down compute hosts.
+- job:
+    name: nova-live-migration-ceph
+    parent: devstack-plugin-ceph-multinode-tempest-py3
+    description: |
+      Run tempest live migration tests against ceph ephemeral storage and
+      cinder volumes.
+    irrelevant-files: *dsvm-irrelevant-files
+    vars:
+      tox_envlist: all
+      tempest_test_regex: (^tempest\.api\.compute\.admin\.(test_live_migration|test_migration))
+      devstack_local_conf:
+        test-config:
+          $TEMPEST_CONFIG:
+            compute-feature-enabled:
+              volume_backed_live_migration: true
+              block_migration_for_live_migration: false
+              block_migrate_cinder_iscsi: false
+    post-run: playbooks/nova-live-migration/post-run.yaml
 
 - job:
     name: nova-lvm
@@ -456,6 +461,7 @@
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
         - nova-grenade-multinode
         - nova-live-migration
+        - nova-live-migration-ceph
         - nova-lvm
         - nova-multi-cell
         - nova-next
@@ -497,6 +503,7 @@
       jobs:
         - nova-grenade-multinode
         - nova-live-migration
+        - nova-live-migration-ceph
         - nova-tox-functional-py38
         - nova-multi-cell
         - nova-next
