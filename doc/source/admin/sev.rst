@@ -121,6 +121,14 @@ steps:
      footprint of any flavor imposes a maximum number of simultaneously
      running guests which is less than or equal to the SEV limit.
 
+- Configure :oslo.config:option:`ram_allocation_ratio` on all SEV-capable
+  compute hosts to ``1.0``. Use of SEV requires locking guest memory, meaning
+  it is not possible to overcommit host memory.
+
+  Alternatively, you can explicitly configure small pages for instances using
+  the :nova:extra-spec:`hw:mem_page_size` flavor extra spec and equivalent
+  image metadata property. For more information, see :doc:`huge-pages`.
+
 - Configure :oslo.config:option:`libvirt.hw_machine_type` on all
   SEV-capable compute hosts to include ``x86_64=q35``, so that all
   x86_64 images use the ``q35`` machine type by default.  (Currently
@@ -260,8 +268,7 @@ expected to be limited when SEV encryption is used:
 
 - Use of spice / VNC / serial / RDP consoles
 
-- `VM guest virtual NUMA (a.k.a. vNUMA)
-  <https://www.suse.com/documentation/sles-12/singlehtml/article_vt_best_practices/article_vt_best_practices.html#sec.vt.best.perf.numa.vmguest>`_
+- :doc:`VM guest virtual NUMA <cpu-topologies>`
 
 
 References
