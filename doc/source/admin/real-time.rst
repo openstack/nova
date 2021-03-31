@@ -74,9 +74,8 @@ Configuring a flavor or image
 .. versionchanged:: 22.0.0 (Victoria)
 
     Previously, it was necessary to specify
-    :nova:extra-spec:`hw:cpu_realtime_mask` when
-    :nova:extra-spec:`hw:cpu_realtime` was set to ``true``.
-    Starting in Victoria, it is possible
+    :nova:extra-spec:`hw:cpu_realtime_mask` when realtime mode was enabled via
+    :nova:extra-spec:`hw:cpu_realtime`. Starting in Victoria, it is possible
     to omit this when an emulator thread policy is configured using the
     :nova:extra-spec:`hw:emulator_threads_policy` extra spec, thus allowing all
     guest cores to be be allocated as real-time cores.
@@ -92,14 +91,14 @@ and merely requires a combination of flavor extra specs and image metadata
 properties, along with a suitable real-time guest OS.
 
 Enable real-time by setting the :nova:extra-spec:`hw:cpu_realtime` flavor extra
-spec to ``true``.  When this is configured, it is necessary to specify where
-guest overhead processes should be scheduled to.  This can be accomplished in
-one of three ways. Firstly, the :nova:extra-spec:`hw:cpu_realtime_mask` extra
-spec or equivalent image metadata property can be used to indicate which guest
-cores should be scheduled as real-time cores, leaving the remainder to be
-scheduled as non-real-time cores and to handle overhead processes. For example,
-to allocate the first two cores of an 8 core instance as the non-real-time
-cores:
+spec to ``yes`` or a truthy value. When this is configured, it is necessary to
+specify where guest overhead processes should be scheduled to. This can be
+accomplished in one of three ways. Firstly, the
+:nova:extra-spec:`hw:cpu_realtime_mask` extra spec or equivalent image metadata
+property can be used to indicate which guest cores should be scheduled as
+real-time cores, leaving the remainder to be scheduled as non-real-time cores
+and to handle overhead processes. For example, to allocate the first two cores
+of an 8 core instance as the non-real-time cores:
 
 .. code-block:: console
 
