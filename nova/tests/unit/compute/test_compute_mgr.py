@@ -2915,14 +2915,36 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 self.context, 'compute_check_can_live_migrate_destination',
                 CONF.host, instance.uuid)
 
+    @mock.patch('nova.objects.InstanceGroup.get_by_instance_uuid', mock.Mock(
+        side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_check_can_live_migrate_destination_success(self):
         self._test_check_can_live_migrate_destination()
 
+    @mock.patch('nova.objects.InstanceGroup.get_by_instance_uuid', mock.Mock(
+        side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_check_can_live_migrate_destination_fail(self):
         self.assertRaises(
-                test.TestingException,
-                self._test_check_can_live_migrate_destination,
-                do_raise=True)
+            test.TestingException,
+            self._test_check_can_live_migrate_destination,
+            do_raise=True)
+
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    def test_check_can_live_migrate_destination_fail_group_policy(
+            self, mock_fail_db):
+
+        instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host, vm_state=vm_states.ACTIVE,
+            node='fake-node')
+
+        ex = exception.RescheduledException(
+                instance_uuid=instance.uuid, reason="policy violated")
+
+        with mock.patch.object(self.compute, '_validate_instance_group_policy',
+                               side_effect=ex):
+            self.assertRaises(
+                exception.MigrationPreCheckError,
+                self.compute.check_can_live_migrate_destination,
+                self.context, instance, None, None)
 
     @mock.patch('nova.compute.manager.InstanceEvents._lock_name')
     def test_prepare_for_instance_event(self, lock_name_mock):
@@ -6447,7 +6469,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_validate_policy_honors_workaround_disabled(self, mock_get):
         instance = objects.Instance(uuid=uuids.instance)
         hints = {'group': 'foo'}
-        mock_get.return_value = objects.InstanceGroup(policy=None)
+        mock_get.return_value = objects.InstanceGroup(policy=None,
+                                                      uuid=uuids.group)
         self.compute._validate_instance_group_policy(self.context,
                                                      instance, hints)
         mock_get.assert_called_once_with(self.context, 'foo')
@@ -6473,10 +6496,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                                      instance, hints)
         mock_get.assert_called_once_with(self.context, uuids.group_hint)
 
+    @mock.patch('nova.objects.InstanceGroup.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     @mock.patch('nova.objects.InstanceGroup.get_by_hint')
-    def test_validate_instance_group_policy_with_rules(self, mock_get_by_hint,
-                                                       mock_get_by_host):
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    def test_validate_instance_group_policy_with_rules(
+            self, migration_list, nodes, mock_get_by_hint, mock_get_by_host,
+            mock_get_by_uuid):
         # Create 2 instance in same host, inst2 created before inst1
         instance = objects.Instance(uuid=uuids.inst1)
         hints = {'group': [uuids.group_hint]}
@@ -6485,17 +6512,26 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_get_by_host.return_value = existing_insts
 
         # if group policy rules limit to 1, raise RescheduledException
-        mock_get_by_hint.return_value = objects.InstanceGroup(
+        group = objects.InstanceGroup(
             policy='anti-affinity', rules={'max_server_per_host': '1'},
-            hosts=['host1'], members=members_uuids)
+            hosts=['host1'], members=members_uuids,
+            uuid=uuids.group)
+        mock_get_by_hint.return_value = group
+        mock_get_by_uuid.return_value = group
+        nodes.return_value = ['nodename']
+        migration_list.return_value = [objects.Migration(
+            uuid=uuids.migration, instance_uuid=uuids.instance)]
         self.assertRaises(exception.RescheduledException,
                           self.compute._validate_instance_group_policy,
                           self.context, instance, hints)
 
         # if group policy rules limit change to 2, validate OK
-        mock_get_by_hint.return_value = objects.InstanceGroup(
+        group2 = objects.InstanceGroup(
             policy='anti-affinity', rules={'max_server_per_host': 2},
-            hosts=['host1'], members=members_uuids)
+            hosts=['host1'], members=members_uuids,
+            uuid=uuids.group)
+        mock_get_by_hint.return_value = group2
+        mock_get_by_uuid.return_value = group2
         self.compute._validate_instance_group_policy(self.context,
                                                      instance, hints)
 
@@ -7966,6 +8002,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         else:
             mock_log.warning.assert_not_called()
 
+    @mock.patch('nova.objects.InstanceGroup.get_by_instance_uuid', mock.Mock(
+        side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_pre_live_migration_cinder_v3_api(self):
         # This tests that pre_live_migration with a bdm with an
         # attachment_id, will create a new attachment and update
@@ -8043,6 +8081,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
         _test()
 
+    @mock.patch('nova.objects.InstanceGroup.get_by_instance_uuid', mock.Mock(
+        side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_pre_live_migration_exception_cinder_v3_api(self):
         # The instance in this test has 2 attachments. The second attach_create
         # will throw an exception. This will test that the first attachment
@@ -8112,6 +8152,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 self.assertGreater(len(m.mock_calls), 0)
         _test()
 
+    @mock.patch('nova.objects.InstanceGroup.get_by_instance_uuid', mock.Mock(
+        side_effect=exception.InstanceGroupNotFound(group_uuid='')))
     def test_pre_live_migration_exceptions_delete_attachments(self):
         # The instance in this test has 2 attachments. The call to
         # driver.pre_live_migration will raise an exception. This will test
@@ -9297,7 +9339,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                               self.compute.prep_resize,
                               self.context, mock.sentinel.image,
                               instance, flavor,
-                              mock.sentinel.request_spec,
+                              objects.RequestSpec(),
                               {}, 'node', False,
                               migration, [])
 
@@ -9368,6 +9410,54 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 # _error_out_instance_on_exception should reraise the
                 # UnableToMigrateToSelf inside InstanceFaultRollback.
                 exception.UnableToMigrateToSelf, self.compute.prep_resize,
+                self.context, instance.image_meta, instance, instance.flavor,
+                request_spec, filter_properties={}, node=instance.node,
+                clean_shutdown=True, migration=migration, host_list=[])
+        # The instance.vm_state should remain unchanged
+        # (_error_out_instance_on_exception will set to ACTIVE by default).
+        self.assertEqual(vm_states.STOPPED, instance.vm_state)
+
+    @mock.patch('nova.compute.utils.notify_usage_exists')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    @mock.patch('nova.compute.utils.notify_about_resize_prep_instance')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.manager.ComputeManager._revert_allocation')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_reschedule_resize_or_reraise')
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    # this is almost copy-paste from test_prep_resize_fails_rollback
+    def test_prep_resize_fails_group_validation(
+            self, add_instance_fault_from_exc, _reschedule_resize_or_reraise,
+            _revert_allocation, mock_instance_save,
+            notify_about_resize_prep_instance, _notify_about_instance_usage,
+            notify_usage_exists):
+        """Tests that if _validate_instance_group_policy raises
+        InstanceFaultRollback, the instance.vm_state is reset properly in
+        _error_out_instance_on_exception
+        """
+        instance = fake_instance.fake_instance_obj(
+            self.context, host=self.compute.host, vm_state=vm_states.STOPPED,
+            node='fake-node', expected_attrs=['system_metadata', 'flavor'])
+        migration = mock.MagicMock(spec='nova.objects.Migration')
+        request_spec = mock.MagicMock(spec='nova.objects.RequestSpec')
+        ex = exception.RescheduledException(
+            instance_uuid=instance.uuid, reason="policy violated")
+        ex2 = exception.InstanceFaultRollback(
+            inner_exception=ex)
+
+        def fake_reschedule_resize_or_reraise(*args, **kwargs):
+            raise ex2
+
+        _reschedule_resize_or_reraise.side_effect = (
+            fake_reschedule_resize_or_reraise)
+
+        with mock.patch.object(self.compute, '_validate_instance_group_policy',
+                               side_effect=ex):
+            self.assertRaises(
+                # _error_out_instance_on_exception should reraise the
+                # RescheduledException inside InstanceFaultRollback.
+                exception.RescheduledException, self.compute.prep_resize,
                 self.context, instance.image_meta, instance, instance.flavor,
                 request_spec, filter_properties={}, node=instance.node,
                 clean_shutdown=True, migration=migration, host_list=[])
