@@ -177,13 +177,13 @@ db sync
 
 Upgrade the main database schema up to the most recent version or ``VERSION``
 if specified. By default, this command will also attempt to upgrade the schema
-for the cell0 database if it is mapped .
+for the cell0 database if it is mapped.
 If :option:`--local_cell` is specified, then only the main database in the
 current cell is upgraded. The local database connection is determined by
 :oslo.config:option:`database.connection` in the configuration file, passed to
 nova-manage using the ``--config-file`` option(s).
 
-Refer to the :program:`nova-manage cells_v2 map_cell0`` or
+Refer to the :program:`nova-manage cells_v2 map_cell0` or
 :program:`nova-manage cells_v2 simple_cell_setup` commands for more details on
 mapping the cell0 database.
 
