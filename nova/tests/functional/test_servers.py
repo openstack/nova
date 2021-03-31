@@ -7181,9 +7181,9 @@ class ServerMoveWithPortResourceRequestTest(
         self._assert_pci_request_pf_device_name(server, 'host2-ens2')
 
         # recover source compute
+        self.compute1 = self.restart_compute_service(self.compute1)
         self.admin_api.put_service(
             self.compute1_service_id, {'forced_down': 'false'})
-        self.compute1 = self.restart_compute_service(self.compute1)
 
         # check that source allocation is cleaned up and the dest allocation
         # and the port bindings are not touched.
@@ -7226,9 +7226,9 @@ class ServerMoveWithPortResourceRequestTest(
             qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         # recover source compute
+        self.compute1 = self.restart_compute_service(self.compute1)
         self.admin_api.put_service(
             self.compute1_service_id, {'forced_down': 'false'})
-        self.compute1 = self.restart_compute_service(self.compute1)
 
         # check again that even after source host recovery the source
         # allocation is intact

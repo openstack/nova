@@ -252,6 +252,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         services = self.admin_api.get_services(host='host2',
                                                binary='nova-compute')
         service_id = services[0]['id']
+        self.compute2.stop()
         self.admin_api.put_service(service_id, {'forced_down': True})
         evacuate = {
             'evacuate': {
@@ -272,6 +273,8 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=notifications[0])
+        self.compute2.start()
+        self._wait_for_migration_status(server, ['completed'])
         self.admin_api.put_service(service_id, {'forced_down': False})
 
     def _test_live_migration_force_complete(self, server):

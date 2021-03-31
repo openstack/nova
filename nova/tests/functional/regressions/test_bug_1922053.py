@@ -10,6 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 
 
@@ -61,16 +62,13 @@ class ForceUpWithDoneEvacuations(integrated_helpers._IntegratedTestBase):
             expected_migration_status='done'
         )
 
-        # FIXME(lyarwood): This is bug #1922053, this shouldn't be allowed with
-        # `done` evacuation migration records still associated with the host.
-        # Replace this with the following assertion once fixed:
-        # ex = self.assertRaises(
-        #   client.OpenStackApiException,
-        #   self._force_up_compute,
-        #   'compute',
-        # )
-        # self.assertEqual(400, ex.response.status_code)
-        self._force_up_compute('compute')
+        # Assert that the request to force up the host is rejected
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._force_up_compute,
+            'compute',
+        )
+        self.assertEqual(400, ex.response.status_code)
 
         # Assert that the evacuation migration record remains `done`
         self._wait_for_migration_status(server, ["done"])
@@ -81,6 +79,9 @@ class ForceUpWithDoneEvacuations(integrated_helpers._IntegratedTestBase):
 
         # Assert that the evacuation migration record is now `completed`
         self._wait_for_migration_status(server, ["completed"])
+
+        # Assert that we can now force up the host
+        self._force_up_compute('compute')
 
 
 class ForceUpWithDoneEvacuationsv252(ForceUpWithDoneEvacuations):
