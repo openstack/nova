@@ -1587,7 +1587,11 @@ class ComputeManager(manager.Manager):
         return [_decode(f) for f in injected_files]
 
     def _validate_instance_group_policy(self, context, instance,
-                                        scheduler_hints):
+                                        scheduler_hints=None):
+
+        if CONF.workarounds.disable_group_policy_check_upcall:
+            return
+
         # NOTE(russellb) Instance group policy is enforced by the scheduler.
         # However, there is a race condition with the enforcement of
         # the policy.  Since more than one instance may be scheduled at the
@@ -1596,29 +1600,63 @@ class ComputeManager(manager.Manager):
         # multiple instances with an affinity policy could end up on different
         # hosts.  This is a validation step to make sure that starting the
         # instance here doesn't violate the policy.
-        group_hint = scheduler_hints.get('group')
-        if not group_hint:
-            return
+        if scheduler_hints is not None:
+            # only go through here if scheduler_hints is provided, even if it
+            # is empty.
+            group_hint = scheduler_hints.get('group')
+            if not group_hint:
+                return
+            else:
+                # The RequestSpec stores scheduler_hints as key=list pairs so
+                # we need to check the type on the value and pull the single
+                # entry out. The API request schema validates that
+                # the 'group' hint is a single value.
+                if isinstance(group_hint, list):
+                    group_hint = group_hint[0]
 
-        # The RequestSpec stores scheduler_hints as key=list pairs so we need
-        # to check the type on the value and pull the single entry out. The
-        # API request schema validates that the 'group' hint is a single value.
-        if isinstance(group_hint, list):
-            group_hint = group_hint[0]
+                group = objects.InstanceGroup.get_by_hint(context, group_hint)
+        else:
+            # TODO(ganso): a call to DB can be saved by adding request_spec
+            # to rpcapi payload of live_migration, pre_live_migration and
+            # check_can_live_migrate_destination
+            try:
+                group = objects.InstanceGroup.get_by_instance_uuid(
+                    context, instance.uuid)
+            except exception.InstanceGroupNotFound:
+                return
 
-        @utils.synchronized(group_hint)
-        def _do_validation(context, instance, group_hint):
-            group = objects.InstanceGroup.get_by_hint(context, group_hint)
+        @utils.synchronized(group['uuid'])
+        def _do_validation(context, instance, group):
             if group.policy and 'anti-affinity' == group.policy:
+
+                # instances on host
                 instances_uuids = objects.InstanceList.get_uuids_by_host(
                     context, self.host)
                 ins_on_host = set(instances_uuids)
+
+                # instance param is just for logging, the nodename obtained is
+                # not actually related to the instance at all
+                nodename = self._get_nodename(instance)
+
+                # instances being migrated to host
+                migrations = (
+                    objects.MigrationList.get_in_progress_by_host_and_node(
+                        context, self.host, nodename))
+                migration_vm_uuids = set([mig['instance_uuid']
+                                          for mig in migrations])
+
+                total_instances = migration_vm_uuids | ins_on_host
+
+                # refresh group to get updated members within locked block
+                group = objects.InstanceGroup.get_by_uuid(context,
+                                                          group['uuid'])
                 members = set(group.members)
                 # Determine the set of instance group members on this host
                 # which are not the instance in question. This is used to
                 # determine how many other members from the same anti-affinity
                 # group can be on this host.
-                members_on_host = ins_on_host & members - set([instance.uuid])
+                members_on_host = (total_instances & members -
+                                   set([instance.uuid]))
                 rules = group.rules
                 if rules and 'max_server_per_host' in rules:
                     max_server = rules['max_server_per_host']
@@ -1630,6 +1668,12 @@ class ComputeManager(manager.Manager):
                     raise exception.RescheduledException(
                             instance_uuid=instance.uuid,
                             reason=msg)
+
+            # NOTE(ganso): The check for affinity below does not work and it
+            # can easily be violated because the lock happens in different
+            # compute hosts.
+            # The only fix seems to be a DB lock to perform the check whenever
+            # setting the host field to an instance.
             elif group.policy and 'affinity' == group.policy:
                 group_hosts = group.get_hosts(exclude=[instance.uuid])
                 if group_hosts and self.host not in group_hosts:
@@ -1638,8 +1682,7 @@ class ComputeManager(manager.Manager):
                             instance_uuid=instance.uuid,
                             reason=msg)
 
-        if not CONF.workarounds.disable_group_policy_check_upcall:
-            _do_validation(context, instance, group_hint)
+        _do_validation(context, instance, group)
 
     def _log_original_error(self, exc_info, instance_uuid):
         LOG.error('Error: %s', exc_info[1], instance_uuid=instance_uuid,
@@ -4773,10 +4816,24 @@ class ComputeManager(manager.Manager):
         with self._error_out_instance_on_exception(
                 context, instance, instance_state=instance_state),\
                 errors_out_migration_ctxt(migration):
+
             self._send_prep_resize_notifications(
                 context, instance, fields.NotificationPhase.START,
                 instance_type)
             try:
+                scheduler_hints = self._get_scheduler_hints(filter_properties,
+                                                            request_spec)
+                # Error out if this host cannot accept the new instance due
+                # to anti-affinity. At this point the migration is already
+                # in-progress, so this is the definitive moment to abort due to
+                # the policy violation. Also, exploding here is covered by the
+                # cleanup methods in except block.
+                try:
+                    self._validate_instance_group_policy(context, instance,
+                                                         scheduler_hints)
+                except exception.RescheduledException as e:
+                    raise exception.InstanceFaultRollback(inner_exception=e)
+
                 self._prep_resize(context, image, instance,
                                   instance_type, filter_properties,
                                   node, migration, request_spec,
@@ -6811,6 +6868,20 @@ class ComputeManager(manager.Manager):
         :param limits: objects.SchedulerLimits object for this live migration.
         :returns: a LiveMigrateData object (hypervisor-dependent)
         """
+
+        # Error out if this host cannot accept the new instance due
+        # to anti-affinity. This check at this moment is not very accurate, as
+        # multiple requests may be happening concurrently and miss the lock,
+        # but when it works it provides a better user experience by failing
+        # earlier. Also, it should be safe to explode here, error becomes
+        # NoValidHost and instance status remains ACTIVE.
+        try:
+            self._validate_instance_group_policy(ctxt, instance)
+        except exception.RescheduledException as e:
+            msg = ("Failed to validate instance group policy "
+                   "due to: {}".format(e))
+            raise exception.MigrationPreCheckError(reason=msg)
+
         src_compute_info = obj_base.obj_to_primitive(
             self._get_compute_info(ctxt, instance.host))
         dst_compute_info = obj_base.obj_to_primitive(
@@ -6948,6 +7019,13 @@ class ComputeManager(manager.Manager):
         :returns: migrate_data containing additional migration info
         """
         LOG.debug('pre_live_migration data is %s', migrate_data)
+
+        # Error out if this host cannot accept the new instance due
+        # to anti-affinity. At this point the migration is already in-progress,
+        # so this is the definitive moment to abort due to the policy
+        # violation. Also, it should be safe to explode here. The instance
+        # status remains ACTIVE, migration status failed.
+        self._validate_instance_group_policy(context, instance)
 
         migrate_data.old_vol_attachment_ids = {}
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
