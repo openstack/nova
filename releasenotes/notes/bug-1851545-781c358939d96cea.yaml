@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    `Bug 1851545 <https://bugs.launchpad.net/nova/+bug/1851545>`_, wherein
+    unshelving an instance with SRIOV Neutron ports did not update the port
+    binding's ``pci_slot`` and could cause libvirt PCI conflicts, has been
+    fixed.
+
+    .. important:: Constraints in the fix's implementation mean that it only
+      applies to instances booted **after** it has been applied. Existing
+      instances will still experience bug 1851545 after being shelved and
+      unshelved, even with the fix applied.

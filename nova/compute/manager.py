@@ -6556,12 +6556,6 @@ class ComputeManager(manager.Manager):
                     context, self.reportclient, instance.pci_requests.requests,
                     provider_mappings)
 
-            self.network_api.setup_instance_network_on_host(
-                context, instance, self.host,
-                provider_mappings=provider_mappings)
-            network_info = self.network_api.get_instance_nw_info(
-                context, instance)
-
             accel_info = []
             if accel_uuids:
                 try:
@@ -6571,11 +6565,17 @@ class ComputeManager(manager.Manager):
                     LOG.exception('Failure getting accelerator requests '
                                   'with the exception: %s', exc,
                                   instance=instance)
-                    self._build_resources_cleanup(instance, network_info)
+                    self._build_resources_cleanup(instance, None)
                     raise
 
             with self.rt.instance_claim(context, instance, node, allocations,
                                         limits):
+                self.network_api.setup_instance_network_on_host(
+                    context, instance, self.host,
+                    provider_mappings=provider_mappings)
+                network_info = self.network_api.get_instance_nw_info(
+                    context, instance)
+
                 self.driver.spawn(context, instance, image_meta,
                                   injected_files=[],
                                   admin_password=None,

@@ -434,30 +434,17 @@ class SRIOVServersTest(_PCIServersTestBase):
         source_port = self.neutron.show_port(source_port['port']['id'])
         same_slot_port = self.neutron.show_port(same_slot_port['port']['id'])
 
-        # FIXME(artom) Until bug 1851545 is fixed, unshelve will not update the
-        # pci_slot.
-        if expect_fail:
-            self.assertEqual(
-                source_port['port']['binding:profile']['pci_slot'],
-                same_slot_port['port']['binding:profile']['pci_slot'])
-        else:
-            self.assertNotEqual(
-                source_port['port']['binding:profile']['pci_slot'],
-                same_slot_port['port']['binding:profile']['pci_slot'])
+        self.assertNotEqual(
+            source_port['port']['binding:profile']['pci_slot'],
+            same_slot_port['port']['binding:profile']['pci_slot'])
 
         conn = self.computes['dest'].driver._host.get_connection()
         vms = [vm._def for vm in conn._vms.values()]
         self.assertEqual(2, len(vms))
         for vm in vms:
             self.assertEqual(1, len(vm['devices']['nics']))
-        # FIXME(artom) Until bug 1851545 is fixed, unshelve will not update the
-        # XML.
-        if expect_fail:
-            self.assertEqual(vms[0]['devices']['nics'][0]['source'],
-                             vms[1]['devices']['nics'][0]['source'])
-        else:
-            self.assertNotEqual(vms[0]['devices']['nics'][0]['source'],
-                                vms[1]['devices']['nics'][0]['source'])
+        self.assertNotEqual(vms[0]['devices']['nics'][0]['source'],
+                            vms[1]['devices']['nics'][0]['source'])
 
     def test_unshelve_server_with_neutron(self):
         def move_operation(source_server):
@@ -466,10 +453,7 @@ class SRIOVServersTest(_PCIServersTestBase):
             self.api.put_service(self.computes['source'].service_ref.uuid,
                                  {'status': 'disabled'})
             self._unshelve_server(source_server)
-        # FIXME(artom) Bug 1851545 means we explain failure here: the pci_slot
-        # and XML will not get updated.
-        self._test_move_operation_with_neutron(move_operation,
-                                               expect_fail=True)
+        self._test_move_operation_with_neutron(move_operation)
 
     def test_cold_migrate_server_with_neutron(self):
         def move_operation(source_server):
