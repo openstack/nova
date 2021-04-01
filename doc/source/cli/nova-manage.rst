@@ -43,7 +43,7 @@ without an argument can be combined after a single dash.
 
     Show a help message and exit
 
-.. option:: --config-dir DIR
+.. option:: --config-dir <dir>
 
     Path to a config directory to pull ``*.conf`` files from. This file set is
     sorted, so as to provide a predictable parse order if individual options
@@ -51,18 +51,13 @@ without an argument can be combined after a single dash.
     :option:`--config-file`, arguments hence over-ridden options in the
     directory take precedence.  This option must be set from the command-line.
 
-.. option:: --config-file PATH
+.. option:: --config-file <path>
 
     Path to a config file to use. Multiple config files can be specified, with
     values in later files taking precedence. Defaults to None. This option must
     be set from the command-line.
 
-.. option:: --debug, -d
-
-    If set to true, the logging level will be set to DEBUG instead of the
-    default INFO level.
-
-.. option:: --log-config-append PATH, --log-config PATH, --log_config PATH
+.. option:: --log-config-append <path>, --log-config <path>, --log_config <path>
 
     The name of a logging configuration file. This file is appended to any
     existing logging configuration files.  For details about logging
@@ -71,54 +66,26 @@ without an argument can be combined after a single dash.
     set in the configuration file and other logging configuration options are
     ignored (for example, :option:`--log-date-format`).
 
-.. option:: --log-date-format DATE_FORMAT
+.. option:: --log-date-format <format>
 
     Defines the format string for ``%(asctime)s`` in log records. Default:
     None. This option is ignored if :option:`--log-config-append` is set.
 
-.. option:: --log-dir LOG_DIR, --logdir LOG_DIR
+.. option:: --log-dir <dir>, --logdir <dir>
 
-    (Optional) The base directory used for relative log_file paths. This option
-    is ignored if :option:`--log-config-append` is set.
+    The base directory used for relative log_file paths.
+    This option is ignored if :option:`--log-config-append` is set.
 
-.. option:: --log-file PATH, --logfile PATH
+.. option:: --log-file PATH, --logfile <path>
 
-    (Optional) Name of log file to send logging output to.  If no default is
-    set, logging will go to stderr as defined by use_stderr. This option is
-    ignored if :option:`--log-config-append` is set.
-
-.. option:: --nodebug
-
-    The inverse of :option:`--debug`.
-
-.. option:: --nopost-mortem
-
-    The inverse of :option:`--post-mortem`.
-
-.. option:: --nouse-journal
-
-    The inverse of :option:`--use-journal`.
-
-.. option:: --nouse-json
-
-    The inverse of :option:`--use-json`.
-
-.. option:: --nouse-syslog
-
-    The inverse of :option:`--use-syslog`.
-
-.. option:: --nowatch-log-file
-
-    The inverse of :option:`--watch-log-file`.
-
-.. option:: --post-mortem
-
-    Allow post-mortem debugging
+    Name of log file to send logging output to.
+    If no default is set, logging will go to stderr as defined by use_stderr.
+    This option is ignored if :option:`--log-config-append` is set.
 
 .. option:: --syslog-log-facility SYSLOG_LOG_FACILITY
 
-    Syslog facility to receive log lines. This option is ignored if
-    :option:`--log-config-append` is set.
+    Syslog facility to receive log lines.
+    This option is ignored if :option:`--log-config-append` is set.
 
 .. option:: --use-journal
 
@@ -128,10 +95,18 @@ without an argument can be combined after a single dash.
     messages. This option is ignored if :option:`--log-config-append` is
     set.
 
+.. option:: --nouse-journal
+
+    The inverse of :option:`--use-journal`.
+
 .. option:: --use-json
 
     Use JSON formatting for logging. This option is ignored if
     :option:`--log-config-append` is set.
+
+.. option:: --nouse-json
+
+    The inverse of :option:`--use-json`.
 
 .. option:: --use-syslog
 
@@ -139,9 +114,9 @@ without an argument can be combined after a single dash.
     changed later to honor RFC5424.  This option is ignored if
     :option:`--log-config-append` is set.
 
-.. option:: --version
+.. option:: --nouse-syslog
 
-    Show program's version number and exit
+    The inverse of :option:`--use-syslog`.
 
 .. option:: --watch-log-file
 
@@ -150,6 +125,31 @@ without an argument can be combined after a single dash.
     instantaneously. It makes sense only if :option:`--log-file` option is
     specified and Linux platform is used. This option is ignored if
     :option:`--log-config-append` is set.
+
+.. option:: --nowatch-log-file
+
+    The inverse of :option:`--watch-log-file`.
+
+.. option:: --debug, -d
+
+    If enabled, the logging level will be set to ``DEBUG`` instead of the
+    default ``INFO`` level.
+
+.. option:: --nodebug
+
+    The inverse of :option:`--debug`.
+
+.. option:: --post-mortem
+
+    Allow post-mortem debugging.
+
+.. option:: --nopost-mortem
+
+    The inverse of :option:`--post-mortem`.
+
+.. option:: --version
+
+    Show program's version number and exit
 
 
 Database Commands
@@ -175,18 +175,38 @@ db sync
 
     nova-manage db sync [--local_cell] [VERSION]
 
-Upgrade the main database schema up to the most recent version or
-``VERSION`` if specified. By default, this command will also attempt to
-upgrade the schema for the cell0 database if it is mapped (see the
-``map_cell0`` or ``simple_cell_setup`` commands for more details on mapping
-the cell0 database). If ``--local_cell`` is specified, then only the main
-database in the current cell is upgraded. The local database connection is
-determined by :oslo.config:option:`database.connection` in the
-configuration file, passed to nova-manage using the ``--config-file``
-option(s). This command should be run after ``nova-manage api_db sync``.
+Upgrade the main database schema up to the most recent version or ``VERSION``
+if specified. By default, this command will also attempt to upgrade the schema
+for the cell0 database if it is mapped .
+If :option:`--local_cell` is specified, then only the main database in the
+current cell is upgraded. The local database connection is determined by
+:oslo.config:option:`database.connection` in the configuration file, passed to
+nova-manage using the ``--config-file`` option(s).
 
-Returns exit code 0 if the database schema was synced successfully, or 1 if
-cell0 cannot be accessed.
+Refer to the :program:`nova-manage cells_v2 map_cell0`` or
+:program:`nova-manage cells_v2 simple_cell_setup` commands for more details on
+mapping the cell0 database.
+
+This command should be run **after** :program:`nova-manage api_db sync`.
+
+.. rubric:: Options
+
+.. option:: --local_cell
+
+    Only sync db in the local cell: do not attempt to fan-out to all cells.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Successfully synced database schema.
+   * - 1
+     - Failed to access cell0.
 
 db archive_deleted_rows
 -----------------------
@@ -195,7 +215,7 @@ db archive_deleted_rows
 
 .. code-block:: shell
 
-    nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose]
+    nova-manage db archive_deleted_rows [--max_rows <rows>] [--verbose]
       [--until-complete] [--before <date>] [--purge] [--all-cells]
 
 Move deleted rows from production tables to shadow tables. Note that the
@@ -203,40 +223,56 @@ corresponding rows in the ``instance_mappings``, ``request_specs`` and
 ``instance_group_member`` tables of the API database are purged when
 instance records are archived and thus,
 :oslo.config:option:`api_database.connection` is required in the config
-file. Specifying ``--verbose`` will print the results of the archive
-operation for any tables that were changed. Specifying ``--until-complete``
-will make the command run continuously until all deleted rows are archived.
-Use the ``--max_rows`` option, which defaults to 1000, as a batch size for
-each iteration (note that the purged API database table records are not
-included in this batch size). Specifying ``--before`` will archive only
-instances that were deleted before the date provided, and records in other
-tables related to those instances. Specifying ``--purge`` will cause a
-*full* DB purge to be completed after archival. If a date range is desired
-for the purge, then run ``nova-manage db purge --before <date>`` manually
-after archiving is complete. Specifying ``--all-cells`` will
-cause the process to run against all cell databases.
+file.
 
-.. note::
+If automating, this should be run continuously while the result is 1,
+stopping at 0, or use the :option:`--until-complete` option.
 
-   The date argument accepted by the ``--before`` option can be in any
-   of several formats, including ``YYYY-MM-DD [HH:mm[:ss]]`` and the default
-   format produced by the ``date`` command, e.g. ``Fri May 24 09:20:11 CDT 2019``.
-   Date strings containing spaces must be quoted appropriately. Some examples::
+.. rubric:: Options
 
-     # Archive deleted row older than a specific date
-     nova-manage db archive_deleted_rows --before 2015-10-21
-     # or
-     nova-manage db archive_deleted_rows --before "Oct 21 2015"
-     # Times are also accepted
-     nova-manage db archive_deleted_rows --before "2015-10-21 12:00"
+.. option:: --max_rows <rows>
 
-   Relative dates (such as ``yesterday``) are not supported natively.
-   The ``date`` command can be helpful here::
+    Maximum number of deleted rows to archive. Defaults to 1000. Note that this
+    number does not include the corresponding rows, if any, that are removed
+    from the API database for deleted instances.
 
-     # Archive deleted rows more than one month old
-     nova-manage db archive_deleted_rows --before "$(date -d 'now - 1 month')"
+.. option:: --before <date>
 
-**Return Codes**
+    Archive rows that have been deleted before ``<date>``. Accepts date strings
+    in the default format output by the ``date`` command, as well as
+    ``YYYY-MM-DD[HH:mm:ss]``. For example::
+
+        # Purge shadow table rows older than a specific date
+        nova-manage db archive --before 2015-10-21
+        # or
+        nova-manage db archive --before "Oct 21 2015"
+        # Times are also accepted
+        nova-manage db archive --before "2015-10-21 12:00"
+
+    Note that relative dates (such as ``yesterday``) are not supported
+    natively. The ``date`` command can be helpful here::
+
+        # Archive deleted rows more than one month old
+        nova-manage db archive --before "$(date -d 'now - 1 month')"
+
+.. option:: --verbose
+
+    Print how many rows were archived per table.
+
+.. option:: --until-complete
+
+    Run continuously until all deleted rows are archived.
+    Use :option:`--max_rows` as a batch size for each iteration.
+
+.. option:: --purge
+
+    Purge all data from shadow tables after archive completes.
+
+.. option:: --all-cells
+
+    Run command across all cells.
+
+.. rubric:: Return codes
 
 .. list-table::
    :widths: 20 80
@@ -249,17 +285,14 @@ cause the process to run against all cell databases.
    * - 1
      - Some number of rows were archived.
    * - 2
-     - Invalid value for ``--max_rows``.
+     - Invalid value for :option:`--max_rows`.
    * - 3
      - No connection to the API database could be established using
        :oslo.config:option:`api_database.connection`.
    * - 4
-     - Invalid value for ``--before``.
+     - Invalid value for :option:`--before`.
    * - 255
      - An unexpected error occurred.
-
-If automating, this should be run continuously while the result is 1,
-stopping at 0, or use the ``--until-complete`` option.
 
 db purge
 --------
@@ -270,35 +303,63 @@ db purge
 
     nova-manage db purge [--all] [--before <date>] [--verbose] [--all-cells]
 
-Delete rows from shadow tables. Specifying ``--all`` will delete all data from
-all shadow tables. Specifying ``--before`` will delete data from all shadow tables
-that is older than the date provided. Specifying ``--verbose`` will
-cause information to be printed about purged records. Specifying
-``--all-cells`` will cause the purge to be applied against all cell databases.
-For ``--all-cells`` to work, the api database connection information must
-be configured. Returns exit code 0 if rows were deleted, 1 if required
-arguments are not provided, 2 if an invalid date is provided, 3 if no
-data was deleted, 4 if the list of cells cannot be obtained.
+Delete rows from shadow tables. For :option:`--all-cells` to work, the API
+database connection information must be configured.
 
-.. note::
+.. versionadded:: 18.0.0 (Rocky)
 
-   The date argument accepted by the ``--before`` option can be in any
-   of several formats, including ``YYYY-MM-DD [HH:mm[:ss]]`` and the default
-   format produced by the ``date`` command, e.g. ``Fri May 24 09:20:11 CDT 2019``.
-   Date strings containing spaces must be quoted appropriately. Some examples::
+.. rubric:: Options
 
-     # Purge shadow table rows older than a specific date
-     nova-manage db purge --before 2015-10-21
-     # or
-     nova-manage db purge --before "Oct 21 2015"
-     # Times are also accepted
-     nova-manage db purge --before "2015-10-21 12:00"
+.. option:: --all
 
-   Relative dates (such as ``yesterday``) are not supported natively.
-   The ``date`` command can be helpful here::
+    Purge all rows in the shadow tables.
 
-     # Archive deleted rows more than one month old
-     nova-manage db purge --before "$(date -d 'now - 1 month')"
+.. option:: --before <date>
+
+    Delete data that was archived before ``<date>``. Accepts date strings
+    in the default format output by the ``date`` command, as well as
+    ``YYYY-MM-DD[HH:mm:ss]``. For example::
+
+        # Purge shadow table rows older than a specific date
+        nova-manage db purge --before 2015-10-21
+        # or
+        nova-manage db purge --before "Oct 21 2015"
+        # Times are also accepted
+        nova-manage db purge --before "2015-10-21 12:00"
+
+    Note that relative dates (such as ``yesterday``) are not supported
+    natively. The ``date`` command can be helpful here::
+
+        # Archive deleted rows more than one month old
+        nova-manage db purge --before "$(date -d 'now - 1 month')"
+
+.. option:: --verbose
+
+    Print information about purged records.
+
+.. option:: --all-cells
+
+    Run against all cell databases.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Rows were deleted.
+   * - 1
+     - Required arguments were not provided.
+   * - 2
+     - Invalid value for :option:`--before`.
+   * - 3
+     - Nothing was purged.
+   * - 4
+     - No connection to the API database could be established using
+       :oslo.config:option:`api_database.connection`.
 
 db online_data_migrations
 -------------------------
@@ -307,19 +368,9 @@ db online_data_migrations
 
 .. code-block:: shell
 
-    nova-manage db online_data_migrations [--max-count]
+    nova-manage db online_data_migrations [--max-count <count>]
 
 Perform data migration to update all live data.
-
-``--max-count`` controls the maximum number of objects to migrate in a given
-call. If not specified, migration will occur in batches of 50 until fully
-complete.
-
-Returns exit code 0 if no (further) updates are possible, 1 if the ``--max-count``
-option was used and some updates were completed successfully (even if others generated
-errors), 2 if some updates generated errors and no other migrations were able to take
-effect in the last batch attempted, or 127 if invalid input is provided (e.g.
-non-numeric max-count).
 
 This command should be called after upgrading database schema and nova services on
 all controller nodes. If it exits with partial updates (exit status 1) it should
@@ -351,9 +402,37 @@ In the above example, the ``migrate_instances_add_request_spec`` migration
 found two candidate records but did not need to perform any kind of data
 migration for either of them. In the case of the
 ``populate_queued_for_delete`` migration, two candidate records were found
-which did require a data migration. Since ``--max-count`` defaults to 50
+which did require a data migration. Since :option:`--max-count` defaults to 50
 and only two records were migrated with no more candidates remaining, the
 command completed successfully with exit code 0.
+
+.. versionadded:: 13.0.0 (Mitaka)
+
+.. rubric:: Options
+
+.. option:: --max-count <count>
+
+    Controls the maximum number of objects to migrate in a given call. If not
+    specified, migration will occur in batches of 50 until fully complete.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - No (further) updates are possible.
+   * - 1
+     - Some updates were completed successfully. Note that not all updates may
+       have succeeded.
+   * - 2
+     - Some updates generated errors and no other migrations were able to take
+       effect in the last batch attempted.
+   * - 127
+     - Invalid input was provided.
 
 
 API Database Commands
