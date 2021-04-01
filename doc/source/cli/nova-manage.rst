@@ -449,6 +449,8 @@ api_db version
 
 Print the current API database version.
 
+.. versionadded:: 2015.1.0 (Kilo)
+
 api_db sync
 -----------
 
@@ -464,13 +466,21 @@ database, it runs schema migration scripts. The API database connection is
 determined by :oslo.config:option:`api_database.connection` in the
 configuration file passed to nova-manage.
 
-In the 18.0.0 Rocky or 19.0.0 Stein release, this command will also upgrade
-the optional placement database if ``[placement_database]/connection`` is
-configured.
+This command should be run before ``nova-manage db sync``.
 
-Returns exit code 0 if the database schema was synced successfully. This
-command should be run before ``nova-manage db sync``.
+.. versionadded:: 2015.1.0 (Kilo)
 
+.. versionchanged:: 18.0.0 (Rocky)
+
+    Added support for upgrading the optional placement database if
+    ``[placement_database]/connection`` is configured.
+
+.. versionchanged:: 20.0.0 (Train)
+
+    Removed support for upgrading the optional placement database as placement
+    is now a separate project.
+
+    Removed support for the legacy ``--version <version>`` argument.
 
 .. _man-page-cells-v2:
 
@@ -486,11 +496,31 @@ cell_v2 simple_cell_setup
 
     nova-manage cell_v2 simple_cell_setup [--transport-url <transport_url>]
 
-Setup a fresh cells v2 environment. If a ``transport_url`` is not
+Setup a fresh cells v2 environment. If :option:`--transport-url` is not
 specified, it will use the one defined by :oslo.config:option:`transport_url`
-in the configuration file. Returns 0 if setup is completed
-(or has already been done), 1 if no hosts are reporting (and cannot be
-mapped) and 1 if the transport url is missing or invalid.
+in the configuration file.
+
+.. versionadded:: 14.0.0 (Newton)
+
+.. rubric:: Options
+
+.. option:: --transport-url <transport_url>
+
+    The transport url for the cell message queue.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Setup is completed.
+   * - 1
+     - No hosts are reporting, meaning none can be mapped, or if the transport
+       URL is missing or invalid.
 
 cell_v2 map_cell0
 -----------------
@@ -506,8 +536,28 @@ If a database_connection is not specified, it will use the one defined by
 :oslo.config:option:`database.connection` in the configuration file passed
 to nova-manage. The cell0 database is used for instances that have not been
 scheduled to any cell. This generally applies to instances that have
-encountered an error before they have been scheduled. Returns 0 if cell0 is
-created successfully or already setup.
+encountered an error before they have been scheduled.
+
+.. versionadded:: 14.0.0 (Newton)
+
+.. rubric:: Options
+
+.. option:: --database_connection <database_connection>
+
+    The database connection URL for ``cell0``. This is optional. If not
+    provided, a standard database connection will be used based on the main
+    database connection from nova configuration.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - ``cell0`` is created successfully or has already been set up.
 
 cell_v2 map_instances
 ---------------------
@@ -520,19 +570,39 @@ cell_v2 map_instances
       [--max-count <max_count>] [--reset]
 
 Map instances to the provided cell. Instances in the nova database will
-be queried from oldest to newest and mapped to the provided cell. A
-``--max-count`` can be set on the number of instance to map in a single run.
-Repeated runs of the command will start from where the last run finished
-so it is not necessary to increase ``--max-count`` to finish. A ``--reset``
-option can be passed which will reset the marker, thus making the command
-start from the beginning as opposed to the default behavior of starting from
-where the last run finished.
+be queried from oldest to newest and mapped to the provided cell.
+A :option:`--max-count` can be set on the number of instance to map in a single
+run. Repeated runs of the command will start from where the last run finished
+so it is not necessary to increase :option:`--max-count` to finish.
+A :option:`--reset` option can be passed which will reset the marker, thus
+making the command start from the beginning as opposed to the default behavior
+of starting from where the last run finished.
 
-If ``--max-count`` is not specified, all instances in the cell will be
+If :option:`--max-count` is not specified, all instances in the cell will be
 mapped in batches of 50. If you have a large number of instances, consider
 specifying a custom value and run the command until it exits with 0.
 
-**Return Codes**
+.. versionadded:: 12.0.0 (Liberty)
+
+.. rubric:: Options
+
+.. option:: --cell_uuid <cell_uuid>
+
+    Unmigrated instances will be mapped to the cell with the UUID provided.
+
+.. option:: --max-count <max_count>
+
+    Maximum number of instances to map. If not set, all instances in the cell
+    will be mapped in batches of 50. If you have a large number of instances,
+    consider specifying a custom value and run the command until it exits with
+    0.
+
+.. option:: --reset
+
+    The command will start from the beginning as opposed to the default
+    behavior of starting from where the last run finished.
+
+.. rubric:: Return codes
 
 .. list-table::
    :widths: 20 80
@@ -545,7 +615,7 @@ specifying a custom value and run the command until it exits with 0.
    * - 1
      - There are still instances to be mapped.
    * - 127
-     - Invalid value for ``--max-count``.
+     - Invalid value for :option:`--max-count`.
    * - 255
      - An unexpected error occurred.
 
@@ -560,14 +630,42 @@ cell_v2 map_cell_and_hosts
       [--transport-url <transport_url>] [--verbose]
 
 Create a cell mapping to the database connection and message queue
-transport url, and map hosts to that cell. The database connection
+transport URL, and map hosts to that cell. The database connection
 comes from the :oslo.config:option:`database.connection` defined in the
-configuration file passed to nova-manage. If a transport_url is not
+configuration file passed to nova-manage. If :option:`--transport-url` is not
 specified, it will use the one defined by
 :oslo.config:option:`transport_url` in the configuration file. This command
 is idempotent (can be run multiple times), and the verbose option will
-print out the resulting cell mapping uuid. Returns 0 on successful
-completion, and 1 if the transport url is missing or invalid.
+print out the resulting cell mapping UUID.
+
+.. versionadded:: 13.0.0 (Mitaka)
+
+.. rubric:: Options
+
+.. option:: --transport-url <transport_url>
+
+    The transport url for the cell message queue.
+
+.. option:: --name <cell_name>
+
+    The name of the cell.
+
+.. option:: --verbose
+
+    Output the cell mapping uuid for any newly mapped hosts.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Successful completion.
+   * - 1
+     - The transport url is missing or invalid
 
 cell_v2 verify_instance
 -----------------------
@@ -580,14 +678,42 @@ cell_v2 verify_instance
 
 Verify instance mapping to a cell. This command is useful to determine if
 the cells v2 environment is properly setup, specifically in terms of the
-cell, host, and instance mapping records required. Returns 0 when the
-instance is successfully mapped to a cell, 1 if the instance is not
-mapped to a cell (see the ``map_instances`` command), 2 if the cell
-mapping is missing (see the ``map_cell_and_hosts`` command if you are
-upgrading from a cells v1 environment, and the ``simple_cell_setup`` if
-you are upgrading from a non-cells v1 environment), 3 if it is a deleted
-instance which has instance mapping, and 4 if it is an archived instance
-which still has an instance mapping.
+cell, host, and instance mapping records required.
+
+.. versionadded:: 14.0.0 (Newton)
+
+.. rubric:: Options
+
+.. option:: --uuid <instance_uuid>
+
+    The instance UUID to verify.
+
+.. option:: --quiet
+
+    Do not print anything.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - The instance was successfully mapped to a cell.
+   * - 1
+     - The instance is not mapped to a cell. See the ``map_instances``
+       command.
+   * - 2
+     - The cell mapping is missing. See the ``map_cell_and_hots`` command if
+       you are upgrading from a cells v1 environment, and the
+       ``simple_cell_setup`` command if you are upgrading from a non-cells v1
+       environment.
+   * - 3
+     - The instance is a deleted instance that still has an instance mapping.
+   * - 4
+     - The instance is an archived instance that still has an instance mapping.
 
 cell_v2 create_cell
 -------------------
@@ -601,22 +727,59 @@ cell_v2 create_cell
       [--database_connection <database_connection>] [--verbose] [--disabled]
 
 Create a cell mapping to the database connection and message queue
-transport url. If a database_connection is not specified, it will use the
+transport URL. If a database_connection is not specified, it will use the
 one defined by :oslo.config:option:`database.connection` in the
-configuration file passed to nova-manage. If a transport_url is not
+configuration file passed to nova-manage. If :option:`--transport-url` is not
 specified, it will use the one defined by
 :oslo.config:option:`transport_url` in the configuration file. The verbose
-option will print out the resulting cell mapping uuid. All the cells
-created are by default enabled. However passing the ``--disabled`` option
+option will print out the resulting cell mapping UUID. All the cells
+created are by default enabled. However passing the :option:`--disabled` option
 can create a pre-disabled cell, meaning no scheduling will happen to this
-cell. The meaning of the various exit codes returned by this command are
-explained below:
+cell.
 
-* Returns 0 if the cell mapping was successfully created.
-* Returns 1 if the transport url or database connection was missing
-  or invalid.
-* Returns 2 if another cell is already using that transport url and/or
-  database connection combination.
+.. versionadded:: 15.0.0 (Ocata)
+
+.. versionchanged:: 18.0.0 (Rocky)
+
+    Added :option:`--disabled` option.
+
+.. rubric:: Options
+
+.. option:: --name <cell_name>
+
+    The name of the cell.
+
+.. option:: --database_connection <database_connection>
+
+    The database URL for the cell database.
+
+.. option:: --transport-url <transport_url>
+
+    The transport url for the cell message queue.
+
+.. option:: --verbose
+
+    Output the UUID of the created cell.
+
+.. option:: --disabled
+
+    Create a pre-disabled cell.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - The cell mapping was successfully created.
+   * - 1
+     - The transport URL or database connection was missing or invalid.
+   * - 2
+     - Another cell is already using the provided transport URL and/or database
+       connection combination.
 
 cell_v2 discover_hosts
 ----------------------
@@ -633,10 +796,10 @@ check the database for each cell (or a single one if passed in) and map any
 hosts which are not currently mapped. If a host is already mapped, nothing
 will be done. You need to re-run this command each time you add a batch of
 compute hosts to a cell (otherwise the scheduler will never place instances
-there and the API will not list the new hosts). If ``--strict`` is specified,
-the command will only return 0 if an unmapped host was discovered and
-mapped successfully. If ``--by-service`` is specified, this command will look
-in the appropriate cell(s) for any nova-compute services and ensure there
+there and the API will not list the new hosts). If :option:`--strict` is
+specified, the command will only return 0 if an unmapped host was discovered
+and mapped successfully. If :option:`--by-service` is specified, this command will
+look in the appropriate cell(s) for any nova-compute services and ensure there
 are host mappings for them. This is less efficient and is only necessary
 when using compute drivers that may manage zero or more actual compute
 nodes at any given time (currently only ironic).
@@ -646,17 +809,55 @@ and should not be run in parallel. When run in parallel, the commands will
 collide with each other trying to map the same hosts in the database at the
 same time.
 
-The meaning of the various exit codes returned by this command are
-explained below:
+.. versionadded:: 14.0.0 (Newton)
 
-* Returns 0 if hosts were successfully mapped or no hosts needed to be
-  mapped. If ``--strict`` is specified, returns 0 only if an unmapped host was
-  discovered and mapped.
-* Returns 1 if ``--strict`` is specified and no unmapped hosts were found.
-  Also returns 1 if an exception was raised while running.
-* Returns 2 if the command aborted because of a duplicate host mapping
-  found. This means the command collided with another running
-  discover_hosts command or scheduler periodic task and is safe to retry.
+.. versionchanged:: 16.0.0 (Pike)
+
+    Added :option:`--strict` option.
+
+.. versionchanged:: 18.0.0 (Rocky)
+
+    Added :option:`--by-service` option.
+
+.. rubric:: Options
+
+.. option:: --cell_uuid <cell_uuid>
+
+    If provided only this cell will be searched for new hosts to map.
+
+.. option:: --verbose
+
+    Provide detailed output when discovering hosts.
+
+.. option:: --strict
+
+    Considered successful (exit code 0) only when an unmapped host is
+    discovered. Any other outcome will be considered a failure (non-zero exit
+    code).
+
+.. option:: --by-service
+
+    Discover hosts by service instead of compute node.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Hosts were successfully mapped or no hosts needed to be mapped. If
+       :option:`--strict` is specified, returns 0 only if an unmapped host was
+       discovered and mapped.
+   * - 1
+     - If :option:`--strict` is specified and no unmapped hosts were found.
+       Also returns 1 if an exception was raised while running.
+   * - 2
+     - The command was aborted because of a duplicate host mapping found. This
+       means the command collided with another running ``discover_hosts``
+       command or scheduler periodic task and is safe to retry.
 
 cell_v2 list_cells
 ------------------
@@ -667,9 +868,32 @@ cell_v2 list_cells
 
     nova-manage cell_v2 list_cells [--verbose]
 
-By default the cell name, uuid, disabled state, masked transport URL and
-database connection details are shown. Use the ``--verbose`` option to see
-transport URL and database connection with their sensitive details.
+By default the cell name, UUID, disabled state, masked transport URL and
+database connection details are shown. Use the :option:`--verbose` option to
+see transport URL and database connection with their sensitive details.
+
+.. versionadded:: 15.0.0 (Ocata)
+
+.. versionchanged:: 18.0.0 (Rocky)
+
+    Added the ``disabled`` column to output.
+
+.. rubric:: Options
+
+.. option:: --verbose
+
+    Show sensitive details, such as passwords.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Success.
 
 cell_v2 delete_cell
 -------------------
@@ -680,15 +904,43 @@ cell_v2 delete_cell
 
     nova-manage cell_v2 delete_cell [--force] --cell_uuid <cell_uuid>
 
-Delete a cell by the given uuid. Returns 0 if the empty cell is found and
-deleted successfully or the cell that has hosts is found and the cell, hosts
-and the instance_mappings are deleted successfully with ``--force`` option
-(this happens if there are no living instances), 1 if a cell with that uuid
-could not be found, 2 if host mappings were found for the cell (cell not empty)
-without ``--force`` option, 3 if there are instances mapped to the cell
-(cell not empty) irrespective of the ``--force`` option, and 4 if there are
-instance mappings to the cell but all instances have been deleted in the cell,
-again without the ``--force`` option.
+Delete a cell by the given UUID.
+
+.. versionadded:: 15.0.0 (Ocata)
+
+.. rubric:: Options
+
+.. option:: --force
+
+    Delete hosts and instance_mappings that belong to the cell as well.
+
+.. option:: --cell_uuid <cell_uuid>
+
+    The UUID of the cell to delete.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - An empty cell was found and deleted successfully or a cell that has
+       hosts was found and the cell, hosts and the instance_mappings were
+       deleted successfully with :option:`--force` option (this happens if there are
+       no living instances).
+   * - 1
+     - A cell with the provided UUID could not be found.
+   * - 2
+     - Host mappings were found for the cell, meaning the cell is not empty,
+       and the :option:`--force` option was not provided.
+   * - 3
+     - There are active instances mapped to the cell (cell not empty).
+   * - 4
+     - There are (inactive) instances mapped to the cell and the
+       :option:`--force` option was not provided.
 
 cell_v2 list_hosts
 ------------------
@@ -700,9 +952,28 @@ cell_v2 list_hosts
     nova-manage cell_v2 list_hosts [--cell_uuid <cell_uuid>]
 
 Lists the hosts in one or all v2 cells. By default hosts in all v2 cells
-are listed. Use the ``--cell_uuid`` option to list hosts in a specific cell.
-If the cell is not found by uuid, this command will return an exit code
-of 1. Otherwise, the exit code will be 0.
+are listed. Use the :option:`--cell_uuid` option to list hosts in a specific cell.
+
+.. versionadded:: 17.0.0 (Queens)
+
+.. rubric:: Options
+
+.. option:: --cell_uuid <cell_uuid>
+
+    The UUID of the cell.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Success.
+   * - 1
+     - The cell indidicatd by :option:`--cell_uuid` was not found.
 
 cell_v2 update_cell
 -------------------
@@ -720,17 +991,6 @@ database_connection is not specified, it will attempt to use the one
 defined by :oslo.config:option:`database.connection` in the configuration
 file. If a transport_url is not specified, it will attempt to use the one
 defined by :oslo.config:option:`transport_url` in the configuration file.
-The meaning of the various exit codes returned by this command are
-explained below:
-
-* If successful, it will return 0.
-* If the cell is not found by the provided uuid, it will return 1.
-* If the properties cannot be set, it will return 2.
-* If the provided transport_url or/and database_connection is/are same as
-  another cell, it will return 3.
-* If an attempt is made to disable and enable a cell at the same time, it
-  will return 4.
-* If an attempt is made to disable or enable cell0 it will return 5.
 
 .. note::
 
@@ -741,6 +1001,64 @@ explained below:
     The scheduler will not notice that a cell has been enabled/disabled until
     it is restarted or sent the SIGHUP signal.
 
+.. versionadded:: 16.0.0 (Pike)
+
+.. versionchanged:: 18.0.0 (Rocky)
+
+    Added :option:`--enable`, :option:`--disable` options.
+
+.. rubric:: Options
+
+.. option:: --cell_uuid <cell_uuid>
+
+    The UUID of the cell to update.
+
+.. option:: --name <cell_name>
+
+    Set the cell name.
+
+.. option:: --transport-url <transport_url>
+
+    Set the cell transport_url. NOTE that running nodes will not see the change
+    until restart!
+
+.. option:: --database_connection <database_connection>
+
+    Set the cell database_connection. NOTE that running nodes will not see the
+    change until restart!
+
+.. option:: --disable
+
+    Disables the cell. Note that the scheduling will be blocked to this cell
+    until it is enabled and followed by a SIGHUP of nova-scheduler service.
+
+.. option:: --enable
+
+    Enables the cell. Note that this makes a disabled cell available for
+    scheduling after a SIGHUP of the nova-scheduler service.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Success.
+   * - 1
+     - The cell was not found by the provided UUID.
+   * - 2
+     - The specified properties could not be set.
+   * - 3
+     - The provided :option:`--transport-url` or/and
+       :option:`--database_connection` parameters were same as another cell.
+   * - 4
+     - An attempt was made to disable and enable a cell at the same time.
+   * - 5
+     - An attempt was made to disable or enable cell0.
+
 cell_v2 delete_host
 -------------------
 
@@ -750,17 +1068,43 @@ cell_v2 delete_host
 
     nova-manage cell_v2 delete_host --cell_uuid <cell_uuid> --host <host>
 
-Delete a host by the given host name and the given cell uuid. Returns 0
-if the empty host is found and deleted successfully, 1 if a cell with
-that uuid could not be found, 2 if a host with that name could not be
-found, 3 if a host with that name is not in a cell with that uuid, 4 if
-a host with that name has instances (host not empty).
+Delete a host by the given host name and the given cell UUID.
+
+.. versionadded:: 17.0.0 (Queens)
 
 .. note::
 
     The scheduler caches host-to-cell mapping information so when deleting
     a host the scheduler may need to be restarted or sent the SIGHUP signal.
 
+.. rubric:: Options
+
+.. option:: --cell_uuid <cell_uuid>
+
+    The UUID of the cell.
+
+.. option:: --host <host>
+
+    The host to delete.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - The empty host was found and deleted successfully
+   * - 1
+     - A cell with the specified UUID could not be found.
+   * - 2
+     - A host with the specified name could not be found
+   * - 3
+     - The host with the specified name is not in a cell with the specified UUID.
+   * - 4
+     - The host with the specified name has instances (host not empty).
 
 Placement Commands
 ==================
