@@ -16,7 +16,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova import objects
 from nova.objects import base

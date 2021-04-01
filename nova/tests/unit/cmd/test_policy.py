@@ -25,7 +25,7 @@ import mock
 from nova.cmd import policy
 import nova.conf
 from nova import context as nova_context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova.policies import base as base_policies
 from nova.policies import instance_actions as ia_policies

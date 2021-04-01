@@ -184,8 +184,8 @@ def import_no_db_in_virt(logical_line, filename):
     N307
     """
     if "nova/virt" in filename and not filename.endswith("fake.py"):
-        if logical_line.startswith("from nova.db import api"):
-            yield (0, "N307: nova.db.api import not allowed in nova/virt/*")
+        if logical_line.startswith("from nova.db.main import api"):
+            yield (0, "N307: nova.db.* import not allowed in nova/virt/*")
 
 
 @core.flake8ext

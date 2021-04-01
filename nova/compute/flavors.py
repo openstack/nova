@@ -97,7 +97,8 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
 
     for key, value in flavor_attributes.items():
         kwargs[key] = utils.validate_integer(
-            kwargs[key], value[0], value[1], db_const.MAX_INT)
+            kwargs[key], value[0], value[1], db_const.MAX_INT,
+        )
 
     # rxtx_factor should be a positive float
     try:

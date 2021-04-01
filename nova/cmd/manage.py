@@ -47,10 +47,9 @@ from nova.compute import api as compute_api
 import nova.conf
 from nova import config
 from nova import context
-from nova.db import api as db
 from nova.db import constants as db_const
+from nova.db.main import api as db
 from nova.db import migration
-from nova.db.sqlalchemy import api as sa_db
 from nova import exception
 from nova.i18n import _
 from nova.network import constants
@@ -121,7 +120,7 @@ class DbCommands(object):
         # Added in Pike
         quotas_obj.migrate_quota_classes_to_api_db,
         # Added in Queens
-        sa_db.migration_migrate_to_uuid,
+        db.migration_migrate_to_uuid,
         # Added in Queens
         block_device_obj.BlockDeviceMapping.populate_uuids,
         # Added in Rocky
@@ -461,13 +460,12 @@ Error: %s""") % str(e))
             for cell in cells:
                 identity = _('Cell %s') % cell.identity
                 with context.target_cell(admin_ctxt, cell) as cctxt:
-                    deleted += sa_db.purge_shadow_tables(cctxt,
-                                                         before_date,
-                                                         status_fn=status)
+                    deleted += db.purge_shadow_tables(
+                        cctxt, before_date, status_fn=status)
         else:
             identity = _('DB')
-            deleted = sa_db.purge_shadow_tables(admin_ctxt,
-                                                before_date, status_fn=status)
+            deleted = db.purge_shadow_tables(
+                admin_ctxt, before_date, status_fn=status)
         if deleted:
             return 0
         else:

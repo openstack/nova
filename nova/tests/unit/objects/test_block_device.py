@@ -16,9 +16,8 @@ import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import context
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
-from nova.db.sqlalchemy import models as db_models
+from nova.db.main import api as db
+from nova.db.main import models as db_models
 from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
@@ -331,7 +330,7 @@ class TestBlockDeviceMappingUUIDMigration(test.TestCase):
             objects.BlockDeviceMapping._create_uuid
 
     @staticmethod
-    @db_api.pick_context_manager_writer
+    @db.pick_context_manager_writer
     def _create_legacy_bdm(context, deleted=False):
         # Create a BDM with no uuid
         values = {'instance_uuid': uuids.instance_uuid}
@@ -402,9 +401,10 @@ class TestBlockDeviceMappingUUIDMigration(test.TestCase):
 
         # Create 2 BDMs, one with a uuid and one without
         self._create_legacy_bdm(self.context)
-        db_api.block_device_mapping_create(self.context,
-                {'uuid': uuids.bdm2, 'instance_uuid': uuids.instance_uuid},
-                legacy=False)
+        db.block_device_mapping_create(
+            self.context,
+            {'uuid': uuids.bdm2, 'instance_uuid': uuids.instance_uuid},
+            legacy=False)
 
         # Run the online migration. We should find 1 and update 1
         self._assert_online_migration(1, 1)

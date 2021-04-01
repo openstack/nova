@@ -22,7 +22,7 @@ from nova.api.openstack.compute import hosts as os_hosts_v21
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context as context_maker
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova import test
 from nova.tests import fixtures
@@ -135,10 +135,10 @@ class HostTestCaseV21(test.TestCase):
 
     def _setup_stubs(self):
         # Pretend we have fake_hosts.HOST_LIST in the DB
-        self.stub_out('nova.db.api.service_get_all',
+        self.stub_out('nova.db.main.api.service_get_all',
                       stub_service_get_all)
         # Only hosts in our fake DB exist
-        self.stub_out('nova.db.api.service_get_by_host_and_binary',
+        self.stub_out('nova.db.main.api.service_get_by_host_and_binary',
                       stub_service_get_by_host_and_binary)
         # 'host_c1' always succeeds, and 'host_c2'
         self.stub_out('nova.compute.api.HostAPI.set_host_enabled',
@@ -233,7 +233,7 @@ class HostTestCaseV21(test.TestCase):
         def stub_service_get_all_notimpl(self, req):
             return [{'host': 'notimplemented', 'topic': None,
                      'availability_zone': None}]
-        self.stub_out('nova.db.api.service_get_all',
+        self.stub_out('nova.db.main.api.service_get_all',
                       stub_service_get_all_notimpl)
         body = {key: val}
         self.assertRaises(webob.exc.HTTPNotImplemented,

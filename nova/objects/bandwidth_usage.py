@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.db import api as db
+from nova.db.main import api as db
 from nova.objects import base
 from nova.objects import fields
 

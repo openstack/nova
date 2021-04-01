@@ -17,7 +17,7 @@ from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova import objects
 from nova.objects import migration
@@ -85,7 +85,7 @@ class _TestMigrationObject(object):
                                          fake_migration['id'],
                                          'migrating')
 
-    @mock.patch('nova.db.api.migration_get_in_progress_by_instance')
+    @mock.patch('nova.db.main.api.migration_get_in_progress_by_instance')
     def test_get_in_progress_by_instance(self, m_get_mig):
         ctxt = context.get_admin_context()
         fake_migration = fake_db_migration()
@@ -261,7 +261,7 @@ class _TestMigrationObject(object):
 
     def test_migrate_old_resize_record(self):
         db_migration = dict(fake_db_migration(), migration_type=None)
-        with mock.patch('nova.db.api.migration_get') as fake_get:
+        with mock.patch('nova.db.main.api.migration_get') as fake_get:
             fake_get.return_value = db_migration
             mig = objects.Migration.get_by_id(context.get_admin_context(), 1)
         self.assertTrue(mig.obj_attr_is_set('migration_type'))
@@ -271,7 +271,7 @@ class _TestMigrationObject(object):
         db_migration = dict(
             fake_db_migration(), migration_type=None,
             old_instance_type_id=1, new_instance_type_id=1)
-        with mock.patch('nova.db.api.migration_get') as fake_get:
+        with mock.patch('nova.db.main.api.migration_get') as fake_get:
             fake_get.return_value = db_migration
             mig = objects.Migration.get_by_id(context.get_admin_context(), 1)
         self.assertTrue(mig.obj_attr_is_set('migration_type'))
@@ -299,7 +299,7 @@ class _TestMigrationObject(object):
         self.assertFalse(mig.cross_cell_move)
         self.assertIn('cross_cell_move', mig)
 
-    @mock.patch('nova.db.api.migration_get_by_id_and_instance')
+    @mock.patch('nova.db.main.api.migration_get_by_id_and_instance')
     def test_get_by_id_and_instance(self, fake_get):
         ctxt = context.get_admin_context()
         fake_migration = fake_db_migration()
@@ -353,7 +353,7 @@ class _TestMigrationObject(object):
         self.assertIn('source_compute', primitive)
         self.assertNotIn('migration_type', primitive)
 
-    @mock.patch('nova.db.api.migration_get_by_uuid')
+    @mock.patch('nova.db.main.api.migration_get_by_uuid')
     def test_get_by_uuid(self, mock_db_get):
         mock_db_get.return_value = fake_db_migration(uuid=uuidsentinel.mig)
         mig = objects.Migration.get_by_uuid(self.context, uuidsentinel.mig)

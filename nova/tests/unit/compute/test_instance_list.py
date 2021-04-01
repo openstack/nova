@@ -61,7 +61,7 @@ class TestInstanceList(test.NoDBTestCase):
         self.assertEqual(['created_at', 'id', 'uuid'], ctx.sort_keys)
         self.assertEqual(['desc', 'desc', 'asc'], ctx.sort_dirs)
 
-    @mock.patch('nova.db.api.instance_get_all_by_filters_sort')
+    @mock.patch('nova.db.main.api.instance_get_all_by_filters_sort')
     @mock.patch('nova.objects.CellMappingList.get_all')
     def test_get_instances_sorted(self, mock_cells, mock_inst):
         mock_cells.return_value = self.cells
@@ -341,7 +341,7 @@ class TestInstanceListBig(test.NoDBTestCase):
         self.context = nova_context.RequestContext()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
-    @mock.patch('nova.db.api.instance_get_all_by_filters_sort')
+    @mock.patch('nova.db.main.api.instance_get_all_by_filters_sort')
     @mock.patch('nova.objects.CellMappingList.get_all')
     def test_get_instances_batched(self, mock_cells, mock_inst):
         mock_cells.return_value = self.cells

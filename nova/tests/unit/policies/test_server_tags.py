@@ -97,7 +97,7 @@ class ServerTagsPolicyTest(base.BasePolicyTest):
                                  self.req, self.instance.uuid, uuids.fake_id)
 
     @mock.patch('nova.notifications.base.send_instance_update_notification')
-    @mock.patch('nova.db.api.instance_tag_get_by_instance_uuid')
+    @mock.patch('nova.db.main.api.instance_tag_get_by_instance_uuid')
     @mock.patch('nova.objects.Tag.create')
     def test_update_server_tags_policy(self, mock_create, mock_tag,
         mock_notf):
@@ -110,7 +110,7 @@ class ServerTagsPolicyTest(base.BasePolicyTest):
                                  body=None)
 
     @mock.patch('nova.notifications.base.send_instance_update_notification')
-    @mock.patch('nova.db.api.instance_tag_set')
+    @mock.patch('nova.db.main.api.instance_tag_set')
     def test_update_all_server_tags_policy(self, mock_set, mock_notf):
         rule_name = policies.POLICY_ROOT % 'update_all'
         self.common_policy_check(self.admin_or_owner_authorized_contexts,
@@ -131,7 +131,7 @@ class ServerTagsPolicyTest(base.BasePolicyTest):
                                  self.req, self.instance.uuid)
 
     @mock.patch('nova.notifications.base.send_instance_update_notification')
-    @mock.patch('nova.db.api.instance_tag_get_by_instance_uuid')
+    @mock.patch('nova.db.main.api.instance_tag_get_by_instance_uuid')
     @mock.patch('nova.objects.Tag.destroy')
     def test_delete_server_tags_policy(self, mock_destroy, mock_get,
         mock_notf):

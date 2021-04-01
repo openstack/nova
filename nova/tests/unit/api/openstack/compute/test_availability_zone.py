@@ -24,7 +24,7 @@ from nova.api.openstack.compute import servers as servers_v21
 from nova import availability_zones
 from nova.compute import api as compute_api
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova import objects
 from nova import test

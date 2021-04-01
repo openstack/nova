@@ -39,7 +39,7 @@ from nova.compute import vm_states
 from nova import conductor
 import nova.conf
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova.image import glance as image_api
 from nova.network import constants
@@ -4508,7 +4508,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 name='network-changed'),
             ]
 
-        with mock.patch('nova.db.sqlalchemy.api.migration_get', migration_get):
+        with mock.patch('nova.db.main.api.migration_get', migration_get):
             self.compute_api.compute_rpcapi = mock.MagicMock()
             self.compute_api.external_instance_event(self.context,
                                                      instances, events)

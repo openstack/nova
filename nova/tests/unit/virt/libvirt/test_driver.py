@@ -67,8 +67,8 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 import nova.conf
 from nova import context
-from nova.db import api as db
 from nova.db import constants as db_const
+from nova.db.main import api as db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects

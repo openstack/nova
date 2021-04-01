@@ -34,7 +34,7 @@ import testtools
 from nova.compute import rpcapi as compute_rpcapi
 from nova import conductor
 from nova import context
-from nova.db.sqlalchemy import api as session
+from nova.db.main import api as session
 from nova import exception
 from nova.network import neutron as neutron_api
 from nova import objects

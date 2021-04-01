@@ -23,6 +23,7 @@ import datetime
 import functools
 import inspect
 import sys
+import traceback
 
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
@@ -47,7 +48,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 import nova.context
-from nova.db.sqlalchemy import models
+from nova.db.main import models
 from nova import exception
 from nova.i18n import _
 from nova import safe_utils
@@ -55,9 +56,9 @@ from nova import safe_utils
 profiler_sqlalchemy = importutils.try_import('osprofiler.sqlalchemy')
 
 CONF = nova.conf.CONF
-
-
 LOG = logging.getLogger(__name__)
+
+DISABLE_DB_ACCESS = False
 
 main_context_manager = enginefacade.transaction_context()
 api_context_manager = enginefacade.transaction_context()
@@ -193,6 +194,17 @@ def select_db_reader_mode(f):
     return wrapper
 
 
+def _check_db_access():
+    # disable all database access if required
+    if DISABLE_DB_ACCESS:
+        service_name = 'nova-compute'
+        stacktrace = ''.join(traceback.format_stack())
+        LOG.error(
+            'No DB access allowed in %(service_name)s: %(stacktrace)s',
+            {'service_name': service_name, 'stacktrace': stacktrace})
+        raise exception.DBNotAllowed(binary=service_name)
+
+
 def pick_context_manager_writer(f):
     """Decorator to use a writer db context manager.
 
@@ -202,6 +214,7 @@ def pick_context_manager_writer(f):
     """
     @functools.wraps(f)
     def wrapper(context, *args, **kwargs):
+        _check_db_access()
         ctxt_mgr = get_context_manager(context)
         with ctxt_mgr.writer.using(context):
             return f(context, *args, **kwargs)
@@ -218,6 +231,7 @@ def pick_context_manager_reader(f):
     """
     @functools.wraps(f)
     def wrapper(context, *args, **kwargs):
+        _check_db_access()
         ctxt_mgr = get_context_manager(context)
         with ctxt_mgr.reader.using(context):
             return f(context, *args, **kwargs)
@@ -234,6 +248,7 @@ def pick_context_manager_reader_allow_async(f):
     """
     @functools.wraps(f)
     def wrapper(context, *args, **kwargs):
+        _check_db_access()
         ctxt_mgr = get_context_manager(context)
         with ctxt_mgr.reader.allow_async.using(context):
             return f(context, *args, **kwargs)

@@ -27,9 +27,8 @@ from sqlalchemy.sql import func
 from nova import availability_zones as avail_zone
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
-from nova.db.sqlalchemy import models
+from nova.db.main import api as db
+from nova.db.main import models
 from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
@@ -1254,7 +1253,7 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     return inst_list
 
 
-@db_api.pick_context_manager_writer
+@db.pick_context_manager_writer
 def populate_missing_availability_zones(context, count):
     # instances without host have no reasonable AZ to set
     not_empty_host = models.Instance.host != None  # noqa E711
@@ -1344,7 +1343,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                                    expected_attrs)
 
     @staticmethod
-    @db_api.pick_context_manager_reader
+    @db.pick_context_manager_reader
     def _get_uuids_by_host_and_node(context, host, node):
         return context.session.query(
             models.Instance.uuid).filter_by(
@@ -1495,7 +1494,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         return db.instance_get_all_uuids_by_hosts(context, hosts)
 
     @staticmethod
-    @db_api.pick_context_manager_reader
+    @db.pick_context_manager_reader
     def _get_count_by_vm_state_in_db(context, project_id, user_id, vm_state):
         return context.session.query(models.Instance.id).\
             filter_by(deleted=0).\
@@ -1510,9 +1509,9 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                                                 vm_state)
 
     @staticmethod
-    @db_api.pick_context_manager_reader
+    @db.pick_context_manager_reader
     def _get_counts_in_db(context, project_id, user_id=None):
-        # NOTE(melwitt): Copied from nova/db/sqlalchemy/api.py:
+        # NOTE(melwitt): Copied from nova/db/main/api.py:
         # It would be better to have vm_state not be nullable
         # but until then we test it explicitly as a workaround.
         not_soft_deleted = sa.or_(
@@ -1567,7 +1566,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         return cls._get_counts_in_db(context, project_id, user_id=user_id)
 
     @staticmethod
-    @db_api.pick_context_manager_reader
+    @db.pick_context_manager_reader
     def _get_count_by_hosts(context, hosts):
         return context.session.query(models.Instance).\
             filter_by(deleted=0).\

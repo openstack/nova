@@ -88,7 +88,7 @@ class DiskConfigTestCaseV21(test.TestCase):
 
             return inst
 
-        self.stub_out('nova.db.api.instance_create', fake_instance_create)
+        self.stub_out('nova.db.main.api.instance_create', fake_instance_create)
 
     def _set_up_app(self):
         self.app = compute.APIRouterV21()

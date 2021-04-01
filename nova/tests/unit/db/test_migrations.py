@@ -47,8 +47,8 @@ import sqlalchemy.exc
 import testtools
 
 from nova.db.main import legacy_migrations
+from nova.db.main import models
 from nova.db import migration
-from nova.db.sqlalchemy import models
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 

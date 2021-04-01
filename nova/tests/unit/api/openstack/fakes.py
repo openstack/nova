@@ -33,7 +33,7 @@ from nova.compute import flavors
 from nova.compute import vm_states
 import nova.conf
 from nova import context
-from nova.db.sqlalchemy import models
+from nova.db.main import models
 from nova import exception as exc
 from nova import objects
 from nova.objects import base
@@ -105,10 +105,12 @@ def stub_out_key_pair_funcs(testcase, have_key_pair=True, **kwargs):
         return []
 
     if have_key_pair:
-        testcase.stub_out('nova.db.api.key_pair_get_all_by_user', key_pair)
-        testcase.stub_out('nova.db.api.key_pair_get', one_key_pair)
+        testcase.stub_out(
+            'nova.db.main.api.key_pair_get_all_by_user', key_pair)
+        testcase.stub_out('nova.db.main.api.key_pair_get', one_key_pair)
     else:
-        testcase.stub_out('nova.db.api.key_pair_get_all_by_user', no_key_pair)
+        testcase.stub_out(
+            'nova.db.main.api.key_pair_get_all_by_user', no_key_pair)
 
 
 def stub_out_trusted_certs(test, certs=None):

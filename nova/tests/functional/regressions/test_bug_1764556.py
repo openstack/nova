@@ -11,7 +11,7 @@
 # under the License.
 
 from nova import context as nova_context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures

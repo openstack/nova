@@ -17,18 +17,19 @@ import contextlib
 import mock
 
 from nova.cmd import compute
-from nova.db import api as db
+from nova import context
+from nova.db.main import api as db
 from nova import exception
 from nova import test
 
 
 @contextlib.contextmanager
 def restore_db():
-    orig = db.IMPL
+    orig = db.DISABLE_DB_ACCESS
     try:
         yield
     finally:
-        db.IMPL = orig
+        db.DISABLE_DB_ACCESS = orig
 
 
 class ComputeMainTest(test.NoDBTestCase):
@@ -43,7 +44,7 @@ class ComputeMainTest(test.NoDBTestCase):
         run_main()
 
     def test_compute_main_blocks_db(self):
+        ctxt = context.get_admin_context()
         with restore_db():
             self._call_main(compute)
-            self.assertRaises(exception.DBNotAllowed,
-                              db.instance_get, 1, 2)
+            self.assertRaises(exception.DBNotAllowed, db.instance_get, ctxt, 2)

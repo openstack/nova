@@ -22,8 +22,7 @@ import sqlalchemy as sa
 from sqlalchemy import func
 
 from nova import context
-from nova.db import api as db
-from nova.db.sqlalchemy import api as sqlalchemy_api
+from nova.db.main import api as db
 from nova import objects
 from nova.tests.functional import integrated_helpers
 from nova import utils as nova_utils
@@ -176,11 +175,11 @@ class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
         self.assertFalse(exceptions)
 
     def _get_table_counts(self):
-        engine = sqlalchemy_api.get_engine()
+        engine = db.get_engine()
         conn = engine.connect()
         meta = sa.MetaData(engine)
         meta.reflect()
-        shadow_tables = sqlalchemy_api._purgeable_tables(meta)
+        shadow_tables = db._purgeable_tables(meta)
         results = {}
         for table in shadow_tables:
             r = conn.execute(
@@ -222,8 +221,7 @@ class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
         def status(msg):
             lines.append(msg)
 
-        deleted = sqlalchemy_api.purge_shadow_tables(admin_context,
-                                                     None, status_fn=status)
+        deleted = db.purge_shadow_tables(admin_context, None, status_fn=status)
         self.assertNotEqual(0, deleted)
         self.assertNotEqual(0, len(lines))
         self.assertEqual(sum(results.values()), archived)
@@ -277,8 +275,7 @@ class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
         # Make sure we didn't delete anything if the marker is before
         # we started
         past = timeutils.utcnow() - datetime.timedelta(days=31)
-        deleted = sqlalchemy_api.purge_shadow_tables(admin_context,
-                                                     past)
+        deleted = db.purge_shadow_tables(admin_context, past)
         self.assertEqual(0, deleted)
 
         # Nothing should be changed if we didn't purge anything
@@ -288,7 +285,7 @@ class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
         # Make sure we deleted things when the marker is after
         # we started
         future = timeutils.utcnow() + datetime.timedelta(hours=1)
-        deleted = sqlalchemy_api.purge_shadow_tables(admin_context, future)
+        deleted = db.purge_shadow_tables(admin_context, future)
         self.assertNotEqual(0, deleted)
 
         # There should be no rows in any table if we purged everything
@@ -306,6 +303,6 @@ class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
         self.assertEqual([server_id], deleted_ids)
         date = dateutil_parser.parse('oct 21 2015', fuzzy=True)
         admin_context = context.get_admin_context()
-        deleted = sqlalchemy_api.purge_shadow_tables(admin_context, date)
+        deleted = db.purge_shadow_tables(admin_context, date)
         self.assertEqual(0, deleted)
         self.assertEqual(sum(results.values()), archived)

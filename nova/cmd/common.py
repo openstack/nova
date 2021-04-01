@@ -19,34 +19,16 @@
 
 import argparse
 import inspect
-import traceback
 
 from oslo_log import log as logging
 
 import nova.conf
-import nova.db.api
+import nova.db.main.api
 from nova import exception
 from nova.i18n import _
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
-
-
-def block_db_access(service_name):
-    """Blocks Nova DB access."""
-
-    class NoDB(object):
-        def __getattr__(self, attr):
-            return self
-
-        def __call__(self, *args, **kwargs):
-            stacktrace = "".join(traceback.format_stack())
-            LOG.error('No db access allowed in %(service_name)s: '
-                      '%(stacktrace)s',
-                      dict(service_name=service_name, stacktrace=stacktrace))
-            raise exception.DBNotAllowed(binary=service_name)
-
-    nova.db.api.IMPL = NoDB()
 
 
 def validate_args(fn, *args, **kwargs):

@@ -1038,8 +1038,9 @@ class ServerActionsControllerTestV21(test.TestCase):
                          'delete_on_termination': False,
                          'no_device': None})]
 
-        self.stub_out('nova.db.api.block_device_mapping_get_all_by_instance',
-                      fake_block_device_mapping_get_all_by_instance)
+        self.stub_out(
+            'nova.db.main.api.block_device_mapping_get_all_by_instance',
+            fake_block_device_mapping_get_all_by_instance)
 
         system_metadata = dict(image_kernel_id=_fake_id('b'),
                                image_ramdisk_id=_fake_id('c'),
@@ -1150,8 +1151,9 @@ class ServerActionsControllerTestV21(test.TestCase):
                          'delete_on_termination': False,
                          'no_device': None})]
 
-        self.stub_out('nova.db.api.block_device_mapping_get_all_by_instance',
-                      fake_block_device_mapping_get_all_by_instance)
+        self.stub_out(
+            'nova.db.main.api.block_device_mapping_get_all_by_instance',
+            fake_block_device_mapping_get_all_by_instance)
 
         instance = fakes.fake_compute_get(
             project_id=fakes.FAKE_PROJECT_ID,

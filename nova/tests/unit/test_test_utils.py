@@ -18,7 +18,7 @@ from unittest import mock
 
 import fixtures
 
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import test
 from nova.tests.unit import utils as test_utils
 

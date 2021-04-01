@@ -11,7 +11,7 @@
 # under the License.
 
 from nova import context as nova_context
-from nova.db import api as db_api
+from nova.db.main import api as db_api
 from nova.objects import virtual_interface
 from nova import test
 from nova.tests import fixtures as nova_fixtures

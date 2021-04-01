@@ -20,7 +20,7 @@ from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova import objects
 from nova.objects import instance_action
@@ -188,7 +188,7 @@ class _TestInstanceActionObject(object):
         ex = self.assertRaises(exception.ObjectActionError, action.create)
         self.assertIn('already created', str(ex))
 
-    @mock.patch('nova.db.api.action_start')
+    @mock.patch('nova.db.main.api.action_start')
     def test_create(self, mock_action_start):
         mock_action_start.return_value = fake_action
         action = instance_action.InstanceAction(self.context)
@@ -404,7 +404,7 @@ class _TestInstanceActionEventObject(object):
             fake_action['instance_uuid'], fake_action['request_id'])
         self.assertIn('already created', str(ex))
 
-    @mock.patch('nova.db.api.action_event_start')
+    @mock.patch('nova.db.main.api.action_event_start')
     def test_create(self, mock_action_event_start):
         mock_action_event_start.return_value = fake_event
         event = instance_action.InstanceActionEvent(self.context)

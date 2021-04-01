@@ -18,9 +18,8 @@
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
-from nova.db.sqlalchemy import models
+from nova.db.main import api as db
+from nova.db.main import models
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -115,7 +114,7 @@ class SecurityGroupList(base.ObjectListBase, base.NovaObject):
         self.obj_reset_changes()
 
     @staticmethod
-    @db_api.pick_context_manager_reader
+    @db.pick_context_manager_reader
     def _get_counts_from_db(context, project_id, user_id=None):
         query = context.session.query(models.SecurityGroup.id).\
                 filter_by(deleted=0).\

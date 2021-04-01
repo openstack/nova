@@ -18,7 +18,7 @@ from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 
 from nova import context
-from nova.db.sqlalchemy import api as db_api
+from nova.db.main import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
 import nova.objects.aggregate as aggregate_obj

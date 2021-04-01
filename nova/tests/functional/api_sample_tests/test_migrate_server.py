@@ -71,7 +71,7 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
             'nova.conductor.manager.ComputeTaskManager._live_migrate',
             fake_live_migrate)
         self.stub_out(
-            'nova.db.api.service_get_by_compute_host',
+            'nova.db.main.api.service_get_by_compute_host',
             fake_get_compute)
 
         response = self._do_post('servers/%s/action' % self.uuid,
@@ -218,7 +218,7 @@ class MigrateServerSamplesJsonTestV268(test_servers.ServersSampleBase):
             'nova.conductor.manager.ComputeTaskManager._live_migrate',
             fake_live_migrate)
         self.stub_out(
-            'nova.db.api.service_get_by_compute_host',
+            'nova.db.main.api.service_get_by_compute_host',
             fake_get_compute)
 
         response = self._do_post('servers/%s/action' % self.uuid,

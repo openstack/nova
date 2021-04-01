@@ -25,7 +25,7 @@ from webob import exc
 from nova.api.openstack.compute import instance_actions as instance_actions_v21
 from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
-from nova.db.sqlalchemy import models
+from nova.db.main import models
 from nova import exception
 from nova import objects
 from nova import policy
@@ -134,7 +134,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
                 actions.append(action)
             return actions
 
-        self.stub_out('nova.db.api.actions_get', fake_get_actions)
+        self.stub_out('nova.db.main.api.actions_get', fake_get_actions)
         req = self._get_http_req('os-instance-actions')
         res_dict = self.controller.index(req, FAKE_UUID)
         for res in res_dict['instanceActions']:
@@ -155,8 +155,9 @@ class InstanceActionsTestV21(test.NoDBTestCase):
                 events.append(event)
             return events
 
-        self.stub_out('nova.db.api.action_get_by_request_id', fake_get_action)
-        self.stub_out('nova.db.api.action_events_get', fake_get_events)
+        self.stub_out(
+            'nova.db.main.api.action_get_by_request_id', fake_get_action)
+        self.stub_out('nova.db.main.api.action_events_get', fake_get_events)
         req = self._get_http_req('os-instance-actions/1',
                                 use_admin_context=True)
         res_dict = self.controller.show(req, FAKE_UUID, FAKE_REQUEST_ID)
@@ -177,8 +178,9 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         def fake_get_events(context, action_id):
             return self.fake_events[action_id]
 
-        self.stub_out('nova.db.api.action_get_by_request_id', fake_get_action)
-        self.stub_out('nova.db.api.action_events_get', fake_get_events)
+        self.stub_out(
+            'nova.db.main.api.action_get_by_request_id', fake_get_action)
+        self.stub_out('nova.db.main.api.action_events_get', fake_get_events)
 
         self._set_policy_rules()
         req = self._get_http_req('os-instance-actions/1')
@@ -202,7 +204,8 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         def fake_no_action(context, uuid, action_id):
             return None
 
-        self.stub_out('nova.db.api.action_get_by_request_id', fake_no_action)
+        self.stub_out(
+            'nova.db.main.api.action_get_by_request_id', fake_no_action)
         req = self._get_http_req('os-instance-actions/1')
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req,
                           FAKE_UUID, FAKE_REQUEST_ID)
@@ -431,8 +434,9 @@ class InstanceActionsTestV284(InstanceActionsTestV266):
         def fake_get_events(context, action_id):
             return self.fake_events[action_id]
 
-        self.stub_out('nova.db.api.action_get_by_request_id', fake_get_action)
-        self.stub_out('nova.db.api.action_events_get', fake_get_events)
+        self.stub_out(
+            'nova.db.main.api.action_get_by_request_id', fake_get_action)
+        self.stub_out('nova.db.main.api.action_events_get', fake_get_events)
 
         self._set_policy_rules(overwrite=False)
         req = self._get_http_req('os-instance-actions/1')
@@ -448,8 +452,9 @@ class InstanceActionsTestV284(InstanceActionsTestV266):
         def fake_get_events(context, action_id):
             return self.fake_events[action_id]
 
-        self.stub_out('nova.db.api.action_get_by_request_id', fake_get_action)
-        self.stub_out('nova.db.api.action_events_get', fake_get_events)
+        self.stub_out(
+            'nova.db.main.api.action_get_by_request_id', fake_get_action)
+        self.stub_out('nova.db.main.api.action_events_get', fake_get_events)
 
         req = self._get_http_req_with_version('os-instance-actions/1',
                                               version="2.83")

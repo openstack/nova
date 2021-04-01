@@ -1135,7 +1135,7 @@ class ComputeDriver(object):
 
         :param context: security context
         :param instance:
-            nova.db.sqlalchemy.models.Instance object
+            nova.db.main.models.Instance object
             instance object that is migrated.
         :param dest: destination host
         :param post_method:
@@ -1265,7 +1265,7 @@ class ComputeDriver(object):
         back to the source host to check the results.
 
         :param context: security context
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.db.main.models.Instance
         :param src_compute_info: Info about the sending machine
         :param dst_compute_info: Info about the receiving machine
         :param block_migration: if true, prepare for block migration
@@ -1307,7 +1307,7 @@ class ComputeDriver(object):
         results from check_can_live_migrate_destination.
 
         :param context: security context
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.db.main.models.Instance
         :param dest_check_data: result of check_can_live_migrate_destination
         :param block_device_info: result of _get_instance_block_device_info
         :returns: a LiveMigrateData object

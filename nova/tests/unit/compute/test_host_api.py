@@ -102,7 +102,7 @@ class ComputeHostAPITestCase(test.TestCase):
 
         _do_test()
 
-    @mock.patch('nova.db.api.service_get_by_compute_host')
+    @mock.patch('nova.db.main.api.service_get_by_compute_host')
     def test_get_host_uptime_service_down(
         self, mock_get_service_get_by_compute_host,
     ):
@@ -229,7 +229,7 @@ class ComputeHostAPITestCase(test.TestCase):
                                         None, set_zones=False)
         mock_get_hm.assert_called_once_with(self.ctxt, cells[1].id)
 
-    @mock.patch('nova.db.api.service_get_all')
+    @mock.patch('nova.db.main.api.service_get_all')
     def test_service_get_all_no_zones(self, mock_service_get_all):
         services = [dict(test_service.fake_service,
                          id=1, topic='compute', host='host1'),
@@ -258,7 +258,7 @@ class ComputeHostAPITestCase(test.TestCase):
                                                      disabled=None)
         self._compare_objs(result, [services[1]])
 
-    @mock.patch('nova.db.api.service_get_all')
+    @mock.patch('nova.db.main.api.service_get_all')
     def test_service_get_all(self, mock_service_get_all):
         services = [dict(test_service.fake_service,
                          topic='compute', host='host1'),
@@ -305,7 +305,7 @@ class ComputeHostAPITestCase(test.TestCase):
         self._compare_objs(result, exp_services)
 
     @mock.patch(
-        'nova.db.api.service_get_by_compute_host',
+        'nova.db.main.api.service_get_by_compute_host',
         return_value=test_service.fake_service)
     def test_service_get_by_compute_host(
         self, mock_service_get_by_compute_host,
@@ -314,8 +314,8 @@ class ComputeHostAPITestCase(test.TestCase):
             self.ctxt, 'fake-host')
         self.assertEqual(test_service.fake_service['id'], result.id)
 
-    @mock.patch('nova.db.api.service_get_by_host_and_binary')
-    @mock.patch('nova.db.api.service_update')
+    @mock.patch('nova.db.main.api.service_get_by_host_and_binary')
+    @mock.patch('nova.db.main.api.service_update')
     def test_service_update_by_host_and_binary(
         self, mock_service_update, mock_service_get_by_host_and_binary,
     ):
@@ -397,7 +397,8 @@ class ComputeHostAPITestCase(test.TestCase):
                                                         'fake-host')
         self.assertEqual(['fake-responses'], result)
 
-    @mock.patch('nova.db.api.task_log_get_all', return_value='fake-response')
+    @mock.patch(
+        'nova.db.main.api.task_log_get_all', return_value='fake-response')
     def test_task_log_get_all(self, mock_task_log_get_all):
         result = self.host_api.task_log_get_all(self.ctxt, 'fake-name',
                                                 'fake-begin', 'fake-end',
@@ -487,7 +488,7 @@ class ComputeHostAPITestCase(test.TestCase):
         mock_remove_host.assert_called_once_with(
             mock.ANY, aggregate.uuid, 'fake-compute-host')
 
-    @mock.patch('nova.db.api.compute_node_statistics')
+    @mock.patch('nova.db.main.api.compute_node_statistics')
     def test_compute_node_statistics(self, mock_cns):
         # Note this should only be called twice
         mock_cns.side_effect = [

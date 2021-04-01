@@ -49,16 +49,12 @@ api_db_opts = copy.deepcopy(oslo_db_opts.database_opts)
 
 
 def register_opts(conf):
-    # TODO(stephenfin): Enable this once we drop use of
-    # 'oslo_db.api.DBAPI.from_config'
-    # conf.register_opts(copy.deepcopy(main_db_opts), group=main_db_group)
+    conf.register_opts(copy.deepcopy(main_db_opts), group=main_db_group)
     conf.register_opts(copy.deepcopy(api_db_opts), group=api_db_group)
 
 
 def list_opts():
     return {
-        # TODO(stephenfin): Enable this once we drop use of
-        # 'oslo_db.api.DBAPI.from_config'
-        # main_db_group: main_db_opts,
+        main_db_group: main_db_opts,
         api_db_group: api_db_opts,
     }

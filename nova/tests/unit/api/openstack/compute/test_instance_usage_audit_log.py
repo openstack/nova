@@ -119,10 +119,12 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
             self.assertIsNone(disabled)
             return TEST_COMPUTE_SERVICES
 
-        self.stub_out('nova.utils.last_completed_audit_period',
-                      fake_last_completed_audit_period)
-        self.stub_out('nova.db.api.service_get_all', fake_service_get_all)
-        self.stub_out('nova.db.api.task_log_get_all', fake_task_log_get_all)
+        self.stub_out(
+            'nova.utils.last_completed_audit_period',
+            fake_last_completed_audit_period)
+        self.stub_out('nova.db.main.api.service_get_all', fake_service_get_all)
+        self.stub_out(
+            'nova.db.main.api.task_log_get_all', fake_task_log_get_all)
 
         self.req = fakes.HTTPRequest.blank('')
 

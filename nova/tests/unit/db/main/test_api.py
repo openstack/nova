@@ -49,9 +49,8 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova import context
-from nova.db import api as db
-from nova.db.sqlalchemy import api as sqlalchemy_api
-from nova.db.sqlalchemy import models
+from nova.db.main import api as db
+from nova.db.main import models
 from nova.db import types as col_types
 from nova import exception
 from nova.objects import fields
@@ -62,8 +61,6 @@ from nova import utils
 
 
 CONF = nova.conf.CONF
-
-get_engine = sqlalchemy_api.get_engine
 
 
 def _make_compute_node(host, node, hv_type, service_id):
@@ -116,13 +113,13 @@ def _quota_create(context, project_id, user_id):
                                                     user_id=user_id).hard_limit
 
 
-@sqlalchemy_api.pick_context_manager_reader
+@db.pick_context_manager_reader
 def _assert_instance_id_mapping(_ctxt, tc, inst_uuid, expected_existing=False):
     # NOTE(mriedem): We can't use ec2_instance_get_by_uuid to assert
     # the instance_id_mappings record is gone because it hard-codes
     # read_deleted='yes' and will read the soft-deleted record. So we
     # do the model_query directly here. See bug 1061166.
-    inst_id_mapping = sqlalchemy_api.model_query(
+    inst_id_mapping = db.model_query(
         _ctxt, models.InstanceIdMapping).filter_by(uuid=inst_uuid).first()
     if not expected_existing:
         tc.assertFalse(inst_id_mapping,
@@ -171,7 +168,7 @@ class DbTestCase(test.TestCase):
 class HelperTestCase(test.TestCase):
     @mock.patch('sqlalchemy.orm.joinedload')
     def test_joinedload_helper(self, mock_jl):
-        query = sqlalchemy_api._joinedload_all('foo.bar.baz')
+        query = db._joinedload_all('foo.bar.baz')
 
         # We call sqlalchemy.orm.joinedload() on the first element
         mock_jl.assert_called_once_with('foo')
@@ -188,7 +185,7 @@ class HelperTestCase(test.TestCase):
 
     @mock.patch('sqlalchemy.orm.joinedload')
     def test_joinedload_helper_single(self, mock_jl):
-        query = sqlalchemy_api._joinedload_all('foo')
+        query = db._joinedload_all('foo')
 
         # We call sqlalchemy.orm.joinedload() on the first element
         mock_jl.assert_called_once_with('foo')
@@ -210,7 +207,7 @@ class DecoratorTestCase(test.TestCase):
         self.assertEqual(test_func.__module__, decorated_func.__module__)
 
     def test_require_context_decorator_wraps_functions_properly(self):
-        self._test_decorator_wraps_helper(sqlalchemy_api.require_context)
+        self._test_decorator_wraps_helper(db.require_context)
 
     def test_require_deadlock_retry_wraps_functions_properly(self):
         self._test_decorator_wraps_helper(
@@ -268,6 +265,54 @@ class DecoratorTestCase(test.TestCase):
         mock_clone.assert_called_once_with(mode=enginefacade._READER)
         mock_using.assert_called_once_with(ctxt)
 
+    @mock.patch.object(db, 'LOG')
+    @mock.patch.object(db, 'DISABLE_DB_ACCESS', return_value=True)
+    def _test_pick_context_manager_disable_db_access(
+        self, func, mock_DISABLE_DB_ACCESS, mock_log,
+    ):
+        ctxt = context.get_admin_context()
+        value = 'some_value'
+
+        with mock_DISABLE_DB_ACCESS:
+            self.assertRaises(exception.DBNotAllowed, func, ctxt, value)
+
+        self.assertIn(
+            'No DB access allowed in ',
+            mock_log.error.call_args[0][0])
+
+    @mock.patch.object(db, 'LOG')
+    @mock.patch.object(db, 'DISABLE_DB_ACCESS', return_value=True)
+    def test_pick_context_manager_writer_disable_db_access(
+        self, mock_DISABLE_DB_ACCESS, mock_log,
+    ):
+        @db.pick_context_manager_writer
+        def func(context, value):
+            pass
+
+        self._test_pick_context_manager_disable_db_access(func)
+
+    @mock.patch.object(db, 'LOG')
+    @mock.patch.object(db, 'DISABLE_DB_ACCESS', return_value=True)
+    def test_pick_context_manager_reader_disable_db_access(
+        self, mock_DISABLE_DB_ACCESS, mock_log,
+    ):
+        @db.pick_context_manager_reader
+        def func(context, value):
+            pass
+
+        self._test_pick_context_manager_disable_db_access(func)
+
+    @mock.patch.object(db, 'LOG')
+    @mock.patch.object(db, 'DISABLE_DB_ACCESS', return_value=True)
+    def test_pick_context_manager_reader_allow_async_disable_db_access(
+        self, mock_DISABLE_DB_ACCESS, mock_log,
+    ):
+        @db.pick_context_manager_reader_allow_async
+        def func(context, value):
+            pass
+
+        self._test_pick_context_manager_disable_db_access(func)
+
 
 def _get_fake_aggr_values():
     return {'name': 'fake_aggregate'}
@@ -300,7 +345,7 @@ def _create_aggregate_with_hosts(context=context.get_admin_context(),
     return result
 
 
-@mock.patch.object(sqlalchemy_api, '_get_regexp_ops',
+@mock.patch.object(db, '_get_regexp_ops',
         return_value=(lambda x: x, 'LIKE'))
 class UnsupportedDbRegexpTestCase(DbTestCase):
 
@@ -565,28 +610,28 @@ class UnsupportedDbRegexpTestCase(DbTestCase):
 
 class ModelQueryTestCase(DbTestCase):
     def test_model_query_invalid_arguments(self):
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test(context):
             # read_deleted shouldn't accept invalid values
-            self.assertRaises(ValueError, sqlalchemy_api.model_query,
+            self.assertRaises(ValueError, db.model_query,
                               context, models.Instance,
                               read_deleted=False)
-            self.assertRaises(ValueError, sqlalchemy_api.model_query,
+            self.assertRaises(ValueError, db.model_query,
                               context, models.Instance,
                               read_deleted="foo")
 
             # Check model is a valid model
-            self.assertRaises(TypeError, sqlalchemy_api.model_query,
+            self.assertRaises(TypeError, db.model_query,
                               context, "")
 
         test(self.context)
 
     @mock.patch.object(sqlalchemyutils, 'model_query')
     def test_model_query_use_context_session(self, mock_model_query):
-        @sqlalchemy_api.main_context_manager.reader
+        @db.main_context_manager.reader
         def fake_method(context):
             session = context.session
-            sqlalchemy_api.model_query(context, models.Instance)
+            db.model_query(context, models.Instance)
             return session
 
         session = fake_method(self.context)
@@ -597,18 +642,18 @@ class ModelQueryTestCase(DbTestCase):
 class EngineFacadeTestCase(DbTestCase):
     def test_use_single_context_session_writer(self):
         # Checks that session in context would not be overwritten by
-        # annotation @sqlalchemy_api.main_context_manager.writer if annotation
+        # annotation @db.main_context_manager.writer if annotation
         # is used twice.
 
-        @sqlalchemy_api.main_context_manager.writer
+        @db.main_context_manager.writer
         def fake_parent_method(context):
             session = context.session
             return fake_child_method(context), session
 
-        @sqlalchemy_api.main_context_manager.writer
+        @db.main_context_manager.writer
         def fake_child_method(context):
             session = context.session
-            sqlalchemy_api.model_query(context, models.Instance)
+            db.model_query(context, models.Instance)
             return session
 
         parent_session, child_session = fake_parent_method(self.context)
@@ -616,18 +661,18 @@ class EngineFacadeTestCase(DbTestCase):
 
     def test_use_single_context_session_reader(self):
         # Checks that session in context would not be overwritten by
-        # annotation @sqlalchemy_api.main_context_manager.reader if annotation
+        # annotation @db.main_context_manager.reader if annotation
         # is used twice.
 
-        @sqlalchemy_api.main_context_manager.reader
+        @db.main_context_manager.reader
         def fake_parent_method(context):
             session = context.session
             return fake_child_method(context), session
 
-        @sqlalchemy_api.main_context_manager.reader
+        @db.main_context_manager.reader
         def fake_child_method(context):
             session = context.session
-            sqlalchemy_api.model_query(context, models.Instance)
+            db.model_query(context, models.Instance)
             return session
 
         parent_session, child_session = fake_parent_method(self.context)
@@ -641,7 +686,7 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         # Tests that _manual_join_columns doesn't modify the list passed in.
         columns_to_join = ['system_metadata', 'test']
         manual_joins, columns_to_join2 = (
-            sqlalchemy_api._manual_join_columns(columns_to_join))
+            db._manual_join_columns(columns_to_join))
         self.assertEqual(['system_metadata'], manual_joins)
         self.assertEqual(['test'], columns_to_join2)
         self.assertEqual(['system_metadata', 'test'], columns_to_join)
@@ -659,17 +704,17 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
 
         test1 = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
         expected_dict = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
-        sqlalchemy_api.convert_objects_related_datetimes(test1, *datetime_keys)
+        db.convert_objects_related_datetimes(test1, *datetime_keys)
         self.assertEqual(test1, expected_dict)
 
         test2 = {'created_at': t1, 'deleted_at': t2_utc, 'updated_at': t3}
         expected_dict = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
-        sqlalchemy_api.convert_objects_related_datetimes(test2, *datetime_keys)
+        db.convert_objects_related_datetimes(test2, *datetime_keys)
         self.assertEqual(test2, expected_dict)
 
         test3 = {'deleted_at': t2_utc, 'updated_at': t3_utc}
         expected_dict = {'deleted_at': t2, 'updated_at': t3_utc}
-        sqlalchemy_api.convert_objects_related_datetimes(test3, *datetime_keys)
+        db.convert_objects_related_datetimes(test3, *datetime_keys)
         self.assertEqual(test3, expected_dict)
 
     def test_convert_objects_related_datetimes_with_strings(self):
@@ -684,81 +729,81 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         'deleted_at': timeutils.parse_isotime(t2).replace(tzinfo=None),
         'updated_at': timeutils.parse_isotime(t3).replace(tzinfo=None)}
 
-        sqlalchemy_api.convert_objects_related_datetimes(test1)
+        db.convert_objects_related_datetimes(test1)
         self.assertEqual(test1, expected_dict)
 
-        sqlalchemy_api.convert_objects_related_datetimes(test1, *datetime_keys)
+        db.convert_objects_related_datetimes(test1, *datetime_keys)
         self.assertEqual(test1, expected_dict)
 
     def test_get_regexp_op_for_database_sqlite(self):
-        filter, op = sqlalchemy_api._get_regexp_ops('sqlite:///')
+        filter, op = db._get_regexp_ops('sqlite:///')
         self.assertEqual('|', filter('|'))
         self.assertEqual('REGEXP', op)
 
     def test_get_regexp_op_for_database_mysql(self):
-        filter, op = sqlalchemy_api._get_regexp_ops(
+        filter, op = db._get_regexp_ops(
                     'mysql+pymysql://root@localhost')
         self.assertEqual('\\|', filter('|'))
         self.assertEqual('REGEXP', op)
 
     def test_get_regexp_op_for_database_postgresql(self):
-        filter, op = sqlalchemy_api._get_regexp_ops(
+        filter, op = db._get_regexp_ops(
                     'postgresql://localhost')
         self.assertEqual('|', filter('|'))
         self.assertEqual('~', op)
 
     def test_get_regexp_op_for_database_unknown(self):
-        filter, op = sqlalchemy_api._get_regexp_ops('notdb:///')
+        filter, op = db._get_regexp_ops('notdb:///')
         self.assertEqual('|', filter('|'))
         self.assertEqual('LIKE', op)
 
-    @mock.patch.object(sqlalchemy_api, 'main_context_manager')
+    @mock.patch.object(db, 'main_context_manager')
     def test_get_engine(self, mock_ctxt_mgr):
-        sqlalchemy_api.get_engine()
+        db.get_engine()
         mock_ctxt_mgr.writer.get_engine.assert_called_once_with()
 
-    @mock.patch.object(sqlalchemy_api, 'main_context_manager')
+    @mock.patch.object(db, 'main_context_manager')
     def test_get_engine_use_slave(self, mock_ctxt_mgr):
-        sqlalchemy_api.get_engine(use_slave=True)
+        db.get_engine(use_slave=True)
         mock_ctxt_mgr.reader.get_engine.assert_called_once_with()
 
     def test_get_db_conf_with_connection(self):
         mock_conf_group = mock.MagicMock()
         mock_conf_group.connection = 'fakemain://'
-        db_conf = sqlalchemy_api._get_db_conf(mock_conf_group,
+        db_conf = db._get_db_conf(mock_conf_group,
                                               connection='fake://')
         self.assertEqual('fake://', db_conf['connection'])
 
-    @mock.patch.object(sqlalchemy_api, 'api_context_manager')
+    @mock.patch.object(db, 'api_context_manager')
     def test_get_api_engine(self, mock_ctxt_mgr):
-        sqlalchemy_api.get_api_engine()
+        db.get_api_engine()
         mock_ctxt_mgr.writer.get_engine.assert_called_once_with()
 
-    @mock.patch.object(sqlalchemy_api, '_instance_get_by_uuid')
-    @mock.patch.object(sqlalchemy_api, '_instances_fill_metadata')
+    @mock.patch.object(db, '_instance_get_by_uuid')
+    @mock.patch.object(db, '_instances_fill_metadata')
     @mock.patch('oslo_db.sqlalchemy.utils.paginate_query')
     def test_instance_get_all_by_filters_paginated_allows_deleted_marker(
             self, mock_paginate, mock_fill, mock_get):
         ctxt = mock.MagicMock()
         ctxt.elevated.return_value = mock.sentinel.elevated
-        sqlalchemy_api.instance_get_all_by_filters_sort(ctxt, {}, marker='foo')
+        db.instance_get_all_by_filters_sort(ctxt, {}, marker='foo')
         mock_get.assert_called_once_with(mock.sentinel.elevated, 'foo')
         ctxt.elevated.assert_called_once_with(read_deleted='yes')
 
     def test_replace_sub_expression(self):
-        ret = sqlalchemy_api._safe_regex_mysql('|')
+        ret = db._safe_regex_mysql('|')
         self.assertEqual('\\|', ret)
 
-        ret = sqlalchemy_api._safe_regex_mysql('||')
+        ret = db._safe_regex_mysql('||')
         self.assertEqual('\\|\\|', ret)
 
-        ret = sqlalchemy_api._safe_regex_mysql('a||')
+        ret = db._safe_regex_mysql('a||')
         self.assertEqual('a\\|\\|', ret)
 
-        ret = sqlalchemy_api._safe_regex_mysql('|a|')
+        ret = db._safe_regex_mysql('|a|')
         self.assertEqual('\\|a\\|', ret)
 
-        ret = sqlalchemy_api._safe_regex_mysql('||a')
+        ret = db._safe_regex_mysql('||a')
         self.assertEqual('\\|\\|a', ret)
 
 
@@ -770,9 +815,9 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.create_instance_with_args()
         self.create_instance_with_args(host='host2')
 
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test(context):
-            return sqlalchemy_api.instance_get_all_by_host(
+            return db.instance_get_all_by_host(
                 context, 'host1')
 
         result = test(ctxt)
@@ -789,9 +834,9 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         """
         self.create_instance_with_args()
 
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test(ctxt):
-            return sqlalchemy_api.instance_get_all_by_host(
+            return db.instance_get_all_by_host(
                 ctxt, 'host1', columns_to_join=[])
 
         result = test(context.get_admin_context())
@@ -807,14 +852,13 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.create_instance_with_args()
         self.create_instance_with_args(host='host2')
 
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test1(context):
-            return sqlalchemy_api._instance_get_all_uuids_by_hosts(
-                context, ['host1'])
+            return db._instance_get_all_uuids_by_hosts(context, ['host1'])
 
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test2(context):
-            return sqlalchemy_api._instance_get_all_uuids_by_hosts(
+            return db._instance_get_all_uuids_by_hosts(
                 context, ['host1', 'host2'])
 
         result = test1(ctxt)
@@ -841,19 +885,19 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.create_instance_with_args(project_id='project-AAA')
 
         # no limit or marker
-        result = sqlalchemy_api.instance_get_active_by_window_joined(
+        result = db.instance_get_active_by_window_joined(
             ctxt, begin=now, columns_to_join=[])
         actual_uuids = [row['uuid'] for row in result]
         self.assertEqual(['CCC', 'AAA', 'BBB', 'ZZZ'], actual_uuids)
 
         # just limit
-        result = sqlalchemy_api.instance_get_active_by_window_joined(
+        result = db.instance_get_active_by_window_joined(
             ctxt, begin=now, columns_to_join=[], limit=2)
         actual_uuids = [row['uuid'] for row in result]
         self.assertEqual(['CCC', 'AAA'], actual_uuids)
 
         # limit & marker
-        result = sqlalchemy_api.instance_get_active_by_window_joined(
+        result = db.instance_get_active_by_window_joined(
             ctxt, begin=now, columns_to_join=[], limit=2, marker='CCC')
         actual_uuids = [row['uuid'] for row in result]
         self.assertEqual(['AAA', 'BBB'], actual_uuids)
@@ -861,7 +905,7 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         # unknown marker
         self.assertRaises(
             exception.MarkerNotFound,
-            sqlalchemy_api.instance_get_active_by_window_joined,
+            db.instance_get_active_by_window_joined,
             ctxt, begin=now, columns_to_join=[], limit=2, marker='unknown')
 
     def test_instance_get_active_by_window_joined(self):
@@ -886,7 +930,7 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.create_instance_with_args(launched_at=now3, terminated_at=None,
                                        **sample_data)
 
-        result = sqlalchemy_api.instance_get_active_by_window_joined(
+        result = db.instance_get_active_by_window_joined(
             ctxt, begin=now)
         self.assertEqual(4, len(result))
         # verify that all default columns are joined
@@ -896,7 +940,7 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.assertEqual(sample_data['system_metadata'], sys_meta)
         self.assertIn('info_cache', result[0])
 
-        result = sqlalchemy_api.instance_get_active_by_window_joined(
+        result = db.instance_get_active_by_window_joined(
             ctxt, begin=now3, columns_to_join=['info_cache'])
         self.assertEqual(2, len(result))
         # verify that only info_cache is loaded
@@ -904,11 +948,11 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.assertEqual({}, meta)
         self.assertIn('info_cache', result[0])
 
-        result = sqlalchemy_api.instance_get_active_by_window_joined(
+        result = db.instance_get_active_by_window_joined(
             ctxt, begin=start_time, end=now)
         self.assertEqual(0, len(result))
 
-        result = sqlalchemy_api.instance_get_active_by_window_joined(
+        result = db.instance_get_active_by_window_joined(
             ctxt, begin=start_time, end=now2,
             columns_to_join=['system_metadata'])
         self.assertEqual(2, len(result))
@@ -919,7 +963,7 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.assertEqual(sample_data['system_metadata'], sys_meta)
         self.assertNotIn('info_cache', result[0])
 
-        result = sqlalchemy_api.instance_get_active_by_window_joined(
+        result = db.instance_get_active_by_window_joined(
             ctxt, begin=now2, end=now3,
             columns_to_join=['metadata', 'info_cache'])
         self.assertEqual(2, len(result))
@@ -931,14 +975,15 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.assertIn('info_cache', result[0])
         self.assertEqual(network_info, result[0]['info_cache']['network_info'])
 
-    @mock.patch('nova.db.sqlalchemy.api.instance_get_all_by_filters_sort')
+    @mock.patch('nova.db.main.api.instance_get_all_by_filters_sort')
     def test_instance_get_all_by_filters_calls_sort(self,
                                                     mock_get_all_filters_sort):
         '''Verifies instance_get_all_by_filters calls the sort function.'''
         # sort parameters should be wrapped in a list, all other parameters
         # should be passed through
         ctxt = context.get_admin_context()
-        sqlalchemy_api.instance_get_all_by_filters(ctxt, {'foo': 'bar'},
+        db.instance_get_all_by_filters(
+            ctxt, {'foo': 'bar'},
             'sort_key', 'sort_dir', limit=100, marker='uuid',
             columns_to_join='columns')
         mock_get_all_filters_sort.assert_called_once_with(ctxt, {'foo': 'bar'},
@@ -959,11 +1004,11 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         # Create a hidden instance record.
         self.create_instance_with_args(hidden=True)
         # Get instances which by default will filter out the hidden instance.
-        instances = sqlalchemy_api.instance_get_all_by_filters_sort(
+        instances = db.instance_get_all_by_filters_sort(
             self.context, filters={}, limit=10)
         self.assertEqual(0, len(instances))
         # Now explicitly filter for hidden instances.
-        instances = sqlalchemy_api.instance_get_all_by_filters_sort(
+        instances = db.instance_get_all_by_filters_sort(
             self.context, filters={'hidden': True}, limit=10)
         self.assertEqual(1, len(instances))
 
@@ -972,44 +1017,44 @@ class ProcessSortParamTestCase(test.TestCase):
 
     def test_process_sort_params_defaults(self):
         '''Verifies default sort parameters.'''
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params([], [])
+        sort_keys, sort_dirs = db.process_sort_params([], [])
         self.assertEqual(['created_at', 'id'], sort_keys)
         self.assertEqual(['asc', 'asc'], sort_dirs)
 
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(None, None)
+        sort_keys, sort_dirs = db.process_sort_params(None, None)
         self.assertEqual(['created_at', 'id'], sort_keys)
         self.assertEqual(['asc', 'asc'], sort_dirs)
 
     def test_process_sort_params_override_default_keys(self):
         '''Verifies that the default keys can be overridden.'''
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             [], [], default_keys=['key1', 'key2', 'key3'])
         self.assertEqual(['key1', 'key2', 'key3'], sort_keys)
         self.assertEqual(['asc', 'asc', 'asc'], sort_dirs)
 
     def test_process_sort_params_override_default_dir(self):
         '''Verifies that the default direction can be overridden.'''
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             [], [], default_dir='dir1')
         self.assertEqual(['created_at', 'id'], sort_keys)
         self.assertEqual(['dir1', 'dir1'], sort_dirs)
 
     def test_process_sort_params_override_default_key_and_dir(self):
         '''Verifies that the default key and dir can be overridden.'''
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             [], [], default_keys=['key1', 'key2', 'key3'],
             default_dir='dir1')
         self.assertEqual(['key1', 'key2', 'key3'], sort_keys)
         self.assertEqual(['dir1', 'dir1', 'dir1'], sort_dirs)
 
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             [], [], default_keys=[], default_dir='dir1')
         self.assertEqual([], sort_keys)
         self.assertEqual([], sort_dirs)
 
     def test_process_sort_params_non_default(self):
         '''Verifies that non-default keys are added correctly.'''
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             ['key1', 'key2'], ['asc', 'desc'])
         self.assertEqual(['key1', 'key2', 'created_at', 'id'], sort_keys)
         # First sort_dir in list is used when adding the default keys
@@ -1017,13 +1062,13 @@ class ProcessSortParamTestCase(test.TestCase):
 
     def test_process_sort_params_default(self):
         '''Verifies that default keys are added correctly.'''
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             ['id', 'key2'], ['asc', 'desc'])
         self.assertEqual(['id', 'key2', 'created_at'], sort_keys)
         self.assertEqual(['asc', 'desc', 'asc'], sort_dirs)
 
         # Include default key value, rely on default direction
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             ['id', 'key2'], [])
         self.assertEqual(['id', 'key2', 'created_at'], sort_keys)
         self.assertEqual(['asc', 'asc', 'asc'], sort_dirs)
@@ -1031,31 +1076,31 @@ class ProcessSortParamTestCase(test.TestCase):
     def test_process_sort_params_default_dir(self):
         '''Verifies that the default dir is applied to all keys.'''
         # Direction is set, ignore default dir
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             ['id', 'key2'], ['desc'], default_dir='dir')
         self.assertEqual(['id', 'key2', 'created_at'], sort_keys)
         self.assertEqual(['desc', 'desc', 'desc'], sort_dirs)
 
         # But should be used if no direction is set
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             ['id', 'key2'], [], default_dir='dir')
         self.assertEqual(['id', 'key2', 'created_at'], sort_keys)
         self.assertEqual(['dir', 'dir', 'dir'], sort_dirs)
 
     def test_process_sort_params_unequal_length(self):
         '''Verifies that a sort direction list is applied correctly.'''
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             ['id', 'key2', 'key3'], ['desc'])
         self.assertEqual(['id', 'key2', 'key3', 'created_at'], sort_keys)
         self.assertEqual(['desc', 'desc', 'desc', 'desc'], sort_dirs)
 
         # Default direction is the first key in the list
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             ['id', 'key2', 'key3'], ['desc', 'asc'])
         self.assertEqual(['id', 'key2', 'key3', 'created_at'], sort_keys)
         self.assertEqual(['desc', 'asc', 'desc', 'desc'], sort_dirs)
 
-        sort_keys, sort_dirs = sqlalchemy_api.process_sort_params(
+        sort_keys, sort_dirs = db.process_sort_params(
             ['id', 'key2', 'key3'], ['desc', 'asc', 'asc'])
         self.assertEqual(['id', 'key2', 'key3', 'created_at'], sort_keys)
         self.assertEqual(['desc', 'asc', 'asc', 'desc'], sort_dirs)
@@ -1063,7 +1108,7 @@ class ProcessSortParamTestCase(test.TestCase):
     def test_process_sort_params_extra_dirs_lengths(self):
         '''InvalidInput raised if more directions are given.'''
         self.assertRaises(exception.InvalidInput,
-                          sqlalchemy_api.process_sort_params,
+                          db.process_sort_params,
                           ['key1', 'key2'],
                           ['asc', 'desc', 'desc'])
 
@@ -1071,7 +1116,7 @@ class ProcessSortParamTestCase(test.TestCase):
         '''InvalidInput raised if invalid directions are given.'''
         for dirs in [['foo'], ['asc', 'foo'], ['asc', 'desc', 'foo']]:
             self.assertRaises(exception.InvalidInput,
-                              sqlalchemy_api.process_sort_params,
+                              db.process_sort_params,
                               ['key'],
                               dirs)
 
@@ -1179,16 +1224,15 @@ class MigrationTestCase(test.TestCase):
     def test_migration_get_by_uuid_soft_deleted_and_deleted(self):
         migration1 = self._create(uuid=uuidsentinel.migration1_uuid)
 
-        @sqlalchemy_api.pick_context_manager_writer
+        @db.pick_context_manager_writer
         def soft_delete_it(context):
-            sqlalchemy_api.model_query(context, models.Migration).\
+            db.model_query(context, models.Migration).\
                 filter_by(uuid=uuidsentinel.migration1_uuid).\
                 soft_delete()
 
-        @sqlalchemy_api.pick_context_manager_writer
+        @db.pick_context_manager_writer
         def delete_it(context):
-            sqlalchemy_api.model_query(context, models.Migration,
-                                       read_deleted="yes").\
+            db.model_query(context, models.Migration, read_deleted="yes").\
                 filter_by(uuid=uuidsentinel.migration1_uuid).\
                 delete()
 
@@ -1623,7 +1667,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         instance = self.create_instance_with_args()
         self.assertTrue(uuidutils.is_uuid_like(instance['uuid']))
 
-    @mock.patch.object(sqlalchemy_api, 'security_group_ensure_default')
+    @mock.patch.object(db, 'security_group_ensure_default')
     def test_instance_create_with_deadlock_retry(self, mock_sg):
         mock_sg.side_effect = [db_exc.DBDeadlock(), None]
         instance = self.create_instance_with_args()
@@ -1823,10 +1867,9 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_instance_metadata_get_multi(self):
         uuids = [self.create_instance_with_args()['uuid'] for i in range(3)]
 
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test(context):
-            return sqlalchemy_api._instance_metadata_get_multi(
-                context, uuids)
+            return db._instance_metadata_get_multi(context, uuids)
 
         meta = test(self.ctxt)
         for row in meta:
@@ -1834,17 +1877,16 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     @mock.patch.object(query.Query, 'filter')
     def test_instance_metadata_get_multi_no_uuids(self, mock_query_filter):
-        with sqlalchemy_api.main_context_manager.reader.using(self.ctxt):
-            sqlalchemy_api._instance_metadata_get_multi(self.ctxt, [])
+        with db.main_context_manager.reader.using(self.ctxt):
+            db._instance_metadata_get_multi(self.ctxt, [])
         self.assertFalse(mock_query_filter.called)
 
     def test_instance_system_system_metadata_get_multi(self):
         uuids = [self.create_instance_with_args()['uuid'] for i in range(3)]
 
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test(context):
-            return sqlalchemy_api._instance_system_metadata_get_multi(
-                context, uuids)
+            return db._instance_system_metadata_get_multi(context, uuids)
 
         sys_meta = test(self.ctxt)
         for row in sys_meta:
@@ -1853,7 +1895,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     @mock.patch.object(query.Query, 'filter')
     def test_instance_system_metadata_get_multi_no_uuids(self,
                                                mock_query_filter):
-        sqlalchemy_api._instance_system_metadata_get_multi(self.ctxt, [])
+        db._instance_system_metadata_get_multi(self.ctxt, [])
         self.assertFalse(mock_query_filter.called)
 
     def test_instance_get_all_by_filters_regex(self):
@@ -2118,8 +2160,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual('bar', result[0]['system_metadata'][0]['value'])
         self.assertEqual(instance['uuid'], result[0]['extra']['instance_uuid'])
 
-    @mock.patch('nova.db.sqlalchemy.api._instances_fill_metadata')
-    @mock.patch('nova.db.sqlalchemy.api._instance_get_all_query')
+    @mock.patch('nova.db.main.api._instances_fill_metadata')
+    @mock.patch('nova.db.main.api._instance_get_all_query')
     def test_instance_get_all_by_host_and_node_fills_manually(self,
                                                               mock_getall,
                                                               mock_fill):
@@ -2306,7 +2348,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(meta, {'mk1': 'mv3'})
 
     def test_instance_update_and_get_original_no_conflict_on_session(self):
-        @sqlalchemy_api.pick_context_manager_writer
+        @db.pick_context_manager_writer
         def test(context):
             instance = self.create_instance_with_args()
             (old_ref, new_ref) = db.instance_update_and_get_original(
@@ -2365,15 +2407,18 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # we ensure that the first time we fetch the instance object we get
         # out-of-date data. This forces us to retry the operation to find out
         # what really went wrong.
-        with mock.patch.object(sqlalchemy_api, '_instance_get_by_uuid',
-                    side_effect=[instance_out_of_date, instance]), \
-                 mock.patch.object(sqlalchemy_api, '_instance_update',
-                     side_effect=sqlalchemy_api._instance_update):
+        with mock.patch.object(
+            db, '_instance_get_by_uuid',
+            side_effect=[instance_out_of_date, instance]
+        ), mock.patch.object(
+            db, '_instance_update',
+            side_effect=db._instance_update
+        ):
             self.assertRaises(exception.UnexpectedTaskStateError,
                               db.instance_update_and_get_original,
                               self.ctxt, instance['uuid'],
                               {'expected_task_state': [None]})
-            sqlalchemy_api._instance_update.assert_has_calls([
+            db._instance_update.assert_has_calls([
                 mock.call(self.ctxt, instance['uuid'],
                           {'expected_task_state': [None]}, None,
                           original=instance_out_of_date),
@@ -2617,7 +2662,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertIsInstance(instance['access_ip_v4'], str)
         self.assertIsInstance(instance['access_ip_v6'], str)
 
-    @mock.patch('nova.db.sqlalchemy.api._check_instance_exists_in_project',
+    @mock.patch('nova.db.main.api._check_instance_exists_in_project',
                 return_value=None)
     def test_instance_destroy(self, mock_check_inst_exists):
         ctxt = context.get_admin_context()
@@ -2657,7 +2702,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         # Save the real implementation of _instance_get_by_uuid before we mock
         # it later.
-        real_get_i = sqlalchemy_api._instance_get_by_uuid
+        real_get_i = db._instance_get_by_uuid
 
         # We will delete the instance record before we begin and mock
         # _instance_get_by_uuid to simulate the instance still existing at the
@@ -2677,8 +2722,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 return instance
             return real_get_i(*a, **kw)
 
-        with mock.patch.object(sqlalchemy_api,
-                               '_instance_get_by_uuid') as mock_get_i:
+        with mock.patch.object(db, '_instance_get_by_uuid') as mock_get_i:
             fake_get_i.called = False
             mock_get_i.side_effect = fake_get_i
             # We expect InstanceNotFound to be raised in the case of the
@@ -2800,18 +2844,18 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_check_instance_exists(self):
         instance = self.create_instance_with_args()
 
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test(context):
-            self.assertIsNone(sqlalchemy_api._check_instance_exists_in_project(
+            self.assertIsNone(db._check_instance_exists_in_project(
                 context, instance['uuid']))
 
         test(self.ctxt)
 
     def test_check_instance_exists_non_existing_instance(self):
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test(ctxt):
             self.assertRaises(exception.InstanceNotFound,
-                              sqlalchemy_api._check_instance_exists_in_project,
+                              db._check_instance_exists_in_project,
                               self.ctxt, '123')
 
         test(self.ctxt)
@@ -2821,17 +2865,17 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         context2 = context.RequestContext('user2', 'project2')
         instance = self.create_instance_with_args(context=context1)
 
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test1(context):
-            self.assertIsNone(sqlalchemy_api._check_instance_exists_in_project(
+            self.assertIsNone(db._check_instance_exists_in_project(
             context, instance['uuid']))
 
         test1(context1)
 
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test2(context):
             self.assertRaises(exception.InstanceNotFound,
-                              sqlalchemy_api._check_instance_exists_in_project,
+                              db._check_instance_exists_in_project,
                               context, instance['uuid'])
 
         test2(context2)
@@ -2840,10 +2884,10 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         some_context = context.RequestContext('some_user', 'some_project')
         instance = self.create_instance_with_args(context=some_context)
 
-        @sqlalchemy_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def test(context):
             # Check that method works correctly with admin context
-            self.assertIsNone(sqlalchemy_api._check_instance_exists_in_project(
+            self.assertIsNone(db._check_instance_exists_in_project(
                 context, instance['uuid']))
 
         test(self.ctxt)
@@ -2914,9 +2958,9 @@ class InstanceExtraTestCase(test.TestCase):
         self.assertEqual("['res0', 'res1']", inst_extra.resources)
 
     def test_instance_extra_update_by_uuid_and_create(self):
-        @sqlalchemy_api.pick_context_manager_writer
+        @db.pick_context_manager_writer
         def test(context):
-            sqlalchemy_api.model_query(context, models.InstanceExtra).\
+            db.model_query(context, models.InstanceExtra).\
                     filter_by(instance_uuid=self.instance['uuid']).\
                     delete()
 
@@ -3262,7 +3306,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           self.ctxt, values)
 
     def test_migration_migrate_to_uuid(self):
-        total, done = sqlalchemy_api.migration_migrate_to_uuid(self.ctxt, 10)
+        total, done = db.migration_migrate_to_uuid(self.ctxt, 10)
         self.assertEqual(0, total)
         self.assertEqual(0, done)
 
@@ -3278,7 +3322,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                  uuid=uuidsentinel.migration2))
 
         # Now migrate them, we should find one and update one
-        total, done = sqlalchemy_api.migration_migrate_to_uuid(self.ctxt, 10)
+        total, done = db.migration_migrate_to_uuid(self.ctxt, 10)
         self.assertEqual(1, total)
         self.assertEqual(1, done)
 
@@ -3289,7 +3333,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertNotIn(None, uuids)
 
         # Run the online migration again to see nothing was processed.
-        total, done = sqlalchemy_api.migration_migrate_to_uuid(self.ctxt, 10)
+        total, done = db.migration_migrate_to_uuid(self.ctxt, 10)
         self.assertEqual(0, total)
         self.assertEqual(0, done)
 
@@ -4330,17 +4374,17 @@ class BlockDeviceMappingTestCase(test.TestCase):
     def test_scrub_empty_str_values_no_effect(self):
         values = {'volume_size': 5}
         expected = copy.copy(values)
-        sqlalchemy_api._scrub_empty_str_values(values, ['volume_size'])
+        db._scrub_empty_str_values(values, ['volume_size'])
         self.assertEqual(values, expected)
 
     def test_scrub_empty_str_values_empty_string(self):
         values = {'volume_size': ''}
-        sqlalchemy_api._scrub_empty_str_values(values, ['volume_size'])
+        db._scrub_empty_str_values(values, ['volume_size'])
         self.assertEqual(values, {})
 
     def test_scrub_empty_str_values_empty_unicode(self):
         values = {'volume_size': u''}
-        sqlalchemy_api._scrub_empty_str_values(values, ['volume_size'])
+        db._scrub_empty_str_values(values, ['volume_size'])
         self.assertEqual(values, {})
 
     def test_block_device_mapping_create(self):
@@ -5780,13 +5824,13 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           db.compute_node_get_model, self.ctxt,
                           item_old['id'])
 
-    @mock.patch("nova.db.sqlalchemy.api.compute_node_get_model")
+    @mock.patch("nova.db.main.api.compute_node_get_model")
     def test_dbapi_compute_node_get_model(self, mock_get_model):
         cid = self.item["id"]
         db.compute_node_get_model(self.ctxt, cid)
         mock_get_model.assert_called_once_with(self.ctxt, cid)
 
-    @mock.patch("nova.db.sqlalchemy.api.model_query")
+    @mock.patch("nova.db.main.api.model_query")
     def test_compute_node_get_model(self, mock_model_query):
 
         class FakeFiltered(object):
@@ -5800,8 +5844,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 return fake_filtered_cn
 
         mock_model_query.return_value = FakeModelQuery()
-        result = sqlalchemy_api.compute_node_get_model(self.ctxt,
-                                                       self.item["id"])
+        result = db.compute_node_get_model(self.ctxt, self.item["id"])
         self.assertEqual(result, mock.sentinel.first)
         mock_model_query.assert_called_once_with(self.ctxt, models.ComputeNode)
 
@@ -5895,7 +5938,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def setUp(self):
         super(ArchiveTestCase, self).setUp()
-        self.engine = get_engine()
+        self.engine = db.get_engine()
         self.metadata = sa.MetaData(self.engine)
         self.conn = self.engine.connect()
         self.instance_id_mappings = models.InstanceIdMapping.__table__
@@ -6176,11 +6219,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Verify we have 0 in shadow
         self.assertEqual(len(rows), 0)
         # Archive 2 rows
-        sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
-                                                       tablename,
-                                                       max_rows=2,
-                                                       before=None,
-                                                       task_log=False)
+        db._archive_deleted_rows_for_table(
+            self.metadata, tablename, max_rows=2, before=None, task_log=False)
         # Verify we have 4 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 4)
@@ -6188,11 +6228,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         rows = self.conn.execute(qst).fetchall()
         self.assertEqual(len(rows), 2)
         # Archive 2 more rows
-        sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
-                                                       tablename,
-                                                       max_rows=2,
-                                                       before=None,
-                                                       task_log=False)
+        db._archive_deleted_rows_for_table(
+            self.metadata, tablename, max_rows=2, before=None, task_log=False)
         # Verify we have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 2)
@@ -6200,11 +6237,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         rows = self.conn.execute(qst).fetchall()
         self.assertEqual(len(rows), 4)
         # Try to archive more, but there are no deleted rows left.
-        sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
-                                                       tablename,
-                                                       max_rows=2,
-                                                       before=None,
-                                                       task_log=False)
+        db._archive_deleted_rows_for_table(
+            self.metadata, tablename, max_rows=2, before=None, task_log=False)
         # Verify we still have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 2)
@@ -6261,11 +6295,9 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.conn.execute(ins_stmt)
         # Archiving instances should result in migrations related to the
         # instances also being archived.
-        num = sqlalchemy_api._archive_deleted_rows_for_table(self.metadata,
-                                                             "instances",
-                                                             max_rows=None,
-                                                             before=None,
-                                                             task_log=False)
+        num = db._archive_deleted_rows_for_table(
+            self.metadata, "instances", max_rows=None, before=None,
+            task_log=False)
         self.assertEqual(1, num[0])
         self._assert_shadow_tables_empty_except(
             'shadow_instances',
@@ -6749,7 +6781,7 @@ class TestDBInstanceTags(test.TestCase):
         expected = [(uuid, tag3), (uuid, tag4), (uuid, tag2)]
         self.assertEqual(set(expected), set(tags))
 
-    @mock.patch('nova.db.sqlalchemy.models.Tag.__table__.insert',
+    @mock.patch('nova.db.main.models.Tag.__table__.insert',
                 return_value=models.Tag.__table__.insert())
     def test_instance_tag_set_empty_add(self, mock_insert):
         uuid = self._create_instance()

@@ -18,7 +18,7 @@ import webob
 
 from nova.api.openstack.compute import servers
 from nova.compute import api as compute_api
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -32,7 +32,7 @@ class ServerStartStopTestV21(test.TestCase):
         self._setup_controller()
         self.req = fakes.HTTPRequest.blank('')
         self.useFixture(nova_fixtures.SingleCellSimple())
-        self.stub_out('nova.db.api.instance_get_by_uuid',
+        self.stub_out('nova.db.main.api.instance_get_by_uuid',
                       fakes.fake_instance_get(
                           project_id=fakes.FAKE_PROJECT_ID))
 

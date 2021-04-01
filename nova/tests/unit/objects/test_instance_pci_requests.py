@@ -57,7 +57,7 @@ fake_legacy_pci_requests = [
 
 
 class _TestInstancePCIRequests(object):
-    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid')
+    @mock.patch('nova.db.main.api.instance_extra_get_by_instance_uuid')
     def test_get_by_instance_uuid(self, mock_get):
         mock_get.return_value = {
             'instance_uuid': FAKE_UUID,

@@ -31,7 +31,7 @@ from nova.objects import base as obj_base
 from nova.objects import fields
 from nova.objects import instance as instance_obj
 from nova import test
-from nova.tests.unit.db import test_db_api
+from nova.tests.unit.db.main import test_api as test_db_api
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_compute_node

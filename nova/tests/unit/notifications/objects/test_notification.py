@@ -137,7 +137,7 @@ class TestNotificationBase(test.NoDBTestCase):
     def setUp(self):
         super(TestNotificationBase, self).setUp()
         with mock.patch(
-                'nova.db.api.service_update') as mock_db_service_update:
+                'nova.db.main.api.service_update') as mock_db_service_update:
             self.service_obj = objects.Service(context=mock.sentinel.context,
                                                id=self.fake_service['id'])
             self.service_obj.obj_reset_changes(['version'])

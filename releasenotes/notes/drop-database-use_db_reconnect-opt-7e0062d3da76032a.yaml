@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    Support for automatically retrying all database interactions by configuring
+    the ``[database] use_db_reconnect`` config option has been removed. This
+    behavior was only ever supported for interactions with the main database
+    and was generally not necessary as a number of lookups were already
+    explicitly wrapped in retries. The ``[database] use_db_reconnect`` option
+    is provided by oslo.db and will now be ignored by nova.
