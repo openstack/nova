@@ -17,7 +17,8 @@ from migrate.versioning import api as versioning_api
 import mock
 import sqlalchemy
 
-from nova.db.main import api as db_api
+from nova.db.api import api as api_db_api
+from nova.db.main import api as main_db_api
 from nova.db import migration
 from nova import test
 
@@ -144,15 +145,17 @@ class TestDbVersionControl(test.NoDBTestCase):
 class TestGetEngine(test.NoDBTestCase):
 
     def test_get_main_engine(self):
-        with mock.patch.object(db_api, 'get_engine',
-                return_value='engine') as mock_get_engine:
+        with mock.patch.object(
+            main_db_api, 'get_engine', return_value='engine',
+        ) as mock_get_engine:
             engine = migration.get_engine()
             self.assertEqual('engine', engine)
             mock_get_engine.assert_called_once_with(context=None)
 
     def test_get_api_engine(self):
-        with mock.patch.object(db_api, 'get_api_engine',
-                return_value='api_engine') as mock_get_engine:
+        with mock.patch.object(
+            api_db_api, 'get_engine', return_value='engine',
+        ) as mock_get_engine:
             engine = migration.get_engine('api')
-            self.assertEqual('api_engine', engine)
+            self.assertEqual('engine', engine)
             mock_get_engine.assert_called_once_with()

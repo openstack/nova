@@ -43,7 +43,8 @@ from nova.api import wsgi
 from nova.compute import multi_cell_list
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
-from nova.db.main import api as session
+from nova.db.api import api as api_db_api
+from nova.db.main import api as main_db_api
 from nova.db import migration
 from nova import exception
 from nova import objects
@@ -61,7 +62,6 @@ LOG = logging.getLogger(__name__)
 
 DB_SCHEMA = collections.defaultdict(str)
 SESSION_CONFIGURED = False
-
 PROJECT_ID = '6f70656e737461636b20342065766572'
 
 
@@ -532,7 +532,7 @@ class CellDatabases(fixtures.Fixture):
         # will house the sqlite:// connection for this cell's in-memory
         # database. Store/index it by the connection string, which is
         # how we identify cells in CellMapping.
-        ctxt_mgr = session.create_context_manager()
+        ctxt_mgr = main_db_api.create_context_manager()
         self._ctxt_mgrs[connection_str] = ctxt_mgr
 
         # NOTE(melwitt): The first DB access through service start is
@@ -595,30 +595,45 @@ class CellDatabases(fixtures.Fixture):
 
 
 class Database(fixtures.Fixture):
+
+    # TODO(stephenfin): The 'version' argument is unused and can be removed
     def __init__(self, database='main', version=None, connection=None):
         """Create a database fixture.
 
         :param database: The type of database, 'main', or 'api'
         :param connection: The connection string to use
         """
-        super(Database, self).__init__()
-        # NOTE(pkholkin): oslo_db.enginefacade is configured in tests the same
-        # way as it is done for any other service that uses db
+        super().__init__()
+
+        # NOTE(pkholkin): oslo_db.enginefacade is configured in tests the
+        # same way as it is done for any other service that uses DB
         global SESSION_CONFIGURED
         if not SESSION_CONFIGURED:
-            session.configure(CONF)
+            main_db_api.configure(CONF)
+            api_db_api.configure(CONF)
             SESSION_CONFIGURED = True
+
+        assert database in {'main', 'api'}, f'Unrecognized database {database}'
+
         self.database = database
         self.version = version
+
         if database == 'main':
             if connection is not None:
-                ctxt_mgr = session.create_context_manager(
-                        connection=connection)
+                ctxt_mgr = main_db_api.create_context_manager(
+                    connection=connection)
                 self.get_engine = ctxt_mgr.writer.get_engine
             else:
-                self.get_engine = session.get_engine
+                self.get_engine = main_db_api.get_engine
         elif database == 'api':
-            self.get_engine = session.get_api_engine
+            assert connection is None, 'Not supported for the API database'
+
+            self.get_engine = api_db_api.get_engine
+
+    def setUp(self):
+        super(Database, self).setUp()
+        self.reset()
+        self.addCleanup(self.cleanup)
 
     def _cache_schema(self):
         global DB_SCHEMA
@@ -641,11 +656,6 @@ class Database(fixtures.Fixture):
         conn = engine.connect()
         conn.connection.executescript(
             DB_SCHEMA[(self.database, self.version)])
-
-    def setUp(self):
-        super(Database, self).setUp()
-        self.reset()
-        self.addCleanup(self.cleanup)
 
 
 class DefaultFlavorsFixture(fixtures.Fixture):

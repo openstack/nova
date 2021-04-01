@@ -16,9 +16,11 @@ import collections
 
 from oslo_db import exception as db_exc
 
+from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as db
+from nova.db.main import api as main_db_api
 from nova.db.main import models as main_models
+from nova.db import utils as db_utils
 from nova import exception
 from nova.objects import base
 from nova.objects import fields
@@ -82,7 +84,7 @@ class Quotas(base.NovaObject):
         self.obj_reset_changes(fields=[attr])
 
     @staticmethod
-    @db.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_from_db(context, project_id, resource, user_id=None):
         model = api_models.ProjectUserQuota if user_id else api_models.Quota
         query = context.session.query(model).\
@@ -100,14 +102,14 @@ class Quotas(base.NovaObject):
         return result
 
     @staticmethod
-    @db.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_all_from_db(context, project_id):
         return context.session.query(api_models.ProjectUserQuota).\
                         filter_by(project_id=project_id).\
                         all()
 
     @staticmethod
-    @db.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_all_from_db_by_project(context, project_id):
         # by_project refers to the returned dict that has a 'project_id' key
         rows = context.session.query(api_models.Quota).\
@@ -119,7 +121,7 @@ class Quotas(base.NovaObject):
         return result
 
     @staticmethod
-    @db.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_all_from_db_by_project_and_user(context, project_id, user_id):
         # by_project_and_user refers to the returned dict that has
         # 'project_id' and 'user_id' keys
@@ -135,7 +137,7 @@ class Quotas(base.NovaObject):
         return result
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _destroy_all_in_db_by_project(context, project_id):
         per_project = context.session.query(api_models.Quota).\
                             filter_by(project_id=project_id).\
@@ -147,7 +149,7 @@ class Quotas(base.NovaObject):
             raise exception.ProjectQuotaNotFound(project_id=project_id)
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _destroy_all_in_db_by_project_and_user(context, project_id, user_id):
         result = context.session.query(api_models.ProjectUserQuota).\
                         filter_by(project_id=project_id).\
@@ -158,7 +160,7 @@ class Quotas(base.NovaObject):
                                                      user_id=user_id)
 
     @staticmethod
-    @db.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_class_from_db(context, class_name, resource):
         result = context.session.query(api_models.QuotaClass).\
                         filter_by(class_name=class_name).\
@@ -169,7 +171,7 @@ class Quotas(base.NovaObject):
         return result
 
     @staticmethod
-    @db.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_all_class_from_db_by_name(context, class_name):
         # by_name refers to the returned dict that has a 'class_name' key
         rows = context.session.query(api_models.QuotaClass).\
@@ -181,14 +183,16 @@ class Quotas(base.NovaObject):
         return result
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _create_limit_in_db(context, project_id, resource, limit,
                             user_id=None):
         # TODO(melwitt): We won't have per project resources after nova-network
         # is removed.
         # TODO(stephenfin): We need to do something here now...but what?
-        per_user = (user_id and
-                    resource not in db.quota_get_per_project_resources())
+        per_user = (
+            user_id and
+            resource not in main_db_api.quota_get_per_project_resources()
+        )
         quota_ref = (api_models.ProjectUserQuota() if per_user
                      else api_models.Quota())
         if per_user:
@@ -204,14 +208,16 @@ class Quotas(base.NovaObject):
         return quota_ref
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _update_limit_in_db(context, project_id, resource, limit,
                             user_id=None):
         # TODO(melwitt): We won't have per project resources after nova-network
         # is removed.
         # TODO(stephenfin): We need to do something here now...but what?
-        per_user = (user_id and
-                    resource not in db.quota_get_per_project_resources())
+        per_user = (
+            user_id and
+            resource not in main_db_api.quota_get_per_project_resources()
+        )
         model = api_models.ProjectUserQuota if per_user else api_models.Quota
         query = context.session.query(model).\
                         filter_by(project_id=project_id).\
@@ -228,7 +234,7 @@ class Quotas(base.NovaObject):
                 raise exception.ProjectQuotaNotFound(project_id=project_id)
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _create_class_in_db(context, class_name, resource, limit):
         # NOTE(melwitt): There's no unique constraint on the QuotaClass model,
         # so check for duplicate manually.
@@ -247,7 +253,7 @@ class Quotas(base.NovaObject):
         return quota_class_ref
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _update_class_in_db(context, class_name, resource, limit):
         result = context.session.query(api_models.QuotaClass).\
                         filter_by(class_name=class_name).\
@@ -366,7 +372,8 @@ class Quotas(base.NovaObject):
     @base.remotable_classmethod
     def create_limit(cls, context, project_id, resource, limit, user_id=None):
         try:
-            db.quota_get(context, project_id, resource, user_id=user_id)
+            main_db_api.quota_get(
+                context, project_id, resource, user_id=user_id)
         except exception.QuotaNotFound:
             cls._create_limit_in_db(context, project_id, resource, limit,
                                     user_id=user_id)
@@ -380,13 +387,13 @@ class Quotas(base.NovaObject):
             cls._update_limit_in_db(context, project_id, resource, limit,
                                     user_id=user_id)
         except exception.QuotaNotFound:
-            db.quota_update(context, project_id, resource, limit,
+            main_db_api.quota_update(context, project_id, resource, limit,
                             user_id=user_id)
 
     @classmethod
     def create_class(cls, context, class_name, resource, limit):
         try:
-            db.quota_class_get(context, class_name, resource)
+            main_db_api.quota_class_get(context, class_name, resource)
         except exception.QuotaClassNotFound:
             cls._create_class_in_db(context, class_name, resource, limit)
         else:
@@ -398,7 +405,8 @@ class Quotas(base.NovaObject):
         try:
             cls._update_class_in_db(context, class_name, resource, limit)
         except exception.QuotaClassNotFound:
-            db.quota_class_update(context, class_name, resource, limit)
+            main_db_api.quota_class_update(
+                context, class_name, resource, limit)
 
     # NOTE(melwitt): The following methods are not remotable and return
     # dict-like database model objects. We are using classmethods to provide
@@ -409,21 +417,22 @@ class Quotas(base.NovaObject):
             quota = cls._get_from_db(context, project_id, resource,
                                      user_id=user_id)
         except exception.QuotaNotFound:
-            quota = db.quota_get(context, project_id, resource,
+            quota = main_db_api.quota_get(context, project_id, resource,
                                  user_id=user_id)
         return quota
 
     @classmethod
     def get_all(cls, context, project_id):
         api_db_quotas = cls._get_all_from_db(context, project_id)
-        main_db_quotas = db.quota_get_all(context, project_id)
+        main_db_quotas = main_db_api.quota_get_all(context, project_id)
         return api_db_quotas + main_db_quotas
 
     @classmethod
     def get_all_by_project(cls, context, project_id):
         api_db_quotas_dict = cls._get_all_from_db_by_project(context,
                                                              project_id)
-        main_db_quotas_dict = db.quota_get_all_by_project(context, project_id)
+        main_db_quotas_dict = main_db_api.quota_get_all_by_project(
+            context, project_id)
         for k, v in api_db_quotas_dict.items():
             main_db_quotas_dict[k] = v
         return main_db_quotas_dict
@@ -432,7 +441,7 @@ class Quotas(base.NovaObject):
     def get_all_by_project_and_user(cls, context, project_id, user_id):
         api_db_quotas_dict = cls._get_all_from_db_by_project_and_user(
                 context, project_id, user_id)
-        main_db_quotas_dict = db.quota_get_all_by_project_and_user(
+        main_db_quotas_dict = main_db_api.quota_get_all_by_project_and_user(
                 context, project_id, user_id)
         for k, v in api_db_quotas_dict.items():
             main_db_quotas_dict[k] = v
@@ -443,7 +452,7 @@ class Quotas(base.NovaObject):
         try:
             cls._destroy_all_in_db_by_project(context, project_id)
         except exception.ProjectQuotaNotFound:
-            db.quota_destroy_all_by_project(context, project_id)
+            main_db_api.quota_destroy_all_by_project(context, project_id)
 
     @classmethod
     def destroy_all_by_project_and_user(cls, context, project_id, user_id):
@@ -451,31 +460,31 @@ class Quotas(base.NovaObject):
             cls._destroy_all_in_db_by_project_and_user(context, project_id,
                                                        user_id)
         except exception.ProjectUserQuotaNotFound:
-            db.quota_destroy_all_by_project_and_user(context, project_id,
-                                                     user_id)
+            main_db_api.quota_destroy_all_by_project_and_user(
+                context, project_id, user_id)
 
     @classmethod
     def get_class(cls, context, class_name, resource):
         try:
             qclass = cls._get_class_from_db(context, class_name, resource)
         except exception.QuotaClassNotFound:
-            qclass = db.quota_class_get(context, class_name, resource)
+            qclass = main_db_api.quota_class_get(context, class_name, resource)
         return qclass
 
     @classmethod
     def get_default_class(cls, context):
         try:
             qclass = cls._get_all_class_from_db_by_name(
-                    context, db._DEFAULT_QUOTA_NAME)
+                    context, main_db_api._DEFAULT_QUOTA_NAME)
         except exception.QuotaClassNotFound:
-            qclass = db.quota_class_get_default(context)
+            qclass = main_db_api.quota_class_get_default(context)
         return qclass
 
     @classmethod
     def get_all_class_by_name(cls, context, class_name):
         api_db_quotas_dict = cls._get_all_class_from_db_by_name(context,
                                                                 class_name)
-        main_db_quotas_dict = db.quota_class_get_all_by_name(context,
+        main_db_quotas_dict = main_db_api.quota_class_get_all_by_name(context,
                                                              class_name)
         for k, v in api_db_quotas_dict.items():
             main_db_quotas_dict[k] = v
@@ -501,8 +510,8 @@ class QuotasNoOp(Quotas):
         pass
 
 
-@db.require_context
-@db.pick_context_manager_reader
+@db_utils.require_context
+@main_db_api.pick_context_manager_reader
 def _get_main_per_project_limits(context, limit):
     return context.session.query(main_models.Quota).\
         filter_by(deleted=0).\
@@ -510,8 +519,8 @@ def _get_main_per_project_limits(context, limit):
         all()
 
 
-@db.require_context
-@db.pick_context_manager_reader
+@db_utils.require_context
+@main_db_api.pick_context_manager_reader
 def _get_main_per_user_limits(context, limit):
     return context.session.query(main_models.ProjectUserQuota).\
         filter_by(deleted=0).\
@@ -519,8 +528,8 @@ def _get_main_per_user_limits(context, limit):
         all()
 
 
-@db.require_context
-@db.pick_context_manager_writer
+@db_utils.require_context
+@main_db_api.pick_context_manager_writer
 def _destroy_main_per_project_limits(context, project_id, resource):
     context.session.query(main_models.Quota).\
         filter_by(deleted=0).\
@@ -529,8 +538,8 @@ def _destroy_main_per_project_limits(context, project_id, resource):
         soft_delete(synchronize_session=False)
 
 
-@db.require_context
-@db.pick_context_manager_writer
+@db_utils.require_context
+@main_db_api.pick_context_manager_writer
 def _destroy_main_per_user_limits(context, project_id, resource, user_id):
     context.session.query(main_models.ProjectUserQuota).\
         filter_by(deleted=0).\
@@ -540,7 +549,7 @@ def _destroy_main_per_user_limits(context, project_id, resource, user_id):
         soft_delete(synchronize_session=False)
 
 
-@db.api_context_manager.writer
+@api_db_api.context_manager.writer
 def _create_limits_in_api_db(context, db_limits, per_user=False):
     for db_limit in db_limits:
         user_id = db_limit.user_id if per_user else None
@@ -587,8 +596,8 @@ def migrate_quota_limits_to_api_db(context, count):
     return len(main_per_project_limits) + len(main_per_user_limits), done
 
 
-@db.require_context
-@db.pick_context_manager_reader
+@db_utils.require_context
+@main_db_api.pick_context_manager_reader
 def _get_main_quota_classes(context, limit):
     return context.session.query(main_models.QuotaClass).\
         filter_by(deleted=0).\
@@ -596,7 +605,7 @@ def _get_main_quota_classes(context, limit):
         all()
 
 
-@db.pick_context_manager_writer
+@main_db_api.pick_context_manager_writer
 def _destroy_main_quota_classes(context, db_classes):
     for db_class in db_classes:
         context.session.query(main_models.QuotaClass).\
@@ -605,7 +614,7 @@ def _destroy_main_quota_classes(context, db_classes):
             soft_delete(synchronize_session=False)
 
 
-@db.api_context_manager.writer
+@api_db_api.context_manager.writer
 def _create_classes_in_api_db(context, db_classes):
     for db_class in db_classes:
         Quotas._create_class_in_db(context, db_class.class_name,

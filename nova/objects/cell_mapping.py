@@ -18,8 +18,8 @@ from sqlalchemy import sql
 from sqlalchemy.sql import expression
 
 import nova.conf
-from nova.db.api import models as api_models
-from nova.db.main import api as db_api
+from nova.db.api import api as api_db_api
+from nova.db.api import models as api_db_models
 from nova import exception
 from nova.objects import base
 from nova.objects import fields
@@ -168,11 +168,11 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
         return cell_mapping
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_by_uuid_from_db(context, uuid):
 
-        db_mapping = context.session.query(api_models.CellMapping).filter_by(
-                uuid=uuid).first()
+        db_mapping = context.session\
+            .query(api_db_models.CellMapping).filter_by(uuid=uuid).first()
         if not db_mapping:
             raise exception.CellMappingNotFound(uuid=uuid)
 
@@ -185,10 +185,10 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
         return cls._from_db_object(context, cls(), db_mapping)
 
     @staticmethod
-    @db_api.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _create_in_db(context, updates):
 
-        db_mapping = api_models.CellMapping()
+        db_mapping = api_db_models.CellMapping()
         db_mapping.update(updates)
         db_mapping.save(context.session)
         return db_mapping
@@ -199,11 +199,11 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
         self._from_db_object(self._context, self, db_mapping)
 
     @staticmethod
-    @db_api.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _save_in_db(context, uuid, updates):
 
         db_mapping = context.session.query(
-                api_models.CellMapping).filter_by(uuid=uuid).first()
+                api_db_models.CellMapping).filter_by(uuid=uuid).first()
         if not db_mapping:
             raise exception.CellMappingNotFound(uuid=uuid)
 
@@ -219,10 +219,10 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
         self.obj_reset_changes()
 
     @staticmethod
-    @db_api.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _destroy_in_db(context, uuid):
 
-        result = context.session.query(api_models.CellMapping).filter_by(
+        result = context.session.query(api_db_models.CellMapping).filter_by(
                 uuid=uuid).delete()
         if not result:
             raise exception.CellMappingNotFound(uuid=uuid)
@@ -246,10 +246,10 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
     }
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_all_from_db(context):
-        return context.session.query(api_models.CellMapping).order_by(
-            expression.asc(api_models.CellMapping.id)).all()
+        return context.session.query(api_db_models.CellMapping).order_by(
+            expression.asc(api_db_models.CellMapping.id)).all()
 
     @base.remotable_classmethod
     def get_all(cls, context):
@@ -257,16 +257,16 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(), CellMapping, db_mappings)
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_by_disabled_from_db(context, disabled):
         if disabled:
-            return context.session.query(api_models.CellMapping)\
+            return context.session.query(api_db_models.CellMapping)\
                 .filter_by(disabled=sql.true())\
-                .order_by(expression.asc(api_models.CellMapping.id)).all()
+                .order_by(expression.asc(api_db_models.CellMapping.id)).all()
         else:
-            return context.session.query(api_models.CellMapping)\
+            return context.session.query(api_db_models.CellMapping)\
                 .filter_by(disabled=sql.false())\
-                .order_by(expression.asc(api_models.CellMapping.id)).all()
+                .order_by(expression.asc(api_db_models.CellMapping.id)).all()
 
     @base.remotable_classmethod
     def get_by_disabled(cls, context, disabled):
@@ -274,16 +274,16 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(), CellMapping, db_mappings)
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_by_project_id_from_db(context, project_id):
         # SELECT DISTINCT cell_id FROM instance_mappings \
         #   WHERE project_id = $project_id;
         cell_ids = context.session.query(
-            api_models.InstanceMapping.cell_id).filter_by(
+            api_db_models.InstanceMapping.cell_id).filter_by(
             project_id=project_id).distinct().subquery()
         # SELECT cell_mappings WHERE cell_id IN ($cell_ids);
-        return context.session.query(api_models.CellMapping).filter(
-            api_models.CellMapping.id.in_(cell_ids)).all()
+        return context.session.query(api_db_models.CellMapping).filter(
+            api_db_models.CellMapping.id.in_(cell_ids)).all()
 
     @classmethod
     def get_by_project_id(cls, context, project_id):

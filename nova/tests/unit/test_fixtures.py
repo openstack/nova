@@ -34,7 +34,8 @@ import testtools
 from nova.compute import rpcapi as compute_rpcapi
 from nova import conductor
 from nova import context
-from nova.db.main import api as session
+from nova.db.api import api as api_db_api
+from nova.db.main import api as main_db_api
 from nova import exception
 from nova.network import neutron as neutron_api
 from nova import objects
@@ -121,7 +122,7 @@ class TestDatabaseFixture(testtools.TestCase):
         # because this sets up reasonable db connection strings
         self.useFixture(fixtures.ConfFixture())
         self.useFixture(fixtures.Database())
-        engine = session.get_engine()
+        engine = main_db_api.get_engine()
         conn = engine.connect()
         result = conn.execute("select * from instance_types")
         rows = result.fetchall()
@@ -152,7 +153,7 @@ class TestDatabaseFixture(testtools.TestCase):
         # This sets up reasonable db connection strings
         self.useFixture(fixtures.ConfFixture())
         self.useFixture(fixtures.Database(database='api'))
-        engine = session.get_api_engine()
+        engine = api_db_api.get_engine()
         conn = engine.connect()
         result = conn.execute("select * from cell_mappings")
         rows = result.fetchall()
@@ -186,7 +187,7 @@ class TestDatabaseFixture(testtools.TestCase):
         fix.cleanup()
 
         # ensure the db contains nothing
-        engine = session.get_engine()
+        engine = main_db_api.get_engine()
         conn = engine.connect()
         schema = "".join(line for line in conn.connection.iterdump())
         self.assertEqual(schema, "BEGIN TRANSACTION;COMMIT;")
@@ -198,7 +199,7 @@ class TestDatabaseFixture(testtools.TestCase):
         self.useFixture(fix)
 
         # No data inserted by migrations so we need to add a row
-        engine = session.get_api_engine()
+        engine = api_db_api.get_engine()
         conn = engine.connect()
         uuid = uuidutils.generate_uuid()
         conn.execute("insert into cell_mappings (uuid, name) VALUES "
@@ -211,7 +212,7 @@ class TestDatabaseFixture(testtools.TestCase):
         fix.cleanup()
 
         # Ensure the db contains nothing
-        engine = session.get_api_engine()
+        engine = api_db_api.get_engine()
         conn = engine.connect()
         schema = "".join(line for line in conn.connection.iterdump())
         self.assertEqual("BEGIN TRANSACTION;COMMIT;", schema)
@@ -224,7 +225,7 @@ class TestDefaultFlavorsFixture(testtools.TestCase):
         self.useFixture(fixtures.Database())
         self.useFixture(fixtures.Database(database='api'))
 
-        engine = session.get_api_engine()
+        engine = api_db_api.get_engine()
         conn = engine.connect()
         result = conn.execute("select * from flavors")
         rows = result.fetchall()

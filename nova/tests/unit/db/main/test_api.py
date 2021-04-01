@@ -1,5 +1,3 @@
-# encoding=UTF8
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -52,6 +50,7 @@ from nova import context
 from nova.db.main import api as db
 from nova.db.main import models
 from nova.db import types as col_types
+from nova.db import utils as db_utils
 from nova import exception
 from nova.objects import fields
 from nova import test
@@ -207,7 +206,7 @@ class DecoratorTestCase(test.TestCase):
         self.assertEqual(test_func.__module__, decorated_func.__module__)
 
     def test_require_context_decorator_wraps_functions_properly(self):
-        self._test_decorator_wraps_helper(db.require_context)
+        self._test_decorator_wraps_helper(db_utils.require_context)
 
     def test_require_deadlock_retry_wraps_functions_properly(self):
         self._test_decorator_wraps_helper(
@@ -628,7 +627,7 @@ class ModelQueryTestCase(DbTestCase):
 
     @mock.patch.object(sqlalchemyutils, 'model_query')
     def test_model_query_use_context_session(self, mock_model_query):
-        @db.main_context_manager.reader
+        @db.context_manager.reader
         def fake_method(context):
             session = context.session
             db.model_query(context, models.Instance)
@@ -642,15 +641,15 @@ class ModelQueryTestCase(DbTestCase):
 class EngineFacadeTestCase(DbTestCase):
     def test_use_single_context_session_writer(self):
         # Checks that session in context would not be overwritten by
-        # annotation @db.main_context_manager.writer if annotation
+        # annotation @db.context_manager.writer if annotation
         # is used twice.
 
-        @db.main_context_manager.writer
+        @db.context_manager.writer
         def fake_parent_method(context):
             session = context.session
             return fake_child_method(context), session
 
-        @db.main_context_manager.writer
+        @db.context_manager.writer
         def fake_child_method(context):
             session = context.session
             db.model_query(context, models.Instance)
@@ -661,15 +660,15 @@ class EngineFacadeTestCase(DbTestCase):
 
     def test_use_single_context_session_reader(self):
         # Checks that session in context would not be overwritten by
-        # annotation @db.main_context_manager.reader if annotation
+        # annotation @db.context_manager.reader if annotation
         # is used twice.
 
-        @db.main_context_manager.reader
+        @db.context_manager.reader
         def fake_parent_method(context):
             session = context.session
             return fake_child_method(context), session
 
-        @db.main_context_manager.reader
+        @db.context_manager.reader
         def fake_child_method(context):
             session = context.session
             db.model_query(context, models.Instance)
@@ -757,12 +756,12 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         self.assertEqual('|', filter('|'))
         self.assertEqual('LIKE', op)
 
-    @mock.patch.object(db, 'main_context_manager')
+    @mock.patch.object(db, 'context_manager')
     def test_get_engine(self, mock_ctxt_mgr):
         db.get_engine()
         mock_ctxt_mgr.writer.get_engine.assert_called_once_with()
 
-    @mock.patch.object(db, 'main_context_manager')
+    @mock.patch.object(db, 'context_manager')
     def test_get_engine_use_slave(self, mock_ctxt_mgr):
         db.get_engine(use_slave=True)
         mock_ctxt_mgr.reader.get_engine.assert_called_once_with()
@@ -773,11 +772,6 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         db_conf = db._get_db_conf(mock_conf_group,
                                               connection='fake://')
         self.assertEqual('fake://', db_conf['connection'])
-
-    @mock.patch.object(db, 'api_context_manager')
-    def test_get_api_engine(self, mock_ctxt_mgr):
-        db.get_api_engine()
-        mock_ctxt_mgr.writer.get_engine.assert_called_once_with()
 
     @mock.patch.object(db, '_instance_get_by_uuid')
     @mock.patch.object(db, '_instances_fill_metadata')
@@ -1011,114 +1005,6 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         instances = db.instance_get_all_by_filters_sort(
             self.context, filters={'hidden': True}, limit=10)
         self.assertEqual(1, len(instances))
-
-
-class ProcessSortParamTestCase(test.TestCase):
-
-    def test_process_sort_params_defaults(self):
-        '''Verifies default sort parameters.'''
-        sort_keys, sort_dirs = db.process_sort_params([], [])
-        self.assertEqual(['created_at', 'id'], sort_keys)
-        self.assertEqual(['asc', 'asc'], sort_dirs)
-
-        sort_keys, sort_dirs = db.process_sort_params(None, None)
-        self.assertEqual(['created_at', 'id'], sort_keys)
-        self.assertEqual(['asc', 'asc'], sort_dirs)
-
-    def test_process_sort_params_override_default_keys(self):
-        '''Verifies that the default keys can be overridden.'''
-        sort_keys, sort_dirs = db.process_sort_params(
-            [], [], default_keys=['key1', 'key2', 'key3'])
-        self.assertEqual(['key1', 'key2', 'key3'], sort_keys)
-        self.assertEqual(['asc', 'asc', 'asc'], sort_dirs)
-
-    def test_process_sort_params_override_default_dir(self):
-        '''Verifies that the default direction can be overridden.'''
-        sort_keys, sort_dirs = db.process_sort_params(
-            [], [], default_dir='dir1')
-        self.assertEqual(['created_at', 'id'], sort_keys)
-        self.assertEqual(['dir1', 'dir1'], sort_dirs)
-
-    def test_process_sort_params_override_default_key_and_dir(self):
-        '''Verifies that the default key and dir can be overridden.'''
-        sort_keys, sort_dirs = db.process_sort_params(
-            [], [], default_keys=['key1', 'key2', 'key3'],
-            default_dir='dir1')
-        self.assertEqual(['key1', 'key2', 'key3'], sort_keys)
-        self.assertEqual(['dir1', 'dir1', 'dir1'], sort_dirs)
-
-        sort_keys, sort_dirs = db.process_sort_params(
-            [], [], default_keys=[], default_dir='dir1')
-        self.assertEqual([], sort_keys)
-        self.assertEqual([], sort_dirs)
-
-    def test_process_sort_params_non_default(self):
-        '''Verifies that non-default keys are added correctly.'''
-        sort_keys, sort_dirs = db.process_sort_params(
-            ['key1', 'key2'], ['asc', 'desc'])
-        self.assertEqual(['key1', 'key2', 'created_at', 'id'], sort_keys)
-        # First sort_dir in list is used when adding the default keys
-        self.assertEqual(['asc', 'desc', 'asc', 'asc'], sort_dirs)
-
-    def test_process_sort_params_default(self):
-        '''Verifies that default keys are added correctly.'''
-        sort_keys, sort_dirs = db.process_sort_params(
-            ['id', 'key2'], ['asc', 'desc'])
-        self.assertEqual(['id', 'key2', 'created_at'], sort_keys)
-        self.assertEqual(['asc', 'desc', 'asc'], sort_dirs)
-
-        # Include default key value, rely on default direction
-        sort_keys, sort_dirs = db.process_sort_params(
-            ['id', 'key2'], [])
-        self.assertEqual(['id', 'key2', 'created_at'], sort_keys)
-        self.assertEqual(['asc', 'asc', 'asc'], sort_dirs)
-
-    def test_process_sort_params_default_dir(self):
-        '''Verifies that the default dir is applied to all keys.'''
-        # Direction is set, ignore default dir
-        sort_keys, sort_dirs = db.process_sort_params(
-            ['id', 'key2'], ['desc'], default_dir='dir')
-        self.assertEqual(['id', 'key2', 'created_at'], sort_keys)
-        self.assertEqual(['desc', 'desc', 'desc'], sort_dirs)
-
-        # But should be used if no direction is set
-        sort_keys, sort_dirs = db.process_sort_params(
-            ['id', 'key2'], [], default_dir='dir')
-        self.assertEqual(['id', 'key2', 'created_at'], sort_keys)
-        self.assertEqual(['dir', 'dir', 'dir'], sort_dirs)
-
-    def test_process_sort_params_unequal_length(self):
-        '''Verifies that a sort direction list is applied correctly.'''
-        sort_keys, sort_dirs = db.process_sort_params(
-            ['id', 'key2', 'key3'], ['desc'])
-        self.assertEqual(['id', 'key2', 'key3', 'created_at'], sort_keys)
-        self.assertEqual(['desc', 'desc', 'desc', 'desc'], sort_dirs)
-
-        # Default direction is the first key in the list
-        sort_keys, sort_dirs = db.process_sort_params(
-            ['id', 'key2', 'key3'], ['desc', 'asc'])
-        self.assertEqual(['id', 'key2', 'key3', 'created_at'], sort_keys)
-        self.assertEqual(['desc', 'asc', 'desc', 'desc'], sort_dirs)
-
-        sort_keys, sort_dirs = db.process_sort_params(
-            ['id', 'key2', 'key3'], ['desc', 'asc', 'asc'])
-        self.assertEqual(['id', 'key2', 'key3', 'created_at'], sort_keys)
-        self.assertEqual(['desc', 'asc', 'asc', 'desc'], sort_dirs)
-
-    def test_process_sort_params_extra_dirs_lengths(self):
-        '''InvalidInput raised if more directions are given.'''
-        self.assertRaises(exception.InvalidInput,
-                          db.process_sort_params,
-                          ['key1', 'key2'],
-                          ['asc', 'desc', 'desc'])
-
-    def test_process_sort_params_invalid_sort_dir(self):
-        '''InvalidInput raised if invalid directions are given.'''
-        for dirs in [['foo'], ['asc', 'foo'], ['asc', 'desc', 'foo']]:
-            self.assertRaises(exception.InvalidInput,
-                              db.process_sort_params,
-                              ['key'],
-                              dirs)
 
 
 class MigrationTestCase(test.TestCase):
@@ -1877,7 +1763,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     @mock.patch.object(query.Query, 'filter')
     def test_instance_metadata_get_multi_no_uuids(self, mock_query_filter):
-        with db.main_context_manager.reader.using(self.ctxt):
+        with db.context_manager.reader.using(self.ctxt):
             db._instance_metadata_get_multi(self.ctxt, [])
         self.assertFalse(mock_query_filter.called)
 

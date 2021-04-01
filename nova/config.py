@@ -22,7 +22,8 @@ from oslo_policy import opts as policy_opts
 from oslo_utils import importutils
 
 import nova.conf
-from nova.db.main import api as db_api
+from nova.db.api import api as api_db_api
+from nova.db.main import api as main_db_api
 from nova import middleware
 from nova import policy
 from nova import rpc
@@ -100,4 +101,5 @@ def parse_args(argv, default_config_files=None, configure_db=True,
         rpc.init(CONF)
 
     if configure_db:
-        db_api.configure(CONF)
+        main_db_api.configure(CONF)
+        api_db_api.configure(CONF)

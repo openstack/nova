@@ -22,7 +22,6 @@ import copy
 import datetime
 import functools
 import inspect
-import sys
 import traceback
 
 from oslo_db import api as oslo_db_api
@@ -49,6 +48,8 @@ from nova.compute import vm_states
 import nova.conf
 import nova.context
 from nova.db.main import models
+from nova.db import utils as db_utils
+from nova.db.utils import require_context
 from nova import exception
 from nova.i18n import _
 from nova import safe_utils
@@ -60,8 +61,7 @@ LOG = logging.getLogger(__name__)
 
 DISABLE_DB_ACCESS = False
 
-main_context_manager = enginefacade.transaction_context()
-api_context_manager = enginefacade.transaction_context()
+context_manager = enginefacade.transaction_context()
 
 
 def _get_db_conf(conf_group, connection=None):
@@ -89,15 +89,14 @@ def _joinedload_all(column):
 
 
 def configure(conf):
-    main_context_manager.configure(**_get_db_conf(conf.database))
-    api_context_manager.configure(**_get_db_conf(conf.api_database))
+    context_manager.configure(**_get_db_conf(conf.database))
 
-    if profiler_sqlalchemy and CONF.profiler.enabled \
-            and CONF.profiler.trace_sqlalchemy:
-
-        main_context_manager.append_on_engine_create(
-            lambda eng: profiler_sqlalchemy.add_tracing(sa, eng, "db"))
-        api_context_manager.append_on_engine_create(
+    if (
+        profiler_sqlalchemy and
+        CONF.profiler.enabled and
+        CONF.profiler.trace_sqlalchemy
+    ):
+        context_manager.append_on_engine_create(
             lambda eng: profiler_sqlalchemy.add_tracing(sa, eng, "db"))
 
 
@@ -116,7 +115,7 @@ def get_context_manager(context):
 
     :param context: The request context that can contain a context manager
     """
-    return _context_manager_from_context(context) or main_context_manager
+    return _context_manager_from_context(context) or context_manager
 
 
 def get_engine(use_slave=False, context=None):
@@ -131,38 +130,9 @@ def get_engine(use_slave=False, context=None):
     return ctxt_mgr.writer.get_engine()
 
 
-def get_api_engine():
-    return api_context_manager.writer.get_engine()
-
-
 _SHADOW_TABLE_PREFIX = 'shadow_'
 _DEFAULT_QUOTA_NAME = 'default'
 PER_PROJECT_QUOTAS = ['fixed_ips', 'floating_ips', 'networks']
-
-
-# NOTE(stephenfin): This is required and used by oslo.db
-def get_backend():
-    """The backend is this module itself."""
-    return sys.modules[__name__]
-
-
-def require_context(f):
-    """Decorator to require *any* user or admin context.
-
-    This does no authorization for user or project access matching, see
-    :py:func:`nova.context.authorize_project_context` and
-    :py:func:`nova.context.authorize_user_context`.
-
-    The first argument to the wrapped function must be the context.
-
-    """
-
-    @functools.wraps(f)
-    def wrapper(*args, **kwargs):
-        nova.context.require_context(args[0])
-        return f(*args, **kwargs)
-    wrapper.__signature__ = inspect.signature(f)
-    return wrapper
 
 
 def select_db_reader_mode(f):
@@ -1662,9 +1632,8 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     if limit == 0:
         return []
 
-    sort_keys, sort_dirs = process_sort_params(sort_keys,
-                                               sort_dirs,
-                                               default_dir='desc')
+    sort_keys, sort_dirs = db_utils.process_sort_params(
+        sort_keys, sort_dirs, default_dir='desc')
 
     if columns_to_join is None:
         columns_to_join_new = ['info_cache', 'security_groups']
@@ -2041,75 +2010,6 @@ def _exact_instance_filter(query, filters, legal_keys):
         query = query.filter(*[getattr(models.Instance, k) == v
                                for k, v in filter_dict.items()])
     return query
-
-
-def process_sort_params(sort_keys, sort_dirs,
-                        default_keys=['created_at', 'id'],
-                        default_dir='asc'):
-    """Process the sort parameters to include default keys.
-
-    Creates a list of sort keys and a list of sort directions. Adds the default
-    keys to the end of the list if they are not already included.
-
-    When adding the default keys to the sort keys list, the associated
-    direction is:
-    1) The first element in the 'sort_dirs' list (if specified), else
-    2) 'default_dir' value (Note that 'asc' is the default value since this is
-    the default in sqlalchemy.utils.paginate_query)
-
-    :param sort_keys: List of sort keys to include in the processed list
-    :param sort_dirs: List of sort directions to include in the processed list
-    :param default_keys: List of sort keys that need to be included in the
-                         processed list, they are added at the end of the list
-                         if not already specified.
-    :param default_dir: Sort direction associated with each of the default
-                        keys that are not supplied, used when they are added
-                        to the processed list
-    :returns: list of sort keys, list of sort directions
-    :raise exception.InvalidInput: If more sort directions than sort keys
-                                   are specified or if an invalid sort
-                                   direction is specified
-    """
-    # Determine direction to use for when adding default keys
-    if sort_dirs and len(sort_dirs) != 0:
-        default_dir_value = sort_dirs[0]
-    else:
-        default_dir_value = default_dir
-
-    # Create list of keys (do not modify the input list)
-    if sort_keys:
-        result_keys = list(sort_keys)
-    else:
-        result_keys = []
-
-    # If a list of directions is not provided, use the default sort direction
-    # for all provided keys
-    if sort_dirs:
-        result_dirs = []
-        # Verify sort direction
-        for sort_dir in sort_dirs:
-            if sort_dir not in ('asc', 'desc'):
-                msg = _("Unknown sort direction, must be 'desc' or 'asc'")
-                raise exception.InvalidInput(reason=msg)
-            result_dirs.append(sort_dir)
-    else:
-        result_dirs = [default_dir_value for _sort_key in result_keys]
-
-    # Ensure that the key and direction length match
-    while len(result_dirs) < len(result_keys):
-        result_dirs.append(default_dir_value)
-    # Unless more direction are specified, which is an error
-    if len(result_dirs) > len(result_keys):
-        msg = _("Sort direction size exceeds sort key size")
-        raise exception.InvalidInput(reason=msg)
-
-    # Ensure defaults are included
-    for key in default_keys:
-        if key not in result_keys:
-            result_keys.append(key)
-            result_dirs.append(default_dir_value)
-
-    return result_keys, result_dirs
 
 
 @require_context
@@ -3507,8 +3407,8 @@ def migration_get_all_by_filters(context, filters,
             raise exception.MarkerNotFound(marker=marker)
     if limit or marker or sort_keys or sort_dirs:
         # Default sort by desc(['created_at', 'id'])
-        sort_keys, sort_dirs = process_sort_params(sort_keys, sort_dirs,
-                                                   default_dir='desc')
+        sort_keys, sort_dirs = db_utils.process_sort_params(
+            sort_keys, sort_dirs, default_dir='desc')
         return sqlalchemyutils.paginate_query(query,
                                               models.Migration,
                                               limit=limit,

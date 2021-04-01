@@ -14,8 +14,8 @@ from oslo_db import exception as db_exc
 from sqlalchemy import orm
 
 from nova import context
+from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as db_api
 from nova import exception
 from nova.i18n import _
 from nova.objects import base
@@ -52,7 +52,7 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
         }
 
     def _get_cell_mapping(self):
-        with db_api.api_context_manager.reader.using(self._context) as session:
+        with api_db_api.context_manager.reader.using(self._context) as session:
             cell_map = (session.query(api_models.CellMapping)
                         .join(api_models.HostMapping)
                         .filter(api_models.HostMapping.host == self.host)
@@ -87,7 +87,7 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
         return host_mapping
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_by_host_from_db(context, host):
         db_mapping = context.session.query(api_models.HostMapping)\
             .options(orm.joinedload('cell_mapping'))\
@@ -102,7 +102,7 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
         return cls._from_db_object(context, cls(), db_mapping)
 
     @staticmethod
-    @db_api.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _create_in_db(context, updates):
         db_mapping = api_models.HostMapping()
         return _apply_updates(context, db_mapping, updates)
@@ -116,7 +116,7 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
         self._from_db_object(self._context, self, db_mapping)
 
     @staticmethod
-    @db_api.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _save_in_db(context, obj, updates):
         db_mapping = context.session.query(api_models.HostMapping).filter_by(
             id=obj.id).first()
@@ -134,7 +134,7 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
         self.obj_reset_changes()
 
     @staticmethod
-    @db_api.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _destroy_in_db(context, host):
         result = context.session.query(api_models.HostMapping).filter_by(
                 host=host).delete()
@@ -157,7 +157,7 @@ class HostMappingList(base.ObjectListBase, base.NovaObject):
         }
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_from_db(context, cell_id=None):
         query = (context.session.query(api_models.HostMapping)
                  .options(orm.joinedload('cell_mapping')))

@@ -20,8 +20,8 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
+from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as db
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -630,7 +630,7 @@ class RequestSpec(base.NovaObject):
         return spec
 
     @staticmethod
-    @db.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_by_instance_uuid_from_db(context, instance_uuid):
         db_spec = context.session.query(api_models.RequestSpec).filter_by(
             instance_uuid=instance_uuid).first()
@@ -645,7 +645,7 @@ class RequestSpec(base.NovaObject):
         return cls._from_db_object(context, cls(), db_spec)
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _create_in_db(context, updates):
         db_spec = api_models.RequestSpec()
         db_spec.update(updates)
@@ -709,7 +709,7 @@ class RequestSpec(base.NovaObject):
         self._from_db_object(self._context, self, db_spec)
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _save_in_db(context, instance_uuid, updates):
         # FIXME(sbauza): Provide a classmethod when oslo.db bug #1520195 is
         # fixed and released
@@ -729,7 +729,7 @@ class RequestSpec(base.NovaObject):
             self.obj_reset_changes()
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _destroy_in_db(context, instance_uuid):
         result = context.session.query(api_models.RequestSpec).filter_by(
             instance_uuid=instance_uuid).delete()
@@ -741,7 +741,7 @@ class RequestSpec(base.NovaObject):
         self._destroy_in_db(self._context, self.instance_uuid)
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _destroy_bulk_in_db(context, instance_uuids):
         return context.session.query(api_models.RequestSpec).filter(
                 api_models.RequestSpec.instance_uuid.in_(instance_uuids)).\

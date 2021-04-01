@@ -11,8 +11,8 @@
 #    under the License.
 
 from nova import context
+from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as db_api
 from nova import exception
 from nova import objects
 from nova import test
@@ -111,7 +111,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.assertEqual(set(projects), set(flavor2.projects))
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _collect_flavor_residue_api(context, flavor):
         flavors = context.session.query(api_models.Flavors).\
                   filter_by(id=flavor.id).all()

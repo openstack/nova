@@ -46,11 +46,14 @@ document_root = /tmp
         self.useFixture(config_fixture.Config())
 
     @mock.patch('sys.argv', return_value=mock.sentinel.argv)
+    @mock.patch('nova.db.api.api.configure')
     @mock.patch('nova.db.main.api.configure')
     @mock.patch('nova.api.openstack.wsgi_app._setup_service')
     @mock.patch('nova.api.openstack.wsgi_app._get_config_files')
-    def test_init_application_called_twice(self, mock_get_files, mock_setup,
-                                           mock_db_configure, mock_argv):
+    def test_init_application_called_twice(
+        self, mock_get_files, mock_setup, mock_main_db_configure,
+        mock_api_db_configure, mock_argv,
+    ):
         """Test that init_application can tolerate being called twice in a
         single python interpreter instance.
 
@@ -65,14 +68,15 @@ document_root = /tmp
         """
         mock_get_files.return_value = [self.conf.name]
         mock_setup.side_effect = [test.TestingException, None]
-        # We need to mock the global database configure() method, else we will
+        # We need to mock the global database configure() methods, else we will
         # be affected by global database state altered by other tests that ran
         # before this test, causing this test to fail with
         # oslo_db.sqlalchemy.enginefacade.AlreadyStartedError. We can instead
         # mock the method to raise an exception if it's called a second time in
         # this test to simulate the fact that the database does not tolerate
         # re-init [after a database query has been made].
-        mock_db_configure.side_effect = [None, test.TestingException]
+        mock_main_db_configure.side_effect = [None, test.TestingException]
+        mock_api_db_configure.side_effect = [None, test.TestingException]
         # Run init_application the first time, simulating an exception being
         # raised during it.
         self.assertRaises(test.TestingException, wsgi_app.init_application,

@@ -87,19 +87,24 @@ class TestParseArgs(test.NoDBTestCase):
     def setUp(self):
         super(TestParseArgs, self).setUp()
         m = mock.patch('nova.db.main.api.configure')
-        self.nova_db_config_mock = m.start()
-        self.addCleanup(self.nova_db_config_mock.stop)
+        self.main_db_config_mock = m.start()
+        self.addCleanup(self.main_db_config_mock.stop)
+        m = mock.patch('nova.db.api.api.configure')
+        self.api_db_config_mock = m.start()
+        self.addCleanup(self.api_db_config_mock.stop)
 
     @mock.patch.object(config.log, 'register_options')
     def test_parse_args_glance_debug_false(self, register_options):
         self.flags(debug=False, group='glance')
         config.parse_args([], configure_db=False, init_rpc=False)
         self.assertIn('glanceclient=WARN', config.CONF.default_log_levels)
-        self.nova_db_config_mock.assert_not_called()
+        self.main_db_config_mock.assert_not_called()
+        self.api_db_config_mock.assert_not_called()
 
     @mock.patch.object(config.log, 'register_options')
     def test_parse_args_glance_debug_true(self, register_options):
         self.flags(debug=True, group='glance')
         config.parse_args([], configure_db=True, init_rpc=False)
         self.assertIn('glanceclient=DEBUG', config.CONF.default_log_levels)
-        self.nova_db_config_mock.assert_called_once_with(config.CONF)
+        self.main_db_config_mock.assert_called_once_with(config.CONF)
+        self.api_db_config_mock.assert_called_once_with(config.CONF)
