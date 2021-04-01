@@ -13,21 +13,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 from oslo_config import cfg
-from oslo_db import options as oslo_db_options
+from oslo_db import options as oslo_db_opts
 
-_ENRICHED = False
+main_db_group = cfg.OptGroup(
+    name='database',
+    title='Main Database Options',
+    help="""
+The *Nova Database* is the primary database which is used for information
+local to a *cell*.
 
+This group should **not** be configured for the ``nova-compute`` service.
+""")
 
-# NOTE(markus_z): We cannot simply do:
-# conf.register_opts(oslo_db_options.database_opts, 'api_database')
-# If we reuse a db config option for two different groups ("api_database"
-# and "database") and deprecate or rename a config option in one of these
-# groups, "oslo.config" cannot correctly determine which one to update.
-# That's why we copied & pasted these config options for the "api_database"
-# group here. See commit ba407e3 ("Add support for multiple database engines")
-# for more details.
-api_db_group = cfg.OptGroup('api_database',
+api_db_group = cfg.OptGroup(
+    name='api_database',
     title='API Database Options',
     help="""
 The *Nova API Database* is a separate database which is used for information
@@ -37,91 +39,26 @@ release (13.0.0).
 This group should **not** be configured for the ``nova-compute`` service.
 """)
 
-api_db_opts = [
-    # TODO(markus_z): This should probably have a required=True attribute
-    cfg.StrOpt('connection',
-        secret=True,
-        # This help gets appended to the oslo.db help so prefix with a space.
-        help=' Do not set this for the ``nova-compute`` service.'),
-    cfg.StrOpt('connection_parameters',
-        default='',
-        help=''),
-    cfg.BoolOpt('sqlite_synchronous',
-        default=True,
-        help=''),
-    cfg.StrOpt('slave_connection',
-        secret=True,
-        help=''),
-    cfg.StrOpt('mysql_sql_mode',
-        default='TRADITIONAL',
-        help=''),
-    cfg.IntOpt('connection_recycle_time',
-        default=3600,
-        deprecated_name='idle_timeout',
-        help=''),
-    # TODO(markus_z): We should probably default this to 5 to not rely on the
-    # SQLAlchemy default. Otherwise we wouldn't provide a stable default.
-    cfg.IntOpt('max_pool_size',
-        help=''),
-    cfg.IntOpt('max_retries',
-        default=10,
-        help=''),
-    # TODO(markus_z): This should have a minimum attribute of 0
-    cfg.IntOpt('retry_interval',
-        default=10,
-        help=''),
-    # TODO(markus_z): We should probably default this to 10 to not rely on the
-    # SQLAlchemy default. Otherwise we wouldn't provide a stable default.
-    cfg.IntOpt('max_overflow',
-        help=''),
-    # TODO(markus_z): This should probably make use of the "choices" attribute.
-    # "oslo.db" uses only the values [<0, 0, 50, 100] see module
-    # /oslo_db/sqlalchemy/engines.py method "_setup_logging"
-    cfg.IntOpt('connection_debug',
-        default=0,
-        help=''),
-    cfg.BoolOpt('connection_trace',
-        default=False,
-        help=''),
-    # TODO(markus_z): We should probably default this to 30 to not rely on the
-    # SQLAlchemy default. Otherwise we wouldn't provide a stable default.
-    cfg.IntOpt('pool_timeout',
-        help='')
-]  # noqa
-
-
-def enrich_help_text(alt_db_opts):
-
-    def get_db_opts():
-        for group_name, db_opts in oslo_db_options.list_opts():
-            if group_name == 'database':
-                return db_opts
-        return []
-
-    for db_opt in get_db_opts():
-        for alt_db_opt in alt_db_opts:
-            if alt_db_opt.name == db_opt.name:
-                # NOTE(markus_z): We can append alternative DB specific help
-                # texts here if needed.
-                alt_db_opt.help = db_opt.help + alt_db_opt.help
+# NOTE(stephenfin): We cannot simply use 'oslo_db_options.database_opts'
+# directly. If we reuse a db config option for two different groups
+# ("api_database" and "database") and deprecate or rename a config option in
+# one of these groups, "oslo.config" cannot correctly determine which one to
+# update. That's why we copy these.
+main_db_opts = copy.deepcopy(oslo_db_opts.database_opts)
+api_db_opts = copy.deepcopy(oslo_db_opts.database_opts)
 
 
 def register_opts(conf):
-    conf.register_opts(api_db_opts, group=api_db_group)
+    # TODO(stephenfin): Enable this once we drop use of
+    # 'oslo_db.api.DBAPI.from_config'
+    # conf.register_opts(copy.deepcopy(main_db_opts), group=main_db_group)
+    conf.register_opts(copy.deepcopy(api_db_opts), group=api_db_group)
 
 
 def list_opts():
-    # NOTE(markus_z): 2016-04-04: If we list the oslo_db_options here, they
-    # get emitted twice(!) in the "sample.conf" file. First under the
-    # namespace "nova.conf" and second under the namespace "oslo.db". This
-    # is due to the setting in file "etc/nova/nova-config-generator.conf".
-    # As I think it is useful to have the "oslo.db" namespace information
-    # in the "sample.conf" file, I omit the listing of the "oslo_db_options"
-    # here.
-    global _ENRICHED
-    if not _ENRICHED:
-        enrich_help_text(api_db_opts)
-        _ENRICHED = True
     return {
+        # TODO(stephenfin): Enable this once we drop use of
+        # 'oslo_db.api.DBAPI.from_config'
+        # main_db_group: main_db_opts,
         api_db_group: api_db_opts,
     }
