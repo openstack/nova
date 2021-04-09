@@ -434,12 +434,27 @@ class Guest(object):
                     LOG.debug('Successfully detached device %s from guest. '
                               'Persistent? %s. Live? %s',
                               device, persistent, live)
-
             except libvirt.libvirtError as ex:
                 with excutils.save_and_reraise_exception(reraise=False) as ctx:
-                    if ex.get_error_code() == libvirt.VIR_ERR_DEVICE_MISSING:
+                    code = ex.get_error_code()
+                    msg = ex.get_error_message()
+                    if code == libvirt.VIR_ERR_DEVICE_MISSING:
                         raise exception.DeviceNotFound(
                             device=alternative_device_name)
+                    # NOTE(lyarwood): https://bugzilla.redhat.com/1878659
+                    # Ignore this known QEMU bug for the time being allowing
+                    # our retry logic to fire again and hopefully see that
+                    # the device has been removed asynchronously by QEMU
+                    # in the meantime when the next call to detach raises
+                    # VIR_ERR_DEVICE_MISSING.
+                    if (code == libvirt.VIR_ERR_INTERNAL_ERROR and
+                        msg and 'already in the process of unplug' in msg
+                    ):
+                        LOG.debug('Ignoring QEMU rejecting our request to '
+                                  'detach as it is caused by a previous '
+                                  'request still being in progress.')
+                        return
+
                     # Re-raise the original exception if we're not raising
                     # DeviceNotFound instead. This will avoid logging of a
                     # "Original exception being dropped" traceback.
