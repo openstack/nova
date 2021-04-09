@@ -5,15 +5,25 @@
   environment:
     SUBNODE_HOSTNAME: "{{ hostvars['compute1']['ansible_hostname'] }}"
 
-- name: Fence subnode by stopping q-agt and n-cpu
+- name: Fence subnode by stopping n-cpu
   delegate_to: compute1
   become: true
   systemd:
-    name: "{{ item }}"
+    name: devstack@n-cpu
     state: stopped
-  with_items:
-    - devstack@q-agt
-    - devstack@n-cpu
+
+- name: Check if q-agt exists
+  shell: sudo systemctl status devstack@q-agt
+  ignore_errors: true
+  register: qagtstatus
+
+- name: Fence subnode by stopping q-agt (if exists)
+  delegate_to: compute1
+  become: true
+  systemd:
+    name: devstack@q-agt
+    state: stopped
+  when: qagtstatus.rc | int == 0
 
 - name: Register running domains on subnode
   delegate_to: compute1

@@ -56,7 +56,11 @@ nova boot --flavor ${flavor_id} --poll \
 
 # Fence the subnode
 echo "Stopping n-cpu, q-agt and guest domains on subnode"
-$ANSIBLE subnodes --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "systemctl stop devstack@n-cpu devstack@q-agt"
+_stop_services="devstack@n-cpu"
+if sudo systemctl list-unit-files --type service | grep -q "devstack@q-agt"; then
+    _stop_services+=" devstack@q-agt"
+fi
+$ANSIBLE subnodes --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "systemctl stop $_stop_services"
 $ANSIBLE subnodes --become -f 5 -i "$WORKSPACE/inventory" -m shell -a "for domain in \$(virsh list --all --name); do  virsh destroy \$domain; done"
 
 echo "Forcing down the subnode so we can evacuate from it"
