@@ -128,20 +128,23 @@ Related options:
     cfg.BoolOpt('enable_rbd_download',
         default=False,
         help="""
-Enable download of Glance images directly via RBD.
+Enable Glance image downloads directly via RBD.
 
-Allow compute hosts to quickly download and cache images localy directly
-from Ceph rather than slow dowloads from the Glance API. This can
-reduce download time for images in the ten to hundreds of GBs from tens of
-minutes to tens of seconds, but requires a Ceph-based deployment and access
-from the compute nodes to Ceph.
+Allow non-rbd computes using local storage to download and cache images from
+Ceph via rbd rather than the Glance API via http.
+
+.. note:: This option should only be enabled when the compute itself is not
+          also using Ceph as a backing store. For example with the libvirt
+          driver it should only be enabled when
+          :oslo.config:option:`libvirt.images_type` is not set to ``rbd``.
 
 Related options:
 
-* ``[glance] rbd_user``
-* ``[glance] rbd_connect_timeout``
-* ``[glance] rbd_pool``
-* ``[glance] rbd_ceph_conf``
+* :oslo.config:option:`glance.rbd_user`
+* :oslo.config:option:`glance.rbd_connect_timeout`
+* :oslo.config:option:`glance.rbd_pool`
+* :oslo.config:option:`glance.rbd_ceph_conf`
+* :oslo.config:option:`libvirt.images_type`
 """),
     cfg.StrOpt('rbd_user',
         default='',
@@ -150,7 +153,8 @@ The RADOS client name for accessing Glance images stored as rbd volumes.
 
 Related options:
 
-* This option is only used if ``[glance] enable_rbd_download`` is set to True.
+* This option is only used if :oslo.config:option:`glance.enable_rbd_download`
+  is set to ``True``.
 """),
     cfg.IntOpt('rbd_connect_timeout',
         default=5,
@@ -159,7 +163,8 @@ The RADOS client timeout in seconds when initially connecting to the cluster.
 
 Related options:
 
-* This option is only used if ``[glance] enable_rbd_download`` is set to True.
+* This option is only used if :oslo.config:option:`glance.enable_rbd_download`
+  is set to ``True``.
 """),
     cfg.StrOpt('rbd_pool',
         default='',
@@ -168,7 +173,8 @@ The RADOS pool in which the Glance images are stored as rbd volumes.
 
 Related options:
 
-* This option is only used if ``[glance] enable_rbd_download`` is set to True.
+* This option is only used if :oslo.config:option:`glance.enable_rbd_download`
+  is set to ``True``.
 """),
     cfg.StrOpt('rbd_ceph_conf',
         default='',
@@ -177,7 +183,9 @@ Path to the ceph configuration file to use.
 
 Related options:
 
-* This option is only used if ``[glance] enable_rbd_download`` is set to True.
+* This option is only used if :oslo.config:option:`glance.enable_rbd_download`
+  is set to ``True``.
+
 """),
 
     cfg.BoolOpt('debug',
