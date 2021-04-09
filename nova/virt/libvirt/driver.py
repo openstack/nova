@@ -1964,14 +1964,18 @@ class LibvirtDriver(driver.ComputeDriver):
             return self._host.delete_secret('volume', volume_id)
         if encryption is None:
             encryption = self._get_volume_encryption(context, connection_info)
-        # NOTE(lyarwood): Handle bug #1821696 where volume secrets have been
-        # removed manually by returning if a LUKS provider is being used
-        # and device_path is not present in the connection_info. This avoids
-        # VolumeEncryptionNotSupported being thrown when we incorrectly build
-        # the encryptor below due to the secrets not being present above.
-        if (encryption and self._allow_native_luksv1(encryption=encryption) and
-            not connection_info['data'].get('device_path')):
+
+        # NOTE(lyarwood): Handle bugs #1821696 and #1917619 by avoiding the use
+        # of the os-brick encryptors if we don't have a device_path. The lack
+        # of a device_path here suggests the volume was natively attached to
+        # QEMU anyway as volumes without a device_path are not supported by
+        # os-brick encryptors. For volumes with a device_path the calls to
+        # the os-brick encryptors are safe as they are actually idempotent,
+        # ignoring any failures caused by the volumes actually being natively
+        # attached previously.
+        if (encryption and connection_info['data'].get('device_path') is None):
             return
+
         if encryption:
             encryptor = self._get_volume_encryptor(connection_info,
                                                    encryption)
