@@ -236,8 +236,6 @@
               # The q35 machine type doesn't support an IDE bus
               ide_bus: False
       devstack_localrc:
-        # Added in Pike.
-        NOVA_USE_SERVICE_TOKEN: True
         # Enable TLS between the noVNC proxy & compute nodes; this requires
         # the tls-proxy service to be enabled. Added in Queens.
         NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
