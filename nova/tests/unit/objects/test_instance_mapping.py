@@ -12,6 +12,7 @@
 
 import mock
 from oslo_utils import uuidutils
+from sqlalchemy.orm import exc as orm_exc
 
 from nova import exception
 from nova import objects
@@ -150,6 +151,14 @@ class _TestInstanceMappingObject(object):
                          subs={'cell_mapping': 'cell_id'},
                          comparators={
                              'cell_mapping': self._check_cell_map_value})
+
+    @mock.patch.object(instance_mapping.InstanceMapping, '_save_in_db')
+    def test_save_stale_data_error(self, save_in_db):
+        save_in_db.side_effect = orm_exc.StaleDataError
+        mapping_obj = objects.InstanceMapping(self.context)
+        mapping_obj.instance_uuid = uuidutils.generate_uuid()
+
+        self.assertRaises(exception.InstanceMappingNotFound, mapping_obj.save)
 
     @mock.patch.object(instance_mapping.InstanceMapping, '_destroy_in_db')
     def test_destroy(self, destroy_in_db):
