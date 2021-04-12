@@ -362,7 +362,8 @@ class VMwareVMOps(object):
                 memory_reserved_mb = int(flavor.extra_specs[
                     utils.MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY])
                 if memory_reserved_mb > 0:
-                    extra_specs.memory_limits.reservation = memory_reserved_mb
+                    extra_specs.memory_limits.reservation = min(
+                        int(flavor.memory_mb), memory_reserved_mb)
             except (ValueError, KeyError):
                 pass
         extra_specs.cpu_limits.validate()
