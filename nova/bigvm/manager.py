@@ -428,7 +428,7 @@ class BigVmManager(manager.Manager):
                          '%(rp_uuid)s for deletion.',
                          {'host_rp_uuid': rp['host_rp_uuid'],
                           'rp_uuid': rp_uuid})
-            reserved_percent = host_rp['memory_mb_reserved_percent']
+            reserved_percent = host_rp['memory_reservable_mb_used_percent']
             if reserved_percent > CONF.bigvm_cluster_max_reservation_percent:
                 overused_providers[rp_uuid] = rp
                 LOG.info('Resource-provider %(host_rp_uuid)s with free host '
