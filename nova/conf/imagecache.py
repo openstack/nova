@@ -59,7 +59,11 @@ For per-compute-host cached images, set to '_base_$my_ip'
     cfg.BoolOpt('remove_unused_base_images',
         default=True,
         deprecated_group='DEFAULT',
-        help='Should unused base images be removed?'),
+        help="""
+Should unused base images be removed?
+
+When there are no remaining instances on the hypervisor created from this base image or linked to it, the base image is considered unused.
+"""),
     cfg.IntOpt('remove_unused_original_minimum_age_seconds',
         default=(24 * 3600),
         deprecated_group='DEFAULT',
