@@ -421,13 +421,19 @@ class BigVmManager(manager.Manager):
                 continue
             host_rp = vmware_providers[rp['host_rp_uuid']]
             used_percent = host_rp['memory_mb_used_percent']
-            reserved_percent = host_rp['memory_mb_reserved_percent']
-            if used_percent > CONF.bigvm_cluster_max_usage_percent \
-                    or reserved_percent \
-                        > CONF.bigvm_cluster_max_reservation_percent:
+            if used_percent > CONF.bigvm_cluster_max_usage_percent:
                 overused_providers[rp_uuid] = rp
                 LOG.info('Resource-provider %(host_rp_uuid)s with free host '
-                         'is overused. Marking %(rp_uuid)s for deletion.',
+                         'is overused on regular memory usage. Marking '
+                         '%(rp_uuid)s for deletion.',
+                         {'host_rp_uuid': rp['host_rp_uuid'],
+                          'rp_uuid': rp_uuid})
+            reserved_percent = host_rp['memory_mb_reserved_percent']
+            if reserved_percent > CONF.bigvm_cluster_max_reservation_percent:
+                overused_providers[rp_uuid] = rp
+                LOG.info('Resource-provider %(host_rp_uuid)s with free host '
+                         'is overused on reserved memory usage. Marking '
+                         '%(rp_uuid)s for deletion.',
                          {'host_rp_uuid': rp['host_rp_uuid'],
                           'rp_uuid': rp_uuid})
 
