@@ -34,6 +34,8 @@ that manages a cluster (like vmwareapi.VMwareVCDriver) could result in
 processing a large number of instances. Therefore you may need to adjust the
 time interval for the anticipated load, or only run on one nova-compute
 service within a shared storage aggregate.
+Additional note, every time the image_cache_manager runs the timestamps
+of images in ``[DEFAULT]/instances_path`` are updated.
 
 Possible values:
 
@@ -59,7 +61,12 @@ For per-compute-host cached images, set to '_base_$my_ip'
     cfg.BoolOpt('remove_unused_base_images',
         default=True,
         deprecated_group='DEFAULT',
-        help='Should unused base images be removed?'),
+        help="""
+Should unused base images be removed?
+
+When there are no remaining instances on the hypervisor created from
+this base image or linked to it, the base image is considered unused.
+"""),
     cfg.IntOpt('remove_unused_original_minimum_age_seconds',
         default=(24 * 3600),
         deprecated_group='DEFAULT',
