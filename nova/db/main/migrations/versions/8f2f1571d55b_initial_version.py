@@ -1,19 +1,23 @@
-# Copyright 2012 OpenStack Foundation
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
 #
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
 
-from migrate.changeset import UniqueConstraint
-from oslo_log import log as logging
+"""Initial version
+
+Revision ID: 8f2f1571d55b
+Revises:
+Create Date: 2021-04-13 11:59:19.234123
+"""
+
+from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import dialects
 from sqlalchemy.ext import compiler
@@ -22,7 +26,11 @@ from sqlalchemy import types as sqla_types
 from nova.db import types
 from nova.objects import keypair
 
-LOG = logging.getLogger(__name__)
+# revision identifiers, used by Alembic.
+revision = '8f2f1571d55b'
+down_revision = None
+branch_labels = None
+depends_on = None
 
 
 # NOTE(dprince): This wrapper allows us to easily match the Folsom MySQL
@@ -52,12 +60,10 @@ def process(element, compiler, **kw):
     return compiler.visit_foreign_key_constraint(element, **kw)
 
 
-def _create_shadow_tables(migrate_engine):
-    meta = sa.MetaData(migrate_engine)
-    meta.reflect(migrate_engine)
+def _create_shadow_tables(connection):
+    meta = sa.MetaData(connection)
+    meta.reflect(connection)
     table_names = list(meta.tables.keys())
-
-    meta.bind = migrate_engine
 
     for table_name in table_names:
         # Skip tables that are not soft-deletable
@@ -71,15 +77,15 @@ def _create_shadow_tables(migrate_engine):
         ):
             continue
 
-        table = sa.Table(table_name, meta, autoload=True)
+        table = sa.Table(table_name, meta, autoload_with=connection)
 
         columns = []
         for column in table.columns:
             column_copy = None
 
-            # NOTE(boris-42): BigInteger is not supported by sqlite, so after
-            # copy it will have NullType. The other types that are used in Nova
-            # are supported by sqlite
+            # NOTE(boris-42): BigInteger is not supported by sqlite so
+            # after copy it will have NullType. The other types that are used
+            # in Nova are supported by SQLite
             if isinstance(column.type, sqla_types.NullType):
                 column_copy = sa.Column(
                     column.name, sa.BigInteger(), default=0,
@@ -140,7 +146,7 @@ def _create_shadow_tables(migrate_engine):
             # 'create_type' to 'False'. See [1] for more information.
             #
             # [1] https://stackoverflow.com/a/28894354/613428
-            if migrate_engine.name == 'postgresql':
+            if connection.engine.name == 'postgresql':
                 if table_name == 'key_pairs' and column.name == 'type':
                     enum = dialects.postgresql.ENUM(
                         'ssh', 'x509', name='keypair_types', create_type=False)
@@ -161,630 +167,31 @@ def _create_shadow_tables(migrate_engine):
 
             columns.append(column_copy)
 
-        shadow_table = sa.Table(
+        op.create_table(
             'shadow_' + table_name, meta, *columns, mysql_engine='InnoDB',
         )
-
-        try:
-            shadow_table.create()
-        except Exception:
-            LOG.info(repr(shadow_table))
-            LOG.exception('Exception while creating table.')
-            raise
 
     # TODO(stephenfin): Fix these various bugs in a follow-up
 
     # 252_add_instance_extra_table; we don't create indexes for shadow tables
     # in general and these should be removed
 
-    table = sa.Table('shadow_instance_extra', meta, autoload=True)
-    idx = sa.Index('shadow_instance_extra_idx', table.c.instance_uuid)
-    idx.create(migrate_engine)
+    op.create_index(
+        'shadow_instance_extra_idx',
+        'shadow_instance_extra',
+        ['instance_uuid'])
 
     # 373_migration_uuid; we should't create indexes for shadow tables
 
-    table = sa.Table('shadow_migrations', meta, autoload=True)
-    idx = sa.Index('shadow_migrations_uuid', table.c.uuid, unique=True)
-    idx.create(migrate_engine)
+    op.create_index(
+        'shadow_migrations_uuid', 'shadow_migrations', ['uuid'], unique=True)
 
 
-def upgrade(migrate_engine):
-    meta = sa.MetaData()
-    meta.bind = migrate_engine
+def upgrade():
+    bind = op.get_bind()
 
-    agent_builds = sa.Table('agent_builds', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('hypervisor', sa.String(length=255)),
-        sa.Column('os', sa.String(length=255)),
-        sa.Column('architecture', sa.String(length=255)),
-        sa.Column('version', sa.String(length=255)),
-        sa.Column('url', sa.String(length=255)),
-        sa.Column('md5hash', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        sa.Index(
-            'agent_builds_hypervisor_os_arch_idx',
-              'hypervisor', 'os', 'architecture'),
-        UniqueConstraint(
-            'hypervisor', 'os', 'architecture', 'deleted',
-            name='uniq_agent_builds0hypervisor0os0architecture0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    aggregate_hosts = sa.Table('aggregate_hosts', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('host', sa.String(length=255)),
-        sa.Column(
-            'aggregate_id', sa.Integer, sa.ForeignKey('aggregates.id'),
-            nullable=False),
-        sa.Column('deleted', sa.Integer),
-        UniqueConstraint(
-            'host', 'aggregate_id', 'deleted',
-            name='uniq_aggregate_hosts0host0aggregate_id0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    aggregate_metadata = sa.Table('aggregate_metadata', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column(
-            'aggregate_id', sa.Integer, sa.ForeignKey('aggregates.id'),
-            nullable=False),
-        sa.Column('key', sa.String(length=255), nullable=False),
-        sa.Column('value', sa.String(length=255), nullable=False),
-        sa.Column('deleted', sa.Integer),
-        sa.Index('aggregate_metadata_key_idx', 'key'),
-        sa.Index('aggregate_metadata_value_idx', 'value'),
-        UniqueConstraint(
-            'aggregate_id', 'key', 'deleted',
-            name='uniq_aggregate_metadata0aggregate_id0key0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    aggregates = sa.Table('aggregates', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('name', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        sa.Column('uuid', sa.String(36)),
-        sa.Index('aggregate_uuid_idx', 'uuid'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    allocations = sa.Table('allocations', meta,
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('resource_provider_id', sa.Integer, nullable=False),
-        sa.Column('consumer_id', sa.String(36), nullable=False),
-        sa.Column('resource_class_id', sa.Integer, nullable=False),
-        sa.Column('used', sa.Integer, nullable=False),
-        sa.Index(
-            'allocations_resource_provider_class_used_idx',
-            'resource_provider_id', 'resource_class_id', 'used'),
-        sa.Index('allocations_consumer_id_idx', 'consumer_id'),
-        sa.Index('allocations_resource_class_id_idx', 'resource_class_id'),
-        mysql_engine='InnoDB',
-        mysql_charset='latin1',
-    )
-
-    block_device_mapping = sa.Table('block_device_mapping', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('device_name', sa.String(length=255), nullable=True),
-        sa.Column('delete_on_termination', sa.Boolean),
-        sa.Column('snapshot_id', sa.String(length=36), nullable=True),
-        sa.Column('volume_id', sa.String(length=36), nullable=True),
-        sa.Column('volume_size', sa.Integer),
-        sa.Column('no_device', sa.Boolean),
-        sa.Column('connection_info', MediumText()),
-        sa.Column(
-            'instance_uuid', sa.String(length=36),
-            sa.ForeignKey(
-                'instances.uuid',
-                name='block_device_mapping_instance_uuid_fkey')),
-        sa.Column('deleted', sa.Integer),
-        sa.Column('source_type', sa.String(length=255), nullable=True),
-        sa.Column('destination_type', sa.String(length=255), nullable=True),
-        sa.Column('guest_format', sa.String(length=255), nullable=True),
-        sa.Column('device_type', sa.String(length=255), nullable=True),
-        sa.Column('disk_bus', sa.String(length=255), nullable=True),
-        sa.Column('boot_index', sa.Integer),
-        sa.Column('image_id', sa.String(length=36), nullable=True),
-        sa.Column('tag', sa.String(255)),
-        sa.Column('attachment_id', sa.String(36), nullable=True),
-        sa.Column('uuid', sa.String(36), nullable=True),
-        sa.Column('volume_type', sa.String(255), nullable=True),
-        sa.Index('snapshot_id', 'snapshot_id'),
-        sa.Index('volume_id', 'volume_id'),
-        sa.Index('block_device_mapping_instance_uuid_idx', 'instance_uuid'),
-        sa.Index(
-            'block_device_mapping_instance_uuid_device_name_idx',
-            'instance_uuid', 'device_name'),
-        sa.Index(
-            'block_device_mapping_instance_uuid_volume_id_idx',
-            'instance_uuid', 'volume_id'),
-        UniqueConstraint('uuid', name='uniq_block_device_mapping0uuid'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    bw_usage_cache = sa.Table('bw_usage_cache', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('start_period', sa.DateTime, nullable=False),
-        sa.Column('last_refreshed', sa.DateTime),
-        sa.Column('bw_in', sa.BigInteger),
-        sa.Column('bw_out', sa.BigInteger),
-        sa.Column('mac', sa.String(length=255)),
-        sa.Column('uuid', sa.String(length=36)),
-        sa.Column('last_ctr_in', sa.BigInteger()),
-        sa.Column('last_ctr_out', sa.BigInteger()),
-        sa.Column('deleted', sa.Integer),
-        sa.Index(
-            'bw_usage_cache_uuid_start_period_idx',
-            'uuid', 'start_period'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    cells = sa.Table('cells', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('api_url', sa.String(length=255)),
-        sa.Column('weight_offset', sa.Float),
-        sa.Column('weight_scale', sa.Float),
-        sa.Column('name', sa.String(length=255)),
-        sa.Column('is_parent', sa.Boolean),
-        sa.Column('deleted', sa.Integer),
-        sa.Column('transport_url', sa.String(length=255), nullable=False),
-        UniqueConstraint(
-            'name', 'deleted',
-            name='uniq_cells0name0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    certificates = sa.Table('certificates', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('user_id', sa.String(length=255)),
-        sa.Column('project_id', sa.String(length=255)),
-        sa.Column('file_name', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        sa.Index(
-            'certificates_project_id_deleted_idx',
-            'project_id', 'deleted'),
-        sa.Index('certificates_user_id_deleted_idx', 'user_id', 'deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    compute_nodes = sa.Table('compute_nodes', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('service_id', sa.Integer, nullable=True),
-        sa.Column('vcpus', sa.Integer, nullable=False),
-        sa.Column('memory_mb', sa.Integer, nullable=False),
-        sa.Column('local_gb', sa.Integer, nullable=False),
-        sa.Column('vcpus_used', sa.Integer, nullable=False),
-        sa.Column('memory_mb_used', sa.Integer, nullable=False),
-        sa.Column('local_gb_used', sa.Integer, nullable=False),
-        sa.Column('hypervisor_type', MediumText(), nullable=False),
-        sa.Column('hypervisor_version', sa.Integer, nullable=False),
-        sa.Column('cpu_info', MediumText(), nullable=False),
-        sa.Column('disk_available_least', sa.Integer),
-        sa.Column('free_ram_mb', sa.Integer),
-        sa.Column('free_disk_gb', sa.Integer),
-        sa.Column('current_workload', sa.Integer),
-        sa.Column('running_vms', sa.Integer),
-        sa.Column('hypervisor_hostname', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        sa.Column('host_ip', InetSmall()),
-        sa.Column('supported_instances', sa.Text),
-        sa.Column('pci_stats', sa.Text, nullable=True),
-        sa.Column('metrics', sa.Text, nullable=True),
-        sa.Column('extra_resources', sa.Text, nullable=True),
-        sa.Column('stats', sa.Text, default='{}'),
-        sa.Column('numa_topology', sa.Text, nullable=True),
-        sa.Column('host', sa.String(255), nullable=True),
-        sa.Column('ram_allocation_ratio', sa.Float, nullable=True),
-        sa.Column('cpu_allocation_ratio', sa.Float, nullable=True),
-        sa.Column('uuid', sa.String(36), nullable=True),
-        sa.Column('disk_allocation_ratio', sa.Float, nullable=True),
-        sa.Column('mapped', sa.Integer, default=0, nullable=True),
-        sa.Index('compute_nodes_uuid_idx', 'uuid', unique=True),
-        UniqueConstraint(
-            'host', 'hypervisor_hostname', 'deleted',
-            name='uniq_compute_nodes0host0hypervisor_hostname0deleted',
-        ),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    console_auth_tokens = sa.Table('console_auth_tokens', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('token_hash', sa.String(255), nullable=False),
-        sa.Column('console_type', sa.String(255), nullable=False),
-        sa.Column('host', sa.String(255), nullable=False),
-        sa.Column('port', sa.Integer, nullable=False),
-        sa.Column('internal_access_path', sa.String(255)),
-        sa.Column('instance_uuid', sa.String(36), nullable=False),
-        sa.Column('expires', sa.Integer, nullable=False),
-        sa.Column('access_url_base', sa.String(255), nullable=True),
-        sa.Index('console_auth_tokens_instance_uuid_idx', 'instance_uuid'),
-        sa.Index('console_auth_tokens_host_expires_idx', 'host', 'expires'),
-        sa.Index('console_auth_tokens_token_hash_idx', 'token_hash'),
-        sa.Index(
-            'console_auth_tokens_token_hash_instance_uuid_idx',
-            'token_hash', 'instance_uuid'),
-        UniqueConstraint(
-            'token_hash', name='uniq_console_auth_tokens0token_hash'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8',
-    )
-
-    console_pools = sa.Table('console_pools', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('address', InetSmall()),
-        sa.Column('username', sa.String(length=255)),
-        sa.Column('password', sa.String(length=255)),
-        sa.Column('console_type', sa.String(length=255)),
-        sa.Column('public_hostname', sa.String(length=255)),
-        sa.Column('host', sa.String(length=255)),
-        sa.Column('compute_host', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        UniqueConstraint(
-            'host', 'console_type', 'compute_host', 'deleted',
-            name='uniq_console_pools0host0console_type0compute_host0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    consoles = sa.Table('consoles', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('instance_name', sa.String(length=255)),
-        sa.Column('password', sa.String(length=255)),
-        sa.Column('port', sa.Integer),
-        sa.Column('pool_id', sa.Integer, sa.ForeignKey('console_pools.id')),
-        sa.Column(
-            'instance_uuid', sa.String(length=36),
-            sa.ForeignKey(
-                'instances.uuid', name='consoles_instance_uuid_fkey')),
-        sa.Column('deleted', sa.Integer),
-        sa.Index('consoles_instance_uuid_idx', 'instance_uuid'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    dns_domains = sa.Table('dns_domains', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('deleted', sa.Boolean),
-        sa.Column(
-            'domain', sa.String(length=255), primary_key=True, nullable=False),
-        sa.Column('scope', sa.String(length=255)),
-        sa.Column('availability_zone', sa.String(length=255)),
-        sa.Column('project_id', sa.String(length=255)),
-        sa.Index('dns_domains_domain_deleted_idx', 'domain', 'deleted'),
-        sa.Index('dns_domains_project_id_idx', 'project_id'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    fixed_ips = sa.Table('fixed_ips', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('address', InetSmall()),
-        sa.Column('network_id', sa.Integer),
-        sa.Column('allocated', sa.Boolean),
-        sa.Column('leased', sa.Boolean),
-        sa.Column('reserved', sa.Boolean),
-        sa.Column('virtual_interface_id', sa.Integer),
-        sa.Column('host', sa.String(length=255)),
-        sa.Column(
-            'instance_uuid', sa.String(length=36),
-            sa.ForeignKey(
-                'instances.uuid', name='fixed_ips_instance_uuid_fkey'),
-        ),
-        sa.Column('deleted', sa.Integer),
-        sa.Index('network_id', 'network_id'),
-        sa.Index('address', 'address'),
-        sa.Index('fixed_ips_instance_uuid_fkey', 'instance_uuid'),
-        sa.Index(
-            'fixed_ips_virtual_interface_id_fkey',
-            'virtual_interface_id'),
-        sa.Index('fixed_ips_host_idx', 'host'),
-        sa.Index(
-            'fixed_ips_network_id_host_deleted_idx', 'network_id',
-            'host', 'deleted'),
-        sa.Index(
-            'fixed_ips_address_reserved_network_id_deleted_idx',
-            'address', 'reserved',
-            'network_id', 'deleted'),
-        sa.Index(
-            'fixed_ips_deleted_allocated_idx',
-            'address', 'deleted', 'allocated'),
-        sa.Index(
-            'fixed_ips_deleted_allocated_updated_at_idx',
-              'deleted', 'allocated', 'updated_at'),
-        UniqueConstraint(
-            'address', 'deleted',
-            name='uniq_fixed_ips0address0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    floating_ips = sa.Table('floating_ips', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('address', InetSmall()),
-        sa.Column('fixed_ip_id', sa.Integer),
-        sa.Column('project_id', sa.String(length=255)),
-        sa.Column('host', sa.String(length=255)),
-        sa.Column('auto_assigned', sa.Boolean),
-        sa.Column('pool', sa.String(length=255)),
-        sa.Column('interface', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        sa.Index('fixed_ip_id', 'fixed_ip_id'),
-        sa.Index('floating_ips_host_idx', 'host'),
-        sa.Index('floating_ips_project_id_idx', 'project_id'),
-        sa.Index(
-            'floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
-            'pool', 'deleted', 'fixed_ip_id', 'project_id'),
-        UniqueConstraint(
-            'address', 'deleted',
-            name='uniq_floating_ips0address0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    instance_faults = sa.Table('instance_faults', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column(
-            'instance_uuid', sa.String(length=36),
-            sa.ForeignKey(
-                'instances.uuid', name='fk_instance_faults_instance_uuid')),
-        sa.Column('code', sa.Integer, nullable=False),
-        sa.Column('message', sa.String(length=255)),
-        sa.Column('details', MediumText()),
-        sa.Column('host', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        sa.Index('instance_faults_host_idx', 'host'),
-        sa.Index(
-            'instance_faults_instance_uuid_deleted_created_at_idx',
-            'instance_uuid', 'deleted', 'created_at'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    instance_id_mappings = sa.Table('instance_id_mappings', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('uuid', sa.String(36), nullable=False),
-        sa.Column('deleted', sa.Integer),
-        sa.Index('ix_instance_id_mappings_uuid', 'uuid'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    instance_info_caches = sa.Table('instance_info_caches', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('network_info', MediumText()),
-        sa.Column(
-            'instance_uuid', sa.String(length=36),
-            sa.ForeignKey(
-                'instances.uuid',
-                name='instance_info_caches_instance_uuid_fkey'),
-            nullable=False),
-        sa.Column('deleted', sa.Integer),
-        UniqueConstraint(
-            'instance_uuid',
-            name='uniq_instance_info_caches0instance_uuid'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    groups = sa.Table('instance_groups', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('deleted', sa.Integer),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('user_id', sa.String(length=255)),
-        sa.Column('project_id', sa.String(length=255)),
-        sa.Column('uuid', sa.String(length=36), nullable=False),
-        sa.Column('name', sa.String(length=255)),
-        UniqueConstraint(
-            'uuid', 'deleted',
-            name='uniq_instance_groups0uuid0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8',
-    )
-
-    group_policy = sa.Table('instance_group_policy', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('deleted', sa.Integer),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('policy', sa.String(length=255)),
-        sa.Column(
-            'group_id', sa.Integer, sa.ForeignKey('instance_groups.id'),
-            nullable=False),
-        sa.Index('instance_group_policy_policy_idx', 'policy'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8',
-    )
-
-    group_member = sa.Table('instance_group_member', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('deleted', sa.Integer),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('instance_id', sa.String(length=255)),
-        sa.Column(
-            'group_id', sa.Integer, sa.ForeignKey('instance_groups.id'),
-            nullable=False),
-        sa.Index(
-            'instance_group_member_instance_idx',
-            'instance_id'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8',
-    )
-
-    instance_metadata = sa.Table('instance_metadata', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('key', sa.String(length=255)),
-        sa.Column('value', sa.String(length=255)),
-        sa.Column(
-            'instance_uuid', sa.String(length=36),
-            sa.ForeignKey(
-                'instances.uuid', name='instance_metadata_instance_uuid_fkey'),
-            nullable=True),
-        sa.Column('deleted', sa.Integer),
-        sa.Index('instance_metadata_instance_uuid_idx', 'instance_uuid'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    instance_system_metadata = sa.Table('instance_system_metadata', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column(
-            'instance_uuid', sa.String(length=36),
-            sa.ForeignKey(
-                'instances.uuid', name='instance_system_metadata_ibfk_1'),
-            nullable=False),
-        sa.Column('key', sa.String(length=255), nullable=False),
-        sa.Column('value', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        sa.Index('instance_uuid', 'instance_uuid'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    # TODO(stephenfin): Remove this table since it has been moved to the API DB
-    instance_type_extra_specs = sa.Table('instance_type_extra_specs', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column(
-            'instance_type_id', sa.Integer, sa.ForeignKey('instance_types.id'),
-            nullable=False),
-        sa.Column('key', sa.String(length=255)),
-        sa.Column('value', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        sa.Index(
-            'instance_type_extra_specs_instance_type_id_key_idx',
-            'instance_type_id', 'key'),
-        UniqueConstraint(
-            'instance_type_id', 'key', 'deleted',
-            name='uniq_instance_type_extra_specs0instance_type_id0key0deleted'
-        ),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    # TODO(stephenfin): Remove this table since it has been moved to the API DB
-    instance_type_projects = sa.Table('instance_type_projects', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column(
-            'instance_type_id', sa.Integer,
-            sa.ForeignKey(
-                'instance_types.id', name='instance_type_projects_ibfk_1'),
-            nullable=False),
-        sa.Column('project_id', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        UniqueConstraint(
-            'instance_type_id', 'project_id', 'deleted',
-            name='uniq_instance_type_projects0instance_type_id0project_id'
-            '0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    # TODO(stephenfin): Remove this table since it has been moved to the API DB
-    instance_types = sa.Table('instance_types', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('name', sa.String(length=255)),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('memory_mb', sa.Integer, nullable=False),
-        sa.Column('vcpus', sa.Integer, nullable=False),
-        sa.Column('swap', sa.Integer, nullable=False),
-        sa.Column('vcpu_weight', sa.Integer),
-        sa.Column('flavorid', sa.String(length=255)),
-        sa.Column('rxtx_factor', sa.Float),
-        sa.Column('root_gb', sa.Integer),
-        sa.Column('ephemeral_gb', sa.Integer),
-        sa.Column('disabled', sa.Boolean),
-        sa.Column('is_public', sa.Boolean),
-        sa.Column('deleted', sa.Integer),
-        UniqueConstraint(
-            'name', 'deleted',
-            name='uniq_instance_types0name0deleted'),
-        UniqueConstraint(
-            'flavorid', 'deleted',
-            name='uniq_instance_types0flavorid0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    instances = sa.Table('instances', meta,
+    op.create_table(
+        'instances',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -865,12 +272,632 @@ def upgrade(migrate_engine):
         sa.Index(
             'instances_updated_at_project_id_idx',
             'updated_at', 'project_id'),
-        UniqueConstraint('uuid', name='uniq_instances0uuid'),
+        sa.UniqueConstraint('uuid', name='uniq_instances0uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
 
-    instance_actions = sa.Table('instance_actions', meta,
+    op.create_table(
+        'agent_builds',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('hypervisor', sa.String(length=255)),
+        sa.Column('os', sa.String(length=255)),
+        sa.Column('architecture', sa.String(length=255)),
+        sa.Column('version', sa.String(length=255)),
+        sa.Column('url', sa.String(length=255)),
+        sa.Column('md5hash', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.Index(
+            'agent_builds_hypervisor_os_arch_idx',
+              'hypervisor', 'os', 'architecture'),
+        sa.UniqueConstraint(
+            'hypervisor', 'os', 'architecture', 'deleted',
+            name='uniq_agent_builds0hypervisor0os0architecture0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'aggregates',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('name', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.Column('uuid', sa.String(36)),
+        sa.Index('aggregate_uuid_idx', 'uuid'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'aggregate_hosts',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('host', sa.String(length=255)),
+        sa.Column(
+            'aggregate_id', sa.Integer, sa.ForeignKey('aggregates.id'),
+            nullable=False),
+        sa.Column('deleted', sa.Integer),
+        sa.UniqueConstraint(
+            'host', 'aggregate_id', 'deleted',
+            name='uniq_aggregate_hosts0host0aggregate_id0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'aggregate_metadata',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column(
+            'aggregate_id', sa.Integer, sa.ForeignKey('aggregates.id'),
+            nullable=False),
+        sa.Column('key', sa.String(length=255), nullable=False),
+        sa.Column('value', sa.String(length=255), nullable=False),
+        sa.Column('deleted', sa.Integer),
+        sa.Index('aggregate_metadata_key_idx', 'key'),
+        sa.Index('aggregate_metadata_value_idx', 'value'),
+        sa.UniqueConstraint(
+            'aggregate_id', 'key', 'deleted',
+            name='uniq_aggregate_metadata0aggregate_id0key0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'allocations',
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('resource_provider_id', sa.Integer, nullable=False),
+        sa.Column('consumer_id', sa.String(36), nullable=False),
+        sa.Column('resource_class_id', sa.Integer, nullable=False),
+        sa.Column('used', sa.Integer, nullable=False),
+        sa.Index(
+            'allocations_resource_provider_class_used_idx',
+            'resource_provider_id', 'resource_class_id', 'used'),
+        sa.Index('allocations_consumer_id_idx', 'consumer_id'),
+        sa.Index('allocations_resource_class_id_idx', 'resource_class_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='latin1',
+    )
+
+    op.create_table(
+        'block_device_mapping',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('device_name', sa.String(length=255), nullable=True),
+        sa.Column('delete_on_termination', sa.Boolean),
+        sa.Column('snapshot_id', sa.String(length=36), nullable=True),
+        sa.Column('volume_id', sa.String(length=36), nullable=True),
+        sa.Column('volume_size', sa.Integer),
+        sa.Column('no_device', sa.Boolean),
+        sa.Column('connection_info', MediumText()),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid',
+                name='block_device_mapping_instance_uuid_fkey')),
+        sa.Column('deleted', sa.Integer),
+        sa.Column('source_type', sa.String(length=255), nullable=True),
+        sa.Column('destination_type', sa.String(length=255), nullable=True),
+        sa.Column('guest_format', sa.String(length=255), nullable=True),
+        sa.Column('device_type', sa.String(length=255), nullable=True),
+        sa.Column('disk_bus', sa.String(length=255), nullable=True),
+        sa.Column('boot_index', sa.Integer),
+        sa.Column('image_id', sa.String(length=36), nullable=True),
+        sa.Column('tag', sa.String(255)),
+        sa.Column('attachment_id', sa.String(36), nullable=True),
+        sa.Column('uuid', sa.String(36), nullable=True),
+        sa.Column('volume_type', sa.String(255), nullable=True),
+        sa.Index('snapshot_id', 'snapshot_id'),
+        sa.Index('volume_id', 'volume_id'),
+        sa.Index('block_device_mapping_instance_uuid_idx', 'instance_uuid'),
+        sa.Index(
+            'block_device_mapping_instance_uuid_device_name_idx',
+            'instance_uuid', 'device_name'),
+        sa.Index(
+            'block_device_mapping_instance_uuid_volume_id_idx',
+            'instance_uuid', 'volume_id'),
+        sa.UniqueConstraint('uuid', name='uniq_block_device_mapping0uuid'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'bw_usage_cache',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('start_period', sa.DateTime, nullable=False),
+        sa.Column('last_refreshed', sa.DateTime),
+        sa.Column('bw_in', sa.BigInteger),
+        sa.Column('bw_out', sa.BigInteger),
+        sa.Column('mac', sa.String(length=255)),
+        sa.Column('uuid', sa.String(length=36)),
+        sa.Column('last_ctr_in', sa.BigInteger()),
+        sa.Column('last_ctr_out', sa.BigInteger()),
+        sa.Column('deleted', sa.Integer),
+        sa.Index(
+            'bw_usage_cache_uuid_start_period_idx',
+            'uuid', 'start_period'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'cells',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('api_url', sa.String(length=255)),
+        sa.Column('weight_offset', sa.Float),
+        sa.Column('weight_scale', sa.Float),
+        sa.Column('name', sa.String(length=255)),
+        sa.Column('is_parent', sa.Boolean),
+        sa.Column('deleted', sa.Integer),
+        sa.Column('transport_url', sa.String(length=255), nullable=False),
+        sa.UniqueConstraint(
+            'name', 'deleted',
+            name='uniq_cells0name0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'certificates',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('user_id', sa.String(length=255)),
+        sa.Column('project_id', sa.String(length=255)),
+        sa.Column('file_name', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.Index(
+            'certificates_project_id_deleted_idx',
+            'project_id', 'deleted'),
+        sa.Index('certificates_user_id_deleted_idx', 'user_id', 'deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'compute_nodes',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('service_id', sa.Integer, nullable=True),
+        sa.Column('vcpus', sa.Integer, nullable=False),
+        sa.Column('memory_mb', sa.Integer, nullable=False),
+        sa.Column('local_gb', sa.Integer, nullable=False),
+        sa.Column('vcpus_used', sa.Integer, nullable=False),
+        sa.Column('memory_mb_used', sa.Integer, nullable=False),
+        sa.Column('local_gb_used', sa.Integer, nullable=False),
+        sa.Column('hypervisor_type', MediumText(), nullable=False),
+        sa.Column('hypervisor_version', sa.Integer, nullable=False),
+        sa.Column('cpu_info', MediumText(), nullable=False),
+        sa.Column('disk_available_least', sa.Integer),
+        sa.Column('free_ram_mb', sa.Integer),
+        sa.Column('free_disk_gb', sa.Integer),
+        sa.Column('current_workload', sa.Integer),
+        sa.Column('running_vms', sa.Integer),
+        sa.Column('hypervisor_hostname', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.Column('host_ip', InetSmall()),
+        sa.Column('supported_instances', sa.Text),
+        sa.Column('pci_stats', sa.Text, nullable=True),
+        sa.Column('metrics', sa.Text, nullable=True),
+        sa.Column('extra_resources', sa.Text, nullable=True),
+        sa.Column('stats', sa.Text, default='{}'),
+        sa.Column('numa_topology', sa.Text, nullable=True),
+        sa.Column('host', sa.String(255), nullable=True),
+        sa.Column('ram_allocation_ratio', sa.Float, nullable=True),
+        sa.Column('cpu_allocation_ratio', sa.Float, nullable=True),
+        sa.Column('uuid', sa.String(36), nullable=True),
+        sa.Column('disk_allocation_ratio', sa.Float, nullable=True),
+        sa.Column('mapped', sa.Integer, default=0, nullable=True),
+        sa.Index('compute_nodes_uuid_idx', 'uuid', unique=True),
+        sa.UniqueConstraint(
+            'host', 'hypervisor_hostname', 'deleted',
+            name='uniq_compute_nodes0host0hypervisor_hostname0deleted',
+        ),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'console_auth_tokens',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('token_hash', sa.String(255), nullable=False),
+        sa.Column('console_type', sa.String(255), nullable=False),
+        sa.Column('host', sa.String(255), nullable=False),
+        sa.Column('port', sa.Integer, nullable=False),
+        sa.Column('internal_access_path', sa.String(255)),
+        sa.Column('instance_uuid', sa.String(36), nullable=False),
+        sa.Column('expires', sa.Integer, nullable=False),
+        sa.Column('access_url_base', sa.String(255), nullable=True),
+        sa.Index('console_auth_tokens_instance_uuid_idx', 'instance_uuid'),
+        sa.Index('console_auth_tokens_host_expires_idx', 'host', 'expires'),
+        sa.Index('console_auth_tokens_token_hash_idx', 'token_hash'),
+        sa.Index(
+            'console_auth_tokens_token_hash_instance_uuid_idx',
+            'token_hash', 'instance_uuid'),
+        sa.UniqueConstraint(
+            'token_hash', name='uniq_console_auth_tokens0token_hash'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    op.create_table(
+        'console_pools',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('address', InetSmall()),
+        sa.Column('username', sa.String(length=255)),
+        sa.Column('password', sa.String(length=255)),
+        sa.Column('console_type', sa.String(length=255)),
+        sa.Column('public_hostname', sa.String(length=255)),
+        sa.Column('host', sa.String(length=255)),
+        sa.Column('compute_host', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.UniqueConstraint(
+            'host', 'console_type', 'compute_host', 'deleted',
+            name='uniq_console_pools0host0console_type0compute_host0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'consoles',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('instance_name', sa.String(length=255)),
+        sa.Column('password', sa.String(length=255)),
+        sa.Column('port', sa.Integer),
+        sa.Column('pool_id', sa.Integer, sa.ForeignKey('console_pools.id')),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='consoles_instance_uuid_fkey')),
+        sa.Column('deleted', sa.Integer),
+        sa.Index('consoles_instance_uuid_idx', 'instance_uuid'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'dns_domains',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('deleted', sa.Boolean),
+        sa.Column(
+            'domain', sa.String(length=255), primary_key=True, nullable=False),
+        sa.Column('scope', sa.String(length=255)),
+        sa.Column('availability_zone', sa.String(length=255)),
+        sa.Column('project_id', sa.String(length=255)),
+        sa.Index('dns_domains_domain_deleted_idx', 'domain', 'deleted'),
+        sa.Index('dns_domains_project_id_idx', 'project_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'fixed_ips',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('address', InetSmall()),
+        sa.Column('network_id', sa.Integer),
+        sa.Column('allocated', sa.Boolean),
+        sa.Column('leased', sa.Boolean),
+        sa.Column('reserved', sa.Boolean),
+        sa.Column('virtual_interface_id', sa.Integer),
+        sa.Column('host', sa.String(length=255)),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='fixed_ips_instance_uuid_fkey'),
+        ),
+        sa.Column('deleted', sa.Integer),
+        sa.Index('network_id', 'network_id'),
+        sa.Index('address', 'address'),
+        sa.Index('fixed_ips_instance_uuid_fkey', 'instance_uuid'),
+        sa.Index(
+            'fixed_ips_virtual_interface_id_fkey',
+            'virtual_interface_id'),
+        sa.Index('fixed_ips_host_idx', 'host'),
+        sa.Index(
+            'fixed_ips_network_id_host_deleted_idx', 'network_id',
+            'host', 'deleted'),
+        sa.Index(
+            'fixed_ips_address_reserved_network_id_deleted_idx',
+            'address', 'reserved',
+            'network_id', 'deleted'),
+        sa.Index(
+            'fixed_ips_deleted_allocated_idx',
+            'address', 'deleted', 'allocated'),
+        sa.Index(
+            'fixed_ips_deleted_allocated_updated_at_idx',
+              'deleted', 'allocated', 'updated_at'),
+        sa.UniqueConstraint(
+            'address', 'deleted',
+            name='uniq_fixed_ips0address0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'floating_ips',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('address', InetSmall()),
+        sa.Column('fixed_ip_id', sa.Integer),
+        sa.Column('project_id', sa.String(length=255)),
+        sa.Column('host', sa.String(length=255)),
+        sa.Column('auto_assigned', sa.Boolean),
+        sa.Column('pool', sa.String(length=255)),
+        sa.Column('interface', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.Index('fixed_ip_id', 'fixed_ip_id'),
+        sa.Index('floating_ips_host_idx', 'host'),
+        sa.Index('floating_ips_project_id_idx', 'project_id'),
+        sa.Index(
+            'floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
+            'pool', 'deleted', 'fixed_ip_id', 'project_id'),
+        sa.UniqueConstraint(
+            'address', 'deleted',
+            name='uniq_floating_ips0address0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'instance_faults',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='fk_instance_faults_instance_uuid')),
+        sa.Column('code', sa.Integer, nullable=False),
+        sa.Column('message', sa.String(length=255)),
+        sa.Column('details', MediumText()),
+        sa.Column('host', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.Index('instance_faults_host_idx', 'host'),
+        sa.Index(
+            'instance_faults_instance_uuid_deleted_created_at_idx',
+            'instance_uuid', 'deleted', 'created_at'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'instance_id_mappings',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('uuid', sa.String(36), nullable=False),
+        sa.Column('deleted', sa.Integer),
+        sa.Index('ix_instance_id_mappings_uuid', 'uuid'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'instance_info_caches',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('network_info', MediumText()),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid',
+                name='instance_info_caches_instance_uuid_fkey'),
+            nullable=False),
+        sa.Column('deleted', sa.Integer),
+        sa.UniqueConstraint(
+            'instance_uuid',
+            name='uniq_instance_info_caches0instance_uuid'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'instance_groups',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('deleted', sa.Integer),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('user_id', sa.String(length=255)),
+        sa.Column('project_id', sa.String(length=255)),
+        sa.Column('uuid', sa.String(length=36), nullable=False),
+        sa.Column('name', sa.String(length=255)),
+        sa.UniqueConstraint(
+            'uuid', 'deleted',
+            name='uniq_instance_groups0uuid0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    op.create_table(
+        'instance_group_policy',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('deleted', sa.Integer),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('policy', sa.String(length=255)),
+        sa.Column(
+            'group_id', sa.Integer, sa.ForeignKey('instance_groups.id'),
+            nullable=False),
+        sa.Index('instance_group_policy_policy_idx', 'policy'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    op.create_table(
+        'instance_group_member',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('deleted', sa.Integer),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('instance_id', sa.String(length=255)),
+        sa.Column(
+            'group_id', sa.Integer, sa.ForeignKey('instance_groups.id'),
+            nullable=False),
+        sa.Index(
+            'instance_group_member_instance_idx',
+            'instance_id'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    op.create_table(
+        'instance_metadata',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('key', sa.String(length=255)),
+        sa.Column('value', sa.String(length=255)),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='instance_metadata_instance_uuid_fkey'),
+            nullable=True),
+        sa.Column('deleted', sa.Integer),
+        sa.Index('instance_metadata_instance_uuid_idx', 'instance_uuid'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'instance_system_metadata',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column(
+            'instance_uuid', sa.String(length=36),
+            sa.ForeignKey(
+                'instances.uuid', name='instance_system_metadata_ibfk_1'),
+            nullable=False),
+        sa.Column('key', sa.String(length=255), nullable=False),
+        sa.Column('value', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.Index('instance_uuid', 'instance_uuid'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    # TODO(stephenfin): Remove this table since it has been moved to the API DB
+    op.create_table(
+        'instance_types',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('name', sa.String(length=255)),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('memory_mb', sa.Integer, nullable=False),
+        sa.Column('vcpus', sa.Integer, nullable=False),
+        sa.Column('swap', sa.Integer, nullable=False),
+        sa.Column('vcpu_weight', sa.Integer),
+        sa.Column('flavorid', sa.String(length=255)),
+        sa.Column('rxtx_factor', sa.Float),
+        sa.Column('root_gb', sa.Integer),
+        sa.Column('ephemeral_gb', sa.Integer),
+        sa.Column('disabled', sa.Boolean),
+        sa.Column('is_public', sa.Boolean),
+        sa.Column('deleted', sa.Integer),
+        sa.UniqueConstraint(
+            'name', 'deleted',
+            name='uniq_instance_types0name0deleted'),
+        sa.UniqueConstraint(
+            'flavorid', 'deleted',
+            name='uniq_instance_types0flavorid0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    # TODO(stephenfin): Remove this table since it has been moved to the API DB
+    op.create_table(
+        'instance_type_extra_specs',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column(
+            'instance_type_id', sa.Integer, sa.ForeignKey('instance_types.id'),
+            nullable=False),
+        sa.Column('key', sa.String(length=255)),
+        sa.Column('value', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.Index(
+            'instance_type_extra_specs_instance_type_id_key_idx',
+            'instance_type_id', 'key'),
+        sa.UniqueConstraint(
+            'instance_type_id', 'key', 'deleted',
+            name='uniq_instance_type_extra_specs0instance_type_id0key0deleted'
+        ),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    # TODO(stephenfin): Remove this table since it has been moved to the API DB
+    op.create_table(
+        'instance_type_projects',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column(
+            'instance_type_id', sa.Integer,
+            sa.ForeignKey(
+                'instance_types.id', name='instance_type_projects_ibfk_1'),
+            nullable=False),
+        sa.Column('project_id', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.UniqueConstraint(
+            'instance_type_id', 'project_id', 'deleted',
+            name='uniq_instance_type_projects0instance_type_id0project_id'
+            '0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'instance_actions',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -896,7 +923,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8',
     )
 
-    instance_actions_events = sa.Table('instance_actions_events', meta,
+    op.create_table(
+        'instance_actions_events',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -915,7 +943,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8',
     )
 
-    instance_extra = sa.Table('instance_extra', meta,
+    op.create_table(
+        'instance_extra',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -941,7 +970,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8',
     )
 
-    inventories = sa.Table('inventories', meta,
+    op.create_table(
+        'inventories',
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('resource_provider_id', sa.Integer, nullable=False),
         sa.Column('resource_class_id', sa.Integer, nullable=False),
@@ -958,14 +988,15 @@ def upgrade(migrate_engine):
         sa.Index(
             'inventories_resource_provider_resource_class_idx',
             'resource_provider_id', 'resource_class_id'),
-        UniqueConstraint(
+        sa.UniqueConstraint(
             'resource_provider_id', 'resource_class_id',
             name='uniq_inventories0resource_provider_resource_class'),
         mysql_engine='InnoDB',
         mysql_charset='latin1',
     )
 
-    key_pairs = sa.Table('key_pairs', meta,
+    op.create_table(
+        'key_pairs',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -978,14 +1009,15 @@ def upgrade(migrate_engine):
         sa.Column(
             'type', sa.Enum('ssh', 'x509', name='keypair_types'),
             nullable=False, server_default=keypair.KEYPAIR_TYPE_SSH),
-        UniqueConstraint(
+        sa.UniqueConstraint(
             'user_id', 'name', 'deleted',
             name='uniq_key_pairs0user_id0name0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
 
-    migrations = sa.Table('migrations', meta,
+    op.create_table(
+        'migrations',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1048,7 +1080,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    networks = sa.Table('networks', meta,
+    op.create_table(
+        'networks',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1095,12 +1128,14 @@ def upgrade(migrate_engine):
             'networks_uuid_project_id_deleted_idx',
             'uuid', 'project_id', 'deleted'),
         sa.Index('networks_vlan_deleted_idx', 'vlan', 'deleted'),
-        UniqueConstraint('vlan', 'deleted', name='uniq_networks0vlan0deleted'),
+        sa.UniqueConstraint(
+            'vlan', 'deleted', name='uniq_networks0vlan0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
 
-    pci_devices = sa.Table('pci_devices', meta,
+    op.create_table(
+        'pci_devices',
         sa.Column('created_at', sa.DateTime(timezone=False)),
         sa.Column('updated_at', sa.DateTime(timezone=False)),
         sa.Column('deleted_at', sa.DateTime(timezone=False)),
@@ -1133,13 +1168,14 @@ def upgrade(migrate_engine):
         sa.Index(
             'ix_pci_devices_compute_node_id_parent_addr_deleted',
             'compute_node_id', 'parent_addr', 'deleted'),
-        UniqueConstraint(
+        sa.UniqueConstraint(
             'compute_node_id', 'address', 'deleted',
             name='uniq_pci_devices0compute_node_id0address0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8')
 
-    provider_fw_rules = sa.Table('provider_fw_rules', meta,
+    op.create_table(
+        'provider_fw_rules',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1153,7 +1189,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    quota_classes = sa.Table('quota_classes', meta,
+    op.create_table(
+        'quota_classes',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1167,7 +1204,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    quota_usages = sa.Table('quota_usages', meta,
+    op.create_table(
+        'quota_usages',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1185,7 +1223,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    quotas = sa.Table('quotas', meta,
+    op.create_table(
+        'quotas',
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
@@ -1194,14 +1233,15 @@ def upgrade(migrate_engine):
         sa.Column('resource', sa.String(length=255), nullable=False),
         sa.Column('hard_limit', sa.Integer),
         sa.Column('deleted', sa.Integer),
-        UniqueConstraint(
+        sa.UniqueConstraint(
             'project_id', 'resource', 'deleted',
             name='uniq_quotas0project_id0resource0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
 
-    project_user_quotas = sa.Table('project_user_quotas', meta,
+    op.create_table(
+        'project_user_quotas',
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
@@ -1217,7 +1257,7 @@ def upgrade(migrate_engine):
         sa.Index(
             'project_user_quotas_user_id_deleted_idx',
             'user_id', 'deleted'),
-        UniqueConstraint(
+        sa.UniqueConstraint(
             'user_id', 'project_id', 'resource', 'deleted',
             name='uniq_project_user_quotas0user_id0project_id0resource0'
             'deleted'),
@@ -1225,7 +1265,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8',
     )
 
-    reservations = sa.Table('reservations', meta,
+    op.create_table(
+        'reservations',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1249,22 +1290,23 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    resource_providers = sa.Table('resource_providers', meta,
+    op.create_table(
+        'resource_providers',
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('uuid', sa.String(36), nullable=False),
         sa.Column('name', sa.Unicode(200), nullable=True),
         sa.Column('generation', sa.Integer, default=0),
         sa.Column('can_host', sa.Integer, default=0),
-        UniqueConstraint('uuid', name='uniq_resource_providers0uuid'),
-        UniqueConstraint('name', name='uniq_resource_providers0name'),
+        sa.UniqueConstraint('uuid', name='uniq_resource_providers0uuid'),
+        sa.UniqueConstraint('name', name='uniq_resource_providers0name'),
         sa.Index('resource_providers_name_idx', 'name'),
         sa.Index('resource_providers_uuid_idx', 'uuid'),
         mysql_engine='InnoDB',
         mysql_charset='latin1',
     )
 
-    resource_provider_aggregates = sa.Table(
-        'resource_provider_aggregates', meta,
+    op.create_table(
+        'resource_provider_aggregates',
         sa.Column(
             'resource_provider_id', sa.Integer, primary_key=True,
             nullable=False),
@@ -1276,7 +1318,8 @@ def upgrade(migrate_engine):
         mysql_charset='latin1',
     )
 
-    s3_images = sa.Table('s3_images', meta,
+    op.create_table(
+        's3_images',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1287,8 +1330,26 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    security_group_instance_association = sa.Table(
-        'security_group_instance_association', meta,
+    op.create_table(
+        'security_groups',
+        sa.Column('created_at', sa.DateTime),
+        sa.Column('updated_at', sa.DateTime),
+        sa.Column('deleted_at', sa.DateTime),
+        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
+        sa.Column('name', sa.String(length=255)),
+        sa.Column('description', sa.String(length=255)),
+        sa.Column('user_id', sa.String(length=255)),
+        sa.Column('project_id', sa.String(length=255)),
+        sa.Column('deleted', sa.Integer),
+        sa.UniqueConstraint(
+            'project_id', 'name', 'deleted',
+            name='uniq_security_groups0project_id0name0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8'
+    )
+
+    op.create_table(
+        'security_group_instance_association',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1313,7 +1374,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    security_group_rules = sa.Table('security_group_rules', meta,
+    op.create_table(
+        'security_group_rules',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1331,25 +1393,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    security_groups = sa.Table('security_groups', meta,
-        sa.Column('created_at', sa.DateTime),
-        sa.Column('updated_at', sa.DateTime),
-        sa.Column('deleted_at', sa.DateTime),
-        sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('name', sa.String(length=255)),
-        sa.Column('description', sa.String(length=255)),
-        sa.Column('user_id', sa.String(length=255)),
-        sa.Column('project_id', sa.String(length=255)),
-        sa.Column('deleted', sa.Integer),
-        UniqueConstraint(
-            'project_id', 'name', 'deleted',
-            name='uniq_security_groups0project_id0name0deleted'),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    security_group_default_rules = sa.Table(
-        'security_group_default_rules', meta,
+    op.create_table(
+        'security_group_default_rules',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1363,7 +1408,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8',
     )
 
-    services = sa.Table('services', meta,
+    op.create_table(
+        'services',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1383,17 +1429,18 @@ def upgrade(migrate_engine):
         sa.Column('version', sa.Integer, default=0),
         sa.Column('uuid', sa.String(36), nullable=True),
         sa.Index('services_uuid_idx', 'uuid', unique=True),
-        UniqueConstraint(
+        sa.UniqueConstraint(
             'host', 'topic', 'deleted',
             name='uniq_services0host0topic0deleted'),
-        UniqueConstraint(
+        sa.UniqueConstraint(
             'host', 'binary', 'deleted',
             name='uniq_services0host0binary0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
 
-    snapshot_id_mappings = sa.Table('snapshot_id_mappings', meta,
+    op.create_table(
+        'snapshot_id_mappings',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1404,7 +1451,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    snapshots = sa.Table('snapshots', meta,
+    op.create_table(
+        'snapshots',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1424,7 +1472,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    tags = sa.Table('tags', meta,
+    op.create_table(
+        'tags',
         sa.Column(
             'resource_id', sa.String(36), primary_key=True, nullable=False),
         sa.Column('tag', sa.Unicode(80), primary_key=True, nullable=False),
@@ -1433,7 +1482,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8',
     )
 
-    task_log = sa.Table('task_log', meta,
+    op.create_table(
+        'task_log',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1450,7 +1500,7 @@ def upgrade(migrate_engine):
         sa.Index('ix_task_log_period_beginning', 'period_beginning'),
         sa.Index('ix_task_log_host', 'host'),
         sa.Index('ix_task_log_period_ending', 'period_ending'),
-        UniqueConstraint(
+        sa.UniqueConstraint(
             'task_name', 'host', 'period_beginning', 'period_ending',
             name='uniq_task_log0task_name0host0period_beginning0period_ending',
         ),
@@ -1458,7 +1508,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    virtual_interfaces = sa.Table('virtual_interfaces', meta,
+    op.create_table(
+        'virtual_interfaces',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1477,14 +1528,15 @@ def upgrade(migrate_engine):
         sa.Index('virtual_interfaces_instance_uuid_fkey', 'instance_uuid'),
         sa.Index('virtual_interfaces_network_id_idx', 'network_id'),
         sa.Index('virtual_interfaces_uuid_idx', 'uuid'),
-        UniqueConstraint(
+        sa.UniqueConstraint(
             'address', 'deleted',
             name='uniq_virtual_interfaces0address0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
 
-    volume_id_mappings = sa.Table('volume_id_mappings', meta,
+    op.create_table(
+        'volume_id_mappings',
         sa.Column('created_at', sa.DateTime),
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
@@ -1495,7 +1547,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    volume_usage_cache = sa.Table('volume_usage_cache', meta,
+    op.create_table(
+        'volume_usage_cache',
         sa.Column('created_at', sa.DateTime(timezone=False)),
         sa.Column('updated_at', sa.DateTime(timezone=False)),
         sa.Column('deleted_at', sa.DateTime(timezone=False)),
@@ -1520,42 +1573,8 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    # create all tables
-    tables = [instances, aggregates, console_auth_tokens,
-              console_pools, instance_types,
-              security_groups, snapshots,
-              # those that are children and others later
-              agent_builds, aggregate_hosts, aggregate_metadata,
-              block_device_mapping, bw_usage_cache, cells,
-              certificates, compute_nodes, consoles,
-              dns_domains, fixed_ips, floating_ips,
-              instance_faults, instance_id_mappings, instance_info_caches,
-              instance_metadata, instance_system_metadata,
-              instance_type_extra_specs, instance_type_projects,
-              instance_actions, instance_actions_events, instance_extra,
-              groups, group_policy, group_member,
-              key_pairs, migrations, networks,
-              pci_devices, provider_fw_rules, quota_classes, quota_usages,
-              quotas, project_user_quotas,
-              reservations, s3_images, security_group_instance_association,
-              security_group_rules, security_group_default_rules,
-              services, snapshot_id_mappings, tags, task_log,
-              virtual_interfaces,
-              volume_id_mappings,
-              volume_usage_cache,
-              resource_providers, inventories, allocations,
-              resource_provider_aggregates]
-
-    for table in tables:
-        try:
-            table.create()
-        except Exception:
-            LOG.info(repr(table))
-            LOG.exception('Exception while creating table.')
-            raise
-
     # MySQL specific indexes
-    if migrate_engine.name == 'mysql':
+    if bind.engine.name == 'mysql':
         # NOTE(stephenfin): For some reason, we have to put this within the if
         # statement to avoid it being evaluated for the sqlite case. Even
         # though we don't call create except in the MySQL case... Failure to do
@@ -1565,46 +1584,46 @@ def upgrade(migrate_engine):
         #   index: instance_type_id
         #
         # Yeah, I don't get it either...
-        mysql_specific_indexes = [
-            sa.Index(
-                'instance_type_id',
-                instance_type_projects.c.instance_type_id),
-            sa.Index('usage_id', reservations.c.usage_id),
-            sa.Index(
-                'security_group_id',
-                security_group_instance_association.c.security_group_id),
-        ]
+        op.create_index(
+            'instance_type_id',
+            'instance_type_projects',
+            ['instance_type_id'],
+        ),
+        op.create_index('usage_id', 'reservations', ['usage_id']),
+        op.create_index(
+            'security_group_id',
+            'security_group_instance_association',
+            ['security_group_id'],
+        ),
 
-        for index in mysql_specific_indexes:
-            index.create(migrate_engine)
-
-    if migrate_engine.name == 'mysql':
-        # In Folsom we explicitly converted migrate_version to UTF8.
-        migrate_engine.execute(
-            'ALTER TABLE migrate_version CONVERT TO CHARACTER SET utf8')
+    if bind.engine.name == 'mysql':
         # Set default DB charset to UTF8.
-        migrate_engine.execute(
+        op.execute(
             'ALTER DATABASE `%s` DEFAULT CHARACTER SET utf8' %
-            migrate_engine.url.database)
+            bind.engine.url.database)
 
         # NOTE(cdent): The resource_providers table is defined as latin1 to be
         # more efficient. Now we need the name column to be UTF8. We modify it
         # here otherwise the declarative handling in sqlalchemy gets confused.
-        migrate_engine.execute(
+        op.execute(
             'ALTER TABLE resource_providers MODIFY name '
             'VARCHAR(200) CHARACTER SET utf8')
 
-    _create_shadow_tables(migrate_engine)
+    _create_shadow_tables(bind)
 
     # TODO(stephenfin): Fix these various bugs in a follow-up
 
     # 298_mysql_extra_specs_binary_collation; we should update the shadow table
     # also
 
-    if migrate_engine.name == 'mysql':
+    if bind.engine.name == 'mysql':
         # Use binary collation for extra specs table
-        migrate_engine.execute(
+        op.execute(
             'ALTER TABLE instance_type_extra_specs '
             'CONVERT TO CHARACTER SET utf8 '
             'COLLATE utf8_bin'
         )
+
+
+def downgrade():
+    pass
