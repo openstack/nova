@@ -10,6 +10,29 @@ Guide </admin/index>`.
 Configuration
 -------------
 
+Nova, like most OpenStack projects, uses INI-style configuration files to
+configure various services and utilities. This functionality is provided by the
+`oslo.config`__ project. *oslo.config* supports loading configuration from both
+individual configuration files and a directory of configuration files. By
+default, nova will search the below directories for two config files -
+``nova.conf`` and ``{prog}.conf``, where ``prog`` corresponds to the name of
+the service or utility being configured such as :program:`nova-compute` - and
+two config directories - ``nova.conf.d`` and ``{prog}.conf.d``:
+
+- ``${HOME}/.nova``
+- ``${HOME}``
+- ``/etc/nova``
+- ``/etc``
+- ``${SNAP_COMMON}/etc/nova/``
+- ``${SNAP}/etc/nova/``
+
+Where a matching file is found, all other directories will be skipped.
+This behavior can be overridden by using the ``--config-file`` and
+``--config-dir`` options provided for each executable.
+
+More information on how you can use the configuration options to configure
+services and what configuration options are available can be found below.
+
 * :doc:`Configuration Guide </admin/configuration/index>`: Detailed
   configuration guides for various parts of your Nova system. Helpful
   reference for setting up specific hypervisor backends.
@@ -42,22 +65,29 @@ Configuration
 
       sample-config
 
+.. __: https://docs.openstack.org/oslo.config/latest/
+
 Policy
 ------
 
 Nova, like most OpenStack projects, uses a policy language to restrict
-permissions on REST API actions.
+permissions on REST API actions. This functionality is provided by the
+`oslo.policy`__ project. *oslo.policy* supports loading policy configuration
+from both an individual configuration file, which defaults to ``policy.yaml``,
+and one or more directories of configuration files, which defaults to
+``policy.d``. These must be located in the same directory as the ``nova.conf``
+file(s). This behavior can be overridden by setting the
+:oslo.config:option:`oslo_policy.policy_file` and
+:oslo.config:option:`oslo_policy.policy_dirs` configuration options.
+
+More information on how nova's policy configuration works and about what
+policies are available can be found below.
 
 * :doc:`Policy Concepts <policy-concepts>`: Starting in the Ussuri
   release, Nova API policy defines new default roles with system scope
   capabilities. These new changes improve the security level and
   manageability of Nova API as they are richer in terms of handling access at
   system and project level token with 'Read' and 'Write' roles.
-
-.. toctree::
-   :hidden:
-
-   policy-concepts
 
 * :doc:`Policy Reference <policy>`: A complete reference of all
   policy points in nova and what they impact.
@@ -75,6 +105,7 @@ permissions on REST API actions.
 .. toctree::
    :hidden:
 
+   policy-concepts
    policy
 
 .. # NOTE(amotoki): Sample files are only available in HTML document.
@@ -86,6 +117,8 @@ permissions on REST API actions.
       :hidden:
 
       sample-policy
+
+.. __: https://docs.openstack.org/oslo.policy/latest/
 
 Extra Specs
 -----------
