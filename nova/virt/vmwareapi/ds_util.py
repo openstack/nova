@@ -395,7 +395,7 @@ def file_size(session, ds_browser, ds_path, file_name):
                                        datastorePath=str(ds_path),
                                        searchSpec=search_spec)
     task_info = session._wait_for_task(search_task)
-    if hasattr(task_info.result, 'file'):
+    if hasattr(task_info.result, 'file') and task_info.result.file:
         return task_info.result.file[0].fileSize
 
 

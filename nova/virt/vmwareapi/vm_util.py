@@ -1069,7 +1069,7 @@ def _get_allocated_vnc_ports(session):
                                   "VirtualMachine", [VNC_CONFIG_KEY])
     while result:
         for obj in result.objects:
-            if not hasattr(obj, 'propSet'):
+            if not hasattr(obj, 'propSet') or not obj.propSet:
                 continue
             dynamic_prop = obj.propSet[0]
             option_value = dynamic_prop.val
@@ -1328,7 +1328,7 @@ def get_cluster_ref_by_name(session, cluster_name):
     """Get reference to the vCenter cluster with the specified name."""
     all_clusters = get_all_cluster_mors(session)
     for cluster in all_clusters:
-        if (hasattr(cluster, 'propSet') and
+        if (hasattr(cluster, 'propSet') and cluster.propSet and
                     cluster.propSet[0].val == cluster_name):
             return cluster.obj
 
