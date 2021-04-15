@@ -170,12 +170,14 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         train_placeholders = list(range(68, 73))
         ussuri_placeholders = list(range(73, 78))
         victoria_placeholders = list(range(78, 83))
+        wallaby_placeholders = list(range(83, 88))
         special_cases = [
             self.INIT_VERSION + 1,  # initial change
         ]
         return (train_placeholders +
                 ussuri_placeholders +
                 victoria_placeholders +
+                wallaby_placeholders +
                 special_cases)
 
     def migrate_up(self, version, with_data=False):
