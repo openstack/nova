@@ -276,7 +276,7 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     # enable to provide info needed by udev to generate /dev/disk/by-id
     opt = client_factory.create('ns0:OptionValue')
     opt.key = "disk.EnableUUID"
-    opt.value = True
+    opt.value = 'true'
     extra_config.append(opt)
 
     port_index = 0
