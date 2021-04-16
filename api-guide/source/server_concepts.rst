@@ -606,7 +606,7 @@ Server actions
    - Restore Soft-Deleted Instance (restore Action)
    - Resume Suspended Server (resume Action)
    - Revert Resized Server (revertResize Action)
-   - Shelf-Offload (Remove) Server (shelveOffload Action)
+   - Shelve-Offload (Remove) Server (shelveOffload Action)
    - Shelve Server (shelve Action)
    - Start Server (os-start Action)
    - Stop Server (os-stop Action)
