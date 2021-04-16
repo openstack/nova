@@ -116,12 +116,12 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         return timeutils.parse_strtime(ts, fmt=TIMESTAMP_FORMAT)
 
     def _get_ds_browser(self, ds_ref):
-        ds_browser = self._ds_browser.get(ds_ref.value)
+        ds_browser = self._ds_browser.get(vutil.get_moref_value(ds_ref))
         if not ds_browser:
             ds_browser = vutil.get_object_property(self._session.vim,
                                                    ds_ref,
                                                    "browser")
-            self._ds_browser[ds_ref.value] = ds_browser
+            self._ds_browser[vutil.get_moref_value(ds_ref)] = ds_browser
         return ds_browser
 
     def _list_datastore_images(self, ds_path, datastore):

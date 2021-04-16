@@ -1623,15 +1623,18 @@ def create_folder(session, parent_folder_ref, name):
     """
 
     LOG.debug("Creating folder: %(name)s. Parent ref: %(parent)s.",
-              {'name': name, 'parent': parent_folder_ref.value})
+              {'name': name,
+               'parent': vutil.get_moref_value(parent_folder_ref)})
     try:
         folder = session._call_method(session.vim, "CreateFolder",
                                       parent_folder_ref, name=name)
         LOG.info("Created folder: %(name)s in parent %(parent)s.",
-                 {'name': name, 'parent': parent_folder_ref.value})
+                 {'name': name,
+                  'parent': vutil.get_moref_value(parent_folder_ref)})
     except vexc.DuplicateName as e:
         LOG.debug("Folder already exists: %(name)s. Parent ref: %(parent)s.",
-                  {'name': name, 'parent': parent_folder_ref.value})
+                  {'name': name,
+                   'parent': vutil.get_moref_value(parent_folder_ref)})
         val = e.details['object']
         folder = vutil.get_moref(val, 'Folder')
     return folder

@@ -300,7 +300,7 @@ class VMwareVolumeOps(object):
                      'initiator': iqn,
                      'host': CONF.vmware.host_ip}
         if vm_ref:
-            connector['instance'] = vm_ref.value
+            connector['instance'] = vutil.get_moref_value(vm_ref)
         return connector
 
     def _get_volume_ref(self, volume_ref_name):
