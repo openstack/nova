@@ -1,5 +1,6 @@
 nova/compute/manager.py
 nova/crypto.py
+nova/network/neutron.py
 nova/privsep/path.py
 nova/scheduler/request_filter.py
 nova/scheduler/utils.py
