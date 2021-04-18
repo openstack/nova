@@ -21,6 +21,9 @@ import webob.exc
 
 from nova.api.openstack import wsgi
 from nova.api import wsgi as base_wsgi
+import nova.conf
+
+CONF = nova.conf.CONF
 
 # TODO(sdague) maybe we can use a better name here for the logger
 LOG = logging.getLogger(__name__)
@@ -65,8 +68,17 @@ class RequestLog(base_wsgi.Middleware):
         # wsgi stack, res is going to be an empty dict for the
         # fallback logging. So never count on it having attributes.
         status = getattr(res, "status", "500 Error").split(None, 1)[0]
+
+        remote_address = req.environ.get('REMOTE_ADDR', '-')
+
+        # If the API is configured to treat the X-Forwarded-For header as the
+        # canonical remote address, use its value instead.
+        if CONF.api.use_forwarded_for:
+            remote_address = req.environ.get(
+                'HTTP_X_FORWARDED_FOR', remote_address)
+
         data = {
-            'REMOTE_ADDR': req.environ.get('REMOTE_ADDR', '-'),
+            'REMOTE_ADDR': remote_address,
             'REQUEST_METHOD': req.environ['REQUEST_METHOD'],
             'REQUEST_URI': self._get_uri(req.environ),
             'status': status,
