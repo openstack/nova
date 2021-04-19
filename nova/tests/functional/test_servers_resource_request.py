@@ -81,6 +81,7 @@ class PortResourceRequestBasedSchedulingTestBase(
         self.compute1_rp_uuid = self._get_provider_uuid_by_host('host1')
         self.compute1_service_id = self.admin_api.get_services(
             host='host1', binary='nova-compute')[0]['id']
+        self.ovs_agent_rp_per_host = {}
         self.ovs_bridge_rp_per_host = {}
         self.sriov_dev_rp_per_host = {}
         self.flavor = self.api.get_flavors()[0]
@@ -142,19 +143,24 @@ class PortResourceRequestBasedSchedulingTestBase(
             "uuid": ovs_agent_rp_uuid,
             "parent_provider_uuid": compute_rp_uuid
         }
-        self.placement.post('/resource_providers',
-                                body=agent_rp_req,
-                                version='1.20')
+        self.placement.post(
+            '/resource_providers', body=agent_rp_req, version='1.20')
+        self.ovs_agent_rp_per_host[compute_rp_uuid] = ovs_agent_rp_uuid
         ovs_bridge_rp_uuid = getattr(uuids, ovs_agent_rp_uuid + 'ovs br')
         ovs_bridge_req = {
             "name": ovs_bridge_rp_uuid,
             "uuid": ovs_bridge_rp_uuid,
             "parent_provider_uuid": ovs_agent_rp_uuid
         }
-        self.placement.post('/resource_providers',
-                                body=ovs_bridge_req,
-                                version='1.20')
+        self.placement.post(
+            '/resource_providers', body=ovs_bridge_req, version='1.20')
         self.ovs_bridge_rp_per_host[compute_rp_uuid] = ovs_bridge_rp_uuid
+
+        self._set_provider_inventories(
+            ovs_agent_rp_uuid,
+            {"inventories": {
+                orc.NET_PACKET_RATE_KILOPACKET_PER_SEC: {"total": 10000},
+            }})
 
         self._set_provider_inventories(
             ovs_bridge_rp_uuid,
@@ -165,6 +171,9 @@ class PortResourceRequestBasedSchedulingTestBase(
 
         self._create_trait(self.CUSTOM_VNIC_TYPE_NORMAL)
         self._create_trait(self.CUSTOM_PHYSNET2)
+
+        self._set_provider_traits(
+            ovs_agent_rp_uuid, [self.CUSTOM_VNIC_TYPE_NORMAL])
 
         self._set_provider_traits(
             ovs_bridge_rp_uuid,

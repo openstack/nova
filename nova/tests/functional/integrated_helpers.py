@@ -598,6 +598,10 @@ class PlacementHelperMixin:
         ).body['resource_classes']
         return [d['name'] for d in resp]
 
+    def _create_resource_class(self, resource_class):
+        return self.placement.post(
+            '/resource_classes', {"name": resource_class}, version='1.6')
+
     def _get_all_providers(self):
         return self.placement.get(
             '/resource_providers', version='1.14'
