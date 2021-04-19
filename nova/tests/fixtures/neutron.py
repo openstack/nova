@@ -496,68 +496,6 @@ class NeutronFixture(fixtures.Fixture):
         'port_security_enabled': False,
     }
 
-    port_with_sriov_resource_request = {
-        'id': '7059503b-a648-40fd-a561-5ca769304bee',
-        'name': '',
-        'description': '',
-        'network_id': network_2['id'],
-        'admin_state_up': True,
-        'status': 'ACTIVE',
-        'mac_address': '52:54:00:1e:59:c5',
-        # Do neutron really adds fixed_ips to an direct vnic_type port?
-        'fixed_ips': [
-            {
-                'ip_address': '192.168.13.3',
-                'subnet_id': subnet_2['id']
-            }
-        ],
-        'tenant_id': tenant_id,
-        'project_id': tenant_id,
-        'device_id': '',
-        'resource_request': {
-            "resources": {
-                orc.NET_BW_IGR_KILOBIT_PER_SEC: 10000,
-                orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
-            "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_DIRECT"]
-        },
-        'binding:profile': {},
-        'binding:vif_details': {},
-        'binding:vif_type': 'hw_veb',
-        'binding:vnic_type': 'direct',
-        'port_security_enabled': False,
-    }
-
-    port_macvtap_with_resource_request = {
-        'id': 'cbb9707f-3559-4675-a973-4ea89c747f02',
-        'name': '',
-        'description': '',
-        'network_id': network_2['id'],
-        'admin_state_up': True,
-        'status': 'ACTIVE',
-        'mac_address': '52:54:00:1e:59:c6',
-        # Do neutron really adds fixed_ips to an direct vnic_type port?
-        'fixed_ips': [
-            {
-                'ip_address': '192.168.13.4',
-                'subnet_id': subnet_2['id']
-            }
-        ],
-        'tenant_id': tenant_id,
-        'project_id': tenant_id,
-        'device_id': '',
-        'resource_request': {
-            "resources": {
-                orc.NET_BW_IGR_KILOBIT_PER_SEC: 10000,
-                orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
-            "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_MACVTAP"]
-        },
-        'binding:profile': {},
-        'binding:vif_details': {},
-        'binding:vif_type': 'hw_veb',
-        'binding:vnic_type': 'macvtap',
-        'port_security_enabled': False,
-    }
-
     ports_with_accelerator = [
         {
         'id': '7970ec1f-7ce0-4293-a2a3-92cbce8048b4',
