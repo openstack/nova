@@ -973,7 +973,7 @@ are listed. Use the :option:`--cell_uuid` option to list hosts in a specific cel
    * - 0
      - Success.
    * - 1
-     - The cell indidicatd by :option:`--cell_uuid` was not found.
+     - The cell indicated by :option:`--cell_uuid` was not found.
 
 cell_v2 update_cell
 -------------------
@@ -1019,23 +1019,24 @@ defined by :oslo.config:option:`transport_url` in the configuration file.
 
 .. option:: --transport-url <transport_url>
 
-    Set the cell transport_url. NOTE that running nodes will not see the change
-    until restart!
+    Set the cell ``transport_url``. Note that running nodes will not see
+    the change until restarted or the ``SIGHUP`` signal is sent.
 
 .. option:: --database_connection <database_connection>
 
-    Set the cell database_connection. NOTE that running nodes will not see the
-    change until restart!
+    Set the cell ``database_connection``. Note that running nodes will not see
+    the change until restarted or the ``SIGHUP`` signal is sent.
 
 .. option:: --disable
 
     Disables the cell. Note that the scheduling will be blocked to this cell
-    until it is enabled and followed by a SIGHUP of nova-scheduler service.
+    until it is enabled and the ``nova-scheduler`` service is restarted or
+    the ``SIGHUP`` signal is sent.
 
 .. option:: --enable
 
-    Enables the cell. Note that this makes a disabled cell available for
-    scheduling after a SIGHUP of the nova-scheduler service.
+    Enables the cell. Note that the ``nova-scheduler`` service will not see the
+    change until it is restarted or the ``SIGHUP`` signal is sent.
 
 .. rubric:: Return codes
 
