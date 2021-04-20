@@ -49,6 +49,15 @@
           # to the other, which is mostly only interesting for grenade since
           # we have mixed level computes.
           export DEVSTACK_LOCAL_CONFIG+=$'\n'"LIVE_MIGRATE_BACK_AND_FORTH=True"
+          # TODO(lucasagomes): The block below is explicitly enabling
+          # ML2/OVS for the nova grenade jobs. Remove it after at least
+          # one release where ML2/OVN is the default backend.
+          export DEVSTACK_LOCAL_CONFIG+=$'\n'"Q_AGENT=openvswitch"
+          export DEVSTACK_LOCAL_CONFIG+=$'\n'"Q_ML2_TENANT_NETWORK_TYPE=vxlan"
+          export DEVSTACK_LOCAL_CONFIG+=$'\n'"Q_ML2_PLUGIN_MECHANISM_DRIVERS=openvswitch,l2population"
+          export DEVSTACK_LOCAL_CONFIG+=$'\n'"disable_service ovn-controller"
+          export DEVSTACK_LOCAL_CONFIG+=$'\n'"disable_service ovn-northd"
+          export DEVSTACK_LOCAL_CONFIG+=$'\n'"disable_service q-ovn-metadata-agent"
           export BRANCH_OVERRIDE=default
           export DEVSTACK_GATE_TOPOLOGY="multinode"
           if [ "$BRANCH_OVERRIDE" != "default" ] ; then
