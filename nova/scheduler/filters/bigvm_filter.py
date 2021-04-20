@@ -111,6 +111,7 @@ class BigVmFlavorHostSizeFilter(BigVmBaseFilter):
     """
     _EXTRA_SPECS_KEY = 'host_fraction'
     _HV_SIZE_TOLERANCE_PERCENT = 10
+    _NUMA_TRAIT_SPEC_PREFIX = 'trait:CUSTOM_NUMASIZE_'
 
     def _memory_match_with_tolerance(self, memory_mb, requested_ram_mb):
         """Return True if requested_ram_mb is equal to memory_mb or down to
@@ -119,14 +120,34 @@ class BigVmFlavorHostSizeFilter(BigVmBaseFilter):
         tolerance = memory_mb * self._HV_SIZE_TOLERANCE_PERCENT / 100.0
         return memory_mb - tolerance <= requested_ram_mb <= memory_mb
 
+    def _get_numa_trait_requirement(self, extra_specs):
+        """Return the (first) extra_specs key for required numa host traits."""
+        try:
+            return next(k for k, v in extra_specs.items()
+                        if k.startswith(self._NUMA_TRAIT_SPEC_PREFIX) and
+                            v == "required")
+        except StopIteration:
+            return None
+
     def _check_flavor_extra_specs(self, host_state, flavor,
                                   hypervisor_ram_mb, requested_ram_mb):
         """Use a flavor attribute to define the fraction of the host this VM
         should match.
         """
         extra_specs = flavor.extra_specs
-        # if there's no definition in the big VM flavor, we cannot make an
-        # informed decision and bail out
+
+        # Check if we ask for a specific NUMA trait and if so we assume this
+        # cluster already matched via trait requirement in placement.
+        numa_trait_spec = self._get_numa_trait_requirement(extra_specs)
+        if numa_trait_spec:
+            LOG.debug('Flavor %(flavor_name)s has NUMA host requirement '
+                      '%(numa_trait) set. Host-fraction filtering ignored.',
+                      {'flavor_name': flavor.name,
+                       'numa_trait': numa_trait_spec.replace('trait:', '')})
+            return True
+
+        # if numa trait is not set and there's no host_fraction definition in
+        # the big VM flavor, we cannot make an informed decision and bail out
         if self._EXTRA_SPECS_KEY not in extra_specs:
             LOG.info('Flavor %(flavor_name)s has no extra_specs.'
                      '%(specs_key)s. Cannot schedule on %(host_state)s.',

@@ -336,3 +336,25 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_has_numa_trait_required(self):
+        """test trait:CUSTOM_NUMASIZE_*=required passes filter"""
+        extra_specs = {'trait:CUSTOM_NUMASIZE_C1_M1': 'required'}
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs=extra_specs,
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_extra_specs_has_numa_trait_not_required(self):
+        """test trait:CUSTOM_NUMASIZE_*=forbidden fails filter"""
+        extra_specs = {'trait:CUSTOM_NUMASIZE_C1_M1': 'forbidden'}
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=CONF.bigvm_mb,
+                                  extra_specs=extra_specs,
+                                  name='random-name'))
+        host = fakes.FakeHostState('host1', 'compute',
+                {'uuid': uuidsentinel.host1})
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
