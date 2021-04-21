@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    To fix `device detach issues`__ in the libvirt driver the detach logic has
+    been changed from a sleep based retry loop to waiting for libvirt domain
+    events. During this change we also introduced two new config options to
+    allow fine tuning the retry logic. For details see the description of the
+    new ``[libvirt]device_detach_attempts`` and
+    ``[libvirt]device_detach_timeout`` config options.
+
+    .. __: https://bugs.launchpad.net/nova/+bug/1882521

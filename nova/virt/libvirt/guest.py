@@ -31,7 +31,6 @@ import time
 
 from lxml import etree
 from oslo_log import log as logging
-from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
@@ -398,109 +397,6 @@ class Guest(object):
                 isinstance(dev, devtype)):
                 devs.append(dev)
         return devs
-
-    def detach_device_with_retry(self, get_device_conf_func, device, live,
-                                 max_retry_count=7, inc_sleep_time=10,
-                                 max_sleep_time=60,
-                                 alternative_device_name=None):
-        """Detaches a device from the guest. After the initial detach request,
-        a function is returned which can be used to ensure the device is
-        successfully removed from the guest domain (retrying the removal as
-        necessary).
-
-        :param get_device_conf_func: function which takes device as a parameter
-                                     and returns the configuration for device
-        :param device: device to detach
-        :param live: bool to indicate whether it affects the guest in running
-                     state
-        :param max_retry_count: number of times the returned function will
-                                retry a detach before failing
-        :param inc_sleep_time: incremental time to sleep in seconds between
-                               detach retries
-        :param max_sleep_time: max sleep time in seconds beyond which the sleep
-                               time will not be incremented using param
-                               inc_sleep_time. On reaching this threshold,
-                               max_sleep_time will be used as the sleep time.
-        :param alternative_device_name: This is an alternative identifier for
-            the device if device is not an ID, used solely for error messages.
-        """
-        alternative_device_name = alternative_device_name or device
-
-        def _try_detach_device(conf, persistent=False, live=False):
-            # Raise DeviceNotFound if the device isn't found during detach
-            try:
-                self.detach_device(conf, persistent=persistent, live=live)
-                if get_device_conf_func(device) is None:
-                    LOG.debug('Successfully detached device %s from guest. '
-                              'Persistent? %s. Live? %s',
-                              device, persistent, live)
-            except libvirt.libvirtError as ex:
-                with excutils.save_and_reraise_exception(reraise=False) as ctx:
-                    code = ex.get_error_code()
-                    msg = ex.get_error_message()
-                    if code == libvirt.VIR_ERR_DEVICE_MISSING:
-                        raise exception.DeviceNotFound(
-                            device=alternative_device_name)
-                    # NOTE(lyarwood): https://bugzilla.redhat.com/1878659
-                    # Ignore this known QEMU bug for the time being allowing
-                    # our retry logic to fire again and hopefully see that
-                    # the device has been removed asynchronously by QEMU
-                    # in the meantime when the next call to detach raises
-                    # VIR_ERR_DEVICE_MISSING.
-                    if (code == libvirt.VIR_ERR_INTERNAL_ERROR and
-                        msg and 'already in the process of unplug' in msg
-                    ):
-                        LOG.debug('Ignoring QEMU rejecting our request to '
-                                  'detach as it is caused by a previous '
-                                  'request still being in progress.')
-                        return
-
-                    # Re-raise the original exception if we're not raising
-                    # DeviceNotFound instead. This will avoid logging of a
-                    # "Original exception being dropped" traceback.
-                    ctx.reraise = True
-
-        conf = get_device_conf_func(device)
-        if conf is None:
-            raise exception.DeviceNotFound(device=alternative_device_name)
-
-        persistent = self.has_persistent_configuration()
-
-        LOG.debug('Attempting initial detach for device %s',
-                  alternative_device_name)
-        try:
-            _try_detach_device(conf, persistent, live)
-        except exception.DeviceNotFound:
-            # NOTE(melwitt): There are effectively two configs for an instance.
-            # The persistent config (affects instance upon next boot) and the
-            # live config (affects running instance). When we detach a device,
-            # we need to detach it from both configs if the instance has a
-            # persistent config and a live config. If we tried to detach the
-            # device with persistent=True and live=True and it was not found,
-            # we should still try to detach from the live config, so continue.
-            if persistent and live:
-                pass
-            else:
-                raise
-        LOG.debug('Start retrying detach until device %s is gone.',
-                  alternative_device_name)
-
-        @loopingcall.RetryDecorator(max_retry_count=max_retry_count,
-                                    inc_sleep_time=inc_sleep_time,
-                                    max_sleep_time=max_sleep_time,
-                                    exceptions=exception.DeviceDetachFailed)
-        def _do_wait_and_retry_detach():
-            config = get_device_conf_func(device)
-            if config is not None:
-                # Device is already detached from persistent config
-                # and only the live config needs to be updated.
-                _try_detach_device(config, persistent=False, live=live)
-
-                reason = _("Unable to detach the device from the live config.")
-                raise exception.DeviceDetachFailed(
-                    device=alternative_device_name, reason=reason)
-
-        return _do_wait_and_retry_detach
 
     def detach_device(self, conf, persistent=False, live=False):
         """Detaches device to the guest.
