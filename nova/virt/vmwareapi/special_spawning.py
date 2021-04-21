@@ -127,7 +127,8 @@ class _SpecialVmSpawningServer(object):
             vm_data.append((
                 vm_props['config.instanceUuid'],
                 vm_props['config.hardware.memoryMB'],
-                vm_props['runtime.powerState']))
+                vm_props['runtime.powerState'],
+                vm_props.get('config.managedBy')))
         return vm_data
 
     def remove_host_from_hostgroup(self, context):
@@ -306,9 +307,17 @@ class _SpecialVmSpawningServer(object):
                             'maintenance or became disconnected.')
                 return FREE_HOST_STATE_ERROR
 
+        # filter the VMs on the host, so we don't look at the non-movable
+        # DRS-created and -owned VMs
+        vcls_identifier = (constants.VCLS_EXTENSION_KEY,
+                           constants.VCLS_EXTENSION_TYPE_AGENT)
+        non_vcls_vms = [
+            (u, state) for u, h, state, m in self._get_vms_on_host(host_ref)
+            if not m or (m.extensionKey, m.type) != vcls_identifier]
+
         # check if there are running VMs on that host
-        running_vms = [u for u, h, state in self._get_vms_on_host(host_ref)
-                        if state != 'poweredOff']
+        running_vms = [u for u, state in non_vcls_vms
+                       if state != 'poweredOff']
         if running_vms:
             LOG.debug('Freeing up %(host)s for spawning in progress.',
                       {'host': host_ref.value})
