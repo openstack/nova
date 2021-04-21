@@ -62,24 +62,26 @@ class PolicyCommands(object):
         'project_id', 'user_id', 'quota_class', 'availability_zone',
         'instance_id']
 
-    @cmd_common.args('--api-name', dest='api_name', metavar='<API name>',
-                     help='Will return only passing policy rules containing '
-                          'the given API name.')
-    @cmd_common.args('--target', nargs='+', dest='target', metavar='<Target>',
-                     help='Will return only passing policy rules for the '
-                          'given target. The available targets are %s. When '
-                          '"instance_id" is used, the other targets will be '
-                          'overwritten.' % ','.join(_ACCEPTABLE_TARGETS))
+    @cmd_common.args(
+        '--api-name', dest='api_name', metavar='<name>',
+        help=(
+            'Return only the passing policy rules containing the given API '
+            'name. If unspecified, all passing policy rules will be returned.'
+        ),
+    )
+    @cmd_common.args(
+        '--target', nargs='+', dest='target', metavar='<target>',
+        help=(
+            "The target(s) against which the policy rule authorization will "
+            "be tested. The available targets are: %s. When 'instance_id' is "
+            "used, the other targets will be overwritten. If unspecified, the "
+            "given user will be considered the target." % ', '.join(
+                _ACCEPTABLE_TARGETS
+            )
+        ),
+    )
     def check(self, api_name=None, target=None):
-        """Prints all passing policy rules for the given user.
-
-        :param api_name: If None, all passing policy rules will be printed,
-                         otherwise, only passing policies that contain the
-                         given api_name in their names.
-        :param target: The target against which the policy rule authorization
-                       will be tested. If None, the given user will be
-                       considered as the target.
-        """
+        """Prints all passing policy rules for the given user."""
         context = self._get_context()
         api_name = api_name or ''
         target = self._get_target(context, target)
@@ -104,7 +106,7 @@ class PolicyCommands(object):
         policy authorization.
 
         :returns: None if the given target is None, otherwise returns a proper
-                  authorization target.
+            authorization target.
         :raises nova.exception.InvalidAttribute: if a key in the given target
             is not an acceptable.
         :raises nova.exception.InstanceNotFound: if 'instance_id' is given, and

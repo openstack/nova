@@ -31,6 +31,7 @@ database.
    :maxdepth: 1
 
    nova-manage
+   nova-policy
    nova-status
 
 Service Daemons

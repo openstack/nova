@@ -99,6 +99,10 @@ _man_pages = [
         'Root wrapper daemon for the OpenStack Compute service.',
     ),
     (
+        'nova-policy',
+        'Inspect policy configuration for the OpenStack Compute services.',
+    ),
+    (
         'nova-scheduler',
         'Server for the OpenStack Compute scheduler service.',
     ),

@@ -34,6 +34,7 @@ Files
 * ``/etc/nova/nova.conf``
 * ``/etc/nova/api-paste.ini``
 * ``/etc/nova/policy.yaml``
+* ``/etc/nova/policy.d/``
 * ``/etc/nova/rootwrap.conf``
 * ``/etc/nova/rootwrap.d/``
 
