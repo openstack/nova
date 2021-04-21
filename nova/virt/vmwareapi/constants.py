@@ -71,6 +71,10 @@ SUPPORTED_FLAT_VARIANTS = ["thin", "preallocated", "thick", "eagerZeroedThick"]
 EXTENSION_KEY = 'org.openstack.compute'
 EXTENSION_TYPE_INSTANCE = 'instance'
 
+# extension and type used by vCLS VMs created by DRS beginning from vSphere 7
+VCLS_EXTENSION_KEY = 'com.vmware.vim.eam'
+VCLS_EXTENSION_TYPE_AGENT = 'cluster-agent'
+
 # The max number of devices that can be connected to one adapter
 # One adapter has 16 slots but one reserved for controller
 SCSI_MAX_CONNECT_NUMBER = 15
