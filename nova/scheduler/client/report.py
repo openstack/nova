@@ -181,9 +181,9 @@ class SchedulerReportClient(object):
         self._adapter = adapter
         # An object that contains a nova-compute-side cache of resource
         # provider and inventory information
-        self._provider_tree = None
+        self._provider_tree: provider_tree.ProviderTree = None
         # Track the last time we updated providers' aggregates and traits
-        self._association_refresh_time = None
+        self._association_refresh_time: ty.Dict[str, float] = {}
         self._client = self._create_client()
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
@@ -2452,7 +2452,7 @@ class SchedulerReportClient(object):
             pcpus = usages['usages'].get(orc.PCPU, 0)
             return vcpus + pcpus
 
-        total_counts = {'project': {}}
+        total_counts: ty.Dict[str, ty.Dict[str, int]] = {'project': {}}
         # First query counts across all users of a project
         LOG.debug('Getting usages for project_id %s from placement',
                   project_id)
