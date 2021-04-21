@@ -6032,7 +6032,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _add_vtpm_device(
         self,
-        guest: libvirt_guest.Guest,
+        guest: vconfig.LibvirtConfigGuest,
         flavor: 'objects.Flavor',
         instance: 'objects.Instance',
         image_meta: 'objects.ImageMeta',
@@ -6225,7 +6225,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _configure_guest_by_virt_type(
         self,
-        guest: libvirt_guest.Guest,
+        guest: vconfig.LibvirtConfigGuest,
         instance: 'objects.Instance',
         image_meta: 'objects.ImageMeta',
         flavor: 'objects.Flavor',
@@ -6327,7 +6327,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _conf_non_lxc(
         self,
-        guest: libvirt_guest.Guest,
+        guest: vconfig.LibvirtConfigGuest,
         root_device_name: str,
         rescue: bool,
         instance: 'objects.Instance',
@@ -7258,7 +7258,7 @@ class LibvirtDriver(driver.ComputeDriver):
             events = []
 
         pause = bool(events)
-        guest: libvirt_guest.Guest = None
+        guest: ty.Optional[libvirt_guest.Guest] = None
         try:
             with self.virtapi.wait_for_instance_event(
                     instance, events, deadline=timeout,
@@ -7304,6 +7304,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     cleanup_instance_disks=cleanup_instance_disks)
         # Resume only if domain has been paused
         if pause:
+            assert guest is not None
             guest.resume()
         return guest
 

@@ -28,6 +28,7 @@ then used by all the other libvirt related classes
 """
 
 import time
+import typing as ty
 
 from lxml import etree
 from oslo_log import log as logging
@@ -41,7 +42,11 @@ from nova.i18n import _
 from nova.virt import hardware
 from nova.virt.libvirt import config as vconfig
 
-libvirt = None
+
+if ty.TYPE_CHECKING:
+    import libvirt
+else:
+    libvirt = None
 
 LOG = logging.getLogger(__name__)
 
