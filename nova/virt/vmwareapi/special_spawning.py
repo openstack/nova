@@ -114,7 +114,7 @@ class _SpecialVmSpawningServer(object):
                             "get_properties_for_a_collection_of_objects",
                             "VirtualMachine", vm_mors,
                             ["config.instanceUuid", "runtime.powerState",
-                             "config.hardware.memoryMB"])
+                             "config.hardware.memoryMB", "config.managedBy"])
         for obj in result.objects:
             vm_props = propset_dict(obj.propSet)
             if 'config.instanceUuid' not in vm_props:
