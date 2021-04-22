@@ -14,9 +14,11 @@
 import abc
 import re
 import string
+import typing as ty
 
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova.pci import utils
 
 MAX_VENDOR_ID = 0xFFFF
@@ -29,24 +31,35 @@ ANY = '*'
 REGEX_ANY = '.*'
 
 
+PCISpecAddressType = ty.Union[ty.Dict[str, str], str]
+
+
 class PciAddressSpec(metaclass=abc.ABCMeta):
     """Abstract class for all PCI address spec styles
 
     This class checks the address fields of the pci.passthrough_whitelist
     """
 
+    def __init__(self, pci_addr: str) -> None:
+        self.domain = ''
+        self.bus = ''
+        self.slot = ''
+        self.func = ''
+
     @abc.abstractmethod
     def match(self, pci_addr):
         pass
 
-    def is_single_address(self):
+    def is_single_address(self) -> bool:
         return all([
             all(c in string.hexdigits for c in self.domain),
             all(c in string.hexdigits for c in self.bus),
             all(c in string.hexdigits for c in self.slot),
             all(c in string.hexdigits for c in self.func)])
 
-    def _set_pci_dev_info(self, prop, maxval, hex_value):
+    def _set_pci_dev_info(
+        self, prop: str, maxval: int, hex_value: str
+    ) -> None:
         a = getattr(self, prop)
         if a == ANY:
             return
@@ -70,8 +83,10 @@ class PhysicalPciAddress(PciAddressSpec):
     This function class will validate the address fields for a single
     PCI device.
     """
-    def __init__(self, pci_addr):
+
+    def __init__(self, pci_addr: PCISpecAddressType) -> None:
         try:
+            # TODO(stephenfin): Is this ever actually a string?
             if isinstance(pci_addr, dict):
                 self.domain = pci_addr['domain']
                 self.bus = pci_addr['bus']
@@ -87,7 +102,7 @@ class PhysicalPciAddress(PciAddressSpec):
         except (KeyError, ValueError):
             raise exception.PciDeviceWrongAddressFormat(address=pci_addr)
 
-    def match(self, phys_pci_addr):
+    def match(self, phys_pci_addr: PciAddressSpec) -> bool:
         conditions = [
             self.domain == phys_pci_addr.domain,
             self.bus == phys_pci_addr.bus,
@@ -104,7 +119,7 @@ class PciAddressGlobSpec(PciAddressSpec):
     check for wildcards, and insert wildcards where the field is left blank.
     """
 
-    def __init__(self, pci_addr):
+    def __init__(self, pci_addr: str) -> None:
         self.domain = ANY
         self.bus = ANY
         self.slot = ANY
@@ -129,7 +144,7 @@ class PciAddressGlobSpec(PciAddressSpec):
             self._set_pci_dev_info('bus', MAX_BUS, '%02x')
             self._set_pci_dev_info('slot', MAX_SLOT, '%02x')
 
-    def match(self, phys_pci_addr):
+    def match(self, phys_pci_addr: PciAddressSpec) -> bool:
         conditions = [
             self.domain in (ANY, phys_pci_addr.domain),
             self.bus in (ANY, phys_pci_addr.bus),
@@ -146,7 +161,8 @@ class PciAddressRegexSpec(PciAddressSpec):
     The validation includes check for all PCI address attributes and validate
     their regex.
     """
-    def __init__(self, pci_addr):
+
+    def __init__(self, pci_addr: dict) -> None:
         try:
             self.domain = pci_addr.get('domain', REGEX_ANY)
             self.bus = pci_addr.get('bus', REGEX_ANY)
@@ -159,7 +175,7 @@ class PciAddressRegexSpec(PciAddressSpec):
         except re.error:
             raise exception.PciDeviceWrongAddressFormat(address=pci_addr)
 
-    def match(self, phys_pci_addr):
+    def match(self, phys_pci_addr: PciAddressSpec) -> bool:
         conditions = [
             bool(self.domain_regex.match(phys_pci_addr.domain)),
             bool(self.bus_regex.match(phys_pci_addr.bus)),
@@ -187,11 +203,13 @@ class WhitelistPciAddress(object):
         | passthrough_whitelist = {"vendor_id":"1137","product_id":"0071"}
 
     """
-    def __init__(self, pci_addr, is_physical_function):
+    def __init__(
+        self, pci_addr: PCISpecAddressType, is_physical_function: bool
+    ) -> None:
         self.is_physical_function = is_physical_function
         self._init_address_fields(pci_addr)
 
-    def _check_physical_function(self):
+    def _check_physical_function(self) -> None:
         if self.pci_address_spec.is_single_address():
             self.is_physical_function = (
                 utils.is_physical_function(
@@ -200,7 +218,8 @@ class WhitelistPciAddress(object):
                     self.pci_address_spec.slot,
                     self.pci_address_spec.func))
 
-    def _init_address_fields(self, pci_addr):
+    def _init_address_fields(self, pci_addr: PCISpecAddressType) -> None:
+        self.pci_address_spec: PciAddressSpec
         if not self.is_physical_function:
             if isinstance(pci_addr, str):
                 self.pci_address_spec = PciAddressGlobSpec(pci_addr)
@@ -212,10 +231,12 @@ class WhitelistPciAddress(object):
         else:
             self.pci_address_spec = PhysicalPciAddress(pci_addr)
 
-    def match(self, pci_addr, pci_phys_addr):
-        """Match a device to this PciAddress.  Assume this is called given
-        pci_addr and pci_phys_addr reported by libvirt, no attempt is made to
-        verify if pci_addr is a VF of pci_phys_addr.
+    def match(self, pci_addr: str, pci_phys_addr: ty.Optional[str]) -> bool:
+        """Match a device to this PciAddress.
+
+        Assume this is called with a ``pci_addr`` and ``pci_phys_addr``
+        reported by libvirt. No attempt is made to verify if ``pci_addr`` is a
+        VF of ``pci_phys_addr``.
 
         :param pci_addr: PCI address of the device to match.
         :param pci_phys_addr: PCI address of the parent of the device to match
@@ -237,51 +258,57 @@ class WhitelistPciAddress(object):
 
 
 class PciDeviceSpec(PciAddressSpec):
-    def __init__(self, dev_spec):
+    def __init__(self, dev_spec: ty.Dict[str, str]) -> None:
         self.tags = dev_spec
         self._init_dev_details()
 
-    def _init_dev_details(self):
+    def _init_dev_details(self) -> None:
         self.vendor_id = self.tags.pop("vendor_id", ANY)
         self.product_id = self.tags.pop("product_id", ANY)
+        self.dev_name = self.tags.pop("devname", None)
+        self.address: ty.Optional[WhitelistPciAddress] = None
         # Note(moshele): The address attribute can be a string or a dict.
         # For glob syntax or specific pci it is a string and for regex syntax
         # it is a dict. The WhitelistPciAddress class handles both types.
-        self.address = self.tags.pop("address", None)
-        self.dev_name = self.tags.pop("devname", None)
+        address = self.tags.pop("address", None)
 
         self.vendor_id = self.vendor_id.strip()
         self._set_pci_dev_info('vendor_id', MAX_VENDOR_ID, '%04x')
         self._set_pci_dev_info('product_id', MAX_PRODUCT_ID, '%04x')
 
-        if self.address and self.dev_name:
+        if address and self.dev_name:
             raise exception.PciDeviceInvalidDeviceName()
-        if not self.dev_name:
-            pci_address = self.address or "*:*:*.*"
-            self.address = WhitelistPciAddress(pci_address, False)
 
-    def match(self, dev_dict):
+        if not self.dev_name:
+            self.address = WhitelistPciAddress(address or '*:*:*.*', False)
+
+    def match(self, dev_dict: ty.Dict[str, str]) -> bool:
+        address_obj: ty.Optional[WhitelistPciAddress]
+
         if self.dev_name:
-            address_str, pf = utils.get_function_by_ifname(
-                self.dev_name)
+            address_str, pf = utils.get_function_by_ifname(self.dev_name)
             if not address_str:
                 return False
             # Note(moshele): In this case we always passing a string
             # of the PF pci address
             address_obj = WhitelistPciAddress(address_str, pf)
-        elif self.address:
+        else:  # use self.address
             address_obj = self.address
+
+        if not address_obj:
+            return False
+
         return all([
             self.vendor_id in (ANY, dev_dict['vendor_id']),
             self.product_id in (ANY, dev_dict['product_id']),
             address_obj.match(dev_dict['address'],
                 dev_dict.get('parent_addr'))])
 
-    def match_pci_obj(self, pci_obj):
+    def match_pci_obj(self, pci_obj: 'objects.PciDevice') -> bool:
         return self.match({'vendor_id': pci_obj.vendor_id,
                            'product_id': pci_obj.product_id,
                            'address': pci_obj.address,
                            'parent_addr': pci_obj.parent_addr})
 
-    def get_tags(self):
+    def get_tags(self) -> ty.Dict[str, str]:
         return self.tags

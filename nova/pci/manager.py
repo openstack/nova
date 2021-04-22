@@ -15,11 +15,13 @@
 #    under the License.
 
 import collections
+import typing as ty
 
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
+from nova import context as ctx
 from nova import exception
 from nova import objects
 from nova.objects import fields
@@ -28,6 +30,9 @@ from nova.pci import whitelist
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+MappingType = ty.Dict[str, ty.List['objects.PciDevice']]
+PCIInvType = ty.DefaultDict[str, ty.List['objects.PciDevice']]
 
 
 class PciDevTracker(object):
@@ -51,17 +56,19 @@ class PciDevTracker(object):
     are saved.
     """
 
-    def __init__(self, context, compute_node):
+    def __init__(
+        self,
+        context: ctx.RequestContext,
+        compute_node: 'objects.ComputeNode',
+    ):
         """Create a pci device tracker.
 
         :param context: The request context.
         :param compute_node: The object.ComputeNode whose PCI devices we're
                              tracking.
         """
-
-        super(PciDevTracker, self).__init__()
-        self.stale = {}
-        self.node_id = compute_node.id
+        self.stale: ty.Dict[str, objects.PciDevice] = {}
+        self.node_id: str = compute_node.id
         self.dev_filter = whitelist.Whitelist(CONF.pci.passthrough_whitelist)
         numa_topology = compute_node.numa_topology
         if numa_topology:
@@ -76,9 +83,10 @@ class PciDevTracker(object):
         self._build_device_tree(self.pci_devs)
         self._initial_instance_usage()
 
-    def _initial_instance_usage(self):
-        self.allocations = collections.defaultdict(list)
-        self.claims = collections.defaultdict(list)
+    def _initial_instance_usage(self) -> None:
+        self.allocations: PCIInvType = collections.defaultdict(list)
+        self.claims: PCIInvType = collections.defaultdict(list)
+
         for dev in self.pci_devs:
             uuid = dev.instance_uuid
             if dev.status == fields.PciDeviceStatus.CLAIMED:
@@ -88,7 +96,7 @@ class PciDevTracker(object):
             elif dev.status == fields.PciDeviceStatus.AVAILABLE:
                 self.stats.add_device(dev)
 
-    def save(self, context):
+    def save(self, context: ctx.RequestContext) -> None:
         for dev in self.pci_devs:
             if dev.obj_what_changed():
                 with dev.obj_alternate_context(context):
@@ -97,10 +105,12 @@ class PciDevTracker(object):
                         self.pci_devs.objects.remove(dev)
 
     @property
-    def pci_stats(self):
+    def pci_stats(self) -> stats.PciDeviceStats:
         return self.stats
 
-    def update_devices_from_hypervisor_resources(self, devices_json):
+    def update_devices_from_hypervisor_resources(
+        self, devices_json: str,
+    ) -> None:
         """Sync the pci device tracker with hypervisor information.
 
         To support pci device hot plug, we sync with the hypervisor
@@ -159,7 +169,7 @@ class PciDevTracker(object):
         self._set_hvdevs(devices)
 
     @staticmethod
-    def _build_device_tree(all_devs):
+    def _build_device_tree(all_devs: ty.List['objects.PciDevice']) -> None:
         """Build a tree of devices that represents parent-child relationships.
 
         We need to have the relationships set up so that we can easily make
@@ -196,7 +206,7 @@ class PciDevTracker(object):
                 if dev.parent_device:
                     parents[dev.parent_addr].child_devices.append(dev)
 
-    def _set_hvdevs(self, devices):
+    def _set_hvdevs(self, devices: ty.List[ty.Dict[str, ty.Any]]) -> None:
         exist_addrs = set([dev.address for dev in self.pci_devs])
         new_addrs = set([dev['address'] for dev in devices])
 
@@ -243,6 +253,7 @@ class PciDevTracker(object):
                     self.stats.remove_device(existed)
             else:
                 # Update tracked devices.
+                new_value: ty.Dict[str, ty.Any]
                 new_value = next((dev for dev in devices if
                     dev['address'] == existed.address))
                 new_value['compute_node_id'] = self.node_id
@@ -276,7 +287,12 @@ class PciDevTracker(object):
 
         self._build_device_tree(self.pci_devs)
 
-    def _claim_instance(self, context, pci_requests, instance_numa_topology):
+    def _claim_instance(
+        self,
+        context: ctx.RequestContext,
+        pci_requests: 'objects.InstancePCIRequests',
+        instance_numa_topology: 'objects.InstanceNUMATopology',
+    ) -> ty.List['objects.PciDevice']:
         instance_cells = None
         if instance_numa_topology:
             instance_cells = instance_numa_topology.cells
@@ -284,7 +300,7 @@ class PciDevTracker(object):
         devs = self.stats.consume_requests(pci_requests.requests,
                                            instance_cells)
         if not devs:
-            return None
+            return []
 
         instance_uuid = pci_requests.instance_uuid
         for dev in devs:
@@ -296,18 +312,15 @@ class PciDevTracker(object):
                         {'instance': instance_uuid})
         return devs
 
-    def _allocate_instance(self, instance, devs):
-        for dev in devs:
-            dev.allocate(instance)
+    def claim_instance(
+        self,
+        context: ctx.RequestContext,
+        pci_requests: 'objects.InstancePCIRequests',
+        instance_numa_topology: 'objects.InstanceNUMATopology',
+    ) -> ty.List['objects.PciDevice']:
 
-    def allocate_instance(self, instance):
-        devs = self.claims.pop(instance['uuid'], [])
-        self._allocate_instance(instance, devs)
-        if devs:
-            self.allocations[instance['uuid']] += devs
-
-    def claim_instance(self, context, pci_requests, instance_numa_topology):
         devs = []
+
         if self.pci_devs and pci_requests.requests:
             instance_uuid = pci_requests.instance_uuid
             devs = self._claim_instance(context, pci_requests,
@@ -316,7 +329,21 @@ class PciDevTracker(object):
                 self.claims[instance_uuid] = devs
         return devs
 
-    def free_device(self, dev, instance):
+    def _allocate_instance(
+        self, instance: 'objects.Instance', devs: ty.List['objects.PciDevice'],
+    ) -> None:
+        for dev in devs:
+            dev.allocate(instance)
+
+    def allocate_instance(self, instance: 'objects.Instance') -> None:
+        devs = self.claims.pop(instance['uuid'], [])
+        self._allocate_instance(instance, devs)
+        if devs:
+            self.allocations[instance['uuid']] += devs
+
+    def free_device(
+        self, dev: 'objects.PciDevice', instance: 'objects.Instance'
+    ) -> None:
         """Free device from pci resource tracker
 
         :param dev: cloned pci device object that needs to be free
@@ -335,7 +362,11 @@ class PciDevTracker(object):
                 break
 
     def _remove_device_from_pci_mapping(
-            self, instance_uuid, pci_device, pci_mapping):
+        self,
+        instance_uuid: str,
+        pci_device: 'objects.PciDevice',
+        pci_mapping: MappingType,
+    ) -> None:
         """Remove a PCI device from allocations or claims.
 
         If there are no more PCI devices, pop the uuid.
@@ -346,7 +377,9 @@ class PciDevTracker(object):
             if len(pci_devices) == 0:
                 pci_mapping.pop(instance_uuid, None)
 
-    def _free_device(self, dev, instance=None):
+    def _free_device(
+        self, dev: 'objects.PciDevice', instance: 'objects.Instance' = None,
+    ) -> None:
         freed_devs = dev.free(instance)
         stale = self.stale.pop(dev.address, None)
         if stale:
@@ -354,31 +387,41 @@ class PciDevTracker(object):
         for dev in freed_devs:
             self.stats.add_device(dev)
 
-    def free_instance_allocations(self, context, instance):
+    def free_instance_allocations(
+        self, context: ctx.RequestContext, instance: 'objects.Instance',
+    ) -> None:
         """Free devices that are in ALLOCATED state for instance.
 
-        :param context: user request context (nova.context.RequestContext)
+        :param context: user request context
         :param instance: instance object
         """
-        if self.allocations.pop(instance['uuid'], None):
-            for dev in self.pci_devs:
-                if (dev.status == fields.PciDeviceStatus.ALLOCATED and
-                        dev.instance_uuid == instance['uuid']):
-                    self._free_device(dev)
+        if not self.allocations.pop(instance['uuid'], None):
+            return
 
-    def free_instance_claims(self, context, instance):
+        for dev in self.pci_devs:
+            if (dev.status == fields.PciDeviceStatus.ALLOCATED and
+                    dev.instance_uuid == instance['uuid']):
+                self._free_device(dev)
+
+    def free_instance_claims(
+        self, context: ctx.RequestContext, instance: 'objects.Instance',
+    ) -> None:
         """Free devices that are in CLAIMED state for instance.
 
         :param context: user request context (nova.context.RequestContext)
         :param instance: instance object
         """
-        if self.claims.pop(instance['uuid'], None):
-            for dev in self.pci_devs:
-                if (dev.status == fields.PciDeviceStatus.CLAIMED and
-                        dev.instance_uuid == instance['uuid']):
-                    self._free_device(dev)
+        if not self.claims.pop(instance['uuid'], None):
+            return
 
-    def free_instance(self, context, instance):
+        for dev in self.pci_devs:
+            if (dev.status == fields.PciDeviceStatus.CLAIMED and
+                    dev.instance_uuid == instance['uuid']):
+                self._free_device(dev)
+
+    def free_instance(
+        self, context: ctx.RequestContext, instance: 'objects.Instance',
+    ) -> None:
         """Free devices that are in CLAIMED or ALLOCATED state for instance.
 
         :param context: user request context (nova.context.RequestContext)
@@ -392,9 +435,13 @@ class PciDevTracker(object):
         self.free_instance_allocations(context, instance)
         self.free_instance_claims(context, instance)
 
-    def update_pci_for_instance(self, context, instance, sign):
-        """Update PCI usage information if devices are de/allocated.
-        """
+    def update_pci_for_instance(
+        self,
+        context: ctx.RequestContext,
+        instance: 'objects.Instance',
+        sign: int,
+    ) -> None:
+        """Update PCI usage information if devices are de/allocated."""
         if not self.pci_devs:
             return
 
@@ -403,7 +450,11 @@ class PciDevTracker(object):
         if sign == 1:
             self.allocate_instance(instance)
 
-    def clean_usage(self, instances, migrations):
+    def clean_usage(
+        self,
+        instances: 'objects.InstanceList',
+        migrations: 'objects.MigrationList',
+    ) -> None:
         """Remove all usages for instances not passed in the parameter.
 
         The caller should hold the COMPUTE_RESOURCE_SEMAPHORE lock
@@ -425,7 +476,9 @@ class PciDevTracker(object):
                     self._free_device(dev)
 
 
-def get_instance_pci_devs(inst, request_id=None):
+def get_instance_pci_devs(
+    inst: 'objects.Instance', request_id: str = None,
+) -> ty.List['objects.PciDevice']:
     """Get the devices allocated to one or all requests for an instance.
 
     - For generic PCI request, the request id is None.
@@ -437,5 +490,8 @@ def get_instance_pci_devs(inst, request_id=None):
     pci_devices = inst.pci_devices
     if pci_devices is None:
         return []
-    return [device for device in pci_devices if
-                   device.request_id == request_id or request_id == 'all']
+
+    return [
+        device for device in pci_devices if
+        device.request_id == request_id or request_id == 'all'
+    ]

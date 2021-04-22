@@ -14,10 +14,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import typing as ty
+
 from oslo_serialization import jsonutils
 
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova.pci import devspec
 
 
@@ -30,7 +33,7 @@ class Whitelist(object):
     assignable.
     """
 
-    def __init__(self, whitelist_spec=None):
+    def __init__(self, whitelist_spec: str = None) -> None:
         """White list constructor
 
         For example, the following json string specifies that devices whose
@@ -50,7 +53,9 @@ class Whitelist(object):
             self.specs = []
 
     @staticmethod
-    def _parse_white_list_from_config(whitelists):
+    def _parse_white_list_from_config(
+        whitelists: str,
+    ) -> ty.List[devspec.PciDeviceSpec]:
         """Parse and validate the pci whitelist from the nova config."""
         specs = []
         for jsonspec in whitelists:
@@ -77,7 +82,7 @@ class Whitelist(object):
 
         return specs
 
-    def device_assignable(self, dev):
+    def device_assignable(self, dev: ty.Dict[str, str]) -> bool:
         """Check if a device can be assigned to a guest.
 
         :param dev: A dictionary describing the device properties
@@ -87,7 +92,11 @@ class Whitelist(object):
                 return True
         return False
 
-    def get_devspec(self, pci_dev):
+    def get_devspec(
+        self, pci_dev: 'objects.PciDevice',
+    ) -> ty.Optional[devspec.PciDeviceSpec]:
         for spec in self.specs:
             if spec.match_pci_obj(pci_dev):
                 return spec
+
+        return None

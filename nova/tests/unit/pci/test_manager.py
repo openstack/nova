@@ -448,10 +448,11 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.inst.numa_topology = objects.InstanceNUMATopology(
                     cells=[objects.InstanceNUMACell(
                         id=1, cpuset=set([1, 2]), memory=512)])
-        self.assertIsNone(self.tracker.claim_instance(
-                            mock.sentinel.context,
-                            pci_requests_obj,
-                            self.inst.numa_topology))
+        claims = self.tracker.claim_instance(
+            mock.sentinel.context,
+            pci_requests_obj,
+            self.inst.numa_topology)
+        self.assertEqual([], claims)
 
     def test_update_pci_for_instance_deleted(self):
         pci_requests_obj = self._create_pci_requests_object(fake_pci_requests)
