@@ -306,7 +306,14 @@ class VFSGuestFS(vfs.VFS):
     def read_file(self, path):
         LOG.debug("Read file path=%s", path)
         path = self._canonicalize_path(path)
-        return self.handle.read_file(path)
+        data = self.handle.read_file(path)
+        # NOTE(lyarwood): libguestfs v1.41.1 (0ee02e0117527) switched the
+        # return type of read_file from string to bytes and as such we need to
+        # handle both here, decoding and returning a string if bytes is
+        # provided. https://bugzilla.redhat.com/show_bug.cgi?id=1661871
+        if isinstance(data, bytes):
+            return data.decode()
+        return data
 
     def has_file(self, path):
         LOG.debug("Has file path=%s", path)
