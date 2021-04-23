@@ -615,8 +615,8 @@ def _set_passwd(username, admin_passwd, passwd_data, shadow_data):
 
     :param username: the username
     :param admin_passwd: the admin password
-    :param passwd_data: path to the passwd file
-    :param shadow_data: path to the shadow password file
+    :param passwd_data: Data from the passwd file decoded as a string
+    :param shadow_data: Data from the shadow file decoded as a string
     :returns: nothing
     :raises: exception.NovaException(), IOError()
 
