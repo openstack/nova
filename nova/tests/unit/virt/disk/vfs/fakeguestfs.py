@@ -109,7 +109,7 @@ class GuestFS(object):
                 "mode": 0o700
                 }
 
-        return self.files[path]["content"]
+        return bytes(self.files[path]["content"].encode())
 
     def write(self, path, content):
         if path not in self.files:
