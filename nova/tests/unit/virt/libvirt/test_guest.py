@@ -377,6 +377,48 @@ class GuestTestCase(test.NoDBTestCase):
             error_message="device not found: disk vdb not found",
             supports_device_missing=True)
 
+    def test_detach_device_with_already_in_process_of_unplug_error(self):
+        # Assert that DeviceNotFound is raised when encountering
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1878659
+        # This is raised as QEMU returns a VIR_ERR_INTERNAL_ERROR when
+        # a request to device_del is made while another is about to complete.
+
+        self.domain.isPersistent.return_value = True
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+
+        existing_unplug_exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, "",
+            error_message='device vdb is already in the process of unplug',
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR,
+            error_domain=fakelibvirt.VIR_FROM_DOMAIN
+        )
+        device_missing_exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, "",
+            error_message='device not found: disk vdb not found',
+            error_code=fakelibvirt.VIR_ERR_DEVICE_MISSING,
+            error_domain=fakelibvirt.VIR_FROM_DOMAIN
+        )
+
+        # Raise VIR_ERR_INTERNAL_ERROR on the second call before raising
+        # VIR_ERR_DEVICE_MISSING to mock the first call successfully detaching
+        # the device asynchronously.
+        self.domain.detachDeviceFlags.side_effect = [
+            None,
+            existing_unplug_exc,
+            device_missing_exc
+        ]
+
+        retry_detach = self.guest.detach_device_with_retry(
+            mock.Mock(return_value=conf),
+            'vdb',
+            live=True,
+            inc_sleep_time=.01
+        )
+
+        # Assert that we raise exception.DeviceNotFound
+        self.assertRaises(exception.DeviceNotFound, retry_detach)
+
     def test_get_xml_desc(self):
         self.guest.get_xml_desc()
         self.domain.XMLDesc.assert_called_once_with(flags=0)
