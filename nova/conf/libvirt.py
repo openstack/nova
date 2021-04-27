@@ -235,7 +235,7 @@ Related options:
 * ``live_migration_uri``: If ``live_migration_uri`` value is not None, the
   scheme used for live migration is taken from ``live_migration_uri`` instead.
 """),
-    cfg.HostAddressOpt('live_migration_inbound_addr',
+    cfg.HostDomainOpt('live_migration_inbound_addr',
                        help="""
 IP address used as the live migration address for this host.
 

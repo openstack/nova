@@ -49,7 +49,7 @@ Related options:
 
 * my_ip - if my_block_storage_ip is not set, then my_ip value is used.
 """),
-    cfg.StrOpt("host",
+    cfg.HostDomainOpt("host",
         default=socket.gethostname(),
         sample_default='<current_hostname>',
         help="""
