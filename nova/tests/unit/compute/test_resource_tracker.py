@@ -4178,3 +4178,20 @@ class ProviderConfigTestCases(BaseTestCase):
         mock_log.warning.assert_called_once_with(*expected_log_call)
         self.assertIn(uuids.unknown, self.rt.absent_providers)
         self.assertEqual(result, [])
+
+
+class TestCleanComputeNodeCache(BaseTestCase):
+
+    def setUp(self):
+        super(TestCleanComputeNodeCache, self).setUp()
+        self._setup_rt()
+        self.context = context.RequestContext(
+            mock.sentinel.user_id, mock.sentinel.project_id)
+
+    @mock.patch.object(resource_tracker.ResourceTracker, "remove_node")
+    def test_clean_compute_node_cache(self, mock_remove):
+        invalid_nodename = "invalid-node"
+        self.rt.compute_nodes[_NODENAME] = self.compute
+        self.rt.compute_nodes[invalid_nodename] = mock.sentinel.compute
+        self.rt.clean_compute_node_cache([self.compute])
+        mock_remove.assert_called_once_with(invalid_nodename)

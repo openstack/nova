@@ -82,9 +82,6 @@ class NodeRebalanceDeletedComputeNodeRaceTestCase(
         # Now run the update_available_resource periodic to register fake-node
         # and have it managed by host_b. This will also detect the "host_b"
         # node as orphaned and delete it along with its resource provider.
-        cn_host_b_node = objects.ComputeNode.get_by_host_and_nodename(
-            self.ctxt, 'host_b', 'host_b',
-        )
 
         # host_b[1]: Finds no compute record in RT. Tries to create one
         # (_init_compute_node).
@@ -93,10 +90,6 @@ class NodeRebalanceDeletedComputeNodeRaceTestCase(
         # update for this node. See
         # https://bugs.launchpad.net/nova/+bug/1853159.
         host_b.manager.update_available_resource(self.ctxt)
-        self.assertIn(
-            'Deleting orphan compute node %s hypervisor host '
-            'is host_b, nodes are' % cn_host_b_node.id,
-            self.stdlog.logger.output)
         self._assert_hypervisor_api(self.nodename, expected_host='host_b')
         # There should only be one resource provider (fake-node).
         original_rps = self._get_all_providers()
@@ -160,27 +153,44 @@ class NodeRebalanceDeletedComputeNodeRaceTestCase(
         self.assertEqual(0, len(rps), rps)
 
         # host_b[3]: Should recreate compute node and resource provider.
-        # FIXME(mgoddard): Compute node not recreated here, because it is
-        # already in RT.compute_nodes. See
-        # https://bugs.launchpad.net/nova/+bug/1853009.
         # FIXME(mgoddard): Resource provider not recreated here, because it
         # exists in the provider tree. See
         # https://bugs.launchpad.net/nova/+bug/1841481.
         host_b.manager.update_available_resource(self.ctxt)
 
-        # Verify that the node was not recreated.
-        hypervisors = self.api.api_get(
-            '/os-hypervisors/detail').body['hypervisors']
-        self.assertEqual(0, len(hypervisors), hypervisors)
+        # Verify that the node was recreated.
+        self._assert_hypervisor_api(self.nodename, 'host_b')
 
-        # But the compute node exists in the RT.
-        self.assertIn(self.nodename, host_b.manager.rt.compute_nodes)
+        # But due to https://bugs.launchpad.net/nova/+bug/1853159 the compute
+        # node is not cached in the RT.
+        self.assertNotIn(self.nodename, host_b.manager.rt.compute_nodes)
 
         # There is no RP.
         rps = self._get_all_providers()
         self.assertEqual(0, len(rps), rps)
 
         # But the RP exists in the provider tree.
+        self.assertTrue(host_b.manager.rt.reportclient._provider_tree.exists(
+            self.nodename))
+
+        # host_b[1]: Should add compute node to RT cache and recreate resource
+        # provider.
+        # FIXME(mgoddard): Resource provider not recreated here, because it
+        # exists in the provider tree. See
+        # https://bugs.launchpad.net/nova/+bug/1841481.
+        host_b.manager.update_available_resource(self.ctxt)
+
+        # Verify that the node still exists.
+        self._assert_hypervisor_api(self.nodename, 'host_b')
+
+        # And it is now in the RT cache.
+        self.assertIn(self.nodename, host_b.manager.rt.compute_nodes)
+
+        # There is still no RP.
+        rps = self._get_all_providers()
+        self.assertEqual(0, len(rps), rps)
+
+        # But the RP it exists in the provider tree.
         self.assertTrue(host_b.manager.rt.reportclient._provider_tree.exists(
             self.nodename))
 
