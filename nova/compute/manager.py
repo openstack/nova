@@ -9996,6 +9996,8 @@ class ComputeManager(manager.Manager):
                                                             use_slave=True,
                                                             startup=startup)
 
+        self.rt.clean_compute_node_cache(compute_nodes_in_db)
+
         # Delete orphan compute node not reported by driver but still in db
         for cn in compute_nodes_in_db:
             if cn.hypervisor_hostname not in nodenames:
