@@ -175,7 +175,7 @@
           "type": "string",
           "title": "Port bonding type",
           "enum": [
-            "802.1ad",
+            "802.3ad",
             "balance-rr",
             "active-backup",
             "balance-xor",
@@ -184,7 +184,7 @@
             "balance-alb"
           ],
           "examples": [
-            "802.1ad"
+            "802.3ad"
           ]
         },
         "bond_links": {
