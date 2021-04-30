@@ -1583,8 +1583,9 @@ class VMwareVMOps(object):
         ds_hosts = self._session._call_method(vutil, 'get_object_property',
                                               ds_ref, 'host')
         for ds_host in ds_hosts.DatastoreHostMount:
+            ds_host_ref_value = vutil.get_moref_value(ds_host.key)
             for cluster_host in cluster_hosts.ManagedObjectReference:
-                if ds_host.key.value == cluster_host.value:
+                if ds_host_ref_value == vutil.get_moref_value(cluster_host):
                     return cluster_host
 
     def _find_datastore_for_migration(self, instance, vm_ref, cluster_ref,
@@ -1604,8 +1605,9 @@ class VMwareVMOps(object):
             return None
         # check if the current datastore is connected to the destination
         # cluster
+        ds_ref_value = vutil.get_moref_value(ds_ref)
         for datastore in cluster_datastores.ManagedObjectReference:
-            if datastore.value == ds_ref.value:
+            if vutil.get_moref_value(datastore) == ds_ref_value:
                 ds = ds_obj.get_datastore_by_ref(self._session, ds_ref)
                 if (datastore_regex is None or
                         datastore_regex.match(ds.name)):
@@ -1819,13 +1821,14 @@ class VMwareVMOps(object):
                   instance=instance)
 
     def _get_ds_browser(self, ds_ref):
-        ds_browser = self._datastore_browser_mapping.get(ds_ref.value)
+        ds_ref_value = vutil.get_moref_value(ds_ref)
+        ds_browser = self._datastore_browser_mapping.get(ds_ref_value)
         if not ds_browser:
             ds_browser = self._session._call_method(vutil,
                                                     "get_object_property",
                                                     ds_ref,
                                                     "browser")
-            self._datastore_browser_mapping[ds_ref.value] = ds_browser
+            self._datastore_browser_mapping[ds_ref_value] = ds_browser
         return ds_browser
 
     def _create_folder_if_missing(self, ds_name, ds_ref, folder):

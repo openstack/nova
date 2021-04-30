@@ -136,7 +136,8 @@ class VMwareVCDriver(driver.ComputeDriver):
                                        "found in vCenter")
                                      % self._cluster_name)
         self._vcenter_uuid = self._get_vcenter_uuid()
-        self._nodename = self._create_nodename(self._cluster_ref.value)
+        self._nodename = \
+            self._create_nodename(vim_util.get_moref_value(self._cluster_ref))
         self._volumeops = volumeops.VMwareVolumeOps(self._session,
                                                     self._cluster_ref)
         self._vmops = vmops.VMwareVMOps(self._session,
