@@ -458,7 +458,8 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
                 subnets=[]),
             details={
                 model.VIF_DETAILS_PORT_FILTER: True,
-            }
+            },
+            delegate_create=False,
         )
 
         actual = os_vif_util.nova_to_osvif_vif(vif)
@@ -471,7 +472,8 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             plugin="ovs",
             port_profile=osv_objects.vif.VIFPortProfileOpenVSwitch(
                 interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
-                datapath_type=None),
+                datapath_type=None,
+                create_port=False),
             preserve_on_delete=False,
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(
@@ -588,6 +590,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
                 model.VIF_DETAILS_OVS_DATAPATH_TYPE:
                     model.VIF_DETAILS_OVS_DATAPATH_SYSTEM
             },
+            delegate_create=True,
         )
 
         actual = os_vif_util.nova_to_osvif_vif(vif)
@@ -600,7 +603,8 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             plugin="ovs",
             port_profile=osv_objects.vif.VIFPortProfileOpenVSwitch(
                 interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
-                datapath_type=model.VIF_DETAILS_OVS_DATAPATH_SYSTEM),
+                datapath_type=model.VIF_DETAILS_OVS_DATAPATH_SYSTEM,
+                create_port=True),
             preserve_on_delete=False,
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(

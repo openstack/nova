@@ -7997,11 +7997,12 @@ class ComputeManager(manager.Manager):
                          'but source is either too old, or is set to an '
                          'older upgrade level.', instance=instance)
             if self.network_api.supports_port_binding_extension(ctxt):
-                # Create migrate_data vifs
-                migrate_data.vifs = \
-                    migrate_data_obj.\
-                    VIFMigrateData.create_skeleton_migrate_vifs(
-                        instance.get_network_info())
+                # Create migrate_data vifs if not provided by driver.
+                if 'vifs' not in migrate_data:
+                    migrate_data.vifs = (
+                        migrate_data_obj.
+                        VIFMigrateData.create_skeleton_migrate_vifs(
+                            instance.get_network_info()))
                 # Claim PCI devices for VIFs on destination (if needed)
                 port_id_to_pci = self._claim_pci_for_instance_vifs(
                     ctxt, instance)

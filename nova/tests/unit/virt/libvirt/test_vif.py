@@ -22,6 +22,7 @@ from os_vif.objects import fields as osv_fields
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils.fixture import uuidsentinel as uuids
+import pbr.version
 
 from nova import exception
 from nova.network import model as network_model
@@ -149,7 +150,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         type=network_model.VIF_TYPE_OVS,
         details={'port_filter': True},
         devname='tap-xxx-yyy-zzz',
-        ovs_interfaceid=uuids.ovs)
+        ovs_interfaceid=uuids.ovs,
+        delegate_create=True)
 
     vif_ovs_legacy = network_model.VIF(id=uuids.vif,
         address='ca:fe:de:ad:be:ef',
@@ -410,7 +412,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
         self.os_vif_ovs_prof = osv_objects.vif.VIFPortProfileOpenVSwitch(
             interface_id="07bd6cea-fb37-4594-b769-90fc51854ee9",
-            profile_id="fishfood")
+            profile_id="fishfood",
+            create_port=True)
 
         self.os_vif_repr_prof = osv_objects.vif.VIFPortProfileOVSRepresentor(
             interface_id="07bd6cea-fb37-4594-b769-90fc51854ee9",
@@ -1014,36 +1017,22 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                        self.vif_iovisor['network']['id'],
                        self.instance.project_id)])
 
-    def _check_ovs_virtualport_driver(self, d, vif, want_iface_id):
-        xml = self._get_instance_xml(d, vif)
-        node = self._get_node(xml)
-        self._assertTypeAndMacEquals(node, "bridge", "source", "bridge",
-                                     vif, "br0")
-        vp = node.find("virtualport")
-        self.assertEqual(vp.get("type"), "openvswitch")
-        iface_id_found = False
-        for p_elem in vp.findall("parameters"):
-            iface_id = p_elem.get("interfaceid", None)
-            if iface_id:
-                self.assertEqual(iface_id, want_iface_id)
-                iface_id_found = True
-
-        self.assertTrue(iface_id_found)
-
-    def test_generic_ovs_virtualport_driver(self):
-        d = vif.LibvirtGenericVIFDriver()
-        want_iface_id = self.vif_ovs['ovs_interfaceid']
-        self._check_ovs_virtualport_driver(d,
-                                           self.vif_ovs,
-                                           want_iface_id)
-
     def test_direct_plug_with_port_filter_cap_no_nova_firewall(self):
         d = vif.LibvirtGenericVIFDriver()
         br_want = self.vif_midonet['devname']
         xml = self._get_instance_xml(d, self.vif_ovs_filter_cap)
         node = self._get_node(xml)
-        self._assertTypeAndMacEquals(node, "bridge", "target", "dev",
-                                     self.vif_ovs_filter_cap, br_want)
+        # NOTE(stephenfin): We delegate creation of the port to os-vif if, and
+        # only if, the version present is suitably new
+        if (
+            pbr.version.VersionInfo('os-vif').semantic_version() >=
+            pbr.version.SemanticVersion.from_pip_string('1.15.0')
+        ):
+            self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
+                                         self.vif_ovs_filter_cap, br_want)
+        else:
+            self._assertTypeAndMacEquals(node, "bridge", "target", "dev",
+                                         self.vif_ovs_filter_cap, br_want)
 
     def test_ib_hostdev_driver(self):
         d = vif.LibvirtGenericVIFDriver()
@@ -1522,8 +1511,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         xml = self._get_instance_xml(d, vif_model)
         node = self._get_node(xml)
-
-        self._assertXmlEqual(expected_xml, node)
+        node_xml = etree.tostring(node).decode()
+        self._assertXmlEqual(expected_xml, node_xml)
 
     def test_config_os_vif_bridge(self):
         os_vif_type = self.os_vif_bridge
@@ -1582,22 +1571,40 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         os_vif_type = self.os_vif_agilio_ovs
         vif_type = self.vif_agilio_ovs
 
-        expected_xml = """
-            <interface type="bridge">
-             <mac address="22:52:25:62:e2:aa"/>
-             <model type="virtio"/>
-             <source bridge="br0"/>
-             <mtu size="9000"/>
-             <target dev="nicdc065497-3c"/>
-             <virtualport type="openvswitch">
-              <parameters
-              interfaceid="07bd6cea-fb37-4594-b769-90fc51854ee9"/>
-             </virtualport>
-              <bandwidth>
-               <inbound average="100" peak="200" burst="300"/>
-               <outbound average="10" peak="20" burst="30"/>
-              </bandwidth>
-            </interface>"""
+        # NOTE(stephenfin): We delegate creation of the port to os-vif if, and
+        # only if, the version present is suitably new
+        if (
+            pbr.version.VersionInfo('os-vif').semantic_version() >=
+            pbr.version.SemanticVersion.from_pip_string('1.15.0')
+        ):
+            expected_xml = """
+                <interface type="ethernet">
+                 <mac address="22:52:25:62:e2:aa"/>
+                 <model type="virtio"/>
+                 <mtu size="9000"/>
+                 <target dev="nicdc065497-3c"/>
+                 <bandwidth>
+                  <inbound average="100" peak="200" burst="300"/>
+                  <outbound average="10" peak="20" burst="30"/>
+                 </bandwidth>
+                </interface>"""
+        else:
+            expected_xml = """
+                <interface type="bridge">
+                 <mac address="22:52:25:62:e2:aa"/>
+                 <model type="virtio"/>
+                 <source bridge="br0"/>
+                 <mtu size="9000"/>
+                 <target dev="nicdc065497-3c"/>
+                 <virtualport type="openvswitch">
+                  <parameters
+                  interfaceid="07bd6cea-fb37-4594-b769-90fc51854ee9"/>
+                 </virtualport>
+                  <bandwidth>
+                   <inbound average="100" peak="200" burst="300"/>
+                   <outbound average="10" peak="20" burst="30"/>
+                  </bandwidth>
+                </interface>"""
 
         self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 
@@ -1635,21 +1642,39 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         os_vif_type = self.os_vif_ovs
         vif_type = self.vif_ovs
 
-        expected_xml = """
-            <interface type="bridge">
-             <mac address="22:52:25:62:e2:aa"/>
-             <model type="virtio"/>
-             <source bridge="br0"/>
-             <mtu size="9000"/>
-             <target dev="nicdc065497-3c"/>
-             <virtualport type="openvswitch">
-              <parameters interfaceid="07bd6cea-fb37-4594-b769-90fc51854ee9"/>
-             </virtualport>
-             <bandwidth>
-              <inbound average="100" peak="200" burst="300"/>
-              <outbound average="10" peak="20" burst="30"/>
-             </bandwidth>
-            </interface>"""
+        # NOTE(stephenfin): We delegate creation of the port to os-vif if, and
+        # only if, the version present is suitably new
+        if (
+            pbr.version.VersionInfo('os-vif').semantic_version() >=
+            pbr.version.SemanticVersion.from_pip_string('1.15.0')
+        ):
+            expected_xml = """
+                <interface type="ethernet">
+                 <mac address="22:52:25:62:e2:aa"/>
+                 <model type="virtio"/>
+                 <mtu size="9000"/>
+                 <target dev="nicdc065497-3c"/>
+                 <bandwidth>
+                  <inbound average="100" peak="200" burst="300"/>
+                  <outbound average="10" peak="20" burst="30"/>
+                 </bandwidth>
+                </interface>"""
+        else:
+            expected_xml = """
+                <interface type="bridge">
+                 <mac address="22:52:25:62:e2:aa"/>
+                 <model type="virtio"/>
+                 <source bridge="br0"/>
+                 <mtu size="9000"/>
+                 <target dev="nicdc065497-3c"/>
+                 <virtualport type="openvswitch">
+                  <parameters interfaceid="07bd6cea-fb37-4594-b769-90fc51854ee9"/>
+                 </virtualport>
+                 <bandwidth>
+                  <inbound average="100" peak="200" burst="300"/>
+                  <outbound average="10" peak="20" burst="30"/>
+                 </bandwidth>
+                </interface>"""  # noqa: E501
 
         self._test_config_os_vif(os_vif_type, vif_type, expected_xml)
 

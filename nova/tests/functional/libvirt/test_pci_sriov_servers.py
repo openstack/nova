@@ -577,16 +577,15 @@ class SRIOVServersTest(_PCIServersTestBase):
         self.start_compute(pci_info=pci_info)
 
         # create the SR-IOV port
-        self.neutron.create_port({'port': self.neutron.network_4_port_1})
+        port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_1})
 
-        # create a server using the VF and multiple networks
-        extra_spec = {'pci_passthrough:alias': f'{self.VFS_ALIAS_NAME}:1'}
-        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        flavor_id = self._create_flavor()
         server = self._create_server(
             flavor_id=flavor_id,
             networks=[
                 {'uuid': base.LibvirtNeutronFixture.network_1['id']},
-                {'port': base.LibvirtNeutronFixture.network_4_port_1['id']},
+                {'port': port['port']['id']},
             ],
         )
 
@@ -600,13 +599,16 @@ class SRIOVServersTest(_PCIServersTestBase):
             base.LibvirtNeutronFixture.network_1_port_2['mac_address'],
             diagnostics['nic_details'][0]['mac_address'],
         )
-        self.assertIsNotNone(diagnostics['nic_details'][0]['tx_packets'])
+
+        for key in ('rx_packets', 'tx_packets'):
+            self.assertIn(key, diagnostics['nic_details'][0])
 
         self.assertEqual(
             base.LibvirtNeutronFixture.network_4_port_1['mac_address'],
             diagnostics['nic_details'][1]['mac_address'],
         )
-        self.assertIsNone(diagnostics['nic_details'][1]['tx_packets'])
+        for key in ('rx_packets', 'tx_packets'):
+            self.assertIn(key, diagnostics['nic_details'][1])
 
     def test_create_server_after_change_in_nonsriov_pf_to_sriov_pf(self):
         # Starts a compute with PF not configured with SRIOV capabilities
