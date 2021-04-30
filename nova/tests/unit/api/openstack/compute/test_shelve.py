@@ -52,6 +52,7 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
             self.req.environ['nova.context'],
             vm_state=vm_states.ACTIVE, task_state=None)
         instance.launched_at = instance.created_at
+        instance.system_metadata = {}
         get_instance_mock.return_value = instance
         mock_save.side_effect = exception.UnexpectedTaskStateError(
             instance_uuid=instance.uuid, expected=None,
