@@ -1264,6 +1264,16 @@ class Domain(object):
             nic_info['_attached'] = True
             self._def['devices']['nics'] += [nic_info]
             result = True
+        else:
+            # FIXME(sean-k-mooney): We don't currently handle attaching
+            # or detaching hostdevs but we have tests that assume we do so
+            # this is an error not an exception. This affects PCI passthough,
+            # vGPUs and PF neutron ports.
+            LOG.error(
+                "Trying to attach an unsupported device type."
+                "The fakelibvirt implementation is incomplete "
+                "and should be extended to support %s: %s",
+                xml, self._def['devices'])
 
         return result
 
@@ -1278,17 +1288,45 @@ class Domain(object):
         self.attachDevice(xml)
 
     def detachDevice(self, xml):
-        # TODO(gibi): this should handle nics similarly to attachDevice()
-        disk_info = _parse_disk_info(etree.fromstring(xml))
-        attached_disk_info = None
-        for attached_disk in self._def['devices']['disks']:
-            if attached_disk['target_dev'] == disk_info.get('target_dev'):
-                attached_disk_info = attached_disk
-                break
+        # detachDevice is a common function used for all devices types
+        # so we need to handle each separately
+        if xml.startswith("<disk"):
+            disk_info = _parse_disk_info(etree.fromstring(xml))
+            attached_disk_info = None
+            for attached_disk in self._def['devices']['disks']:
+                if attached_disk['target_dev'] == disk_info.get('target_dev'):
+                    attached_disk_info = attached_disk
+                    break
 
-        if attached_disk_info:
-            self._def['devices']['disks'].remove(attached_disk_info)
-        return attached_disk_info is not None
+            if attached_disk_info:
+                self._def['devices']['disks'].remove(attached_disk_info)
+
+            return attached_disk_info is not None
+
+        if xml.startswith("<interface"):
+            nic_info = _parse_nic_info(etree.fromstring(xml))
+            attached_nic_info = None
+            for attached_nic in self._def['devices']['nics']:
+                if attached_nic['mac'] == nic_info['mac']:
+                    attached_nic_info = attached_nic
+                    break
+
+            if attached_nic_info:
+                self._def['devices']['nics'].remove(attached_nic_info)
+
+            return attached_nic_info is not None
+
+        # FIXME(sean-k-mooney): We don't currently handle attaching or
+        # detaching hostdevs but we have tests that assume we do so this is
+        # an error not an exception. This affects PCI passthough, vGPUs and
+        # PF neutron ports
+        LOG.error(
+            "Trying to detach an unsupported device type."
+            "The fakelibvirt implementation is incomplete "
+            "and should be extended to support %s: %s",
+            xml, self._def['devices'])
+
+        return False
 
     def detachDeviceFlags(self, xml, flags):
         self.detachDevice(xml)
@@ -1310,34 +1348,46 @@ class Domain(object):
       <target dev='%(target_dev)s' bus='%(target_bus)s'/>
       <address type='drive' controller='0' bus='0' unit='0'/>
     </disk>''' % dict(source_attr=source_attr, **disk)
-
         nics = ''
-        for nic in self._def['devices']['nics']:
+        for func, nic in enumerate(self._def['devices']['nics']):
+            if func > 7:
+                # this should never be raised but is just present to highlight
+                # the limitations of the current fake when writing new tests.
+                # if you see this raised when add a new test you will need
+                # to extend this fake to use both functions and slots.
+                # the pci function is limited to 3 bits or 0-7.
+                raise RuntimeError(
+                    'Test attempts to add more than 8 PCI devices. This is '
+                    'not supported by the fake libvirt implementation.')
+            nic['func'] = func
+            # this branch covers most interface types with a source
+            # such as linux bridge interfaces.
             if 'source' in nic:
-                if nic['type'] == 'hostdev':
-                    nics += '''<interface type='%(type)s'>
-                      <mac address='%(mac)s'/>
-                      <source>
-                        <address type='pci' domain='0x0000' bus='0x81' slot='0x00' function='0x01'/>
-                      </source>
-                      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-                    </interface>''' % nic  # noqa: E501
-                elif nic['type'] == 'vdpa':
-                    # TODO(stephenfin): In real life, this would actually have
-                    # an '<address>' element, but that requires information
-                    # about the host that we're not passing through yet
-                    nics += '''<interface type='%(type)s'>
-                      <mac address='%(mac)s'/>
-                      <source dev='%(source)s'/>
-                      <model type='virtio'/>
-                    </interface>'''
-                else:
-                    nics += '''<interface type='%(type)s'>
-                      <mac address='%(mac)s'/>
-                      <source %(type)s='%(source)s'/>
-                      <target dev='tap274487d1-60'/>
-                      <address type='pci' domain='0x0000' bus='0x00' slot='0x03' function='0x0'/>
-                    </interface>''' % nic  # noqa: E501
+                nics += '''<interface type='%(type)s'>
+          <mac address='%(mac)s'/>
+          <source %(type)s='%(source)s'/>
+          <target dev='tap274487d1-6%(func)s'/>
+          <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
+                   function='0x%(func)s'/>
+        </interface>''' % nic
+            elif nic['type'] in ('ethernet',):
+                # this branch covers kernel ovs interfaces
+                nics += '''<interface type='%(type)s'>
+          <mac address='%(mac)s'/>
+          <target dev='tap274487d1-6%(func)s'/>
+        </interface>''' % nic
+            else:
+                # This branch covers the macvtap vnic-type.
+                # This is incomplete as the source dev should be unique
+                # and map to the VF netdev name but due to the mocking in
+                # the fixture we hard code it.
+                nics += '''<interface type='%(type)s'>
+          <mac address='%(mac)s'/>
+          <source dev='fake_pf_interface_name' mode='passthrough'>
+              <address type='pci' domain='0x0000' bus='0x81' slot='0x00'
+                   function='0x%(func)s'/>
+          </source>
+        </interface>''' % nic
 
         hostdevs = ''
         for hostdev in self._def['devices']['hostdevs']:

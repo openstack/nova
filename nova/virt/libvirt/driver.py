@@ -91,9 +91,11 @@ from nova import exception
 from nova.i18n import _
 from nova.image import glance
 from nova.network import model as network_model
+from nova.network import neutron
 from nova import objects
 from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields
+from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 import nova.privsep.libvirt
@@ -456,6 +458,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._volume_api = cinder.API()
         self._image_api = glance.API()
+        self._network_api = neutron.API()
 
         # The default choice for the sysinfo_serial config option is "unique"
         # which does not have a special function since the value is just the
@@ -9064,6 +9067,18 @@ class LibvirtDriver(driver.ComputeDriver):
         # then.
         if instance.numa_topology:
             data.dst_supports_numa_live_migration = True
+
+        # NOTE(sean-k-mooney): The migrate_data vifs field is used to signal
+        # that we are using the multiple port binding workflow so we can only
+        # populate it if we are using multiple port bindings.
+        # TODO(stephenfin): Remove once we can do this unconditionally in X or
+        # later
+        if self._network_api.supports_port_binding_extension(context):
+            data.vifs = (
+                migrate_data_obj.VIFMigrateData.create_skeleton_migrate_vifs(
+                    instance.get_network_info()))
+            for vif in data.vifs:
+                vif.supports_os_vif_delegation = True
 
         return data
 
