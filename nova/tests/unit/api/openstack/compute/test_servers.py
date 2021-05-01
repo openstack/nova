@@ -5860,12 +5860,13 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        def create_db_entry_for_new_instance(*args, **kwargs):
-            instance = args[4]
+        def _populate_instance_for_create(*args, **kwargs):
+            instance = args[2]
             self.instance_cache_by_uuid[instance.uuid] = instance
             return instance
-        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
-                      create_db_entry_for_new_instance)
+
+        self.stub_out('nova.compute.api.API._populate_instance_for_create',
+                      _populate_instance_for_create)
         res = self.controller.create(self.req, body=body).obj
 
         instance_uuids = self.instance_cache_by_uuid.keys()
@@ -5890,12 +5891,13 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        def create_db_entry_for_new_instance(*args, **kwargs):
-            instance = args[4]
+        def _populate_instance_for_create(*args, **kwargs):
+            instance = args[2]
             self.instance_cache_by_uuid[instance.uuid] = instance
             return instance
-        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
-                      create_db_entry_for_new_instance)
+
+        self.stub_out('nova.compute.api.API._populate_instance_for_create',
+                      _populate_instance_for_create)
         res = self.controller.create(self.req, body=body).obj
 
         instance_uuids = self.instance_cache_by_uuid.keys()
@@ -5906,13 +5908,13 @@ class ServersControllerCreateTest(test.TestCase):
         """Test creating multiple instances with asking for
         reservation_id
         """
-        def create_db_entry_for_new_instance(*args, **kwargs):
-            instance = args[4]
+        def _populate_instance_for_create(*args, **kwargs):
+            instance = args[2]
             self.instance_cache_by_uuid[instance.uuid] = instance
             return instance
 
-        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
-                      create_db_entry_for_new_instance)
+        self.stub_out('nova.compute.api.API._populate_instance_for_create',
+                      _populate_instance_for_create)
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
@@ -6036,12 +6038,13 @@ class ServersControllerCreateTest(test.TestCase):
             }
         }
 
-        def create_db_entry_for_new_instance(*args, **kwargs):
-            instance = args[4]
+        def _populate_instance_for_create(*args, **kwargs):
+            instance = args[2]
             self.instance_cache_by_uuid[instance.uuid] = instance
             return instance
-        self.stub_out('nova.compute.api.API.create_db_entry_for_new_instance',
-                      create_db_entry_for_new_instance)
+
+        self.stub_out('nova.compute.api.API._populate_instance_for_create',
+                      _populate_instance_for_create)
         res = self.controller.create(self.req, body=body).obj
         instance_uuids = self.instance_cache_by_uuid.keys()
         self.assertIn(res["server"]["id"], instance_uuids)

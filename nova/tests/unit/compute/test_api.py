@@ -4957,11 +4957,12 @@ class _ComputeAPIUnitTestMixIn(object):
                            new=mock.MagicMock())
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch('nova.network.security_group_api')
-        @mock.patch.object(self.compute_api,
-                           'create_db_entry_for_new_instance')
+        @mock.patch.object(
+            self.compute_api, '_populate_instance_for_create',
+            new=mock.MagicMock())
         @mock.patch.object(self.compute_api,
                            '_bdm_validate_set_size_and_instance')
-        def do_test(mock_bdm_v, mock_cdb, mock_sg, mock_cniq, mock_get_vols):
+        def do_test(mock_bdm_v, mock_sg, mock_cniq, mock_get_vols):
             mock_cniq.return_value = 1
             self.compute_api._provision_instances(self.context,
                                                   inst_type,
@@ -4997,16 +4998,17 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_im, mock_instance, mock_br, mock_rs, mock_get_dp):
 
         @mock.patch.object(self.compute_api, '_get_volumes_for_bdms')
-        @mock.patch.object(self.compute_api,
-                           '_create_reqspec_buildreq_instmapping',
-                           new=mock.MagicMock())
+        @mock.patch.object(
+            self.compute_api, '_create_reqspec_buildreq_instmapping',
+            new=mock.MagicMock())
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch('nova.network.security_group_api')
-        @mock.patch.object(self.compute_api,
-                           'create_db_entry_for_new_instance')
+        @mock.patch.object(
+            self.compute_api, '_populate_instance_for_create',
+            new=mock.Mock())
         @mock.patch.object(self.compute_api,
                            '_bdm_validate_set_size_and_instance')
-        def do_test(mock_bdm_v, mock_cdb, mock_sg, mock_cniq, mock_get_vols):
+        def do_test(mock_bdm_v, mock_sg, mock_cniq, mock_get_vols):
             mock_cniq.return_value = 1
             self.compute_api._provision_instances(self.context,
                                                   instance_type,
@@ -5326,9 +5328,9 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch('nova.network.security_group_api'
                     '.populate_security_groups')
         @mock.patch.object(compute_api, 'objects')
-        @mock.patch.object(self.compute_api,
-                           'create_db_entry_for_new_instance',
-                           new=mock.MagicMock())
+        @mock.patch.object(
+            self.compute_api, '_populate_instance_for_create',
+            new=mock.MagicMock())
         @mock.patch.object(self.compute_api,
                            '_bdm_validate_set_size_and_instance',
                            new=mock.MagicMock())
