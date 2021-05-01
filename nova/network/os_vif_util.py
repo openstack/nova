@@ -347,6 +347,7 @@ def _nova_to_osvif_vif_ovs(vif):
             vif_name=vif_name,
             bridge_name=_get_hybrid_bridge_name(vif))
     else:
+        profile.create_port = vif.get('delegate_create', False)
         obj = _get_vif_instance(
             vif,
             objects.vif.VIFOpenVSwitch,

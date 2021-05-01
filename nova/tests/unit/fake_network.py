@@ -120,7 +120,7 @@ def fake_get_instance_nw_info(test, num_networks=1):
             qbg_params=None,
             active=False,
             vnic_type='normal',
-            profile=None,
+            profile={},
             preserve_on_delete=False,
             meta={'rxtx_cap': 30},
         )

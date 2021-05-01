@@ -450,10 +450,15 @@ class LibvirtGenericVIFDriver(object):
         conf.target_dev = vif.vif_name
 
     def _set_config_VIFOpenVSwitch(self, instance, vif, conf):
-        conf.net_type = "bridge"
-        conf.source_dev = vif.bridge_name
-        conf.target_dev = vif.vif_name
-        self._set_config_VIFPortProfile(instance, vif, conf)
+        # if delegating creation to os-vif, create an ethernet-type VIF and let
+        # os-vif do the actual wiring up
+        if 'create_port' in vif.port_profile and vif.port_profile.create_port:
+            self._set_config_VIFGeneric(instance, vif, conf)
+        else:
+            conf.net_type = "bridge"
+            conf.source_dev = vif.bridge_name
+            conf.target_dev = vif.vif_name
+            self._set_config_VIFPortProfile(instance, vif, conf)
 
     def _set_config_VIFVHostUser(self, instance, vif, conf):
         # TODO(sahid): We should never configure a driver backend for

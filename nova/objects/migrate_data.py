@@ -22,8 +22,8 @@ from nova import exception
 from nova.objects import base as obj_base
 from nova.objects import fields
 
-
 LOG = log.getLogger(__name__)
+OS_VIF_DELEGATION = 'os_vif_delegation'
 
 
 @obj_base.NovaObjectRegistry.register
@@ -60,6 +60,8 @@ class VIFMigrateData(obj_base.NovaObject):
 
     @property
     def vif_details(self):
+        if 'vif_details_json' not in self:
+            return {}
         return jsonutils.loads(self.vif_details_json)
 
     @vif_details.setter
@@ -68,11 +70,23 @@ class VIFMigrateData(obj_base.NovaObject):
 
     @property
     def profile(self):
+        if 'profile_json' not in self:
+            return {}
         return jsonutils.loads(self.profile_json)
 
     @profile.setter
     def profile(self, profile_dict):
         self.profile_json = jsonutils.dumps(profile_dict)
+
+    @property
+    def supports_os_vif_delegation(self):
+        return self.profile.get(OS_VIF_DELEGATION, False)
+
+    # TODO(stephenfin): add a proper delegation field instead of storing this
+    # info in the profile catch-all blob
+    @supports_os_vif_delegation.setter
+    def supports_os_vif_delegation(self, supported):
+        self.profile[OS_VIF_DELEGATION] = supported
 
     def get_dest_vif(self):
         """Get a destination VIF representation of this object.
@@ -91,6 +105,7 @@ class VIFMigrateData(obj_base.NovaObject):
         vif['vnic_type'] = self.vnic_type
         vif['profile'] = self.profile
         vif['details'] = self.vif_details
+        vif['delegate_create'] = self.supports_os_vif_delegation
         return vif
 
     @classmethod
