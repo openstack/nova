@@ -358,6 +358,138 @@ class SRIOVServersTest(_PCIServersTestBase):
         self.assertEqual(500, ex.response.status_code)
         self.assertIn('NoValidHost', str(ex))
 
+    def _test_move_operation_with_neutron(self, move_operation,
+                                          expect_fail=False):
+        # The purpose here is to force an observable PCI slot update when
+        # moving from source to dest. This is accomplished by having a single
+        # PCI device on the source, 2 PCI devices on the test, and relying on
+        # the fact that our fake HostPCIDevicesInfo creates predictable PCI
+        # addresses. The PCI device on source and the first PCI device on dest
+        # will have identical PCI addresses. By sticking a "placeholder"
+        # instance on that first PCI device on the dest, the incoming instance
+        # from source will be forced to consume the second dest PCI device,
+        # with a different PCI address.
+        self.start_compute(
+            hostname='source',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(
+                num_pfs=1, num_vfs=1))
+        self.start_compute(
+            hostname='dest',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(
+                num_pfs=1, num_vfs=2))
+
+        source_port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_1})
+        dest_port1 = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_2})
+        dest_port2 = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_3})
+
+        source_server = self._create_server(
+            networks=[{'port': source_port['port']['id']}], host='source')
+        dest_server1 = self._create_server(
+            networks=[{'port': dest_port1['port']['id']}], host='dest')
+        dest_server2 = self._create_server(
+            networks=[{'port': dest_port2['port']['id']}], host='dest')
+
+        # Refresh the ports.
+        source_port = self.neutron.show_port(source_port['port']['id'])
+        dest_port1 = self.neutron.show_port(dest_port1['port']['id'])
+        dest_port2 = self.neutron.show_port(dest_port2['port']['id'])
+
+        # Find the server on the dest compute that's using the same pci_slot as
+        # the server on the source compute, and delete the other one to make
+        # room for the incoming server from the source.
+        source_pci_slot = source_port['port']['binding:profile']['pci_slot']
+        dest_pci_slot1 = dest_port1['port']['binding:profile']['pci_slot']
+        if dest_pci_slot1 == source_pci_slot:
+            same_slot_port = dest_port1
+            self._delete_server(dest_server2)
+        else:
+            same_slot_port = dest_port2
+            self._delete_server(dest_server1)
+
+        # Before moving, explictly assert that the servers on source and dest
+        # have the same pci_slot in their port's binding profile
+        self.assertEqual(source_port['port']['binding:profile']['pci_slot'],
+                         same_slot_port['port']['binding:profile']['pci_slot'])
+
+        # Before moving, assert that the servers on source and dest have the
+        # same PCI source address in their XML for their SRIOV nic.
+        source_conn = self.computes['source'].driver._host.get_connection()
+        dest_conn = self.computes['source'].driver._host.get_connection()
+        source_vms = [vm._def for vm in source_conn._vms.values()]
+        dest_vms = [vm._def for vm in dest_conn._vms.values()]
+        self.assertEqual(1, len(source_vms))
+        self.assertEqual(1, len(dest_vms))
+        self.assertEqual(1, len(source_vms[0]['devices']['nics']))
+        self.assertEqual(1, len(dest_vms[0]['devices']['nics']))
+        self.assertEqual(source_vms[0]['devices']['nics'][0]['source'],
+                         dest_vms[0]['devices']['nics'][0]['source'])
+
+        move_operation(source_server)
+
+        # Refresh the ports again, keeping in mind the source_port is now bound
+        # on the dest after unshelving.
+        source_port = self.neutron.show_port(source_port['port']['id'])
+        same_slot_port = self.neutron.show_port(same_slot_port['port']['id'])
+
+        # FIXME(artom) Until bug 1851545 is fixed, unshelve will not update the
+        # pci_slot.
+        if expect_fail:
+            self.assertEqual(
+                source_port['port']['binding:profile']['pci_slot'],
+                same_slot_port['port']['binding:profile']['pci_slot'])
+        else:
+            self.assertNotEqual(
+                source_port['port']['binding:profile']['pci_slot'],
+                same_slot_port['port']['binding:profile']['pci_slot'])
+
+        conn = self.computes['dest'].driver._host.get_connection()
+        vms = [vm._def for vm in conn._vms.values()]
+        self.assertEqual(2, len(vms))
+        for vm in vms:
+            self.assertEqual(1, len(vm['devices']['nics']))
+        # FIXME(artom) Until bug 1851545 is fixed, unshelve will not update the
+        # XML.
+        if expect_fail:
+            self.assertEqual(vms[0]['devices']['nics'][0]['source'],
+                             vms[1]['devices']['nics'][0]['source'])
+        else:
+            self.assertNotEqual(vms[0]['devices']['nics'][0]['source'],
+                                vms[1]['devices']['nics'][0]['source'])
+
+    def test_unshelve_server_with_neutron(self):
+        def move_operation(source_server):
+            self._shelve_server(source_server)
+            # Disable the source compute, to force unshelving on the dest.
+            self.api.put_service(self.computes['source'].service_ref.uuid,
+                                 {'status': 'disabled'})
+            self._unshelve_server(source_server)
+        # FIXME(artom) Bug 1851545 means we explain failure here: the pci_slot
+        # and XML will not get updated.
+        self._test_move_operation_with_neutron(move_operation,
+                                               expect_fail=True)
+
+    def test_cold_migrate_server_with_neutron(self):
+        def move_operation(source_server):
+            # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
+            # probably be less...dumb
+            with mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                            '.migrate_disk_and_power_off', return_value='{}'):
+                self._migrate_server(source_server)
+            self._confirm_resize(source_server)
+        self._test_move_operation_with_neutron(move_operation)
+
+    def test_evacuate_server_with_neutron(self):
+        def move_operation(source_server):
+            # Down the source compute to enable the evacuation
+            self.api.put_service(self.computes['source'].service_ref.uuid,
+                                 {'forced_down': True})
+            self.computes['source'].stop()
+            self._evacuate_server(source_server)
+        self._test_move_operation_with_neutron(move_operation)
+
     def test_live_migrate_server_with_neutron(self):
         """Live migrate an instance using a neutron-provisioned SR-IOV VIF.
 
