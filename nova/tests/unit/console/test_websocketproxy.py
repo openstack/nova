@@ -356,34 +356,6 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
                                      mock.call(len(HTTP_RESP))])
         self.wh.do_proxy.assert_called_with(tsock)
 
-    @mock.patch.object(websocketproxy, 'sys')
-    @mock.patch('nova.console.websocketproxy.NovaProxyRequestHandler.'
-                '_check_console_port')
-    @mock.patch('nova.objects.ConsoleAuthToken.validate')
-    def test_new_websocket_client_py273_good_scheme(
-            self, validate, check_port, mock_sys):
-        mock_sys.version_info.return_value = (2, 7, 3)
-        params = {
-            'id': 1,
-            'token': '123-456-789',
-            'instance_uuid': uuids.instance,
-            'host': 'node1',
-            'port': '10000',
-            'console_type': 'novnc',
-            'access_url_base': 'https://example.net:6080'
-        }
-        validate.return_value = objects.ConsoleAuthToken(**params)
-
-        self.wh.socket.return_value = '<socket>'
-        self.wh.path = "http://127.0.0.1/?token=123-456-789"
-        self.wh.headers = self.fake_header
-
-        self.wh.new_websocket_client()
-
-        validate.assert_called_with(mock.ANY, "123-456-789")
-        self.wh.socket.assert_called_with('node1', 10000, connect=True)
-        self.wh.do_proxy.assert_called_with('<socket>')
-
     @mock.patch('socket.getfqdn')
     def test_address_string_doesnt_do_reverse_dns_lookup(self, getfqdn):
         request_mock = mock.MagicMock()
