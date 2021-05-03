@@ -2114,6 +2114,9 @@ class API(base.Base):
             port_numa_policy = None
 
             if request_net.port_id:
+                # InstancePCIRequest.requester_id is semantically linked
+                # to a port with a resource_request.
+                requester_id = request_net.port_id
                 (vnic_type, trusted, network_id, resource_request,
                  port_numa_policy) = self._get_port_vnic_info(
                      context, neutron, request_net.port_id)
@@ -2121,9 +2124,6 @@ class API(base.Base):
                     context, neutron, network_id)
 
                 if resource_request:
-                    # InstancePCIRequest.requester_id is semantically linked
-                    # to a port with a resource_request.
-                    requester_id = request_net.port_id
                     # NOTE(gibi): explicitly orphan the RequestGroup by setting
                     # context=None as we never intended to save it to the DB.
                     resource_requests.append(
@@ -3373,6 +3373,37 @@ class API(base.Base):
                   migration.get('status') == 'reverted')
         return instance.migration_context.get_pci_mapping_for_migration(revert)
 
+    def _get_port_pci_slot(self, context, instance, port):
+        """Find the PCI address of the device corresponding to the port.
+        Assumes the port is an SRIOV one.
+
+        :param context: The request context.
+        :param instance: The instance to which the port is attached.
+        :param port: The Neutron port, as obtained from the Neutron API
+            JSON form.
+        :return: The PCI address as a string, or None if unable to find.
+        """
+        # Find the port's PCIRequest, or return None
+        for r in instance.pci_requests.requests:
+            if r.requester_id == port['id']:
+                request = r
+                break
+        else:
+            LOG.debug('No PCI request found for port %s', port['id'],
+                      instance=instance)
+            return None
+        # Find the request's device, or return None
+        for d in instance.pci_devices:
+            if d.request_id == request.request_id:
+                device = d
+                break
+        else:
+            LOG.debug('No PCI device found for request %s',
+                      request.request_id, instance=instance)
+            return None
+        # Return the device's PCI address
+        return device.address
+
     def _update_port_binding_for_instance(
             self, context, instance, host, migration=None,
             provider_mappings=None):
@@ -3381,7 +3412,6 @@ class API(base.Base):
         search_opts = {'device_id': instance.uuid,
                        'tenant_id': instance.project_id}
         data = neutron.list_ports(**search_opts)
-        pci_mapping = None
         port_updates = []
         ports = data['ports']
         FAILED_VIF_TYPES = (network_model.VIF_TYPE_UNBOUND,
@@ -3414,25 +3444,36 @@ class API(base.Base):
             # that this function is called without a migration object, such
             # as in an unshelve operation.
             vnic_type = p.get('binding:vnic_type')
-            if (vnic_type in network_model.VNIC_TYPES_SRIOV and
-                    migration is not None and
-                    not migration.is_live_migration):
-                # Note(adrianc): for live migration binding profile was already
-                # updated in conductor when calling bind_ports_to_host()
-                if not pci_mapping:
-                    pci_mapping = self._get_pci_mapping_for_migration(
-                        instance, migration)
+            if vnic_type in network_model.VNIC_TYPES_SRIOV:
+                # NOTE(artom) For migrations, update the binding profile from
+                # the migration object...
+                if migration is not None:
+                    # NOTE(artom) ... except for live migrations, because the
+                    # conductor has already done that whe calling
+                    # bind_ports_to_host().
+                    if not migration.is_live_migration:
+                        pci_mapping = self._get_pci_mapping_for_migration(
+                            instance, migration)
 
-                pci_slot = binding_profile.get('pci_slot')
-                new_dev = pci_mapping.get(pci_slot)
-                if new_dev:
-                    binding_profile.update(
-                        self._get_pci_device_profile(new_dev))
-                    updates[constants.BINDING_PROFILE] = binding_profile
+                        pci_slot = binding_profile.get('pci_slot')
+                        new_dev = pci_mapping.get(pci_slot)
+                        if new_dev:
+                            binding_profile.update(
+                                self._get_pci_device_profile(new_dev))
+                            updates[
+                                constants.BINDING_PROFILE] = binding_profile
+                        else:
+                            raise exception.PortUpdateFailed(port_id=p['id'],
+                                reason=_("Unable to correlate PCI slot %s") %
+                                         pci_slot)
+                # NOTE(artom) If migration is None, this is an unshevle, and we
+                # need to figure out the pci_slot from the InstancePCIRequest
+                # and PciDevice objects.
                 else:
-                    raise exception.PortUpdateFailed(port_id=p['id'],
-                        reason=_("Unable to correlate PCI slot %s") %
-                                 pci_slot)
+                    pci_slot = self._get_port_pci_slot(context, instance, p)
+                    if pci_slot:
+                        binding_profile.update({'pci_slot': pci_slot})
+                        updates[constants.BINDING_PROFILE] = binding_profile
 
             # NOTE(gibi): during live migration the conductor already sets the
             # allocation key in the port binding. However during resize, cold
