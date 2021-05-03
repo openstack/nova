@@ -13,6 +13,7 @@
 
 from eventlet import tpool
 import mock
+from oslo_concurrency import processutils
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
@@ -652,6 +653,11 @@ class RbdTestCase(test.NoDBTestCase):
                     'free': ceph_df_json['pools'][1]['stats']['max_avail'],
                     'used': ceph_df_json['pools'][1]['stats']['bytes_used']}
         self.assertDictEqual(expected, self.driver.get_pool_info())
+
+    @mock.patch('oslo_concurrency.processutils.execute', autospec=True,
+                side_effect=processutils.ProcessExecutionError("failed"))
+    def test_get_pool_info_execute_failed(self, mock_execute):
+        self.assertRaises(exception.StorageError, self.driver.get_pool_info)
 
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_get_pool_info_not_found(self, mock_execute):
