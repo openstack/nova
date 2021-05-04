@@ -218,6 +218,12 @@ class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
     def test_success_ssh(self):
         self._check_success()
 
+    def test_success_ssh_ed25519(self):
+        self.pub_key = ('ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFl6u75BTi8xGtSPm'
+                        '1yVJuLE/oMtCOuEMJJnBSuZEdXz')
+        self.fingerprint = '1a:1d:a7:2c:4c:ff:15:c4:70:13:38:b6:ac:4c:dc:12'
+        self._check_success()
+
     def test_success_x509(self):
         self.keypair_type = keypair_obj.KEYPAIR_TYPE_X509
         certif, fingerprint = fake_crypto.get_x509_cert_and_fingerprint()
