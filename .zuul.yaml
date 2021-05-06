@@ -339,6 +339,8 @@
             compute-feature-enabled:
               # The q35 machine type doesn't support an IDE bus
               ide_bus: False
+              # Added in Yoga.
+              unified_limits: True
             neutron_plugin_options:
               available_type_drivers: flat,geneve,vlan,gre,local,vxlan
       devstack_localrc:
@@ -355,6 +357,7 @@
         FORCE_CONFIG_DRIVE: True
         # Added in Yoga.
         NOVNC_FROM_PACKAGE: False
+        NOVA_USE_UNIFIED_LIMITS: True
       devstack_services:
         # Disable OVN services
         br-ex-tcpdump: false
