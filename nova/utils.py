@@ -80,12 +80,6 @@ _FILE_CACHE = {}
 _SERVICE_TYPES = service_types.ServiceTypes()
 
 
-if hasattr(inspect, 'getfullargspec'):
-    getargspec = inspect.getfullargspec
-else:
-    getargspec = inspect.getargspec
-
-
 # NOTE(mikal): this seems to have to stay for now to handle os-brick
 # requirements. This makes me a sad panda.
 def get_root_helper():
@@ -553,7 +547,7 @@ def expects_func_args(*args):
         @functools.wraps(dec)
         def _decorator(f):
             base_f = safe_utils.get_wrapped_function(f)
-            argspec = getargspec(base_f)
+            argspec = inspect.getfullargspec(base_f)
             if argspec[1] or argspec[2] or set(args) <= set(argspec[0]):
                 # NOTE (ndipanov): We can't really tell if correct stuff will
                 # be passed if it's a function with *args or **kwargs so

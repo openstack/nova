@@ -15,6 +15,7 @@
 
 import base64
 import errno
+import inspect
 import os
 import shutil
 import tempfile
@@ -38,7 +39,6 @@ from nova import objects
 from nova.storage import rbd_utils
 from nova import test
 from nova.tests.unit import fake_processutils
-from nova import utils
 from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
@@ -1488,8 +1488,10 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertEqual(fake_processutils.fake_execute_get_log(), [])
 
     def test_parent_compatible(self):
-        self.assertEqual(utils.getargspec(imagebackend.Image.libvirt_info),
-                         utils.getargspec(self.image_class.libvirt_info))
+        self.assertEqual(
+            inspect.getfullargspec(imagebackend.Image.libvirt_info),
+            inspect.getfullargspec(self.image_class.libvirt_info)
+        )
 
     def test_image_path(self):
 

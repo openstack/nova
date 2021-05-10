@@ -20,6 +20,7 @@ API and utilities for nova-network interactions.
 
 import copy
 import functools
+import inspect
 import time
 import typing as ty
 
@@ -133,7 +134,7 @@ def refresh_cache(f):
 
     Requires context and instance as function args
     """
-    argspec = utils.getargspec(f)
+    argspec = inspect.getfullargspec(f)
 
     @functools.wraps(f)
     def wrapper(self, context, *args, **kwargs):
