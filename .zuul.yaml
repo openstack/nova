@@ -550,6 +550,9 @@
             voting: false
         - tempest-integrated-compute-centos-8-stream:
             irrelevant-files: *nova-base-irrelevant-files
+        - tempest-centos8-stream-fips:
+            irrelevant-files: *nova-base-irrelevant-files
+            voting: false
     gate:
       jobs:
         - nova-live-migration
