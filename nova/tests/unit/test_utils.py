@@ -1310,7 +1310,7 @@ class RunOnceTests(test.NoDBTestCase):
         self.dummy_test_func.reset()
         RunOnceTests.fake_logger.reset_mock()
 
-    def test_wrapped_funtions_called_once(self):
+    def test_wrapped_functions_called_once(self):
         self.assertFalse(self.dummy_test_func.called)
         result = self.dummy_test_func()
         self.assertTrue(result)
@@ -1322,7 +1322,7 @@ class RunOnceTests(test.NoDBTestCase):
         RunOnceTests.fake_logger.assert_called_once()
         self.assertIsNone(result)
 
-    def test_wrapped_funtions_called_once_raises(self):
+    def test_wrapped_functions_called_once_raises(self):
         self.assertFalse(self.dummy_test_func.called)
         self.assertRaises(ValueError, self.dummy_test_func, fail=True)
         self.assertTrue(self.dummy_test_func.called)
@@ -1333,7 +1333,7 @@ class RunOnceTests(test.NoDBTestCase):
         RunOnceTests.fake_logger.assert_called_once()
         self.assertIsNone(result)
 
-    def test_wrapped_funtions_can_be_reset(self):
+    def test_wrapped_functions_can_be_reset(self):
         # assert we start with a clean state
         self.assertFalse(self.dummy_test_func.called)
         result = self.dummy_test_func()
