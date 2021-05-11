@@ -5421,7 +5421,7 @@ class MemEncryptionRequestedWithoutUEFITestCase(
         for image_prop in ('1', 'true', 'True'):
             self._test_encrypted_memory_support_no_uefi(
                 None, image_prop,
-                "hw_mem_encryption property of image %s" % self.image_name)
+                "hw_mem_encryption property of image %s" % self.image_id)
 
     def test_flavor_image_require_encrypted_memory_support_no_uefi(self):
         for extra_spec in ('1', 'true', 'True'):
@@ -5430,7 +5430,7 @@ class MemEncryptionRequestedWithoutUEFITestCase(
                     extra_spec, image_prop,
                     "hw:mem_encryption extra spec in %s flavor and "
                     "hw_mem_encryption property of image %s"
-                    % (self.flavor_name, self.image_name))
+                    % (self.flavor_name, self.image_id))
 
 
 class MemEncryptionRequestedWithInvalidMachineTypeTestCase(
@@ -5508,7 +5508,7 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
             self._test_encrypted_memory_support_required(
                 {},
                 {'hw_mem_encryption': image_prop},
-                "hw_mem_encryption property of image %s" % self.image_name
+                "hw_mem_encryption property of image %s" % self.image_id
             )
 
     def test_require_encrypted_memory_support_both_required(self):
@@ -5519,7 +5519,7 @@ class MemEncryptionRequiredTestCase(test.NoDBTestCase):
                     {'hw_mem_encryption': image_prop},
                     "hw:mem_encryption extra spec in %s flavor and "
                     "hw_mem_encryption property of image %s" %
-                    (self.flavor_name, self.image_name)
+                    (self.flavor_name, self.image_id)
                 )
 
 

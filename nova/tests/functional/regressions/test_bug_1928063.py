@@ -17,7 +17,6 @@ from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import test
 from nova.tests.fixtures import libvirt as fakelibvirt
-from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import base
 from nova.virt.libvirt.host import SEV_KERNEL_PARAM_FILE
 
@@ -58,12 +57,5 @@ class TestSEVInstanceReboot(base.ServersTestBase):
             networks='none'
         )
 
-        # FIXME(lyarwood): This is bug #1928063, the instance fails to reboot
-        # due to a NotImplementedError exception being raised when we try to
-        # access image_meta.name as this isn't stashed in the system_metadata
-        # of the instance and as a result is not provided in the image_meta
-        # associated with the instance during this flow.
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self._reboot_server, server, hard=True)
-        self.assertEqual(500, ex.response.status_code)
+        # Hard reboot the server
+        self._reboot_server(server, hard=True)

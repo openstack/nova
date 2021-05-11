@@ -1313,7 +1313,7 @@ def get_mem_encryption_constraint(
                           flavor.name)
     if image_mem_enc:
         requesters.append("hw_mem_encryption property of image %s" %
-                          image_meta.name)
+                          image_meta.id)
 
     _check_mem_encryption_uses_uefi_image(requesters, image_meta)
     _check_mem_encryption_machine_type(image_meta, machine_type)
