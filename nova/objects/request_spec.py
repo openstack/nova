@@ -1293,16 +1293,55 @@ class RequestLevelParams(base.NovaObject):
     RequestGroup).
     """
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add same_subtree field
+    VERSION = '1.1'
 
     fields = {
         # Traits required on the root provider
         'root_required': fields.SetOfStringsField(default=set()),
         # Traits forbidden on the root provider
         'root_forbidden': fields.SetOfStringsField(default=set()),
+        # Lists of request group suffixes that needs to be allocated from the
+        # same provider subtree
+        'same_subtree': fields.ListOfListsOfStringsField(default=list()),
         # NOTE(efried): group_policy would be appropriate to include here, once
         # we have a use case for it.
     }
 
     def obj_load_attr(self, attrname):
         self.obj_set_defaults(attrname)
+
+    def obj_make_compatible(self, primitive, target_version):
+        super().obj_make_compatible(primitive, target_version)
+
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            if 'same_subtree' in primitive:
+                del primitive['same_subtree']
+
+    @classmethod
+    def from_port_request(cls, port_resource_request):
+        """Extracts request level global parameters from the resource_request
+        of a neutron port.
+
+        Neutron only uses same_subtree at the moment.
+        """
+        same_subtree = port_resource_request.get('same_subtree')
+        if same_subtree:
+            # NOTE(gibi): A single port only has a single list of groups
+            # requesting same subtree, but the RequestLevelParams maintains a
+            # list of such subtree requests
+            return cls(same_subtree=[same_subtree])
+
+        return cls()
+
+    def extend_with(self, other_req_lvl_params):
+        """Extends the existing object with parameter values from another
+        RequestLevelParams object. That new set of requirements are connected
+        with the existing ones with a logical AND operation.
+        """
+        self.root_required = self.root_required.union(
+            other_req_lvl_params.root_required)
+        self.root_forbidden = self.root_forbidden.union(
+            other_req_lvl_params.root_forbidden)
+        self.same_subtree.extend(other_req_lvl_params.same_subtree)

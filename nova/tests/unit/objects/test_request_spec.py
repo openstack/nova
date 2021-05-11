@@ -1692,3 +1692,54 @@ class TestMappingRequestGroupsToProviders(test.NoDBTestCase):
             allocations, provider_traits)
 
         self.assertIn('allocations leftover', mock_debug.mock_calls[3][1][0])
+
+
+class TestRequestLevelParams(test.NoDBTestCase):
+    def setUp(self):
+        super().setUp()
+        self.user_id = uuids.user_id
+        self.project_id = uuids.project_id
+        self.context = context.RequestContext(uuids.user_id, uuids.project_id)
+
+    def test_obj_make_compatible(self):
+        obj = request_spec.RequestLevelParams(
+            self.context,
+            root_required={"CUSTOM_FOO", "CUSTOM_BAR"},
+            root_forbidden={"CUSTOM_BAZ"},
+            same_subtree=[["group1", "group2"], ["group3", "group4"]])
+
+        manifest = ovo_base.obj_tree_get_versions(obj.obj_name())
+
+        obj_primitive = obj.obj_to_primitive(
+            target_version='1.1',
+            version_manifest=manifest)['nova_object.data']
+        self.assertIn('root_required', obj_primitive)
+        self.assertIn('root_forbidden', obj_primitive)
+        self.assertIn('same_subtree', obj_primitive)
+
+        obj_primitive = obj.obj_to_primitive(
+            target_version='1.0',
+            version_manifest=manifest)['nova_object.data']
+        self.assertIn('root_required', obj_primitive)
+        self.assertIn('root_forbidden', obj_primitive)
+        self.assertNotIn('same_subtree', obj_primitive)
+
+    def test_extend_with(self):
+        obj1 = request_spec.RequestLevelParams(
+            self.context,
+            root_required={"CUSTOM_FOO"},
+            root_forbidden={"CUSTOM_BAZ"},
+            same_subtree=[["group1", "group2"]])
+        obj2 = request_spec.RequestLevelParams(
+            self.context,
+            root_required={"CUSTOM_BAR"},
+            root_forbidden={"CUSTOM_FOOBAR"},
+            same_subtree=[["group3", "group4"]])
+
+        obj1.extend_with(obj2)
+
+        self.assertEqual({"CUSTOM_FOO", "CUSTOM_BAR"}, obj1.root_required)
+        self.assertEqual({"CUSTOM_BAZ", "CUSTOM_FOOBAR"}, obj1.root_forbidden)
+        self.assertEqual(
+            [["group1", "group2"], ["group3", "group4"]],
+            obj1.same_subtree)
