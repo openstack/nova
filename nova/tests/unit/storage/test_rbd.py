@@ -110,7 +110,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.rbd_pool = 'rbd'
         self.rbd_connect_timeout = 5
         self.flags(
-            images_rbd_pool=self.images_rbd_pool,
+            images_rbd_pool=self.rbd_pool,
             images_rbd_ceph_conf='/foo/bar.conf',
             rbd_connect_timeout=self.rbd_connect_timeout,
             rbd_user='foo', group='libvirt')
