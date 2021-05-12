@@ -23,6 +23,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
         instance = objects.Instance(
             config_drive="yes",
+            image_ref='',
             system_metadata={
                 "image_img_config_drive": "mandatory",
             }
@@ -34,6 +35,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.flags(force_config_drive=False)
 
         instance = objects.Instance(
+            image_ref='',
             config_drive=None,
             system_metadata={
                 "image_img_config_drive": "mandatory",
@@ -46,6 +48,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.flags(force_config_drive=True)
 
         instance = objects.Instance(
+            image_ref='',
             config_drive=None,
             launched_at=None,
             system_metadata={
@@ -59,6 +62,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.flags(force_config_drive=True)
 
         instance = objects.Instance(
+            image_ref='',
             config_drive=None,
             launched_at='2019-05-17T00:00:00.000000',
             system_metadata={
@@ -72,6 +76,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.flags(force_config_drive=False)
 
         instance = objects.Instance(
+            image_ref='',
             config_drive=None,
             system_metadata={
                 "image_img_config_drive": "optional",

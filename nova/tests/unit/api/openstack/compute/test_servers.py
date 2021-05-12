@@ -410,7 +410,7 @@ class ServersControllerTest(ControllerTest):
                 "status": status,
                 "hostId": '',
                 "image": {
-                    "id": "10",
+                    "id": FAKE_UUID,
                     "links": [
                         {
                             "rel": "bookmark",
@@ -474,7 +474,8 @@ class ServersControllerTest(ControllerTest):
         }
 
     def test_get_server_by_id(self):
-        image_bookmark = "http://localhost/%s/images/10" % self.project_id
+        image_bookmark = "http://localhost/%s/images/%s" % (
+            self.project_id, FAKE_UUID)
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
 
         uuid = FAKE_UUID
@@ -499,7 +500,8 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(res_dict['server']['OS-EXT-AZ:availability_zone'], '')
 
     def test_get_server_with_active_status_by_id(self):
-        image_bookmark = "http://localhost/%s/images/10" % self.project_id
+        image_bookmark = "http://localhost/%s/images/%s" % (
+            self.project_id, FAKE_UUID)
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
 
         res_dict = self.controller.show(self.request, FAKE_UUID)
@@ -517,7 +519,8 @@ class ServersControllerTest(ControllerTest):
                             'numa_topology'], cell_down_support=False)
 
     def test_get_server_with_id_image_ref_by_id(self):
-        image_bookmark = "http://localhost/%s/images/10" % self.project_id
+        image_bookmark = "http://localhost/%s/images/%s" % (
+            self.project_id, FAKE_UUID)
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
 
         res_dict = self.controller.show(self.request, FAKE_UUID)
@@ -1710,12 +1713,12 @@ class ServersControllerTest(ControllerTest):
                     ],
                 }
         expected_image = {
-            "id": "10",
+            "id": FAKE_UUID,
             "links": [
                 {
                     "rel": "bookmark",
-                    "href": ('http://localhost/%s/images/10' %
-                             self.project_id),
+                    "href": ('http://localhost/%s/images/%s' % (
+                        self.project_id, FAKE_UUID)),
                     },
                 ],
             }
@@ -1838,7 +1841,8 @@ class ServersControllerTestV23(ServersControllerTest):
         return server_dict
 
     def test_show(self):
-        image_bookmark = "http://localhost/%s/images/10" % self.project_id
+        image_bookmark = "http://localhost/%s/images/%s" % (
+            self.project_id, FAKE_UUID)
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
 
         res_dict = self.controller.show(self.request, FAKE_UUID)
@@ -1880,7 +1884,8 @@ class ServersControllerTestV23(ServersControllerTest):
             req.environ['nova.context'])
 
         servers_list = self.controller.detail(req)
-        image_bookmark = "http://localhost/%s/images/10" % self.project_id
+        image_bookmark = "http://localhost/%s/images/%s" % (
+            self.project_id, FAKE_UUID)
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
         expected_server = self._get_server_data_dict(FAKE_UUID,
                                                      image_bookmark,
@@ -1941,7 +1946,8 @@ class ServersControllerTestV29(ServersControllerTest):
         return server_dict
 
     def _test_get_server_with_lock(self, locked_by):
-        image_bookmark = "http://localhost/%s/images/10" % self.project_id
+        image_bookmark = "http://localhost/%s/images/%s" % (
+            self.project_id, FAKE_UUID)
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
         req = self.req(self.path_with_id % FAKE_UUID)
         project_id = req.environ['nova.context'].project_id
@@ -2121,7 +2127,8 @@ class ServersControllerTestV216(ServersControllerTest):
         policy.set_rules(orig_rules)
 
     def test_show(self):
-        image_bookmark = "http://localhost/%s/images/10" % self.project_id
+        image_bookmark = "http://localhost/%s/images/%s" % (
+            self.project_id, FAKE_UUID)
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
         res_dict = self.controller.show(self.request, FAKE_UUID)
         expected_server = self._get_server_data_dict(FAKE_UUID,
@@ -2166,7 +2173,8 @@ class ServersControllerTestV216(ServersControllerTest):
 
         servers_list = self.controller.detail(req)
         self.assertEqual(2, len(servers_list['servers']))
-        image_bookmark = "http://localhost/%s/images/10" % self.project_id
+        image_bookmark = "http://localhost/%s/images/%s" % (
+            self.project_id, FAKE_UUID)
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
         expected_server = self._get_server_data_dict(FAKE_UUID,
                                                      image_bookmark,
@@ -2237,7 +2245,8 @@ class ServersControllerTestV219(ServersControllerTest):
         return server_dict
 
     def _test_get_server_with_description(self, description):
-        image_bookmark = "http://localhost/%s/images/10" % self.project_id
+        image_bookmark = "http://localhost/%s/images/%s" % (
+            self.project_id, FAKE_UUID)
         flavor_bookmark = "http://localhost/%s/flavors/2" % self.project_id
         req = self.req(self.path_with_id % FAKE_UUID)
         project_id = req.environ['nova.context'].project_id

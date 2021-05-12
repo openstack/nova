@@ -1688,6 +1688,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             hypervisor_os='esxi',
             config_drive=True)
         instance = objects.Instance(uuid=self.uuid,
+                                    image_ref='',
                                     config_drive=False,
                                     system_metadata={},
                                     node=self.instance_node)

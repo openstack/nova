@@ -69,7 +69,6 @@ from nova.volume import cinder
 
 CONF = nova.conf.CONF
 
-FAKE_IMAGE_REF = 'fake-image-ref'
 NODENAME = 'fakenode1'
 SHELVED_IMAGE = 'fake-shelved-image'
 SHELVED_IMAGE_NOT_FOUND = 'fake-shelved-image-notfound'
@@ -147,7 +146,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.uuid = uuidutils.generate_uuid()
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
-        instance.image_ref = FAKE_IMAGE_REF
+        instance.image_ref = uuids.image_ref
         instance.reservation_id = 'r-fakeres'
         instance.user_id = self.user_id
         instance.project_id = self.project_id
@@ -3762,7 +3761,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = fake_instance.fake_instance_obj(
             self.context, vm_state=vm_states.ACTIVE, cell_name='fake-cell',
             launched_at=timeutils.utcnow(),
-            system_metadata={}, image_ref='foo',
+            system_metadata={}, image_ref=uuids.image_ref,
             expected_attrs=['system_metadata'])
         image_id = self._setup_fake_image_with_invalid_arch()
         self.assertRaises(exception.InvalidArchitectureName,
@@ -3793,7 +3792,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = fake_instance.fake_instance_obj(
             self.context, vm_state=vm_states.ACTIVE, cell_name='fake-cell',
             launched_at=timeutils.utcnow(),
-            system_metadata={}, image_ref='foo',
+            system_metadata={}, image_ref=uuids.image_ref,
             expected_attrs=['system_metadata'])
 
         bdms = objects.BlockDeviceMappingList(objects=[
@@ -3807,8 +3806,8 @@ class _ComputeAPIUnitTestMixIn(object):
         get_flavor.return_value = test_flavor.fake_flavor
         flavor = instance.get_flavor()
 
-        image_href = 'foo'
         image = {
+            "id": uuids.image_ref,
             "min_ram": 10, "min_disk": 1,
             "properties": {
                 'architecture': fields_obj.Architecture.X86_64}}
@@ -3824,7 +3823,7 @@ class _ComputeAPIUnitTestMixIn(object):
                               self.compute_api.rebuild,
                               self.context,
                               instance,
-                              image_href,
+                              uuids.image_ref,
                               "new password")
             self.assertIsNone(instance.task_state)
             mock_get_bdms.assert_called_once_with(self.context,
@@ -3854,12 +3853,12 @@ class _ComputeAPIUnitTestMixIn(object):
                 vm_state=vm_states.ACTIVE, cell_name='fake-cell',
                 launched_at=timeutils.utcnow(),
                 system_metadata=orig_system_metadata,
-                image_ref='foo',
+                image_ref=uuids.image_ref,
                 expected_attrs=['system_metadata'])
         get_flavor.return_value = test_flavor.fake_flavor
         flavor = instance.get_flavor()
-        image_href = 'foo'
         image = {
+            "id": uuids.image_ref,
             "min_ram": 10, "min_disk": 1,
             "properties": {
                 'architecture': fields_obj.Architecture.X86_64}}
@@ -3875,13 +3874,14 @@ class _ComputeAPIUnitTestMixIn(object):
 
         with mock.patch.object(self.compute_api.compute_task_api,
                 'rebuild_instance') as rebuild_instance:
-            self.compute_api.rebuild(self.context, instance, image_href,
-                    admin_pass, files_to_inject)
+            self.compute_api.rebuild(
+                self.context, instance, uuids.image_ref,
+                admin_pass, files_to_inject)
 
             rebuild_instance.assert_called_once_with(self.context,
                     instance=instance, new_pass=admin_pass,
-                    injected_files=files_to_inject, image_ref=image_href,
-                    orig_image_ref=image_href,
+                    injected_files=files_to_inject, image_ref=uuids.image_ref,
+                    orig_image_ref=uuids.image_ref,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=instance.host,
                     request_spec=fake_spec)
@@ -3909,13 +3909,13 @@ class _ComputeAPIUnitTestMixIn(object):
             req_spec_get_by_inst_uuid, req_spec_save):
         orig_system_metadata = {}
         get_flavor.return_value = test_flavor.fake_flavor
-        orig_image_href = 'orig_image'
         orig_image = {
+            "id": uuids.image_ref,
             "min_ram": 10, "min_disk": 1,
             "properties": {'architecture': fields_obj.Architecture.X86_64,
                            'vm_mode': 'hvm'}}
-        new_image_href = 'new_image'
         new_image = {
+            "id": uuids.new_image_ref,
             "min_ram": 10, "min_disk": 1,
              "properties": {'architecture': fields_obj.Architecture.X86_64,
                            'vm_mode': 'xen'}}
@@ -3928,15 +3928,15 @@ class _ComputeAPIUnitTestMixIn(object):
                 launched_at=timeutils.utcnow(),
                 system_metadata=orig_system_metadata,
                 expected_attrs=['system_metadata'],
-                image_ref=orig_image_href,
+                image_ref=uuids.image_ref,
                 node='node',
                 vm_mode=fields_obj.VMMode.HVM)
         flavor = instance.get_flavor()
 
         def get_image(context, image_href):
-            if image_href == new_image_href:
+            if image_href == uuids.new_image_ref:
                 return (None, new_image)
-            if image_href == orig_image_href:
+            if image_href == uuids.image_ref:
                 return (None, orig_image)
         _get_image.side_effect = get_image
         bdm_get_by_instance_uuid.return_value = bdms
@@ -3946,13 +3946,15 @@ class _ComputeAPIUnitTestMixIn(object):
 
         with mock.patch.object(self.compute_api.compute_task_api,
                 'rebuild_instance') as rebuild_instance:
-            self.compute_api.rebuild(self.context, instance, new_image_href,
-                    admin_pass, files_to_inject)
+            self.compute_api.rebuild(
+                self.context, instance, uuids.new_image_ref, admin_pass,
+                files_to_inject)
 
             rebuild_instance.assert_called_once_with(self.context,
                     instance=instance, new_pass=admin_pass,
-                    injected_files=files_to_inject, image_ref=new_image_href,
-                    orig_image_ref=orig_image_href,
+                    injected_files=files_to_inject,
+                    image_ref=uuids.new_image_ref,
+                    orig_image_ref=uuids.image_ref,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=None,
                     request_spec=fake_spec)
@@ -3989,14 +3991,14 @@ class _ComputeAPIUnitTestMixIn(object):
                 vm_state=vm_states.ACTIVE, cell_name='fake-cell',
                 launched_at=timeutils.utcnow(),
                 system_metadata=orig_system_metadata,
-                image_ref='foo',
+                image_ref=uuids.image_ref,
                 expected_attrs=['system_metadata'],
                 key_name=orig_key_name,
                 key_data=orig_key_data)
         get_flavor.return_value = test_flavor.fake_flavor
         flavor = instance.get_flavor()
-        image_href = 'foo'
         image = {
+            "id": uuids.image_ref,
             "min_ram": 10, "min_disk": 1,
             "properties": {'architecture': fields_obj.Architecture.X86_64,
                            'vm_mode': 'hvm'}}
@@ -4014,13 +4016,13 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_get_keypair.return_value = keypair
         with mock.patch.object(self.compute_api.compute_task_api,
                 'rebuild_instance') as rebuild_instance:
-            self.compute_api.rebuild(self.context, instance, image_href,
+            self.compute_api.rebuild(self.context, instance, uuids.image_ref,
                     admin_pass, files_to_inject, key_name=keypair.name)
 
             rebuild_instance.assert_called_once_with(self.context,
                     instance=instance, new_pass=admin_pass,
-                    injected_files=files_to_inject, image_ref=image_href,
-                    orig_image_ref=image_href,
+                    injected_files=files_to_inject, image_ref=uuids.image_ref,
+                    orig_image_ref=uuids.image_ref,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=instance.host,
                     request_spec=fake_spec)
@@ -4050,13 +4052,13 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = fake_instance.fake_instance_obj(
             self.context, vm_state=vm_states.ACTIVE, cell_name='fake-cell',
             launched_at=timeutils.utcnow(),
-            system_metadata=orig_system_metadata, image_ref='foo',
+            system_metadata=orig_system_metadata, image_ref=uuids.image_ref,
             expected_attrs=['system_metadata'],
             trusted_certs=orig_trusted_certs)
         get_flavor.return_value = test_flavor.fake_flavor
         flavor = instance.get_flavor()
-        image_href = 'foo'
         image = {
+            "id": uuids.image_ref,
             "min_ram": 10, "min_disk": 1,
             "properties": {'architecture': fields_obj.Architecture.X86_64,
                            'vm_mode': 'hvm'}}
@@ -4072,14 +4074,14 @@ class _ComputeAPIUnitTestMixIn(object):
 
         with mock.patch.object(self.compute_api.compute_task_api,
                 'rebuild_instance') as rebuild_instance:
-            self.compute_api.rebuild(self.context, instance, image_href,
+            self.compute_api.rebuild(self.context, instance, uuids.image_ref,
                                      admin_pass, files_to_inject,
                                      trusted_certs=new_trusted_certs)
 
             rebuild_instance.assert_called_once_with(
                 self.context, instance=instance, new_pass=admin_pass,
-                injected_files=files_to_inject, image_ref=image_href,
-                orig_image_ref=image_href,
+                injected_files=files_to_inject, image_ref=uuids.image_ref,
+                orig_image_ref=uuids.image_ref,
                 orig_sys_metadata=orig_system_metadata, bdms=bdms,
                 preserve_ephemeral=False, host=instance.host,
                 request_spec=fake_spec)
@@ -4114,13 +4116,13 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = fake_instance.fake_instance_obj(
             self.context, vm_state=vm_states.ACTIVE, cell_name='fake-cell',
             launched_at=timeutils.utcnow(),
-            system_metadata=orig_system_metadata, image_ref='foo',
+            system_metadata=orig_system_metadata, image_ref=uuids.image_ref,
             expected_attrs=['system_metadata'],
             trusted_certs=orig_trusted_certs)
         get_flavor.return_value = test_flavor.fake_flavor
         flavor = instance.get_flavor()
-        image_href = 'foo'
         image = {
+            "id": uuids.image_ref,
             "min_ram": 10, "min_disk": 1,
             "properties": {'architecture': fields_obj.Architecture.X86_64,
                            'vm_mode': 'hvm'}}
@@ -4136,14 +4138,14 @@ class _ComputeAPIUnitTestMixIn(object):
 
         with mock.patch.object(self.compute_api.compute_task_api,
                                'rebuild_instance') as rebuild_instance:
-            self.compute_api.rebuild(self.context, instance, image_href,
-                                     admin_pass, files_to_inject,
-                                     trusted_certs=new_trusted_certs)
+            self.compute_api.rebuild(
+                self.context, instance, uuids.image_ref, admin_pass,
+                files_to_inject, trusted_certs=new_trusted_certs)
 
             rebuild_instance.assert_called_once_with(
                 self.context, instance=instance, new_pass=admin_pass,
-                injected_files=files_to_inject, image_ref=image_href,
-                orig_image_ref=image_href,
+                injected_files=files_to_inject, image_ref=uuids.image_ref,
+                orig_image_ref=uuids.image_ref,
                 orig_sys_metadata=orig_system_metadata, bdms=bdms,
                 preserve_ephemeral=False, host=instance.host,
                 request_spec=fake_spec)
@@ -4172,8 +4174,8 @@ class _ComputeAPIUnitTestMixIn(object):
             system_metadata=orig_system_metadata, image_ref=None,
             expected_attrs=['system_metadata'], trusted_certs=None)
         get_flavor.return_value = test_flavor.fake_flavor
-        image_href = 'foo'
         image = {
+            "id": uuids.image_ref,
             "min_ram": 10, "min_disk": 1,
             "properties": {'architecture': fields_obj.Architecture.X86_64,
                            'vm_mode': 'hvm'}}
@@ -4186,7 +4188,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.assertRaises(exception.CertificateValidationFailed,
                           self.compute_api.rebuild, self.context, instance,
-                          image_href, admin_pass, files_to_inject,
+                          uuids.image_ref, admin_pass, files_to_inject,
                           trusted_certs=new_trusted_certs)
 
         _check_auto_disk_config.assert_called_once_with(

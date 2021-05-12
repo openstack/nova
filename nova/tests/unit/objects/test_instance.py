@@ -75,8 +75,10 @@ class _TestInstanceObject(object):
 
         db_inst['info_cache'] = dict(test_instance_info_cache.fake_info_cache,
                                      instance_uuid=db_inst['uuid'])
+        db_inst['image_ref'] = uuids.image_ref
 
         db_inst['system_metadata'] = {
+            'image_id': uuids.image_id,
             'image_name': 'os2-warp',
             'image_min_ram': 100,
             'image_hw_disk_bus': 'ide',
@@ -962,12 +964,12 @@ class _TestInstanceObject(object):
         fake_inst = dict(self.fake_instance)
         mock_get.return_value = fake_inst
 
-        inst = instance.Instance.get_by_uuid(self.context,
-                                             fake_inst['uuid'],
-                                             expected_attrs=['image_meta'])
+        inst = instance.Instance.get_by_uuid(
+            self.context, fake_inst['uuid'], expected_attrs=['image_meta'])
 
         image_meta = inst.image_meta
         self.assertIsInstance(image_meta, objects.ImageMeta)
+        self.assertEqual(uuids.image_ref, image_meta.id)
         self.assertEqual(100, image_meta.min_ram)
         self.assertEqual('ide', image_meta.properties.hw_disk_bus)
         self.assertEqual('ne2k_pci', image_meta.properties.hw_vif_model)
