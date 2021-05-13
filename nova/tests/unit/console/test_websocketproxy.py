@@ -626,6 +626,40 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         self.wh.server.top_new_client(conn, address)
         self.assertIsNone(self.wh._compute_rpcapi)
 
+    def test_reject_open_redirect(self):
+        # This will test the behavior when an attempt is made to cause an open
+        # redirect. It should be rejected.
+        mock_req = mock.MagicMock()
+        mock_req.makefile().readline.side_effect = [
+            b'GET //example.com/%2F.. HTTP/1.1\r\n',
+            b''
+        ]
+
+        # Collect the response data to verify at the end. The
+        # SimpleHTTPRequestHandler writes the response data by calling the
+        # request socket sendall() method.
+        self.data = b''
+
+        def fake_sendall(data):
+            self.data += data
+
+        mock_req.sendall.side_effect = fake_sendall
+
+        client_addr = ('8.8.8.8', 54321)
+        mock_server = mock.MagicMock()
+        # This specifies that the server will be able to handle requests other
+        # than only websockets.
+        mock_server.only_upgrade = False
+
+        # Constructing a handler will process the mock_req request passed in.
+        websocketproxy.NovaProxyRequestHandler(
+            mock_req, client_addr, mock_server)
+
+        # Verify no redirect happens and instead a 400 Bad Request is returned.
+        self.data = self.data.decode()
+        self.assertIn('Error code: 400', self.data)
+        self.assertIn('Message: URI must not start with //', self.data)
+
     @mock.patch('websockify.websocketproxy.select_ssl_version')
     def test_ssl_min_version_is_not_set(self, mock_select_ssl):
         websocketproxy.NovaWebSocketProxy()

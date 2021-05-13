@@ -1,0 +1,19 @@
+---
+security:
+  - |
+    A vulnerability in the console proxies (novnc, serial, spice) that allowed
+    open redirection has been `patched`_. The novnc, serial, and spice console
+    proxies are implemented as websockify servers and the request handler
+    inherits from the python standard SimpleHTTPRequestHandler. There is a
+    `known issue`_ in the SimpleHTTPRequestHandler which allows open redirects
+    by way of URLs in the following format::
+
+      http://vncproxy.my.domain.com//example.com/%2F..
+
+    which if visited, will redirect a user to example.com.
+
+    The novnc, serial, and spice console proxies will now reject requests that
+    pass a redirection URL beginning with "//" with a 400 Bad Request.
+
+    .. _patched: https://bugs.launchpad.net/nova/+bug/1927677
+    .. _known issue: https://bugs.python.org/issue32084
