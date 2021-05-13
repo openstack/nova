@@ -53,9 +53,8 @@ class PostLiveMigrationFail(
             "Failed to remove source vol connection post live migration")
         mock_migration.side_effect = error
 
-        self._live_migrate(
+        server = self._live_migrate(
             server, migration_expected_state='error',
             server_expected_state='ERROR')
-        # FIXME(amit): this should point to the dest as after migration
-        # but does not because of bug 1628606
-        self.assertEqual(self.src.host, server['OS-EXT-SRV-ATTR:host'])
+
+        self.assertEqual(self.dest.host, server['OS-EXT-SRV-ATTR:host'])
