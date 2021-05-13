@@ -9922,6 +9922,27 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                                 self.instance,
                                                 migration)
 
+    def test_post_live_migration_update_host(self):
+        @mock.patch.object(self.compute, '_get_compute_info')
+        def _test_post_live_migration(_get_compute_info):
+            dest_host = 'dest'
+            cn = objects.ComputeNode(hypervisor_hostname=dest_host)
+            _get_compute_info.return_value = cn
+            instance = fake_instance.fake_instance_obj(self.context,
+                                                        node='src',
+                                                        uuid=uuids.instance)
+            with mock.patch.object(self.compute, "_post_live_migration"
+                    ) as plm, mock.patch.object(instance, "save") as save:
+                error = ValueError("some failure")
+                plm.side_effect = error
+                self.assertRaises(
+                    ValueError, self.compute._post_live_migration_update_host,
+                    self.context, instance, dest_host)
+                save.assert_called_once()
+                self.assertEqual(instance.host, dest_host)
+
+        _test_post_live_migration()
+
     def test_post_live_migration_cinder_pre_344_api(self):
         # Because live migration has
         # succeeded,_post_live_migration_remove_source_vol_connections()
