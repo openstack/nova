@@ -19,6 +19,7 @@ Leverages websockify.py by Joel Martin
 '''
 
 import copy
+import os
 import socket
 import sys
 
@@ -304,6 +305,27 @@ class NovaProxyRequestHandler(NovaProxyRequestHandlerBase,
         else:
             # Fall back to the websockify <= v0.8.0 'socket' method location.
             return websockify.WebSocketServer.socket(*args, **kwargs)
+
+    def send_head(self):
+        # This code is copied from this example patch:
+        # https://bugs.python.org/issue32084#msg306545
+        path = self.translate_path(self.path)
+        if os.path.isdir(path):
+            parts = urlparse.urlsplit(self.path)
+            if not parts.path.endswith('/'):
+                # redirect browser - doing basically what apache does
+                new_parts = (parts[0], parts[1], parts[2] + '/',
+                              parts[3], parts[4])
+                new_url = urlparse.urlunsplit(new_parts)
+
+                # Browsers interpret "Location: //uri" as an absolute URI
+                # like "http://URI"
+                if new_url.startswith('//'):
+                    self.send_error(400,
+                                    "URI must not start with //")
+                    return None
+
+        return super(NovaProxyRequestHandler, self).send_head()
 
 
 class NovaWebSocketProxy(websockify.WebSocketProxy):
