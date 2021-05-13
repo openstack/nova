@@ -8472,8 +8472,9 @@ class ComputeManager(manager.Manager):
         # host attachment. We fetch BDMs before that to retain connection_info
         # and attachment_id relating to the source host for post migration
         # cleanup.
-        post_live_migration = functools.partial(self._post_live_migration,
-                                                source_bdms=source_bdms)
+        post_live_migration = functools.partial(
+            self._post_live_migration_update_host, source_bdms=source_bdms
+            )
         rollback_live_migration = functools.partial(
             self._rollback_live_migration, source_bdms=source_bdms)
 
@@ -8745,6 +8746,42 @@ class ComputeManager(manager.Manager):
                                   bdm.attachment_id, self.host,
                                   str(e), instance=instance)
 
+    # TODO(sean-k-mooney): add typing
+    def _post_live_migration_update_host(
+        self, ctxt, instance, dest, block_migration=False,
+        migrate_data=None, source_bdms=None
+    ):
+        try:
+            self._post_live_migration(
+                ctxt, instance, dest, block_migration, migrate_data,
+                source_bdms)
+        except Exception:
+            # Restore the instance object
+            node_name = None
+            try:
+                # get node name of compute, where instance will be
+                # running after migration, that is destination host
+                compute_node = self._get_compute_info(ctxt, dest)
+                node_name = compute_node.hypervisor_hostname
+            except exception.ComputeHostNotFound:
+                LOG.exception('Failed to get compute_info for %s', dest)
+
+            # we can never rollback from post live migration and we can only
+            # get here if the instance is running on the dest so we ensure
+            # the instance.host is set correctly and reraise the original
+            # exception unmodified.
+            if instance.host != dest:
+                # apply saves the new fields while drop actually removes the
+                # migration context from the instance, so migration persists.
+                instance.apply_migration_context()
+                instance.drop_migration_context()
+                instance.host = dest
+                instance.task_state = None
+                instance.node = node_name
+                instance.progress = 0
+                instance.save()
+            raise
+
     @wrap_exception()
     @wrap_instance_fault
     def _post_live_migration(self, ctxt, instance, dest,
@@ -8756,7 +8793,7 @@ class ComputeManager(manager.Manager):
         and mainly updating database record.
 
         :param ctxt: security context
-        :param instance: instance dict
+        :param instance: instance object
         :param dest: destination host
         :param block_migration: if true, prepare for block migration
         :param migrate_data: if not None, it is a dict which has data
