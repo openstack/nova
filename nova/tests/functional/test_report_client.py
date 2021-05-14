@@ -1285,7 +1285,7 @@ class SchedulerReportClientTests(test.TestCase):
              'CUSTOM_FOO'))
         acs, _, ver = self.client.get_allocation_candidates(
             self.context, utils.ResourceRequest.from_request_spec(req_spec))
-        self.assertEqual('1.35', ver)
+        self.assertEqual('1.36', ver)
         # This prints which ddt permutation we're using if it fails.
         self.assertEqual(data['expected_acs'], len(acs), data)
 

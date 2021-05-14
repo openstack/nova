@@ -42,7 +42,7 @@ from nova import utils
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 WARN_EVERY = 10
-ROOT_REQUIRED_VERSION = '1.35'
+SAME_SUBTREE_VERSION = '1.36'
 RESHAPER_VERSION = '1.30'
 CONSUMER_GENERATION_VERSION = '1.28'
 ALLOW_RESERVED_EQUAL_TOTAL_INVENTORY_VERSION = '1.26'
@@ -292,7 +292,7 @@ class SchedulerReportClient(object):
         """
         # Note that claim_resources() will use this version as well to
         # make allocations by `PUT /allocations/{consumer_uuid}`
-        version = ROOT_REQUIRED_VERSION
+        version = SAME_SUBTREE_VERSION
         qparams = resources.to_querystring()
         url = "/allocation_candidates?%s" % qparams
         resp = self.get(url, version=version,
