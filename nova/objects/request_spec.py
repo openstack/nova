@@ -200,6 +200,12 @@ class RequestSpec(base.NovaObject):
         # respective obj_load_attr methods.
         return self.request_level_params.root_forbidden
 
+    @property
+    def same_subtree(self):
+        # self.request_level_params and .same_subtree lazy-default via their
+        # respective obj_load_attr methods.
+        return self.request_level_params.same_subtree
+
     def _image_meta_from_image(self, image):
         if isinstance(image, objects.ImageMeta):
             self.image = image
@@ -533,6 +539,7 @@ class RequestSpec(base.NovaObject):
         # NOTE(efried): We don't need to handle request_level_params here yet
         #  because they're set dynamically by the scheduler. That could change
         #  in the future.
+        # TODO(gibi): handle same_subtree here coming from the neutron ports
 
         # NOTE(sbauza): Default the other fields that are not part of the
         # original contract
