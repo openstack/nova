@@ -251,14 +251,3 @@ class GetVfNumByPciAddressTestCase(test.NoDBTestCase):
             utils.get_vf_num_by_pci_address,
             self.pci_address
         )
-
-    @mock.patch.object(os, 'readlink')
-    @mock.patch.object(glob, 'iglob')
-    def test_exception(self, mock_iglob, mock_readlink):
-        mock_iglob.return_value = self.paths
-        mock_readlink.side_effect = OSError('No such file or directory')
-        self.assertRaises(
-            exception.PciDeviceNotFoundById,
-            utils.get_vf_num_by_pci_address,
-            self.pci_address
-        )
