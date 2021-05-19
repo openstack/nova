@@ -8018,7 +8018,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for cell in topology.cells:
             cpus = set(cpu.id for cpu in cell.cpus)
 
-            # NOTE(artom) We assume we'll never see hardware with multipe
+            # NOTE(artom) We assume we'll never see hardware with multiple
             # sockets in a single NUMA node - IOW, the socket_id for all CPUs
             # in a single cell will be the same. To make that assumption
             # explicit, we leave the cell's socket_id as None if that's the

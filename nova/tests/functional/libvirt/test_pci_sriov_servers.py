@@ -624,7 +624,7 @@ class SRIOVServersTest(_PCIServersTestBase):
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
         pci_info_no_sriov = copy.deepcopy(pci_info)
 
-        # Disable SRIOV capabilties in PF and delete the VFs
+        # Disable SRIOV capabilities in PF and delete the VFs
         self._disable_sriov_in_pf(pci_info_no_sriov)
 
         fake_connection = self._get_connection(pci_info=pci_info_no_sriov,

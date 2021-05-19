@@ -7379,7 +7379,7 @@ class ComputeTestCase(BaseTestCase,
             fake_instance.fake_db_instance(uuid=uuids.migration_instance_5,
                                            vm_state=vm_states.ACTIVE,
                                            task_state=None),
-            # The expceted migration result will be None instead of error
+            # The expected migration result will be None instead of error
             # since _poll_unconfirmed_resizes will not change it
             # when the instance vm state is RESIZED and task state
             # is deleting, see bug 1301696 for more detail

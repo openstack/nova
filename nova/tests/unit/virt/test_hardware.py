@@ -2867,7 +2867,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
         # the PCI device is found on host cell 1
         pci_stats = _create_pci_stats(1)
 
-        # ...threfore an instance without a PCI device should get host cell 2
+        # ...therefore an instance without a PCI device should get host cell 2
         instance_topology = hw.numa_fit_instance_to_host(
                 self.host, self.instance1, pci_stats=pci_stats)
         self.assertIsInstance(instance_topology, objects.InstanceNUMATopology)
@@ -2877,7 +2877,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
         # the PCI device is now found on host cell 2
         pci_stats = _create_pci_stats(2)
 
-        # ...threfore an instance without a PCI device should get host cell 1
+        # ...therefore an instance without a PCI device should get host cell 1
         instance_topology = hw.numa_fit_instance_to_host(
                 self.host, self.instance1, pci_stats=pci_stats)
         self.assertIsInstance(instance_topology, objects.InstanceNUMATopology)

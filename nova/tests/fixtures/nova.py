@@ -709,7 +709,7 @@ class RPCFixture(fixtures.Fixture):
 
         # NOTE(danms): This will be called with a non-None url by
         # cells-aware code that is requesting to contact something on
-        # one of the many transports we're multplexing here.
+        # one of the many transports we're multiplexing here.
         if url not in self._buses:
             exmods = rpc.get_allowed_exmods()
             self._buses[url] = messaging.get_rpc_transport(
