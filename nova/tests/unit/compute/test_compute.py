@@ -68,6 +68,7 @@ from nova.policies import servers as servers_policy
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
+from nova.tests.fixtures import cyborg as cyborg_fixture
 from nova.tests.unit.compute import eventlet_utils
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device
@@ -3148,7 +3149,7 @@ class ComputeTestCase(BaseTestCase,
     def test_reboot_with_accels_ok(self, mock_get_arqs):
         dp_name = 'mydp'
         extra_specs = {'accel:device_profile': dp_name}
-        _, accel_info = fixtures.get_arqs(dp_name)
+        _, accel_info = cyborg_fixture.get_arqs(dp_name)
         mock_get_arqs.return_value = accel_info
 
         instance_uuid = self._test_reboot_with_accels(

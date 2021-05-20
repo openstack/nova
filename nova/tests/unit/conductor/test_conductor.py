@@ -53,6 +53,7 @@ from nova.scheduler.client import query
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
+from nova.tests.fixtures import cyborg as cyborg_fixture
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_build_request
@@ -2280,7 +2281,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         dp_name = 'mydp'
         instance.flavor.extra_specs = {'accel:device_profile': dp_name}
 
-        in_arq_list, _ = fixtures.get_arqs(dp_name)
+        in_arq_list, _ = cyborg_fixture.get_arqs(dp_name)
         mock_create.return_value = in_arq_list
 
         self.conductor._create_and_bind_arqs(self.context,
