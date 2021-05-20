@@ -218,6 +218,11 @@ important OS distros.
       - 6.6.0
       - 5.1.0
       - 1.43.0
+    * - 34
+      - 2021-04-27
+      - 7.0.0
+      - 5.2.0
+      - 1.45.4
     * - **SUSE**
       -
       -
@@ -234,10 +239,15 @@ important OS distros.
       - 3.1.1
       - 1.38.0
     * - Leap 15.2
-      - 2020-07-02 (scheduled)
+      - 2020-07-02
       - 6.0.0
       - 4.2.0
       - 1.38.0
+    * - Leap 15.3
+      - 2021-06-02 (scheduled)
+      - 7.2.0
+      - 6.0.0
+      - 1.44.1
     * - **RHEL**
       -
       -
@@ -263,6 +273,11 @@ important OS distros.
       - 6.0.0-25.5
       - 4.2.0-29
       - 1.40.2-24
+    * - 8.4
+      - 2021-05-18
+      - 7.0.0-8
+      - 5.2.0-10
+      - 1.44.0-2
     * - **SLES**
       -
       -
@@ -290,14 +305,19 @@ important OS distros.
       -
     * - 18.04 (Bionic LTS - Cloud Archive)
       - as of 2019-11-18
-      - 5.4
+      - 5.4.0
       - 4.0
       - 1.36
-    * - 20.04 (Focal Fossa)
+    * - 20.04 (Focal Fossa LTS)
       - 2020-04-23
       - 6.0.0
       - 4.2
       - 1.40.2
+    * - 21.04 (Hirsute Hippo)
+      - 2021-04-22
+      - 7.0.0
+      - 5.2
+      - 1.44.1
 
 .. NB: maintain alphabetical ordering of distros, followed by oldest released
        versions first
