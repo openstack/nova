@@ -62,14 +62,10 @@ Fortunately, nova provides functionality to ensure NUMA affinitization is
 provided for instances using neutron. How this works depends on the type of
 port you are trying to use.
 
-.. todo::
-
-   Add documentation for PCI NUMA affinity and PCI policies and link to it from
-   here.
-
 For SR-IOV ports, virtual functions, which are PCI devices, are attached to the
 instance. This means the instance can benefit from the NUMA affinity guarantees
-provided for PCI devices. This happens automatically.
+provided for PCI devices. This happens automatically and is described in detail
+in :ref:`pci-numa-affinity-policy`.
 
 For all other types of ports, some manual configuration is required.
 
