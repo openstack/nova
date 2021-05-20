@@ -41,7 +41,7 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
 
         super(ServersTestBase, self).setUp()
 
-        self.useFixture(nova_fixtures.ImageBackendFixture())
+        self.useFixture(nova_fixtures.LibvirtImageBackendFixture())
         self.useFixture(nova_fixtures.LibvirtFixture())
 
         self.useFixture(fixtures.MockPatch(

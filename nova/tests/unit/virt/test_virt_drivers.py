@@ -83,7 +83,7 @@ class _FakeDriverBackendTestCase(object):
             self.saved_libvirt = None
 
         self.useFixture(nova_fixtures.OSBrickFixture())
-        self.useFixture(nova_fixtures.ImageBackendFixture())
+        self.useFixture(nova_fixtures.LibvirtImageBackendFixture())
         self.useFixture(nova_fixtures.LibvirtFixture())
 
         self.useFixture(fixtures.MonkeyPatch(

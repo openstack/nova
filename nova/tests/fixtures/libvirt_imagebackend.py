@@ -26,7 +26,7 @@ from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import utils as libvirt_utils
 
 
-class ImageBackendFixture(fixtures.Fixture):
+class LibvirtImageBackendFixture(fixtures.Fixture):
 
     def __init__(self, got_files=None, imported_files=None, exists=None):
         """This fixture mocks imagebackend.Backend.backend, which is the

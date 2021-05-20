@@ -17,8 +17,8 @@ from .cinder import CinderFixture  # noqa: F401
 from .conf import ConfFixture  # noqa: F401, F403
 from .cyborg import CyborgFixture  # noqa: F401
 from .glance import GlanceFixture  # noqa: F401
-from .imagebackend import ImageBackendFixture  # noqa: F401
 from .libvirt import LibvirtFixture  # noqa: F401
+from .libvirt_imagebackend import LibvirtImageBackendFixture  # noqa: F401
 from .neutron import NeutronFixture  # noqa: F401
 from .nova import *  # noqa: F401, F403
 from .os_brick import OSBrickFixture  # noqa: F401
