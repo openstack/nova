@@ -12,8 +12,6 @@
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.unit import cast_as_call
-from nova.tests.unit import policy_fixture
 
 
 class TestServerUpdate(test.TestCase):
@@ -21,7 +19,7 @@ class TestServerUpdate(test.TestCase):
 
     def setUp(self):
         super(TestServerUpdate, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.GlanceFixture(self))
         # Simulate requests coming in before the instance is scheduled by
@@ -32,7 +30,7 @@ class TestServerUpdate(test.TestCase):
 
         self.api = api_fixture.api
 
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(nova_fixtures.CastAsCallFixture(self))
 
         self.image_id = self.api.get_images()[0]['id']
         self.flavor_id = self.api.get_flavors()[0]['id']

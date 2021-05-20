@@ -18,7 +18,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import policy_fixture
 
 
 class TestNeutronExternalNetworks(test.TestCase,
@@ -29,7 +28,7 @@ class TestNeutronExternalNetworks(test.TestCase,
     def setUp(self):
         super(TestNeutronExternalNetworks, self).setUp()
         # Use the standard fixtures.
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(func_fixtures.PlacementFixture())
         self.useFixture(nova_fixtures.GlanceFixture(self))
         neutron = self.useFixture(nova_fixtures.NeutronFixture(self))

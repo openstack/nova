@@ -25,7 +25,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import policy_fixture
 from nova import utils
 from nova.virt import fake
 
@@ -61,7 +60,7 @@ class ServerGroupTestBase(test.TestCase,
         self.flags(weight_classes=self._get_weight_classes(),
                    group='filter_scheduler')
 
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
 
@@ -951,7 +950,7 @@ class TestAntiAffinityLiveMigration(test.TestCase,
     def setUp(self):
         super(TestAntiAffinityLiveMigration, self).setUp()
         # Setup common fixtures.
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())

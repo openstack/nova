@@ -15,7 +15,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import policy_fixture
 
 
 class TestServersPerUserQuota(test.TestCase,
@@ -41,7 +40,7 @@ class TestServersPerUserQuota(test.TestCase,
     """
     def setUp(self):
         super(TestServersPerUserQuota, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))

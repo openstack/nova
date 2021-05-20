@@ -19,9 +19,7 @@ from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
-from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_network
-from nova.tests.unit import policy_fixture
 
 
 class TestRetryBetweenComputeNodeBuilds(test.TestCase):
@@ -39,7 +37,7 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
     def setUp(self):
         super(TestRetryBetweenComputeNodeBuilds, self).setUp()
 
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
 
         # The NeutronFixture is needed to stub out validate_networks in API.
         self.useFixture(nova_fixtures.NeutronFixture(self))
@@ -69,7 +67,7 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
 
         self.scheduler_service = self.start_service('scheduler')
 
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(nova_fixtures.CastAsCallFixture(self))
 
         self.image_id = self.admin_api.get_images()[0]['id']
         self.flavor_id = self.admin_api.get_flavors()[0]['id']

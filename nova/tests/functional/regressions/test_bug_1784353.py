@@ -15,7 +15,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
-from nova.tests.unit import policy_fixture
 
 
 class TestRescheduleWithVolumesAttached(
@@ -32,7 +31,7 @@ class TestRescheduleWithVolumesAttached(
 
         # Use the new attach flow fixture for cinder
         self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(nova_fixtures.GlanceFixture(self))
 

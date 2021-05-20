@@ -620,9 +620,8 @@ class NUMALiveMigrationNegativeTests(NUMALiveMigrationBase):
         server = self.api.post_server(post)
         self._wait_for_state_change(server, 'ACTIVE')
         self.assertEqual('host_a', self.get_host(server['id']))
-        # NOTE(artom) Because we use the CastAsCall fixture, we expect the
+        # NOTE(artom) Because we use the CastAsCallFixture, we expect the
         # MigrationPreCheckError to be bubbled up to the API as an error 500.
-        # TODO(artom) Stop using CastAsCall to make it more realistic.
         self.api.api_post(
             '/servers/%s/action' % server['id'],
             {'os-migrateLive': {'host': 'host_b',
@@ -666,9 +665,8 @@ class NUMALiveMigrationNegativeTests(NUMALiveMigrationBase):
         self._wait_for_state_change(server, 'ACTIVE')
         initial_host = self.get_host(server['id'])
         dest_host = 'host_a' if initial_host == 'host_b' else 'host_b'
-        # NOTE(artom) Because we use the CastAsCall fixture, we expect the
+        # NOTE(artom) Because we use the CastAsCallFixture, we expect the
         # MigrationPreCheckError to be bubbled up to the API as an error 500.
-        # TODO(artom) Stop using CastAsCall to make it more realistic.
         self.api.api_post(
             '/servers/%s/action' % server['id'],
             {'os-migrateLive': {'host': dest_host,

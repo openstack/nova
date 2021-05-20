@@ -18,7 +18,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import policy_fixture
 
 
 class BootFromVolumeOverQuotaRaceDeleteTest(
@@ -49,7 +48,7 @@ class BootFromVolumeOverQuotaRaceDeleteTest(
         self.cinder_fixture = self.useFixture(
             nova_fixtures.CinderFixture(self))
         # Use the standard fixtures.
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
         self.api = self.useFixture(nova_fixtures.OSAPIFixture(

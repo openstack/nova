@@ -18,7 +18,6 @@ from nova.network import model as network_model
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_server_actions
 
@@ -27,7 +26,7 @@ class ComputeManagerTestCase(test.TestCase):
     def setUp(self):
         super(ComputeManagerTestCase, self).setUp()
         self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(nova_fixtures.CastAsCallFixture(self))
         self.conductor = self.start_service('conductor')
         self.start_service('scheduler')
         self.compute = self.start_service('compute')

@@ -11,19 +11,19 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+
 from cinderclient import exceptions as cinder_exceptions
 import mock
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
-from nova.tests.unit import policy_fixture
 
 
 class TestCinderForbidden(test.TestCase):
     def setUp(self):
         super(TestCinderForbidden, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 
@@ -50,7 +50,7 @@ class TestCinderForbidden(test.TestCase):
 class TestCinderOverLimit(test.TestCase):
     def setUp(self):
         super(TestCinderOverLimit, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 

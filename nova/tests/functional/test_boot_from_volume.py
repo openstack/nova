@@ -19,7 +19,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import policy_fixture
 
 
 class BootFromVolumeTest(integrated_helpers._IntegratedTestBase):
@@ -167,7 +166,7 @@ class BootFromVolumeLargeRequestTest(test.TestCase,
 
     def setUp(self):
         super(BootFromVolumeLargeRequestTest, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.CinderFixture(self))

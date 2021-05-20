@@ -1664,7 +1664,7 @@ class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
         server_req = {
             'server': server, 'os:scheduler_hints': {'group': group['id']}}
         # Since we don't pass return_reservation_id=True we get the first
-        # server back in the response. We're also using the CastAsCall fixture
+        # server back in the response. We're also using the CastAsCallFixture
         # (from the base class) fixture so we don't have to worry about the
         # server being ACTIVE.
         server = self.api.post_server(server_req)

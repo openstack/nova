@@ -9,6 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 import copy
 
 from oslo_log import log as logging
@@ -17,7 +18,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from nova import context as nova_context
 from nova import exception
 from nova import test
-from nova.tests.unit import policy_fixture
+from nova.tests import fixtures
 
 
 LOG = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ class BasePolicyTest(test.TestCase):
 
     def setUp(self):
         super(BasePolicyTest, self).setUp()
-        self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
+        self.policy = self.useFixture(fixtures.RealPolicyFixture())
 
         self.admin_project_id = uuids.admin_project_id
         self.project_id = uuids.project_id

@@ -27,8 +27,8 @@ from nova import exception
 from nova.policies import servers as servers_policy
 from nova import policy
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_policy
-from nova.tests.unit import policy_fixture
 from nova import utils
 
 
@@ -285,7 +285,7 @@ class IsAdminCheckTestCase(test.NoDBTestCase):
 class AdminRolePolicyTestCase(test.NoDBTestCase):
     def setUp(self):
         super(AdminRolePolicyTestCase, self).setUp()
-        self.policy = self.useFixture(policy_fixture.RoleBasedPolicyFixture())
+        self.policy = self.useFixture(nova_fixtures.RoleBasedPolicyFixture())
         self.context = context.RequestContext('fake', 'fake', roles=['member'])
         self.actions = policy.get_rules().keys()
         self.target = {}
@@ -302,7 +302,7 @@ class AdminRolePolicyTestCase(test.NoDBTestCase):
 class RealRolePolicyTestCase(test.NoDBTestCase):
     def setUp(self):
         super(RealRolePolicyTestCase, self).setUp()
-        self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
+        self.policy = self.useFixture(nova_fixtures.RealPolicyFixture())
         self.non_admin_context = context.RequestContext('fake', 'fake',
                                                         roles=['member'])
         self.admin_context = context.RequestContext('fake', 'fake', True,

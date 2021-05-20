@@ -63,7 +63,6 @@ from nova.objects import base as objects_base
 from nova import quota
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import matchers
-from nova.tests.unit import policy_fixture
 from nova import utils
 from nova.virt import images
 
@@ -263,7 +262,7 @@ class TestCase(base.BaseTestCase):
 
         self.addCleanup(self._clear_attrs)
         self.useFixture(fixtures.EnvironmentVariable('http_proxy'))
-        self.policy = self.useFixture(policy_fixture.PolicyFixture())
+        self.policy = self.useFixture(nova_fixtures.PolicyFixture())
 
         self.useFixture(nova_fixtures.PoisonFunctions())
 

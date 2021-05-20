@@ -40,9 +40,7 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional import fixtures as func_fixtures
-from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_notifier
-from nova.tests.unit import policy_fixture
 from nova import utils
 
 
@@ -1109,13 +1107,13 @@ class _IntegratedTestBase(test.TestCase, PlacementInstanceHelperMixin):
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
 
-        self.useFixture(cast_as_call.CastAsCall(self))
+        self.useFixture(nova_fixtures.CastAsCallFixture(self))
 
         self.placement = self.useFixture(func_fixtures.PlacementFixture()).api
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
-        self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
+        self.policy = self.useFixture(nova_fixtures.RealPolicyFixture())
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
@@ -1182,7 +1180,7 @@ class ProviderUsageBaseTestCase(test.TestCase, PlacementInstanceHelperMixin):
         self.flags(compute_driver=self.compute_driver)
         super(ProviderUsageBaseTestCase, self).setUp()
 
-        self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
+        self.policy = self.useFixture(nova_fixtures.RealPolicyFixture())
         self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.placement = self.useFixture(func_fixtures.PlacementFixture()).api

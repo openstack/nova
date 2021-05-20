@@ -25,12 +25,12 @@ from nova import exception
 from nova.policies import base as base_policy
 from nova.policies import instance_actions as ia_policies
 from nova import policy
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack.compute import test_instance_actions
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.policies import base
-from nova.tests.unit import policy_fixture
 
 FAKE_UUID = fake_server_actions.FAKE_UUID
 FAKE_REQUEST_ID = fake_server_actions.FAKE_REQUEST_ID1
@@ -178,7 +178,7 @@ class InstanceActionsDeprecatedPolicyTest(base.BasePolicyTest):
         # Oslo.policy will consider the overridden rules if:
         # 1. overridden deprecated rule's checks are different than defaults
         # 2. new rules are not present in policy file
-        self.policy = self.useFixture(policy_fixture.OverridePolicyFixture(
+        self.policy = self.useFixture(nova_fixtures.OverridePolicyFixture(
                                       rules_in_file=override_rules))
 
     @mock.patch('nova.compute.api.InstanceActionAPI.actions_get')

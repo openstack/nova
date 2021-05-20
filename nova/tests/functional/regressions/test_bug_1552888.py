@@ -15,14 +15,13 @@
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.unit import policy_fixture
 
 
 class TestAggregateCreation(test.TestCase):
 
     def setUp(self):
         super(TestAggregateCreation, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 

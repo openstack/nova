@@ -18,7 +18,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import policy_fixture
 from nova.tests.unit import utils as test_utils
 from nova import utils
 
@@ -933,7 +932,7 @@ class AggregateMultiTenancyIsolationColdMigrateTest(
 
     def setUp(self):
         super(AggregateMultiTenancyIsolationColdMigrateTest, self).setUp()
-        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.RealPolicyFixture())
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())

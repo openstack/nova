@@ -18,7 +18,7 @@ import fixtures
 import oslo_messaging as messaging
 
 
-class CastAsCall(fixtures.Fixture):
+class CastAsCallFixture(fixtures.Fixture):
 
     """Make RPC 'cast' behave like a 'call'.
 
@@ -31,7 +31,7 @@ class CastAsCall(fixtures.Fixture):
     """
 
     def __init__(self, testcase):
-        super(CastAsCall, self).__init__()
+        super().__init__()
         self.testcase = testcase
 
     @staticmethod
@@ -47,7 +47,7 @@ class CastAsCall(fixtures.Fixture):
             if 'fanout' in kwargs:
                 kwargs['fanout'] = False
             cctxt = orig_prepare(self, *args, **kwargs)
-            CastAsCall._stub_out(testcase, cctxt)  # woo, recurse!
+            CastAsCallFixture._stub_out(testcase, cctxt)  # woo, recurse!
             return cctxt
 
         if obj:
@@ -65,5 +65,5 @@ class CastAsCall(fixtures.Fixture):
                               messaging.RPCClient.call)
 
     def setUp(self):
-        super(CastAsCall, self).setUp()
+        super().setUp()
         self._stub_out(self.testcase)

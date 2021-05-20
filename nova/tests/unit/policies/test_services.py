@@ -16,9 +16,9 @@ import mock
 from nova.api.openstack.compute import services as services_v21
 from nova import exception
 from nova.policies import base as base_policy
+from nova.tests import fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.policies import base
-from nova.tests.unit import policy_fixture
 
 
 class ServicesPolicyTest(base.BasePolicyTest):
@@ -178,7 +178,7 @@ class ServicesDeprecatedPolicyTest(base.BasePolicyTest):
         # Oslo.policy will consider the overridden rules if:
         #  1. overridden deprecated rule's checks are different than defaults
         #  2. new rules are not present in policy file
-        self.policy = self.useFixture(policy_fixture.OverridePolicyFixture(
+        self.policy = self.useFixture(fixtures.OverridePolicyFixture(
                                       rules_in_file=override_rules))
 
     def test_deprecated_policy_overridden_rule_is_checked(self):

@@ -1354,7 +1354,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
                 'imageRef': rebuild_image_ref
             }
         }
-        # Since we're using the CastAsCall fixture, the NoValidHost error
+        # Since we're using CastAsCallFixture, the NoValidHost error
         # should actually come back to the API and result in a 500 error.
         # Normally the user would get a 202 response because nova-api RPC casts
         # to nova-conductor which RPC calls the scheduler which raises the
@@ -1374,9 +1374,9 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
         self.assertIn('No valid host', server['fault']['message'])
 
         # Rebuild it again with the same bad image to make sure it's rejected
-        # again. Since we're using CastAsCall here, there is no 202 from the
-        # API, and the exception from conductor gets passed back through the
-        # API.
+        # again. Since we're using CastAsCallFixture here, there is no 202 from
+        # the API, and the exception from conductor gets passed back through
+        # the API.
         ex = self.assertRaises(
             client.OpenStackApiException, self.api.api_post,
             '/servers/%s/action' % server['id'], rebuild_req_body)
