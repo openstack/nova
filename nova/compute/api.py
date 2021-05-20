@@ -838,17 +838,10 @@ class API:
         """
         image_meta = _get_image_meta_obj(image)
 
-        API._validate_flavor_image_mem_encryption(flavor, image_meta)
-
-        # validate PMU extra spec and image metadata
-        flavor_pmu = flavor.extra_specs.get('hw:pmu')
-        image_pmu = image_meta.properties.get('hw_pmu')
-        if (flavor_pmu is not None and image_pmu is not None and
-                image_pmu != strutils.bool_from_string(flavor_pmu)):
-            raise exception.ImagePMUConflict()
-
         # Only validate values of flavor/image so the return results of
         # following 'get' functions are not used.
+        hardware.get_mem_encryption_constraint(flavor, image_meta)
+        hardware.get_pmu_constraint(flavor, image_meta)
         hardware.get_number_of_serial_ports(flavor, image_meta)
         hardware.get_realtime_cpu_constraint(flavor, image_meta)
         hardware.get_cpu_topology_constraints(flavor, image_meta)
@@ -857,19 +850,6 @@ class API:
             hardware.numa_get_constraints(flavor, image_meta)
         if validate_pci:
             pci_request.get_pci_requests_from_flavor(flavor)
-
-    @staticmethod
-    def _validate_flavor_image_mem_encryption(flavor, image):
-        """Validate that the flavor and image don't make contradictory
-        requests regarding memory encryption.
-
-        :param flavor: Flavor object
-        :param image: an ImageMeta object
-        :raises: nova.exception.FlavorImageConflict
-        """
-        # This library function will raise the exception for us if
-        # necessary; if not, we can ignore the result returned.
-        hardware.get_mem_encryption_constraint(flavor, image)
 
     def _get_image_defined_bdms(self, flavor, image_meta, root_device_name):
         image_properties = image_meta.get('properties', {})

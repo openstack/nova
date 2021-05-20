@@ -5906,14 +5906,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.features.append(
                     vconfig.LibvirtConfigGuestFeatureKvmHidden())
 
-            # NOTE(sean-k-mooney): we validate that the image and flavor
-            # cannot have conflicting values in the compute API
-            # so we just use the values directly. If it is not set in
-            # either the flavor or image pmu will be none and we should
-            # not generate the element to allow qemu to decide if a vPMU
-            # should be provided for backwards compatibility.
-            pmu = (flavor.extra_specs.get('hw:pmu') or
-                   image_meta.properties.get('hw_pmu'))
+            pmu = hardware.get_pmu_constraint(flavor, image_meta)
             if pmu is not None:
                 guest.features.append(
                     vconfig.LibvirtConfigGuestFeaturePMU(pmu))
