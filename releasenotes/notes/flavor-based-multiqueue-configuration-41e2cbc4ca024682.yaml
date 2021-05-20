@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    The ``hw:vif_multiqueue_enabled`` flavor extra spec has been added. This
+    is a boolean option that, when set, can be used to enable or disable
+    multiqueue for virtio-net VIFs. It complements the equivalent image
+    metadata property, ``hw_vif_multiqueue_enabled``. If both values are set,
+    they must be identical or an error will be raised.

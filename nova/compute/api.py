@@ -852,6 +852,7 @@ class API:
         hardware.get_number_of_serial_ports(flavor, image_meta)
         hardware.get_realtime_cpu_constraint(flavor, image_meta)
         hardware.get_cpu_topology_constraints(flavor, image_meta)
+        hardware.get_vif_multiqueue_constraint(flavor, image_meta)
         if validate_numa:
             hardware.numa_get_constraints(flavor, image_meta)
         if validate_pci:

@@ -702,17 +702,20 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(
             {'properties': {'hw_vif_model': 'virtio',
                             'hw_vif_multiqueue_enabled': 'true'}})
-        flavor = objects.Flavor(name='m1.small',
-                    memory_mb=128,
-                    vcpus=4,
-                    root_gb=0,
-                    ephemeral_gb=0,
-                    swap=0,
-                    deleted_at=None,
-                    deleted=0,
-                    created_at=None, flavorid=1,
-                    is_public=True, vcpu_weight=None,
-                    id=2, disabled=False, rxtx_factor=1.0)
+        flavor = objects.Flavor(
+            id=2,
+            name='m1.small',
+            memory_mb=128,
+            vcpus=4,
+            root_gb=0,
+            ephemeral_gb=0,
+            swap=0,
+            deleted_at=None,
+            deleted=0,
+            created_at=None, flavorid=1,
+            is_public=True, vcpu_weight=None,
+            disabled=False,
+            extra_specs={})
         conf = d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
                                  flavor, 'kvm', 'normal')
         self.assertEqual(4, conf.vhost_queues)
@@ -728,7 +731,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.flags(tx_queue_size=1024, group='libvirt')
         v = vif.LibvirtGenericVIFDriver()
         conf = v.get_base_config(
-            None, 'ca:fe:de:ad:be:ef', {}, objects.Flavor(), 'kvm', vnic_type)
+            None, 'ca:fe:de:ad:be:ef', {},
+            objects.Flavor(vcpus=2), 'kvm', vnic_type)
         return v, conf
 
     def test_virtio_vhost_queue_sizes(self):
@@ -874,8 +878,22 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         image_meta = {'properties': {'os_name': 'fedora22'}}
         image_meta = objects.ImageMeta.from_dict(image_meta)
+        flavor = objects.Flavor(
+            id=2,
+            name='m1.small',
+            memory_mb=128,
+            vcpus=4,
+            root_gb=0,
+            ephemeral_gb=0,
+            swap=0,
+            deleted_at=None,
+            deleted=0,
+            created_at=None, flavorid=1,
+            is_public=True, vcpu_weight=None,
+            disabled=False,
+            extra_specs={})
         d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
-                          None, 'kvm', 'normal')
+                          flavor, 'kvm', 'normal')
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
                                          'virtio', None, None, None)
 
@@ -1089,9 +1107,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         mq_ins = objects.Instance(
             id=1, uuid='f0000000-0000-0000-0000-000000000001',
             image_ref=uuids.image_ref, flavor=self.flavor_2vcpu,
-            project_id=723, system_metadata={
+            system_metadata={
                 'image_hw_vif_multiqueue_enabled': 'True'
-            }
+            },
         )
         d2.plug(mq_ins, self.vif_tap)
         mock_create_tap_dev.assert_called_once_with(
@@ -1129,9 +1147,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         ins = objects.Instance(
             id=1, uuid='f0000000-0000-0000-0000-000000000001',
             image_ref=uuids.image_ref, flavor=self.flavor_2vcpu,
-            project_id=723, system_metadata={
+            project_id=723,
+            system_metadata={
                 'image_hw_vif_multiqueue_enabled': 'True'
-            }
+            },
         )
         d1.plug(ins, self.vif_tap)
         mock_create_tap_dev.assert_called_once_with(
@@ -1147,10 +1166,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         ins = objects.Instance(
             id=1, uuid='f0000000-0000-0000-0000-000000000001',
             image_ref=uuids.image_ref, flavor=self.flavor_2vcpu,
-            project_id=723, system_metadata={
+            project_id=723,
+            system_metadata={
                 'image_hw_vif_multiqueue_enabled': 'True',
                 'image_hw_vif_model': 'e1000',
-            }
+            },
         )
         d1.plug(ins, self.vif_tap)
         mock_create_tap_dev.assert_called_once_with(

@@ -39,6 +39,7 @@ from nova.pci import utils as pci_utils
 import nova.privsep.linux_net
 from nova import profiler
 from nova import utils
+from nova.virt import hardware
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
 from nova.virt.libvirt import host as libvirt_host
@@ -256,9 +257,12 @@ class LibvirtGenericVIFDriver(object):
         """A methods to set the number of virtio queues,
            if it has been requested in extra specs.
         """
+        if not isinstance(image_meta, objects.ImageMeta):
+            image_meta = objects.ImageMeta.from_dict(image_meta)
+
         driver = None
         vhost_queues = None
-        if self._requests_multiqueue(image_meta):
+        if hardware.get_vif_multiqueue_constraint(flavor, image_meta):
             driver = 'vhost'
             max_tap_queues = self._get_max_tap_queues()
             if max_tap_queues:
@@ -268,19 +272,6 @@ class LibvirtGenericVIFDriver(object):
                 vhost_queues = flavor.vcpus
 
         return (driver, vhost_queues)
-
-    def _requests_multiqueue(self, image_meta):
-        """Check if multiqueue property is set in the image metadata."""
-
-        if not isinstance(image_meta, objects.ImageMeta):
-            image_meta = objects.ImageMeta.from_dict(image_meta)
-
-        img_props = image_meta.properties
-
-        if img_props.get('hw_vif_multiqueue_enabled'):
-            return True
-
-        return False
 
     def _get_max_tap_queues(self):
         # Note(sean-k-mooney): some linux distros have backported
@@ -692,9 +683,10 @@ class LibvirtGenericVIFDriver(object):
         vif_model = self.get_vif_model(image_meta=image_meta)
         # TODO(ganso): explore whether multiqueue works for other vif models
         # that go through this code path.
-        multiqueue = (instance.get_flavor().vcpus > 1 and
-                      self._requests_multiqueue(image_meta) and
-                      vif_model == network_model.VIF_MODEL_VIRTIO)
+        multiqueue = False
+        if vif_model == network_model.VIF_MODEL_VIRTIO:
+            multiqueue = hardware.get_vif_multiqueue_constraint(
+                instance.flavor, image_meta)
         nova.privsep.linux_net.create_tap_dev(dev, mac, multiqueue=multiqueue)
         network = vif.get('network')
         mtu = network.get_meta('mtu') if network else None

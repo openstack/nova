@@ -5453,6 +5453,50 @@ class PCINUMAAffinityPolicyTest(test.NoDBTestCase):
 
 
 @ddt.ddt
+class VIFMultiqueueEnabledTest(test.NoDBTestCase):
+
+    @ddt.unpack
+    @ddt.data(
+        # pass: no configuration
+        (None, None, False),
+        # pass: flavor-only configuration
+        ('yes', None, True),
+        # pass: image-only configuration
+        (None, False, False),
+        # pass: identical image and flavor configuration
+        ('yes', True, True),
+        # fail: mismatched image and flavor configuration
+        ('no', True, exception.FlavorImageConflict),
+    )
+    def test_get_vif_multiqueue_constraint(
+        self, flavor_policy, image_policy, expected,
+    ):
+        extra_specs = {}
+
+        if flavor_policy:
+            extra_specs['hw:vif_multiqueue_enabled'] = flavor_policy
+
+        image_meta_props = {}
+
+        if image_policy:
+            image_meta_props['hw_vif_multiqueue_enabled'] = image_policy
+
+        flavor = objects.Flavor(
+            name='foo', vcpus=2, memory_mb=1024, extra_specs=extra_specs)
+        image_meta = objects.ImageMeta.from_dict(
+            {'name': 'bar', 'properties': image_meta_props})
+
+        if isinstance(expected, type) and issubclass(expected, Exception):
+            self.assertRaises(
+                expected, hw.get_vif_multiqueue_constraint, flavor, image_meta,
+            )
+        else:
+            self.assertEqual(
+                expected, hw.get_vif_multiqueue_constraint(flavor, image_meta),
+            )
+
+
+@ddt.ddt
 class VTPMConfigTest(test.NoDBTestCase):
 
     @ddt.unpack
