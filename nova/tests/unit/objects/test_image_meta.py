@@ -390,6 +390,28 @@ class TestImageMetaProps(test.NoDBTestCase):
                                    obj.obj_to_primitive, '1.21')
             self.assertIn('hw_video_model', str(ex))
 
+    def test_obj_bochs_model_positive(self):
+        """Test "bochs" support from Nova object version 1.30 onwards
+        """
+        obj = objects.ImageMetaProps(
+            hw_video_model=objects.fields.VideoModel.BOCHS,
+        )
+        primitive = obj.obj_to_primitive('1.30')
+        self.assertEqual(
+            objects.fields.VideoModel.BOCHS,
+            primitive['nova_object.data']['hw_video_model'])
+
+    def test_obj_bochs_model_negative(self):
+        """Make sure an exception is raised for Nova object version <
+        1.30
+        """
+        obj = objects.ImageMetaProps(
+            hw_video_model=objects.fields.VideoModel.BOCHS,
+        )
+        ex = self.assertRaises(exception.ObjectActionError,
+                               obj.obj_to_primitive, '1.29')
+        self.assertIn('hw_video_model=bochs not supported', str(ex))
+
     def test_obj_make_compatible_watchdog_action_not_disabled(self):
         """Tests that we don't pop the hw_watchdog_action if the value is not
         'disabled'.

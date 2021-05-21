@@ -124,7 +124,8 @@ class ImageMetaPropsPayload(base.NotificationPayloadBase):
     # Version 1.5: Added 'hw_tpm_model' and 'hw_tpm_version' fields
     # Version 1.6: Added 'socket' to hw_pci_numa_affinity_policy
     # Version 1.7: Added 'hw_input_bus' field
-    VERSION = '1.7'
+    # Version 1.8: Added 'bochs' as an option to 'hw_video_model'
+    VERSION = '1.8'
 
     SCHEMA = {
         k: ('image_meta_props', k) for k in image_meta.ImageMetaProps.fields}

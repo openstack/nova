@@ -178,14 +178,22 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.27: Added 'hw_tpm_model' and 'hw_tpm_version' fields
     # Version 1.28: Added 'socket' to 'hw_pci_numa_affinity_policy'
     # Version 1.29: Added 'hw_input_bus' field
+    # Version 1.30: Added 'bochs' as an option to 'hw_video_model'
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.29'
+    VERSION = '1.30'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 30):
+            video = primitive.get('hw_video_model', None)
+            if video == fields.VideoModel.BOCHS:
+                raise exception.ObjectActionError(
+                    action='obj_make_compatible',
+                    reason='hw_video_model=%s not supported in version %s' %
+                           (video, target_version))
         if target_version < (1, 29):
             primitive.pop('hw_input_bus', None)
         if target_version < (1, 28):
