@@ -267,7 +267,7 @@ class ServerActionsControllerTestV21(test.TestCase):
     def _test_rebuild_preserve_ephemeral(self, value=None):
         return_server = fakes.fake_compute_get(
                 project_id=fakes.FAKE_PROJECT_ID,
-                image_ref='2',
+                image_ref=uuids.image_ref,
                 vm_state=vm_states.ACTIVE,
                 host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
@@ -302,7 +302,7 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_rebuild_accepted_minimum(self):
         return_server = fakes.fake_compute_get(
                 project_id=fakes.FAKE_PROJECT_ID,
-                image_ref='2',
+                image_ref=uuids.image_ref,
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
         self_href = 'http://localhost/v2/servers/%s' % FAKE_UUID
@@ -316,7 +316,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         robj = self.controller._action_rebuild(self.req, FAKE_UUID, body=body)
         body = robj.obj
 
-        self.assertEqual(body['server']['image']['id'], '2')
+        self.assertEqual(body['server']['image']['id'], uuids.image_ref)
         self.assertEqual(len(body['server']['adminPass']),
                          CONF.password_length)
 
@@ -361,7 +361,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         return_server = fakes.fake_compute_get(
                 project_id=fakes.FAKE_PROJECT_ID,
-                image_ref='2',
+                image_ref=uuids.image_ref,
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
         self_href = 'http://localhost/v2/servers/%s' % FAKE_UUID
@@ -375,7 +375,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         robj = self.controller._action_rebuild(self.req, FAKE_UUID, body=body)
         body = robj.obj
 
-        self.assertEqual(body['server']['image']['id'], '2')
+        self.assertEqual(body['server']['image']['id'], uuids.image_ref)
         self.assertNotIn("adminPass", body['server'])
 
         self.assertEqual(robj['location'], self_href)
@@ -473,7 +473,7 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_rebuild_admin_pass(self):
         return_server = fakes.fake_compute_get(
                 project_id=fakes.FAKE_PROJECT_ID,
-                image_ref='2',
+                image_ref=uuids.image_ref,
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
 
@@ -487,7 +487,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         body = self.controller._action_rebuild(self.req, FAKE_UUID,
                                                body=body).obj
 
-        self.assertEqual(body['server']['image']['id'], '2')
+        self.assertEqual(body['server']['image']['id'], uuids.image_ref)
         self.assertEqual(body['server']['adminPass'], 'asdf')
 
     def test_rebuild_admin_pass_pass_disabled(self):
@@ -497,7 +497,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         return_server = fakes.fake_compute_get(
                 project_id=fakes.FAKE_PROJECT_ID,
-                image_ref='2',
+                image_ref=FAKE_UUID,
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stub_out('nova.compute.api.API.get', return_server)
 
@@ -511,7 +511,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         body = self.controller._action_rebuild(self.req, FAKE_UUID,
                                                body=body).obj
 
-        self.assertEqual(body['server']['image']['id'], '2')
+        self.assertEqual(body['server']['image']['id'], FAKE_UUID)
         self.assertNotIn('adminPass', body['server'])
 
     def test_rebuild_server_not_found(self):
@@ -578,12 +578,20 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         def return_image_meta(*args, **kwargs):
             image_meta_table = {
-                '2': {'id': uuids.image_id, 'status': 'active',
-                      'container_format': 'ari'},
-                '155d900f-4e14-4e4c-a73d-069cbf4541e6':
-                     {'id': uuids.image_id, 'status': 'active',
-                      'container_format': 'raw',
-                      'properties': {'kernel_id': 1, 'ramdisk_id': 2}},
+                uuids.image_1_id: {
+                    'id': uuids.image_1_id,
+                    'status': 'active',
+                    'container_format': 'ari'
+                },
+                uuids.image_2_id: {
+                    'id': uuids.image_2_id,
+                    'status': 'active',
+                    'container_format': 'raw',
+                    'properties': {
+                        'kernel_id': uuids.kernel_id,
+                        'ramdisk_id': uuids.ramdisk_id
+                    }
+                },
             }
             image_id = args[2]
             try:
@@ -597,7 +605,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                       return_image_meta)
         body = {
             "rebuild": {
-                "imageRef": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                "imageRef": uuids.image_2_id,
             },
         }
         self.assertRaises(webob.exc.HTTPBadRequest,

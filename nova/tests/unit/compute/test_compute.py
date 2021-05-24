@@ -8962,14 +8962,17 @@ class ComputeAPITestCase(BaseTestCase):
             sys_meta = {k: v for k, v in instance.system_metadata.items()
                         if not k.startswith('instance_type')}
             self.assertEqual(
-                    {'image_kernel_id': uuids.kernel_id,
-                     'image_min_disk': '1',
-                     'image_ramdisk_id': uuids.ramdisk_id,
-                     'image_something_else': 'meow',
-                     'preserved': 'preserve this!',
-                     'image_base_image_ref': image_ref,
-                     'boot_roles': ''},
-                    sys_meta)
+                {
+                    'image_kernel_id': uuids.kernel_id,
+                    'image_min_disk': '1',
+                    'image_ramdisk_id': uuids.ramdisk_id,
+                    'image_something_else': 'meow',
+                    'preserved': 'preserve this!',
+                    'image_base_image_ref': image_ref,
+                    'boot_roles': ''
+                },
+                sys_meta
+            )
 
     def test_rebuild(self):
         self._test_rebuild(vm_state=vm_states.ACTIVE)
@@ -10534,7 +10537,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = objects.Instance(
                        id=42,
                        uuid=uuids.interface_failed_instance,
-                       image_ref='foo',
+                       image_ref=uuids.image_ref,
                        system_metadata={},
                        flavor=new_type,
                        host='fake-host')
@@ -10598,7 +10601,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = objects.Instance(
             id=42,
             uuid=uuids.interface_failed_instance,
-            image_ref='foo',
+            image_ref=uuids.image_ref,
             system_metadata={},
             flavor=new_type,
             host='fake-host',

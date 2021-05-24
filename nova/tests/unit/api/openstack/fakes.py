@@ -428,7 +428,7 @@ def fake_compute_get_all(num_servers=5, **kwargs):
 
 def stub_instance(id=1, user_id=None, project_id=None, host=None,
                   node=None, vm_state=None, task_state=None,
-                  reservation_id="", uuid=FAKE_UUID, image_ref="10",
+                  reservation_id="", uuid=FAKE_UUID, image_ref=FAKE_UUID,
                   flavor_id="1", name=None, key_name='',
                   access_ipv4=None, access_ipv6=None, progress=0,
                   auto_disk_config=False, display_name=None,

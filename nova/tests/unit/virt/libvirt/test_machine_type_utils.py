@@ -36,7 +36,8 @@ class TestMachineTypeUtils(test.NoDBTestCase):
             uuid=uuidsentinel.instance, host='fake', node='fake',
             task_state=None, flavor=objects.Flavor(),
             project_id='fake-project', user_id='fake-user',
-            vm_state=vm_state, system_metadata={}
+            vm_state=vm_state, system_metadata={},
+            image_ref=uuidsentinel.image_ref
         )
         if mtype:
             instance.system_metadata = {

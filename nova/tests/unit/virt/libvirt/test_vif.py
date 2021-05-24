@@ -1054,6 +1054,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d1 = vif.LibvirtGenericVIFDriver()
         ins = objects.Instance(
             id=1, uuid='f0000000-0000-0000-0000-000000000001',
+            image_ref=uuids.image_ref,
             project_id=723, system_metadata={}
         )
         d1.plug(ins, self.vif_tap)
@@ -1065,6 +1066,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d2 = vif.LibvirtGenericVIFDriver()
         mq_ins = objects.Instance(
             id=1, uuid='f0000000-0000-0000-0000-000000000001',
+            image_ref=uuids.image_ref,
             project_id=723, system_metadata={
                 'image_hw_vif_multiqueue_enabled': 'True'
             }
@@ -1086,6 +1088,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d1 = vif.LibvirtGenericVIFDriver()
         ins = objects.Instance(
             id=1, uuid='f0000000-0000-0000-0000-000000000001',
+            image_ref=uuids.image_ref,
             project_id=723, system_metadata={
                 'image_hw_vif_multiqueue_enabled': 'True'
             }
@@ -1104,6 +1107,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d1 = vif.LibvirtGenericVIFDriver()
         ins = objects.Instance(
             id=1, uuid='f0000000-0000-0000-0000-000000000001',
+            image_ref=uuids.image_ref,
             project_id=723, system_metadata={
                 'image_hw_vif_multiqueue_enabled': 'True',
                 'image_hw_vif_model': 'e1000',

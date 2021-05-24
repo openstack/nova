@@ -14570,7 +14570,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_spawn_without_image_meta(self):
         instance_ref = self.test_instance
-        instance_ref['image_ref'] = 1
+        instance_ref['image_ref'] = uuids.image_ref
         instance = objects.Instance(**instance_ref)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -14773,7 +14773,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             nodeDeviceLookupByName=fake_node_device_lookup_by_name)
 
         instance_ref = self.test_instance
-        instance_ref['image_ref'] = 'my_fake_image'
+        instance_ref['image_ref'] = uuids.image_ref
         instance = objects.Instance(**instance_ref)
         instance['pci_devices'] = objects.PciDeviceList(
             objects=[objects.PciDevice(address='0000:00:00.0')])
@@ -14809,7 +14809,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance_ref = self.test_instance
-        instance_ref['image_ref'] = 'my_fake_image'
+        instance_ref['image_ref'] = uuids.image_ref
         instance = objects.Instance(**instance_ref)
         instance.system_metadata = {}
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -14823,7 +14823,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         gotFiles = []
 
         instance_ref = self.test_instance
-        instance_ref['image_ref'] = 1
+        instance_ref['image_ref'] = uuids.image_ref
         instance = objects.Instance(**instance_ref)
         instance['os_type'] = os_type
 
@@ -14854,12 +14854,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                             disk_info, image_meta)
 
         wantFiles = [
-            {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
+            {'filename': imagecache.get_cache_fname(uuids.image_ref),
              'size': 10 * units.Gi},
             {'filename': filename,
              'size': 20 * units.Gi},
             ]
-        self.assertEqual(gotFiles, wantFiles)
+        self.assertEqual(wantFiles, gotFiles)
 
     def test_create_image_plain_os_type_blank(self):
         self._test_create_image_plain(os_type='',
@@ -15149,7 +15149,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         block_device_info = {
                 'ephemerals': ephemerals}
         instance_ref = self.test_instance
-        instance_ref['image_ref'] = 1
+        instance_ref['image_ref'] = uuids.image_ref
         instance = objects.Instance(**instance_ref)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         image_meta = objects.ImageMeta.from_dict({'disk_format': 'raw'})
@@ -16158,7 +16158,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(FakeVirtDomain, 'attachDeviceFlags')
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
     @mock.patch.object(utils, 'get_image_from_system_metadata',
-                       return_value=None)
+                       return_value={})
     def test_attach_direct_passthrough_ports(self,
             mock_get_image_metadata, mock_ID, mock_attachDevice):
         instance = objects.Instance(**self.test_instance)
@@ -16177,7 +16177,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(FakeVirtDomain, 'attachDeviceFlags')
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
     @mock.patch.object(utils, 'get_image_from_system_metadata',
-                       return_value=None)
+                       return_value={})
     def test_attach_direct_physical_passthrough_ports(self,
             mock_get_image_metadata, mock_ID, mock_attachDevice):
         instance = objects.Instance(**self.test_instance)
@@ -16196,7 +16196,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(FakeVirtDomain, 'attachDeviceFlags')
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
     @mock.patch.object(utils, 'get_image_from_system_metadata',
-                       return_value=None)
+                       return_value={})
     def test_attach_direct_passthrough_ports_with_info_cache(self,
             mock_get_image_metadata, mock_ID, mock_attachDevice):
         instance = objects.Instance(**self.test_instance)
@@ -18851,7 +18851,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(id=1, uuid=uuids.instance,
-                                    image_ref='my_fake_image')
+                                    image_ref=uuids.image_ref)
 
         with test.nested(
               mock.patch.object(drvr, '_create_domain_setup_lxc'),
@@ -22588,8 +22588,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # file, instance is back to nominal state: after unshelve,
         # instance.image_ref will match current backing file.
         self._test_qcow2_rebase_image_during_create(
-                image_ref='snapshot_id_of_shelved_instance',
-                base_image_ref='original_image_id',
+                image_ref=uuids.shelved_instance_snapshot_id,
+                base_image_ref=uuids.original_image_id,
                 vm_state=vm_states.SHELVED_OFFLOADED,
                 rebase_expected=True)
 
@@ -22598,23 +22598,23 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # will failed (HTTP 404). In that case qemu-img rebase will merge
         # backing file into disk, removing backing file dependency.
         self._test_qcow2_rebase_image_during_create(
-                image_ref='snapshot_id_of_shelved_instance',
-                base_image_ref='original_image_id',
+                image_ref=uuids.shelved_instance_snapshot_id,
+                base_image_ref=uuids.original_image_id,
                 vm_state=vm_states.SHELVED_OFFLOADED,
                 original_image_in_glance=False,
                 rebase_expected=True)
 
     def test_cross_cell_resize_qcow2_rebase_image_during_create(self):
         self._test_qcow2_rebase_image_during_create(
-                image_ref='snapshot_id_of_resized_instance',
-                base_image_ref='original_image_id',
+                image_ref=uuids.resized_instance_snapshot_id,
+                base_image_ref=uuids.original_image_id,
                 task_state=task_states.RESIZE_FINISH,
                 rebase_expected=True)
 
     def test_cross_cell_resize_qcow2_rebase_image_during_create_notfound(self):
         self._test_qcow2_rebase_image_during_create(
-                image_ref='snapshot_id_of_resized_instance',
-                base_image_ref='original_image_id',
+                image_ref=uuids.resized_instance_snapshot_id,
+                base_image_ref=uuids.original_image_id,
                 task_state=task_states.RESIZE_FINISH,
                 original_image_in_glance=False,
                 rebase_expected=True)
@@ -22624,8 +22624,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # consequently, instance.image_ref remain the same and we must ensure
         # that no rebase is done.
         self._test_qcow2_rebase_image_during_create(
-                image_ref='original_image_id',
-                base_image_ref='original_image_id',
+                image_ref=uuids.original_image_id,
+                base_image_ref=uuids.original_image_id,
                 task_state=task_states.RESIZE_FINISH,
                 rebase_expected=False)
 
@@ -26318,6 +26318,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.inst = {}
         self.inst['uuid'] = uuids.fake
         self.inst['id'] = '1'
+        self.inst['image_ref'] = ''
         # system_metadata is needed for objects.Instance.image_meta conversion
         self.inst['system_metadata'] = {}
 

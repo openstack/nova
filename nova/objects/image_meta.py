@@ -124,6 +124,14 @@ class ImageMeta(base.NovaObject):
         """
         sysmeta = utils.instance_sys_meta(instance)
         image_meta = utils.get_image_from_system_metadata(sysmeta)
+
+        # NOTE(lyarwood): Provide the id of the image in image_meta if it
+        # wasn't persisted in the system_metadata of the instance previously.
+        # This is only provided to allow users of image_meta to avoid the need
+        # to pass around references to instance.image_ref alongside image_meta.
+        if image_meta.get('id') is None and instance.image_ref:
+            image_meta['id'] = instance.image_ref
+
         return cls.from_dict(image_meta)
 
     @classmethod
