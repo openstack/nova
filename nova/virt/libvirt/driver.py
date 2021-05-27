@@ -1340,7 +1340,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 destroy_disks=True, destroy_secrets=True):
         self._destroy(instance)
         self.cleanup(context, instance, network_info, block_device_info,
-                     destroy_disks)
+                     destroy_disks, destroy_secrets=destroy_secrets)
 
     def _undefine_domain(self, instance):
         try:
@@ -1414,11 +1414,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 block_device_info=block_device_info,
                 destroy_vifs=destroy_vifs,
                 cleanup_instance_dir=cleanup_instance_dir,
-                cleanup_instance_disks=cleanup_instance_disks)
+                cleanup_instance_disks=cleanup_instance_disks,
+                destroy_secrets=destroy_secrets)
 
     def _cleanup(self, context, instance, network_info, block_device_info=None,
                  destroy_vifs=True, cleanup_instance_dir=False,
-                 cleanup_instance_disks=False):
+                 cleanup_instance_disks=False, destroy_secrets=True):
         """Cleanup the domain and any attached resources from the host.
 
         This method cleans up any pmem devices, unplugs VIFs, disconnects
@@ -1459,7 +1460,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 continue
 
             try:
-                self._disconnect_volume(context, connection_info, instance)
+                self._disconnect_volume(
+                    context, connection_info, instance,
+                    destroy_secrets=destroy_secrets)
             except Exception as exc:
                 with excutils.save_and_reraise_exception() as ctxt:
                     if cleanup_instance_disks:
@@ -1729,8 +1732,13 @@ class LibvirtDriver(driver.ComputeDriver):
         return (False if connection_count > 1 else True)
 
     def _disconnect_volume(self, context, connection_info, instance,
-                           encryption=None):
-        self._detach_encryptor(context, connection_info, encryption=encryption)
+                           encryption=None, destroy_secrets=True):
+        self._detach_encryptor(
+            context,
+            connection_info,
+            encryption=encryption,
+            destroy_secrets=destroy_secrets
+        )
         vol_driver = self._get_volume_driver(connection_info)
         volume_id = driver_block_device.get_volume_id(connection_info)
         multiattach = connection_info.get('multiattach', False)
@@ -1843,7 +1851,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                    encryption)
             encryptor.attach_volume(context, **encryption)
 
-    def _detach_encryptor(self, context, connection_info, encryption):
+    def _detach_encryptor(self, context, connection_info, encryption,
+                          destroy_secrets=True):
         """Detach the frontend encryptor if one is required by the volume.
 
         The request context is only used when an encryption metadata dict is
@@ -1855,7 +1864,11 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         volume_id = driver_block_device.get_volume_id(connection_info)
         if volume_id and self._host.find_secret('volume', volume_id):
+            if not destroy_secrets:
+                LOG.debug("Skipping volume secret destruction")
+                return
             return self._host.delete_secret('volume', volume_id)
+
         if encryption is None:
             encryption = self._get_volume_encryption(context, connection_info)
         # NOTE(lyarwood): Handle bug #1821696 where volume secrets have been
@@ -3346,7 +3359,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # we can here without losing data. This allows us to re-initialise from
         # scratch, and hopefully fix, most aspects of a non-functioning guest.
         self.destroy(context, instance, network_info, destroy_disks=False,
-                     block_device_info=block_device_info)
+                     block_device_info=block_device_info,
+                     destroy_secrets=False)
 
         # Convert the system metadata to image metadata
         # NOTE(mdbooth): This is a workaround for stateless Nova compute
