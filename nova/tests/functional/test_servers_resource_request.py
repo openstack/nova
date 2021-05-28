@@ -14,6 +14,7 @@
 
 import copy
 import logging
+import unittest
 
 from keystoneauth1 import adapter
 import mock
@@ -206,7 +207,13 @@ class ExtendedResourceRequestNeutronFixture(ResourceRequestNeutronFixture):
         # NOTE(gibi): in case of the old format Neutron sends None in the
         # resource_request if the port has no QoS policy implicating
         # resource request.
-        old_rr = port.get('resource_request')
+        res_req = port.get('resource_request') or {}
+        if 'request_groups' in res_req:
+            # this is already a port with new resource_request format no
+            # translation is needed
+            return
+        # So we have the old format, translate it
+        old_rr = res_req
         # NOTE(gibi): In the new format Neutron also sends None if the port
         # has no QoS policy implicating resource request
         new_rr = None
@@ -243,6 +250,60 @@ class ExtendedResourceRequestNeutronFixture(ResourceRequestNeutronFixture):
             # returns a deep copy of the port
             self._translate_port_to_new_resource_request(port)
         return ports_dict
+
+
+class MultiGroupResourceRequestNeutronFixture(
+        ExtendedResourceRequestNeutronFixture):
+    # NOTE(gibi): We redefine the port_with_resource_request from the base
+    # NeutronFixture to have both bw and pps resource requests
+    port_with_resource_request = {
+        'id': '2f2613ce-95a9-490a-b3c4-5f1c28c1f886',
+        'name': '',
+        'description': '',
+        'network_id': NeutronFixture.network_1['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c3',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.1.42',
+                'subnet_id': NeutronFixture.subnet_1['id']
+            }
+        ],
+        'tenant_id': NeutronFixture.tenant_id,
+        'project_id': NeutronFixture.tenant_id,
+        'device_id': '',
+        'binding:profile': {},
+        'binding:vif_details': {},
+        'binding:vif_type': 'ovs',
+        'binding:vnic_type': 'normal',
+        'resource_request': {
+            "request_groups": [
+                {
+                    "id": "a1ffd1f7-8e17-4254-bdf2-f07fd9220e4b",
+                    "resources": {
+                        orc.NET_BW_IGR_KILOBIT_PER_SEC: 1000,
+                        orc.NET_BW_EGR_KILOBIT_PER_SEC: 1000},
+                    "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_NORMAL"]
+                },
+                {
+                    "id": "a2ffa7b3-a623-4922-946c-25476efdec97",
+                    "resources": {
+                        orc.NET_PACKET_RATE_KILOPACKET_PER_SEC: 1000
+                    },
+                    "required": ["CUSTOM_VNIC_TYPE_NORMAL"]
+                }
+            ],
+            "same_subtree": [
+                "a1ffd1f7-8e17-4254-bdf2-f07fd9220e4b",
+                "a2ffa7b3-a623-4922-946c-25476efdec97"
+            ],
+        },
+        'port_security_enabled': True,
+        'security_groups': [
+            NeutronFixture.security_group['id'],
+        ],
+    }
 
 
 class PortResourceRequestBasedSchedulingTestBase(
@@ -1461,6 +1522,195 @@ class PortResourceRequestBasedSchedulingTest(
             port_binding['pci_slot'])
 
 
+class ExtendedPortResourceRequestBasedSchedulingTestBase(
+        PortResourceRequestBasedSchedulingTestBase):
+    """A base class for tests with neutron extended resource request."""
+
+    # NOTE(gibi): we overwrite this from the base class to assert the new
+    # format in the binding profile as the extended resource request extension
+    # is enabled in the neutron fixture
+    def _assert_port_binding_profile_allocation(self, port, compute_rp_uuid):
+        groups = (port.get('resource_request') or {}).get('request_groups', [])
+        if groups:
+            if port['binding:vnic_type'] == "normal":
+                expected_allocation = {}
+                # Normal ports can have both bandwidth and packet rate requests
+                for group in groups:
+                    requested_rcs = group['resources'].keys()
+                    if {
+                        orc.NET_BW_IGR_KILOBIT_PER_SEC,
+                        orc.NET_BW_EGR_KILOBIT_PER_SEC,
+                    }.intersection(requested_rcs):
+                        # Normal ports are expected to have bandwidth
+                        # allocation on the OVS bridge RP
+                        expected_allocation[group['id']] = (
+                            self.ovs_bridge_rp_per_host[compute_rp_uuid])
+                    else:  # assumed that this is the packet rate request
+                        # the packet rate is expected to allocated from the
+                        # OVS agent RP
+                        expected_allocation[group['id']] = (
+                            self.ovs_agent_rp_per_host[compute_rp_uuid])
+            else:
+                # SRIOV port can only have bandwidth requests no packet rate.
+                group_id = groups[0]['id']
+                # SRIOV ports are expected to have allocation on the PF2 RP
+                # see _create_sriov_networking_rp_tree() for details.
+                expected_allocation = {
+                    group_id: self.sriov_dev_rp_per_host[
+                        compute_rp_uuid][self.PF2]
+                }
+
+            self.assertEqual(
+                expected_allocation,
+                port['binding:profile']['allocation'])
+        else:
+            # if no resource request then we expect no allocation key in the
+            # binding profile
+            self.assertNotIn(
+                'allocation', port['binding:profile'])
+
+    # NOTE(gibi): we overwrite this from the base class as with the new neutron
+    # extension enabled a port might have allocation from more than one RP
+    def _get_number_of_expected_allocations_for_ports(self, *ports):
+        # we expect one for each request group in each port's resource request
+        return sum(
+            len((port.get("resource_request") or {}).get("request_groups", []))
+            for port in ports
+        )
+
+    def _assert_port_res_req_grp_matches_allocation(
+        self, port_id, group, allocations
+    ):
+        for rc, amount in allocations.items():
+            self.assertEqual(
+                group[rc], amount,
+                'port %s requested %d %s resources but got allocation %d' %
+                (port_id, group[rc], rc, amount))
+
+    # NOTE(gibi): we overwrite this from the base class as with the new neutron
+    # extension enabled a port might requests both packet rate and bandwidth
+    # resources and therefore has allocation from more than on RP.
+    def assertPortMatchesAllocation(self, port, allocations, compute_rp_uuid):
+        # The goal here is to grab the part of the allocation that is due to
+        # the port having bandwidth request. We assume that all the normal
+        # ports are handled by OVS while the rest is handled by SRIOV agent.
+        # This is true in our func test setup, see the RP tree structure
+        # created in _create_networking_rp_tree(), so it safe to assume here.
+        # So we select the OVS / SRIOV part of the allocation based on the
+        # vnic_type.
+        if port['binding:vnic_type'] == 'normal':
+            bw_allocations = allocations[
+                self.ovs_bridge_rp_per_host[compute_rp_uuid]]['resources']
+        else:
+            bw_allocations = allocations[
+                self.sriov_dev_rp_per_host[
+                    compute_rp_uuid][self.PF2]]['resources']
+
+        resource_request = port[constants.RESOURCE_REQUEST]
+        # in the new format we have request groups in the resource request
+        for group in resource_request["request_groups"]:
+            group_req = group['resources']
+            if (orc.NET_BW_IGR_KILOBIT_PER_SEC in group_req.keys() or
+                    orc.NET_BW_IGR_KILOBIT_PER_SEC in group_req.keys()):
+                # we match the bandwidth request group with the bandwidth
+                # request we grabbed above
+                self._assert_port_res_req_grp_matches_allocation(
+                    port['id'], group_req, bw_allocations)
+            else:
+                # We assume that the other request group can only be about
+                # packet rate. Also we know that the packet rate is allocated
+                # always from the OVS agent RP.
+                pps_allocations = allocations[
+                    self.ovs_agent_rp_per_host[
+                        compute_rp_uuid]]['resources']
+                self._assert_port_res_req_grp_matches_allocation(
+                    port['id'], group_req, pps_allocations)
+
+
+# TODO(gibi): The tests are failing today as we need to fix a bunch of TODOs in
+# the code.
+class MultiGroupResourceRequestBasedSchedulingTest(
+    ExtendedPortResourceRequestBasedSchedulingTestBase,
+    PortResourceRequestBasedSchedulingTest,
+):
+    """The same tests as in PortResourceRequestBasedSchedulingTest but the
+    the neutron.port_with_resource_request now changed to have both bandwidth
+    and packet rate resource requests. This also means that the neutron fixture
+    simulates the new resource_request format for all ports.
+    """
+    def setUp(self):
+        super().setUp()
+        self.neutron = self.useFixture(
+            MultiGroupResourceRequestNeutronFixture(self))
+        # Turn off the blanket rejections of the extended resource request.
+        # This test class wants to prove that the extended resource request is
+        # supported.
+        patcher = mock.patch(
+            'nova.network.neutron.API.support_create_with_resource_request',
+            return_value=True,
+        )
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        patcher = mock.patch(
+            'nova.compute.api.API.support_port_attach',
+            return_value=True,
+        )
+        self.addCleanup(patcher.stop)
+        patcher.start()
+
+    @unittest.expectedFailure
+    def test_boot_server_with_two_ports_one_having_resource_request(self):
+        super().test_boot_server_with_two_ports_one_having_resource_request()
+
+    @unittest.expectedFailure
+    def test_one_ovs_one_sriov_port(self):
+        super().test_one_ovs_one_sriov_port()
+
+    @unittest.expectedFailure
+    def test_interface_attach_with_resource_request(self):
+        super().test_interface_attach_with_resource_request()
+
+    @unittest.expectedFailure
+    def test_interface_attach_with_resource_request_no_candidates(self):
+        super().test_interface_attach_with_resource_request_no_candidates()
+
+    @unittest.expectedFailure
+    def test_interface_attach_with_resource_request_pci_claim_fails(self):
+        super().test_interface_attach_with_resource_request_pci_claim_fails()
+
+    @unittest.expectedFailure
+    def test_interface_attach_sriov_with_qos_pci_update_fails(self):
+        super().test_interface_attach_sriov_with_qos_pci_update_fails()
+
+    @unittest.expectedFailure
+    def test_interface_attach_sriov_with_qos_pci_update_fails_cleanup_fails(
+        self
+    ):
+        super(
+        ).test_interface_attach_sriov_with_qos_pci_update_fails_cleanup_fails()
+
+    @unittest.expectedFailure
+    def test_interface_detach_with_port_with_bandwidth_request(self):
+        super().test_interface_detach_with_port_with_bandwidth_request()
+
+    @unittest.expectedFailure
+    def test_delete_bound_port_in_neutron_with_resource_request(self):
+        super().test_delete_bound_port_in_neutron_with_resource_request()
+
+    @unittest.expectedFailure
+    def test_two_sriov_ports_one_with_request_two_available_pfs(self):
+        super().test_two_sriov_ports_one_with_request_two_available_pfs()
+
+    @unittest.expectedFailure
+    def test_one_sriov_port_no_vf_and_bandwidth_available_on_the_same_pf(self):
+        super(
+        ).test_one_sriov_port_no_vf_and_bandwidth_available_on_the_same_pf()
+
+    @unittest.expectedFailure
+    def test_sriov_macvtap_port_with_resource_request(self):
+        super().test_sriov_macvtap_port_with_resource_request()
+
+
 class ServerMoveWithPortResourceRequestTest(
         PortResourceRequestBasedSchedulingTestBase):
 
@@ -2357,6 +2607,39 @@ class ServerMoveWithPortResourceRequestTest(
 
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)
+
+
+# TODO(gibi): This would show a lot of failing tests. Disable it for now
+@unittest.skip
+class ServerMoveWithMultiGroupResourceRequestBasedSchedulingTest(
+    ExtendedPortResourceRequestBasedSchedulingTestBase,
+    ServerMoveWithPortResourceRequestTest,
+):
+    """The same tests as in ServerMoveWithPortResourceRequestTest but the
+    the neutron.port_with_resource_request now changed to have both bandwidth
+    and packet rate resource requests. This also means that the neutron
+    fixture simulates the new resource_request format for all ports.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.neutron = self.useFixture(
+            MultiGroupResourceRequestNeutronFixture(self))
+        # Turn off the blanket rejections of the extended resource request.
+        # This test class wants to prove that the extended resource request is
+        # supported.
+        patcher = mock.patch(
+            'nova.network.neutron.API.support_create_with_resource_request',
+            return_value=True,
+        )
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        patcher = mock.patch(
+            'nova.network.neutron.API.instance_has_extended_resource_request',
+            return_value=False,
+        )
+        self.addCleanup(patcher.stop)
+        patcher.start()
 
 
 class LiveMigrateAbortWithPortResourceRequestTest(
