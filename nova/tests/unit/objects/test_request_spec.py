@@ -412,13 +412,17 @@ class _TestRequestSpecObject(object):
         filter_properties = {'fake': 'property'}
 
         rg = request_spec.RequestGroup()
+        req_lvl_params = request_spec.RequestLevelParams()
 
-        spec = objects.RequestSpec.from_components(ctxt, instance.uuid, image,
-                flavor, instance.numa_topology, instance.pci_requests,
-                filter_properties, None, instance.availability_zone,
-                port_resource_requests=[rg])
+        spec = objects.RequestSpec.from_components(
+            ctxt, instance.uuid, image,
+            flavor, instance.numa_topology, instance.pci_requests,
+            filter_properties, None, instance.availability_zone,
+            port_resource_requests=[rg], request_level_params=req_lvl_params
+        )
 
         self.assertListEqual([rg], spec.requested_resources)
+        self.assertEqual(req_lvl_params, spec.request_level_params)
 
     def test_get_scheduler_hint(self):
         spec_obj = objects.RequestSpec(scheduler_hints={'foo_single': ['1'],

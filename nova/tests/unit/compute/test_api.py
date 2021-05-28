@@ -223,9 +223,11 @@ class _ComputeAPIUnitTestMixIn(object):
             objects=[objects.NetworkRequest(address=address,
                                             port_id=port)])
 
-        with mock.patch.object(self.compute_api.network_api,
-                               'create_resource_requests',
-                               return_value=(None, [])):
+        with mock.patch.object(
+            self.compute_api.network_api,
+            'create_resource_requests',
+            return_value=(None, [], mock.sentinel.req_lvl_params)
+        ):
             self.compute_api.create(self.context, flavor, 'image_id',
                                     requested_networks=requested_networks,
                                     max_count=None)
@@ -4888,7 +4890,10 @@ class _ComputeAPIUnitTestMixIn(object):
                             'user_data': None,
                             'numa_topology': None,
                             'pci_requests': None,
-                            'port_resource_requests': None}
+                            'port_resource_requests': None,
+                            'request_level_params':
+                                objects.RequestLevelParams(),
+                            }
             security_groups = {}
             block_device_mapping = objects.BlockDeviceMappingList(
                 objects=[objects.BlockDeviceMapping(
@@ -5059,10 +5064,12 @@ class _ComputeAPIUnitTestMixIn(object):
                 'properties': {'mappings': []},
                 'status': 'fake-status',
                 'location': 'far-away'}
+            numa_topology = objects.InstanceNUMATopology()
+            pci_requests = objects.InstancePCIRequests()
             base_options = {'image_ref': 'fake-ref',
                             'display_name': 'fake-name',
                             'project_id': 'fake-project',
-                            'availability_zone': None,
+                            'availability_zone': 'fake-az',
                             'metadata': {},
                             'access_ip_v4': None,
                             'access_ip_v6': None,
@@ -5073,9 +5080,13 @@ class _ComputeAPIUnitTestMixIn(object):
                             'ramdisk_id': None,
                             'root_device_name': None,
                             'user_data': None,
-                            'numa_topology': None,
-                            'pci_requests': None,
-                            'port_resource_requests': None}
+                            'numa_topology': numa_topology,
+                            'pci_requests': pci_requests,
+                            'port_resource_requests':
+                                mock.sentinel.resource_reqs,
+                            'request_level_params':
+                                mock.sentinel.req_lvl_params,
+                            }
             security_groups = {}
             block_device_mappings = objects.BlockDeviceMappingList(
                 objects=[objects.BlockDeviceMapping(
@@ -5111,6 +5122,18 @@ class _ComputeAPIUnitTestMixIn(object):
                 ctxt, test.MatchType(objects.Instance), flavor,
                 block_device_mappings, {}, mock_get_volumes.return_value,
                 False)] * max_count)
+
+            mock_req_spec_from_components.assert_has_calls(
+                [
+                    mock.call(
+                        ctxt, mock.ANY, boot_meta, flavor, numa_topology,
+                        pci_requests, filter_properties, instance_group,
+                        'fake-az', security_groups=mock.ANY,
+                        port_resource_requests=mock.sentinel.resource_reqs,
+                        request_level_params=mock.sentinel.req_lvl_params
+                    ),
+                ] * 2
+            )
 
             for rs, br, im in instances_to_build:
                 self.assertIsInstance(br.instance, objects.Instance)
@@ -5165,7 +5188,10 @@ class _ComputeAPIUnitTestMixIn(object):
                             'user_data': None,
                             'numa_topology': None,
                             'pci_requests': None,
-                            'port_resource_requests': None}
+                            'port_resource_requests': None,
+                            'request_level_params':
+                                objects.RequestLevelParams(),
+                            }
             security_groups = {}
             block_device_mapping = objects.BlockDeviceMappingList(
                 objects=[objects.BlockDeviceMapping(
@@ -5262,7 +5288,11 @@ class _ComputeAPIUnitTestMixIn(object):
                             'user_data': None,
                             'numa_topology': None,
                             'pci_requests': None,
-                            'port_resource_requests': None}
+                            'port_resource_requests': None,
+                            'request_level_params':
+                                objects.RequestLevelParams(),
+                            }
+
             security_groups = {}
             block_device_mapping = objects.BlockDeviceMappingList(
                 objects=[objects.BlockDeviceMapping(
@@ -5328,7 +5358,9 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_objects.RequestSpec.from_components.assert_called_once_with(
                 mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY,
                 mock.ANY, mock.ANY, mock.ANY,
-                security_groups=secgroups, port_resource_requests=mock.ANY)
+                security_groups=secgroups, port_resource_requests=mock.ANY,
+                request_level_params=mock.ANY
+            )
         test()
 
     def _test_rescue(self, vm_state=vm_states.ACTIVE, rescue_password=None,

@@ -202,9 +202,13 @@ class ResourceRequest(object):
     def from_request_group(
         cls,
         request_group: 'objects.RequestGroup',
+        request_level_params: 'objects.RequestLevelParams',
     ) -> 'ResourceRequest':
         """Create a new instance of ResourceRequest from a RequestGroup."""
         res_req = cls()
+        res_req._root_required = request_level_params.root_required
+        res_req._root_forbidden = request_level_params.root_forbidden
+        res_req._same_subtree = request_level_params.same_subtree
         res_req._add_request_group(request_group)
         res_req.strip_zeros()
         return res_req

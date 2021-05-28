@@ -7643,6 +7643,7 @@ class ComputeManager(manager.Manager):
         instance: 'objects.Instance',
         pci_reqs: 'objects.InstancePCIRequests',
         request_groups: ty.List['objects.RequestGroup'],
+        request_level_params: 'objects.RequestLevelParams',
     ) -> ty.Tuple[ty.Optional[ty.Dict[str, ty.List[str]]],
                   ty.Optional[ty.Dict[str, ty.Dict[str, ty.Dict[str, int]]]]]:
         """Allocate resources for the request in placement
@@ -7654,6 +7655,8 @@ class ComputeManager(manager.Manager):
             needed PCI devices
         :param request_groups: A list of RequestGroup objects describing the
             resources the port requests from placement
+        :param request_level_params: A RequestLevelParams object describing the
+            non group specific request of the port.
         :raises InterfaceAttachResourceAllocationFailed: if we failed to
             allocate resource in placement for the request
         :returns: A tuple of provider mappings and allocated resources or
@@ -7682,7 +7685,8 @@ class ComputeManager(manager.Manager):
         # NOTE(gibi): when support is added for attaching a cyborg based
         # smart NIC the ResourceRequest could be extended to handle multiple
         # request groups.
-        rr = scheduler_utils.ResourceRequest.from_request_group(request_group)
+        rr = scheduler_utils.ResourceRequest.from_request_group(
+            request_group, request_level_params)
         res = self.reportclient.get_allocation_candidates(context, rr)
         alloc_reqs, provider_sums, version = res
 
@@ -7805,9 +7809,14 @@ class ComputeManager(manager.Manager):
             instance.flavor, instance.image_meta)
         pci_reqs = objects.InstancePCIRequests(
             requests=[], instance_uuid=instance.uuid)
-        _, request_groups = self.network_api.create_resource_requests(
-            context, requested_networks, pci_reqs,
-            affinity_policy=pci_numa_affinity_policy)
+        _, request_groups, req_lvl_params = (
+            self.network_api.create_resource_requests(
+                context,
+                requested_networks,
+                pci_reqs,
+                affinity_policy=pci_numa_affinity_policy
+            )
+        )
 
         # We only support one port per attach request so we at most have one
         # pci request
@@ -7816,7 +7825,7 @@ class ComputeManager(manager.Manager):
             requested_networks[0].pci_request_id = pci_req.request_id
 
         result = self._allocate_port_resource_for_instance(
-            context, instance, pci_reqs, request_groups)
+            context, instance, pci_reqs, request_groups, req_lvl_params)
         provider_mappings, resources = result
 
         try:

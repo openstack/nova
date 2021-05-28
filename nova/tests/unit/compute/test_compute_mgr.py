@@ -2600,7 +2600,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         def do_test(
                 update, meth, add_fault, notify, event, mock_claim_pci,
                 mock_create_resource_req):
-            mock_create_resource_req.return_value = None, []
+            mock_create_resource_req.return_value = (
+                None, [], mock.sentinel.req_lvl_params)
             self.assertRaises(exception.InterfaceAttachFailed,
                               self.compute.attach_interface,
                               self.context, f_instance, uuids.network_id,

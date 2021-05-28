@@ -1063,7 +1063,7 @@ class API:
         result = self.network_api.create_resource_requests(
             context, requested_networks, pci_request_info,
             affinity_policy=pci_numa_affinity_policy)
-        network_metadata, port_resource_requests = result
+        network_metadata, port_resource_requests, req_lvl_params = result
 
         self._check_support_vnic_accelerator(context, requested_networks)
 
@@ -1103,7 +1103,9 @@ class API:
             'pci_requests': pci_request_info,
             'numa_topology': numa_topology,
             'system_metadata': system_metadata,
-            'port_resource_requests': port_resource_requests}
+            'port_resource_requests': port_resource_requests,
+            'request_level_params': req_lvl_params,
+        }
 
         options_from_image = self._inherit_properties_from_image(
                 boot_meta, auto_disk_config)
@@ -1295,6 +1297,7 @@ class API:
         security_groups = security_group_api.populate_security_groups(
             security_groups)
         port_resource_requests = base_options.pop('port_resource_requests')
+        req_lvl_params = base_options.pop('request_level_params')
         instances_to_build = []
         # We could be iterating over several instances with several BDMs per
         # instance and those BDMs could be using a lot of the same images so
@@ -1324,13 +1327,15 @@ class API:
                 # RequestSpec before the instance is created.
                 instance_uuid = uuidutils.generate_uuid()
                 # Store the RequestSpec that will be used for scheduling.
-                req_spec = objects.RequestSpec.from_components(context,
-                        instance_uuid, boot_meta, flavor,
-                        base_options['numa_topology'],
-                        base_options['pci_requests'], filter_properties,
-                        instance_group, base_options['availability_zone'],
-                        security_groups=security_groups,
-                        port_resource_requests=port_resource_requests)
+                req_spec = objects.RequestSpec.from_components(
+                    context,
+                    instance_uuid, boot_meta, flavor,
+                    base_options['numa_topology'],
+                    base_options['pci_requests'], filter_properties,
+                    instance_group, base_options['availability_zone'],
+                    security_groups=security_groups,
+                    port_resource_requests=port_resource_requests,
+                    request_level_params=req_lvl_params)
 
                 if block_device_mapping:
                     # Record whether or not we are a BFV instance
