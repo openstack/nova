@@ -271,6 +271,7 @@ def _get_ksa_client(context, admin=False):
     client = utils.get_ksa_adapter(
         'network', ksa_auth=auth_plugin, ksa_session=session)
     client.additional_headers = {'accept': 'application/json'}
+    client.connect_retries = CONF.neutron.http_retries
     return client
 
 
