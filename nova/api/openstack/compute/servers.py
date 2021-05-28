@@ -843,7 +843,9 @@ class ServersController(wsgi.Controller):
                 exception.CreateWithPortResourceRequestOldVersion,
                 exception.DeviceProfileError,
                 exception.ComputeHostNotFound,
-                exception.ForbiddenPortsWithAccelerator) as error:
+                exception.ForbiddenPortsWithAccelerator,
+                exception.ExtendedResourceRequestNotSupported,
+                ) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except INVALID_FLAVOR_IMAGE_EXCEPTIONS as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())

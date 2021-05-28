@@ -5795,10 +5795,15 @@ class TestAPI(TestAPIBase):
         self.assertIsNone(network_metadata)
         self.assertEqual([], port_resource_requests)
 
+    @mock.patch.object(
+        neutronapi.API, '_has_extended_resource_request_extension',
+        return_value=False)
     @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
-    def test_create_resource_requests_auto_allocated(self, mock_get_client,
-            mock_get_physnet_tunneled_info):
+    def test_create_resource_requests_auto_allocated(
+        self, mock_get_client, mock_get_physnet_tunneled_info,
+        mock_has_extended_res_req
+    ):
         """Ensure physnet info is not retrieved for auto-allocated networks.
 
         This isn't possible so we shouldn't attempt to do it.
@@ -5818,13 +5823,18 @@ class TestAPI(TestAPIBase):
         self.assertFalse(network_metadata.tunneled)
         self.assertEqual([], port_resource_requests)
 
+    @mock.patch.object(
+        neutronapi.API, '_has_extended_resource_request_extension',
+        return_value=False)
     @mock.patch('nova.objects.request_spec.RequestGroup.from_port_request')
     @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
     @mock.patch.object(neutronapi, 'get_client')
-    def test_create_resource_requests(self, getclient,
-            mock_get_port_vnic_info, mock_get_physnet_tunneled_info,
-            mock_from_port_request):
+    def test_create_resource_requests(
+        self, getclient, mock_get_port_vnic_info,
+        mock_get_physnet_tunneled_info, mock_from_port_request,
+        mock_has_extended_res_req
+    ):
         requested_networks = objects.NetworkRequestList(
             objects = [
                 objects.NetworkRequest(port_id=uuids.portid_1),
@@ -5910,6 +5920,26 @@ class TestAPI(TestAPIBase):
                 port_uuid=uuids.trusted_port,
                 port_resource_request=mock.sentinel.resource_request2),
         ])
+        mock_has_extended_res_req.assert_called_once_with(self.context)
+
+    @mock.patch.object(
+        neutronapi.API, '_has_extended_resource_request_extension',
+        return_value=True)
+    def test_create_resource_request_extended_not_supported(
+        self, mock_has_extended_extension
+    ):
+        requested_networks = objects.NetworkRequestList(
+            objects=[
+                objects.NetworkRequest(port_id=uuids.portid_1),
+            ]
+        )
+        pci_requests = objects.InstancePCIRequests(requests=[])
+        self.assertRaises(
+            exception.ExtendedResourceRequestNotSupported,
+            neutronapi.API().create_resource_requests,
+            self.context, requested_networks, pci_requests
+        )
+        mock_has_extended_extension.assert_called_once_with(self.context)
 
     @mock.patch(
         'nova.accelerator.cyborg._CyborgClient.get_device_request_groups')

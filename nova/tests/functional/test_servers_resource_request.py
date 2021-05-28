@@ -2611,3 +2611,38 @@ class CrossCellResizeWithQoSPort(PortResourceRequestBasedSchedulingTestBase):
 
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)
+
+
+class ExtendedResourceRequestTempNegativeTest(
+        PortResourceRequestBasedSchedulingTestBase):
+    """A set of temporary tests to show that nova currently rejects requests
+    that uses the extended-resource-request Neutron API extension. These test
+    are  expected to be removed when support for the extension is implemented
+    in nova.
+    """
+    def setUp(self):
+        super().setUp()
+        self.neutron = self.useFixture(
+            ExtendedResourceRequestNeutronFixture(self))
+
+    def test_boot(self):
+        """The neutron fixture used in this test class enables the
+        extended-resource-request API extension. This results in any new
+        server to boot. This is harsh but without nova support for this
+        extension there is no way that this extension is helpful. So treat
+        this as a deployment configuration error.
+        """
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._create_server,
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_1['id']}],
+        )
+
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn(
+            'The port-resource-request-groups neutron API extension is not '
+            'yet supported by Nova. Please turn off this extension in '
+            'Neutron.',
+            str(ex)
+        )

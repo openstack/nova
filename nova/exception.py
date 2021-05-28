@@ -1955,6 +1955,12 @@ class CreateWithPortResourceRequestOldVersion(Invalid):
                 "until microversion 2.72.")
 
 
+class ExtendedResourceRequestNotSupported(Invalid):
+    msg_fmt = _("The port-resource-request-groups neutron API extension is "
+                "not yet supported by Nova. Please turn off this extension in "
+                "Neutron.")
+
+
 class InvalidReservedMemoryPagesOption(Invalid):
     msg_fmt = _("The format of the option 'reserved_huge_pages' is invalid. "
                 "(found '%(conf)s') Please refer to the nova "
