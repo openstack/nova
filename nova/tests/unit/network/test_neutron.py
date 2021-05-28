@@ -253,6 +253,8 @@ class TestNeutronClient(test.NoDBTestCase):
                                             auth_token='token')
         cl = neutronapi.get_client(my_context)
         self.assertEqual(retries, cl.httpclient.connect_retries)
+        kcl = neutronapi._get_ksa_client(my_context)
+        self.assertEqual(retries, kcl.connect_retries)
 
 
 class TestAPIBase(test.TestCase):
