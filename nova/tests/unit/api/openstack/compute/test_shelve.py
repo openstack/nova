@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 
 import ddt
@@ -104,6 +105,12 @@ class UnshelveServerControllerTestV277(test.NoDBTestCase):
 
     def setUp(self):
         super(UnshelveServerControllerTestV277, self).setUp()
+        self.mock_neutron_extension_list = self.useFixture(
+            fixtures.MockPatch(
+                'nova.network.neutron.API._refresh_neutron_extensions_cache'
+            )
+        ).mock
+        self.mock_neutron_extension_list.return_value = {'extensions': []}
         self.controller = shelve_v21.ShelveController()
         self.req = fakes.HTTPRequest.blank(
                 '/%s/servers/a/action' % fakes.FAKE_PROJECT_ID,

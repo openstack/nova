@@ -1028,6 +1028,15 @@ class ServersController(wsgi.Controller):
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
 
+        if self.network_api.instance_has_extended_resource_request(
+            instance_id
+        ):
+            msg = _(
+                "The resize server operation with port having extended "
+                "resource request, like a port with both QoS minimum "
+                "bandwidth and packet rate policies, is not yet supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
             self.compute_api.resize(context, instance, flavor_id,
                                     auto_disk_config=auto_disk_config)

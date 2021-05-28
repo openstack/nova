@@ -12,6 +12,7 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 import testtools
@@ -66,6 +67,12 @@ class EvacuateTestV21(test.NoDBTestCase):
         self.stub_out('nova.compute.api.API.get', fake_compute_api_get)
         self.stub_out('nova.compute.api.HostAPI.service_get_by_compute_host',
                       fake_service_get_by_compute_host)
+        self.mock_neutron_extension_list = self.useFixture(
+            fixtures.MockPatch(
+                'nova.network.neutron.API._refresh_neutron_extensions_cache'
+            )
+        ).mock
+        self.mock_neutron_extension_list.return_value = {'extensions': []}
         self.UUID = uuids.fake
         for _method in self._methods:
             self.stub_out('nova.compute.api.API.%s' % _method,

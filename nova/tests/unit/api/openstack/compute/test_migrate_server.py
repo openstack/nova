@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
@@ -44,6 +45,12 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         self.stub_out('nova.api.openstack.compute.migrate_server.'
                       'MigrateServerController',
                       lambda *a, **kw: self.controller)
+        self.mock_neutron_extension_list = self.useFixture(
+            fixtures.MockPatch(
+                'nova.network.neutron.API._refresh_neutron_extensions_cache'
+            )
+        ).mock
+        self.mock_neutron_extension_list.return_value = {'extensions': []}
 
     def _get_migration_body(self, **kwargs):
         return {'os-migrateLive': self._get_params(**kwargs)}

@@ -41,6 +41,7 @@ class BasePolicyTest(test.TestCase):
 
     def setUp(self):
         super(BasePolicyTest, self).setUp()
+        self.useFixture(fixtures.NeutronFixture(self))
         self.policy = self.useFixture(fixtures.RealPolicyFixture())
 
         self.admin_project_id = uuids.admin_project_id
