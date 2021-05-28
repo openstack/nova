@@ -6571,6 +6571,71 @@ class TestAPI(TestAPIBase):
         mock_debug.assert_called_with('No PCI device found for request %s',
                                       uuids.pci_request_id, instance=instance)
 
+    @mock.patch(
+        'nova.network.neutron.API.'
+        '_has_extended_resource_request_extension')
+    def test__has_resource_request(self, mock_has_extended_res_req):
+        # Old format, resource_request in None. That is Neutron current
+        # behavior if the port has no QoS policy associated.
+        mock_has_extended_res_req.return_value = False
+        port_no_res_req = {"resource_request": None}
+        self.assertFalse(self.api._has_resource_request(
+            self.context, port_no_res_req, neutron=None)
+        )
+        # Old format, there is resource_request key but no resource is
+        # requested. We should never get this from Neutron today but we
+        # actually get it if there are QoS policy assigned to the port but
+        # there is no rule in that policy requesting resources.
+        port_old_empty_res_req = {"resource_request": {}}
+        self.assertFalse(self.api._has_resource_request(
+            self.context, port_old_empty_res_req, neutron=None)
+        )
+        # Old format, and the port has resource request.
+        port_old_res_req = {
+            "resource_request": {
+                "resources": {
+                    "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+                }
+            }
+        }
+        self.assertTrue(self.api._has_resource_request(
+            self.context, port_old_res_req, neutron=None)
+        )
+        # New format tests are starting here
+        mock_has_extended_res_req.return_value = True
+        # New format, port has no QoS policy assigned
+        port_no_res_req = {"resource_request": None}
+        self.assertFalse(self.api._has_resource_request(
+            self.context, port_no_res_req, neutron=None)
+        )
+        # New format, port has a resource_request key but no resource is
+        # requested. Neutron never sends this, it sends None instead. We keep
+        # this here for completeness as the code actually handle this properly.
+        port_new_empty_res_req = {
+            "resource_request": {
+                "request_groups": []
+            }
+        }
+        self.assertFalse(self.api._has_resource_request(
+            self.context, port_new_empty_res_req, neutron=None)
+        )
+        # New format, port has a resource request
+        port_new_res_req = {
+            "resource_request": {
+                "request_groups": [
+                    {
+                        "resources": {
+                            "NET_KILOPACKET_PER_SEC": 1000
+                        }
+                    },
+                ],
+                "same_subtree": [],
+            }
+        }
+        self.assertTrue(self.api._has_resource_request(
+            self.context, port_new_res_req, neutron=None)
+        )
+
 
 class TestAPIModuleMethods(test.NoDBTestCase):
 

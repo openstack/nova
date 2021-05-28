@@ -995,6 +995,13 @@ class API:
 
         return requests_and_created_ports
 
+    def _has_resource_request(self, context, port, neutron):
+        resource_request = port.get(constants.RESOURCE_REQUEST) or {}
+        if self._has_extended_resource_request_extension(context, neutron):
+            return bool(resource_request.get(constants.REQUEST_GROUPS, []))
+        else:
+            return bool(resource_request)
+
     def allocate_for_instance(self, context, instance,
                               requested_networks,
                               security_groups=None, bind_host_id=None,
@@ -1269,6 +1276,14 @@ class API:
     def _has_segment_extension(self, context, neutron=None):
         self._refresh_neutron_extensions_cache(context, neutron=neutron)
         return constants.SEGMENT in self.extensions
+
+    # TODO(gibi): Remove all branches where this is False after Neutron made
+    # the this extension mandatory. In Xena this extension will be optional to
+    # support the scenario where Neutron upgraded first. So Neutron can mark
+    # this mandatory earliest in Yoga.
+    def _has_extended_resource_request_extension(self, context, neutron=None):
+        self._refresh_neutron_extensions_cache(context, neutron=neutron)
+        return constants.RESOURCE_REQUEST_GROUPS_EXTENSION in self.extensions
 
     def supports_port_binding_extension(self, context):
         """This is a simple check to see if the neutron "binding-extended"
