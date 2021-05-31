@@ -306,10 +306,21 @@ class BigVmManager(manager.Manager):
                               {'rp': rp['uuid']})
                     continue
                 inventory = resp.json()["inventories"]
-                memory_mb_inventory = inventory[MEMORY_MB]
+                # Note(jakobk): It's possible to encounter incomplete (e.g.
+                # in-buildup) resource providers here, that don't have all the
+                # usual resources set.
+                memory_mb_inventory = inventory.get(MEMORY_MB)
+                if not memory_mb_inventory:
+                    LOG.info('no %(mem_res)s resource in RP %(rp)s',
+                             {'mem_res': MEMORY_MB, 'rp': rp['uuid']})
+                    continue
                 memory_reservable_mb_inventory = inventory.get(
                     MEMORY_RESERVABLE_MB_RESOURCE)
                 if not memory_reservable_mb_inventory:
+                    LOG.debug('no %(memreserv_res)s in resource provider'
+                              ' %(rp)s',
+                              {'memreserv_res': MEMORY_RESERVABLE_MB_RESOURCE,
+                               'rp': rp['uuid']})
                     continue
 
                 # retrieve the usage
