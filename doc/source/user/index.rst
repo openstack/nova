@@ -16,7 +16,6 @@ End user guide
    resize
    reboot
    rescue
-   availability-zones
    block-device-mapping
    /reference/api-microversion-history
 
