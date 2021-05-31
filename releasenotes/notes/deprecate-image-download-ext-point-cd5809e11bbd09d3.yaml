@@ -8,5 +8,5 @@ deprecations:
     ``nova.image.download.modules`` extension point is not maintained
     and there is no indication of its use in production clouds. If you are
     using this extension point, please make the nova development team
-    aware by contacting us in the #openstack-nova freenode IRC channel or
+    aware by contacting us in the #openstack-nova OFTC IRC channel or
     on the openstack-dev mailing list.

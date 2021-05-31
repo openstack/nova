@@ -42,5 +42,5 @@ upgrade:
     If you rely on the ``caching_scheduler`` driver or your own out-of-tree
     driver which sets ``USES_ALLOCATION_CANDIDATES = False`` to bypass the
     placement service, please communicate with the nova development team in
-    the openstack-dev mailing list and/or #openstack-nova freenode IRC channel
+    the openstack-dev mailing list and/or #openstack-nova OFTC IRC channel
     to determine what prevents you from using the ``filter_scheduler`` driver.

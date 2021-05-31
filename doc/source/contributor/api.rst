@@ -231,7 +231,7 @@ The functional API samples tests are not the simplest thing in the world to
 get used to, and can be very frustrating at times when they fail in not
 obvious ways. If you need help debugging a functional API sample test failure,
 feel free to post your work-in-progress change for review and ask for help in
-the ``openstack-nova`` freenode IRC channel.
+the ``openstack-nova`` OFTC IRC channel.
 
 
 Documentation
