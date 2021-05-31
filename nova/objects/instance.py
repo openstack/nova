@@ -1563,13 +1563,22 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                 if missing_itypes:
                     # Not found in flavor db. might be deleted. get it from the
                     # saved info
+                    iquery = context.session.query(
+                            models.Instance.uuid
+                        ).filter(
+                            models.Instance.instance_type_id.
+                            in_(missing_itypes)
+                        ).group_by(
+                            models.Instance.instance_type_id
+                        ).subquery()
+
                     db_flavors = context.session.query(
                             models.InstanceExtra.flavor
-                        ).join(models.Instance). \
-                        filter(
-                            models.Instance.instance_type_id.in_(
-                                missing_itypes)
-                        ).distinct(models.Instance.instance_type_id)
+                        ).join(
+                            iquery,
+                            models.InstanceExtra.instance_uuid == iquery.c.uuid
+                        )
+
                     for db_flavor in db_flavors:
                         flavor_info = jsonutils.loads(db_flavor[0])
                         flavor = objects.Flavor.obj_from_primitive(
