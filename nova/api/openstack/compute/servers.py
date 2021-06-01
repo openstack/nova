@@ -731,6 +731,7 @@ class ServersController(wsgi.Controller):
                 exception.FlavorNotFound,
                 exception.InvalidMetadata,
                 exception.InvalidVolume,
+                exception.VolumeNotFound,
                 exception.MismatchVolumeAZException,
                 exception.MultiplePortsNotApplicable,
                 exception.InvalidFixedIpAndMaxCountRequest,

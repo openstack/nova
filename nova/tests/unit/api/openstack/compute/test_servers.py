@@ -6957,6 +6957,14 @@ class ServersControllerCreateTestWithMock(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, {})
 
+    @mock.patch.object(
+        compute_api.API, 'create',
+        side_effect=exception.VolumeNotFound(volume_id='foo'))
+    def test_create_instance_with_volume_not_found_error(self, create_mock):
+        # Tests that InvalidVolume is translated to a 400 error.
+        self.assertRaises(
+            webob.exc.HTTPBadRequest, self._test_create_extra, {})
+
 
 class ServersViewBuilderTest(test.TestCase):
     project_id = fakes.FAKE_PROJECT_ID
