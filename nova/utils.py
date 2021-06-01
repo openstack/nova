@@ -1191,6 +1191,10 @@ def is_baremetal_flavor(flavor):
     return 'capabilities:cpu_arch' in flavor.extra_specs
 
 
+def is_baremetal_host(host_state):
+    return host_state.hypervisor_type == 'ironic'
+
+
 def is_big_vm(memory_mb, flavor):
     # small VMs are not big
     if memory_mb < CONF.bigvm_mb:

@@ -123,10 +123,12 @@ class ShardFilter(filters.BaseHostFilter):
 
         host_shard_names = set(aggr.name for aggr in host_shard_aggrs)
         if not host_shard_names:
-            LOG.error('%(host_state)s is not in an aggregate starting with '
-                      '%(shard_prefix)s.',
-                      {'host_state': host_state,
-                       'shard_prefix': self._SHARD_PREFIX})
+            log_method = (LOG.debug if nova_utils.is_baremetal_host(host_state)
+                          else LOG.error)
+            log_method('%(host_state)s is not in an aggregate starting with '
+                       '%(shard_prefix)s.',
+                       {'host_state': host_state,
+                        'shard_prefix': self._SHARD_PREFIX})
             return False
 
         # forbid changing the shard of an instance
