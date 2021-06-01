@@ -38,7 +38,6 @@ import sqlalchemy as sa
 from sqlalchemy import and_
 from sqlalchemy import Boolean
 from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy.ext.compiler import compiles
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy import or_
@@ -52,7 +51,6 @@ from sqlalchemy import sql
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.expression import desc
-from sqlalchemy.sql.expression import UpdateBase
 from sqlalchemy.sql import false
 from sqlalchemy.sql import func
 from sqlalchemy.sql import null
@@ -366,23 +364,6 @@ class InequalityCondition(object):
     def clauses(self, field):
         return [field != value for value in self.values]
 
-
-class DeleteFromSelect(UpdateBase):
-    def __init__(self, table, select, column):
-        self.table = table
-        self.select = select
-        self.column = column
-
-
-# NOTE(guochbo): some versions of MySQL doesn't yet support subquery with
-# 'LIMIT & IN/ALL/ANY/SOME' We need work around this with nesting select .
-@compiles(DeleteFromSelect)
-def visit_delete_from_select(element, compiler, **kw):
-    return "DELETE FROM %s WHERE %s in (SELECT T1.%s FROM (%s) as T1)" % (
-        compiler.process(element.table, asfrom=True),
-        compiler.process(element.column),
-        element.column.name,
-        compiler.process(element.select))
 
 ###################
 
@@ -4202,8 +4183,7 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before):
         column = table.c.domain
     else:
         column = table.c.id
-    # NOTE(guochbo): Use DeleteFromSelect to avoid
-    # database's limit of maximum parameter in one SQL statement.
+
     deleted_column = table.c.deleted
     columns = [c.name for c in table.c]
 

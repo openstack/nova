@@ -16,11 +16,9 @@
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import test_fixtures
-from oslo_utils import uuidutils
 from sqlalchemy import Integer, String
 from sqlalchemy import MetaData, Table, Column
 from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy import sql
 from sqlalchemy.types import UserDefinedType
 
 from nova.db.sqlalchemy import api as db
@@ -56,39 +54,6 @@ class TestMigrationUtilsSQLite(
         super(TestMigrationUtilsSQLite, self).setUp()
         self.engine = enginefacade.writer.get_engine()
         self.meta = MetaData(bind=self.engine)
-
-    def test_delete_from_select(self):
-        table_name = "__test_deletefromselect_table__"
-        uuidstrs = []
-        for unused in range(10):
-            uuidstrs.append(uuidutils.generate_uuid(dashed=False))
-
-        conn = self.engine.connect()
-        test_table = Table(table_name, self.meta,
-                           Column('id', Integer, primary_key=True,
-                                  nullable=False, autoincrement=True),
-                           Column('uuid', String(36), nullable=False))
-        test_table.create()
-        # Add 10 rows to table
-        for uuidstr in uuidstrs:
-            ins_stmt = test_table.insert().values(uuid=uuidstr)
-            conn.execute(ins_stmt)
-
-        # Delete 4 rows in one chunk
-        column = test_table.c.id
-        query_delete = sql.select([column],
-                                  test_table.c.id < 5).order_by(column)
-        delete_statement = db.DeleteFromSelect(test_table,
-                                               query_delete, column)
-        result_delete = conn.execute(delete_statement)
-        # Verify we delete 4 rows
-        self.assertEqual(result_delete.rowcount, 4)
-
-        query_all = sql.select([test_table])\
-                       .where(test_table.c.uuid.in_(uuidstrs))
-        rows = conn.execute(query_all).fetchall()
-        # Verify we still have 6 rows in table
-        self.assertEqual(len(rows), 6)
 
     def test_check_shadow_table(self):
         table_name = 'test_check_shadow_table'
