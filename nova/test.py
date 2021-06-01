@@ -633,8 +633,8 @@ class TestCase(base.BaseTestCase):
 
         for name in sorted(implmethods.keys()):
             # NOTE(stephenfin): We ignore type annotations
-            baseargs = utils.getargspec(basemethods[name])[:-1]
-            implargs = utils.getargspec(implmethods[name])[:-1]
+            baseargs = inspect.getfullargspec(basemethods[name])[:-1]
+            implargs = inspect.getfullargspec(implmethods[name])[:-1]
 
             self.assertEqual(baseargs, implargs,
                              "%s args don't match base class %s" %
@@ -707,7 +707,7 @@ class SubclassSignatureTestCase(testtools.TestCase, metaclass=abc.ABCMeta):
                 # instead.
                 method = getattr(method, '__wrapped__')
 
-            argspecs[name] = utils.getargspec(method)
+            argspecs[name] = inspect.getfullargspec(method)
 
         return argspecs
 
