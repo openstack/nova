@@ -404,7 +404,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, destroy_secrets=True):
         """Destroy the specified instance from the Hypervisor.
 
         If the instance is not found (for example if networking failed), this
@@ -417,11 +417,13 @@ class ComputeDriver(object):
         :param block_device_info: Information about block devices that should
                                   be detached from the instance.
         :param destroy_disks: Indicates if disks should be destroyed
+        :param destroy_secrets: Indicates if secrets should be destroyed
         """
         raise NotImplementedError()
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, migrate_data=None, destroy_vifs=True):
+                destroy_disks=True, migrate_data=None, destroy_vifs=True,
+                destroy_secrets=True):
         """Cleanup the instance resources .
 
         Instance should have been destroyed from the Hypervisor before calling
@@ -434,6 +436,8 @@ class ComputeDriver(object):
                                   be detached from the instance.
         :param destroy_disks: Indicates if disks should be destroyed
         :param migrate_data: implementation specific params
+        :param destroy_vifs: Indicates if vifs should be unplugged
+        :param destroy_secrets: Indicates if secrets should be destroyed
         """
         raise NotImplementedError()
 
