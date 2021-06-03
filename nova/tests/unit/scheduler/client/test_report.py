@@ -3107,15 +3107,16 @@ class TestAssociations(SchedulerReportClientTestCase):
         self.client._refresh_associations(self.context, uuid)
         self.assert_getters_not_called()
 
+    @mock.patch('time.time', return_value=time.time())
     @mock.patch.object(report.LOG, 'debug')
-    def test_refresh_associations_time(self, log_mock):
+    def test_refresh_associations_time(self, log_mock, mock_time):
         """Test that refresh associations is called when the map is stale."""
         uuid = uuids.compute_node
         # Seed the provider tree so _refresh_associations finds the provider
         self.client._provider_tree.new_root('compute', uuid, generation=1)
 
         # Called a first time because association_refresh_time is empty.
-        now = time.time()
+        now = mock_time.return_value
         self.client._refresh_associations(self.context, uuid)
         self.assert_getters_were_called(uuid)
         log_mock.assert_has_calls([
@@ -3132,20 +3133,20 @@ class TestAssociations(SchedulerReportClientTestCase):
         # Clear call count.
         self.reset_getter_mocks()
 
-        with mock.patch('time.time') as mock_future:
-            # Not called a second time because not enough time has passed.
-            mock_future.return_value = (now +
-                CONF.compute.resource_provider_association_refresh / 2)
-            self.client._refresh_associations(self.context, uuid)
-            self.assert_getters_not_called(timer_entry=uuid)
+        # Not called a second time because not enough time has passed.
+        mock_time.return_value = (now +
+            CONF.compute.resource_provider_association_refresh / 2)
+        self.client._refresh_associations(self.context, uuid)
+        self.assert_getters_not_called(timer_entry=uuid)
 
-            # Called because time has passed.
-            mock_future.return_value = (now +
-                CONF.compute.resource_provider_association_refresh + 1)
-            self.client._refresh_associations(self.context, uuid)
-            self.assert_getters_were_called(uuid)
+        # Called because time has passed.
+        mock_time.return_value = (now +
+            CONF.compute.resource_provider_association_refresh + 1)
+        self.client._refresh_associations(self.context, uuid)
+        self.assert_getters_were_called(uuid)
 
-    def test_refresh_associations_disabled(self):
+    @mock.patch('time.time', return_value=time.time())
+    def test_refresh_associations_disabled(self, mock_time):
         """Test that refresh associations can be disabled."""
         self.flags(resource_provider_association_refresh=0, group='compute')
         uuid = uuids.compute_node
@@ -3153,33 +3154,32 @@ class TestAssociations(SchedulerReportClientTestCase):
         self.client._provider_tree.new_root('compute', uuid, generation=1)
 
         # Called a first time because association_refresh_time is empty.
-        now = time.time()
+        now = mock_time.return_value
         self.client._refresh_associations(self.context, uuid)
         self.assert_getters_were_called(uuid)
 
         # Clear call count.
         self.reset_getter_mocks()
 
-        with mock.patch('time.time') as mock_future:
-            # A lot of time passes
-            mock_future.return_value = now + 10000000000000
-            self.client._refresh_associations(self.context, uuid)
-            self.assert_getters_not_called(timer_entry=uuid)
+        # A lot of time passes
+        mock_time.return_value = now + 10000000000000
+        self.client._refresh_associations(self.context, uuid)
+        self.assert_getters_not_called(timer_entry=uuid)
 
-            self.reset_getter_mocks()
+        self.reset_getter_mocks()
 
-            # Forever passes
-            mock_future.return_value = float('inf')
-            self.client._refresh_associations(self.context, uuid)
-            self.assert_getters_not_called(timer_entry=uuid)
+        # Forever passes
+        mock_time.return_value = float('inf')
+        self.client._refresh_associations(self.context, uuid)
+        self.assert_getters_not_called(timer_entry=uuid)
 
-            self.reset_getter_mocks()
+        self.reset_getter_mocks()
 
-            # Even if no time passes, clearing the counter triggers refresh
-            mock_future.return_value = now
-            del self.client._association_refresh_time[uuid]
-            self.client._refresh_associations(self.context, uuid)
-            self.assert_getters_were_called(uuid)
+        # Even if no time passes, clearing the counter triggers refresh
+        mock_time.return_value = now
+        del self.client._association_refresh_time[uuid]
+        self.client._refresh_associations(self.context, uuid)
+        self.assert_getters_were_called(uuid)
 
 
 class TestAllocations(SchedulerReportClientTestCase):
