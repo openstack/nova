@@ -266,16 +266,6 @@ validated by the scheduler filters unlike the
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=ZERO_DISK_FLAVOR,
-        # TODO(gmann): We need to make it SYSTEM_ADMIN.
-        # PROJECT_ADMIN is added for now because create server
-        # policy is project scoped and there is no way to
-        # pass the project_id in request body for system scoped
-        # roles so that create server for other project with zero disk flavor.
-        # To achieve that, we need to update the create server API to
-        # accept the project_id for whom the server needs to be created
-        # and then change the scope of this policy to system-only
-        # Because that is API change it needs to be done with new
-        # microversion.
         check_str=base.PROJECT_ADMIN,
         description="""
 This rule controls the compute API validation behavior of creating a server
@@ -301,16 +291,6 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=NETWORK_ATTACH_EXTERNAL,
-        # TODO(gmann): We need to make it SYSTEM_ADMIN.
-        # PROJECT_ADMIN is added for now because create server
-        # policy is project scoped and there is no way to
-        # pass the project_id in request body for system scoped
-        # roles so that create server for other project or attach the
-        # external network. To achieve that, we need to update the
-        # create server API to accept the project_id for whom the
-        # server needs to be created and then change the scope of this
-        # policy to system-only Because that is API change it needs to
-        # be done with new microversion.
         check_str=base.PROJECT_ADMIN,
         description="Attach an unshared external network to a server",
         operations=[
