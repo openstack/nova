@@ -1877,9 +1877,13 @@ class LibvirtDriver(driver.ComputeDriver):
             provider = encryptors.LEGACY_PROVIDER_CLASS_TO_FORMAT_MAP[provider]
         return provider == encryptors.LUKS
 
-    def _get_volume_config(self, connection_info, disk_info):
+    def _get_volume_config(self, instance, connection_info, disk_info):
         vol_driver = self._get_volume_driver(connection_info)
         conf = vol_driver.get_config(connection_info, disk_info)
+
+        if self._sev_enabled(instance.flavor, instance.image_meta):
+            designer.set_driver_iommu_for_device(conf)
+
         self._set_cache_mode(conf)
         return conf
 
@@ -2037,7 +2041,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if disk_info['bus'] == 'scsi':
             disk_info['unit'] = self._get_scsi_controller_next_unit(guest)
 
-        conf = self._get_volume_config(connection_info, disk_info)
+        conf = self._get_volume_config(instance, connection_info, disk_info)
 
         self._check_discard_for_attach_volume(conf, instance)
 
@@ -2159,7 +2163,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # this to the BDM here as the upper compute swap_volume method will
         # eventually do this for us.
         self._connect_volume(context, new_connection_info, instance)
-        conf = self._get_volume_config(new_connection_info, disk_info)
+        conf = self._get_volume_config(
+            instance, new_connection_info, disk_info)
         hw_firmware_type = instance.image_meta.properties.get(
             'hw_firmware_type')
 
@@ -2686,6 +2691,10 @@ class LibvirtDriver(driver.ComputeDriver):
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
                                          instance.flavor,
                                          CONF.libvirt.virt_type)
+
+        if self._sev_enabled(instance.flavor, image_meta):
+            designer.set_driver_iommu_for_device(cfg)
+
         try:
             state = guest.get_power_state(self._host)
             live = state in (power_state.RUNNING, power_state.PAUSED)
@@ -5257,7 +5266,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     info['unit'] = disk_mapping['unit']
                     disk_mapping['unit'] += 1
-            cfg = self._get_volume_config(connection_info, info)
+            cfg = self._get_volume_config(instance, connection_info, info)
             devices.append(cfg)
             vol['connection_info'] = connection_info
             vol.save()
@@ -6754,7 +6763,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.MissingDomainCapabilityFeatureException(
                 feature='sev')
 
-        designer.set_driver_iommu_for_sev(guest)
+        designer.set_driver_iommu_for_all_devices(guest)
         self._guest_add_launch_security(guest, sev)
 
     def _guest_add_launch_security(self, guest, sev):
@@ -9518,7 +9527,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # TODO(sahid): It's not a really good idea to pass
                     # the method _get_volume_config and we should to find
                     # a way to avoid this in future.
-                    guest, migrate_data, self._get_volume_config,
+                    instance, guest, migrate_data, self._get_volume_config,
                     get_vif_config=get_vif_config, new_resources=new_resources)
 
             # NOTE(pkoniszewski): Because of precheck which blocks

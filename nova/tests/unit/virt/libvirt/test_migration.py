@@ -79,10 +79,12 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         get_volume_config = mock.MagicMock()
         mock_guest.get_xml_desc.return_value = '<domain></domain>'
 
-        migration.get_updated_guest_xml(mock_guest, data, get_volume_config)
+        migration.get_updated_guest_xml(
+            mock.sentinel.instance, mock_guest, data, get_volume_config)
         mock_graphics.assert_called_once_with(mock.ANY, data)
         mock_serial.assert_called_once_with(mock.ANY, data)
-        mock_volume.assert_called_once_with(mock.ANY, data, get_volume_config)
+        mock_volume.assert_called_once_with(
+            mock.ANY, data, mock.sentinel.instance, get_volume_config)
         mock_perf_events_xml.assert_called_once_with(mock.ANY, data)
         mock_memory_backing.assert_called_once_with(mock.ANY, data)
         self.assertEqual(1, mock_tostring.called)
@@ -353,8 +355,15 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
 
         get_volume_config = mock.MagicMock(return_value=conf)
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_volume_xml(
-            doc, data, get_volume_config), encoding='unicode')
+        res = etree.tostring(
+            migration._update_volume_xml(
+                doc,
+                data,
+                mock.sentinel.instance,
+                get_volume_config
+            ),
+            encoding='unicode'
+        )
         new_xml = xml.replace('ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X',
                               'ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z')
         self.assertXmlEqual(res, new_xml)
@@ -420,10 +429,16 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
 
         get_volume_config = mock.MagicMock(return_value=conf)
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_volume_xml(
-            doc, data, get_volume_config), encoding='unicode')
-        new_xml = xml.replace('sdb',
-                              'sdc')
+        res = etree.tostring(
+            migration._update_volume_xml(
+                doc,
+                data,
+                mock.sentinel.instance,
+                get_volume_config
+            ),
+            encoding='unicode'
+        )
+        new_xml = xml.replace('sdb', 'sdc')
         self.assertXmlEqual(res, new_xml)
 
     def test_update_volume_xml_add_encryption(self):
@@ -509,8 +524,15 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
 
         get_volume_config = mock.MagicMock(return_value=conf)
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_volume_xml(
-            doc, data, get_volume_config), encoding='unicode')
+        res = etree.tostring(
+            migration._update_volume_xml(
+                doc,
+                data,
+                mock.sentinel.instance,
+                get_volume_config
+            ),
+            encoding='unicode'
+        )
         self.assertXmlEqual(res, new_xml)
 
     def test_update_volume_xml_update_encryption(self):
@@ -577,8 +599,15 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
 
         get_volume_config = mock.MagicMock(return_value=conf)
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_volume_xml(
-            doc, data, get_volume_config), encoding='unicode')
+        res = etree.tostring(
+            migration._update_volume_xml(
+                doc,
+                data,
+                mock.sentinel.instance,
+                get_volume_config
+            ),
+            encoding='unicode'
+        )
         new_xml = xml.replace(uuids.encryption_secret_uuid_old,
                               uuids.encryption_secret_uuid_new)
         self.assertXmlEqual(res, new_xml)
