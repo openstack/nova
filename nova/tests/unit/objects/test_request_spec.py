@@ -674,6 +674,9 @@ class _TestRequestSpecObject(object):
         req_obj.retry = expected_retry
         nr = objects.NetworkRequest()
         req_obj.requested_networks = objects.NetworkRequestList(objects=[nr])
+        req_lvl_params = objects.RequestLevelParams(
+            root_required={"CUSTOM_FOO"})
+        req_obj.request_level_params = req_lvl_params
 
         orig_create_in_db = request_spec.RequestSpec._create_in_db
         with mock.patch.object(request_spec.RequestSpec, '_create_in_db') \
@@ -688,13 +691,16 @@ class _TestRequestSpecObject(object):
             # 3. requested_resources
             # 4. retry
             # 5. requested_networks
+            # 6. request_level_params
             data = jsonutils.loads(updates['spec'])['nova_object.data']
             self.assertNotIn('network_metadata', data)
             self.assertIsNone(data['requested_destination'])
             self.assertIsNone(data['requested_resources'])
             self.assertIsNone(data['retry'])
-            self.assertIsNotNone(data['instance_uuid'])
             self.assertNotIn('requested_networks', data)
+            self.assertNotIn('request_level_params', data)
+
+            self.assertIsNotNone(data['instance_uuid'])
 
         # also we expect that the following fields are not reset after create
         # 1. network_metadata
@@ -702,6 +708,7 @@ class _TestRequestSpecObject(object):
         # 3. requested_resources
         # 4. retry
         # 5. requested_networks
+        # 6. request_level_params
         self.assertIsNotNone(req_obj.network_metadata)
         self.assertJsonEqual(expected_network_metadata.obj_to_primitive(),
                              req_obj.network_metadata.obj_to_primitive())
@@ -717,6 +724,10 @@ class _TestRequestSpecObject(object):
         self.assertIsNotNone(req_obj.requested_networks)
         self.assertJsonEqual(nr.obj_to_primitive(),
                              req_obj.requested_networks[0].obj_to_primitive())
+        self.assertIsNotNone(req_obj.request_level_params)
+        self.assertJsonEqual(
+            req_lvl_params.obj_to_primitive(),
+            req_obj.request_level_params.obj_to_primitive())
 
     def test_save_does_not_persist_requested_fields(self):
         req_obj = fake_request_spec.fake_spec_obj(remove_id=True)

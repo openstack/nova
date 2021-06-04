@@ -674,8 +674,7 @@ class RequestSpec(base.NovaObject):
                 spec.instance_group.hosts = None
             # NOTE(mriedem): Don't persist these since they are per-request
             for excluded in ('retry', 'requested_destination',
-                             'requested_resources', 'ignore_hosts',
-                             'request_level_params'):
+                             'requested_resources', 'ignore_hosts'):
                 if excluded in spec and getattr(spec, excluded):
                     setattr(spec, excluded, None)
             # NOTE(stephenfin): Don't persist network metadata since we have
@@ -686,6 +685,10 @@ class RequestSpec(base.NovaObject):
             # no need for it after scheduling
             if 'requested_networks' in spec and spec.requested_networks:
                 del spec.requested_networks
+            # NOTE(gibi): Don't persist requested_networks since we have
+            # no need for it after scheduling
+            if 'request_level_params' in spec and spec.request_level_params:
+                del spec.request_level_params
 
             db_updates = {'spec': jsonutils.dumps(spec.obj_to_primitive())}
             if 'instance_uuid' in updates:
