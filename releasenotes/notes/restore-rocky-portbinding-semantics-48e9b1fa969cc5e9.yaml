@@ -1,0 +1,14 @@
+---
+fixes:
+  - |
+    In the Rocky (18.0.0) release support was added to nova to use neutron's
+    multiple port binding feature when the binding-extended API extension
+    is available. In the Train (20.0.0) release the SR-IOV live migration
+    feature broke the semantics of the vifs field in the ``migration_data``
+    object that signals if the new multiple port binding workflow should
+    be used by always populating it even when the ``binding-extended`` API
+    extension is not present. This broke live migration for any deployment
+    that did not support the optional ``binding-extended`` API extension.
+    The Rocky behavior has now been restored enabling live migration
+    using the single port binding workflow when multiple port bindings
+    are not available.

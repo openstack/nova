@@ -18,6 +18,7 @@
 """Tests for compute service."""
 
 import datetime
+import fixtures as std_fixtures
 from itertools import chain
 import operator
 import sys
@@ -6142,9 +6143,15 @@ class ComputeTestCase(BaseTestCase,
         # Confirm setup_compute_volume is called when volume is mounted.
         def stupid(*args, **kwargs):
             return fake_network.fake_get_instance_nw_info(self)
+
         if CONF.use_neutron:
             self.stub_out(
                 'nova.network.neutronv2.api.API.get_instance_nw_info', stupid)
+            self.useFixture(
+                std_fixtures.MonkeyPatch(
+                    'nova.network.neutronv2.api.'
+                    'API.supports_port_binding_extension',
+                    lambda *args: True))
         else:
             self.stub_out('nova.network.api.API.get_instance_nw_info', stupid)
 
@@ -6155,6 +6162,9 @@ class ComputeTestCase(BaseTestCase,
         fake_notifier.NOTIFICATIONS = []
         migrate_data = objects.LibvirtLiveMigrateData(
             is_shared_instance_path=False)
+        vifs = migrate_data_obj.VIFMigrateData.create_skeleton_migrate_vifs(
+                stupid())
+        migrate_data.vifs = vifs
         mock_pre.return_value = migrate_data
 
         with mock.patch.object(self.compute.network_api,
