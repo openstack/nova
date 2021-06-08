@@ -64,7 +64,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id,
                                               is_admin=True)
-        self.inst_type = objects.Flavor.get_by_name(self.context, 'm1.small')
+        self.flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
 
         self.useFixture(nova_fixtures.GlanceFixture(self))
 
@@ -106,9 +106,9 @@ class QuotaIntegrationTestCase(test.TestCase):
             self._create_instance()
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         try:
-            self.compute_api.create(self.context, min_count=1, max_count=1,
-                                    instance_type=self.inst_type,
-                                    image_href=image_uuid)
+            self.compute_api.create(
+                self.context, min_count=1, max_count=1,
+                flavor=self.flavor, image_href=image_uuid)
         except exception.QuotaError as e:
             expected_kwargs = {'code': 413,
                                'req': '1, 1',
@@ -123,9 +123,9 @@ class QuotaIntegrationTestCase(test.TestCase):
         self._create_instance()
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         try:
-            self.compute_api.create(self.context, min_count=1, max_count=1,
-                                    instance_type=self.inst_type,
-                                    image_href=image_uuid)
+            self.compute_api.create(
+                self.context, min_count=1, max_count=1, flavor=self.flavor,
+                image_href=image_uuid)
         except exception.QuotaError as e:
             expected_kwargs = {'code': 413,
                                'req': '1',
@@ -149,27 +149,22 @@ class QuotaIntegrationTestCase(test.TestCase):
         for i in range(CONF.quota.metadata_items + 1):
             metadata['key%s' % i] = 'value%s' % i
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        self.assertRaises(exception.QuotaError, self.compute_api.create,
-                                            self.context,
-                                            min_count=1,
-                                            max_count=1,
-                                            instance_type=self.inst_type,
-                                            image_href=image_uuid,
-                                            metadata=metadata)
+        self.assertRaises(
+            exception.QuotaError, self.compute_api.create,
+            self.context, min_count=1, max_count=1, flavor=self.flavor,
+            image_href=image_uuid, metadata=metadata)
 
     def _create_with_injected_files(self, files):
         api = self.compute_api
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        api.create(self.context, min_count=1, max_count=1,
-                instance_type=self.inst_type, image_href=image_uuid,
-                injected_files=files)
+        api.create(
+            self.context, min_count=1, max_count=1, flavor=self.flavor,
+            image_href=image_uuid, injected_files=files)
 
     def test_no_injected_files(self):
         api = self.compute_api
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        api.create(self.context,
-                   instance_type=self.inst_type,
-                   image_href=image_uuid)
+        api.create(self.context, flavor=self.flavor, image_href=image_uuid)
 
     def test_max_injected_files(self):
         files = []
