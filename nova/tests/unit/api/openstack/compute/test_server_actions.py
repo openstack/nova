@@ -14,7 +14,6 @@
 #    under the License.
 
 import ddt
-import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
@@ -100,10 +99,6 @@ class ServerActionsControllerTestV21(test.TestCase):
             self.controller.compute_api, 'compute_task_api')
         mock_conductor.start()
         self.addCleanup(mock_conductor.stop)
-        # Assume that none of the tests are using ports with resource requests.
-        self.mock_list_port = self.useFixture(
-            fixtures.MockPatch('nova.network.neutron.API.list_ports')).mock
-        self.mock_list_port.return_value = {'ports': []}
 
     def _get_controller(self):
         return self.servers.ServersController()
