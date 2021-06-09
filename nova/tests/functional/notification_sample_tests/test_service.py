@@ -20,7 +20,6 @@ from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
 from nova.tests.unit.api.openstack.compute import test_services
-from nova.tests.unit import fake_notifier
 
 
 class TestServiceNotificationBase(
@@ -167,4 +166,4 @@ class TestServiceNotificationSample(TestServiceNotificationBase):
         self._verify_notification(
             'service-delete',
             replacements={'uuid': compute2_service_id},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=self.notifier.versioned_notifications[1])

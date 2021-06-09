@@ -16,7 +16,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
-from nova.tests.unit import fake_notifier
 
 
 class TestEvacuationWithSourceReturningDuringRebuild(
@@ -62,8 +61,6 @@ class TestEvacuationWithSourceReturningDuringRebuild(
 
         self.image_id = self.api.get_images()[0]['id']
         self.flavor_id = self.api.get_flavors()[0]['id']
-
-        self.addCleanup(fake_notifier.reset)
 
         # Stub out rebuild with a slower method allowing the src compute to be
         # restarted once the migration hits pre-migrating after claiming

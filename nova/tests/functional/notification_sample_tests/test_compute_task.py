@@ -13,7 +13,6 @@
 from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
-from nova.tests.unit import fake_notifier
 
 
 class TestComputeTaskNotificationSample(
@@ -38,8 +37,8 @@ class TestComputeTaskNotificationSample(
         self._wait_for_notification('compute_task.build_instances.error')
         # 0. scheduler.select_destinations.start
         # 1. compute_task.rebuild_server.error
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
-                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        self.assertEqual(2, len(self.notifier.versioned_notifications),
+                         self.notifier.versioned_notifications)
         self._verify_notification(
             'compute_task-build_instances-error',
             replacements={
@@ -52,7 +51,7 @@ class TestComputeTaskNotificationSample(
                 'reason.module_name': self.ANY,
                 'reason.traceback': self.ANY
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=self.notifier.versioned_notifications[1])
 
     def test_rebuild_fault(self):
         server = self._boot_a_server(
@@ -65,7 +64,7 @@ class TestComputeTaskNotificationSample(
         service_id = self.api.get_service_id('nova-compute')
         self.admin_api.put_service_force_down(service_id, True)
 
-        fake_notifier.reset()
+        self.notifier.reset()
 
         # NOTE(takashin): The rebuild action and the evacuate action shares
         # same code path. So the 'evacuate' action is used for this test.
@@ -76,8 +75,8 @@ class TestComputeTaskNotificationSample(
         # 0. instance.evacuate
         # 1. scheduler.select_destinations.start
         # 2. compute_task.rebuild_server.error
-        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
-                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        self.assertEqual(3, len(self.notifier.versioned_notifications),
+                         self.notifier.versioned_notifications)
         self._verify_notification(
             'compute_task-rebuild_server-error',
             replacements={
@@ -90,7 +89,7 @@ class TestComputeTaskNotificationSample(
                 'reason.module_name': self.ANY,
                 'reason.traceback': self.ANY
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=self.notifier.versioned_notifications[2])
 
     def test_migrate_fault(self):
         server = self._boot_a_server(
@@ -103,14 +102,14 @@ class TestComputeTaskNotificationSample(
         service_id = self.api.get_service_id('nova-compute')
         self.admin_api.put_service(service_id, {'status': 'disabled'})
 
-        fake_notifier.reset()
+        self.notifier.reset()
 
         # Note that the operation will return a 202 response but fail with
         # NoValidHost asynchronously.
         self.admin_api.post_server_action(server['id'], {'migrate': None})
         self._wait_for_notification('compute_task.migrate_server.error')
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS),
-                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        self.assertEqual(1, len(self.notifier.versioned_notifications),
+                         self.notifier.versioned_notifications)
         self._verify_notification(
             'compute_task-migrate_server-error',
             replacements={
@@ -124,4 +123,4 @@ class TestComputeTaskNotificationSample(
                 'reason.module_name': self.ANY,
                 'reason.traceback': self.ANY
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])

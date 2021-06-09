@@ -19,7 +19,6 @@ from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 
 
 class FakeCinderError(object):
@@ -48,8 +47,6 @@ class LiveMigrationCinderFailure(integrated_helpers._IntegratedTestBase):
 
     def setUp(self):
         super(LiveMigrationCinderFailure, self).setUp()
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
         # Start a second compute node (the first one was started for us by
         # _IntegratedTestBase. set_nodes() is needed to avoid duplicate
         # nodenames. See comments in test_bug_1702454.py.

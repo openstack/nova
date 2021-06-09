@@ -27,7 +27,6 @@ from nova.tests.functional import integrated_helpers
 from nova.tests import json_ref
 from nova.tests.unit.api.openstack.compute import test_services
 from nova.tests.unit import fake_crypto
-from nova.tests.unit import fake_notifier
 
 CONF = cfg.CONF
 
@@ -75,8 +74,8 @@ class NotificationSampleTestBase(test.TestCase,
         self.api.microversion = max_version
         self.admin_api.microversion = max_version
 
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.notifier = self.useFixture(
+            nova_fixtures.NotificationFixture(self))
 
         self.useFixture(utils_fixture.TimeFixture(test_services.fake_utcnow()))
         self.useFixture(nova_fixtures.GlanceFixture(self))
@@ -92,7 +91,7 @@ class NotificationSampleTestBase(test.TestCase,
         self.start_service('scheduler')
         self.compute = self.start_service('compute')
         # Reset the service create notifications
-        fake_notifier.reset()
+        self.notifier.reset()
 
     def _get_notification_sample(self, sample):
         sample_dir = os.path.dirname(os.path.abspath(__file__))
@@ -136,9 +135,9 @@ class NotificationSampleTestBase(test.TestCase,
                        notification emitted during the test.
         """
         if not actual:
-            self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS),
-                             fake_notifier.VERSIONED_NOTIFICATIONS)
-            notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+            self.assertEqual(1, len(self.notifier.versioned_notifications),
+                             self.notifier.versioned_notifications)
+            notification = self.notifier.versioned_notifications[0]
         else:
             notification = actual
         sample_file = self._get_notification_sample(sample_file_name)
@@ -163,12 +162,12 @@ class NotificationSampleTestBase(test.TestCase,
         scheduler_expected_notifications = [
             'scheduler-select_destinations-start',
             'scheduler-select_destinations-end']
-        self.assertLessEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertLessEqual(2, len(self.notifier.versioned_notifications))
         for notification in scheduler_expected_notifications:
             self._verify_notification(
                 notification,
                 replacements=replacements,
-                actual=fake_notifier.VERSIONED_NOTIFICATIONS.pop(0))
+                actual=self.notifier.versioned_notifications.pop(0))
 
     def _boot_a_server(self, expected_status='ACTIVE', extra_params=None,
                        scheduler_hints=None, additional_extra_specs=None):
@@ -191,7 +190,7 @@ class NotificationSampleTestBase(test.TestCase,
         self.admin_api.post_extra_spec(flavor_id, extra_specs)
 
         # Ignore the create flavor notification
-        fake_notifier.reset()
+        self.notifier.reset()
 
         keypair_req = {
             "keypair": {
@@ -204,11 +203,11 @@ class NotificationSampleTestBase(test.TestCase,
             'keypair-import-start',
             'keypair-import-end'
         ]
-        self.assertLessEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertLessEqual(2, len(self.notifier.versioned_notifications))
         for notification in keypair_expected_notifications:
             self._verify_notification(
                 notification,
-                actual=fake_notifier.VERSIONED_NOTIFICATIONS.pop(0))
+                actual=self.notifier.versioned_notifications.pop(0))
 
         server = self._build_server(
             name='some-server',
@@ -252,19 +251,19 @@ class NotificationSampleTestBase(test.TestCase,
 
     def _get_notifications(self, event_type):
         return [notification for notification
-                    in fake_notifier.VERSIONED_NOTIFICATIONS
+                    in self.notifier.versioned_notifications
                     if notification['event_type'] == event_type]
 
     def _wait_for_notification(self, event_type, timeout=10.0):
         # NOTE(mdbooth): wait_for_versioned_notifications raises an exception
         # if it times out since change I017d1a31. Consider removing this
         # method.
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             event_type, timeout=timeout)
 
     def _wait_for_notifications(self, event_type, expected_count,
                                 timeout=10.0):
-        notifications = fake_notifier.wait_for_versioned_notifications(
+        notifications = self.notifier.wait_for_versioned_notifications(
                 event_type, n_events=expected_count, timeout=timeout)
         msg = ''.join('\n%s' % notif for notif in notifications)
 

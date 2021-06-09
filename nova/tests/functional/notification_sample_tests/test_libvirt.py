@@ -21,7 +21,6 @@ from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
-from nova.tests.unit import fake_notifier
 from nova.virt.libvirt import host
 
 
@@ -45,7 +44,7 @@ class TestLibvirtErrorNotificationSample(
         self.assertRaises(exception.HypervisorUnavailable,
                           self.restart_compute_service, self.compute)
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'libvirt-connect-error',
             replacements={
@@ -54,4 +53,4 @@ class TestLibvirtErrorNotificationSample(
                 'reason.module_name': self.ANY,
                 'reason.traceback': self.ANY
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])

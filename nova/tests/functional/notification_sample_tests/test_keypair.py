@@ -11,7 +11,6 @@
 #    under the License.
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
-from nova.tests.unit import fake_notifier
 
 
 class TestKeypairNotificationSample(
@@ -26,35 +25,35 @@ class TestKeypairNotificationSample(
         }}
         keypair = self.api.post_keypair(keypair_req)
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'keypair-create-start',
             replacements={},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])
         self._verify_notification(
             'keypair-create-end',
             replacements={
                 "fingerprint": keypair['fingerprint'],
                 "public_key": keypair['public_key']
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=self.notifier.versioned_notifications[1])
 
         self.api.delete_keypair(keypair['name'])
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'keypair-delete-start',
             replacements={
                 "fingerprint": keypair['fingerprint'],
                 "public_key": keypair['public_key']
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=self.notifier.versioned_notifications[2])
         self._verify_notification(
             'keypair-delete-end',
             replacements={
                 "fingerprint": keypair['fingerprint'],
                 "public_key": keypair['public_key']
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            actual=self.notifier.versioned_notifications[3])
 
     def test_keypair_import(self):
         pub_key = ('ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDx8nkQv/zgGg'
@@ -71,10 +70,10 @@ class TestKeypairNotificationSample(
 
         self.api.post_keypair(keypair_req)
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(2, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'keypair-import-start',
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])
         self._verify_notification(
             'keypair-import-end',
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=self.notifier.versioned_notifications[1])

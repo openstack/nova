@@ -35,7 +35,6 @@ from nova.objects import fields
 from nova.objects import virt_device_metadata
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.unit import fake_notifier
 from nova import utils
 
 
@@ -212,8 +211,7 @@ class _BaseTestCase(test.TestCase):
         self.user_id = 'fake-user'
         self.project_id = 'fake-project'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.useFixture(nova_fixtures.NotificationFixture(self))
 
         # NOTE(danms): register these here instead of at import time
         # so that they're not always present

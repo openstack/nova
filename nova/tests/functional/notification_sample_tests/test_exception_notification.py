@@ -12,7 +12,6 @@
 from nova.tests.functional.api import client as api_client
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
-from nova.tests.unit import fake_notifier
 
 
 class TestExceptionNotificationSample(
@@ -33,12 +32,12 @@ class TestExceptionNotificationSample(
         self.assertRaises(api_client.OpenStackApiException,
                           self.admin_api.api_post, 'os-aggregates', post)
 
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        traceback = fake_notifier.VERSIONED_NOTIFICATIONS[3][
+        self.assertEqual(4, len(self.notifier.versioned_notifications))
+        traceback = self.notifier.versioned_notifications[3][
             'payload']['nova_object.data']['traceback']
         self.assertIn('AggregateNameExists', traceback)
         self._verify_notification(
             'compute-exception',
             replacements={
                 'traceback': self.ANY},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            actual=self.notifier.versioned_notifications[3])

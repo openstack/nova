@@ -16,7 +16,6 @@ import time
 from nova import context as nova_context
 from nova import objects
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 
 
 class ComputeManagerInitHostTestCase(
@@ -164,7 +163,7 @@ class TestComputeRestartInstanceStuckInBuild(
 
             # the instance.create.start is the closest thing to the
             # instance_claim call we can wait for in the test
-            fake_notifier.wait_for_versioned_notifications(
+            self.notifier.wait_for_versioned_notifications(
                 'instance.create.start')
 
             with mock.patch('nova.compute.manager.LOG.debug') as mock_log:

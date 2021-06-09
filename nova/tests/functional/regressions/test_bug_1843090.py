@@ -15,7 +15,6 @@ import nova.compute
 from nova import exception
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 
 
 class PinnedComputeRpcTests(integrated_helpers.ProviderUsageBaseTestCase):
@@ -28,8 +27,6 @@ class PinnedComputeRpcTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.useFixture(nova_fixtures.HostNameWeigherFixture())
 
         super(PinnedComputeRpcTests, self).setUp()
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
 
         self.compute1 = self._start_compute(host='host1')
         self.compute2 = self._start_compute(host='host2')

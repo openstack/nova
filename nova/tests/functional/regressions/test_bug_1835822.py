@@ -14,7 +14,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 
 
 class RegressionTest1835822(
@@ -39,8 +38,8 @@ class RegressionTest1835822(
         self.image_ref_0 = images[0]['id']
         self.image_ref_1 = images[1]['id']
 
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.notifier = self.useFixture(
+            nova_fixtures.NotificationFixture(self))
 
     def _create_active_server(self, server_args=None):
         basic_server = {

@@ -49,7 +49,6 @@ from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
-from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_requests
 from nova.tests.unit.objects import test_instance_info_cache
 from nova import utils as nova_utils
@@ -1629,8 +1628,6 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
     def setUp(self):
         super(ServerMovingTests, self).setUp()
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
 
         self.compute1 = self._start_compute(host='host1')
         self.compute2 = self._start_compute(host='host2')
@@ -2036,7 +2033,7 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
             server, expected_state='ERROR', expected_host=source_hostname,
             expected_migration_status='error')
 
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'compute_task.rebuild_server.error')
         self._run_periodics()
 
@@ -3999,11 +3996,9 @@ class VolumeBackedServerTest(integrated_helpers.ProviderUsageBaseTestCase):
 
         # Now shelve and unshelve the server to make sure root_gb DISK_GB
         # isn't reported for allocations after we unshelve the server.
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
         self.api.post_server_action(server['id'], {'shelve': None})
         self._wait_for_state_change(server, 'SHELVED_OFFLOADED')
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
                 'instance.shelve_offload.end')
         # The server should not have any allocations since it's not currently
         # hosted on any compute service.
@@ -4783,7 +4778,7 @@ class ConsumerGenerationConflictTest(
                       (migrations[0]['uuid'], server['id']),
                       self.stdlog.logger.output)
         self._delete_server(server)
-        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
+        self.notifier.wait_for_versioned_notifications('instance.delete.end')
 
         allocations = self._get_allocations_by_server_uuid(
             migrations[0]['uuid'])
@@ -4831,7 +4826,7 @@ class ConsumerGenerationConflictTest(
                       (migrations[0]['uuid'], server['id']),
                       self.stdlog.logger.output)
         self._delete_server(server)
-        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
+        self.notifier.wait_for_versioned_notifications('instance.delete.end')
 
         allocations = self._get_allocations_by_server_uuid(
             migrations[0]['uuid'])
@@ -4882,7 +4877,7 @@ class ConsumerGenerationConflictTest(
                       (migrations[0]['uuid'], server['id']),
                       self.stdlog.logger.output)
         self._delete_server(server)
-        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
+        self.notifier.wait_for_versioned_notifications('instance.delete.end')
 
         allocations = self._get_allocations_by_server_uuid(
             migrations[0]['uuid'])
@@ -4947,9 +4942,6 @@ class ConsumerGenerationConflictTest(
         server = self._boot_and_check_allocations(
             self.flavor, source_hostname)
 
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
-
         orig_put = adapter.Adapter.put
 
         rsp = fake_requests.FakeResponse(
@@ -4991,7 +4983,7 @@ class ConsumerGenerationConflictTest(
                 {'OS-EXT-SRV-ATTR:host': dest_hostname,
                  'status': 'ERROR'})
             self._wait_for_migration_status(server, ['error'])
-            fake_notifier.wait_for_versioned_notifications(
+            self.notifier.wait_for_versioned_notifications(
                 'instance.live_migration_post.end')
 
         # 1 claim on destination, 1 normal delete on dest that fails,
@@ -5018,7 +5010,7 @@ class ConsumerGenerationConflictTest(
                       self.stdlog.logger.output)
 
         self._delete_server(server)
-        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
+        self.notifier.wait_for_versioned_notifications('instance.delete.end')
 
         self.assertFlavorMatchesAllocation(self.flavor, migration_uuid,
                                            source_rp_uuid)
@@ -6462,7 +6454,7 @@ class PortResourceRequestBasedSchedulingTest(
         self.api.detach_interface(
             server['id'], self.neutron.port_with_resource_request['id'])
 
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.interface_detach.end')
 
         updated_port = self.neutron.show_port(
@@ -7018,9 +7010,9 @@ class ServerMoveWithPortResourceRequestTest(
         self._wait_for_action_fail_completion(
             server, instance_actions.MIGRATE, 'compute_prep_resize')
 
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.resize_prep.end')
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'compute.exception')
 
         migration_uuid = self.get_migration_uuid_for_instance(server['id'])
@@ -7275,9 +7267,9 @@ class ServerMoveWithPortResourceRequestTest(
         self._wait_for_action_fail_completion(
             server, instance_actions.EVACUATE, 'compute_rebuild_instance')
 
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.rebuild.error')
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'compute.exception')
 
         # and the instance allocates from the source host
@@ -7562,9 +7554,9 @@ class ServerMoveWithPortResourceRequestTest(
         # Unshelve fails on host2 due to
         # update_pci_request_spec_with_allocated_interface_name fails so the
         # instance goes back to shelve offloaded state
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.unshelve.start')
-        error_notification = fake_notifier.wait_for_versioned_notifications(
+        error_notification = self.notifier.wait_for_versioned_notifications(
             'compute.exception')[0]
         self.assertEqual(
             'UnexpectedResourceProviderNameForPCIRequest',
@@ -7610,7 +7602,7 @@ class ServerMoveWithPortResourceRequestTest(
                 reason='test')
             req = {'unshelve': None}
             self.api.post_server_action(server['id'], req)
-            fake_notifier.wait_for_versioned_notifications(
+            self.notifier.wait_for_versioned_notifications(
                 'instance.unshelve.start')
             self._wait_for_server_parameter(
                 server,
@@ -8188,7 +8180,7 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
             {'rebuild': {
                 'imageRef': rebuild_image_ref,
                 'OS-DCF:diskConfig': 'AUTO'}})
-        fake_notifier.wait_for_versioned_notifications('instance.rebuild.end')
+        self.notifier.wait_for_versioned_notifications('instance.rebuild.end')
         self._wait_for_state_change(self.server, 'ACTIVE')
         self._check_allocations_usage(self.server)
 

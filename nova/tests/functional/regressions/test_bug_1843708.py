@@ -15,7 +15,6 @@
 from nova import context
 from nova import objects
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 
 
 class RebuildWithKeypairTestCase(integrated_helpers._IntegratedTestBase):
@@ -59,7 +58,7 @@ class RebuildWithKeypairTestCase(integrated_helpers._IntegratedTestBase):
             },
         }
         self.api.api_post('servers/%s/action' % server['id'], body)
-        fake_notifier.wait_for_versioned_notifications('instance.rebuild.end')
+        self.notifier.wait_for_versioned_notifications('instance.rebuild.end')
         self._wait_for_state_change(server, 'ACTIVE')
 
         # Check keypairs changed

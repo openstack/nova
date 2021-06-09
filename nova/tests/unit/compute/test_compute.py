@@ -149,8 +149,7 @@ class BaseTestCase(test.TestCase):
     def setUp(self):
         super(BaseTestCase, self).setUp()
 
-        fake_notifier.stub_notifier(self)
-        self.addCleanup(fake_notifier.reset)
+        self.useFixture(fixtures.NotificationFixture(self))
 
         self.compute = compute_manager.ComputeManager()
         # NOTE(gibi): this is a hack to make the fake virt driver use the nodes

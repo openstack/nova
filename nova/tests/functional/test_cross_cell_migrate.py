@@ -31,7 +31,6 @@ from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 from nova import utils
 
 CONF = conf.CONF
@@ -421,7 +420,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         body = {'volumeAttachment': {'volumeId': volume_id}}
         self.api.api_post(
             '/servers/%s/os-volume_attachments' % server_id, body)
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.volume_attach.end')
 
     def _detach_volume_from_server(self, server_id, volume_id):
@@ -430,7 +429,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         """
         self.api.api_delete(
             '/servers/%s/os-volume_attachments/%s' % (server_id, volume_id))
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.volume_detach.end')
 
     def assert_volume_is_attached(self, server_id, volume_id):
@@ -453,13 +452,13 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # We should have gotten only two notifications:
         # 1. instance.resize_confirm.start
         # 2. instance.resize_confirm.end
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+        self.assertEqual(2, len(self.notifier.versioned_notifications),
                          'Unexpected number of versioned notifications for '
                          'cross-cell resize confirm: %s' %
-                         fake_notifier.VERSIONED_NOTIFICATIONS)
-        start = fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type']
+                         self.notifier.versioned_notifications)
+        start = self.notifier.versioned_notifications[0]['event_type']
         self.assertEqual('instance.resize_confirm.start', start)
-        end = fake_notifier.VERSIONED_NOTIFICATIONS[1]['event_type']
+        end = self.notifier.versioned_notifications[1]['event_type']
         self.assertEqual('instance.resize_confirm.end', end)
 
     def delete_server_and_assert_cleanup(self, server,
@@ -538,7 +537,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self._attach_volume_to_server(server['id'], uuids.fake_volume_id)
 
         # Reset the fake notifier so we only check confirmation notifications.
-        fake_notifier.reset()
+        self.notifier.reset()
 
         # Confirm the resize and check all the things. The instance and its
         # related records should be gone from the source cell database; the
@@ -634,15 +633,15 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # 1. instance.resize_revert.start (from target compute host)
         # 2. instance.exists (from target compute host)
         # 3. instance.resize_revert.end (from source compute host)
-        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+        self.assertEqual(3, len(self.notifier.versioned_notifications),
                          'Unexpected number of versioned notifications for '
                          'cross-cell resize revert: %s' %
-                         fake_notifier.VERSIONED_NOTIFICATIONS)
-        start = fake_notifier.VERSIONED_NOTIFICATIONS[0]['event_type']
+                         self.notifier.versioned_notifications)
+        start = self.notifier.versioned_notifications[0]['event_type']
         self.assertEqual('instance.resize_revert.start', start)
-        exists = fake_notifier.VERSIONED_NOTIFICATIONS[1]['event_type']
+        exists = self.notifier.versioned_notifications[1]['event_type']
         self.assertEqual('instance.exists', exists)
-        end = fake_notifier.VERSIONED_NOTIFICATIONS[2]['event_type']
+        end = self.notifier.versioned_notifications[2]['event_type']
         self.assertEqual('instance.resize_revert.end', end)
 
     def assert_resize_revert_actions(self, server, source_host, dest_host):
@@ -703,7 +702,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self._attach_volume_to_server(server['id'], uuids.fake_volume_id)
 
         # Reset the fake notifier so we only check revert notifications.
-        fake_notifier.reset()
+        self.notifier.reset()
 
         # Revert the resize. The server should be re-spawned in the source
         # cell and removed from the target cell. The allocations
@@ -718,7 +717,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # instance.resize_revert.end notification because the migration.status
         # is changed to "reverted" *after* the instance status is changed to
         # ACTIVE.
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.resize_revert.end')
         migrations = self.api.api_get(
             '/os-migrations?instance_uuid=%s' % server['id']
@@ -799,7 +798,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], {'revertResize': None})
         server = self._wait_for_state_change(server, 'ACTIVE')
         self._wait_for_migration_status(server, ['reverted'])
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.resize_revert.end')
         self.assert_volume_is_detached(server['id'], uuids.fake_volume_id)
         # Delete the server and make sure we did not leak anything.
@@ -980,7 +979,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # _poll_unconfirmed_resizes periodic task and run it on the target
         # compute service.
         # Reset the fake notifier so we only check confirmation notifications.
-        fake_notifier.reset()
+        self.notifier.reset()
         self.flags(resize_confirm_window=1)
         # Stub timeutils so the DB API query finds the unconfirmed migration.
         future = timeutils.utcnow() + datetime.timedelta(hours=1)
@@ -1071,7 +1070,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.assertEqual(4, server['OS-EXT-STS:power_state'],
                          "Unexpected power state after revertResize.")
         self._wait_for_migration_status(server, ['reverted'])
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'instance.resize_revert.end')
 
         # Now try cold-migrating to cell2 to make sure there is no
@@ -1146,7 +1145,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         # to wait for something which happens after that, which is the
         # ComputeTaskManager._cold_migrate method sending the
         # compute_task.migrate_server.error event.
-        fake_notifier.wait_for_versioned_notifications(
+        self.notifier.wait_for_versioned_notifications(
             'compute_task.migrate_server.error')
         mig_uuid = self.get_migration_uuid_for_instance(server['id'])
         mig_allocs = self._get_allocations_by_server_uuid(mig_uuid)

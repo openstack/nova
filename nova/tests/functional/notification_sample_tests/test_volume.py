@@ -16,7 +16,6 @@ from nova import context
 from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
-from nova.tests.unit import fake_notifier
 
 
 class TestVolumeUsageNotificationSample(
@@ -34,7 +33,7 @@ class TestVolumeUsageNotificationSample(
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
-        fake_notifier.reset()
+        self.notifier.reset()
 
         return server
 
@@ -47,19 +46,19 @@ class TestVolumeUsageNotificationSample(
         # 0. volume_detach-start
         # 1. volume.usage
         # 2. volume_detach-end
-        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(3, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'volume-usage',
             replacements={'instance_uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=self.notifier.versioned_notifications[1])
 
     def test_instance_poll_volume_usage(self):
         server = self._setup_server_with_volume_attached()
 
         self.compute.manager._poll_volume_usage(context.get_admin_context())
 
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(1, len(self.notifier.versioned_notifications))
         self._verify_notification(
             'volume-usage',
             replacements={'instance_uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=self.notifier.versioned_notifications[0])

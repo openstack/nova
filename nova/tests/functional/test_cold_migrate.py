@@ -17,7 +17,6 @@ from nova import context as nova_context
 from nova import objects
 from nova import test
 from nova.tests.functional import integrated_helpers
-from nova.tests.unit import fake_notifier
 
 
 class ColdMigrationDisallowSameHost(
@@ -34,7 +33,7 @@ class ColdMigrationDisallowSameHost(
         self._start_compute('host1')
 
     def _wait_for_migrate_no_valid_host(self, error='NoValidHost'):
-        event = fake_notifier.wait_for_versioned_notifications(
+        event = self.notifier.wait_for_versioned_notifications(
             'compute_task.migrate_server.error')[0]
         self.assertEqual(error,
                          event['payload']['nova_object.data']['reason'][
