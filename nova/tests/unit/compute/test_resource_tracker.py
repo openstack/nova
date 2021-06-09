@@ -41,7 +41,6 @@ from nova.scheduler.client import report
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import fake_instance
-from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
 from nova.tests.unit import utils
 from nova import utils as nova_utils
@@ -3797,7 +3796,7 @@ class ComputeMonitorTestCase(BaseTestCase):
 
     @mock.patch('nova.compute.utils.notify_about_metrics_update')
     def test_get_host_metrics(self, mock_notify):
-        self.useFixture(fixtures.NotificationFixture(self))
+        self.notifier = self.useFixture(fixtures.NotificationFixture(self))
 
         class FakeCPUMonitor(monitor_base.MonitorBase):
 
@@ -3842,8 +3841,8 @@ class ComputeMonitorTestCase(BaseTestCase):
             'nodename': _NODENAME,
         }
 
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(1, len(self.notifier.notifications))
+        msg = self.notifier.notifications[0]
         self.assertEqual('compute.metrics.update', msg.event_type)
         for p_key in payload:
             if p_key == 'metrics':

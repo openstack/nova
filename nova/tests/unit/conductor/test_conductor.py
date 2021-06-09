@@ -58,7 +58,6 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_build_request
 from nova.tests.unit import fake_instance
-from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_request_spec
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import utils as test_utils
@@ -1782,7 +1781,7 @@ class _BaseTaskTestCase(object):
                                             **compute_args)
             self.assertEqual(inst_obj.project_id, fake_spec.project_id)
         self.assertEqual('compute.instance.rebuild.scheduled',
-                         fake_notifier.NOTIFICATIONS[0].event_type)
+                         self.notifier.notifications[0].event_type)
         mock_notify.assert_called_once_with(
             self.context, inst_obj, 'thebesthost', action='rebuild_scheduled',
             source='nova-conductor')
@@ -1833,7 +1832,7 @@ class _BaseTaskTestCase(object):
                                             **compute_args)
             self.assertEqual(inst_obj.project_id, fake_spec.project_id)
         self.assertEqual('compute.instance.rebuild.scheduled',
-                         fake_notifier.NOTIFICATIONS[0].event_type)
+                         self.notifier.notifications[0].event_type)
         mock_notify.assert_called_once_with(
             self.context, inst_obj, 'thebesthost', action='rebuild_scheduled',
             source='nova-conductor')
@@ -2031,7 +2030,7 @@ class _BaseTaskTestCase(object):
                 fake_spec, fake_selection)
 
         self.assertEqual('compute.instance.rebuild.scheduled',
-                         fake_notifier.NOTIFICATIONS[0].event_type)
+                         self.notifier.notifications[0].event_type)
         mock_notify.assert_called_once_with(
             self.context, inst_obj, 'thebesthost', action='rebuild_scheduled',
             source='nova-conductor')
@@ -2103,7 +2102,7 @@ class _BaseTaskTestCase(object):
             mock_del_arqs.assert_called_once()
 
         self.assertEqual('compute.instance.rebuild.scheduled',
-                         fake_notifier.NOTIFICATIONS[0].event_type)
+                         self.notifier.notifications[0].event_type)
         mock_notify.assert_called_once_with(
             self.context, inst_obj, 'thebesthost', action='rebuild_scheduled',
             source='nova-conductor')
@@ -2176,7 +2175,7 @@ class _BaseTaskTestCase(object):
             mock_del_arqs_instance.assert_called_once()
 
         self.assertEqual('compute.instance.rebuild.scheduled',
-                         fake_notifier.NOTIFICATIONS[0].event_type)
+                         self.notifier.notifications[0].event_type)
         mock_notify.assert_called_once_with(
             self.context, inst_obj, 'thebesthost', action='rebuild_scheduled',
             source='nova-conductor')

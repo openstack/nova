@@ -68,7 +68,6 @@ from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_network_cache_model
-from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests.unit.objects import test_instance_numa
@@ -9619,19 +9618,19 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
             force_complete.assert_called_once_with(self.instance)
 
-            self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+            self.assertEqual(2, len(self.notifier.notifications))
             self.assertEqual(
                 'compute.instance.live.migration.force.complete.start',
-                fake_notifier.NOTIFICATIONS[0].event_type)
+                self.notifier.notifications[0].event_type)
             self.assertEqual(
                 self.instance.uuid,
-                fake_notifier.NOTIFICATIONS[0].payload['instance_id'])
+                self.notifier.notifications[0].payload['instance_id'])
             self.assertEqual(
                 'compute.instance.live.migration.force.complete.end',
-                fake_notifier.NOTIFICATIONS[1].event_type)
+                self.notifier.notifications[1].event_type)
             self.assertEqual(
                 self.instance.uuid,
-                fake_notifier.NOTIFICATIONS[1].payload['instance_id'])
+                self.notifier.notifications[1].payload['instance_id'])
             self.assertEqual(2, mock_notify.call_count)
             mock_notify.assert_has_calls([
                 mock.call(self.context, self.instance, self.compute.host,
