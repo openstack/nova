@@ -83,7 +83,8 @@
             compute-feature-enabled:
               volume_backed_live_migration: true
               block_migration_for_live_migration: true
-              block_migrate_cinder_iscsi: true
+              # NOTE(lyarwood): Skip until bug #1931702 is resolved.
+              block_migrate_cinder_iscsi: false
     post-run: playbooks/nova-live-migration/post-run.yaml
 
 - job:
@@ -333,7 +334,8 @@
               live_migration: true
               volume_backed_live_migration: true
               block_migration_for_live_migration: true
-              block_migrate_cinder_iscsi: true
+              # NOTE(lyarwood): Skip until bug #1931702 is resolved.
+              block_migrate_cinder_iscsi: false
       tox_envlist: all
       tempest_test_regex: ((tempest\.(api\.compute|scenario)\..*smoke.*)|(^tempest\.api\.compute\.admin\.(test_live_migration|test_migration)))
 
