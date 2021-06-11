@@ -21,7 +21,7 @@ compatibility code for older versions.
 
 When a decision to update the minimum required libvirt version is made, there
 must be a warning issued for one cycle. This is achieved by editing
-``nova/virt/libvirt/driver.py`` to set ``NEXT_MIN_LIBVIRT_VESION``.
+``nova/virt/libvirt/driver.py`` to set ``NEXT_MIN_LIBVIRT_VERSION``.
 For example:
 
 .. code::
@@ -62,17 +62,17 @@ After choosing a minimum libvirt version, the minimum QEMU version is
 determined by looking for the lowest QEMU version from all the distros that
 support the decided libvirt version.
 
-``MIN_{LIBVIRT,QEMU}_VESION`` and ``NEXT_MIN_{LIBVIRT,QEMU}_VESION`` table
---------------------------------------------------------------------------
+``MIN_{LIBVIRT,QEMU}_VERSION`` and ``NEXT_MIN_{LIBVIRT,QEMU}_VERSION`` table
+----------------------------------------------------------------------------
 
 .. list-table:: OpenStack Nova libvirt/QEMU Support Matrix
 
     * - OpenStack Release
       - Nova Release
-      - ``MIN_LIBVIRT_VESION``
-      - ``NEXT_MIN_LIBVIRT_VESION``
-      - ``MIN_QEMU_VESION``
-      - ``NEXT_MIN_QEMU_VESION``
+      - ``MIN_LIBVIRT_VERSION``
+      - ``NEXT_MIN_LIBVIRT_VERSION``
+      - ``MIN_QEMU_VERSION``
+      - ``NEXT_MIN_QEMU_VERSION``
     * - Havana
       - 2013.2.0
       - 0.9.6
