@@ -49,16 +49,18 @@ def generate_flavor(flavorid, ispublic):
     }
 
 
-INSTANCE_TYPES = {
-        '0': generate_flavor(0, True),
-        '1': generate_flavor(1, True),
-        '2': generate_flavor(2, False),
-        '3': generate_flavor(3, False)}
+FLAVORS = {
+    '0': generate_flavor(0, True),
+    '1': generate_flavor(1, True),
+    '2': generate_flavor(2, False),
+    '3': generate_flavor(3, False)}
 
 
-ACCESS_LIST = [{'flavor_id': '2', 'project_id': 'proj2'},
-               {'flavor_id': '2', 'project_id': 'proj3'},
-               {'flavor_id': '3', 'project_id': 'proj3'}]
+ACCESS_LIST = [
+    {'flavor_id': '2', 'project_id': 'proj2'},
+    {'flavor_id': '2', 'project_id': 'proj3'},
+    {'flavor_id': '3', 'project_id': 'proj3'},
+]
 
 
 def fake_get_flavor_access_by_flavor_id(context, flavorid):
@@ -70,7 +72,7 @@ def fake_get_flavor_access_by_flavor_id(context, flavorid):
 
 
 def fake_get_flavor_by_flavor_id(context, flavorid):
-    return INSTANCE_TYPES[flavorid]
+    return FLAVORS[flavorid]
 
 
 def _has_flavor_access(flavorid, projectid):
@@ -85,10 +87,10 @@ def fake_get_all_flavors_sorted_list(context, inactive=False,
                                      filters=None, sort_key='flavorid',
                                      sort_dir='asc', limit=None, marker=None):
     if filters is None or filters['is_public'] is None:
-        return sorted(INSTANCE_TYPES.values(), key=lambda item: item[sort_key])
+        return sorted(FLAVORS.values(), key=lambda item: item[sort_key])
 
     res = {}
-    for k, v in INSTANCE_TYPES.items():
+    for k, v in FLAVORS.items():
         if filters['is_public'] and _has_flavor_access(k, context.project_id):
             res.update({k: v})
             continue

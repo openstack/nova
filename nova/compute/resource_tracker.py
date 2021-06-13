@@ -201,27 +201,29 @@ class ResourceTracker(object):
     def rebuild_claim(self, context, instance, nodename, allocations,
                       limits=None, image_meta=None, migration=None):
         """Create a claim for a rebuild operation."""
-        instance_type = instance.flavor
         return self._move_claim(
-            context, instance, instance_type, nodename, migration, allocations,
-            move_type=fields.MigrationType.EVACUATION,
+            context, instance, instance.flavor, nodename, migration,
+            allocations, move_type=fields.MigrationType.EVACUATION,
             image_meta=image_meta, limits=limits)
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
-    def resize_claim(self, context, instance, instance_type, nodename,
-                     migration, allocations, image_meta=None, limits=None):
+    def resize_claim(
+        self, context, instance, flavor, nodename, migration, allocations,
+        image_meta=None, limits=None,
+    ):
         """Create a claim for a resize or cold-migration move.
 
         Note that this code assumes ``instance.new_flavor`` is set when
         resizing with a new flavor.
         """
-        return self._move_claim(context, instance, instance_type, nodename,
-                                migration, allocations, image_meta=image_meta,
-                                limits=limits)
+        return self._move_claim(
+            context, instance, flavor, nodename, migration,
+            allocations, image_meta=image_meta, limits=limits)
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
-    def live_migration_claim(self, context, instance, nodename, migration,
-                             limits, allocs):
+    def live_migration_claim(
+        self, context, instance, nodename, migration, limits, allocs,
+    ):
         """Builds a MoveClaim for a live migration.
 
         :param context: The request context.
@@ -235,17 +237,18 @@ class ResourceTracker(object):
         :returns: A MoveClaim for this live migration.
         """
         # Flavor and image cannot change during a live migration.
-        instance_type = instance.flavor
+        flavor = instance.flavor
         image_meta = instance.image_meta
         return self._move_claim(
-            context, instance, instance_type, nodename, migration, allocs,
+            context, instance, flavor, nodename, migration, allocs,
             move_type=fields.MigrationType.LIVE_MIGRATION,
             image_meta=image_meta, limits=limits,
         )
 
-    def _move_claim(self, context, instance, new_instance_type, nodename,
-                    migration, allocations, move_type=None,
-                    image_meta=None, limits=None):
+    def _move_claim(
+        self, context, instance, new_flavor, nodename, migration, allocations,
+        move_type=None, image_meta=None, limits=None,
+    ):
         """Indicate that resources are needed for a move to this host.
 
         Move can be either a migrate/resize, live-migrate or an
@@ -253,7 +256,7 @@ class ResourceTracker(object):
 
         :param context: security context
         :param instance: instance object to reserve resources for
-        :param new_instance_type: new instance_type being resized to
+        :param new_flavor: new flavor being resized to
         :param nodename: The Ironic nodename selected by the scheduler
         :param migration: A migration object if one was already created
                           elsewhere for this operation (otherwise None)
@@ -271,9 +274,8 @@ class ResourceTracker(object):
         if migration:
             self._claim_existing_migration(migration, nodename)
         else:
-            migration = self._create_migration(context, instance,
-                                               new_instance_type,
-                                               nodename, move_type)
+            migration = self._create_migration(
+                context, instance, new_flavor, nodename, move_type)
 
         if self.disabled(nodename):
             # compute_driver doesn't support resource tracking, just
@@ -287,7 +289,7 @@ class ResourceTracker(object):
         # the old/new pci device in the resize phase. In the future
         # we would like to optimise this.
         new_pci_requests = pci_request.get_pci_requests_from_flavor(
-            new_instance_type)
+            new_flavor)
         new_pci_requests.instance_uuid = instance.uuid
         # On resize merge the SR-IOV ports pci_requests
         # with the new instance flavor pci_requests.
@@ -296,7 +298,7 @@ class ResourceTracker(object):
                 if request.source == objects.InstancePCIRequest.NEUTRON_PORT:
                     new_pci_requests.requests.append(request)
         claim = claims.MoveClaim(context, instance, nodename,
-                                 new_instance_type, image_meta, self, cn,
+                                 new_flavor, image_meta, self, cn,
                                  new_pci_requests, migration, limits=limits)
 
         claimed_pci_devices_objs = []
@@ -345,8 +347,9 @@ class ResourceTracker(object):
 
         return claim
 
-    def _create_migration(self, context, instance, new_instance_type,
-                          nodename, move_type=None):
+    def _create_migration(
+        self, context, instance, new_flavor, nodename, move_type=None,
+    ):
         """Create a migration record for the upcoming resize.  This should
         be done while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource
         claim will not be lost if the audit process starts.
@@ -356,7 +359,7 @@ class ResourceTracker(object):
         migration.dest_node = nodename
         migration.dest_host = self.driver.get_host_ip_addr()
         migration.old_instance_type_id = instance.flavor.id
-        migration.new_instance_type_id = new_instance_type.id
+        migration.new_instance_type_id = new_flavor.id
         migration.status = 'pre-migrating'
         migration.instance_uuid = instance.uuid
         migration.source_compute = instance.host
@@ -587,38 +590,35 @@ class ResourceTracker(object):
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def drop_move_claim(self, context, instance, nodename,
-                        instance_type=None, prefix='new_'):
+                        flavor=None, prefix='new_'):
         self._drop_move_claim(
-            context, instance, nodename, instance_type, prefix='new_')
+            context, instance, nodename, flavor, prefix='new_')
 
     def _drop_move_claim(
-        self, context, instance, nodename, instance_type=None, prefix='new_',
+        self, context, instance, nodename, flavor=None, prefix='new_',
     ):
         """Remove usage for an incoming/outgoing migration.
 
         :param context: Security context.
         :param instance: The instance whose usage is to be removed.
         :param nodename: Host on which to remove usage. If the migration
-                         completed successfully, this is normally the source.
-                         If it did not complete successfully (failed or
-                         reverted), this is normally the destination.
-        :param instance_type: The flavor that determines the usage to remove.
-                              If the migration completed successfully, this is
-                              the old flavor to be removed from the source. If
-                              the migration did not complete successfully, this
-                              is the new flavor to be removed from the
-                              destination.
+            completed successfully, this is normally the source.  If it did not
+            complete successfully (failed or reverted), this is normally the
+            destination.
+        :param flavor: The flavor that determines the usage to remove.  If the
+            migration completed successfully, this is the old flavor to be
+            removed from the source. If the migration did not complete
+            successfully, this is the new flavor to be removed from the
+            destination.
         :param prefix: Prefix to use when accessing migration context
-                       attributes. 'old_' or 'new_', with 'new_' being the
-                       default.
+            attributes. 'old_' or 'new_', with 'new_' being the default.
         """
         # Remove usage for an instance that is tracked in migrations, such as
         # on the dest node during revert resize.
         if instance['uuid'] in self.tracked_migrations:
             migration = self.tracked_migrations.pop(instance['uuid'])
-            if not instance_type:
-                instance_type = self._get_instance_type(instance, prefix,
-                                                        migration)
+            if not flavor:
+                flavor = self._get_flavor(instance, prefix, migration)
         # Remove usage for an instance that is not tracked in migrations (such
         # as on the source node after a migration).
         # NOTE(lbeliveau): On resize on the same node, the instance is
@@ -626,11 +626,11 @@ class ResourceTracker(object):
         elif instance['uuid'] in self.tracked_instances:
             self.tracked_instances.remove(instance['uuid'])
 
-        if instance_type is not None:
+        if flavor is not None:
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance, prefix=prefix)
             usage = self._get_usage_dict(
-                    instance_type, instance, numa_topology=numa_topology)
+                    flavor, instance, numa_topology=numa_topology)
             self._drop_pci_devices(instance, nodename, prefix)
             resources = self._get_migration_context_resource(
                 'resources', instance, prefix=prefix)
@@ -1298,9 +1298,8 @@ class ResourceTracker(object):
         if same_node:
             # Same node resize. Record usage for the 'new_' resources.  This
             # is executed on resize_claim().
-            if (instance['instance_type_id'] ==
-                    migration.old_instance_type_id):
-                itype = self._get_instance_type(instance, 'new_', migration)
+            if instance['instance_type_id'] == migration.old_instance_type_id:
+                itype = self._get_flavor(instance, 'new_', migration)
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance)
                 # Allocate pci device(s) for the instance.
@@ -1316,13 +1315,13 @@ class ResourceTracker(object):
                 # _update_usage_from_instances().  This method will then be
                 # called, and we need to account for the '_old' resources
                 # (just in case).
-                itype = self._get_instance_type(instance, 'old_', migration)
+                itype = self._get_flavor(instance, 'old_', migration)
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance, prefix='old_')
 
         elif incoming and not tracked:
             # instance has not yet migrated here:
-            itype = self._get_instance_type(instance, 'new_', migration)
+            itype = self._get_flavor(instance, 'new_', migration)
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance)
             # Allocate pci device(s) for the instance.
@@ -1332,7 +1331,7 @@ class ResourceTracker(object):
 
         elif outbound and not tracked:
             # instance migrated, but record usage for a possible revert:
-            itype = self._get_instance_type(instance, 'old_', migration)
+            itype = self._get_flavor(instance, 'old_', migration)
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance, prefix='old_')
             # We could be racing with confirm_resize setting the
@@ -1657,15 +1656,15 @@ class ResourceTracker(object):
             reason = _("Missing keys: %s") % missing_keys
             raise exception.InvalidInput(reason=reason)
 
-    def _get_instance_type(self, instance, prefix, migration):
-        """Get the instance type from instance."""
+    def _get_flavor(self, instance, prefix, migration):
+        """Get the flavor from instance."""
         if migration.is_resize:
             return getattr(instance, '%sflavor' % prefix)
-        else:
-            # NOTE(ndipanov): Certain migration types (all but resize)
-            # do not change flavors so there is no need to stash
-            # them. In that case - just get the instance flavor.
-            return instance.flavor
+
+        # NOTE(ndipanov): Certain migration types (all but resize)
+        # do not change flavors so there is no need to stash
+        # them. In that case - just get the instance flavor.
+        return instance.flavor
 
     def _get_usage_dict(self, object_or_dict, instance, **updates):
         """Make a usage dict _update methods expect.

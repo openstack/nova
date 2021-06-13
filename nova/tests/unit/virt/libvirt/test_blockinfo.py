@@ -42,6 +42,12 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self.project_id = 'fake'
         self.context = context.get_admin_context()
         self.useFixture(nova_fixtures.GlanceFixture(self))
+
+        flavor = objects.Flavor(
+            id=2, name='m1.micro', vcpus=1, memory_mb=128, root_gb=0,
+            ephemeral_gb=0, swap=0, rxtx_factor=1.0, flavorid='1',
+            vcpu_weight=None,)
+
         self.test_instance = {
             'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
             'memory_kb': '1024000',
@@ -53,7 +59,10 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
             'root_gb': 10,
             'ephemeral_gb': 20,
-            'instance_type_id': 2,  # m1.tiny
+            'instance_type_id': flavor.id,
+            'flavor': flavor,
+            'old_flavor': None,
+            'new_flavor': None,
             'config_drive': None,
             'launched_at': None,
             'system_metadata': {},
@@ -61,20 +70,6 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         self.test_image_meta = {
             'disk_format': 'raw',
         }
-
-        flavor = objects.Flavor(memory_mb=128,
-                                root_gb=0,
-                                name='m1.micro',
-                                ephemeral_gb=0,
-                                vcpus=1,
-                                swap=0,
-                                rxtx_factor=1.0,
-                                flavorid='1',
-                                vcpu_weight=None,
-                                id=2)
-        self.test_instance['flavor'] = flavor
-        self.test_instance['old_flavor'] = None
-        self.test_instance['new_flavor'] = None
 
     def _test_block_device_info(self, with_eph=True, with_swap=True,
                                 with_bdms=True):
@@ -1361,30 +1356,29 @@ class DefaultDeviceNamesTestCase(test.NoDBTestCase):
     def setUp(self):
         super(DefaultDeviceNamesTestCase, self).setUp()
         self.context = context.get_admin_context()
+        self.flavor = objects.Flavor(id=2, swap=4)
         self.instance = objects.Instance(
-                uuid='32dfcb37-5af1-552b-357c-be8c3aa38310',
-                memory_kb='1024000',
-                basepath='/some/path',
-                bridge_name='br100',
-                vcpus=2,
-                project_id='fake',
-                bridge='br101',
-                image_ref='155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                root_gb=10,
-                ephemeral_gb=20,
-                instance_type_id=2,
-                config_drive=False,
-                root_device_name = '/dev/vda',
-                system_metadata={})
+            uuid='32dfcb37-5af1-552b-357c-be8c3aa38310',
+            memory_kb='1024000',
+            basepath='/some/path',
+            bridge_name='br100',
+            vcpus=2,
+            project_id='fake',
+            bridge='br101',
+            image_ref='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            root_gb=10,
+            ephemeral_gb=20,
+            instance_type_id=self.flavor.id,
+            flavor=self.flavor,
+            config_drive=False,
+            root_device_name = '/dev/vda',
+            system_metadata={})
         self.image_meta = objects.ImageMeta(
             disk_format='raw',
             properties=objects.ImageMetaProps())
 
         self.virt_type = 'kvm'
-        self.flavor = objects.Flavor(swap=4)
         self.patchers = []
-        self.patchers.append(mock.patch.object(self.instance, 'get_flavor',
-                                               return_value=self.flavor))
         self.patchers.append(mock.patch(
                 'nova.objects.block_device.BlockDeviceMapping.save'))
         for patcher in self.patchers:

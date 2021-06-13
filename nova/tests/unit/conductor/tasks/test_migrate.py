@@ -40,8 +40,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.context.cell_uuid = uuids.cell1
         self.flavor = fake_flavor.fake_flavor_obj(self.context)
         self.flavor.extra_specs = {'extra_specs': 'fake'}
-        inst = fake_instance.fake_db_instance(image_ref='image_ref',
-                                              instance_type=self.flavor)
+        inst = fake_instance.fake_db_instance(
+            image_ref='image_ref', flavor=self.flavor)
         inst_object = objects.Instance(
             flavor=self.flavor,
             numa_topology=None,

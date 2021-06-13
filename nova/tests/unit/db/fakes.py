@@ -28,8 +28,8 @@ def stub_out(test, funcs):
 def stub_out_db_instance_api(test, injected=True):
     """Stubs out the db API for creating Instances."""
 
-    def _create_instance_type(**updates):
-        instance_type = {'id': 2,
+    def _create_flavor(**updates):
+        flavor = {'id': 2,
                          'name': 'm1.tiny',
                          'memory_mb': 512,
                          'vcpus': 1,
@@ -49,11 +49,11 @@ def stub_out_db_instance_api(test, injected=True):
                          'description': None
                         }
         if updates:
-            instance_type.update(updates)
-        return instance_type
+            flavor.update(updates)
+        return flavor
 
-    INSTANCE_TYPES = {
-        'm1.tiny': _create_instance_type(
+    FLAVORS = {
+        'm1.tiny': _create_flavor(
                         id=2,
                         name='m1.tiny',
                         memory_mb=512,
@@ -64,7 +64,7 @@ def stub_out_db_instance_api(test, injected=True):
                         flavorid=1,
                         rxtx_factor=1.0,
                         swap=0),
-        'm1.small': _create_instance_type(
+        'm1.small': _create_flavor(
                         id=5,
                         name='m1.small',
                         memory_mb=2048,
@@ -75,7 +75,7 @@ def stub_out_db_instance_api(test, injected=True):
                         flavorid=2,
                         rxtx_factor=1.0,
                         swap=1024),
-        'm1.medium': _create_instance_type(
+        'm1.medium': _create_flavor(
                         id=1,
                          name='m1.medium',
                          memory_mb=4096,
@@ -86,7 +86,7 @@ def stub_out_db_instance_api(test, injected=True):
                          flavorid=3,
                          rxtx_factor=1.0,
                          swap=0),
-        'm1.large': _create_instance_type(
+        'm1.large': _create_flavor(
                         id=3,
                          name='m1.large',
                          memory_mb=8192,
@@ -97,7 +97,7 @@ def stub_out_db_instance_api(test, injected=True):
                          flavorid=4,
                          rxtx_factor=1.0,
                          swap=0),
-        'm1.xlarge': _create_instance_type(
+        'm1.xlarge': _create_flavor(
                          id=4,
                          name='m1.xlarge',
                          memory_mb=16384,
@@ -110,15 +110,15 @@ def stub_out_db_instance_api(test, injected=True):
                          swap=0)}
 
     def fake_flavor_get_all(*a, **k):
-        return INSTANCE_TYPES.values()
+        return FLAVORS.values()
 
     @classmethod
     def fake_flavor_get_by_name(cls, context, name):
-        return INSTANCE_TYPES[name]
+        return FLAVORS[name]
 
     @classmethod
     def fake_flavor_get(cls, context, id):
-        for inst_type in INSTANCE_TYPES.values():
+        for inst_type in FLAVORS.values():
             if str(inst_type['id']) == str(id):
                 return inst_type
         return None

@@ -685,11 +685,10 @@ def _create_test_instance():
         'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
         'root_gb': 10,
         'ephemeral_gb': 20,
-        'instance_type_id': '5',  # m1.small
-        'extra_specs': {},
         'system_metadata': {
             'image_disk_format': 'raw'
         },
+        'instance_type_id': flavor.id,
         'flavor': flavor,
         'new_flavor': None,
         'old_flavor': None,
@@ -2844,7 +2843,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         claim = mock.Mock(autospec=True)
         claimed_numa_topology = objects.InstanceNUMATopology()
         claim.claimed_numa_topology = claimed_numa_topology
-        claim.instance_type = instance.flavor
+        claim.flavor = instance.flavor
         numa_info = objects.LibvirtLiveMigrateNUMAInfo()
         with test.nested(
             mock.patch.object(drvr, '_get_live_migrate_numa_info',
@@ -6692,8 +6691,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                    group='spice')
 
         instance_ref = objects.Instance(**self.test_instance)
-        instance_type = instance_ref.get_flavor()
-        instance_type.extra_specs = {'hw_video:ram_max_mb': "50"}
+        flavor = instance_ref.get_flavor()
+        flavor.extra_specs = {'hw_video:ram_max_mb': "50"}
         image_meta = objects.ImageMeta.from_dict({
             "disk_format": "raw",
             "properties": {"hw_video_model": "qxl",
@@ -21248,7 +21247,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
-        inst['instance_type_id'] = 2
+        inst['instance_type_id'] = flavor.id
+        inst['flavor'] = flavor
         inst['ami_launch_index'] = 0
         inst['host'] = 'host1'
         inst['root_gb'] = flavor.root_gb
@@ -21265,9 +21265,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         inst.update(params)
 
         instance = fake_instance.fake_instance_obj(
-            self.context, expected_attrs=['metadata', 'system_metadata',
-                                          'pci_devices'],
-            flavor=flavor, **inst)
+            self.context,
+            expected_attrs=['metadata', 'system_metadata', 'pci_devices'],
+            **inst)
 
         # Attributes which we need to be set so they don't touch the db,
         # but it's not worth the effort to fake properly

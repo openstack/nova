@@ -40,10 +40,11 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         super(ComputeRpcAPITestCase, self).setUp()
         self.context = context.get_admin_context()
         self.fake_flavor_obj = fake_flavor.fake_flavor_obj(self.context)
-        self.fake_flavor = jsonutils.to_primitive(self.fake_flavor_obj)
-        instance_attr = {'host': 'fake_host',
-                         'instance_type_id': self.fake_flavor_obj['id'],
-                         'instance_type': self.fake_flavor_obj}
+        instance_attr = {
+            'host': 'fake_host',
+            'instance_type_id': self.fake_flavor_obj['id'],
+            'flavor': self.fake_flavor_obj,
+        }
         self.fake_instance_obj = fake_instance.fake_instance_obj(self.context,
                                                    **instance_attr)
         self.fake_instance = jsonutils.to_primitive(self.fake_instance_obj)
@@ -920,7 +921,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         rpcapi.resize_instance(
             ctxt, instance=self.fake_instance_obj,
             migration=mock.sentinel.migration, image='image',
-            flavor='instance_type', clean_shutdown=True,
+            flavor=self.fake_flavor_obj, clean_shutdown=True,
             request_spec=self.fake_request_spec_obj)
 
         mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
@@ -930,7 +931,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         mock_cctx.cast.assert_called_with(
             ctxt, 'resize_instance', instance=self.fake_instance_obj,
             migration=mock.sentinel.migration, image='image',
-            instance_type='instance_type', clean_shutdown=True)
+            instance_type=self.fake_flavor_obj, clean_shutdown=True)
 
     def test_resume_instance(self):
         self._test_compute_api('resume_instance', 'cast',

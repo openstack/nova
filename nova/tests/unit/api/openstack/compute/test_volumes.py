@@ -126,18 +126,18 @@ class BootFromVolumeTest(test.TestCase):
         self._legacy_bdm_seen = True
 
     def _get_fake_compute_api_create(self):
-        def _fake_compute_api_create(cls, context, instance_type,
+        def _fake_compute_api_create(cls, context, flavor,
                                     image_href, **kwargs):
             self._block_device_mapping_seen = kwargs.get(
                 'block_device_mapping')
             self._legacy_bdm_seen = kwargs.get('legacy_bdm')
 
-            inst_type = flavors.get_flavor_by_flavor_id(2)
+            flavor = flavors.get_flavor_by_flavor_id(2)
             resv_id = None
             return ([{'id': 1,
                       'display_name': 'test_server',
                       'uuid': FAKE_UUID,
-                      'instance_type': inst_type,
+                      'flavor': flavor,
                       'access_ip_v4': '1.2.3.4',
                       'access_ip_v6': 'fead::1234',
                       'image_ref': IMAGE_UUID,

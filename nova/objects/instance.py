@@ -148,6 +148,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'host': fields.StringField(nullable=True),
         'node': fields.StringField(nullable=True),
 
+        # TODO(stephenfin): Remove this in version 3.0 of the object as it has
+        # been replaced by 'flavor'
         'instance_type_id': fields.IntegerField(nullable=True),
 
         'user_data': fields.StringField(nullable=True),

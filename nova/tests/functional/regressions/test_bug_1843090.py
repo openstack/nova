@@ -43,8 +43,9 @@ class PinnedComputeRpcTests(integrated_helpers.ProviderUsageBaseTestCase):
         claim_calls = []
 
         def fake_orig_claim(
-                _self, context, instance, instance_type, nodename,
-                *args, **kwargs):
+            _self, context, instance, flavor, nodename,
+            *args, **kwargs,
+        ):
             if not claim_calls:
                 claim_calls.append(nodename)
                 raise exception.ComputeResourcesUnavailable(
@@ -52,7 +53,7 @@ class PinnedComputeRpcTests(integrated_helpers.ProviderUsageBaseTestCase):
             else:
                 claim_calls.append(nodename)
                 return orig_claim(
-                    _self, context, instance, instance_type, nodename, *args,
+                    _self, context, instance, flavor, nodename, *args,
                     **kwargs)
 
         with mock.patch(

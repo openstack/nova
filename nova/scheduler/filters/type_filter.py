@@ -19,9 +19,9 @@ from nova.scheduler.filters import utils
 
 
 class AggregateTypeAffinityFilter(filters.BaseHostFilter):
-    """AggregateTypeAffinityFilter limits instance_type by aggregate
+    """AggregateTypeAffinityFilter limits flavors by aggregate
 
-    return True if no instance_type key is set or if the aggregate metadata
+    return True if no flavor key is set or if the aggregate metadata
     key 'instance_type' has the instance_type name as a value
     """
 
@@ -31,13 +31,11 @@ class AggregateTypeAffinityFilter(filters.BaseHostFilter):
     RUN_ON_REBUILD = False
 
     def host_passes(self, host_state, spec_obj):
-        instance_type = spec_obj.flavor
-
+        # TODO(stephenfin): Add support for 'flavor' key
         aggregate_vals = utils.aggregate_values_from_key(
             host_state, 'instance_type')
 
         for val in aggregate_vals:
-            if (instance_type.name in
-                    [x.strip() for x in val.split(',')]):
+            if spec_obj.flavor.name in [x.strip() for x in val.split(',')]:
                 return True
         return not aggregate_vals

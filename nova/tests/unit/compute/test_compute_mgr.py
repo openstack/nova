@@ -3248,7 +3248,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock_get_nodename.assert_called_once_with(instance)
             mock_drop_move_claim.assert_called_once_with(
                 self.context, instance, 'fake-node',
-                instance_type=instance.flavor)
+                flavor=instance.flavor)
 
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(fake_driver.FakeDriver,

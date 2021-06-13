@@ -40,7 +40,6 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         flavor.extra_specs = self.specs
         flavor.create()
         self.flavor = flavor
-        self.instance_type_id = flavor.id
         self.flavorid = flavor.flavorid
 
     def tearDown(self):
@@ -48,28 +47,25 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         self.flavor.destroy()
         super(InstanceTypeExtraSpecsTestCase, self).tearDown()
 
-    def test_instance_type_specs_get(self):
-        flavor = objects.Flavor.get_by_flavor_id(self.context,
-                                                 self.flavorid)
+    def test_flavor_extra_specs_get(self):
+        flavor = objects.Flavor.get_by_flavor_id(self.context, self.flavorid)
         self.assertEqual(self.specs, flavor.extra_specs)
 
     def test_flavor_extra_specs_delete(self):
         del self.specs["xpu_model"]
         del self.flavor.extra_specs['xpu_model']
         self.flavor.save()
-        flavor = objects.Flavor.get_by_flavor_id(self.context,
-                                                 self.flavorid)
+        flavor = objects.Flavor.get_by_flavor_id(self.context, self.flavorid)
         self.assertEqual(self.specs, flavor.extra_specs)
 
-    def test_instance_type_extra_specs_update(self):
+    def test_flavor_extra_specs_update(self):
         self.specs["cpu_model"] = "Sandy Bridge"
         self.flavor.extra_specs["cpu_model"] = "Sandy Bridge"
         self.flavor.save()
-        flavor = objects.Flavor.get_by_flavor_id(self.context,
-                                                 self.flavorid)
+        flavor = objects.Flavor.get_by_flavor_id(self.context, self.flavorid)
         self.assertEqual(self.specs, flavor.extra_specs)
 
-    def test_instance_type_extra_specs_create(self):
+    def test_flavor_extra_specs_create(self):
         net_attrs = {
             "net_arch": "ethernet",
             "net_mbps": "10000"
@@ -77,15 +73,14 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         self.specs.update(net_attrs)
         self.flavor.extra_specs.update(net_attrs)
         self.flavor.save()
-        flavor = objects.Flavor.get_by_flavor_id(self.context,
-                                                 self.flavorid)
+        flavor = objects.Flavor.get_by_flavor_id(self.context, self.flavorid)
         self.assertEqual(self.specs, flavor.extra_specs)
 
-    def test_instance_type_get_with_extra_specs(self):
+    def test_flavor_get_with_extra_specs(self):
         flavor = objects.Flavor.get_by_id(self.context, 5)
         self.assertEqual(flavor.extra_specs, {})
 
-    def test_instance_type_get_by_name_with_extra_specs(self):
+    def test_flavor_get_by_name_with_extra_specs(self):
         flavor = objects.Flavor.get_by_name(self.context,
                                             "cg1.4xlarge")
         self.assertEqual(flavor.extra_specs, self.specs)
@@ -93,13 +88,13 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                                             "m1.small")
         self.assertEqual(flavor.extra_specs, {})
 
-    def test_instance_type_get_by_flavor_id_with_extra_specs(self):
+    def test_flavor_get_by_flavor_id_with_extra_specs(self):
         flavor = objects.Flavor.get_by_flavor_id(self.context, 105)
         self.assertEqual(flavor.extra_specs, self.specs)
         flavor = objects.Flavor.get_by_flavor_id(self.context, 2)
         self.assertEqual(flavor.extra_specs, {})
 
-    def test_instance_type_get_all(self):
+    def test_flavor_get_all(self):
         flavors = objects.FlavorList.get_all(self.context)
 
         name2specs = {flavor.name: flavor.extra_specs

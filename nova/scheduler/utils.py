@@ -534,7 +534,7 @@ class ResourceRequest(object):
             list(str(rg) for rg in list(self._rg_by_id.values()))))
 
 
-def build_request_spec(image, instances, instance_type=None):
+def build_request_spec(image, instances, flavor=None):
     """Build a request_spec (ahem, not a RequestSpec) for the scheduler.
 
     The request_spec assumes that all instances to be scheduled are the same
@@ -543,21 +543,21 @@ def build_request_spec(image, instances, instance_type=None):
     :param image: optional primitive image meta dict
     :param instances: list of instances; objects will be converted to
         primitives
-    :param instance_type: optional flavor; objects will be converted to
+    :param flavor: optional flavor; objects will be converted to
         primitives
     :return: dict with the following keys::
 
         'image': the image dict passed in or {}
         'instance_properties': primitive version of the first instance passed
-        'instance_type': primitive version of the instance_type or None
+        'instance_type': primitive version of the flavor or None
         'num_instances': the number of instances passed in
     """
     instance = instances[0]
-    if instance_type is None:
+    if flavor is None:
         if isinstance(instance, obj_instance.Instance):
-            instance_type = instance.get_flavor()
+            flavor = instance.get_flavor()
         else:
-            instance_type = flavors.extract_flavor(instance)
+            flavor = flavors.extract_flavor(instance)
 
     if isinstance(instance, obj_instance.Instance):
         instance = obj_base.obj_to_primitive(instance)
@@ -565,25 +565,26 @@ def build_request_spec(image, instances, instance_type=None):
         # to detach our metadata blob because we modify it below.
         instance['system_metadata'] = dict(instance.get('system_metadata', {}))
 
-    if isinstance(instance_type, objects.Flavor):
-        instance_type = obj_base.obj_to_primitive(instance_type)
+    if isinstance(flavor, objects.Flavor):
+        flavor = obj_base.obj_to_primitive(flavor)
         # NOTE(danms): Replicate this old behavior because the
         # scheduler RPC interface technically expects it to be
         # there. Remove this when we bump the scheduler RPC API to
         # v5.0
         try:
-            flavors.save_flavor_info(instance.get('system_metadata', {}),
-                                     instance_type)
+            flavors.save_flavor_info(
+                instance.get('system_metadata', {}), flavor)
         except KeyError:
             # If the flavor isn't complete (which is legit with a
             # flavor object, just don't put it in the request spec
             pass
 
     request_spec = {
-            'image': image or {},
-            'instance_properties': instance,
-            'instance_type': instance_type,
-            'num_instances': len(instances)}
+        'image': image or {},
+        'instance_properties': instance,
+        'instance_type': flavor,
+        'num_instances': len(instances),
+    }
     # NOTE(mriedem): obj_to_primitive above does not serialize everything
     # in an object, like datetime fields, so we need to still call to_primitive
     # to recursively serialize the items in the request_spec dict.
@@ -898,11 +899,12 @@ def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
         context, method, instance_uuid, request_spec, vm_state, ex)
 
 
-def build_filter_properties(scheduler_hints, forced_host,
-        forced_node, instance_type):
+def build_filter_properties(
+    scheduler_hints, forced_host, forced_node, flavor,
+):
     """Build the filter_properties dict from data in the boot request."""
     filter_properties = dict(scheduler_hints=scheduler_hints)
-    filter_properties['instance_type'] = instance_type
+    filter_properties['instance_type'] = flavor
     # TODO(alaski): It doesn't seem necessary that these are conditionally
     # added.  Let's just add empty lists if not forced_host/node.
     if forced_host:

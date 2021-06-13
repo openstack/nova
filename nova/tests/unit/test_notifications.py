@@ -66,11 +66,12 @@ class NotificationsTestCase(test.TestCase):
         self.decorated_function_called = False
 
     def _wrapped_create(self, params=None):
-        instance_type = objects.Flavor.get_by_name(self.context, 'm1.tiny')
+        flavor = objects.Flavor.get_by_name(self.context, 'm1.tiny')
         inst = objects.Instance(image_ref=uuids.image_ref,
                                 user_id=self.user_id,
                                 project_id=self.project_id,
-                                instance_type_id=instance_type['id'],
+                                instance_type_id=flavor.id,
+                                flavor=flavor,
                                 root_gb=0,
                                 ephemeral_gb=0,
                                 access_ip_v4='1.2.3.4',
@@ -82,7 +83,6 @@ class NotificationsTestCase(test.TestCase):
         inst._context = self.context
         if params:
             inst.update(params)
-        inst.flavor = instance_type
         inst.create()
         return inst
 

@@ -279,8 +279,8 @@ class InstanceMetadata(object):
             meta_data['public-ipv4'] = floating_ip
 
         if self._check_version('2007-08-29', version):
-            instance_type = self.instance.get_flavor()
-            meta_data['instance-type'] = instance_type['name']
+            flavor = self.instance.get_flavor()
+            meta_data['instance-type'] = flavor['name']
 
         if self._check_version('2007-12-15', version):
             meta_data['block-device-mapping'] = self.mappings

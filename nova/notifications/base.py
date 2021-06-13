@@ -321,9 +321,9 @@ def info_from_instance(context, instance, network_info,
                     image_ref_url = instance.image_ref
                     exc_ctx.reraise = False
 
-    instance_type = instance.get_flavor()
-    instance_type_name = instance_type.get('name', '')
-    instance_flavorid = instance_type.get('flavorid', '')
+    flavor = instance.get_flavor()
+    flavor_name = flavor.get('name', '')
+    instance_flavorid = flavor.get('flavorid', '')
 
     instance_info = dict(
         # Owner properties
@@ -337,7 +337,7 @@ def info_from_instance(context, instance, network_info,
         hostname=instance.hostname,
 
         # Type properties
-        instance_type=instance_type_name,
+        instance_type=flavor_name,
         instance_type_id=instance.instance_type_id,
         instance_flavor_id=instance_flavorid,
         architecture=instance.architecture,

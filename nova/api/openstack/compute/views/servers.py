@@ -547,34 +547,32 @@ class ViewBuilder(common.ViewBuilder):
         else:
             return ""
 
-    def _get_flavor_dict(self, request, instance_type, show_extra_specs):
+    def _get_flavor_dict(self, request, flavor, show_extra_specs):
         flavordict = {
-            "vcpus": instance_type.vcpus,
-            "ram": instance_type.memory_mb,
-            "disk": instance_type.root_gb,
-            "ephemeral": instance_type.ephemeral_gb,
-            "swap": instance_type.swap,
-            "original_name": instance_type.name
+            "vcpus": flavor.vcpus,
+            "ram": flavor.memory_mb,
+            "disk": flavor.root_gb,
+            "ephemeral": flavor.ephemeral_gb,
+            "swap": flavor.swap,
+            "original_name": flavor.name
         }
         if show_extra_specs:
-            flavordict['extra_specs'] = instance_type.extra_specs
+            flavordict['extra_specs'] = flavor.extra_specs
         return flavordict
 
     def _get_flavor(self, request, instance, show_extra_specs):
-        instance_type = instance.get_flavor()
-        if not instance_type:
-            LOG.warning("Instance has had its instance_type removed "
+        flavor = instance.get_flavor()
+        if not flavor:
+            LOG.warning("Instance has had its flavor removed "
                         "from the DB", instance=instance)
             return {}
 
         if api_version_request.is_supported(request, min_version="2.47"):
-            return self._get_flavor_dict(request, instance_type,
-                                         show_extra_specs)
+            return self._get_flavor_dict(request, flavor, show_extra_specs)
 
-        flavor_id = instance_type["flavorid"]
-        flavor_bookmark = self._flavor_builder._get_bookmark_link(request,
-                                                                  flavor_id,
-                                                                  "flavors")
+        flavor_id = flavor["flavorid"]
+        flavor_bookmark = self._flavor_builder._get_bookmark_link(
+            request, flavor_id, "flavors")
         return {
             "id": str(flavor_id),
             "links": [{

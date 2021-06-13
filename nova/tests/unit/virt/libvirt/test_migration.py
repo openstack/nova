@@ -954,12 +954,12 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
             'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
             'root_gb': 10,
             'ephemeral_gb': 20,
-            'instance_type_id': '5',  # m1.small
+            'instance_type_id': flavor.id,
+            'flavor': flavor,
             'extra_specs': {},
             'system_metadata': {
                 'image_disk_format': 'raw',
             },
-            'flavor': flavor,
             'new_flavor': None,
             'old_flavor': None,
             'pci_devices': objects.PciDeviceList(),

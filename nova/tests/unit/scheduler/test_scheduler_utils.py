@@ -40,21 +40,21 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
     def test_build_request_spec_without_image(self):
         instance = {'uuid': uuids.instance}
-        instance_type = objects.Flavor(**test_flavor.fake_flavor)
+        flavor = objects.Flavor(**test_flavor.fake_flavor)
 
         with mock.patch.object(flavors, 'extract_flavor') as mock_extract:
-            mock_extract.return_value = instance_type
+            mock_extract.return_value = flavor
             request_spec = scheduler_utils.build_request_spec(None,
                                                               [instance])
             mock_extract.assert_called_once_with({'uuid': uuids.instance})
         self.assertEqual({}, request_spec['image'])
 
     def test_build_request_spec_with_object(self):
-        instance_type = objects.Flavor()
+        flavor = objects.Flavor()
         instance = fake_instance.fake_instance_obj(self.context)
 
         with mock.patch.object(instance, 'get_flavor') as mock_get:
-            mock_get.return_value = instance_type
+            mock_get.return_value = flavor
             request_spec = scheduler_utils.build_request_spec(None,
                                                               [instance])
             mock_get.assert_called_once_with()
@@ -134,23 +134,23 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         sched_hints = {'hint': ['over-there']}
         forced_host = 'forced-host1'
         forced_node = 'forced-node1'
-        instance_type = objects.Flavor()
+        flavor = objects.Flavor()
         filt_props = scheduler_utils.build_filter_properties(sched_hints,
-                forced_host, forced_node, instance_type)
+                forced_host, forced_node, flavor)
         self.assertEqual(sched_hints, filt_props['scheduler_hints'])
         self.assertEqual([forced_host], filt_props['force_hosts'])
         self.assertEqual([forced_node], filt_props['force_nodes'])
-        self.assertEqual(instance_type, filt_props['instance_type'])
+        self.assertEqual(flavor, filt_props['instance_type'])
 
     def test_build_filter_properties_no_forced_host_no_force_node(self):
         sched_hints = {'hint': ['over-there']}
         forced_host = None
         forced_node = None
-        instance_type = objects.Flavor()
+        flavor = objects.Flavor()
         filt_props = scheduler_utils.build_filter_properties(sched_hints,
-                forced_host, forced_node, instance_type)
+                forced_host, forced_node, flavor)
         self.assertEqual(sched_hints, filt_props['scheduler_hints'])
-        self.assertEqual(instance_type, filt_props['instance_type'])
+        self.assertEqual(flavor, filt_props['instance_type'])
         self.assertNotIn('forced_host', filt_props)
         self.assertNotIn('forced_node', filt_props)
 

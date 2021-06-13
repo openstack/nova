@@ -560,6 +560,7 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
+    # TODO(stephenfin): Remove this table since it has been moved to the API DB
     instance_type_extra_specs = Table('instance_type_extra_specs', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -578,6 +579,7 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
+    # TODO(stephenfin): Remove this table since it has been moved to the API DB
     instance_type_projects = Table('instance_type_projects', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -594,6 +596,7 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
+    # TODO(stephenfin): Remove this table since it has been moved to the API DB
     instance_types = Table('instance_types', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),

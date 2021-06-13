@@ -1351,18 +1351,18 @@ class ComputeTaskManager(base.Base):
 
     # TODO(avolkov): move method to bdm
     @staticmethod
-    def _volume_size(instance_type, bdm):
+    def _volume_size(flavor, bdm):
         size = bdm.get('volume_size')
         # NOTE (ndipanov): inherit flavor size only for swap and ephemeral
         if (size is None and bdm.get('source_type') == 'blank' and
                 bdm.get('destination_type') == 'local'):
             if bdm.get('guest_format') == 'swap':
-                size = instance_type.get('swap', 0)
+                size = flavor.get('swap', 0)
             else:
-                size = instance_type.get('ephemeral_gb', 0)
+                size = flavor.get('ephemeral_gb', 0)
         return size
 
-    def _create_block_device_mapping(self, cell, instance_type, instance_uuid,
+    def _create_block_device_mapping(self, cell, flavor, instance_uuid,
                                      block_device_mapping):
         """Create the BlockDeviceMapping objects in the db.
 
@@ -1373,7 +1373,7 @@ class ComputeTaskManager(base.Base):
                   instance_uuid=instance_uuid)
         instance_block_device_mapping = copy.deepcopy(block_device_mapping)
         for bdm in instance_block_device_mapping:
-            bdm.volume_size = self._volume_size(instance_type, bdm)
+            bdm.volume_size = self._volume_size(flavor, bdm)
             bdm.instance_uuid = instance_uuid
             with obj_target_cell(bdm, cell):
                 bdm.update_or_create()

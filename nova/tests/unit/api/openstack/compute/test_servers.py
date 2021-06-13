@@ -4208,7 +4208,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.controller = servers.ServersController()
 
         def instance_create(context, inst):
-            inst_type = flavors.get_flavor_by_flavor_id(3)
+            flavor = flavors.get_flavor_by_flavor_id(3)
             image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
             def_image_ref = 'http://localhost/%s/images/%s' % (self.project_id,
                                                                image_uuid)
@@ -4218,7 +4218,7 @@ class ServersControllerCreateTest(test.TestCase):
                 'display_name': inst['display_name'] or 'test',
                 'display_description': inst['display_description'] or '',
                 'uuid': FAKE_UUID,
-                'instance_type': inst_type,
+                'flavor': flavor,
                 'image_ref': inst.get('image_ref', def_image_ref),
                 'user_id': 'fake',
                 'project_id': fakes.FAKE_PROJECT_ID,
@@ -7194,7 +7194,7 @@ class ServersViewBuilderTest(test.TestCase):
                                       'ips': [_ip(fixed_ipv4[2])]}]}}]
         return nw_cache
 
-    def test_get_flavor_valid_instance_type(self):
+    def test_get_flavor_valid_flavor(self):
         flavor_bookmark = "http://localhost/%s/flavors/1" % self.project_id
         expected = {"id": "1",
                     "links": [{"rel": "bookmark",

@@ -5083,9 +5083,10 @@ class ComputeManager(manager.Manager):
                                            instance.uuid)
         return orig_alloc
 
-    def _prep_resize(self, context, image, instance, instance_type,
-                     filter_properties, node, migration, request_spec,
-                     clean_shutdown=True):
+    def _prep_resize(
+        self, context, image, instance, flavor, filter_properties, node,
+        migration, request_spec, clean_shutdown=True,
+    ):
 
         if not filter_properties:
             filter_properties = {}
@@ -5097,7 +5098,7 @@ class ComputeManager(manager.Manager):
 
         same_host = instance.host == self.host
         # if the flavor IDs match, it's migrate; otherwise resize
-        if same_host and instance_type.id == instance['instance_type_id']:
+        if same_host and flavor.id == instance['instance_type_id']:
             # check driver whether support migrate to same host
             if not self.driver.capabilities.get(
                     'supports_migrate_to_same_host', False):
@@ -5108,9 +5109,9 @@ class ComputeManager(manager.Manager):
                     inner_exception=exception.UnableToMigrateToSelf(
                         instance_id=instance.uuid, host=self.host))
 
-        # NOTE(danms): Stash the new instance_type to avoid having to
+        # NOTE(danms): Stash the new flavor to avoid having to
         # look it up in the database later
-        instance.new_flavor = instance_type
+        instance.new_flavor = flavor
         # NOTE(mriedem): Stash the old vm_state so we can set the
         # resized/reverted instance back to the same state later.
         vm_state = instance.vm_state
@@ -5149,14 +5150,15 @@ class ComputeManager(manager.Manager):
         limits = filter_properties.get('limits', {})
         allocs = self.reportclient.get_allocations_for_consumer(
             context, instance.uuid)
-        with self.rt.resize_claim(context, instance, instance_type, node,
-                                  migration, allocs, image_meta=image,
-                                  limits=limits) as claim:
+        with self.rt.resize_claim(
+            context, instance, flavor, node, migration, allocs,
+            image_meta=image, limits=limits,
+        ) as claim:
             LOG.info('Migrating', instance=instance)
             # RPC cast to the source host to start the actual resize/migration.
             self.compute_rpcapi.resize_instance(
-                    context, instance, claim.migration, image,
-                    instance_type, request_spec, clean_shutdown)
+                context, instance, claim.migration, image,
+                flavor, request_spec, clean_shutdown)
 
     def _send_prep_resize_notifications(
             self, context, instance, phase, flavor):
@@ -5262,7 +5264,7 @@ class ComputeManager(manager.Manager):
                     flavor)
 
     def _reschedule_resize_or_reraise(self, context, instance, exc_info,
-            instance_type, request_spec, filter_properties, host_list):
+            flavor, request_spec, filter_properties, host_list):
         """Try to re-schedule the resize or re-raise the original error to
         error out the instance.
         """
@@ -5291,7 +5293,7 @@ class ComputeManager(manager.Manager):
                 scheduler_hint = {'filter_properties': filter_properties}
 
                 self.compute_task_api.resize_instance(
-                    context, instance, scheduler_hint, instance_type,
+                    context, instance, scheduler_hint, flavor,
                     request_spec=request_spec, host_list=host_list)
 
                 rescheduled = True
@@ -5561,9 +5563,10 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 self._revert_allocation(context, instance, migration)
 
-    def _resize_instance(self, context, instance, image,
-                         migration, instance_type, clean_shutdown,
-                         request_spec):
+    def _resize_instance(
+        self, context, instance, image, migration, flavor,
+        clean_shutdown, request_spec,
+    ):
         # Pass instance_state=instance.vm_state because we can resize
         # a STOPPED server and we don't want to set it back to ACTIVE
         # in case migrate_disk_and_power_off raises InstanceFaultRollback.
@@ -5592,10 +5595,10 @@ class ComputeManager(manager.Manager):
             timeout, retry_interval = self._get_power_off_values(
                 instance, clean_shutdown)
             disk_info = self.driver.migrate_disk_and_power_off(
-                    context, instance, migration.dest_host,
-                    instance_type, network_info,
-                    block_device_info,
-                    timeout, retry_interval)
+                context, instance, migration.dest_host,
+                flavor, network_info,
+                block_device_info,
+                timeout, retry_interval)
 
             self._terminate_volume_connections(context, instance, bdms)
 
@@ -5672,13 +5675,13 @@ class ComputeManager(manager.Manager):
                                                          connector)
 
     @staticmethod
-    def _set_instance_info(instance, instance_type):
-        instance.instance_type_id = instance_type.id
-        instance.memory_mb = instance_type.memory_mb
-        instance.vcpus = instance_type.vcpus
-        instance.root_gb = instance_type.root_gb
-        instance.ephemeral_gb = instance_type.ephemeral_gb
-        instance.flavor = instance_type
+    def _set_instance_info(instance, flavor):
+        instance.instance_type_id = flavor.id
+        instance.memory_mb = flavor.memory_mb
+        instance.vcpus = flavor.vcpus
+        instance.root_gb = flavor.root_gb
+        instance.ephemeral_gb = flavor.ephemeral_gb
+        instance.flavor = flavor
 
     def _update_volume_attachments(self, context, instance, bdms):
         """Updates volume attachments using the virt driver host connector.
@@ -9160,7 +9163,7 @@ class ComputeManager(manager.Manager):
         LOG.debug('Dropping live migration resource claim on destination '
                   'node %s', nodename, instance=instance)
         self.rt.drop_move_claim(
-            context, instance, nodename, instance_type=instance.flavor)
+            context, instance, nodename, flavor=instance.flavor)
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')

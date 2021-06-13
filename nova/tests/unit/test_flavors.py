@@ -22,7 +22,7 @@ from nova.objects import base as obj_base
 from nova import test
 
 
-class InstanceTypeTestCase(test.TestCase):
+class FlavorTestCase(test.TestCase):
     """Test cases for flavor  code."""
     def test_will_not_get_instance_by_unknown_flavor_id(self):
         # Ensure get by flavor raises error with wrong flavorid.
@@ -31,39 +31,39 @@ class InstanceTypeTestCase(test.TestCase):
                           'unknown_flavor')
 
     def test_will_get_instance_by_flavor_id(self):
-        default_instance_type = objects.Flavor.get_by_name(
+        default_flavor = objects.Flavor.get_by_name(
             context.get_admin_context(), 'm1.small')
-        flavorid = default_instance_type.flavorid
+        flavorid = default_flavor.flavorid
         fetched = flavors.get_flavor_by_flavor_id(flavorid)
         self.assertIsInstance(fetched, objects.Flavor)
-        self.assertEqual(default_instance_type.flavorid, fetched.flavorid)
+        self.assertEqual(default_flavor.flavorid, fetched.flavorid)
 
 
-class InstanceTypeToolsTest(test.TestCase):
+class FlavorToolsTest(test.TestCase):
 
     def setUp(self):
-        super(InstanceTypeToolsTest, self).setUp()
+        super().setUp()
         self.context = context.get_admin_context()
 
     def _dict_to_metadata(self, data):
         return [{'key': key, 'value': value} for key, value in data.items()]
 
     def _test_extract_flavor(self, prefix):
-        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
-        instance_type_p = obj_base.obj_to_primitive(instance_type)
+        flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
+        flavor_p = obj_base.obj_to_primitive(flavor)
 
         metadata = {}
-        flavors.save_flavor_info(metadata, instance_type, prefix)
+        flavors.save_flavor_info(metadata, flavor, prefix)
         instance = {'system_metadata': self._dict_to_metadata(metadata)}
-        _instance_type = flavors.extract_flavor(instance, prefix)
-        _instance_type_p = obj_base.obj_to_primitive(_instance_type)
+        _flavor = flavors.extract_flavor(instance, prefix)
+        _flavor_p = obj_base.obj_to_primitive(_flavor)
 
         props = flavors.system_metadata_flavor_props.keys()
-        for key in list(instance_type_p.keys()):
+        for key in list(flavor_p.keys()):
             if key not in props:
-                del instance_type_p[key]
+                del flavor_p[key]
 
-        self.assertEqual(instance_type_p, _instance_type_p)
+        self.assertEqual(flavor_p, _flavor_p)
 
     def test_extract_flavor(self):
         self._test_extract_flavor('')
@@ -79,47 +79,47 @@ class InstanceTypeToolsTest(test.TestCase):
         self._test_extract_flavor('foo_')
 
     def test_save_flavor_info(self):
-        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
+        flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
 
         example = {}
         example_prefix = {}
 
         for key in flavors.system_metadata_flavor_props.keys():
-            example['instance_type_%s' % key] = instance_type[key]
-            example_prefix['fooinstance_type_%s' % key] = instance_type[key]
+            example['instance_type_%s' % key] = flavor[key]
+            example_prefix['fooinstance_type_%s' % key] = flavor[key]
 
         metadata = {}
-        flavors.save_flavor_info(metadata, instance_type)
+        flavors.save_flavor_info(metadata, flavor)
         self.assertEqual(example, metadata)
 
         metadata = {}
-        flavors.save_flavor_info(metadata, instance_type, 'foo')
+        flavors.save_flavor_info(metadata, flavor, 'foo')
         self.assertEqual(example_prefix, metadata)
 
     def test_flavor_numa_extras_are_saved(self):
-        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
-        instance_type['extra_specs'] = {
+        flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
+        flavor['extra_specs'] = {
             'hw:numa_mem.0': '123',
             'hw:numa_cpus.0': '456',
             'hw:numa_mem.1': '789',
             'hw:numa_cpus.1': 'ABC',
             'foo': 'bar',
         }
-        sysmeta = flavors.save_flavor_info({}, instance_type)
-        _instance_type = flavors.extract_flavor({'system_metadata': sysmeta})
+        sysmeta = flavors.save_flavor_info({}, flavor)
+        _flavor = flavors.extract_flavor({'system_metadata': sysmeta})
         expected_extra_specs = {
             'hw:numa_mem.0': '123',
             'hw:numa_cpus.0': '456',
             'hw:numa_mem.1': '789',
             'hw:numa_cpus.1': 'ABC',
         }
-        self.assertEqual(expected_extra_specs, _instance_type['extra_specs'])
+        self.assertEqual(expected_extra_specs, _flavor['extra_specs'])
 
 
-class InstanceTypeFilteringTest(test.TestCase):
-    """Test cases for the filter option available for instance_type_get_all."""
+class FlavorFilteringTest(test.TestCase):
+    """Test cases for the filter option available for FlavorList.get_all."""
     def setUp(self):
-        super(InstanceTypeFilteringTest, self).setUp()
+        super().setUp()
         self.context = context.get_admin_context()
 
     def assertFilterResults(self, filters, expected):
@@ -153,7 +153,7 @@ class InstanceTypeFilteringTest(test.TestCase):
         self.assertFilterResults(filters, expected)
 
 
-class CreateInstanceTypeTest(test.TestCase):
+class CreateFlavorTest(test.TestCase):
 
     def assertInvalidInput(self, *create_args, **create_kwargs):
         self.assertRaises(exception.InvalidInput, flavors.create,

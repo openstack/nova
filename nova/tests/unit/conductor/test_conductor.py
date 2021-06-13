@@ -457,21 +457,21 @@ class _BaseTaskTestCase(object):
         """
         fake_spec = objects.RequestSpec()
         mock_fp.return_value = fake_spec
-        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
+        flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
         # NOTE(danms): Avoid datetime timezone issues with converted flavors
-        instance_type.created_at = None
+        flavor.created_at = None
         instances = [objects.Instance(context=self.context,
                                       id=i,
                                       uuid=uuids.fake,
-                                      flavor=instance_type) for i in range(2)]
-        instance_type_p = obj_base.obj_to_primitive(instance_type)
+                                      flavor=flavor) for i in range(2)]
+        flavor_p = obj_base.obj_to_primitive(flavor)
         instance_properties = obj_base.obj_to_primitive(instances[0])
         instance_properties['system_metadata'] = flavors.save_flavor_info(
-            {}, instance_type)
+            {}, flavor)
 
         spec = {'image': {'fake_data': 'should_pass_silently'},
                 'instance_properties': instance_properties,
-                'instance_type': instance_type_p,
+                'instance_type': flavor_p,
                 'num_instances': 2}
         filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
         sched_return = copy.deepcopy(fake_host_lists2)
@@ -564,16 +564,16 @@ class _BaseTaskTestCase(object):
         """
         fake_spec = objects.RequestSpec()
         mock_fp.return_value = fake_spec
-        instance_type = objects.Flavor.get_by_name(self.context, 'm1.small')
+        flavor = objects.Flavor.get_by_name(self.context, 'm1.small')
         # NOTE(danms): Avoid datetime timezone issues with converted flavors
-        instance_type.created_at = None
+        flavor.created_at = None
         instances = [objects.Instance(context=self.context,
                                       id=i,
                                       uuid=uuids.fake,
-                                      flavor=instance_type) for i in range(2)]
+                                      flavor=flavor) for i in range(2)]
         instance_properties = obj_base.obj_to_primitive(instances[0])
         instance_properties['system_metadata'] = flavors.save_flavor_info(
-            {}, instance_type)
+            {}, flavor)
 
         sched_return = copy.deepcopy(fake_host_lists2)
         mock_schedule.return_value = sched_return

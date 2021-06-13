@@ -43,11 +43,11 @@ def fake_db_secgroups(instance, names):
 
 
 def fake_db_instance(**updates):
-    if 'instance_type' in updates:
-        if isinstance(updates['instance_type'], objects.Flavor):
-            flavor = updates['instance_type']
+    if 'flavor' in updates:
+        if isinstance(updates['flavor'], objects.Flavor):
+            flavor = updates['flavor']
         else:
-            flavor = objects.Flavor(**updates['instance_type'])
+            flavor = objects.Flavor(**updates['flavor'])
         flavorinfo = jsonutils.dumps({
             'cur': flavor.obj_to_primitive(),
             'old': None,

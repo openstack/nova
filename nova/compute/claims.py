@@ -57,9 +57,11 @@ class Claim(NopClaim):
     correct decisions with respect to host selection.
     """
 
-    def __init__(self, context, instance, nodename, tracker, compute_node,
-                 pci_requests, migration=None, limits=None):
-        super(Claim, self).__init__(migration=migration)
+    def __init__(
+        self, context, instance, nodename, tracker, compute_node, pci_requests,
+        migration=None, limits=None,
+    ):
+        super().__init__(migration=migration)
         # Stash a copy of the instance at the current point of time
         self.instance = instance.obj_clone()
         self.nodename = nodename
@@ -159,21 +161,24 @@ class MoveClaim(Claim):
 
     Move can be either a migrate/resize, live-migrate or an evacuate operation.
     """
-    def __init__(self, context, instance, nodename, instance_type, image_meta,
-                 tracker, compute_node, pci_requests, migration, limits=None):
+    def __init__(
+        self, context, instance, nodename, flavor, image_meta, tracker,
+        compute_node, pci_requests, migration, limits=None,
+    ):
         self.context = context
-        self.instance_type = instance_type
+        self.flavor = flavor
         if isinstance(image_meta, dict):
             image_meta = objects.ImageMeta.from_dict(image_meta)
         self.image_meta = image_meta
-        super(MoveClaim, self).__init__(context, instance, nodename, tracker,
-                                        compute_node, pci_requests,
-                                        migration=migration, limits=limits)
+
+        super().__init__(
+            context, instance, nodename, tracker, compute_node, pci_requests,
+            migration=migration, limits=limits,
+        )
 
     @property
     def numa_topology(self):
-        return hardware.numa_get_constraints(self.instance_type,
-                                             self.image_meta)
+        return hardware.numa_get_constraints(self.flavor, self.image_meta)
 
     def abort(self):
         """Compute operation requiring claimed resources has failed or
@@ -183,7 +188,7 @@ class MoveClaim(Claim):
         self.tracker.drop_move_claim(
             self.context,
             self.instance, self.nodename,
-            instance_type=self.instance_type)
+            flavor=self.flavor)
         self.instance.drop_migration_context()
 
     def _test_pci(self):

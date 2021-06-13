@@ -28,7 +28,7 @@ _SCOPE = 'aggregate_instance_extra_specs'
 
 
 class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
-    """AggregateInstanceExtraSpecsFilter works with InstanceType records."""
+    """AggregateInstanceExtraSpecsFilter works with flavor records."""
 
     # Aggregate data and instance type does not change within a request
     run_filter_once_per_request = True
@@ -36,21 +36,20 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
     RUN_ON_REBUILD = False
 
     def host_passes(self, host_state, spec_obj):
-        """Return a list of hosts that can create instance_type
+        """Return a list of hosts that can create flavor.
 
         Check that the extra specs associated with the instance type match
         the metadata provided by aggregates.  If not present return False.
         """
-        instance_type = spec_obj.flavor
+        flavor = spec_obj.flavor
         # If 'extra_specs' is not present or extra_specs are empty then we
         # need not proceed further
-        if (not instance_type.obj_attr_is_set('extra_specs') or
-                not instance_type.extra_specs):
+        if 'extra_specs' not in flavor or not flavor.extra_specs:
             return True
 
         metadata = utils.aggregate_metadata_get_by_host(host_state)
 
-        for key, req in instance_type.extra_specs.items():
+        for key, req in flavor.extra_specs.items():
             # Either not scope format, or aggregate_instance_extra_specs scope
             scope = key.split(':', 1)
             if len(scope) > 1:
@@ -62,18 +61,20 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
             aggregate_vals = metadata.get(key, None)
             if not aggregate_vals:
                 LOG.debug(
-                    "%(host_state)s fails instance_type extra_specs "
-                    "requirements. Extra_spec %(key)s is not in aggregate.",
+                    "%(host_state)s fails flavor extra_specs requirements. "
+                    "Extra_spec %(key)s is not in aggregate.",
                     {'host_state': host_state, 'key': key})
                 return False
             for aggregate_val in aggregate_vals:
                 if extra_specs_ops.match(aggregate_val, req):
                     break
             else:
-                LOG.debug("%(host_state)s fails instance_type extra_specs "
-                          "requirements. '%(aggregate_vals)s' do not "
-                          "match '%(req)s'",
-                          {'host_state': host_state, 'req': req,
-                           'aggregate_vals': aggregate_vals})
+                LOG.debug(
+                    "%(host_state)s fails flavor extra_specs requirements. "
+                    "'%(aggregate_vals)s' do not match '%(req)s'",
+                    {
+                        'host_state': host_state, 'req': req,
+                        'aggregate_vals': aggregate_vals,
+                    })
                 return False
         return True
