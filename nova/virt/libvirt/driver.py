@@ -2514,6 +2514,11 @@ class LibvirtDriver(driver.ComputeDriver):
         except libvirt.libvirtError as ex:
             code = ex.get_error_code()
             msg = ex.get_error_message()
+            LOG.debug(
+                "Libvirt returned error while detaching device %s from "
+                "instance %s. Libvirt error code: %d, error message: %s.",
+                device_name, instance_uuid, code, msg
+            )
             if code == libvirt.VIR_ERR_DEVICE_MISSING:
                 LOG.debug(
                     'Libvirt failed to detach device %s from instance %s '
