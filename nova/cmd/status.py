@@ -25,8 +25,8 @@ from oslo_config import cfg
 from oslo_upgradecheck import common_checks
 from oslo_upgradecheck import upgradecheck
 import pkg_resources
+import sqlalchemy as sa
 from sqlalchemy import func as sqlfunc
-from sqlalchemy import MetaData, Table, select
 
 from nova.cmd import common as cmd_common
 import nova.conf
@@ -86,10 +86,10 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         # table, or by only counting compute nodes with a service version of at
         # least 15 which was the highest service version when Newton was
         # released.
-        meta = MetaData(bind=db_session.get_engine(context=context))
-        compute_nodes = Table('compute_nodes', meta, autoload=True)
-        return select([sqlfunc.count()]).select_from(compute_nodes).where(
-                compute_nodes.c.deleted == 0).scalar()
+        meta = sa.MetaData(bind=db_session.get_engine(context=context))
+        compute_nodes = sa.Table('compute_nodes', meta, autoload=True)
+        return sa.select([sqlfunc.count()]).select_from(compute_nodes).where(
+            compute_nodes.c.deleted == 0).scalar()
 
     def _check_cellsv2(self):
         """Checks to see if cells v2 has been setup.
@@ -102,7 +102,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         this on an initial install. This also has to be careful about checking
         for compute nodes if there are no host mappings on a fresh install.
         """
-        meta = MetaData()
+        meta = sa.MetaData()
         meta.bind = db_session.get_api_engine()
 
         cell_mappings = self._get_cell_mappings()
@@ -122,8 +122,9 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
                     'retry.')
             return upgradecheck.Result(upgradecheck.Code.FAILURE, msg)
 
-        host_mappings = Table('host_mappings', meta, autoload=True)
-        count = select([sqlfunc.count()]).select_from(host_mappings).scalar()
+        host_mappings = sa.Table('host_mappings', meta, autoload=True)
+        count = sa.select([sqlfunc.count()]).select_from(host_mappings)\
+            .scalar()
         if count == 0:
             # This may be a fresh install in which case there may not be any
             # compute_nodes in the cell database if the nova-compute service

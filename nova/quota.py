@@ -20,10 +20,7 @@ import copy
 
 from oslo_log import log as logging
 from oslo_utils import importutils
-from sqlalchemy.sql import and_
-from sqlalchemy.sql import false
-from sqlalchemy.sql import null
-from sqlalchemy.sql import or_
+from sqlalchemy import sql
 
 import nova.conf
 from nova import context as nova_context
@@ -1077,13 +1074,13 @@ def _user_id_queued_for_delete_populated(context, project_id=None):
     :returns: True if user_id is set for all non-deleted instances and
               queued_for_delete is set for all instances, else False
     """
-    user_id_not_populated = and_(
-        api_models.InstanceMapping.user_id == null(),
-        api_models.InstanceMapping.queued_for_delete == false())
+    user_id_not_populated = sql.and_(
+        api_models.InstanceMapping.user_id == sql.null(),
+        api_models.InstanceMapping.queued_for_delete == sql.false())
     # If either queued_for_delete or user_id are unmigrated, we will return
     # False.
-    unmigrated_filter = or_(
-        api_models.InstanceMapping.queued_for_delete == null(),
+    unmigrated_filter = sql.or_(
+        api_models.InstanceMapping.queued_for_delete == sql.null(),
         user_id_not_populated)
     query = context.session.query(api_models.InstanceMapping).filter(
         unmigrated_filter)

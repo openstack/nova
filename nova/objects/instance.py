@@ -20,10 +20,9 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import versionutils
-from sqlalchemy import or_
-from sqlalchemy.sql import false
+import sqlalchemy as sa
+from sqlalchemy import sql
 from sqlalchemy.sql import func
-from sqlalchemy.sql import null
 
 from nova import availability_zones as avail_zone
 from nova.compute import task_states
@@ -1516,9 +1515,9 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         # NOTE(melwitt): Copied from nova/db/sqlalchemy/api.py:
         # It would be better to have vm_state not be nullable
         # but until then we test it explicitly as a workaround.
-        not_soft_deleted = or_(
+        not_soft_deleted = sa.or_(
             models.Instance.vm_state != vm_states.SOFT_DELETED,
-            models.Instance.vm_state == null()
+            models.Instance.vm_state == sql.null()
             )
         project_query = context.session.query(
             func.count(models.Instance.id),
@@ -1531,8 +1530,10 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         # non-hidden version of the instance in another cell database and the
         # API will only show one of them, so we don't count the hidden copy.
         project_query = project_query.filter(
-            or_(models.Instance.hidden == false(),
-                models.Instance.hidden == null()))
+            sa.or_(
+                models.Instance.hidden == sql.false(),
+                models.Instance.hidden == sql.null(),
+            ))
 
         project_result = project_query.first()
         fields = ('instances', 'cores', 'ram')

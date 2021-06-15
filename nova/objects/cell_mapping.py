@@ -14,9 +14,8 @@ from urllib import parse as urlparse
 
 from oslo_log import log as logging
 from oslo_utils import versionutils
-from sqlalchemy.sql.expression import asc
-from sqlalchemy.sql import false
-from sqlalchemy.sql import true
+from sqlalchemy import sql
+from sqlalchemy.sql import expression
 
 import nova.conf
 from nova.db.sqlalchemy import api as db_api
@@ -250,7 +249,7 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
     @db_api.api_context_manager.reader
     def _get_all_from_db(context):
         return context.session.query(api_models.CellMapping).order_by(
-            asc(api_models.CellMapping.id)).all()
+            expression.asc(api_models.CellMapping.id)).all()
 
     @base.remotable_classmethod
     def get_all(cls, context):
@@ -261,12 +260,13 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
     @db_api.api_context_manager.reader
     def _get_by_disabled_from_db(context, disabled):
         if disabled:
-            return context.session.query(api_models.CellMapping).filter_by(
-                disabled=true()).order_by(asc(api_models.CellMapping.id)).all()
+            return context.session.query(api_models.CellMapping)\
+                .filter_by(disabled=sql.true())\
+                .order_by(expression.asc(api_models.CellMapping.id)).all()
         else:
-            return context.session.query(api_models.CellMapping).filter_by(
-                disabled=false()).order_by(asc(
-                    api_models.CellMapping.id)).all()
+            return context.session.query(api_models.CellMapping)\
+                .filter_by(disabled=sql.false())\
+                .order_by(expression.asc(api_models.CellMapping.id)).all()
 
     @base.remotable_classmethod
     def get_by_disabled(cls, context, disabled):

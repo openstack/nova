@@ -35,26 +35,12 @@ from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import sqlalchemy as sa
-from sqlalchemy import and_
-from sqlalchemy import Boolean
-from sqlalchemy.exc import NoSuchTableError
-from sqlalchemy import Integer
-from sqlalchemy import MetaData
-from sqlalchemy import or_
-from sqlalchemy.orm import aliased
-from sqlalchemy.orm import joinedload
-from sqlalchemy.orm import noload
-from sqlalchemy.orm import subqueryload
-from sqlalchemy.orm import undefer
-from sqlalchemy.schema import Table
+from sqlalchemy import exc as sqla_exc
+from sqlalchemy import orm
+from sqlalchemy import schema
 from sqlalchemy import sql
-from sqlalchemy.sql.expression import asc
-from sqlalchemy.sql.expression import cast
-from sqlalchemy.sql.expression import desc
-from sqlalchemy.sql import false
+from sqlalchemy.sql import expression
 from sqlalchemy.sql import func
-from sqlalchemy.sql import null
-from sqlalchemy.sql import true
 
 from nova import block_device
 from nova.compute import task_states
@@ -94,7 +80,7 @@ def _context_manager_from_context(context):
 
 def _joinedload_all(column):
     elements = column.split('.')
-    joined = joinedload(elements.pop(0))
+    joined = orm.joinedload(elements.pop(0))
     for element in elements:
         joined = joined.joinedload(element)
 
@@ -293,9 +279,10 @@ def model_query(
     # us to return both our projects and unowned projects.
     if nova.context.is_user_context(context) and project_only:
         if project_only == 'allow_none':
-            query = query.\
-                filter(or_(model.project_id == context.project_id,
-                           model.project_id == null()))
+            query = query.filter(sql.or_(
+                model.project_id == context.project_id,
+                model.project_id == sql.null()
+            ))
         else:
             query = query.filter_by(project_id=context.project_id)
 
@@ -367,7 +354,7 @@ class EqualityCondition(object):
     def clauses(self, field):
         # method signature requires us to return an iterable even if for OR
         # operator this will actually be a single clause
-        return [or_(*[field == value for value in self.values])]
+        return [sql.or_(*[field == value for value in self.values])]
 
 
 class InequalityCondition(object):
@@ -395,9 +382,10 @@ def service_destroy(context, service_id):
         # TODO(sbauza): Remove the service_id filter in a later release
         # once we are sure that all compute nodes report the host field
         model_query(context, models.ComputeNode).\
-                    filter(or_(models.ComputeNode.service_id == service_id,
-                               models.ComputeNode.host == service['host'])).\
-                    soft_delete(synchronize_session=False)
+            filter(sql.or_(
+                models.ComputeNode.service_id == service_id,
+                models.ComputeNode.host == service['host'])).\
+            soft_delete(synchronize_session=False)
 
 
 @pick_context_manager_reader
@@ -434,7 +422,7 @@ def service_get_minimum_version(context, binaries):
         func.min(models.Service.version)).\
                          filter(models.Service.binary.in_(binaries)).\
                          filter(models.Service.deleted == 0).\
-                         filter(models.Service.forced_down == false()).\
+                         filter(models.Service.forced_down == sql.false()).\
                          group_by(models.Service.binary)
     return dict(min_versions)
 
@@ -615,7 +603,7 @@ def _compute_node_select(context, filters=None, limit=None, marker=None):
         select = select.limit(limit)
     # Explicitly order by id, so we're not dependent on the native sort
     # order of the underlying DB.
-    select = select.order_by(asc("id"))
+    select = select.order_by(expression.asc("id"))
     return select
 
 
@@ -921,7 +909,7 @@ def compute_node_statistics(context):
                 inner_sel.c.host == services_tbl.c.host,
                 inner_sel.c.service_id == services_tbl.c.id
             ),
-            services_tbl.c.disabled == false(),
+            services_tbl.c.disabled == sql.false(),
             services_tbl.c.binary == 'nova-compute',
             services_tbl.c.deleted == 0
         )
@@ -1106,9 +1094,9 @@ def virtual_interface_get_by_instance(context, instance_uuid):
     :param instance_uuid: UUID of the instance to filter on.
     """
     vif_refs = _virtual_interface_query(context).\
-                       filter_by(instance_uuid=instance_uuid).\
-                       order_by(asc("created_at"), asc("id")).\
-                       all()
+        filter_by(instance_uuid=instance_uuid).\
+        order_by(expression.asc("created_at"), expression.asc("id")).\
+        all()
     return vif_refs
 
 
@@ -1414,7 +1402,7 @@ def instance_get(context, instance_id, columns_to_join=None):
 def _build_instance_get(context, columns_to_join=None):
     query = model_query(context, models.Instance, project_only=True).\
             options(_joinedload_all('security_groups.rules')).\
-            options(joinedload('info_cache'))
+            options(orm.joinedload('info_cache'))
     if columns_to_join is None:
         columns_to_join = ['metadata', 'system_metadata']
     for column in columns_to_join:
@@ -1422,7 +1410,7 @@ def _build_instance_get(context, columns_to_join=None):
             # Already always joined above
             continue
         if 'extra.' in column:
-            query = query.options(undefer(column))
+            query = query.options(orm.undefer(column))
         elif column in ['metadata', 'system_metadata']:
             # NOTE(melwitt): We use subqueryload() instead of joinedload() for
             # metadata and system_metadata because of the one-to-many
@@ -1432,13 +1420,13 @@ def _build_instance_get(context, columns_to_join=None):
             # in a large data transfer. Instead, the subqueryload() will
             # perform additional queries to obtain metadata and system_metadata
             # for the instance.
-            query = query.options(subqueryload(column))
+            query = query.options(orm.subqueryload(column))
         else:
-            query = query.options(joinedload(column))
+            query = query.options(orm.joinedload(column))
     # NOTE(alaski) Stop lazy loading of columns not needed.
     for col in ['metadata', 'system_metadata']:
         if col not in columns_to_join:
-            query = query.options(noload(col))
+            query = query.options(orm.noload(col))
     # NOTE(melwitt): We need to use order_by(<unique column>) so that the
     # additional queries emitted by subqueryload() include the same ordering as
     # used by the parent query.
@@ -1531,7 +1519,7 @@ def instance_get_all(context, columns_to_join=None):
             _manual_join_columns(columns_to_join))
     query = model_query(context, models.Instance)
     for column in columns_to_join_new:
-        query = query.options(joinedload(column))
+        query = query.options(orm.joinedload(column))
     if not context.is_admin:
         # If we're not admin context, add appropriate filter..
         if context.project_id:
@@ -1673,9 +1661,9 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     query_prefix = context.session.query(models.Instance)
     for column in columns_to_join_new:
         if 'extra.' in column:
-            query_prefix = query_prefix.options(undefer(column))
+            query_prefix = query_prefix.options(orm.undefer(column))
         else:
-            query_prefix = query_prefix.options(joinedload(column))
+            query_prefix = query_prefix.options(orm.joinedload(column))
 
     # Note: order_by is done in the sqlalchemy.utils.py paginate_query(),
     # no need to do it here as well
@@ -1695,7 +1683,7 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
         deleted = filters.pop('deleted')
         if deleted:
             if filters.pop('soft_deleted', True):
-                delete = or_(
+                delete = sql.or_(
                     models.Instance.deleted == models.Instance.id,
                     models.Instance.vm_state == vm_states.SOFT_DELETED
                     )
@@ -1710,10 +1698,10 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
             if not filters.pop('soft_deleted', False):
                 # It would be better to have vm_state not be nullable
                 # but until then we test it explicitly as a workaround.
-                not_soft_deleted = or_(
+                not_soft_deleted = sql.or_(
                     models.Instance.vm_state != vm_states.SOFT_DELETED,
-                    models.Instance.vm_state == null()
-                    )
+                    models.Instance.vm_state == sql.null()
+                )
                 query_prefix = query_prefix.filter(not_soft_deleted)
 
     if 'cleaned' in filters:
@@ -1730,14 +1718,14 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
         query_prefix = query_prefix.filter(models.Tag.tag == first_tag)
 
         for tag in tags:
-            tag_alias = aliased(models.Tag)
+            tag_alias = orm.aliased(models.Tag)
             query_prefix = query_prefix.join(tag_alias,
                                              models.Instance.tags)
             query_prefix = query_prefix.filter(tag_alias.tag == tag)
 
     if 'tags-any' in filters:
         tags = filters.pop('tags-any')
-        tag_alias = aliased(models.Tag)
+        tag_alias = orm.aliased(models.Tag)
         query_prefix = query_prefix.join(tag_alias, models.Instance.tags)
         query_prefix = query_prefix.filter(tag_alias.tag.in_(tags))
 
@@ -1749,7 +1737,7 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
         subq = subq.filter(models.Tag.tag == first_tag)
 
         for tag in tags:
-            tag_alias = aliased(models.Tag)
+            tag_alias = orm.aliased(models.Tag)
             subq = subq.join(tag_alias, models.Instance.tags)
             subq = subq.filter(tag_alias.tag == tag)
 
@@ -1768,14 +1756,15 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
             filters['user_id'] = context.user_id
 
     if filters.pop('hidden', False):
-        query_prefix = query_prefix.filter(models.Instance.hidden == true())
+        query_prefix = query_prefix.filter(
+            models.Instance.hidden == sql.true())
     else:
         # If the query should not include hidden instances, then
         # filter instances with hidden=False or hidden=NULL because
         # older records may have no value set.
-        query_prefix = query_prefix.filter(or_(
-            models.Instance.hidden == false(),
-            models.Instance.hidden == null()))
+        query_prefix = query_prefix.filter(sql.or_(
+            models.Instance.hidden == sql.false(),
+            models.Instance.hidden == sql.null()))
 
     # Filters for exact matches that we can do along with the SQL query...
     # For other filters that don't match this, we will do regexp matching
@@ -1856,9 +1845,9 @@ def _model_get_uuid_by_sort_filters(context, model, sort_keys, sort_dirs,
     for skey, sdir, val in zip(sort_keys, sort_dirs, values):
         # Apply ordering to our query for the key, direction we're processing
         if sdir == 'desc':
-            query = query.order_by(desc(getattr(model, skey)))
+            query = query.order_by(expression.desc(getattr(model, skey)))
         else:
-            query = query.order_by(asc(getattr(model, skey)))
+            query = query.order_by(expression.asc(getattr(model, skey)))
 
         # Build a list of equivalence requirements on keys we've already
         # processed through the loop. In other words, if we're adding
@@ -1869,8 +1858,8 @@ def _model_get_uuid_by_sort_filters(context, model, sort_keys, sort_dirs,
                 (getattr(model, sort_keys[equal_attr]) == values[equal_attr]))
 
         model_attr = getattr(model, skey)
-        if isinstance(model_attr.type, Boolean):
-            model_attr = cast(model_attr, Integer)
+        if isinstance(model_attr.type, sa.Boolean):
+            model_attr = expression.cast(model_attr, sa.Integer)
             val = int(val)
 
         if skey == sort_keys[-1]:
@@ -1890,11 +1879,11 @@ def _model_get_uuid_by_sort_filters(context, model, sort_keys, sort_dirs,
 
         # AND together all the above
         crit_attrs.append(crit)
-        criteria.append(and_(*crit_attrs))
+        criteria.append(sql.and_(*crit_attrs))
         key_index += 1
 
     # OR together all the ANDs
-    query = query.filter(or_(*criteria))
+    query = query.filter(sql.or_(*criteria))
 
     # We can't raise InstanceNotFound because we don't have a uuid to
     # be looking for, so just return nothing if no match.
@@ -2130,12 +2119,13 @@ def instance_get_active_by_window_joined(context, begin, end=None,
 
     for column in columns_to_join_new:
         if 'extra.' in column:
-            query = query.options(undefer(column))
+            query = query.options(orm.undefer(column))
         else:
-            query = query.options(joinedload(column))
+            query = query.options(orm.joinedload(column))
 
-    query = query.filter(or_(models.Instance.terminated_at == null(),
-                             models.Instance.terminated_at > begin))
+    query = query.filter(sql.or_(
+        models.Instance.terminated_at == sql.null(),
+        models.Instance.terminated_at > begin))
     if end:
         query = query.filter(models.Instance.launched_at < end)
     if project_id:
@@ -2165,9 +2155,9 @@ def _instance_get_all_query(context, project_only=False, joins=None):
                         project_only=project_only)
     for column in joins:
         if 'extra.' in column:
-            query = query.options(undefer(column))
+            query = query.options(orm.undefer(column))
         else:
-            query = query.options(joinedload(column))
+            query = query.options(orm.joinedload(column))
     return query
 
 
@@ -2581,7 +2571,7 @@ def instance_extra_get_by_instance_uuid(
         columns = ['numa_topology', 'pci_requests', 'flavor', 'vcpu_model',
                    'trusted_certs', 'resources', 'migration_context']
     for column in columns:
-        query = query.options(undefer(column))
+        query = query.options(orm.undefer(column))
     instance_extra = query.first()
     return instance_extra
 
@@ -2875,7 +2865,7 @@ def _block_device_mapping_get_query(context, columns_to_join=None):
     query = model_query(context, models.BlockDeviceMapping)
 
     for column in columns_to_join:
-        query = query.options(joinedload(column))
+        query = query.options(orm.joinedload(column))
 
     return query
 
@@ -3408,10 +3398,13 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
     # and the instance is in VERIFY_RESIZE state, so the end state
     # for a resize is actually 'confirmed' or 'reverted'.
     return model_query(context, models.Migration).\
-            filter(or_(and_(models.Migration.source_compute == host,
-                            models.Migration.source_node == node),
-                       and_(models.Migration.dest_compute == host,
-                            models.Migration.dest_node == node))).\
+            filter(sql.or_(
+                sql.and_(
+                    models.Migration.source_compute == host,
+                    models.Migration.source_node == node),
+                sql.and_(
+                    models.Migration.dest_compute == host,
+                    models.Migration.dest_node == node))).\
             filter(~models.Migration.status.in_(['confirmed', 'reverted',
                                                  'error', 'failed',
                                                  'completed', 'cancelled',
@@ -3465,15 +3458,17 @@ def migration_get_all_by_filters(context, filters,
         query = query.filter(models.Migration.status.in_(status))
     if "host" in filters:
         host = filters["host"]
-        query = query.filter(or_(models.Migration.source_compute == host,
-                                 models.Migration.dest_compute == host))
+        query = query.filter(sql.or_(
+            models.Migration.source_compute == host,
+            models.Migration.dest_compute == host))
     elif "source_compute" in filters:
         host = filters['source_compute']
         query = query.filter(models.Migration.source_compute == host)
     if "node" in filters:
         node = filters['node']
-        query = query.filter(or_(models.Migration.source_node == node,
-                                 models.Migration.dest_node == node))
+        query = query.filter(sql.or_(
+            models.Migration.source_node == node,
+            models.Migration.dest_node == node))
     if "migration_type" in filters:
         migtype = filters["migration_type"]
         query = query.filter(models.Migration.migration_type == migtype)
@@ -3551,10 +3546,13 @@ def migration_get_in_progress_and_error_by_host_and_node(context, host, node):
     host and node.
     """
     return model_query(context, models.Migration).\
-            filter(or_(and_(models.Migration.source_compute == host,
-                            models.Migration.source_node == node),
-                       and_(models.Migration.dest_compute == host,
-                            models.Migration.dest_node == node))).\
+            filter(sql.or_(
+                sql.and_(
+                    models.Migration.source_compute == host,
+                    models.Migration.source_node == node),
+                sql.and_(
+                    models.Migration.dest_compute == host,
+                    models.Migration.dest_node == node))).\
             filter(~models.Migration.status.in_(['confirmed', 'reverted',
                                                  'failed', 'completed',
                                                  'cancelled', 'done'])).\
@@ -3738,11 +3736,11 @@ def bw_usage_update(
     # same record is updated every time. It can be removed after adding
     # unique constraint to this model.
     bw_usage = model_query(context, models.BandwidthUsage,
-            read_deleted='yes').\
-                    filter_by(start_period=ts_values['start_period']).\
-                    filter_by(uuid=uuid).\
-                    filter_by(mac=mac).\
-                    order_by(asc(models.BandwidthUsage.id)).first()
+        read_deleted='yes').\
+            filter_by(start_period=ts_values['start_period']).\
+            filter_by(uuid=uuid).\
+            filter_by(mac=mac).\
+            order_by(expression.asc(models.BandwidthUsage.id)).first()
 
     if bw_usage:
         bw_usage.update(values)
@@ -3770,11 +3768,12 @@ def bw_usage_update(
 def vol_get_usage_by_time(context, begin):
     """Return volumes usage that have been updated after a specified time."""
     return model_query(context, models.VolumeUsage, read_deleted="yes").\
-                   filter(or_(models.VolumeUsage.tot_last_refreshed == null(),
-                              models.VolumeUsage.tot_last_refreshed > begin,
-                              models.VolumeUsage.curr_last_refreshed == null(),
-                              models.VolumeUsage.curr_last_refreshed > begin,
-                              )).all()
+        filter(sql.or_(
+            models.VolumeUsage.tot_last_refreshed == sql.null(),
+            models.VolumeUsage.tot_last_refreshed > begin,
+            models.VolumeUsage.curr_last_refreshed == sql.null(),
+            models.VolumeUsage.curr_last_refreshed > begin,
+        )).all()
 
 
 @require_context
@@ -3992,8 +3991,9 @@ def instance_fault_get_by_instance_uuids(
         query = query.join(latest_faults,
                            faults_tbl.c.id == latest_faults.c.max_id)
     else:
-        query = query.filter(models.InstanceFault.instance_uuid.in_(
-                                        instance_uuids)).order_by(desc("id"))
+        query = query.filter(
+            models.InstanceFault.instance_uuid.in_(instance_uuids)
+        ).order_by(expression.desc("id"))
 
     output = {}
     for instance_uuid in instance_uuids:
@@ -4071,18 +4071,18 @@ def action_get_by_request_id(context, instance_uuid, request_id):
 
 def _action_get_by_request_id(context, instance_uuid, request_id):
     result = model_query(context, models.InstanceAction).\
-                         filter_by(instance_uuid=instance_uuid).\
-                         filter_by(request_id=request_id).\
-                         order_by(desc("created_at"), desc("id")).\
-                         first()
+        filter_by(instance_uuid=instance_uuid).\
+        filter_by(request_id=request_id).\
+        order_by(expression.desc("created_at"), expression.desc("id")).\
+        first()
     return result
 
 
 def _action_get_last_created_by_instance_uuid(context, instance_uuid):
-    result = (model_query(context, models.InstanceAction).
-                     filter_by(instance_uuid=instance_uuid).
-                     order_by(desc("created_at"), desc("id")).
-                     first())
+    result = model_query(context, models.InstanceAction).\
+        filter_by(instance_uuid=instance_uuid).\
+        order_by(expression.desc("created_at"), expression.desc("id")).\
+        first()
     return result
 
 
@@ -4180,9 +4180,9 @@ def action_event_finish(context, values):
 def action_events_get(context, action_id):
     """Get the events by action id."""
     events = model_query(context, models.InstanceActionEvent).\
-                         filter_by(action_id=action_id).\
-                         order_by(desc("created_at"), desc("id")).\
-                         all()
+        filter_by(action_id=action_id).\
+        order_by(expression.desc("created_at"), expression.desc("id")).\
+        all()
 
     return events
 
@@ -4376,9 +4376,9 @@ def _get_fk_stmts(metadata, conn, table, column, records):
         # Create the shadow table for the referencing table.
         fk_shadow_tablename = _SHADOW_TABLE_PREFIX + fk_table.name
         try:
-            fk_shadow_table = Table(fk_shadow_tablename, metadata,
-                                    autoload=True)
-        except NoSuchTableError:
+            fk_shadow_table = schema.Table(
+                fk_shadow_tablename, metadata, autoload=True)
+        except sqla_exc.NoSuchTableError:
             # No corresponding shadow table; skip it.
             continue
 
@@ -4472,8 +4472,8 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before,
     rows_archived = 0
     deleted_instance_uuids = []
     try:
-        shadow_table = Table(shadow_tablename, metadata, autoload=True)
-    except NoSuchTableError:
+        shadow_table = schema.Table(shadow_tablename, metadata, autoload=True)
+    except sqla_exc.NoSuchTableError:
         # No corresponding shadow table; skip it.
         return rows_archived, deleted_instance_uuids, {}
 
@@ -4589,7 +4589,7 @@ def archive_deleted_rows(context=None, max_rows=None, before=None,
     table_to_rows_archived = collections.defaultdict(int)
     deleted_instance_uuids = []
     total_rows_archived = 0
-    meta = MetaData(get_engine(use_slave=True, context=context))
+    meta = sa.MetaData(get_engine(use_slave=True, context=context))
     meta.reflect()
     # Get the sorted list of tables in order of foreign key dependency.
     # Process the parent tables and find their dependent records in order to
@@ -4634,7 +4634,7 @@ def _purgeable_tables(metadata):
 def purge_shadow_tables(context, before_date, status_fn=None):
     engine = get_engine(context=context)
     conn = engine.connect()
-    metadata = MetaData()
+    metadata = sa.MetaData()
     metadata.bind = engine
     metadata.reflect()
     total_deleted = 0

@@ -11,7 +11,7 @@
 #    under the License.
 
 from oslo_db import exception as db_exc
-from sqlalchemy.orm import joinedload
+from sqlalchemy import orm
 
 from nova import context
 from nova.db.sqlalchemy import api as db_api
@@ -89,9 +89,9 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
     @staticmethod
     @db_api.api_context_manager.reader
     def _get_by_host_from_db(context, host):
-        db_mapping = (context.session.query(api_models.HostMapping)
-                      .options(joinedload('cell_mapping'))
-                      .filter(api_models.HostMapping.host == host)).first()
+        db_mapping = context.session.query(api_models.HostMapping)\
+            .options(orm.joinedload('cell_mapping'))\
+            .filter(api_models.HostMapping.host == host).first()
         if not db_mapping:
             raise exception.HostMappingNotFound(name=host)
         return db_mapping
@@ -160,7 +160,7 @@ class HostMappingList(base.ObjectListBase, base.NovaObject):
     @db_api.api_context_manager.reader
     def _get_from_db(context, cell_id=None):
         query = (context.session.query(api_models.HostMapping)
-                 .options(joinedload('cell_mapping')))
+                 .options(orm.joinedload('cell_mapping')))
         if cell_id:
             query = query.filter(api_models.HostMapping.cell_id == cell_id)
         return query.all()

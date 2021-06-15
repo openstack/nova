@@ -22,21 +22,21 @@ SQLAlchemy models for nova data.
 from oslo_config import cfg
 from oslo_db.sqlalchemy import models
 from oslo_utils import timeutils
-from sqlalchemy import (Column, Index, Integer, BigInteger, Enum, String,
-                        schema, Unicode)
-from sqlalchemy.dialects.mysql import MEDIUMTEXT
-from sqlalchemy.ext.declarative import declarative_base
+import sqlalchemy as sa
+import sqlalchemy.dialects.mysql
+from sqlalchemy.ext import declarative
 from sqlalchemy import orm
-from sqlalchemy import ForeignKey, DateTime, Boolean, Text, Float
+from sqlalchemy import schema
 
 from nova.db.sqlalchemy import types
 
 CONF = cfg.CONF
-BASE = declarative_base()
+BASE = declarative.declarative_base()
 
 
 def MediumText():
-    return Text().with_variant(MEDIUMTEXT(), 'mysql')
+    return sa.Text().with_variant(
+        sqlalchemy.dialects.mysql.MEDIUMTEXT(), 'mysql')
 
 
 class NovaBase(models.TimestampMixin,
@@ -82,20 +82,20 @@ class Service(BASE, NovaBase, models.SoftDeleteMixin):
                                 name="uniq_services0host0topic0deleted"),
         schema.UniqueConstraint("host", "binary", "deleted",
                                 name="uniq_services0host0binary0deleted"),
-        Index('services_uuid_idx', 'uuid', unique=True),
+        sa.Index('services_uuid_idx', 'uuid', unique=True),
     )
 
-    id = Column(Integer, primary_key=True)
-    uuid = Column(String(36), nullable=True)
-    host = Column(String(255))
-    binary = Column(String(255))
-    topic = Column(String(255))
-    report_count = Column(Integer, nullable=False, default=0)
-    disabled = Column(Boolean, default=False)
-    disabled_reason = Column(String(255))
-    last_seen_up = Column(DateTime, nullable=True)
-    forced_down = Column(Boolean, default=False)
-    version = Column(Integer, default=0)
+    id = sa.Column(sa.Integer, primary_key=True)
+    uuid = sa.Column(sa.String(36), nullable=True)
+    host = sa.Column(sa.String(255))
+    binary = sa.Column(sa.String(255))
+    topic = sa.Column(sa.String(255))
+    report_count = sa.Column(sa.Integer, nullable=False, default=0)
+    disabled = sa.Column(sa.Boolean, default=False)
+    disabled_reason = sa.Column(sa.String(255))
+    last_seen_up = sa.Column(sa.DateTime, nullable=True)
+    forced_down = sa.Column(sa.Boolean, default=False)
+    version = sa.Column(sa.Integer, default=0)
 
     instance = orm.relationship(
         "Instance",
@@ -112,38 +112,38 @@ class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
 
     __tablename__ = 'compute_nodes'
     __table_args__ = (
-        Index('compute_nodes_uuid_idx', 'uuid', unique=True),
+        sa.Index('compute_nodes_uuid_idx', 'uuid', unique=True),
         schema.UniqueConstraint(
             'host', 'hypervisor_hostname', 'deleted',
             name="uniq_compute_nodes0host0hypervisor_hostname0deleted"),
     )
-    id = Column(Integer, primary_key=True)
-    service_id = Column(Integer, nullable=True)
+    id = sa.Column(sa.Integer, primary_key=True)
+    service_id = sa.Column(sa.Integer, nullable=True)
 
     # FIXME(sbauza: Host field is nullable because some old Juno compute nodes
     # can still report stats from an old ResourceTracker without setting this
     # field.
     # This field has to be set non-nullable in a later cycle (probably Lxxx)
     # once we are sure that all compute nodes in production report it.
-    host = Column(String(255), nullable=True)
-    uuid = Column(String(36), nullable=True)
-    vcpus = Column(Integer, nullable=False)
-    memory_mb = Column(Integer, nullable=False)
-    local_gb = Column(Integer, nullable=False)
-    vcpus_used = Column(Integer, nullable=False)
-    memory_mb_used = Column(Integer, nullable=False)
-    local_gb_used = Column(Integer, nullable=False)
-    hypervisor_type = Column(MediumText(), nullable=False)
-    hypervisor_version = Column(Integer, nullable=False)
-    hypervisor_hostname = Column(String(255))
+    host = sa.Column(sa.String(255), nullable=True)
+    uuid = sa.Column(sa.String(36), nullable=True)
+    vcpus = sa.Column(sa.Integer, nullable=False)
+    memory_mb = sa.Column(sa.Integer, nullable=False)
+    local_gb = sa.Column(sa.Integer, nullable=False)
+    vcpus_used = sa.Column(sa.Integer, nullable=False)
+    memory_mb_used = sa.Column(sa.Integer, nullable=False)
+    local_gb_used = sa.Column(sa.Integer, nullable=False)
+    hypervisor_type = sa.Column(MediumText(), nullable=False)
+    hypervisor_version = sa.Column(sa.Integer, nullable=False)
+    hypervisor_hostname = sa.Column(sa.String(255))
 
     # Free Ram, amount of activity (resize, migration, boot, etc) and
     # the number of running VM's are a good starting point for what's
     # important when making scheduling decisions.
-    free_ram_mb = Column(Integer)
-    free_disk_gb = Column(Integer)
-    current_workload = Column(Integer)
-    running_vms = Column(Integer)
+    free_ram_mb = sa.Column(sa.Integer)
+    free_disk_gb = sa.Column(sa.Integer)
+    current_workload = sa.Column(sa.Integer)
+    running_vms = sa.Column(sa.Integer)
 
     # Note(masumotok): Expected Strings example:
     #
@@ -155,77 +155,79 @@ class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
     # Points are "json translatable" and it must have all dictionary keys
     # above, since it is copied from <cpu> tag of getCapabilities()
     # (See libvirt.virtConnection).
-    cpu_info = Column(MediumText(), nullable=False)
-    disk_available_least = Column(Integer)
-    host_ip = Column(types.IPAddress())
-    supported_instances = Column(Text)
-    metrics = Column(Text)
+    cpu_info = sa.Column(MediumText(), nullable=False)
+    disk_available_least = sa.Column(sa.Integer)
+    host_ip = sa.Column(types.IPAddress())
+    supported_instances = sa.Column(sa.Text)
+    metrics = sa.Column(sa.Text)
 
     # Note(yongli): json string PCI Stats
     # '[{"vendor_id":"8086", "product_id":"1234", "count":3 }, ...]'
-    pci_stats = Column(Text)
+    pci_stats = sa.Column(sa.Text)
 
     # extra_resources is a json string containing arbitrary
     # data about additional resources.
-    extra_resources = Column(Text)
+    extra_resources = sa.Column(sa.Text)
 
     # json-encode string containing compute node statistics
-    stats = Column(Text, default='{}')
+    stats = sa.Column(sa.Text, default='{}')
 
     # json-encoded dict that contains NUMA topology as generated by
     # objects.NUMATopology._to_json()
-    numa_topology = Column(Text)
+    numa_topology = sa.Column(sa.Text)
 
     # allocation ratios provided by the RT
-    ram_allocation_ratio = Column(Float, nullable=True)
-    cpu_allocation_ratio = Column(Float, nullable=True)
-    disk_allocation_ratio = Column(Float, nullable=True)
-    mapped = Column(Integer, nullable=True, default=0)
+    ram_allocation_ratio = sa.Column(sa.Float, nullable=True)
+    cpu_allocation_ratio = sa.Column(sa.Float, nullable=True)
+    disk_allocation_ratio = sa.Column(sa.Float, nullable=True)
+    mapped = sa.Column(sa.Integer, nullable=True, default=0)
 
 
 class Certificate(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a x509 certificate."""
     __tablename__ = 'certificates'
     __table_args__ = (
-        Index('certificates_project_id_deleted_idx', 'project_id', 'deleted'),
-        Index('certificates_user_id_deleted_idx', 'user_id', 'deleted')
+        sa.Index(
+            'certificates_project_id_deleted_idx', 'project_id', 'deleted',
+        ),
+        sa.Index('certificates_user_id_deleted_idx', 'user_id', 'deleted')
     )
-    id = Column(Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True)
 
-    user_id = Column(String(255))
-    project_id = Column(String(255))
-    file_name = Column(String(255))
+    user_id = sa.Column(sa.String(255))
+    project_id = sa.Column(sa.String(255))
+    file_name = sa.Column(sa.String(255))
 
 
 class Instance(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a guest VM."""
     __tablename__ = 'instances'
     __table_args__ = (
-        Index('uuid', 'uuid', unique=True),
-        Index('instances_project_id_idx', 'project_id'),
-        Index('instances_project_id_deleted_idx',
+        sa.Index('uuid', 'uuid', unique=True),
+        sa.Index('instances_project_id_idx', 'project_id'),
+        sa.Index('instances_project_id_deleted_idx',
               'project_id', 'deleted'),
-        Index('instances_reservation_id_idx',
+        sa.Index('instances_reservation_id_idx',
               'reservation_id'),
-        Index('instances_terminated_at_launched_at_idx',
+        sa.Index('instances_terminated_at_launched_at_idx',
               'terminated_at', 'launched_at'),
-        Index('instances_uuid_deleted_idx',
+        sa.Index('instances_uuid_deleted_idx',
               'uuid', 'deleted'),
-        Index('instances_task_state_updated_at_idx',
+        sa.Index('instances_task_state_updated_at_idx',
               'task_state', 'updated_at'),
-        Index('instances_host_node_deleted_idx',
+        sa.Index('instances_host_node_deleted_idx',
               'host', 'node', 'deleted'),
-        Index('instances_host_deleted_cleaned_idx',
+        sa.Index('instances_host_deleted_cleaned_idx',
               'host', 'deleted', 'cleaned'),
-        Index('instances_deleted_created_at_idx',
+        sa.Index('instances_deleted_created_at_idx',
               'deleted', 'created_at'),
-        Index('instances_updated_at_project_id_idx',
+        sa.Index('instances_updated_at_project_id_idx',
               'updated_at', 'project_id'),
         schema.UniqueConstraint('uuid', name='uniq_instances0uuid'),
     )
     injected_files = []
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 
     @property
     def name(self):
@@ -253,106 +255,107 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
     def _extra_keys(self):
         return ['name']
 
-    user_id = Column(String(255))
-    project_id = Column(String(255))
+    user_id = sa.Column(sa.String(255))
+    project_id = sa.Column(sa.String(255))
 
-    image_ref = Column(String(255))
-    kernel_id = Column(String(255))
-    ramdisk_id = Column(String(255))
-    hostname = Column(String(255))
+    image_ref = sa.Column(sa.String(255))
+    kernel_id = sa.Column(sa.String(255))
+    ramdisk_id = sa.Column(sa.String(255))
+    hostname = sa.Column(sa.String(255))
 
-    launch_index = Column(Integer)
-    key_name = Column(String(255))
-    key_data = Column(MediumText())
+    launch_index = sa.Column(sa.Integer)
+    key_name = sa.Column(sa.String(255))
+    key_data = sa.Column(MediumText())
 
-    power_state = Column(Integer)
-    vm_state = Column(String(255))
-    task_state = Column(String(255))
+    power_state = sa.Column(sa.Integer)
+    vm_state = sa.Column(sa.String(255))
+    task_state = sa.Column(sa.String(255))
 
-    memory_mb = Column(Integer)
-    vcpus = Column(Integer)
-    root_gb = Column(Integer)
-    ephemeral_gb = Column(Integer)
-    ephemeral_key_uuid = Column(String(36))
+    memory_mb = sa.Column(sa.Integer)
+    vcpus = sa.Column(sa.Integer)
+    root_gb = sa.Column(sa.Integer)
+    ephemeral_gb = sa.Column(sa.Integer)
+    ephemeral_key_uuid = sa.Column(sa.String(36))
 
     # This is not related to hostname, above.  It refers
     #  to the nova node.
-    host = Column(String(255))
+    host = sa.Column(sa.String(255))
     # To identify the "ComputeNode" which the instance resides in.
     # This equals to ComputeNode.hypervisor_hostname.
-    node = Column(String(255))
+    node = sa.Column(sa.String(255))
 
     # *not* flavorid, this is the internal primary_key
-    instance_type_id = Column(Integer)
+    instance_type_id = sa.Column(sa.Integer)
 
-    user_data = Column(MediumText())
+    user_data = sa.Column(MediumText())
 
-    reservation_id = Column(String(255))
+    reservation_id = sa.Column(sa.String(255))
 
-    launched_at = Column(DateTime)
-    terminated_at = Column(DateTime)
+    launched_at = sa.Column(sa.DateTime)
+    terminated_at = sa.Column(sa.DateTime)
 
     # This always refers to the availability_zone kwarg passed in /servers and
     # provided as an API option, not at all related to the host AZ the instance
     # belongs to.
-    availability_zone = Column(String(255))
+    availability_zone = sa.Column(sa.String(255))
 
     # User editable field for display in user-facing UIs
-    display_name = Column(String(255))
-    display_description = Column(String(255))
+    display_name = sa.Column(sa.String(255))
+    display_description = sa.Column(sa.String(255))
 
     # To remember on which host an instance booted.
     # An instance may have moved to another host by live migration.
-    launched_on = Column(MediumText())
+    launched_on = sa.Column(MediumText())
 
     # locked is superseded by locked_by and locked is not really
     # necessary but still used in API code so it remains.
-    locked = Column(Boolean)
-    locked_by = Column(Enum('owner', 'admin', name='instances0locked_by'))
+    locked = sa.Column(sa.Boolean)
+    locked_by = sa.Column(
+        sa.Enum('owner', 'admin', name='instances0locked_by'))
 
-    os_type = Column(String(255))
-    architecture = Column(String(255))
-    vm_mode = Column(String(255))
-    uuid = Column(String(36), nullable=False)
+    os_type = sa.Column(sa.String(255))
+    architecture = sa.Column(sa.String(255))
+    vm_mode = sa.Column(sa.String(255))
+    uuid = sa.Column(sa.String(36), nullable=False)
 
-    root_device_name = Column(String(255))
-    default_ephemeral_device = Column(String(255))
-    default_swap_device = Column(String(255))
-    config_drive = Column(String(255))
+    root_device_name = sa.Column(sa.String(255))
+    default_ephemeral_device = sa.Column(sa.String(255))
+    default_swap_device = sa.Column(sa.String(255))
+    config_drive = sa.Column(sa.String(255))
 
     # User editable field meant to represent what ip should be used
     # to connect to the instance
-    access_ip_v4 = Column(types.IPAddress())
-    access_ip_v6 = Column(types.IPAddress())
+    access_ip_v4 = sa.Column(types.IPAddress())
+    access_ip_v6 = sa.Column(types.IPAddress())
 
-    auto_disk_config = Column(Boolean())
-    progress = Column(Integer)
+    auto_disk_config = sa.Column(sa.Boolean())
+    progress = sa.Column(sa.Integer)
 
     # EC2 instance_initiated_shutdown_terminate
     # True: -> 'terminate'
     # False: -> 'stop'
     # Note(maoy): currently Nova will always stop instead of terminate
     # no matter what the flag says. So we set the default to False.
-    shutdown_terminate = Column(Boolean(), default=False)
+    shutdown_terminate = sa.Column(sa.Boolean(), default=False)
 
     # EC2 disable_api_termination
-    disable_terminate = Column(Boolean(), default=False)
+    disable_terminate = sa.Column(sa.Boolean(), default=False)
 
     # OpenStack compute cell name.  This will only be set at the top of
     # the cells tree and it'll be a full cell name such as 'api!hop1!hop2'
     # TODO(stephenfin): Remove this
-    cell_name = Column(String(255))
+    cell_name = sa.Column(sa.String(255))
 
     # NOTE(pumaranikar): internal_id attribute is no longer used (bug 1441242)
     # Hence, removing from object layer in current release (Ocata) and will
     # treated as deprecated. The column can be removed from schema with
     # a migration at the start of next release.
-    # internal_id = Column(Integer)
+    # internal_id = sa.Column(sa.Integer)
 
     # Records whether an instance has been deleted from disk
-    cleaned = Column(Integer, default=0)
+    cleaned = sa.Column(sa.Integer, default=0)
 
-    hidden = Column(Boolean, default=False)
+    hidden = sa.Column(sa.Boolean, default=False)
 
 
 class InstanceInfoCache(BASE, NovaBase, models.SoftDeleteMixin):
@@ -363,12 +366,12 @@ class InstanceInfoCache(BASE, NovaBase, models.SoftDeleteMixin):
         schema.UniqueConstraint(
             "instance_uuid",
             name="uniq_instance_info_caches0instance_uuid"),)
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 
     # text column used for storing a json object of network data for api
-    network_info = Column(MediumText())
+    network_info = sa.Column(MediumText())
 
-    instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
+    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'),
                            nullable=False)
     instance = orm.relationship(Instance,
                             backref=orm.backref('info_cache', uselist=False),
@@ -379,21 +382,21 @@ class InstanceInfoCache(BASE, NovaBase, models.SoftDeleteMixin):
 class InstanceExtra(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'instance_extra'
     __table_args__ = (
-        Index('instance_extra_idx', 'instance_uuid'),)
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
+        sa.Index('instance_extra_idx', 'instance_uuid'),)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'),
                            nullable=False)
-    device_metadata = orm.deferred(Column(Text))
-    numa_topology = orm.deferred(Column(Text))
-    pci_requests = orm.deferred(Column(Text))
-    flavor = orm.deferred(Column(Text))
-    vcpu_model = orm.deferred(Column(Text))
-    migration_context = orm.deferred(Column(Text))
-    keypairs = orm.deferred(Column(Text))
-    trusted_certs = orm.deferred(Column(Text))
+    device_metadata = orm.deferred(sa.Column(sa.Text))
+    numa_topology = orm.deferred(sa.Column(sa.Text))
+    pci_requests = orm.deferred(sa.Column(sa.Text))
+    flavor = orm.deferred(sa.Column(sa.Text))
+    vcpu_model = orm.deferred(sa.Column(sa.Text))
+    migration_context = orm.deferred(sa.Column(sa.Text))
+    keypairs = orm.deferred(sa.Column(sa.Text))
+    trusted_certs = orm.deferred(sa.Column(sa.Text))
     # NOTE(Luyao): 'vpmems' is still in the database
     # and can be removed in the future release.
-    resources = orm.deferred(Column(Text))
+    resources = orm.deferred(sa.Column(sa.Text))
     instance = orm.relationship(Instance,
                             backref=orm.backref('extra',
                                                 uselist=False),
@@ -419,19 +422,19 @@ class InstanceTypes(BASE, NovaBase, models.SoftDeleteMixin):
     )
 
     # Internal only primary key/id
-    id = Column(Integer, primary_key=True)
-    name = Column(String(255))
-    memory_mb = Column(Integer, nullable=False)
-    vcpus = Column(Integer, nullable=False)
-    root_gb = Column(Integer)
-    ephemeral_gb = Column(Integer)
+    id = sa.Column(sa.Integer, primary_key=True)
+    name = sa.Column(sa.String(255))
+    memory_mb = sa.Column(sa.Integer, nullable=False)
+    vcpus = sa.Column(sa.Integer, nullable=False)
+    root_gb = sa.Column(sa.Integer)
+    ephemeral_gb = sa.Column(sa.Integer)
     # Public facing id will be renamed public_id
-    flavorid = Column(String(255))
-    swap = Column(Integer, nullable=False, default=0)
-    rxtx_factor = Column(Float, default=1)
-    vcpu_weight = Column(Integer)
-    disabled = Column(Boolean, default=False)
-    is_public = Column(Boolean, default=True)
+    flavorid = sa.Column(sa.String(255))
+    swap = sa.Column(sa.Integer, nullable=False, default=0)
+    rxtx_factor = sa.Column(sa.Float, default=1)
+    vcpu_weight = sa.Column(sa.Integer)
+    disabled = sa.Column(sa.Boolean, default=False)
+    is_public = sa.Column(sa.Boolean, default=True)
 
 
 class Quota(BASE, NovaBase, models.SoftDeleteMixin):
@@ -450,12 +453,12 @@ class Quota(BASE, NovaBase, models.SoftDeleteMixin):
         name="uniq_quotas0project_id0resource0deleted"
         ),
     )
-    id = Column(Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True)
 
-    project_id = Column(String(255))
+    project_id = sa.Column(sa.String(255))
 
-    resource = Column(String(255), nullable=False)
-    hard_limit = Column(Integer)
+    resource = sa.Column(sa.String(255), nullable=False)
+    hard_limit = sa.Column(sa.Integer)
 
 
 class ProjectUserQuota(BASE, NovaBase, models.SoftDeleteMixin):
@@ -466,18 +469,18 @@ class ProjectUserQuota(BASE, NovaBase, models.SoftDeleteMixin):
     __table_args__ = (
         schema.UniqueConstraint("user_id", "project_id", "resource", "deleted",
                                 name=uniq_name),
-        Index('project_user_quotas_project_id_deleted_idx',
+        sa.Index('project_user_quotas_project_id_deleted_idx',
               'project_id', 'deleted'),
-        Index('project_user_quotas_user_id_deleted_idx',
+        sa.Index('project_user_quotas_user_id_deleted_idx',
               'user_id', 'deleted')
     )
-    id = Column(Integer, primary_key=True, nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
 
-    project_id = Column(String(255), nullable=False)
-    user_id = Column(String(255), nullable=False)
+    project_id = sa.Column(sa.String(255), nullable=False)
+    user_id = sa.Column(sa.String(255), nullable=False)
 
-    resource = Column(String(255), nullable=False)
-    hard_limit = Column(Integer)
+    resource = sa.Column(sa.String(255), nullable=False)
+    hard_limit = sa.Column(sa.Integer)
 
 
 class QuotaClass(BASE, NovaBase, models.SoftDeleteMixin):
@@ -490,14 +493,14 @@ class QuotaClass(BASE, NovaBase, models.SoftDeleteMixin):
 
     __tablename__ = 'quota_classes'
     __table_args__ = (
-        Index('ix_quota_classes_class_name', 'class_name'),
+        sa.Index('ix_quota_classes_class_name', 'class_name'),
     )
-    id = Column(Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True)
 
-    class_name = Column(String(255))
+    class_name = sa.Column(sa.String(255))
 
-    resource = Column(String(255))
-    hard_limit = Column(Integer)
+    resource = sa.Column(sa.String(255))
+    hard_limit = sa.Column(sa.Integer)
 
 
 class QuotaUsage(BASE, NovaBase, models.SoftDeleteMixin):
@@ -505,23 +508,23 @@ class QuotaUsage(BASE, NovaBase, models.SoftDeleteMixin):
 
     __tablename__ = 'quota_usages'
     __table_args__ = (
-        Index('ix_quota_usages_project_id', 'project_id'),
-        Index('ix_quota_usages_user_id_deleted', 'user_id', 'deleted'),
+        sa.Index('ix_quota_usages_project_id', 'project_id'),
+        sa.Index('ix_quota_usages_user_id_deleted', 'user_id', 'deleted'),
     )
-    id = Column(Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True)
 
-    project_id = Column(String(255))
-    user_id = Column(String(255))
-    resource = Column(String(255), nullable=False)
+    project_id = sa.Column(sa.String(255))
+    user_id = sa.Column(sa.String(255))
+    resource = sa.Column(sa.String(255), nullable=False)
 
-    in_use = Column(Integer, nullable=False)
-    reserved = Column(Integer, nullable=False)
+    in_use = sa.Column(sa.Integer, nullable=False)
+    reserved = sa.Column(sa.Integer, nullable=False)
 
     @property
     def total(self):
         return self.in_use + self.reserved
 
-    until_refresh = Column(Integer)
+    until_refresh = sa.Column(sa.Integer)
 
 
 class Reservation(BASE, NovaBase, models.SoftDeleteMixin):
@@ -529,22 +532,23 @@ class Reservation(BASE, NovaBase, models.SoftDeleteMixin):
 
     __tablename__ = 'reservations'
     __table_args__ = (
-        Index('ix_reservations_project_id', 'project_id'),
-        Index('reservations_uuid_idx', 'uuid'),
-        Index('reservations_deleted_expire_idx', 'deleted', 'expire'),
-        Index('ix_reservations_user_id_deleted', 'user_id', 'deleted'),
+        sa.Index('ix_reservations_project_id', 'project_id'),
+        sa.Index('reservations_uuid_idx', 'uuid'),
+        sa.Index('reservations_deleted_expire_idx', 'deleted', 'expire'),
+        sa.Index('ix_reservations_user_id_deleted', 'user_id', 'deleted'),
     )
-    id = Column(Integer, primary_key=True, nullable=False)
-    uuid = Column(String(36), nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    uuid = sa.Column(sa.String(36), nullable=False)
 
-    usage_id = Column(Integer, ForeignKey('quota_usages.id'), nullable=False)
+    usage_id = sa.Column(
+        sa.Integer, sa.ForeignKey('quota_usages.id'), nullable=False)
 
-    project_id = Column(String(255))
-    user_id = Column(String(255))
-    resource = Column(String(255))
+    project_id = sa.Column(sa.String(255))
+    user_id = sa.Column(sa.String(255))
+    resource = sa.Column(sa.String(255))
 
-    delta = Column(Integer, nullable=False)
-    expire = Column(DateTime)
+    delta = sa.Column(sa.Integer, nullable=False)
+    expire = sa.Column(sa.DateTime)
 
     usage = orm.relationship(
         "QuotaUsage",
@@ -559,49 +563,49 @@ class Snapshot(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a block storage device that can be attached to a VM."""
     __tablename__ = 'snapshots'
     __table_args__ = ()
-    id = Column(String(36), primary_key=True, nullable=False)
-    deleted = Column(String(36), default="")
+    id = sa.Column(sa.String(36), primary_key=True, nullable=False)
+    deleted = sa.Column(sa.String(36), default="")
 
     @property
     def volume_name(self):
         return CONF.volume_name_template % self.volume_id
 
-    user_id = Column(String(255))
-    project_id = Column(String(255))
+    user_id = sa.Column(sa.String(255))
+    project_id = sa.Column(sa.String(255))
 
-    volume_id = Column(String(36), nullable=False)
-    status = Column(String(255))
-    progress = Column(String(255))
-    volume_size = Column(Integer)
-    scheduled_at = Column(DateTime)
+    volume_id = sa.Column(sa.String(36), nullable=False)
+    status = sa.Column(sa.String(255))
+    progress = sa.Column(sa.String(255))
+    volume_size = sa.Column(sa.Integer)
+    scheduled_at = sa.Column(sa.DateTime)
 
-    display_name = Column(String(255))
-    display_description = Column(String(255))
+    display_name = sa.Column(sa.String(255))
+    display_description = sa.Column(sa.String(255))
 
 
 class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents block device mapping that is defined by EC2."""
     __tablename__ = "block_device_mapping"
     __table_args__ = (
-        Index('snapshot_id', 'snapshot_id'),
-        Index('volume_id', 'volume_id'),
-        Index('block_device_mapping_instance_uuid_device_name_idx',
+        sa.Index('snapshot_id', 'snapshot_id'),
+        sa.Index('volume_id', 'volume_id'),
+        sa.Index('block_device_mapping_instance_uuid_device_name_idx',
               'instance_uuid', 'device_name'),
-        Index('block_device_mapping_instance_uuid_volume_id_idx',
+        sa.Index('block_device_mapping_instance_uuid_volume_id_idx',
               'instance_uuid', 'volume_id'),
-        Index('block_device_mapping_instance_uuid_idx', 'instance_uuid'),
+        sa.Index('block_device_mapping_instance_uuid_idx', 'instance_uuid'),
         schema.UniqueConstraint('uuid', name='uniq_block_device_mapping0uuid'),
     )
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 
-    instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
+    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
     # NOTE(mdbooth): The REST API for BDMs includes a UUID field. That uuid
     # refers to an image, volume, or snapshot which will be used in the
     # initialisation of the BDM. It is only relevant during the API call, and
     # is not persisted directly. This is the UUID of the BDM itself.
     # FIXME(danms): This should eventually be non-nullable, but we need a
     # transition period first.
-    uuid = Column(String(36))
+    uuid = sa.Column(sa.String(36))
     instance = orm.relationship(Instance,
                             backref=orm.backref('block_device_mapping'),
                             foreign_keys=instance_uuid,
@@ -611,51 +615,52 @@ class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
                                               'BlockDeviceMapping.deleted=='
                                               '0)')
 
-    source_type = Column(String(255))
-    destination_type = Column(String(255))
-    guest_format = Column(String(255))
-    device_type = Column(String(255))
-    disk_bus = Column(String(255))
+    source_type = sa.Column(sa.String(255))
+    destination_type = sa.Column(sa.String(255))
+    guest_format = sa.Column(sa.String(255))
+    device_type = sa.Column(sa.String(255))
+    disk_bus = sa.Column(sa.String(255))
 
-    boot_index = Column(Integer)
+    boot_index = sa.Column(sa.Integer)
 
-    device_name = Column(String(255))
+    device_name = sa.Column(sa.String(255))
 
     # default=False for compatibility of the existing code.
     # With EC2 API,
     # default True for ami specified device.
     # default False for created with other timing.
     # TODO(sshturm) add default in db
-    delete_on_termination = Column(Boolean, default=False)
+    delete_on_termination = sa.Column(sa.Boolean, default=False)
 
-    snapshot_id = Column(String(36))
+    snapshot_id = sa.Column(sa.String(36))
 
-    volume_id = Column(String(36))
-    volume_size = Column(Integer)
+    volume_id = sa.Column(sa.String(36))
+    volume_size = sa.Column(sa.Integer)
 
-    volume_type = Column(String(255))
+    volume_type = sa.Column(sa.String(255))
 
-    image_id = Column(String(36))
+    image_id = sa.Column(sa.String(36))
 
     # for no device to suppress devices.
-    no_device = Column(Boolean)
+    no_device = sa.Column(sa.Boolean)
 
-    connection_info = Column(MediumText())
+    connection_info = sa.Column(MediumText())
 
-    tag = Column(String(255))
+    tag = sa.Column(sa.String(255))
 
-    attachment_id = Column(String(36))
+    attachment_id = sa.Column(sa.String(36))
 
 
 class SecurityGroupInstanceAssociation(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'security_group_instance_association'
     __table_args__ = (
-        Index('security_group_instance_association_instance_uuid_idx',
+        sa.Index('security_group_instance_association_instance_uuid_idx',
               'instance_uuid'),
     )
-    id = Column(Integer, primary_key=True, nullable=False)
-    security_group_id = Column(Integer, ForeignKey('security_groups.id'))
-    instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    security_group_id = sa.Column(
+        sa.Integer, sa.ForeignKey('security_groups.id'))
+    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
 
 
 class SecurityGroup(BASE, NovaBase, models.SoftDeleteMixin):
@@ -666,12 +671,12 @@ class SecurityGroup(BASE, NovaBase, models.SoftDeleteMixin):
                                 name='uniq_security_groups0project_id0'
                                      'name0deleted'),
     )
-    id = Column(Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True)
 
-    name = Column(String(255))
-    description = Column(String(255))
-    user_id = Column(String(255))
-    project_id = Column(String(255))
+    name = sa.Column(sa.String(255))
+    description = sa.Column(sa.String(255))
+    user_id = sa.Column(sa.String(255))
+    project_id = sa.Column(sa.String(255))
 
     instances = orm.relationship(Instance,
                              secondary="security_group_instance_association",
@@ -695,23 +700,24 @@ class SecurityGroupIngressRule(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a rule in a security group."""
     __tablename__ = 'security_group_rules'
     __table_args__ = ()
-    id = Column(Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True)
 
-    parent_group_id = Column(Integer, ForeignKey('security_groups.id'))
+    parent_group_id = sa.Column(
+        sa.Integer, sa.ForeignKey('security_groups.id'))
     parent_group = orm.relationship("SecurityGroup", backref="rules",
                                 foreign_keys=parent_group_id,
                                 primaryjoin='and_('
         'SecurityGroupIngressRule.parent_group_id == SecurityGroup.id,'
         'SecurityGroupIngressRule.deleted == 0)')
 
-    protocol = Column(String(255))
-    from_port = Column(Integer)
-    to_port = Column(Integer)
-    cidr = Column(types.CIDR())
+    protocol = sa.Column(sa.String(255))
+    from_port = sa.Column(sa.Integer)
+    to_port = sa.Column(sa.Integer)
+    cidr = sa.Column(types.CIDR())
 
     # Note: This is not the parent SecurityGroup. It's SecurityGroup we're
     # granting access for.
-    group_id = Column(Integer, ForeignKey('security_groups.id'))
+    group_id = sa.Column(sa.Integer, sa.ForeignKey('security_groups.id'))
     grantee_group = orm.relationship("SecurityGroup",
                                  foreign_keys=group_id,
                                  primaryjoin='and_('
@@ -724,11 +730,11 @@ class SecurityGroupIngressRule(BASE, NovaBase, models.SoftDeleteMixin):
 class SecurityGroupIngressDefaultRule(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'security_group_default_rules'
     __table_args__ = ()
-    id = Column(Integer, primary_key=True, nullable=False)
-    protocol = Column(String(5))  # "tcp", "udp" or "icmp"
-    from_port = Column(Integer)
-    to_port = Column(Integer)
-    cidr = Column(types.CIDR())
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    protocol = sa.Column(sa.String(5))  # "tcp", "udp" or "icmp"
+    from_port = sa.Column(sa.Integer)
+    to_port = sa.Column(sa.Integer)
+    cidr = sa.Column(types.CIDR())
 
 
 # TODO(stephenfin): Remove this in the V release or later, once we're sure we
@@ -737,12 +743,12 @@ class ProviderFirewallRule(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a rule in a security group."""
     __tablename__ = 'provider_fw_rules'
     __table_args__ = ()
-    id = Column(Integer, primary_key=True, nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
 
-    protocol = Column(String(5))  # "tcp", "udp", or "icmp"
-    from_port = Column(Integer)
-    to_port = Column(Integer)
-    cidr = Column(types.CIDR())
+    protocol = sa.Column(sa.String(5))  # "tcp", "udp", or "icmp"
+    from_port = sa.Column(sa.Integer)
+    to_port = sa.Column(sa.Integer)
+    cidr = sa.Column(types.CIDR())
 
 
 # NOTE(alaski): This table exists in the nova_api database and its usage here
@@ -754,15 +760,15 @@ class KeyPair(BASE, NovaBase, models.SoftDeleteMixin):
         schema.UniqueConstraint("user_id", "name", "deleted",
                                 name="uniq_key_pairs0user_id0name0deleted"),
     )
-    id = Column(Integer, primary_key=True, nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
 
-    name = Column(String(255), nullable=False)
+    name = sa.Column(sa.String(255), nullable=False)
 
-    user_id = Column(String(255))
+    user_id = sa.Column(sa.String(255))
 
-    fingerprint = Column(String(255))
-    public_key = Column(MediumText())
-    type = Column(Enum('ssh', 'x509', name='keypair_types'),
+    fingerprint = sa.Column(sa.String(255))
+    public_key = sa.Column(MediumText())
+    type = sa.Column(sa.Enum('ssh', 'x509', name='keypair_types'),
                   nullable=False, server_default='ssh')
 
 
@@ -770,43 +776,43 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a running host-to-host migration."""
     __tablename__ = 'migrations'
     __table_args__ = (
-        Index('migrations_instance_uuid_and_status_idx', 'deleted',
+        sa.Index('migrations_instance_uuid_and_status_idx', 'deleted',
               'instance_uuid', 'status'),
-        Index('migrations_by_host_nodes_and_status_idx', 'deleted',
+        sa.Index('migrations_by_host_nodes_and_status_idx', 'deleted',
               'source_compute', 'dest_compute', 'source_node', 'dest_node',
               'status'),
-        Index('migrations_uuid', 'uuid', unique=True),
-        Index('migrations_updated_at_idx', 'updated_at'),
+        sa.Index('migrations_uuid', 'uuid', unique=True),
+        sa.Index('migrations_updated_at_idx', 'updated_at'),
     )
-    id = Column(Integer, primary_key=True, nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
     # NOTE(tr3buchet): the ____compute variables are instance['host']
-    source_compute = Column(String(255))
-    dest_compute = Column(String(255))
+    source_compute = sa.Column(sa.String(255))
+    dest_compute = sa.Column(sa.String(255))
     # nodes are equivalent to a compute node's 'hypervisor_hostname'
-    source_node = Column(String(255))
-    dest_node = Column(String(255))
+    source_node = sa.Column(sa.String(255))
+    dest_node = sa.Column(sa.String(255))
     # NOTE(tr3buchet): dest_host, btw, is an ip address
-    dest_host = Column(String(255))
-    old_instance_type_id = Column(Integer())
-    new_instance_type_id = Column(Integer())
-    instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
-    uuid = Column(String(36), nullable=True)
+    dest_host = sa.Column(sa.String(255))
+    old_instance_type_id = sa.Column(sa.Integer())
+    new_instance_type_id = sa.Column(sa.Integer())
+    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
+    uuid = sa.Column(sa.String(36), nullable=True)
     # TODO(_cerberus_): enum
-    status = Column(String(255))
-    migration_type = Column(Enum('migration', 'resize', 'live-migration',
+    status = sa.Column(sa.String(255))
+    migration_type = sa.Column(sa.Enum('migration', 'resize', 'live-migration',
                                  'evacuation', name='migration_type'),
                             nullable=True)
-    hidden = Column(Boolean, default=False)
-    memory_total = Column(BigInteger, nullable=True)
-    memory_processed = Column(BigInteger, nullable=True)
-    memory_remaining = Column(BigInteger, nullable=True)
-    disk_total = Column(BigInteger, nullable=True)
-    disk_processed = Column(BigInteger, nullable=True)
-    disk_remaining = Column(BigInteger, nullable=True)
-    cross_cell_move = Column(Boolean, default=False)
+    hidden = sa.Column(sa.Boolean, default=False)
+    memory_total = sa.Column(sa.BigInteger, nullable=True)
+    memory_processed = sa.Column(sa.BigInteger, nullable=True)
+    memory_remaining = sa.Column(sa.BigInteger, nullable=True)
+    disk_total = sa.Column(sa.BigInteger, nullable=True)
+    disk_processed = sa.Column(sa.BigInteger, nullable=True)
+    disk_remaining = sa.Column(sa.BigInteger, nullable=True)
+    cross_cell_move = sa.Column(sa.Boolean, default=False)
 
-    user_id = Column(String(255), nullable=True)
-    project_id = Column(String(255), nullable=True)
+    user_id = sa.Column(sa.String(255), nullable=True)
+    project_id = sa.Column(sa.String(255), nullable=True)
 
     instance = orm.relationship("Instance", foreign_keys=instance_uuid,
                             primaryjoin='and_(Migration.instance_uuid == '
@@ -822,50 +828,50 @@ class Network(BASE, NovaBase, models.SoftDeleteMixin):
     __table_args__ = (
         schema.UniqueConstraint("vlan", "deleted",
                                 name="uniq_networks0vlan0deleted"),
-       Index('networks_bridge_deleted_idx', 'bridge', 'deleted'),
-       Index('networks_host_idx', 'host'),
-       Index('networks_project_id_deleted_idx', 'project_id', 'deleted'),
-       Index('networks_uuid_project_id_deleted_idx', 'uuid',
+       sa.Index('networks_bridge_deleted_idx', 'bridge', 'deleted'),
+       sa.Index('networks_host_idx', 'host'),
+       sa.Index('networks_project_id_deleted_idx', 'project_id', 'deleted'),
+       sa.Index('networks_uuid_project_id_deleted_idx', 'uuid',
              'project_id', 'deleted'),
-       Index('networks_vlan_deleted_idx', 'vlan', 'deleted'),
-       Index('networks_cidr_v6_idx', 'cidr_v6')
+       sa.Index('networks_vlan_deleted_idx', 'vlan', 'deleted'),
+       sa.Index('networks_cidr_v6_idx', 'cidr_v6')
     )
 
-    id = Column(Integer, primary_key=True, nullable=False)
-    label = Column(String(255))
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    label = sa.Column(sa.String(255))
 
-    injected = Column(Boolean, default=False)
-    cidr = Column(types.CIDR())
-    cidr_v6 = Column(types.CIDR())
-    multi_host = Column(Boolean, default=False)
+    injected = sa.Column(sa.Boolean, default=False)
+    cidr = sa.Column(types.CIDR())
+    cidr_v6 = sa.Column(types.CIDR())
+    multi_host = sa.Column(sa.Boolean, default=False)
 
-    gateway_v6 = Column(types.IPAddress())
-    netmask_v6 = Column(types.IPAddress())
-    netmask = Column(types.IPAddress())
-    bridge = Column(String(255))
-    bridge_interface = Column(String(255))
-    gateway = Column(types.IPAddress())
-    broadcast = Column(types.IPAddress())
-    dns1 = Column(types.IPAddress())
-    dns2 = Column(types.IPAddress())
+    gateway_v6 = sa.Column(types.IPAddress())
+    netmask_v6 = sa.Column(types.IPAddress())
+    netmask = sa.Column(types.IPAddress())
+    bridge = sa.Column(sa.String(255))
+    bridge_interface = sa.Column(sa.String(255))
+    gateway = sa.Column(types.IPAddress())
+    broadcast = sa.Column(types.IPAddress())
+    dns1 = sa.Column(types.IPAddress())
+    dns2 = sa.Column(types.IPAddress())
 
-    vlan = Column(Integer)
-    vpn_public_address = Column(types.IPAddress())
-    vpn_public_port = Column(Integer)
-    vpn_private_address = Column(types.IPAddress())
-    dhcp_start = Column(types.IPAddress())
+    vlan = sa.Column(sa.Integer)
+    vpn_public_address = sa.Column(types.IPAddress())
+    vpn_public_port = sa.Column(sa.Integer)
+    vpn_private_address = sa.Column(types.IPAddress())
+    dhcp_start = sa.Column(types.IPAddress())
 
-    rxtx_base = Column(Integer)
+    rxtx_base = sa.Column(sa.Integer)
 
-    project_id = Column(String(255))
-    priority = Column(Integer)
-    host = Column(String(255))
-    uuid = Column(String(36))
+    project_id = sa.Column(sa.String(255))
+    priority = sa.Column(sa.Integer)
+    host = sa.Column(sa.String(255))
+    uuid = sa.Column(sa.String(36))
 
-    mtu = Column(Integer)
-    dhcp_server = Column(types.IPAddress())
-    enable_dhcp = Column(Boolean, default=True)
-    share_address = Column(Boolean, default=False)
+    mtu = sa.Column(sa.Integer)
+    dhcp_server = sa.Column(types.IPAddress())
+    enable_dhcp = sa.Column(sa.Boolean, default=True)
+    share_address = sa.Column(sa.Boolean, default=False)
 
 
 class VirtualInterface(BASE, NovaBase, models.SoftDeleteMixin):
@@ -874,16 +880,16 @@ class VirtualInterface(BASE, NovaBase, models.SoftDeleteMixin):
     __table_args__ = (
         schema.UniqueConstraint("address", "deleted",
                         name="uniq_virtual_interfaces0address0deleted"),
-        Index('virtual_interfaces_network_id_idx', 'network_id'),
-        Index('virtual_interfaces_instance_uuid_fkey', 'instance_uuid'),
-        Index('virtual_interfaces_uuid_idx', 'uuid'),
+        sa.Index('virtual_interfaces_network_id_idx', 'network_id'),
+        sa.Index('virtual_interfaces_instance_uuid_fkey', 'instance_uuid'),
+        sa.Index('virtual_interfaces_uuid_idx', 'uuid'),
     )
-    id = Column(Integer, primary_key=True, nullable=False)
-    address = Column(String(255))
-    network_id = Column(Integer)
-    instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
-    uuid = Column(String(36))
-    tag = Column(String(255))
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    address = sa.Column(sa.String(255))
+    network_id = sa.Column(sa.Integer)
+    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
+    uuid = sa.Column(sa.String(36))
+    tag = sa.Column(sa.String(255))
 
 
 # TODO(stephenfin): Remove this in the V release or later, once we're sure we
@@ -894,35 +900,36 @@ class FixedIp(BASE, NovaBase, models.SoftDeleteMixin):
     __table_args__ = (
         schema.UniqueConstraint(
             "address", "deleted", name="uniq_fixed_ips0address0deleted"),
-        Index('fixed_ips_virtual_interface_id_fkey', 'virtual_interface_id'),
-        Index('network_id', 'network_id'),
-        Index('address', 'address'),
-        Index('fixed_ips_instance_uuid_fkey', 'instance_uuid'),
-        Index('fixed_ips_host_idx', 'host'),
-        Index('fixed_ips_network_id_host_deleted_idx', 'network_id', 'host',
+        sa.Index(
+            'fixed_ips_virtual_interface_id_fkey', 'virtual_interface_id'),
+        sa.Index('network_id', 'network_id'),
+        sa.Index('address', 'address'),
+        sa.Index('fixed_ips_instance_uuid_fkey', 'instance_uuid'),
+        sa.Index('fixed_ips_host_idx', 'host'),
+        sa.Index('fixed_ips_network_id_host_deleted_idx', 'network_id', 'host',
               'deleted'),
-        Index('fixed_ips_address_reserved_network_id_deleted_idx',
+        sa.Index('fixed_ips_address_reserved_network_id_deleted_idx',
               'address', 'reserved', 'network_id', 'deleted'),
-        Index('fixed_ips_deleted_allocated_idx', 'address', 'deleted',
+        sa.Index('fixed_ips_deleted_allocated_idx', 'address', 'deleted',
               'allocated'),
-        Index('fixed_ips_deleted_allocated_updated_at_idx', 'deleted',
+        sa.Index('fixed_ips_deleted_allocated_updated_at_idx', 'deleted',
               'allocated', 'updated_at')
     )
-    id = Column(Integer, primary_key=True)
-    address = Column(types.IPAddress())
-    network_id = Column(Integer)
-    virtual_interface_id = Column(Integer)
-    instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
+    id = sa.Column(sa.Integer, primary_key=True)
+    address = sa.Column(types.IPAddress())
+    network_id = sa.Column(sa.Integer)
+    virtual_interface_id = sa.Column(sa.Integer)
+    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
     # associated means that a fixed_ip has its instance_id column set
     # allocated means that a fixed_ip has its virtual_interface_id column set
     # TODO(sshturm) add default in db
-    allocated = Column(Boolean, default=False)
+    allocated = sa.Column(sa.Boolean, default=False)
     # leased means dhcp bridge has leased the ip
     # TODO(sshturm) add default in db
-    leased = Column(Boolean, default=False)
+    leased = sa.Column(sa.Boolean, default=False)
     # TODO(sshturm) add default in db
-    reserved = Column(Boolean, default=False)
-    host = Column(String(255))
+    reserved = sa.Column(sa.Boolean, default=False)
+    host = sa.Column(sa.String(255))
     network = orm.relationship(Network,
                            backref=orm.backref('fixed_ips'),
                            foreign_keys=network_id,
@@ -954,21 +961,21 @@ class FloatingIp(BASE, NovaBase, models.SoftDeleteMixin):
     __table_args__ = (
         schema.UniqueConstraint("address", "deleted",
                                 name="uniq_floating_ips0address0deleted"),
-        Index('fixed_ip_id', 'fixed_ip_id'),
-        Index('floating_ips_host_idx', 'host'),
-        Index('floating_ips_project_id_idx', 'project_id'),
-        Index('floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
+        sa.Index('fixed_ip_id', 'fixed_ip_id'),
+        sa.Index('floating_ips_host_idx', 'host'),
+        sa.Index('floating_ips_project_id_idx', 'project_id'),
+        sa.Index('floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
               'pool', 'deleted', 'fixed_ip_id', 'project_id')
     )
-    id = Column(Integer, primary_key=True)
-    address = Column(types.IPAddress())
-    fixed_ip_id = Column(Integer)
-    project_id = Column(String(255))
-    host = Column(String(255))
-    auto_assigned = Column(Boolean, default=False)
+    id = sa.Column(sa.Integer, primary_key=True)
+    address = sa.Column(types.IPAddress())
+    fixed_ip_id = sa.Column(sa.Integer)
+    project_id = sa.Column(sa.String(255))
+    host = sa.Column(sa.String(255))
+    auto_assigned = sa.Column(sa.Boolean, default=False)
     # TODO(sshturm) add default in db
-    pool = Column(String(255))
-    interface = Column(String(255))
+    pool = sa.Column(sa.String(255))
+    interface = sa.Column(sa.String(255))
     fixed_ip = orm.relationship(FixedIp,
                             backref=orm.backref('floating_ips'),
                             foreign_keys=fixed_ip_id,
@@ -983,14 +990,14 @@ class DNSDomain(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a DNS domain with availability zone or project info."""
     __tablename__ = 'dns_domains'
     __table_args__ = (
-        Index('dns_domains_project_id_idx', 'project_id'),
-        Index('dns_domains_domain_deleted_idx', 'domain', 'deleted'),
+        sa.Index('dns_domains_project_id_idx', 'project_id'),
+        sa.Index('dns_domains_domain_deleted_idx', 'domain', 'deleted'),
     )
-    deleted = Column(Boolean, default=False)
-    domain = Column(String(255), primary_key=True)
-    scope = Column(String(255))
-    availability_zone = Column(String(255))
-    project_id = Column(String(255))
+    deleted = sa.Column(sa.Boolean, default=False)
+    domain = sa.Column(sa.String(255), primary_key=True)
+    scope = sa.Column(sa.String(255))
+    availability_zone = sa.Column(sa.String(255))
+    project_id = sa.Column(sa.String(255))
 
 
 # TODO(stephenfin): Remove in V or later
@@ -1002,14 +1009,14 @@ class ConsolePool(BASE, NovaBase, models.SoftDeleteMixin):
             "host", "console_type", "compute_host", "deleted",
             name="uniq_console_pools0host0console_type0compute_host0deleted"),
     )
-    id = Column(Integer, primary_key=True)
-    address = Column(types.IPAddress())
-    username = Column(String(255))
-    password = Column(String(255))
-    console_type = Column(String(255))
-    public_hostname = Column(String(255))
-    host = Column(String(255))
-    compute_host = Column(String(255))
+    id = sa.Column(sa.Integer, primary_key=True)
+    address = sa.Column(types.IPAddress())
+    username = sa.Column(sa.String(255))
+    password = sa.Column(sa.String(255))
+    console_type = sa.Column(sa.String(255))
+    public_hostname = sa.Column(sa.String(255))
+    host = sa.Column(sa.String(255))
+    compute_host = sa.Column(sa.String(255))
 
 
 # TODO(stephenfin): Remove in V or later
@@ -1017,14 +1024,14 @@ class Console(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a console session for an instance."""
     __tablename__ = 'consoles'
     __table_args__ = (
-        Index('consoles_instance_uuid_idx', 'instance_uuid'),
+        sa.Index('consoles_instance_uuid_idx', 'instance_uuid'),
     )
-    id = Column(Integer, primary_key=True)
-    instance_name = Column(String(255))
-    instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
-    password = Column(String(255))
-    port = Column(Integer)
-    pool_id = Column(Integer, ForeignKey('console_pools.id'))
+    id = sa.Column(sa.Integer, primary_key=True)
+    instance_name = sa.Column(sa.String(255))
+    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
+    password = sa.Column(sa.String(255))
+    port = sa.Column(sa.Integer)
+    pool_id = sa.Column(sa.Integer, sa.ForeignKey('console_pools.id'))
     pool = orm.relationship(ConsolePool, backref=orm.backref('consoles'))
 
 
@@ -1032,12 +1039,12 @@ class InstanceMetadata(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a user-provided metadata key/value pair for an instance."""
     __tablename__ = 'instance_metadata'
     __table_args__ = (
-        Index('instance_metadata_instance_uuid_idx', 'instance_uuid'),
+        sa.Index('instance_metadata_instance_uuid_idx', 'instance_uuid'),
     )
-    id = Column(Integer, primary_key=True)
-    key = Column(String(255))
-    value = Column(String(255))
-    instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
+    id = sa.Column(sa.Integer, primary_key=True)
+    key = sa.Column(sa.String(255))
+    value = sa.Column(sa.String(255))
+    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
     instance = orm.relationship(Instance, backref="metadata",
                             foreign_keys=instance_uuid,
                             primaryjoin='and_('
@@ -1050,13 +1057,13 @@ class InstanceSystemMetadata(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a system-owned metadata key/value pair for an instance."""
     __tablename__ = 'instance_system_metadata'
     __table_args__ = (
-        Index('instance_uuid', 'instance_uuid'),
+        sa.Index('instance_uuid', 'instance_uuid'),
     )
-    id = Column(Integer, primary_key=True)
-    key = Column(String(255), nullable=False)
-    value = Column(String(255))
-    instance_uuid = Column(String(36),
-                           ForeignKey('instances.uuid'),
+    id = sa.Column(sa.Integer, primary_key=True)
+    key = sa.Column(sa.String(255), nullable=False)
+    value = sa.Column(sa.String(255))
+    instance_uuid = sa.Column(sa.String(36),
+                           sa.ForeignKey('instances.uuid'),
                            nullable=False)
 
     instance = orm.relationship(Instance, backref="system_metadata",
@@ -1073,10 +1080,10 @@ class InstanceTypeProjects(BASE, NovaBase, models.SoftDeleteMixin):
         name="uniq_instance_type_projects0instance_type_id0project_id0deleted"
         ),
     )
-    id = Column(Integer, primary_key=True)
-    instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
-                              nullable=False)
-    project_id = Column(String(255))
+    id = sa.Column(sa.Integer, primary_key=True)
+    instance_type_id = sa.Column(
+        sa.Integer, sa.ForeignKey('instance_types.id'), nullable=False)
+    project_id = sa.Column(sa.String(255))
 
     instance_type = orm.relationship(InstanceTypes, backref="projects",
                  foreign_keys=instance_type_id,
@@ -1091,7 +1098,7 @@ class InstanceTypeExtraSpecs(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents additional specs as key/value pairs for an instance_type."""
     __tablename__ = 'instance_type_extra_specs'
     __table_args__ = (
-        Index('instance_type_extra_specs_instance_type_id_key_idx',
+        sa.Index('instance_type_extra_specs_instance_type_id_key_idx',
               'instance_type_id', 'key'),
         schema.UniqueConstraint(
               "instance_type_id", "key", "deleted",
@@ -1100,16 +1107,19 @@ class InstanceTypeExtraSpecs(BASE, NovaBase, models.SoftDeleteMixin):
         ),
         {'mysql_collate': 'utf8_bin'},
     )
-    id = Column(Integer, primary_key=True)
-    key = Column(String(255))
-    value = Column(String(255))
-    instance_type_id = Column(Integer, ForeignKey('instance_types.id'),
-                              nullable=False)
-    instance_type = orm.relationship(InstanceTypes, backref="extra_specs",
-                 foreign_keys=instance_type_id,
-                 primaryjoin='and_('
-                 'InstanceTypeExtraSpecs.instance_type_id == InstanceTypes.id,'
-                 'InstanceTypeExtraSpecs.deleted == 0)')
+    id = sa.Column(sa.Integer, primary_key=True)
+    key = sa.Column(sa.String(255))
+    value = sa.Column(sa.String(255))
+    instance_type_id = sa.Column(
+        sa.Integer, sa.ForeignKey('instance_types.id'), nullable=False)
+    instance_type = orm.relationship(
+        InstanceTypes, backref="extra_specs",
+        foreign_keys=instance_type_id,
+        primaryjoin=(
+            'and_('
+            'InstanceTypeExtraSpecs.instance_type_id == InstanceTypes.id,'
+            'InstanceTypeExtraSpecs.deleted == 0)'),
+    )
 
 
 # TODO(stephenfin): Remove this in the U release or later, once we're sure we
@@ -1124,16 +1134,16 @@ class Cell(BASE, NovaBase, models.SoftDeleteMixin):
         "name", "deleted", name="uniq_cells0name0deleted"
         ),
     )
-    id = Column(Integer, primary_key=True)
+    id = sa.Column(sa.Integer, primary_key=True)
     # Name here is the 'short name' of a cell.  For instance: 'child1'
-    name = Column(String(255))
-    api_url = Column(String(255))
+    name = sa.Column(sa.String(255))
+    api_url = sa.Column(sa.String(255))
 
-    transport_url = Column(String(255), nullable=False)
+    transport_url = sa.Column(sa.String(255), nullable=False)
 
-    weight_offset = Column(Float(), default=0.0)
-    weight_scale = Column(Float(), default=1.0)
-    is_parent = Column(Boolean())
+    weight_offset = sa.Column(sa.Float(), default=0.0)
+    weight_scale = sa.Column(sa.Float(), default=1.0)
+    is_parent = sa.Column(sa.Boolean())
 
 
 # NOTE(alaski): This table exists in the nova_api database and its usage here
@@ -1146,9 +1156,10 @@ class AggregateHost(BASE, NovaBase, models.SoftDeleteMixin):
          name="uniq_aggregate_hosts0host0aggregate_id0deleted"
         ),
     )
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    host = Column(String(255))
-    aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    host = sa.Column(sa.String(255))
+    aggregate_id = sa.Column(
+        sa.Integer, sa.ForeignKey('aggregates.id'), nullable=False)
 
 
 # NOTE(alaski): This table exists in the nova_api database and its usage here
@@ -1160,13 +1171,14 @@ class AggregateMetadata(BASE, NovaBase, models.SoftDeleteMixin):
         schema.UniqueConstraint("aggregate_id", "key", "deleted",
             name="uniq_aggregate_metadata0aggregate_id0key0deleted"
             ),
-        Index('aggregate_metadata_key_idx', 'key'),
-        Index('aggregate_metadata_value_idx', 'value'),
+        sa.Index('aggregate_metadata_key_idx', 'key'),
+        sa.Index('aggregate_metadata_value_idx', 'value'),
     )
-    id = Column(Integer, primary_key=True)
-    key = Column(String(255), nullable=False)
-    value = Column(String(255), nullable=False)
-    aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True)
+    key = sa.Column(sa.String(255), nullable=False)
+    value = sa.Column(sa.String(255), nullable=False)
+    aggregate_id = sa.Column(
+        sa.Integer, sa.ForeignKey('aggregates.id'), nullable=False)
 
 
 # NOTE(alaski): This table exists in the nova_api database and its usage here
@@ -1174,10 +1186,10 @@ class AggregateMetadata(BASE, NovaBase, models.SoftDeleteMixin):
 class Aggregate(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a cluster of hosts that exists in this zone."""
     __tablename__ = 'aggregates'
-    __table_args__ = (Index('aggregate_uuid_idx', 'uuid'),)
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    uuid = Column(String(36))
-    name = Column(String(255))
+    __table_args__ = (sa.Index('aggregate_uuid_idx', 'uuid'),)
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    uuid = sa.Column(sa.String(36))
+    name = sa.Column(sa.String(255))
     _hosts = orm.relationship(AggregateHost,
                           primaryjoin='and_('
                           'Aggregate.id == AggregateHost.aggregate_id,'
@@ -1215,18 +1227,18 @@ class AgentBuild(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents an agent build."""
     __tablename__ = 'agent_builds'
     __table_args__ = (
-        Index('agent_builds_hypervisor_os_arch_idx', 'hypervisor', 'os',
+        sa.Index('agent_builds_hypervisor_os_arch_idx', 'hypervisor', 'os',
               'architecture'),
         schema.UniqueConstraint("hypervisor", "os", "architecture", "deleted",
                 name="uniq_agent_builds0hypervisor0os0architecture0deleted"),
     )
-    id = Column(Integer, primary_key=True)
-    hypervisor = Column(String(255))
-    os = Column(String(255))
-    architecture = Column(String(255))
-    version = Column(String(255))
-    url = Column(String(255))
-    md5hash = Column(String(255))
+    id = sa.Column(sa.Integer, primary_key=True)
+    hypervisor = sa.Column(sa.String(255))
+    os = sa.Column(sa.String(255))
+    architecture = sa.Column(sa.String(255))
+    version = sa.Column(sa.String(255))
+    url = sa.Column(sa.String(255))
+    md5hash = sa.Column(sa.String(255))
 
 
 # TODO(stephenfin): Remove this in the W release or later, once we're sure we
@@ -1235,81 +1247,84 @@ class BandwidthUsage(BASE, NovaBase, models.SoftDeleteMixin):
     """Cache for instance bandwidth usage data pulled from the hypervisor."""
     __tablename__ = 'bw_usage_cache'
     __table_args__ = (
-        Index('bw_usage_cache_uuid_start_period_idx', 'uuid',
+        sa.Index('bw_usage_cache_uuid_start_period_idx', 'uuid',
               'start_period'),
     )
-    id = Column(Integer, primary_key=True, nullable=False)
-    uuid = Column(String(36))
-    mac = Column(String(255))
-    start_period = Column(DateTime, nullable=False)
-    last_refreshed = Column(DateTime)
-    bw_in = Column(BigInteger)
-    bw_out = Column(BigInteger)
-    last_ctr_in = Column(BigInteger)
-    last_ctr_out = Column(BigInteger)
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    uuid = sa.Column(sa.String(36))
+    mac = sa.Column(sa.String(255))
+    start_period = sa.Column(sa.DateTime, nullable=False)
+    last_refreshed = sa.Column(sa.DateTime)
+    bw_in = sa.Column(sa.BigInteger)
+    bw_out = sa.Column(sa.BigInteger)
+    last_ctr_in = sa.Column(sa.BigInteger)
+    last_ctr_out = sa.Column(sa.BigInteger)
 
 
 class VolumeUsage(BASE, NovaBase, models.SoftDeleteMixin):
     """Cache for volume usage data pulled from the hypervisor."""
     __tablename__ = 'volume_usage_cache'
     __table_args__ = ()
-    id = Column(Integer, primary_key=True, nullable=False)
-    volume_id = Column(String(36), nullable=False)
-    instance_uuid = Column(String(36))
-    project_id = Column(String(36))
-    user_id = Column(String(64))
-    availability_zone = Column(String(255))
-    tot_last_refreshed = Column(DateTime)
-    tot_reads = Column(BigInteger, default=0)
-    tot_read_bytes = Column(BigInteger, default=0)
-    tot_writes = Column(BigInteger, default=0)
-    tot_write_bytes = Column(BigInteger, default=0)
-    curr_last_refreshed = Column(DateTime)
-    curr_reads = Column(BigInteger, default=0)
-    curr_read_bytes = Column(BigInteger, default=0)
-    curr_writes = Column(BigInteger, default=0)
-    curr_write_bytes = Column(BigInteger, default=0)
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    volume_id = sa.Column(sa.String(36), nullable=False)
+    instance_uuid = sa.Column(sa.String(36))
+    project_id = sa.Column(sa.String(36))
+    user_id = sa.Column(sa.String(64))
+    availability_zone = sa.Column(sa.String(255))
+    tot_last_refreshed = sa.Column(sa.DateTime)
+    tot_reads = sa.Column(sa.BigInteger, default=0)
+    tot_read_bytes = sa.Column(sa.BigInteger, default=0)
+    tot_writes = sa.Column(sa.BigInteger, default=0)
+    tot_write_bytes = sa.Column(sa.BigInteger, default=0)
+    curr_last_refreshed = sa.Column(sa.DateTime)
+    curr_reads = sa.Column(sa.BigInteger, default=0)
+    curr_read_bytes = sa.Column(sa.BigInteger, default=0)
+    curr_writes = sa.Column(sa.BigInteger, default=0)
+    curr_write_bytes = sa.Column(sa.BigInteger, default=0)
 
 
 class S3Image(BASE, NovaBase, models.SoftDeleteMixin):
     """Compatibility layer for the S3 image service talking to Glance."""
     __tablename__ = 's3_images'
     __table_args__ = ()
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    uuid = Column(String(36), nullable=False)
+    id = sa.Column(
+        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
+    uuid = sa.Column(sa.String(36), nullable=False)
 
 
 class VolumeIdMapping(BASE, NovaBase, models.SoftDeleteMixin):
     """Compatibility layer for the EC2 volume service."""
     __tablename__ = 'volume_id_mappings'
     __table_args__ = ()
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    uuid = Column(String(36), nullable=False)
+    id = sa.Column(
+        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
+    uuid = sa.Column(sa.String(36), nullable=False)
 
 
 class SnapshotIdMapping(BASE, NovaBase, models.SoftDeleteMixin):
     """Compatibility layer for the EC2 snapshot service."""
     __tablename__ = 'snapshot_id_mappings'
     __table_args__ = ()
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    uuid = Column(String(36), nullable=False)
+    id = sa.Column(
+        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
+    uuid = sa.Column(sa.String(36), nullable=False)
 
 
 class InstanceFault(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'instance_faults'
     __table_args__ = (
-        Index('instance_faults_host_idx', 'host'),
-        Index('instance_faults_instance_uuid_deleted_created_at_idx',
+        sa.Index('instance_faults_host_idx', 'host'),
+        sa.Index('instance_faults_instance_uuid_deleted_created_at_idx',
               'instance_uuid', 'deleted', 'created_at')
     )
 
-    id = Column(Integer, primary_key=True, nullable=False)
-    instance_uuid = Column(String(36),
-                           ForeignKey('instances.uuid'))
-    code = Column(Integer(), nullable=False)
-    message = Column(String(255))
-    details = Column(MediumText())
-    host = Column(String(255))
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    instance_uuid = sa.Column(sa.String(36),
+                           sa.ForeignKey('instances.uuid'))
+    code = sa.Column(sa.Integer(), nullable=False)
+    message = sa.Column(sa.String(255))
+    details = sa.Column(MediumText())
+    host = sa.Column(sa.String(255))
 
 
 class InstanceAction(BASE, NovaBase, models.SoftDeleteMixin):
@@ -1320,22 +1335,23 @@ class InstanceAction(BASE, NovaBase, models.SoftDeleteMixin):
     """
     __tablename__ = 'instance_actions'
     __table_args__ = (
-        Index('instance_uuid_idx', 'instance_uuid'),
-        Index('request_id_idx', 'request_id'),
-        Index('instance_actions_instance_uuid_updated_at_idx',
+        sa.Index('instance_uuid_idx', 'instance_uuid'),
+        sa.Index('request_id_idx', 'request_id'),
+        sa.Index('instance_actions_instance_uuid_updated_at_idx',
               'instance_uuid', 'updated_at')
     )
 
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    action = Column(String(255))
-    instance_uuid = Column(String(36),
-                           ForeignKey('instances.uuid'))
-    request_id = Column(String(255))
-    user_id = Column(String(255))
-    project_id = Column(String(255))
-    start_time = Column(DateTime, default=timeutils.utcnow)
-    finish_time = Column(DateTime)
-    message = Column(String(255))
+    id = sa.Column(
+        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
+    action = sa.Column(sa.String(255))
+    instance_uuid = sa.Column(sa.String(36),
+                           sa.ForeignKey('instances.uuid'))
+    request_id = sa.Column(sa.String(255))
+    user_id = sa.Column(sa.String(255))
+    project_id = sa.Column(sa.String(255))
+    start_time = sa.Column(sa.DateTime, default=timeutils.utcnow)
+    finish_time = sa.Column(sa.DateTime)
+    message = sa.Column(sa.String(255))
 
 
 class InstanceActionEvent(BASE, NovaBase, models.SoftDeleteMixin):
@@ -1343,25 +1359,27 @@ class InstanceActionEvent(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'instance_actions_events'
     __table_args__ = ()
 
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    event = Column(String(255))
-    action_id = Column(Integer, ForeignKey('instance_actions.id'))
-    start_time = Column(DateTime, default=timeutils.utcnow)
-    finish_time = Column(DateTime)
-    result = Column(String(255))
-    traceback = Column(Text)
-    host = Column(String(255))
-    details = Column(Text)
+    id = sa.Column(
+        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
+    event = sa.Column(sa.String(255))
+    action_id = sa.Column(sa.Integer, sa.ForeignKey('instance_actions.id'))
+    start_time = sa.Column(sa.DateTime, default=timeutils.utcnow)
+    finish_time = sa.Column(sa.DateTime)
+    result = sa.Column(sa.String(255))
+    traceback = sa.Column(sa.Text)
+    host = sa.Column(sa.String(255))
+    details = sa.Column(sa.Text)
 
 
 class InstanceIdMapping(BASE, NovaBase, models.SoftDeleteMixin):
     """Compatibility layer for the EC2 instance service."""
     __tablename__ = 'instance_id_mappings'
     __table_args__ = (
-        Index('ix_instance_id_mappings_uuid', 'uuid'),
+        sa.Index('ix_instance_id_mappings_uuid', 'uuid'),
     )
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    uuid = Column(String(36), nullable=False)
+    id = sa.Column(
+        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
+    uuid = sa.Column(sa.String(36), nullable=False)
 
 
 class TaskLog(BASE, NovaBase, models.SoftDeleteMixin):
@@ -1372,21 +1390,22 @@ class TaskLog(BASE, NovaBase, models.SoftDeleteMixin):
             'task_name', 'host', 'period_beginning', 'period_ending',
             name="uniq_task_log0task_name0host0period_beginning0period_ending"
         ),
-        Index('ix_task_log_period_beginning', 'period_beginning'),
-        Index('ix_task_log_host', 'host'),
-        Index('ix_task_log_period_ending', 'period_ending'),
+        sa.Index('ix_task_log_period_beginning', 'period_beginning'),
+        sa.Index('ix_task_log_host', 'host'),
+        sa.Index('ix_task_log_period_ending', 'period_ending'),
     )
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    task_name = Column(String(255), nullable=False)
-    state = Column(String(255), nullable=False)
-    host = Column(String(255), nullable=False)
-    period_beginning = Column(DateTime, default=timeutils.utcnow,
+    id = sa.Column(
+        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
+    task_name = sa.Column(sa.String(255), nullable=False)
+    state = sa.Column(sa.String(255), nullable=False)
+    host = sa.Column(sa.String(255), nullable=False)
+    period_beginning = sa.Column(sa.DateTime, default=timeutils.utcnow,
                               nullable=False)
-    period_ending = Column(DateTime, default=timeutils.utcnow,
+    period_ending = sa.Column(sa.DateTime, default=timeutils.utcnow,
                            nullable=False)
-    message = Column(String(255), nullable=False)
-    task_items = Column(Integer(), default=0)
-    errors = Column(Integer(), default=0)
+    message = sa.Column(sa.String(255), nullable=False)
+    task_items = sa.Column(sa.Integer(), default=0)
+    errors = sa.Column(sa.Integer(), default=0)
 
 
 # NOTE(alaski): This table exists in the nova_api database and its usage here
@@ -1395,11 +1414,11 @@ class InstanceGroupMember(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents the members for an instance group."""
     __tablename__ = 'instance_group_member'
     __table_args__ = (
-        Index('instance_group_member_instance_idx', 'instance_id'),
+        sa.Index('instance_group_member_instance_idx', 'instance_id'),
     )
-    id = Column(Integer, primary_key=True, nullable=False)
-    instance_id = Column(String(255))
-    group_id = Column(Integer, ForeignKey('instance_groups.id'),
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    instance_id = sa.Column(sa.String(255))
+    group_id = sa.Column(sa.Integer, sa.ForeignKey('instance_groups.id'),
                       nullable=False)
 
 
@@ -1409,11 +1428,11 @@ class InstanceGroupPolicy(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents the policy type for an instance group."""
     __tablename__ = 'instance_group_policy'
     __table_args__ = (
-        Index('instance_group_policy_policy_idx', 'policy'),
+        sa.Index('instance_group_policy_policy_idx', 'policy'),
     )
-    id = Column(Integer, primary_key=True, nullable=False)
-    policy = Column(String(255))
-    group_id = Column(Integer, ForeignKey('instance_groups.id'),
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    policy = sa.Column(sa.String(255))
+    group_id = sa.Column(sa.Integer, sa.ForeignKey('instance_groups.id'),
                       nullable=False)
 
 
@@ -1432,11 +1451,11 @@ class InstanceGroup(BASE, NovaBase, models.SoftDeleteMixin):
                                  name="uniq_instance_groups0uuid0deleted"),
     )
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(String(255))
-    project_id = Column(String(255))
-    uuid = Column(String(36), nullable=False)
-    name = Column(String(255))
+    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
+    user_id = sa.Column(sa.String(255))
+    project_id = sa.Column(sa.String(255))
+    uuid = sa.Column(sa.String(36), nullable=False)
+    name = sa.Column(sa.String(255))
     _policies = orm.relationship(InstanceGroupPolicy, primaryjoin='and_('
         'InstanceGroup.id == InstanceGroupPolicy.group_id,'
         'InstanceGroupPolicy.deleted == 0,'
@@ -1460,45 +1479,45 @@ class PciDevice(BASE, NovaBase, models.SoftDeleteMixin):
     """
     __tablename__ = 'pci_devices'
     __table_args__ = (
-        Index('ix_pci_devices_compute_node_id_deleted',
+        sa.Index('ix_pci_devices_compute_node_id_deleted',
               'compute_node_id', 'deleted'),
-        Index('ix_pci_devices_instance_uuid_deleted',
+        sa.Index('ix_pci_devices_instance_uuid_deleted',
               'instance_uuid', 'deleted'),
-        Index('ix_pci_devices_compute_node_id_parent_addr_deleted',
+        sa.Index('ix_pci_devices_compute_node_id_parent_addr_deleted',
               'compute_node_id', 'parent_addr', 'deleted'),
         schema.UniqueConstraint(
             "compute_node_id", "address", "deleted",
             name="uniq_pci_devices0compute_node_id0address0deleted")
     )
-    id = Column(Integer, primary_key=True)
-    uuid = Column(String(36))
-    compute_node_id = Column(Integer, ForeignKey('compute_nodes.id'),
+    id = sa.Column(sa.Integer, primary_key=True)
+    uuid = sa.Column(sa.String(36))
+    compute_node_id = sa.Column(sa.Integer, sa.ForeignKey('compute_nodes.id'),
                              nullable=False)
 
     # physical address of device domain:bus:slot.func (0000:09:01.1)
-    address = Column(String(12), nullable=False)
+    address = sa.Column(sa.String(12), nullable=False)
 
-    vendor_id = Column(String(4), nullable=False)
-    product_id = Column(String(4), nullable=False)
-    dev_type = Column(String(8), nullable=False)
-    dev_id = Column(String(255))
+    vendor_id = sa.Column(sa.String(4), nullable=False)
+    product_id = sa.Column(sa.String(4), nullable=False)
+    dev_type = sa.Column(sa.String(8), nullable=False)
+    dev_id = sa.Column(sa.String(255))
 
     # label is abstract device name, that is used to unify devices with the
     # same functionality with different addresses or host.
-    label = Column(String(255), nullable=False)
+    label = sa.Column(sa.String(255), nullable=False)
 
-    status = Column(String(36), nullable=False)
+    status = sa.Column(sa.String(36), nullable=False)
     # the request_id is used to identify a device that is allocated for a
     # particular request
-    request_id = Column(String(36), nullable=True)
+    request_id = sa.Column(sa.String(36), nullable=True)
 
-    extra_info = Column(Text)
+    extra_info = sa.Column(sa.Text)
 
-    instance_uuid = Column(String(36))
+    instance_uuid = sa.Column(sa.String(36))
 
-    numa_node = Column(Integer, nullable=True)
+    numa_node = sa.Column(sa.Integer, nullable=True)
 
-    parent_addr = Column(String(12), nullable=True)
+    parent_addr = sa.Column(sa.String(12), nullable=True)
     instance = orm.relationship(Instance, backref="pci_devices",
                                 foreign_keys=instance_uuid,
                                 primaryjoin='and_('
@@ -1511,10 +1530,10 @@ class Tag(BASE, models.ModelBase):
 
     __tablename__ = "tags"
     __table_args__ = (
-        Index('tags_tag_idx', 'tag'),
+        sa.Index('tags_tag_idx', 'tag'),
     )
-    resource_id = Column(String(36), primary_key=True, nullable=False)
-    tag = Column(Unicode(80), primary_key=True, nullable=False)
+    resource_id = sa.Column(sa.String(36), primary_key=True, nullable=False)
+    tag = sa.Column(sa.Unicode(80), primary_key=True, nullable=False)
 
     instance = orm.relationship(
         "Instance",
@@ -1532,19 +1551,19 @@ class ResourceProvider(BASE, models.ModelBase):
 
     __tablename__ = "resource_providers"
     __table_args__ = (
-        Index('resource_providers_uuid_idx', 'uuid'),
+        sa.Index('resource_providers_uuid_idx', 'uuid'),
         schema.UniqueConstraint('uuid',
             name='uniq_resource_providers0uuid'),
-        Index('resource_providers_name_idx', 'name'),
+        sa.Index('resource_providers_name_idx', 'name'),
         schema.UniqueConstraint('name',
             name='uniq_resource_providers0name')
     )
 
-    id = Column(Integer, primary_key=True, nullable=False)
-    uuid = Column(String(36), nullable=False)
-    name = Column(Unicode(200), nullable=True)
-    generation = Column(Integer, default=0)
-    can_host = Column(Integer, default=0)
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    uuid = sa.Column(sa.String(36), nullable=False)
+    name = sa.Column(sa.Unicode(200), nullable=True)
+    generation = sa.Column(sa.Integer, default=0)
+    can_host = sa.Column(sa.Integer, default=0)
 
 
 # NOTE(alaski): This table exists in the nova_api database and its usage here
@@ -1554,25 +1573,25 @@ class Inventory(BASE, models.ModelBase):
 
     __tablename__ = "inventories"
     __table_args__ = (
-        Index('inventories_resource_provider_id_idx',
+        sa.Index('inventories_resource_provider_id_idx',
               'resource_provider_id'),
-        Index('inventories_resource_class_id_idx',
+        sa.Index('inventories_resource_class_id_idx',
               'resource_class_id'),
-        Index('inventories_resource_provider_resource_class_idx',
+        sa.Index('inventories_resource_provider_resource_class_idx',
               'resource_provider_id', 'resource_class_id'),
         schema.UniqueConstraint('resource_provider_id', 'resource_class_id',
             name='uniq_inventories0resource_provider_resource_class')
     )
 
-    id = Column(Integer, primary_key=True, nullable=False)
-    resource_provider_id = Column(Integer, nullable=False)
-    resource_class_id = Column(Integer, nullable=False)
-    total = Column(Integer, nullable=False)
-    reserved = Column(Integer, nullable=False)
-    min_unit = Column(Integer, nullable=False)
-    max_unit = Column(Integer, nullable=False)
-    step_size = Column(Integer, nullable=False)
-    allocation_ratio = Column(Float, nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    resource_provider_id = sa.Column(sa.Integer, nullable=False)
+    resource_class_id = sa.Column(sa.Integer, nullable=False)
+    total = sa.Column(sa.Integer, nullable=False)
+    reserved = sa.Column(sa.Integer, nullable=False)
+    min_unit = sa.Column(sa.Integer, nullable=False)
+    max_unit = sa.Column(sa.Integer, nullable=False)
+    step_size = sa.Column(sa.Integer, nullable=False)
+    allocation_ratio = sa.Column(sa.Float, nullable=False)
     resource_provider = orm.relationship(
         "ResourceProvider",
         primaryjoin=('and_(Inventory.resource_provider_id == '
@@ -1587,19 +1606,19 @@ class Allocation(BASE, models.ModelBase):
 
     __tablename__ = "allocations"
     __table_args__ = (
-        Index('allocations_resource_provider_class_used_idx',
+        sa.Index('allocations_resource_provider_class_used_idx',
               'resource_provider_id', 'resource_class_id',
               'used'),
-        Index('allocations_resource_class_id_idx',
+        sa.Index('allocations_resource_class_id_idx',
               'resource_class_id'),
-        Index('allocations_consumer_id_idx', 'consumer_id')
+        sa.Index('allocations_consumer_id_idx', 'consumer_id')
     )
 
-    id = Column(Integer, primary_key=True, nullable=False)
-    resource_provider_id = Column(Integer, nullable=False)
-    consumer_id = Column(String(36), nullable=False)
-    resource_class_id = Column(Integer, nullable=False)
-    used = Column(Integer, nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    resource_provider_id = sa.Column(sa.Integer, nullable=False)
+    consumer_id = sa.Column(sa.String(36), nullable=False)
+    resource_class_id = sa.Column(sa.Integer, nullable=False)
+    used = sa.Column(sa.Integer, nullable=False)
 
 
 # NOTE(alaski): This table exists in the nova_api database and its usage here
@@ -1609,12 +1628,13 @@ class ResourceProviderAggregate(BASE, models.ModelBase):
 
     __tablename__ = 'resource_provider_aggregates'
     __table_args__ = (
-        Index('resource_provider_aggregates_aggregate_id_idx',
+        sa.Index('resource_provider_aggregates_aggregate_id_idx',
               'aggregate_id'),
     )
 
-    resource_provider_id = Column(Integer, primary_key=True, nullable=False)
-    aggregate_id = Column(Integer, primary_key=True, nullable=False)
+    resource_provider_id = sa.Column(
+        sa.Integer, primary_key=True, nullable=False)
+    aggregate_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
 
 
 class ConsoleAuthToken(BASE, NovaBase):
@@ -1622,23 +1642,25 @@ class ConsoleAuthToken(BASE, NovaBase):
 
     __tablename__ = 'console_auth_tokens'
     __table_args__ = (
-        Index('console_auth_tokens_instance_uuid_idx', 'instance_uuid'),
-        Index('console_auth_tokens_host_expires_idx', 'host', 'expires'),
-        Index('console_auth_tokens_token_hash_idx', 'token_hash'),
-        Index('console_auth_tokens_token_hash_instance_uuid_idx', 'token_hash',
-              'instance_uuid'),
+        sa.Index('console_auth_tokens_instance_uuid_idx', 'instance_uuid'),
+        sa.Index('console_auth_tokens_host_expires_idx', 'host', 'expires'),
+        sa.Index('console_auth_tokens_token_hash_idx', 'token_hash'),
+        sa.Index(
+            'console_auth_tokens_token_hash_instance_uuid_idx', 'token_hash',
+            'instance_uuid',
+        ),
         schema.UniqueConstraint("token_hash",
                                 name="uniq_console_auth_tokens0token_hash")
     )
-    id = Column(Integer, primary_key=True, nullable=False)
-    token_hash = Column(String(255), nullable=False)
-    console_type = Column(String(255), nullable=False)
-    host = Column(String(255), nullable=False)
-    port = Column(Integer, nullable=False)
-    internal_access_path = Column(String(255))
-    instance_uuid = Column(String(36), nullable=False)
-    expires = Column(Integer, nullable=False)
-    access_url_base = Column(String(255))
+    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
+    token_hash = sa.Column(sa.String(255), nullable=False)
+    console_type = sa.Column(sa.String(255), nullable=False)
+    host = sa.Column(sa.String(255), nullable=False)
+    port = sa.Column(sa.Integer, nullable=False)
+    internal_access_path = sa.Column(sa.String(255))
+    instance_uuid = sa.Column(sa.String(36), nullable=False)
+    expires = sa.Column(sa.Integer, nullable=False)
+    access_url_base = sa.Column(sa.String(255))
 
     instance = orm.relationship(
         "Instance",
