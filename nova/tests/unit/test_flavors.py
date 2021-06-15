@@ -123,9 +123,8 @@ class FlavorFilteringTest(test.TestCase):
         self.context = context.get_admin_context()
 
     def assertFilterResults(self, filters, expected):
-        inst_types = objects.FlavorList.get_all(
-                self.context, filters=filters)
-        inst_names = [i.name for i in inst_types]
+        flavors = objects.FlavorList.get_all(self.context, filters=filters)
+        inst_names = [i.name for i in flavors]
         self.assertEqual(inst_names, expected)
 
     def test_no_filters(self):

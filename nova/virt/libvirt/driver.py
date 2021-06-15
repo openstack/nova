@@ -4476,7 +4476,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         LOG.info('Creating image', instance=instance)
 
-        inst_type = instance.get_flavor()
+        flavor = instance.get_flavor()
         swap_mb = 0
         if 'disk.swap' in disk_mapping:
             mapping = disk_mapping['disk.swap']
@@ -4492,15 +4492,15 @@ class LibvirtDriver(driver.ComputeDriver):
                 # developed. Also at that stage we probably may get rid of
                 # the direct usage of flavor swap size here,
                 # leaving the work with bdm only.
-                swap_mb = inst_type['swap']
+                swap_mb = flavor['swap']
             else:
                 swap = driver.block_device_info_get_swap(block_device_info)
                 if driver.swap_is_usable(swap):
                     swap_mb = swap['swap_size']
-                elif (inst_type['swap'] > 0 and
+                elif (flavor['swap'] > 0 and
                       not block_device.volume_in_mapping(
                         mapping['dev'], block_device_info)):
-                    swap_mb = inst_type['swap']
+                    swap_mb = flavor['swap']
 
             if swap_mb > 0:
                 if (CONF.libvirt.virt_type == "parallels" and
@@ -5120,8 +5120,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return cpu
 
-    def _get_guest_disk_config(self, instance, name, disk_mapping, inst_type,
-                               image_type=None, boot_order=None):
+    def _get_guest_disk_config(
+        self, instance, name, disk_mapping, flavor, image_type=None,
+        boot_order=None,
+    ):
         disk_unit = None
         disk = self.image_backend.by_name(instance, name, image_type)
         if (name == 'disk.config' and image_type == 'rbd' and
@@ -5141,20 +5143,19 @@ class LibvirtDriver(driver.ComputeDriver):
         if 'unit' in disk_mapping and disk_info['bus'] == 'scsi':
             disk_unit = disk_mapping['unit']
             disk_mapping['unit'] += 1  # Increments for the next disk added
-        conf = disk.libvirt_info(disk_info, self.disk_cachemode,
-                                 inst_type['extra_specs'],
-                                 disk_unit=disk_unit,
-                                 boot_order=boot_order)
+        conf = disk.libvirt_info(
+            disk_info, self.disk_cachemode, flavor['extra_specs'],
+            disk_unit=disk_unit, boot_order=boot_order)
         return conf
 
     def _get_guest_fs_config(self, instance, name, image_type=None):
         disk = self.image_backend.by_name(instance, name, image_type)
         return disk.libvirt_fs_info("/", "ploop")
 
-    def _get_guest_storage_config(self, context, instance, image_meta,
-                                  disk_info,
-                                  rescue, block_device_info,
-                                  inst_type, os_type):
+    def _get_guest_storage_config(
+        self, context, instance, image_meta, disk_info, rescue,
+        block_device_info, flavor, os_type,
+    ):
         devices = []
         disk_mapping = disk_info['mapping']
 
@@ -5190,7 +5191,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 diskeph = self._get_guest_disk_config(
                     instance,
                     blockinfo.get_eph_disk(idx),
-                    disk_mapping, inst_type)
+                    disk_mapping, flavor)
                 eph_devices.append(diskeph)
             return eph_devices
 
@@ -5217,30 +5218,22 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
 
             if rescue and disk_mapping['disk.rescue'] == disk_mapping['root']:
-                diskrescue = self._get_guest_disk_config(instance,
-                                                         'disk.rescue',
-                                                         disk_mapping,
-                                                         inst_type)
+                diskrescue = self._get_guest_disk_config(
+                    instance, 'disk.rescue', disk_mapping, flavor)
                 devices.append(diskrescue)
 
-                diskos = self._get_guest_disk_config(instance,
-                                                     'disk',
-                                                     disk_mapping,
-                                                     inst_type)
+                diskos = self._get_guest_disk_config(
+                    instance, 'disk', disk_mapping, flavor)
                 devices.append(diskos)
             else:
                 if 'disk' in disk_mapping:
-                    diskos = self._get_guest_disk_config(instance,
-                                                         'disk',
-                                                         disk_mapping,
-                                                         inst_type)
+                    diskos = self._get_guest_disk_config(
+                        instance, 'disk', disk_mapping, flavor)
                     devices.append(diskos)
 
                 if 'disk.local' in disk_mapping:
-                    disklocal = self._get_guest_disk_config(instance,
-                                                            'disk.local',
-                                                            disk_mapping,
-                                                            inst_type)
+                    disklocal = self._get_guest_disk_config(
+                        instance, 'disk.local', disk_mapping, flavor)
                     devices.append(disklocal)
                     instance.default_ephemeral_device = (
                         block_device.prepend_dev(disklocal.target_dev))
@@ -5248,10 +5241,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 devices = devices + _get_ephemeral_devices()
 
                 if 'disk.swap' in disk_mapping:
-                    diskswap = self._get_guest_disk_config(instance,
-                                                           'disk.swap',
-                                                           disk_mapping,
-                                                           inst_type)
+                    diskswap = self._get_guest_disk_config(
+                        instance, 'disk.swap', disk_mapping, flavor)
                     devices.append(diskswap)
                     instance.default_swap_device = (
                         block_device.prepend_dev(diskswap.target_dev))
@@ -5262,7 +5253,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if config_name in disk_mapping:
                 diskconfig = self._get_guest_disk_config(
-                    instance, config_name, disk_mapping, inst_type,
+                    instance, config_name, disk_mapping, flavor,
                     self._get_disk_config_image_type())
                 devices.append(diskconfig)
 
@@ -5293,9 +5284,8 @@ class LibvirtDriver(driver.ComputeDriver):
             devices.append(scsi_controller)
 
         if rescue and disk_mapping['disk.rescue'] != disk_mapping['root']:
-            diskrescue = self._get_guest_disk_config(instance, 'disk.rescue',
-                                                     disk_mapping, inst_type,
-                                                     boot_order='1')
+            diskrescue = self._get_guest_disk_config(
+                instance, 'disk.rescue', disk_mapping, flavor, boot_order='1')
             devices.append(diskrescue)
 
         return devices
@@ -9540,7 +9530,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         self.vif_driver.get_config,
                         instance=instance,
                         image_meta=instance.image_meta,
-                        inst_type=instance.flavor,
+                        flavor=instance.flavor,
                         virt_type=CONF.libvirt.virt_type,
                     )
                     self._detach_direct_passthrough_vifs(context,
@@ -10348,8 +10338,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         size=info['virt_disk_size'],
                         ephemeral_size=info['virt_disk_size'] / units.Gi)
                 elif cache_name.startswith('swap'):
-                    inst_type = instance.get_flavor()
-                    swap_mb = inst_type.swap
+                    flavor = instance.get_flavor()
+                    swap_mb = flavor.swap
                     disk.cache(fetch_func=self._create_swap,
                                 filename="swap_%s" % swap_mb,
                                 size=swap_mb * units.Mi,

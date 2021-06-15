@@ -4952,7 +4952,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_provision_instances_with_keypair(self, mock_im, mock_instance,
                                               mock_br, mock_rs):
         fake_keypair = objects.KeyPair(name='test')
-        inst_type = self._create_flavor()
+        flavor = self._create_flavor()
 
         @mock.patch.object(self.compute_api, '_get_volumes_for_bdms')
         @mock.patch.object(self.compute_api,
@@ -4967,24 +4967,16 @@ class _ComputeAPIUnitTestMixIn(object):
                            '_bdm_validate_set_size_and_instance')
         def do_test(mock_bdm_v, mock_sg, mock_cniq, mock_get_vols):
             mock_cniq.return_value = 1
-            self.compute_api._provision_instances(self.context,
-                                                  inst_type,
-                                                  1, 1, mock.MagicMock(),
-                                                  {}, None,
-                                                  None, None, None, {}, None,
-                                                  fake_keypair,
-                                                  objects.TagList(), None,
-                                                  False)
+            self.compute_api._provision_instances(
+                self.context, flavor, 1, 1, mock.MagicMock(), {}, None, None,
+                None, None, {}, None, fake_keypair, objects.TagList(), None,
+                False)
             self.assertEqual(
                 'test',
                 mock_instance.return_value.keypairs.objects[0].name)
-            self.compute_api._provision_instances(self.context,
-                                                  inst_type,
-                                                  1, 1, mock.MagicMock(),
-                                                  {}, None,
-                                                  None, None, None, {}, None,
-                                                  None, objects.TagList(),
-                                                  None, False)
+            self.compute_api._provision_instances(
+                self.context, flavor, 1, 1, mock.MagicMock(), {}, None, None,
+                None, None, {}, None, None, objects.TagList(), None, False)
             self.assertEqual(
                 0,
                 len(mock_instance.return_value.keypairs.objects))
@@ -5340,12 +5332,10 @@ class _ComputeAPIUnitTestMixIn(object):
         def test(mock_objects, mock_secgroup, mock_cniq):
             ctxt = context.RequestContext('fake-user', 'fake-project')
             mock_cniq.return_value = 1
-            inst_type = self._create_flavor()
-            self.compute_api._provision_instances(ctxt, inst_type, None, None,
-                                                  mock.MagicMock(), None, None,
-                                                  [], None, None, None, None,
-                                                  None, objects.TagList(),
-                                                  None, False)
+            flavor = self._create_flavor()
+            self.compute_api._provision_instances(
+                ctxt, flavor, None, None, mock.MagicMock(), None, None, [],
+                None, None, None, None, None, objects.TagList(), None, False)
             secgroups = mock_secgroup.return_value
             mock_objects.RequestSpec.from_components.assert_called_once_with(
                 mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY,
