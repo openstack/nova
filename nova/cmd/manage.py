@@ -181,23 +181,30 @@ class DbCommands(object):
             # NOTE(mdoff): Multiple cells not yet implemented. Currently
             # fanout only looks for cell0.
             try:
-                cell_mapping = objects.CellMapping.get_by_uuid(ctxt,
-                                            objects.CellMapping.CELL0_UUID)
+                cell_mapping = objects.CellMapping.get_by_uuid(
+                    ctxt, objects.CellMapping.CELL0_UUID,
+                )
                 with context.target_cell(ctxt, cell_mapping) as cctxt:
                     migration.db_sync(version, context=cctxt)
             except exception.CellMappingNotFound:
-                print(_('WARNING: cell0 mapping not found - not'
-                        ' syncing cell0.'))
+                msg = _(
+                    'WARNING: cell0 mapping not found - not syncing cell0.'
+                )
+                print(msg)
             except Exception as e:
-                print(_("""ERROR: Could not access cell0.
-Has the nova_api database been created?
-Has the nova_cell0 database been created?
-Has "nova-manage api_db sync" been run?
-Has "nova-manage cell_v2 map_cell0" been run?
-Is [api_database]/connection set in nova.conf?
-Is the cell0 database connection URL correct?
-Error: %s""") % str(e))
+                msg = _(
+                    'ERROR: Could not access cell0.\n'
+                    'Has the nova_api database been created?\n'
+                    'Has the nova_cell0 database been created?\n'
+                    'Has "nova-manage api_db sync" been run?\n'
+                    'Has "nova-manage cell_v2 map_cell0" been run?\n'
+                    'Is [api_database]/connection set in nova.conf?\n'
+                    'Is the cell0 database connection URL correct?\n'
+                    'Error: %s'
+                )
+                print(msg % str(e))
                 return 1
+
         return migration.db_sync(version)
 
     def version(self):
