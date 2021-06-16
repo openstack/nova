@@ -244,7 +244,7 @@ class DesignerTestCase(test.NoDBTestCase):
         designer.set_vif_mtu_config(conf, 9000)
         self.assertEqual(9000, conf.mtu)
 
-    def test_set_driver_iommu_for_sev(self):
+    def test_set_driver_iommu(self):
         conf = fake_libvirt_data.fake_kvm_guest()
 
         # obj.devices[11]
@@ -253,7 +253,7 @@ class DesignerTestCase(test.NoDBTestCase):
         controller.index = 0
         conf.add_device(controller)
 
-        designer.set_driver_iommu_for_sev(conf)
+        designer.set_driver_iommu_for_all_devices(conf)
 
         # All disks/interfaces/memballoon are expected to be virtio,
         # thus driver_iommu should be on
