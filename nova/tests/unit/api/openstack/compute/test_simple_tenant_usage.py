@@ -16,7 +16,6 @@
 import datetime
 
 import mock
-from oslo_policy import policy as oslo_policy
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 import webob
@@ -28,13 +27,10 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
-from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
-
 CONF = nova.conf.CONF
-
 
 SERVERS = 5
 TENANTS = 2
@@ -46,7 +42,6 @@ VCPUS = 2
 NOW = timeutils.utcnow()
 START = NOW - datetime.timedelta(hours=HOURS)
 STOP = NOW
-
 
 FAKE_FLAVOR = {
     'id': 1,
@@ -317,24 +312,6 @@ class SimpleTenantUsageTestV21(test.TestCase):
             self.assertEqual('next', res_dict['tenant_usage_links'][0]['rel'])
         else:
             self.assertNotIn('tenant_usage_links', res_dict)
-
-    def test_verify_show_cannot_view_other_tenant(self):
-        req = fakes.HTTPRequest.blank('?start=%s&end=%s' %
-                    (START.isoformat(), STOP.isoformat()),
-                    version=self.version)
-        req.environ['nova.context'] = self.alt_user_context
-
-        rules = {
-            self.policy_rule_prefix + ":show": [
-                ["role:admin"], ["project_id:%(project_id)s"]]
-        }
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-
-        try:
-            self.assertRaises(exception.PolicyNotAuthorized,
-                              self.controller.show, req, 'faketenant_0')
-        finally:
-            policy.reset()
 
     def test_get_tenants_usage_with_bad_start_date(self):
         future = NOW + datetime.timedelta(hours=HOURS)

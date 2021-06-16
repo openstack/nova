@@ -1176,25 +1176,6 @@ class ServersControllerTest(ControllerTest):
         servers = self.controller.index(req)['servers']
         self.assertEqual(1, len(servers))
 
-    def test_all_tenants_fail_policy(self):
-        def fake_get_all(context, search_opts=None, **kwargs):
-            self.assertIsNotNone(search_opts)
-            return [fakes.stub_instance_obj(100)]
-
-        rules = {
-            "os_compute_api:servers:index:get_all_tenants":
-                "project_id:non_fake",
-            "os_compute_api:servers:get_all":
-                "project_id:%s" % self.project_id,
-        }
-
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        self.mock_get_all.side_effect = fake_get_all
-
-        req = self.req(self.path_with_query % 'all_tenants=1')
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.index, req)
-
     def test_get_servers_allows_flavor(self):
         def fake_get_all(context, search_opts=None,
                          limit=None, marker=None,
@@ -3726,18 +3707,6 @@ class ServersControllerRebuildTestV263(ControllerTest):
                                self.req, FAKE_UUID, body=self.body)
         self.assertIn('Additional properties are not allowed', str(ex))
 
-    def test_rebuild_server_with_trusted_certs_policy_failed(self):
-        rule_name = "os_compute_api:servers:rebuild:trusted_certs"
-        rules = {"os_compute_api:servers:rebuild": "@",
-                 rule_name: "project:%s" % fakes.FAKE_PROJECT_ID}
-        self.policy.set_rules(rules)
-        exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self._rebuild_server,
-                                certs=['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8'])
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
-
     @mock.patch.object(compute_api.API, 'rebuild')
     def test_rebuild_server_with_cert_validation_error(
             self, mock_rebuild):
@@ -3913,14 +3882,6 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
                           req, FAKE_UUID, body=body)
 
-    def test_update_server_policy_fail(self):
-        rule = {'compute:update': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rule))
-        body = {'server': {'name': 'server_test'}}
-        req = self._get_request(body)
-        self.assertRaises(exception.PolicyNotAuthorized,
-                self.controller.update, req, FAKE_UUID, body=body)
-
 
 class ServersControllerTriggerCrashDumpTest(ControllerTest):
 
@@ -3952,15 +3913,6 @@ class ServersControllerTriggerCrashDumpTest(ControllerTest):
         self.controller._action_trigger_crash_dump(self.req, FAKE_UUID,
                                                    body=self.body)
         mock_trigger_crash_dump.assert_called_with(ctxt, self.instance)
-
-    def test_trigger_crash_dump_policy_failed(self):
-        rule_name = "os_compute_api:servers:trigger_crash_dump"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self.controller._action_trigger_crash_dump,
-                                self.req, FAKE_UUID, body=self.body)
-        self.assertIn("os_compute_api:servers:trigger_crash_dump",
-                      exc.format_message())
 
     @mock.patch.object(compute_api.API, 'trigger_crash_dump',
                        fake_start_stop_not_ready)
@@ -4117,19 +4069,6 @@ class ServerStatusTest(test.TestCase):
                                         task_states.REBOOTING_HARD)
         self.assertEqual(response['server']['status'], 'HARD_REBOOT')
 
-    def test_reboot_resize_policy_fail(self):
-        rule = {'compute:reboot': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rule))
-        req = fakes.HTTPRequestV21.blank(self.path_action % '1234')
-        self.stub_out('nova.compute.api.API.get',
-                fakes.fake_compute_get(
-                    vm_state='ACTIVE',
-                    task_state=None,
-                    project_id=req.environ['nova.context'].project_id))
-        self.assertRaises(exception.PolicyNotAuthorized,
-                self.controller._action_reboot, req, '1234',
-                body={'reboot': {'type': 'HARD'}})
-
     def test_rebuild(self):
         response = self._get_with_state(vm_states.ACTIVE,
                                         task_states.REBUILDING)
@@ -4144,19 +4083,6 @@ class ServerStatusTest(test.TestCase):
                                         task_states.RESIZE_PREP)
         self.assertEqual(response['server']['status'], 'RESIZE')
 
-    def test_confirm_resize_policy_fail(self):
-        rule = {'compute:confirm_resize': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rule))
-        req = fakes.HTTPRequestV21.blank(self.path_action % '1234')
-        self.stub_out('nova.compute.api.API.get',
-                fakes.fake_compute_get(
-                    vm_state='ACTIVE',
-                    task_state=None,
-                    project_id=req.environ['nova.context'].project_id))
-
-        self.assertRaises(exception.PolicyNotAuthorized,
-                self.controller._action_confirm_resize, req, '1234', {})
-
     def test_verify_resize(self):
         response = self._get_with_state(vm_states.RESIZED, None)
         self.assertEqual(response['server']['status'], 'VERIFY_RESIZE')
@@ -4165,19 +4091,6 @@ class ServerStatusTest(test.TestCase):
         response = self._get_with_state(vm_states.RESIZED,
                                         task_states.RESIZE_REVERTING)
         self.assertEqual(response['server']['status'], 'REVERT_RESIZE')
-
-    def test_revert_resize_policy_fail(self):
-        rule = {'compute:revert_resize': 'role:admin'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rule))
-        req = fakes.HTTPRequestV21.blank(self.path_action % '1234')
-        self.stub_out('nova.compute.api.API.get',
-                fakes.fake_compute_get(
-                    vm_state='ACTIVE',
-                    task_state=None,
-                    project_id=req.environ['nova.context'].project_id))
-
-        self.assertRaises(exception.PolicyNotAuthorized,
-                self.controller._action_revert_resize, req, '1234', {})
 
     def test_password_update(self):
         response = self._get_with_state(vm_states.ACTIVE,
@@ -6790,22 +6703,6 @@ class ServersControllerCreateTestV263(ServersControllerCreateTest):
             exception.ValidationError, self.controller.create, self.req,
             body=self.body)
         self.assertIn('Additional properties are not allowed', str(ex))
-
-    def test_create_server_with_trusted_certs_policy_failed(self):
-        rule_name = "os_compute_api:servers:create:trusted_certs"
-        rules = {"os_compute_api:servers:create": "@",
-                 "os_compute_api:servers:create:forced_host": "@",
-                 "os_compute_api:servers:create:attach_volume": "@",
-                 "os_compute_api:servers:create:attach_network": "@",
-                 rule_name: "project:fake"}
-        self._create_instance_req(['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8'])
-        self.policy.set_rules(rules)
-        exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self.controller.create, self.req,
-                                body=self.body)
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
 
     @mock.patch.object(compute_api.API, 'create')
     def test_create_server_with_cert_validation_error(

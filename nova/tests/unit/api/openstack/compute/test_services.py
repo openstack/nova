@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 import copy
 import datetime
 
@@ -1197,18 +1196,6 @@ class ServicesTestV253(test.TestCase):
         ex = self.assertRaises(webob.exc.HTTPBadRequest,
                                self.controller.update, self.req, 1234, body={})
         self.assertIn('Invalid uuid', str(ex))
-
-    def test_update_policy_failed(self):
-        """Tests that policy is checked with microversion 2.53."""
-        rule_name = "os_compute_api:os-services:update"
-        self.policy.set_rules({rule_name: "project_id:non_fake"})
-        exc = self.assertRaises(
-            exception.PolicyNotAuthorized,
-            self.controller.update, self.req, uuidsentinel.service_uuid,
-            body={})
-        self.assertEqual(
-            "Policy doesn't allow %s to be performed." % rule_name,
-            exc.format_message())
 
     def test_update_service_not_found(self):
         """Tests that we get a 404 response if the service is not found by
