@@ -79,6 +79,17 @@
     timeout: 3600
 
 - job:
+    name: nova-tox-validate-backport
+    parent: openstack-tox
+    description: |
+      Determine whether a backport is ready to be merged by checking whether it
+      has already been merged to master or more recent stable branches.
+
+      Uses tox with the ``validate-backport`` environment.
+    vars:
+      tox_envlist: validate-backport
+
+- job:
     name: nova-live-migration
     parent: tempest-multinode-full-py3
     description: |
@@ -460,6 +471,8 @@
         - nova-lvm
         - nova-multi-cell
         - nova-next
+        - nova-tox-validate-backport:
+            voting: false
         - nova-tox-functional-py38
         - nova-tox-functional-py39:
             voting: false
@@ -500,6 +513,7 @@
         - nova-tox-functional-py38
         - nova-multi-cell
         - nova-next
+        - nova-tox-validate-backport
         - nova-ceph-multistore:
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-tempest-linuxbridge:
