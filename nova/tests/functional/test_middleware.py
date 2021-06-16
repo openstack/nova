@@ -122,3 +122,31 @@ class TestCORSMiddleware(api_sample_base.ApiSampleTestBaseV21):
 
         self.assertEqual(response.status_code, self.exp_version_status)
         self.assertNotIn('Access-Control-Allow-Origin', response.headers)
+
+    def test_api_version_request_headers(self):
+        # Verify allow_headers
+        headers = {
+            'Origin': 'http://valid.example.com',
+            'Access-Control-Request-Method': 'GET',
+            'Access-Control-Request-Headers':
+                'OpenStack-API-Version, X-OpenStack-Nova-API-Version'
+        }
+        response = self._do_options('', strip_version=True, headers=headers)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('Access-Control-Allow-Headers', response.headers)
+        self.assertIn('OpenStack-API-Version',
+                      response.headers['Access-Control-Allow-Headers'])
+        self.assertIn('X-OpenStack-Nova-API-Version',
+                      response.headers['Access-Control-Allow-Headers'])
+
+        # Verify expose_headers
+        headers = {'Origin': 'http://valid.example.com'}
+        response = self._do_get('', strip_version=True, headers=headers)
+
+        self.assertEqual(response.status_code, self.exp_version_status)
+        self.assertIn('Access-Control-Expose-Headers', response.headers)
+        self.assertIn('OpenStack-API-Version',
+                      response.headers['Access-Control-Expose-Headers'])
+        self.assertIn('X-OpenStack-Nova-API-Version',
+                      response.headers['Access-Control-Expose-Headers'])
