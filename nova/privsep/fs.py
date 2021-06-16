@@ -57,14 +57,21 @@ def lvcreate(size, lv, vg, preallocated=None):
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def vginfo(vg):
-    return processutils.execute('vgs', '--noheadings', '--nosuffix',
-                                '--separator', '|', '--units', 'b',
-                                '-o', 'vg_size,vg_free', vg)
+    # NOTE(gibi): We see intermittent faults querying volume groups failing
+    # with error code -11, hence the retry. See bug 1931710
+    return processutils.execute(
+        'vgs', '--noheadings', '--nosuffix',
+        '--separator', '|', '--units', 'b',
+        '-o', 'vg_size,vg_free', vg,
+        attempts=3, delay_on_retry=True,
+    )
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
 def lvlist(vg):
-    return processutils.execute('lvs', '--noheadings', '-o', 'lv_name', vg)
+    return processutils.execute(
+        'lvs', '--noheadings', '-o', 'lv_name', vg,
+        attempts=3, delay_on_retry=True)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
