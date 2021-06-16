@@ -79,6 +79,17 @@
     timeout: 3600
 
 - job:
+    name: nova-tox-validate-backport
+    parent: openstack-tox
+    description: |
+      Determine whether a backport is ready to be merged by checking whether it
+      has already been merged to master or more recent stable branches.
+
+      Uses tox with the ``validate-backport`` environment.
+    vars:
+      tox_envlist: validate-backport
+
+- job:
     name: nova-live-migration
     parent: nova-dsvm-multinode-base
     description: |
@@ -378,6 +389,8 @@
         - nova-multi-cell
         - nova-next
         - nova-tox-functional-py36
+        - nova-tox-validate-backport:
+            voting: false
         - tempest-integrated-compute:
             # NOTE(gmann): Policies changes do not need to run all the
             # integration test jobs. Running only tempest and grenade
@@ -413,6 +426,7 @@
         - nova-tox-functional-py36
         - nova-multi-cell
         - nova-next
+        - nova-tox-validate-backport
         - tempest-integrated-compute:
             irrelevant-files: *policies-irrelevant-files
         - grenade:
