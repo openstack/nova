@@ -305,6 +305,36 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
         'binding:vif_type': 'hw_veb',
         'binding:vnic_type': 'direct',
     }
+    network_4_port_2 = {
+        'id': '4a0e3b05-4704-4adb-bfb1-f31f0e4d1bdc',
+        'network_id': network_4['id'],
+        'status': 'ACTIVE',
+        'mac_address': 'b5:bc:2e:e7:51:ef',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.4.7',
+                'subnet_id': subnet_4['id']
+            }
+        ],
+        'binding:vif_details': {'vlan': 42},
+        'binding:vif_type': 'hw_veb',
+        'binding:vnic_type': 'direct',
+    }
+    network_4_port_3 = {
+        'id': 'fb2de1a1-d096-41be-9dbe-43066da64804',
+        'network_id': network_4['id'],
+        'status': 'ACTIVE',
+        'mac_address': 'b5:bc:2e:e7:51:ff',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.4.8',
+                'subnet_id': subnet_4['id']
+            }
+        ],
+        'binding:vif_details': {'vlan': 42},
+        'binding:vif_type': 'hw_veb',
+        'binding:vnic_type': 'direct',
+    }
 
     def __init__(self, test):
         super(LibvirtNeutronFixture, self).__init__(test)
