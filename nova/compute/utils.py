@@ -854,6 +854,21 @@ def notify_about_server_group_add_member(context, group_id):
 
 
 @rpc.if_notifications_enabled
+def notify_about_server_group_remove_member(context, group_id):
+    group = objects.InstanceGroup.get_by_uuid(context, group_id)
+    payload = sg_notification.ServerGroupPayload(group)
+    notification = sg_notification.ServerGroupNotification(
+        priority=fields.NotificationPriority.INFO,
+        publisher=notification_base.NotificationPublisher(
+            host=CONF.host, source=fields.NotificationSource.API),
+        event_type=notification_base.EventType(
+            object='server_group',
+            action=fields.NotificationAction.REMOVE_MEMBER),
+        payload=payload)
+    notification.emit(context)
+
+
+@rpc.if_notifications_enabled
 def notify_about_instance_rebuild(context, instance, host,
                                   action=fields.NotificationAction.REBUILD,
                                   phase=None,

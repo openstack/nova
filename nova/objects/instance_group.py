@@ -333,9 +333,6 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
     @staticmethod
     @api_db_api.context_manager.writer
     def _remove_members_in_db(context, group_id, instance_uuids):
-        # There is no public method provided for removing members because the
-        # user-facing API doesn't allow removal of instance group members. We
-        # need to be able to remove members to address quota races.
         context.session.query(api_models.InstanceGroupMember).\
             filter_by(group_id=group_id).\
             filter(api_models.InstanceGroupMember.instance_uuid.
@@ -489,6 +486,16 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
                                                        "addmember", payload)
         compute_utils.notify_about_server_group_add_member(context, group_uuid)
         return list(members)
+
+    @base.remotable_classmethod
+    def remove_members(cls, context, group_id, instance_uuids, group_uuid):
+        payload = {'server_group_id': group_uuid,
+                   'instance_uuids': instance_uuids}
+        cls._remove_members_in_db(context, group_id, instance_uuids)
+        compute_utils.notify_about_server_group_update(context,
+                                                       "removemember", payload)
+        compute_utils.notify_about_server_group_remove_member(context,
+                                                              group_uuid)
 
     @base.remotable
     def get_hosts(self, exclude=None):
