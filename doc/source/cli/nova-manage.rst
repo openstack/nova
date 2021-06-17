@@ -208,6 +208,16 @@ This command should be run **after** :program:`nova-manage api_db sync`.
    * - 1
      - Failed to access cell0.
 
+.. versionchanged:: 20.0.0 (Train)
+
+    Removed support for the legacy ``--version <version>`` argument.
+
+.. versionchanged:: 24.0.0 (Xena)
+
+    Migrated versioning engine to alembic. The optional ``VERSION`` argument is
+    now expected to be an alembic-based version. sqlalchemy-migrate-based
+    versions will be rejected.
+
 db archive_deleted_rows
 -----------------------
 
@@ -496,6 +506,12 @@ This command should be run before ``nova-manage db sync``.
     is now a separate project.
 
     Removed support for the legacy ``--version <version>`` argument.
+
+.. versionchanged:: 24.0.0 (Xena)
+
+    Migrated versioning engine to alembic. The optional ``VERSION`` argument is
+    now expected to be an alembic-based version. sqlalchemy-migrate-based
+    versions will be rejected.
 
 .. _man-page-cells-v2:
 

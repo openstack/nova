@@ -1,0 +1,25 @@
+---
+upgrade:
+  - |
+    The database migration engine has changed from `sqlalchemy-migrate`__ to
+    `alembic`__. For most deployments, this should have minimal to no impact
+    and the switch should be mostly transparent. The main user-facing impact is
+    the change in schema versioning. While sqlalchemy-migrate used a linear,
+    integer-based versioning scheme, which required placeholder migrations to
+    allow for potential migration backports, alembic uses a distributed version
+    control-like schema where a migration's ancestor is encoded in the file and
+    branches are possible. The alembic migration files therefore use a
+    arbitrary UUID-like naming scheme and the ``nova-manage db sync`` and
+    ``nova-manage api_db sync`` commands now expect such an version when
+    manually specifying the version that should be applied. For example::
+
+        $ nova-manage db sync 8f2f1571d55b
+
+    It is no longer possible to specify an sqlalchemy-migrate-based version.
+    When the ``nova-manage db sync`` and ``nova-manage api_db sync`` commands
+    are run, all remaining sqlalchemy-migrate-based migrations will be
+    automatically applied. Attempting to specify an sqlalchemy-migrate-based
+    version will result in an error.
+
+    .. __: https://sqlalchemy-migrate.readthedocs.io/en/latest/
+    .. __: https://alembic.sqlalchemy.org/en/latest/
