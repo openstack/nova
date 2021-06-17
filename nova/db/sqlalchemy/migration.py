@@ -21,7 +21,6 @@ from migrate.versioning import api as versioning_api
 from migrate.versioning.repository import Repository
 from oslo_log import log as logging
 import sqlalchemy
-from sqlalchemy.sql import null
 
 from nova.db.sqlalchemy import api as db_session
 from nova import exception
@@ -119,43 +118,6 @@ def _db_version(repository, database, context):
 
 def db_initial_version(database='main'):
     return INIT_VERSION[database]
-
-
-def _process_null_records(table, col_name, check_fkeys, delete=False):
-    """Queries the database and optionally deletes the NULL records.
-
-    :param table: sqlalchemy.Table object.
-    :param col_name: The name of the column to check in the table.
-    :param check_fkeys: If True, check the table for foreign keys back to the
-        instances table and if not found, return.
-    :param delete: If true, run a delete operation on the table, else just
-        query for number of records that match the NULL column.
-    :returns: The number of records processed for the table and column.
-    """
-    records = 0
-    if col_name in table.columns:
-        # NOTE(mriedem): filter out tables that don't have a foreign key back
-        # to the instances table since they could have stale data even if
-        # instances.uuid wasn't NULL.
-        if check_fkeys:
-            fkey_found = False
-            fkeys = table.c[col_name].foreign_keys or []
-            for fkey in fkeys:
-                if fkey.column.table.name == 'instances':
-                    fkey_found = True
-
-            if not fkey_found:
-                return 0
-
-        if delete:
-            records = table.delete().where(
-                table.c[col_name] == null()
-            ).execute().rowcount
-        else:
-            records = len(list(
-                table.select().where(table.c[col_name] == null()).execute()
-            ))
-    return records
 
 
 def db_version_control(version=None, database='main', context=None):
