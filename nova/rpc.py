@@ -386,6 +386,7 @@ class LegacyValidatingNotifier(object):
         'scheduler.select_destinations.end',
         'scheduler.select_destinations.start',
         'servergroup.addmember',
+        'servergroup.removemember',
         'servergroup.create',
         'servergroup.delete',
         'volume.usage',
