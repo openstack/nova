@@ -1734,6 +1734,30 @@ class TestDBArchiveDeletedRows(integrated_helpers._IntegratedTestBase):
         self.cli.archive_deleted_rows(task_log=True, verbose=True)
         self.assertRegex(self.output.getvalue(), r'\| task_log\s+\| 2')
 
+    def test_archive_before(self):
+        """Test that no records are left over after archiving with --before"""
+        # Create and delete a server so we can archive.
+        server = self._build_server()
+        server = self.api.post_server({'server': server})
+        server = self.api.get_server(server['id'])
+        self._delete_server(server)
+        # First try archiving records before a past datetime. Nothing should be
+        # archived.
+        past = timeutils.utcnow() - datetime.timedelta(hours=1)
+        ret = self.cli.archive_deleted_rows(before=past.isoformat())
+        # Return code 0 means nothing was archived.
+        self.assertEqual(0, ret)
+        # Now try archiving records before a future datetime. Everything should
+        # have been archived.
+        future = timeutils.utcnow() + datetime.timedelta(hours=1)
+        ret = self.cli.archive_deleted_rows(before=future.isoformat())
+        # Return code 1 means something was archived.
+        self.assertEqual(1, ret)
+        # Now archive everything without specifying --before.
+        ret = self.cli.archive_deleted_rows()
+        # Return code 0 means nothing was archived.
+        self.assertEqual(0, ret)
+
 
 class TestDBArchiveDeletedRowsMultiCell(integrated_helpers.InstanceHelperMixin,
                                         test.TestCase):
