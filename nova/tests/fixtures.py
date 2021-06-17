@@ -2034,16 +2034,19 @@ class NeutronFixture(fixtures.Fixture):
                 # else update the active one
                 host, _ = self._get_active_binding(port_id)
 
-            self._port_bindings[port_id][host] = {
+            update = {
                 'host': host,
                 'status': 'ACTIVE',
-                'profile': copy.deepcopy(
-                    body['port'].get('binding:profile') or {},
-                ),
-                'vif_details': port.get('binding:vif_details') or {},
                 'vif_type': port['binding:vif_type'],
                 'vnic_type': port['binding:vnic_type'],
             }
+            if body['port'].get('binding:profile'):
+                update['profile'] = copy.deepcopy(
+                    body['port']['binding:profile'])
+            if body['port'].get('binding:vif_details'):
+                update['vif_details'] = copy.deepcopy(
+                    body['port']['binding:vif_details'])
+            self._port_bindings[port_id][host] = update
 
             # mark any other active bindings as inactive
             self._activate_port_binding(port_id, host)
