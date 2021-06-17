@@ -163,12 +163,12 @@ class ServerGroupTestV21(test.NoDBTestCase):
         # test as non-admin
         self.controller.create(self.req, body={'server_group': sgroup})
 
-    def _create_instance(self, ctx, cell):
+    def _create_instance(self, ctx, cell, host='host1'):
         with context.target_cell(ctx, cell) as cctx:
             instance = objects.Instance(context=cctx,
                                         image_ref=uuidsentinel.fake_image_ref,
                                         node='node1', reservation_id='a',
-                                        host='host1',
+                                        host=host,
                                         project_id=fakes.FAKE_PROJECT_ID,
                                         vm_state='fake',
                                         system_metadata={'key': 'value'})
@@ -181,10 +181,10 @@ class ServerGroupTestV21(test.NoDBTestCase):
         im.create()
         return instance
 
-    def _create_instance_group(self, context, members):
+    def _create_instance_group(self, context, members, policy=None):
         ig = objects.InstanceGroup(context=context, name='fake_name',
                   user_id='fake_user', project_id=fakes.FAKE_PROJECT_ID,
-                  members=members)
+                  members=members, policy=policy)
         ig.create()
         return ig.uuid
 
@@ -774,6 +774,209 @@ class ServerGroupTestV264(ServerGroupTestV213):
         sgroup = server_group_template(unknown='unknown')
         self.assertRaises(self.validation_error, self.controller.create,
                           req, body={'server_group': sgroup})
+
+    def test_update_server_group_not_found(self):
+        """We raise a 404 if the server group does not exist."""
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+        (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
+        self.assertRaises(webob.exc.HTTPNotFound,
+            self.controller.update, req, uuidsentinel.group1, body={})
+
+    def test_update_server_group_empty(self):
+        """We do not fail if the user doesn't request any changes"""
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+        (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
+        res_dict = self.controller.update(req, ig_uuid, body={})
+        result_members = res_dict['server_group']['members']
+        self.assertEqual(3, len(result_members))
+        for member in members:
+            self.assertIn(member, result_members)
+
+    def test_update_server_group_add_remove_overlap(self):
+        """We do not accept changes, if there's a server to be both added and
+        removed, because the result would depend on implementation details if
+        we remove first or add first.
+        """
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+        (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
+        body = {
+            'add_members': [uuidsentinel.uuid1, uuidsentinel.uuid2],
+            'remove_members': [uuidsentinel.uuid2, uuidsentinel.uuid3],
+        }
+        result = self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller.update, req, ig_uuid, body=body)
+        self.assertIn('Parameters "add_members" and "remove_members" are '
+                      'overlapping in {}'.format(uuidsentinel.uuid2),
+                      str(result))
+
+    def test_update_server_group_remove_nonexisting(self):
+        """Don't fail if the user tries to remove a server not being member of
+        the server group.
+        """
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+        (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
+        body = {
+            'remove_members': [uuidsentinel.uuid4],
+        }
+        res_dict = self.controller.update(req, ig_uuid, body=body)
+        result_members = res_dict['server_group']['members']
+        self.assertEqual(3, len(result_members))
+        for member in members:
+            self.assertIn(member, result_members)
+
+    def test_update_server_group_add_already_added(self):
+        """Don't fail if the user adds a server that's already a member of the
+        server group.
+        """
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+        (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
+        body = {
+            'add_members': [members[0]],
+        }
+        res_dict = self.controller.update(req, ig_uuid, body=body)
+        result_members = res_dict['server_group']['members']
+        self.assertEqual(3, len(result_members))
+        for member in members:
+            self.assertIn(member, result_members)
+
+    def test_update_server_group_add_against_policy_affinity(self):
+        """Fail if adding the server would break the policy."""
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+
+        cell1 = self.cells[uuidsentinel.cell1]
+        instances = [self._create_instance(ctx, cell1, host='host1')]
+
+        ig_uuid = self._create_instance_group(ctx, [i.uuid for i in instances],
+                                         policy='affinity')
+
+        cell1 = self.cells[uuidsentinel.cell1]
+        new_instance = self._create_instance(ctx, cell1, host='host2')
+
+        body = {
+            'add_members': [new_instance.uuid],
+        }
+        result = self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller.update, req, ig_uuid, body=body)
+        self.assertIn("Adding instance(s) {} would violate policy 'affinity'."
+                      .format(new_instance.uuid),
+                      str(result))
+
+    def test_update_server_group_add_against_policy_anti_affinity(self):
+        """Fail if adding the server would break the policy."""
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+
+        cell1 = self.cells[uuidsentinel.cell1]
+        instances = [self._create_instance(ctx, cell1, host='host1')]
+
+        ig_uuid = self._create_instance_group(ctx, [i.uuid for i in instances],
+                                         policy='anti-affinity')
+
+        cell1 = self.cells[uuidsentinel.cell1]
+        new_instance = self._create_instance(ctx, cell1, host='host1')
+
+        body = {
+            'add_members': [new_instance.uuid],
+        }
+        result = self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller.update, req, ig_uuid, body=body)
+        self.assertIn("Adding instance(s) {} would violate policy "
+                      "'anti-affinity'.".format(new_instance.uuid),
+                      str(result))
+
+    def test_update_server_group_add_with_remove_fixes_policy(self):
+        """Don't fail if adding a server would break the policy, but the remove
+        in the same request fixes that.
+        """
+        """Fail if adding the server would break the policy."""
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+
+        cell1 = self.cells[uuidsentinel.cell1]
+        instances = [self._create_instance(ctx, cell1, host='host1'),
+                     self._create_instance(ctx, cell1, host='host2')]
+
+        ig_uuid = self._create_instance_group(ctx, [i.uuid for i in instances],
+                                         policy='anti-affinity')
+
+        cell1 = self.cells[uuidsentinel.cell1]
+        new_instance = self._create_instance(ctx, cell1, host='host2')
+
+        body = {
+            'add_members': [new_instance.uuid],
+            'remove_members': [instances[1].uuid],
+        }
+        res_dict = self.controller.update(req, ig_uuid, body=body)
+        result_members = res_dict['server_group']['members']
+        self.assertEqual(2, len(result_members))
+        for member in [instances[0].uuid, new_instance.uuid]:
+            self.assertIn(member, result_members)
+
+    def test_update_server_group_add_nonexisting_instance(self):
+        """Fail if the instances the user tries to add does not exist."""
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+        (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
+        body = {
+            'add_members': [uuidsentinel.uuid1],
+        }
+        result = self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller.update, req, ig_uuid, body=body)
+        self.assertIn('One or more members in add_members cannot be found: '
+                      '{}'.format(uuidsentinel.uuid1),
+                      str(result))
+
+    def test_update_server_group_add_instance_multiple_cells(self):
+        """Don't fail if the instance the user tries to add is in another cell.
+        """
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+        (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
+        cell1 = self.cells[uuidsentinel.cell1]
+        cell2 = self.cells[uuidsentinel.cell2]
+        new_instances = [self._create_instance(ctx, cell1),
+                         self._create_instance(ctx, cell2)]
+        body = {
+            'add_members': [i.uuid for i in new_instances],
+        }
+        res_dict = self.controller.update(req, ig_uuid, body=body)
+        result_members = res_dict['server_group']['members']
+        self.assertEqual(5, len(result_members))
+        for member in members:
+            self.assertIn(member, result_members)
+        for instance in new_instances:
+            self.assertIn(instance.uuid, result_members)
+
+    def test_update_server_group_add_against_soft_policy(self):
+        """Don't fail if the policy would fail, but it's a soft-* policy - they
+        are best-effort by design.
+        """
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+
+        cell1 = self.cells[uuidsentinel.cell1]
+        instances = [self._create_instance(ctx, cell1, host='host1')]
+
+        ig_uuid = self._create_instance_group(ctx, [i.uuid for i in instances],
+                                         policy='soft-anti-affinity')
+
+        cell1 = self.cells[uuidsentinel.cell1]
+        new_instance = self._create_instance(ctx, cell1, host='host1')
+
+        body = {
+            'add_members': [new_instance.uuid],
+        }
+        res_dict = self.controller.update(req, ig_uuid, body=body)
+        result_members = res_dict['server_group']['members']
+        self.assertEqual(2, len(result_members))
+        for member in [instances[0].uuid, new_instance.uuid]:
+            self.assertIn(member, result_members)
 
 
 class ServerGroupTestV275(ServerGroupTestV264):

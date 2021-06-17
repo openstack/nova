@@ -91,6 +91,17 @@ server_groups_policies = [
         ],
         scope_types=['system', 'project']
     ),
+    policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'update',
+        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        description="Update members of a server group",
+        operations=[
+            {
+                'path': '/os-server-groups/{server_group_id}',
+                'method': 'PUT'
+            }
+        ]
+    ),
 ]
 
 
