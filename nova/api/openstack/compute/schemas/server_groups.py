@@ -89,5 +89,20 @@ server_groups_query_param = {
     'additionalProperties': True
 }
 
+update = {
+    'type': 'object',
+    'properties': {
+        'add_members': {
+            'type': 'array',
+            'items': parameter_types.server_id,
+        },
+        'remove_members': {
+            'type': 'array',
+            'items': parameter_types.server_id,
+        }
+    },
+    'additionalProperties': False
+}
+
 server_groups_query_param_275 = copy.deepcopy(server_groups_query_param)
 server_groups_query_param_275['additionalProperties'] = False

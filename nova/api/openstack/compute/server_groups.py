@@ -274,3 +274,135 @@ class ServerGroupController(wsgi.Controller):
                 raise exc.HTTPForbidden(explanation=msg)
 
         return {'server_group': self._format_server_group(context, sg, req)}
+
+    @wsgi.Controller.api_version("2.64")
+    @validation.schema(schema.update)
+    @wsgi.expected_errors((400, 404))
+    def update(self, req, id, body):
+        """Update a server-group's members
+
+        Striving for idempotency, we accept already removed or already
+        contained members.
+
+        We always remove first and then check if we can add the requested
+        members. That way, removing an instance for a host and adding another
+        one works in one request.
+
+        We do all requested changes or no change.
+        """
+        context = req.environ['nova.context']
+        project_id = context.project_id
+        context.can(sg_policies.POLICY_ROOT % 'update',
+                    target={'project_id': project_id})
+        try:
+            sg = objects.InstanceGroup.get_by_uuid(context, id)
+        except nova.exception.InstanceGroupNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+        members_to_remove = set(body.get('remove_members', []))
+        members_to_add = set(body.get('add_members', []))
+        LOG.info('Called update for server-group %s with add_members: %s and '
+                 'remove_members %s',
+                 id, ', '.join(members_to_add), ', '.join(members_to_remove))
+
+        overlap = members_to_remove & members_to_add
+        if overlap:
+            msg = ('Parameters "add_members" and "remove_members" are '
+                  'overlapping in {}'.format(', '.join(overlap)))
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        if not members_to_remove and not members_to_add:
+            LOG.info("No update requested.")
+            formatted_sg = self._format_server_group(context, sg, req)
+            return {'server_group': formatted_sg}
+
+        # don't do work if it's not necessary. we might be able to get a fast
+        # way out if this request is already fulfilled
+        members_to_remove = members_to_remove & set(sg.members)
+        members_to_add = members_to_add - set(sg.members)
+
+        if not members_to_remove and not members_to_add:
+            LOG.info("State already satisfied.")
+            formatted_sg = self._format_server_group(context, sg, req)
+            return {'server_group': formatted_sg}
+
+        # retrieve all the instances to add, failing if one doesn't exist,
+        # because we need to check the hosts against the policy and adding
+        # non-existent instances doesn't make sense
+        members_to_search = members_to_add | members_to_remove
+        found_instances_hosts = _get_not_deleted(context, members_to_search)
+        missing_uuids = members_to_add - set(found_instances_hosts)
+        if missing_uuids:
+            msg = ("One or more members in add_members cannot be found: {}"
+                   .format(', '.join(missing_uuids)))
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        # check if (some of) the VMs are already members of another
+        # instance_group. We cannot support this as they might contradict.
+        found_server_groups = \
+            objects.InstanceGroupList.get_by_instance_uuids(context,
+                                                            members_to_add)
+        other_server_groups = [_x.uuid for _x in found_server_groups
+                               if _x.uuid != id]
+        if other_server_groups:
+            msg = ("One ore more members in add_members is already assigned "
+                   "to another server group. Server groups: {}"
+                   .format(', '.join(other_server_groups)))
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        # check if the policy is still valid with these changes
+        if sg.policy in ('affinity', 'anti-affinity'):
+            current_members_hosts = _get_not_deleted(context, sg.members)
+            current_hosts = set(h for u, h in current_members_hosts.items()
+                                if u not in members_to_remove)
+            if sg.policy == 'affinity':
+                outliers = [u for u, h in found_instances_hosts.items()
+                            if h and h not in current_hosts]
+            elif sg.policy == 'anti-affinity':
+                outliers = [u for u, h in found_instances_hosts.items()
+                            if h and h in current_hosts]
+            else:
+                outliers = None
+                LOG.warning('server-group update check not implemented for '
+                            'policy %s', sg.policy)
+            if outliers:
+                LOG.info('Update of server-group %s with policy %s aborted: '
+                         'policy violation by %s',
+                         id, sg.policy, ', '.join(outliers))
+                msg = ("Adding instance(s) {} would violate policy '{}'."
+                       .format(', '.join(outliers), sg.policy))
+                raise exc.HTTPBadRequest(explanation=msg)
+
+        # update the server group and save it
+        if members_to_remove:
+            objects.InstanceGroup.remove_members(context, sg.id,
+                                                 members_to_remove, sg.uuid)
+        if members_to_add:
+            try:
+                objects.InstanceGroup.add_members(context, id, members_to_add)
+            except Exception:
+                LOG.exception('Failed to add members.')
+                if members_to_remove:
+                    LOG.info('Trying to add removed members again after '
+                             'error.')
+                    objects.InstanceGroup.add_members(context, id,
+                                                      members_to_remove)
+                raise
+
+        LOG.info("Changed server-group %s in DB.", id)
+
+        # refresh InstanceGroup object, because we changed it directly in the
+        # DB.
+        sg.refresh()
+
+        # update the request-specs of the updated members
+        for member_uuid in found_instances_hosts:
+            request_spec = \
+                objects.RequestSpec.get_by_instance_uuid(context, member_uuid)
+            if member_uuid in members_to_add:
+                request_spec.instance_group = sg
+            else:
+                request_spec.instance_group = None
+            request_spec.save()
+
+        return {'server_group': self._format_server_group(context, sg, req)}
