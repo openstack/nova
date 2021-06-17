@@ -117,8 +117,42 @@ class PciDevTracker(object):
 
         devices = []
         for dev in jsonutils.loads(devices_json):
-            if self.dev_filter.device_assignable(dev):
-                devices.append(dev)
+            try:
+                if self.dev_filter.device_assignable(dev):
+                    devices.append(dev)
+            except exception.PciConfigInvalidWhitelist as e:
+                # The raised exception is misleading as the problem is not with
+                # the whitelist config but with the host PCI device reported by
+                # libvirt. The code that matches the host PCI device to the
+                # withelist spec reuses the WhitelistPciAddress object to parse
+                # the host PCI device address. That parsing can fail if the
+                # PCI address has a 32 bit domain. But this should not prevent
+                # processing the rest of the devices. So we simply skip this
+                # device and continue.
+                # Please note that this except block does not ignore the
+                # invalid whitelist configuration. The whitelist config has
+                # already been parsed or rejected in case it was invalid. At
+                # this point the self.dev_filter representes the parsed and
+                # validated whitelist config.
+                LOG.debug(
+                    'Skipping PCI device %s reported by the hypervisor: %s',
+                    {k: v for k, v in dev.items()
+                     if k in ['address', 'parent_addr']},
+                    # NOTE(gibi): this is ugly but the device_assignable() call
+                    # uses the PhysicalPciAddress class to parse the PCI
+                    # addresses and that class reuses the code from
+                    # PciAddressSpec that was originally designed to parse
+                    # whitelist spec. Hence the raised exception talks about
+                    # whitelist config. This is misleading as in our case the
+                    # PCI address that we failed to parse came from the
+                    # hypervisor.
+                    # TODO(gibi): refactor the false abstraction to make the
+                    # code reuse clean from the false assumption that we only
+                    # parse whitelist config with
+                    # devspec.PciAddressSpec._set_pci_dev_info()
+                    str(e).replace(
+                        'Invalid PCI devices Whitelist config:', 'The'))
+
         self._set_hvdevs(devices)
 
     @staticmethod

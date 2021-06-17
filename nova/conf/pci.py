@@ -116,7 +116,13 @@ Possible values:
 
   ``address``
     PCI address of the device. Both traditional glob style and regular
-    expression syntax is supported.
+    expression syntax is supported. Please note that the address fields are
+    restricted to the following maximum values:
+
+    * domain - 0xFFFF
+    * bus - 0xFF
+    * slot - 0x1F
+    * function - 0x7
 
   ``devname``
     Device name of the device (for e.g. interface name). Not all PCI devices
