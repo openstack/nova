@@ -23655,6 +23655,52 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_guest.detach_device.assert_not_called()
 
     @ddt.data(power_state.RUNNING, power_state.PAUSED)
+    def test__detach_with_retry_live_dev_not_found_operation_failed(
+        self, state
+    ):
+        """Tests that exception is raised if a live detach is requested,
+        but the device is not found in the live domain and libvirt signalled
+        that with an OPERATION_FAILED error message instead of the
+        DEVICE_MISSING. See bug 1931716.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_guest.get_power_state.return_value = state
+        # for simplicity do a live only detach
+        mock_guest.has_persistent_configuration.return_value = False
+
+        mock_dev = mock.Mock(spec=vconfig.LibvirtConfigGuestDisk)
+        mock_dev.alias = 'virtio-disk1'
+
+        # there will only one device query when the code checks that device
+        # existing in the live domain before it attempts to detach it
+        mock_get_device_conf_func = mock.Mock(return_value=mock_dev)
+
+        # simulate that libvirt raises an error synchronously with
+        # OPERATION_FAILED error code
+        mock_guest.detach_device.side_effect = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            msg='error',
+            error_message='disk vdb not found',
+            error_code=fakelibvirt.VIR_ERR_OPERATION_FAILED)
+
+        self.assertRaises(
+            exception.DeviceNotFound,
+            drvr._detach_with_retry,
+            mock_guest,
+            uuids.instance_uuid,
+            mock_get_device_conf_func,
+            device_name='vdb',
+        )
+
+        mock_guest.has_persistent_configuration.assert_called_once_with()
+        mock_guest.detach_device.assert_called_once_with(
+            mock_dev, persistent=False, live=True)
+
+        # check that the internal event handling is cleaned up
+        self.assertEqual(set(), drvr._device_event_handler._waiters)
+
+    @ddt.data(power_state.RUNNING, power_state.PAUSED)
     def test__detach_with_retry_async_fail(self, state):
         """Test that libvirt sends error event during detach"""
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

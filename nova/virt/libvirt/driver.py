@@ -2524,7 +2524,15 @@ class LibvirtDriver(driver.ComputeDriver):
                 "instance %s. Libvirt error code: %d, error message: %s.",
                 device_name, instance_uuid, code, msg
             )
-            if code == libvirt.VIR_ERR_DEVICE_MISSING:
+            if (code == libvirt.VIR_ERR_DEVICE_MISSING or
+                # Libvirt 4.1 improved error code usage but OPERATION_FAILED
+                # still used in one case during detach:
+                # https://github.com/libvirt/libvirt/blob/55ea45acc99c549c7757efe954aacc33ad30a8ef/src/qemu/qemu_hotplug.c#L5324-L5328
+                # TODO(gibi): remove this when a future version of libvirt
+                # transform this error to VIR_ERR_DEVICE_MISSING too.
+                (code == libvirt.VIR_ERR_OPERATION_FAILED and
+                 'not found' in msg)
+            ):
                 LOG.debug(
                     'Libvirt failed to detach device %s from instance %s '
                     'synchronously (persistent=%s, live=%s) with error: %s.',
