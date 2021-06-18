@@ -1,0 +1,22 @@
+features:
+  - |
+    A ``--task-log`` option has been added to the ``nova-manage db
+    archive_deleted_rows`` CLI. When ``--task-log`` is specified, ``task_log``
+    table records will be archived while archiving the database. The
+    ``--task-log`` option works in conjunction with ``--before`` if operators
+    desire archiving only records that are older than ``<date>``. The
+    ``updated_at`` field is used by ``--task-log --before <date>`` to determine
+    the age of a ``task_log`` record for archival.
+
+    The ``task_log`` database table contains instance usage audit records if
+    ``nova-compute`` has been configured with ``[DEFAULT]instance_usage_audit =
+    True``. This will be the case if OpenStack Telemetry is being used in the
+    deployment, as the option causes Nova to generate audit data that Telemetry
+    then retrieves from the server usage audit log API [1].
+
+    Historically, there has been no way to delete ``task_log`` table records
+    other than manual database modification. Because of this, ``task_log``
+    records could pile up over time and operators are forced to perform manual
+    steps to periodically truncate the ``task_log`` table.
+
+    [1] https://docs.openstack.org/api-ref/compute/#server-usage-audit-log-os-instance-usage-audit-log

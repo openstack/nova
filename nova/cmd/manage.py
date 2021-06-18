@@ -223,9 +223,17 @@ Error: %s""") % str(e))
           help='Purge all data from shadow tables after archive completes')
     @args('--all-cells', action='store_true', dest='all_cells',
           default=False, help='Run command across all cells.')
+    @args('--task-log', action='store_true', dest='task_log', default=False,
+          help=('Also archive ``task_log`` table records. Note that '
+                '``task_log`` records are never deleted, so archiving them '
+                'will move all of the ``task_log`` records up to now into the '
+                'shadow tables. It is recommended to also specify the '
+                '``--before`` option to avoid races for those consuming '
+                '``task_log`` record data via the '
+                '``/os-instance_usage_audit_log`` API (example: Telemetry).'))
     def archive_deleted_rows(self, max_rows=1000, verbose=False,
                              until_complete=False, purge=False,
-                             before=None, all_cells=False):
+                             before=None, all_cells=False, task_log=False):
         """Move deleted rows from production tables to shadow tables.
 
         Returns 0 if nothing was archived, 1 if some number of rows were
@@ -317,7 +325,8 @@ Error: %s""") % str(e))
                         until_complete,
                         verbose,
                         before_date,
-                        cell_name)
+                        cell_name,
+                        task_log)
                 except KeyboardInterrupt:
                     interrupt = True
                     break
@@ -348,7 +357,7 @@ Error: %s""") % str(e))
         return int(bool(table_to_rows_archived))
 
     def _do_archive(self, table_to_rows_archived, cctxt, max_rows,
-                    until_complete, verbose, before_date, cell_name):
+                    until_complete, verbose, before_date, cell_name, task_log):
         """Helper function for archiving deleted rows for a cell.
 
         This will archive deleted rows for a cell database and remove the
@@ -367,11 +376,13 @@ Error: %s""") % str(e))
         :param before_date: Archive rows that were deleted before this date
         :param cell_name: Name of the cell or None if not archiving across all
             cells
+        :param task_log: Whether to archive task_log table rows
         """
         ctxt = context.get_admin_context()
         while True:
             run, deleted_instance_uuids, total_rows_archived = \
-                db.archive_deleted_rows(cctxt, max_rows, before=before_date)
+                db.archive_deleted_rows(
+                    cctxt, max_rows, before=before_date, task_log=task_log)
             for table_name, rows_archived in run.items():
                 if cell_name:
                     table_name = cell_name + '.' + table_name
@@ -397,6 +408,7 @@ Error: %s""") % str(e))
                         ctxt, deleted_instance_uuids))
                 table_to_rows_archived[
                     'API_DB.instance_group_member'] += deleted_group_members
+
             # If we're not archiving until there is nothing more to archive, we
             # have reached max_rows in this cell DB or there was nothing to
             # archive.
