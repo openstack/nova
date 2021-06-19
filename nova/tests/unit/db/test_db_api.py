@@ -5939,31 +5939,51 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 self.assertEqual(rows, [], "Table %s not empty" % table)
 
     def test_shadow_tables(self):
+        """Validate shadow table schema.
+
+        Shadow tables should have an identical schema to the main table.
+        """
         metadata = MetaData(bind=self.engine)
         metadata.reflect()
         for table_name in metadata.tables:
-            # NOTE(rpodolyaka): migration 209 introduced a few new tables,
-            #                   which don't have shadow tables and it's
-            #                   completely OK, so we should skip them here
-            if table_name.startswith("dump_"):
+            # some tables don't have shadow tables so skip these
+            if table_name in [
+                'tags', 'resource_providers', 'allocations',
+                'inventories', 'resource_provider_aggregates',
+                'console_auth_tokens',
+            ]:
                 continue
 
-            # NOTE(snikitin): migration 266 introduced a new table 'tags',
-            #                 which have no shadow table and it's
-            #                 completely OK, so we should skip it here
-            # NOTE(cdent): migration 314 introduced three new
-            # ('resource_providers', 'allocations' and 'inventories')
-            # with no shadow table and it's OK, so skip.
-            # 318 adds one more: 'resource_provider_aggregates'.
-            # NOTE(PaulMurray): migration 333 adds 'console_auth_tokens'
-            if table_name in ['tags', 'resource_providers', 'allocations',
-                              'inventories', 'resource_provider_aggregates',
-                              'console_auth_tokens']:
-                continue
-
+            # we also don't need to check the shadow tables themselves
             if table_name.startswith("shadow_"):
                 self.assertIn(table_name[7:], metadata.tables)
                 continue
+
+            shadow_table_name = f'shadow_{table_name}'
+
+            table = Table(table_name, metadata, autoload=True)
+            shadow_table = Table(shadow_table_name, metadata, autoload=True)
+
+            columns = {c.name: c for c in table.columns}
+            shadow_columns = {c.name: c for c in shadow_table.columns}
+
+            for name, column in columns.items():
+                self.assertIn(
+                    name, shadow_columns,
+                    f'Missing column {column} in table {shadow_table_name}')
+                shadow_column = shadow_columns[name]
+
+                self.assertIsInstance(
+                    shadow_column.type, type(column.type),
+                    f'Different types in {table_name}.{column} '
+                    f'({type(column.type)}) and {shadow_table_name}.{column} '
+                    f'({shadow_column.type})')
+
+            for name, column in shadow_columns.items():
+                self.assertIn(
+                    name, columns,
+                    f'Extra column {column} in table {shadow_table_name}')
+
         self._assert_shadow_tables_empty_except()
 
     def test_archive_deleted_rows(self):
