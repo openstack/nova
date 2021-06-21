@@ -40,7 +40,7 @@ Prerequisites
     nodes.  To simplify your PKI (Public Key Infrastructure) setup, use
     deployment tools that take care of handling all the certificate
     lifecycle management.  For example, refer to the "`TLS everywhere
-    <https://docs.openstack.org/tripleo-docs/latest/install/advanced_deployment/tls_everywhere.html>`__"
+    <https://docs.openstack.org/project-deploy-guide/tripleo-docs/latest/features/tls-everywhere.html>`__"
     guide from the TripleO project.
 
 (3) Password-less SSH setup for all relevant compute nodes.
