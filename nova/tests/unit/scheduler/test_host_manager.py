@@ -583,7 +583,7 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.scheduler.host_manager.LOG')
     @mock.patch('nova.objects.ServiceList.get_by_binary')
-    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_host_states(self, mock_get_by_host, mock_get_all,
                              mock_get_by_binary, mock_log):
@@ -592,7 +592,9 @@ class HostManagerTestCase(test.NoDBTestCase):
         mock_get_by_binary.return_value = fakes.SERVICES
         context = nova_context.get_admin_context()
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.enabled_cells)
+            context,
+            self.host_manager.enabled_cells,
+            compute_uuids=[cn.uuid for cn in fakes.COMPUTE_NODES])
 
         # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
@@ -645,20 +647,26 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch.object(nova.objects.InstanceList, 'get_uuids_by_host')
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
-    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_uuids')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
     def test_get_host_states_with_no_aggs(self, svc_get_by_binary,
                                           cn_get_all, update_from_cn,
                                           mock_get_by_host):
+        fake_compute_nodes = [
+            objects.ComputeNode(
+                uuid=uuids.cn, host='fake', hypervisor_hostname='fake',
+            ),
+        ]
         svc_get_by_binary.return_value = [objects.Service(host='fake')]
-        cn_get_all.return_value = [
-            objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
+        cn_get_all.return_value = fake_compute_nodes
         mock_get_by_host.return_value = []
         self.host_manager.host_aggregates_map = collections.defaultdict(set)
 
         context = nova_context.get_admin_context()
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.enabled_cells)
+            context,
+            self.host_manager.enabled_cells,
+            compute_uuids=[cn.uuid for cn in fake_compute_nodes])
 
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
@@ -670,15 +678,19 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch.object(nova.objects.InstanceList, 'get_uuids_by_host')
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
-    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_uuids')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
     def test_get_host_states_with_matching_aggs(self, svc_get_by_binary,
                                                 cn_get_all,
                                                 update_from_cn,
                                                 mock_get_by_host):
+        fake_compute_nodes = [
+            objects.ComputeNode(
+                uuid=uuids.cn, host='fake', hypervisor_hostname='fake',
+            ),
+        ]
         svc_get_by_binary.return_value = [objects.Service(host='fake')]
-        cn_get_all.return_value = [
-            objects.ComputeNode(host='fake', hypervisor_hostname='fake')]
+        cn_get_all.return_value = fake_compute_nodes
         mock_get_by_host.return_value = []
         fake_agg = objects.Aggregate(id=1)
         self.host_manager.host_aggregates_map = collections.defaultdict(
@@ -687,7 +699,9 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         context = nova_context.get_admin_context()
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.enabled_cells)
+            context,
+            self.host_manager.enabled_cells,
+            compute_uuids=[cn.uuid for cn in fake_compute_nodes])
 
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
@@ -699,17 +713,21 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch.object(nova.objects.InstanceList, 'get_uuids_by_host')
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
-    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_uuids')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
     def test_get_host_states_with_not_matching_aggs(self, svc_get_by_binary,
                                                     cn_get_all,
                                                     update_from_cn,
                                                     mock_get_by_host):
+        fake_compute_nodes = [
+            objects.ComputeNode(
+                uuid=uuids.cn1, host='fake', hypervisor_hostname='fake'),
+            objects.ComputeNode(
+                uuid=uuids.cn2, host='other', hypervisor_hostname='other'),
+        ]
         svc_get_by_binary.return_value = [objects.Service(host='fake'),
                                           objects.Service(host='other')]
-        cn_get_all.return_value = [
-            objects.ComputeNode(host='fake', hypervisor_hostname='fake'),
-            objects.ComputeNode(host='other', hypervisor_hostname='other')]
+        cn_get_all.return_value = fake_compute_nodes
         mock_get_by_host.return_value = []
         fake_agg = objects.Aggregate(id=1)
         self.host_manager.host_aggregates_map = collections.defaultdict(
@@ -718,7 +736,9 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         context = nova_context.get_admin_context()
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.enabled_cells)
+            context,
+            self.host_manager.enabled_cells,
+            compute_uuids=[cn.uuid for cn in fake_compute_nodes])
 
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
@@ -731,7 +751,7 @@ class HostManagerTestCase(test.NoDBTestCase):
     @mock.patch.object(nova.objects.InstanceList, 'get_uuids_by_host',
                        return_value=[])
     @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
-    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_uuids')
     @mock.patch.object(objects.ServiceList, 'get_by_binary')
     def test_get_host_states_corrupt_aggregates_info(self, svc_get_by_binary,
                                                      cn_get_all,
@@ -747,11 +767,17 @@ class HostManagerTestCase(test.NoDBTestCase):
         """
         host_a = 'host_a'
         host_b = 'host_b'
+        fake_compute_nodes = [
+            objects.ComputeNode(
+                uuid=uuids.cn_a, host=host_a, hypervisor_hostname=host_a,
+            ),
+            objects.ComputeNode(
+                uuid=uuids.cn_b, host=host_b, hypervisor_hostname=host_b,
+            ),
+        ]
         svc_get_by_binary.return_value = [objects.Service(host=host_a),
                                           objects.Service(host=host_b)]
-        cn_get_all.return_value = [
-            objects.ComputeNode(host=host_a, hypervisor_hostname=host_a),
-            objects.ComputeNode(host=host_b, hypervisor_hostname=host_b)]
+        cn_get_all.return_value = fake_compute_nodes
 
         aggregate = objects.Aggregate(id=1)
         aggregate.hosts = [host_a, host_b]
@@ -764,7 +790,9 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         context = nova_context.get_admin_context()
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.enabled_cells)
+            context,
+            self.host_manager.enabled_cells,
+            compute_uuids=[cn.uuid for cn in fake_compute_nodes])
 
         self.host_manager._get_host_states(context, compute_nodes, services)
 
@@ -988,7 +1016,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.assertFalse(new_info['updated'])
 
     @mock.patch('nova.objects.CellMappingList.get_all')
-    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     def test_get_computes_for_cells(self, mock_sl, mock_cn, mock_cm):
         cells = [
@@ -1005,11 +1033,12 @@ class HostManagerTestCase(test.NoDBTestCase):
             [objects.ServiceList(host='bar')],
         ]
         mock_cn.side_effect = [
-            [objects.ComputeNode(host='foo')],
-            [objects.ComputeNode(host='bar')],
+            [objects.ComputeNode(uuid=uuids.cn_a, host='foo')],
+            [objects.ComputeNode(uuid=uuids.cn_b, host='bar')],
         ]
         context = nova_context.RequestContext('fake', 'fake')
-        cns, srv = self.host_manager._get_computes_for_cells(context, cells)
+        cns, srv = self.host_manager._get_computes_for_cells(
+            context, cells, compute_uuids=[uuids.cn_a, uuids.cn_b])
         self.assertEqual({uuids.cell1: ['foo'],
                           uuids.cell2: ['bar']},
                          {cell: [cn.host for cn in computes]
@@ -1038,8 +1067,8 @@ class HostManagerTestCase(test.NoDBTestCase):
             [objects.ComputeNode(host='bar')],
         ]
         context = nova_context.RequestContext('fake', 'fake')
-        cns, srv = self.host_manager._get_computes_for_cells(context, cells,
-                                                             [])
+        cns, srv = self.host_manager._get_computes_for_cells(
+            context, cells, [])
         self.assertEqual({uuids.cell1: ['foo'],
                           uuids.cell2: ['bar']},
                          {cell: [cn.host for cn in computes]
@@ -1048,7 +1077,7 @@ class HostManagerTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.context.target_cell')
     @mock.patch('nova.objects.CellMappingList.get_all')
-    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     def test_get_computes_for_cells_limit_to_cell(self, mock_sl,
                                                   mock_cn, mock_cm,
@@ -1062,8 +1091,11 @@ class HostManagerTestCase(test.NoDBTestCase):
                                 database_connection='none://2',
                                 transport_url='none://'),
         ]
+        compute_nodes = [
+            objects.ComputeNode(uuid=uuids.cn, host='foo'),
+        ]
         mock_sl.return_value = [objects.ServiceList(host='foo')]
-        mock_cn.return_value = [objects.ComputeNode(host='foo')]
+        mock_cn.return_value = compute_nodes
         mock_cm.return_value = cells
 
         @contextlib.contextmanager
@@ -1074,7 +1106,9 @@ class HostManagerTestCase(test.NoDBTestCase):
 
         context = nova_context.RequestContext('fake', 'fake')
         cns, srv = self.host_manager._get_computes_for_cells(
-            context, cells=cells[1:])
+            context,
+            cells=cells[1:],
+            compute_uuids=[cn.uuid for cn in compute_nodes])
         self.assertEqual({uuids.cell2: ['foo']},
                          {cell: [cn.host for cn in computes]
                           for cell, computes in cns.items()})
@@ -1084,7 +1118,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         # targeted one if we honored the only-cell destination requirement,
         # and only looked up services and compute nodes in one
         mock_target.assert_called_once_with(context, cells[1])
-        mock_cn.assert_called_once_with(mock.sentinel.cctxt)
+        mock_cn.assert_called_once_with(
+            mock.sentinel.cctxt, [cn.uuid for cn in compute_nodes])
         mock_sl.assert_called_once_with(mock.sentinel.cctxt, 'nova-compute',
                                         include_disabled=True)
 
@@ -1097,7 +1132,8 @@ class HostManagerTestCase(test.NoDBTestCase):
             uuids.cell3: exception.ComputeHostNotFound(host='c'),
         }
         context = nova_context.RequestContext('fake', 'fake')
-        cns, srv = self.host_manager._get_computes_for_cells(context, [])
+        cns, srv = self.host_manager._get_computes_for_cells(
+            context, [], compute_uuids=[uuids.c1n1, uuids.c1n2])
 
         self.assertEqual({uuids.cell1: [mock.sentinel.c1n1,
                                         mock.sentinel.c1n2]}, cns)
@@ -1226,7 +1262,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         self.host_manager = host_manager.HostManager()
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
-    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_host_states(self, mock_get_by_host, mock_get_all,
                              mock_get_by_binary):
@@ -1236,7 +1272,9 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         context = nova_context.get_admin_context()
 
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.enabled_cells)
+            context,
+            self.host_manager.enabled_cells,
+            compute_uuids=[cn.uuid for cn in fakes.COMPUTE_NODES])
 
         # _get_host_states returns a generator, so make a map from it
         host_states_map = {(state.host, state.nodename): state for state in
@@ -1245,7 +1283,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         self.assertEqual(len(host_states_map), 4)
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
-    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_host_states_after_delete_one(self, mock_get_by_host,
                                               mock_get_all,
@@ -1262,7 +1300,9 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
         # first call: all nodes
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.enabled_cells)
+            context,
+            self.host_manager.enabled_cells,
+            compute_uuids=[cn.uuid for cn in fakes.COMPUTE_NODES])
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
         # _get_host_states returns a generator, so make a map from it
@@ -1272,7 +1312,9 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
         # second call: just running nodes
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.enabled_cells)
+            context,
+            self.host_manager.enabled_cells,
+            compute_uuids=[cn.uuid for cn in fakes.COMPUTE_NODES])
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
         host_states_map = {(state.host, state.nodename): state for state in
@@ -1280,7 +1322,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         self.assertEqual(len(host_states_map), 3)
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
-    @mock.patch('nova.objects.ComputeNodeList.get_all')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_host_states_after_delete_all(self, mock_get_by_host,
                                               mock_get_all,
@@ -1292,7 +1334,9 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
         # first call: all nodes
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.enabled_cells)
+            context,
+            self.host_manager.enabled_cells,
+            compute_uuids=[cn.uuid for cn in fakes.COMPUTE_NODES])
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
         # _get_host_states returns a generator, so make a map from it
@@ -1302,7 +1346,9 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
         # second call: no nodes
         compute_nodes, services = self.host_manager._get_computes_for_cells(
-            context, self.host_manager.enabled_cells)
+            context,
+            self.host_manager.enabled_cells,
+            compute_uuids=[cn.uuid for cn in fakes.COMPUTE_NODES])
         hosts = self.host_manager._get_host_states(
             context, compute_nodes, services)
         host_states_map = {(state.host, state.nodename): state for state in

@@ -480,6 +480,7 @@ class FilterScheduler(driver.Scheduler):
         # constraints, which in turn makes compute_uuids an empty list and
         # get_host_states_by_uuids will return an empty generator-iterator
         # also, which will eventually result in a NoValidHost error.
+        # It will be None if we're doing a rebuild since that happens in-place.
         compute_uuids = None
         if provider_summaries is not None:
             compute_uuids = list(provider_summaries.keys())

@@ -134,8 +134,6 @@ class SchedulerManager(manager.Manager):
         alloc_reqs_by_rp_uuid, provider_summaries, allocation_request_version \
             = None, None, None
         if not is_rebuild:
-            # Only process the Placement request spec filters when Placement
-            # is used.
             try:
                 request_filter.process_reqspec(ctxt, spec_obj)
             except exception.RequestFilterFailed as e:
