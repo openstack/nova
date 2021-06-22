@@ -14,7 +14,6 @@
 
 import collections
 import itertools
-import math
 import re
 import typing as ty
 
@@ -504,44 +503,6 @@ def _get_possible_cpu_topologies(vcpus, maxtopology,
     return possible
 
 
-def _filter_for_numa_threads(possible, wantthreads):
-    """Filter topologies which closest match to NUMA threads.
-
-    Determine which topologies provide the closest match to the number
-    of threads desired by the NUMA topology of the instance.
-
-    The possible topologies may not have any entries which match the
-    desired thread count. This method will find the topologies which
-    have the closest matching count. For example, if 'wantthreads' is 4
-    and the possible topologies has entries with 6, 3, 2 or 1 threads,
-    the topologies which have 3 threads will be identified as the
-    closest match not greater than 4 and will be returned.
-
-    :param possible: list of objects.VirtCPUTopology instances
-    :param wantthreads: desired number of threads
-
-    :returns: list of objects.VirtCPUTopology instances
-    """
-    # First figure out the largest available thread
-    # count which is not greater than wantthreads
-    mostthreads = 0
-    for topology in possible:
-        if topology.threads > wantthreads:
-            continue
-        if topology.threads > mostthreads:
-            mostthreads = topology.threads
-
-    # Now restrict to just those topologies which
-    # match the largest thread count
-    bestthreads = []
-    for topology in possible:
-        if topology.threads != mostthreads:
-            continue
-        bestthreads.append(topology)
-
-    return bestthreads
-
-
 def _sort_possible_cpu_topologies(possible, wanttopology):
     """Sort the topologies in order of preference.
 
@@ -579,8 +540,7 @@ def _sort_possible_cpu_topologies(possible, wanttopology):
     return desired
 
 
-def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
-                                  numa_topology=None):
+def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True):
     """Identify desirable CPU topologies based for given constraints.
 
     Look at the properties set in the flavor extra specs and the image
@@ -591,10 +551,6 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
     :param flavor: objects.Flavor instance to query extra specs from
     :param image_meta: nova.objects.ImageMeta object instance
     :param allow_threads: if the hypervisor supports CPU threads
-    :param numa_topology: objects.InstanceNUMATopology instance that
-                          may contain additional topology constraints
-                          (such as threading information) that should
-                          be considered
 
     :returns: sorted list of objects.VirtCPUTopology instances
     """
@@ -612,36 +568,12 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
                                             maximum,
                                             allow_threads)
     LOG.debug("Possible topologies %s", possible)
-
-    if numa_topology:
-        min_requested_threads = None
-        cell_topologies = [cell.cpu_topology for cell in numa_topology.cells
-                           if ('cpu_topology' in cell and cell.cpu_topology)]
-        if cell_topologies:
-            min_requested_threads = min(
-                    topo.threads for topo in cell_topologies)
-
-        if min_requested_threads:
-            if preferred.threads:
-                min_requested_threads = min(preferred.threads,
-                                            min_requested_threads)
-
-            specified_threads = max(1, min_requested_threads)
-            LOG.debug("Filtering topologies best for %d threads",
-                      specified_threads)
-
-            possible = _filter_for_numa_threads(possible,
-                                                specified_threads)
-            LOG.debug("Remaining possible topologies %s",
-                      possible)
-
     desired = _sort_possible_cpu_topologies(possible, preferred)
     LOG.debug("Sorted desired topologies %s", desired)
     return desired
 
 
-def get_best_cpu_topology(flavor, image_meta, allow_threads=True,
-                          numa_topology=None):
+def get_best_cpu_topology(flavor, image_meta, allow_threads=True):
     """Identify best CPU topology for given constraints.
 
     Look at the properties set in the flavor extra specs and the image
@@ -651,15 +583,11 @@ def get_best_cpu_topology(flavor, image_meta, allow_threads=True,
     :param flavor: objects.Flavor instance to query extra specs from
     :param image_meta: nova.objects.ImageMeta object instance
     :param allow_threads: if the hypervisor supports CPU threads
-    :param numa_topology: objects.InstanceNUMATopology instance that
-                          may contain additional topology constraints
-                          (such as threading information) that should
-                          be considered
 
     :returns: an objects.VirtCPUTopology instance for best topology
     """
-    return _get_desirable_cpu_topologies(flavor, image_meta,
-                                         allow_threads, numa_topology)[0]
+    return _get_desirable_cpu_topologies(
+        flavor, image_meta, allow_threads)[0]
 
 
 def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
@@ -752,43 +680,6 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
 
     pinning = None
     threads_no = 1
-
-    def _orphans(instance_cell, threads_per_core):
-        """Number of instance CPUs which will not fill up a host core.
-
-        Best explained by an example: consider set of free host cores as such:
-            [(0, 1), (3, 5), (6, 7, 8)]
-        This would be a case of 2 threads_per_core AKA an entry for 2 in the
-        sibling_sets structure.
-
-        If we attempt to pack a 5 core instance on it - due to the fact that we
-        iterate the list in order, we will end up with a single core of the
-        instance pinned to a thread "alone" (with id 6), and we would have one
-        'orphan' vcpu.
-        """
-        return len(instance_cell) % threads_per_core
-
-    def _threads(instance_cell, threads_per_core):
-        """Threads to expose to the instance via the VirtCPUTopology.
-
-        This is calculated by taking the GCD of the number of threads we are
-        considering at the moment, and the number of orphans. An example for
-            instance_cell = 6
-            threads_per_core = 4
-
-        So we can fit the instance as such:
-            [(0, 1, 2, 3), (4, 5, 6, 7), (8, 9, 10, 11)]
-              x  x  x  x    x  x
-
-        We can't expose 4 threads, as that will not be a valid topology (all
-        cores exposed to the guest have to have an equal number of threads),
-        and 1 would be too restrictive, but we want all threads that guest sees
-        to be on the same physical core, so we take GCD of 4 (max number of
-        threads) and 2 (number of 'orphan' CPUs) and get 2 as the number of
-        threads.
-        """
-        return math.gcd(threads_per_core, _orphans(instance_cell,
-                                                   threads_per_core))
 
     def _get_pinning(threads_no, sibling_set, instance_cores):
         """Determines pCPUs/vCPUs mapping
@@ -988,7 +879,6 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
         if (instance_cell.cpu_thread_policy !=
                 fields.CPUThreadAllocationPolicy.REQUIRE and
                 not pinning):
-            threads_no = 1
             # we create a fake sibling set by splitting all sibling sets and
             # treating each core as if it has no siblings. This is necessary
             # because '_get_pinning' will normally only take the same amount of
@@ -1005,23 +895,12 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
             cpuset_reserved = _get_reserved(
                 sibling_set, pinning, num_cpu_reserved=num_cpu_reserved)
 
-        threads_no = _threads(instance_cell, threads_no)
-
     if not pinning or (num_cpu_reserved and not cpuset_reserved):
         return
     LOG.debug('Selected cores for pinning: %s, in cell %s', pinning,
                                                             host_cell.id)
 
-    # TODO(stephenfin): we're using this attribute essentially as a container
-    # for the thread count used in '_get_desirable_cpu_topologies'; we should
-    # drop it and either use a non-persistent attrbiute or add a new
-    # 'min_threads' field
-    topology = objects.VirtCPUTopology(
-        sockets=1,
-        cores=len(instance_cell) // threads_no,
-        threads=threads_no)
     instance_cell.pin_vcpus(*pinning)
-    instance_cell.cpu_topology = topology
     instance_cell.id = host_cell.id
     instance_cell.cpuset_reserved = cpuset_reserved
     return instance_cell
