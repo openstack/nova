@@ -59,6 +59,17 @@ _SESSION = None
 _ADMIN_AUTH = None
 
 
+# NOTE(jkulik): We need to monkeypatch this exception into
+# python-neutronclient, because we don't get the error_type from the exception
+# back from python-neutronclient other than via a custom class named like it.
+class PortBindingAlreadyExistsClient(neutron_client_exc.Conflict):
+    pass
+
+
+neutron_client_exc.PortBindingAlreadyExistsClient = \
+    PortBindingAlreadyExistsClient
+
+
 def reset_state():
     global _ADMIN_AUTH
     global _SESSION
@@ -1538,12 +1549,25 @@ class API:
 
             data = {'binding': binding}
             try:
-                binding = client.create_port_binding(port_id, data)['binding']
+                step = 'creation'
+                try:
+                    binding = client.create_port_binding(
+                        port_id, data
+                    )['binding']
+                except neutron_client_exc.PortBindingAlreadyExistsClient:
+                    # In case we actually managed to create the binding,
+                    # but something went wrong in between, we can recover
+                    step = 'recovery'
+                    binding = client.show_port_binding(
+                        port_id, host
+                    )['binding']
             except neutron_client_exc.NeutronClientException:
                 # Something failed, so log the error and rollback any
                 # successful bindings.
-                LOG.error('Binding failed for port %s and host %s.',
+                LOG.error('Binding %s failed for port %s and host %s.',
+                          step,
                           port_id, host, instance=instance, exc_info=True)
+
                 for rollback_port_id in bindings_by_port_id:
                     try:
                         client.delete_port_binding(rollback_port_id, host)
