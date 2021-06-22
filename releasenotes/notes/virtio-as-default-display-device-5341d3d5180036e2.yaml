@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    From this release, Nova instances will get ``virtio`` as the default
+    display device (instead of ``cirrus``, which has many limitations).
+    If your guest has a native kernel (called "virtio-gpu" in Linux;
+    available since  Linux 4.4 and above) driver, then it'll be used;
+    otherwise, the 'virtio' model will gracefully fallback to VGA
+    compatibiliy mode, which is still better than ``cirrus``.
