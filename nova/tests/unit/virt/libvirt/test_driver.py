@@ -25575,6 +25575,15 @@ class LibvirtPMEMNamespaceTests(test.NoDBTestCase):
         self.assertRaises(exception.PMEMNamespaceConfigInvalid,
                           drvr._discover_vpmems, vpmem_conf)
 
+    @mock.patch('nova.privsep.libvirt.get_pmem_namespaces')
+    def test_get_vpmems_on_host__exception(self, mock_get_ns):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        mock_get_ns.side_effect = Exception('foo')
+
+        self.assertRaises(
+            exception.GetPMEMNamespacesFailed,
+            drvr._get_vpmems_on_host)
+
     @mock.patch('nova.virt.hardware.get_vpmems')
     def test_get_ordered_vpmems(self, mock_labels):
         # get orgered vpmems based on flavor extra_specs
