@@ -7065,6 +7065,26 @@ class TestAPIPortbinding(TestAPIBase):
                 self.api.delete_port_binding(self.context, port_id,
                                              'fake-host')
 
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.delete_arqs_by_uuid')
+    @mock.patch('nova.network.neutron.get_binding_profile')
+    @mock.patch('nova.network.neutron.API._show_port')
+    @mock.patch('nova.network.neutron.get_client')
+    def test_unbind_ports_clean_arq(self, mock_neutron, mock_show,
+                     mock_bind, mock_delete_arq):
+        mock_client = mock.Mock()
+        mock_ctx = mock.Mock(is_admin=False)
+        ports = ["1"]
+        mock_show.return_value = {'id': uuids.port}
+        mock_bind.return_value = {'arq_uuid': self.arqs[0]['uuid'],
+            'key': 'val'}
+        api = neutronapi.API()
+        api._unbind_ports(mock_ctx, ports, mock_neutron, mock_client)
+        mock_delete_arq.assert_called_once_with([self.arqs[0]['uuid']])
+        # verify binding profile key 'arq_uuid' deleted
+        call_args = mock_client.update_port.call_args[0][1]
+        self.assertEqual(call_args['port']['binding:profile'],
+            {'key': 'val'})
+
 
 class TestAllocateForInstance(test.NoDBTestCase):
     def setUp(self):

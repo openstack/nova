@@ -653,11 +653,19 @@ class API:
                                                    ).get('network')
                     networks[net_id] = network
 
+            # Unbind Port device
+            if port_profile.get('arq_uuid'):
+                """Delete device profile by arq uuid."""
+                cyclient = cyborg.get_client(context)
+                cyclient.delete_arqs_by_uuid([port_profile['arq_uuid']])
+                LOG.debug('Delete ARQs  %s for port %s',
+                    port_profile['arq_uuid'], port_id)
+
             # NOTE: We're doing this to remove the binding information
             # for the physical device but don't want to overwrite the other
             # information in the binding profile.
             for profile_key in ('pci_vendor_info', 'pci_slot',
-                                constants.ALLOCATION):
+                                constants.ALLOCATION, 'arq_uuid'):
                 if profile_key in port_profile:
                     del port_profile[profile_key]
             port_req_body['port'][constants.BINDING_PROFILE] = port_profile

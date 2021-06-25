@@ -1537,16 +1537,28 @@ def update_pci_request_spec_with_allocated_interface_name(
                 spec['parent_ifname'] = rp_name_pieces[2]
 
 
-def delete_arqs_if_needed(context, instance):
-    """Delete Cyborg ARQs for the instance."""
-    dp_name = instance.flavor.extra_specs.get('accel:device_profile')
-    if dp_name is None:
-        return
+def delete_arqs_if_needed(context, instance, arq_uuids=None):
+    """Delete Cyborg ARQs for the instance.
+
+    :param context
+    :param instance: instance who own the args
+    :param uuids: delete arqs by uuids while did not bind to instance yet.
+    """
     cyclient = cyborg.get_client(context)
-    LOG.debug('Calling Cyborg to delete ARQs for instance %(instance)s',
+    dp_name = instance.flavor.extra_specs.get('accel:device_profile')
+
+    if dp_name:
+        LOG.debug('Calling Cyborg to delete ARQs for instance %(instance)s',
               {'instance': instance.uuid})
-    try:
-        cyclient.delete_arqs_for_instance(instance.uuid)
-    except exception.AcceleratorRequestOpFailed as e:
-        LOG.exception('Failed to delete accelerator requests for '
+        try:
+            cyclient.delete_arqs_for_instance(instance.uuid)
+        except exception.AcceleratorRequestOpFailed as e:
+            LOG.exception('Failed to delete accelerator requests for '
                       'instance %s. Exception: %s', instance.uuid, e)
+
+    if arq_uuids:
+        LOG.debug('Calling Cyborg to delete ARQs by uuids %(uuid)s for'
+              ' instance %(instance)s',
+              {'instance': instance.uuid,
+               'uuid': arq_uuids})
+        cyclient.delete_arqs_by_uuid(arq_uuids)

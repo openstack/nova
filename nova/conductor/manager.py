@@ -592,7 +592,13 @@ class ComputeTaskManager:
             legacy_request_spec)
         self._cleanup_allocated_networks(
             context, instance, requested_networks)
-        compute_utils.delete_arqs_if_needed(context, instance)
+
+        arq_uuids = None
+        # arqs have not bound to port/instance yet
+        if requested_networks:
+            arq_uuids = [req.arq_uuid
+                for req in requested_networks if req.arq_uuid]
+        compute_utils.delete_arqs_if_needed(context, instance, arq_uuids)
 
     # NOTE(danms): This is never cell-targeted because it is only used for
     # n-cpu reschedules which go to the cell conductor and thus are always
