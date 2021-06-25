@@ -1,0 +1,19 @@
+---
+other:
+  - |
+    Nova now has a config option called
+    ``[workarounds]/never_download_image_if_on_rbd`` which helps to
+    avoid pathological storage behavior with multiple ceph clusters.
+    Currently, Nova does *not* support multiple ceph clusters
+    properly, but Glance can be configured with them. If an instance
+    is booted from an image residing in a ceph cluster other than the
+    one Nova knows about, it will silently download it from Glance and
+    re-upload the image to the local ceph privately for that
+    instance. Unlike the behavior you expect when configuring Nova and
+    Glance for ceph, Nova will continue to do this over and over for
+    the same image when subsequent instances are booted, consuming a
+    large amount of storage unexpectedly. The new workaround option
+    will cause Nova to refuse to do this download/upload behavior and
+    instead fail the instance boot. It is simply a stop-gap effort to
+    allow unsupported deployments with multiple ceph clusters from
+    silently consuming large amounts of disk space.

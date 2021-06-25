@@ -266,6 +266,30 @@ Related options:
 * :oslo.config:option:`image_cache_subdirectory_name`
 * :oslo.config:option:`update_resources_interval`
 """),
+    cfg.BoolOpt(
+        'never_download_image_if_on_rbd',
+        default=False,
+        help="""
+When booting from an image on a ceph-backed compute node, if the image does not
+already reside on the ceph cluster (as would be the case if glance is
+also using the same cluster), nova will download the image from glance and
+upload it to ceph itself. If using multiple ceph clusters, this may cause nova
+to unintentionally duplicate the image in a non-COW-able way in the local
+ceph deployment, wasting space.
+
+For more information, refer to the bug report:
+
+https://bugs.launchpad.net/nova/+bug/1858877
+
+Enabling this option will cause nova to *refuse* to boot an instance if it
+would require downloading the image from glance and uploading it to ceph
+itself.
+
+Related options:
+
+* ``compute_driver`` (libvirt)
+* ``[libvirt]/images_type`` (rbd)
+"""),
 ]
 
 
