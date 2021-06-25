@@ -54,6 +54,7 @@ from six.moves import builtins
 from sqlalchemy.dialects import sqlite
 import testtools
 
+from nova.api.openstack import wsgi_app
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova.db.sqlalchemy import api as sqlalchemy_api
@@ -284,6 +285,10 @@ class TestCase(base.BaseTestCase):
         quota.UID_QFD_POPULATED_CACHE_ALL = False
 
         self.useFixture(nova_fixtures.GenericPoisonFixture())
+
+        # make sure that the wsgi app is fully initialized for all testcase
+        # instead of only once initialized for test worker
+        wsgi_app.init_global_data.reset()
 
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.
