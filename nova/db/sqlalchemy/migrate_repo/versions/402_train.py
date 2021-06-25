@@ -143,6 +143,9 @@ def upgrade(migrate_engine):
         sa.Column('url', sa.String(length=255)),
         sa.Column('md5hash', sa.String(length=255)),
         sa.Column('deleted', sa.Integer),
+        sa.Index(
+            'agent_builds_hypervisor_os_arch_idx',
+              'hypervisor', 'os', 'architecture'),
         UniqueConstraint(
             'hypervisor', 'os', 'architecture', 'deleted',
             name='uniq_agent_builds0hypervisor0os0architecture0deleted'),
@@ -178,6 +181,8 @@ def upgrade(migrate_engine):
         sa.Column('key', sa.String(length=255), nullable=False),
         sa.Column('value', sa.String(length=255), nullable=False),
         sa.Column('deleted', sa.Integer),
+        sa.Index('aggregate_metadata_key_idx', 'key'),
+        sa.Index('aggregate_metadata_value_idx', 'value'),
         UniqueConstraint(
             'aggregate_id', 'key', 'deleted',
             name='uniq_aggregate_metadata0aggregate_id0key0deleted'),
@@ -238,6 +243,15 @@ def upgrade(migrate_engine):
         sa.Column('attachment_id', sa.String(36), nullable=True),
         sa.Column('uuid', sa.String(36), nullable=True),
         sa.Column('volume_type', sa.String(255), nullable=True),
+        sa.Index('snapshot_id', 'snapshot_id'),
+        sa.Index('volume_id', 'volume_id'),
+        sa.Index('block_device_mapping_instance_uuid_idx', 'instance_uuid'),
+        sa.Index(
+            'block_device_mapping_instance_uuid_device_name_idx',
+            'instance_uuid', 'device_name'),
+        sa.Index(
+            'block_device_mapping_instance_uuid_volume_id_idx',
+            'instance_uuid', 'volume_id'),
         UniqueConstraint('uuid', name='uniq_block_device_mapping0uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
@@ -257,6 +271,9 @@ def upgrade(migrate_engine):
         sa.Column('last_ctr_in', sa.BigInteger()),
         sa.Column('last_ctr_out', sa.BigInteger()),
         sa.Column('deleted', sa.Integer),
+        sa.Index(
+            'bw_usage_cache_uuid_start_period_idx',
+            'uuid', 'start_period'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -289,6 +306,10 @@ def upgrade(migrate_engine):
         sa.Column('project_id', sa.String(length=255)),
         sa.Column('file_name', sa.String(length=255)),
         sa.Column('deleted', sa.Integer),
+        sa.Index(
+            'certificates_project_id_deleted_idx',
+            'project_id', 'deleted'),
+        sa.Index('certificates_user_id_deleted_idx', 'user_id', 'deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -395,6 +416,7 @@ def upgrade(migrate_engine):
             sa.ForeignKey(
                 'instances.uuid', name='consoles_instance_uuid_fkey')),
         sa.Column('deleted', sa.Integer),
+        sa.Index('consoles_instance_uuid_idx', 'instance_uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -409,6 +431,8 @@ def upgrade(migrate_engine):
         sa.Column('scope', sa.String(length=255)),
         sa.Column('availability_zone', sa.String(length=255)),
         sa.Column('project_id', sa.String(length=255)),
+        sa.Index('dns_domains_domain_deleted_idx', 'domain', 'deleted'),
+        sa.Index('dns_domains_project_id_idx', 'project_id'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -427,6 +451,26 @@ def upgrade(migrate_engine):
         sa.Column('host', sa.String(length=255)),
         sa.Column('instance_uuid', sa.String(length=36)),
         sa.Column('deleted', sa.Integer),
+        sa.Index('network_id', 'network_id'),
+        sa.Index('address', 'address'),
+        sa.Index('fixed_ips_instance_uuid_fkey', 'instance_uuid'),
+        sa.Index(
+            'fixed_ips_virtual_interface_id_fkey',
+            'virtual_interface_id'),
+        sa.Index('fixed_ips_host_idx', 'host'),
+        sa.Index(
+            'fixed_ips_network_id_host_deleted_idx', 'network_id',
+            'host', 'deleted'),
+        sa.Index(
+            'fixed_ips_address_reserved_network_id_deleted_idx',
+            'address', 'reserved',
+            'network_id', 'deleted'),
+        sa.Index(
+            'fixed_ips_deleted_allocated_idx',
+            'address', 'deleted', 'allocated'),
+        sa.Index(
+            'fixed_ips_deleted_allocated_updated_at_idx',
+              'deleted', 'allocated', 'updated_at'),
         UniqueConstraint(
             'address', 'deleted',
             name='uniq_fixed_ips0address0deleted'),
@@ -447,6 +491,12 @@ def upgrade(migrate_engine):
         sa.Column('pool', sa.String(length=255)),
         sa.Column('interface', sa.String(length=255)),
         sa.Column('deleted', sa.Integer),
+        sa.Index('fixed_ip_id', 'fixed_ip_id'),
+        sa.Index('floating_ips_host_idx', 'host'),
+        sa.Index('floating_ips_project_id_idx', 'project_id'),
+        sa.Index(
+            'floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
+            'pool', 'deleted', 'fixed_ip_id', 'project_id'),
         UniqueConstraint(
             'address', 'deleted',
             name='uniq_floating_ips0address0deleted'),
@@ -465,6 +515,10 @@ def upgrade(migrate_engine):
         sa.Column('details', MediumText()),
         sa.Column('host', sa.String(length=255)),
         sa.Column('deleted', sa.Integer),
+        sa.Index('instance_faults_host_idx', 'host'),
+        sa.Index(
+            'instance_faults_instance_uuid_deleted_created_at_idx',
+            'instance_uuid', 'deleted', 'created_at'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -476,6 +530,7 @@ def upgrade(migrate_engine):
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('uuid', sa.String(36), nullable=False),
         sa.Column('deleted', sa.Integer),
+        sa.Index('ix_instance_id_mappings_uuid', 'uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -505,8 +560,9 @@ def upgrade(migrate_engine):
         sa.Column('project_id', sa.String(length=255)),
         sa.Column('uuid', sa.String(length=36), nullable=False),
         sa.Column('name', sa.String(length=255)),
-        UniqueConstraint('uuid', 'deleted',
-                         name='uniq_instance_groups0uuid0deleted'),
+        UniqueConstraint(
+            'uuid', 'deleted',
+            name='uniq_instance_groups0uuid0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -518,8 +574,10 @@ def upgrade(migrate_engine):
         sa.Column('deleted', sa.Integer),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('policy', sa.String(length=255)),
-        sa.Column('group_id', sa.Integer, sa.ForeignKey('instance_groups.id'),
-               nullable=False),
+        sa.Column(
+            'group_id', sa.Integer, sa.ForeignKey('instance_groups.id'),
+            nullable=False),
+        sa.Index('instance_group_policy_policy_idx', 'policy'),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -531,8 +589,12 @@ def upgrade(migrate_engine):
         sa.Column('deleted', sa.Integer),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('instance_id', sa.String(length=255)),
-        sa.Column('group_id', sa.Integer, sa.ForeignKey('instance_groups.id'),
-               nullable=False),
+        sa.Column(
+            'group_id', sa.Integer, sa.ForeignKey('instance_groups.id'),
+            nullable=False),
+        sa.Index(
+            'instance_group_member_instance_idx',
+            'instance_id'),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -546,6 +608,7 @@ def upgrade(migrate_engine):
         sa.Column('value', sa.String(length=255)),
         sa.Column('instance_uuid', sa.String(length=36), nullable=True),
         sa.Column('deleted', sa.Integer),
+        sa.Index('instance_metadata_instance_uuid_idx', 'instance_uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -559,6 +622,7 @@ def upgrade(migrate_engine):
         sa.Column('key', sa.String(length=255), nullable=False),
         sa.Column('value', sa.String(length=255)),
         sa.Column('deleted', sa.Integer),
+        sa.Index('instance_uuid', 'instance_uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -575,6 +639,9 @@ def upgrade(migrate_engine):
         sa.Column('key', sa.String(length=255)),
         sa.Column('value', sa.String(length=255)),
         sa.Column('deleted', sa.Integer),
+        sa.Index(
+            'instance_type_extra_specs_instance_type_id_key_idx',
+            'instance_type_id', 'key'),
         UniqueConstraint(
             'instance_type_id', 'key', 'deleted',
             name='uniq_instance_type_extra_specs0instance_type_id0key0deleted'
@@ -691,6 +758,24 @@ def upgrade(migrate_engine):
         # which did not generate the constraints
         sa.Column('hidden', sa.Boolean(create_constraint=False)),
         sa.Index('uuid', 'uuid', unique=True),
+        sa.Index('instances_reservation_id_idx', 'reservation_id'),
+        sa.Index(
+            'instances_terminated_at_launched_at_idx',
+            'terminated_at', 'launched_at'),
+        sa.Index(
+            'instances_task_state_updated_at_idx',
+            'task_state', 'updated_at'),
+        sa.Index('instances_uuid_deleted_idx', 'uuid', 'deleted'),
+        sa.Index('instances_host_node_deleted_idx', 'host', 'node', 'deleted'),
+        sa.Index(
+            'instances_host_deleted_cleaned_idx',
+            'host', 'deleted', 'cleaned'),
+        sa.Index('instances_project_id_deleted_idx', 'project_id', 'deleted'),
+        sa.Index('instances_deleted_created_at_idx', 'deleted', 'created_at'),
+        sa.Index('instances_project_id_idx', 'project_id'),
+        sa.Index(
+            'instances_updated_at_project_id_idx',
+            'updated_at', 'project_id'),
         UniqueConstraint('uuid', name='uniq_instances0uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
@@ -710,6 +795,11 @@ def upgrade(migrate_engine):
         sa.Column('finish_time', sa.DateTime),
         sa.Column('message', sa.String(length=255)),
         sa.Column('deleted', sa.Integer),
+        sa.Index('instance_uuid_idx', 'instance_uuid'),
+        sa.Index('request_id_idx', 'request_id'),
+        sa.Index(
+            'instance_actions_instance_uuid_updated_at_idx',
+            'instance_uuid', 'updated_at'),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -750,6 +840,7 @@ def upgrade(migrate_engine):
         sa.Column('trusted_certs', sa.Text, nullable=True),
         sa.Column('vpmems', sa.Text, nullable=True),
         sa.Column('resources', sa.Text, nullable=True),
+        sa.Index('instance_extra_idx', 'instance_uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8',
     )
@@ -838,6 +929,22 @@ def upgrade(migrate_engine):
         sa.Column('user_id', sa.String(255), nullable=True),
         sa.Column('project_id', sa.String(255), nullable=True),
         sa.Index('migrations_uuid', 'uuid', unique=True),
+        sa.Index(
+            'migrations_instance_uuid_and_status_idx',
+            'deleted', 'instance_uuid', 'status'),
+        sa.Index('migrations_updated_at_idx', 'updated_at'),
+        # mysql-specific index by leftmost 100 chars.  (mysql gets angry if the
+        # index key length is too long.)
+        sa.Index(
+            'migrations_by_host_nodes_and_status_idx',
+            'deleted', 'source_compute', 'dest_compute', 'source_node',
+            'dest_node', 'status',
+            mysql_length={
+                'source_compute': 100,
+                'dest_compute': 100,
+                'source_node': 100,
+                'dest_node': 100,
+            }),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -881,6 +988,14 @@ def upgrade(migrate_engine):
         sa.Column(
             'share_address', sa.Boolean(create_constraint=False),
             default=False),
+        sa.Index('networks_host_idx', 'host'),
+        sa.Index('networks_cidr_v6_idx', 'cidr_v6'),
+        sa.Index('networks_bridge_deleted_idx', 'bridge', 'deleted'),
+        sa.Index('networks_project_id_deleted_idx', 'project_id', 'deleted'),
+        sa.Index(
+            'networks_uuid_project_id_deleted_idx',
+            'uuid', 'project_id', 'deleted'),
+        sa.Index('networks_vlan_deleted_idx', 'vlan', 'deleted'),
         UniqueConstraint('vlan', 'deleted', name='uniq_networks0vlan0deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
@@ -906,10 +1021,15 @@ def upgrade(migrate_engine):
         sa.Column('numa_node', sa.Integer, default=None),
         sa.Column('parent_addr', sa.String(12), nullable=True),
         sa.Column('uuid', sa.String(36)),
-        sa.Index('ix_pci_devices_instance_uuid_deleted',
-              'instance_uuid', 'deleted'),
-        sa.Index('ix_pci_devices_compute_node_id_deleted',
-              'compute_node_id', 'deleted'),
+        sa.Index(
+            'ix_pci_devices_instance_uuid_deleted',
+            'instance_uuid', 'deleted'),
+        sa.Index(
+            'ix_pci_devices_compute_node_id_deleted',
+            'compute_node_id', 'deleted'),
+        sa.Index(
+            'ix_pci_devices_compute_node_id_parent_addr_deleted',
+            'compute_node_id', 'parent_addr', 'deleted'),
         UniqueConstraint(
             'compute_node_id', 'address', 'deleted',
             name='uniq_pci_devices0compute_node_id0address0deleted'),
@@ -939,6 +1059,7 @@ def upgrade(migrate_engine):
         sa.Column('resource', sa.String(length=255)),
         sa.Column('hard_limit', sa.Integer),
         sa.Column('deleted', sa.Integer),
+        sa.Index('ix_quota_classes_class_name', 'class_name'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -955,6 +1076,8 @@ def upgrade(migrate_engine):
         sa.Column('until_refresh', sa.Integer),
         sa.Column('deleted', sa.Integer),
         sa.Column('user_id', sa.String(length=255)),
+        sa.Index('ix_quota_usages_project_id', 'project_id'),
+        sa.Index('ix_quota_usages_user_id_deleted', 'user_id', 'deleted'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -985,6 +1108,12 @@ def upgrade(migrate_engine):
         sa.Column('project_id', sa.String(length=255), nullable=False),
         sa.Column('resource', sa.String(length=255), nullable=False),
         sa.Column('hard_limit', sa.Integer, nullable=True),
+        sa.Index(
+            'project_user_quotas_project_id_deleted_idx',
+            'project_id', 'deleted'),
+        sa.Index(
+            'project_user_quotas_user_id_deleted_idx',
+            'user_id', 'deleted'),
         UniqueConstraint(
             'user_id', 'project_id', 'resource', 'deleted',
             name='uniq_project_user_quotas0user_id0project_id0resource0'
@@ -1006,6 +1135,10 @@ def upgrade(migrate_engine):
         sa.Column('expire', sa.DateTime),
         sa.Column('deleted', sa.Integer),
         sa.Column('user_id', sa.String(length=255)),
+        sa.Index('ix_reservations_project_id', 'project_id'),
+        sa.Index('ix_reservations_user_id_deleted', 'user_id', 'deleted'),
+        sa.Index('reservations_uuid_idx', 'uuid'),
+        sa.Index('reservations_deleted_expire_idx', 'deleted', 'expire'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -1057,6 +1190,9 @@ def upgrade(migrate_engine):
         sa.Column('security_group_id', sa.Integer),
         sa.Column('instance_uuid', sa.String(length=36)),
         sa.Column('deleted', sa.Integer),
+        sa.Index(
+            'security_group_instance_association_instance_uuid_idx',
+            'instance_uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -1195,6 +1331,9 @@ def upgrade(migrate_engine):
         sa.Column('task_items', sa.Integer),
         sa.Column('errors', sa.Integer),
         sa.Column('deleted', sa.Integer),
+        sa.Index('ix_task_log_period_beginning', 'period_beginning'),
+        sa.Index('ix_task_log_host', 'host'),
+        sa.Index('ix_task_log_period_ending', 'period_ending'),
         UniqueConstraint(
             'task_name', 'host', 'period_beginning', 'period_ending',
             name='uniq_task_log0task_name0host0period_beginning0period_ending',
@@ -1214,6 +1353,9 @@ def upgrade(migrate_engine):
         sa.Column('instance_uuid', sa.String(length=36), nullable=True),
         sa.Column('deleted', sa.Integer),
         sa.Column('tag', sa.String(255)),
+        sa.Index('virtual_interfaces_instance_uuid_fkey', 'instance_uuid'),
+        sa.Index('virtual_interfaces_network_id_idx', 'network_id'),
+        sa.Index('virtual_interfaces_uuid_idx', 'uuid'),
         UniqueConstraint(
             'address', 'deleted',
             name='uniq_virtual_interfaces0address0deleted'),
@@ -1291,209 +1433,6 @@ def upgrade(migrate_engine):
             LOG.exception('Exception while creating table.')
             raise
 
-    # Common indexes (indexes we apply to all databases)
-    # NOTE: order specific for MySQL diff support
-    common_indexes = [
-
-        # aggregate_metadata
-        sa.Index('aggregate_metadata_key_idx', aggregate_metadata.c.key),
-        sa.Index('aggregate_metadata_value_idx', aggregate_metadata.c.value),
-
-        # agent_builds
-        sa.Index('agent_builds_hypervisor_os_arch_idx',
-              agent_builds.c.hypervisor,
-              agent_builds.c.os,
-              agent_builds.c.architecture),
-
-        # block_device_mapping
-        sa.Index('snapshot_id', block_device_mapping.c.snapshot_id),
-        sa.Index('volume_id', block_device_mapping.c.volume_id),
-        sa.Index('block_device_mapping_instance_uuid_idx',
-              block_device_mapping.c.instance_uuid),
-        sa.Index('block_device_mapping_instance_uuid_device_name_idx',
-              block_device_mapping.c.instance_uuid,
-              block_device_mapping.c.device_name),
-        sa.Index('block_device_mapping_instance_uuid_volume_id_idx',
-              block_device_mapping.c.instance_uuid,
-              block_device_mapping.c.volume_id),
-
-        # bw_usage_cache
-        sa.Index('bw_usage_cache_uuid_start_period_idx',
-              bw_usage_cache.c.uuid, bw_usage_cache.c.start_period),
-
-        # certificates
-        sa.Index('certificates_project_id_deleted_idx',
-              certificates.c.project_id, certificates.c.deleted),
-        sa.Index('certificates_user_id_deleted_idx', certificates.c.user_id,
-              certificates.c.deleted),
-
-        # consoles
-        sa.Index('consoles_instance_uuid_idx', consoles.c.instance_uuid),
-
-        # dns_domains
-        sa.Index('dns_domains_domain_deleted_idx',
-              dns_domains.c.domain, dns_domains.c.deleted),
-        sa.Index('dns_domains_project_id_idx', dns_domains.c.project_id),
-
-        # fixed_ips
-        sa.Index('network_id', fixed_ips.c.network_id),
-        sa.Index('address', fixed_ips.c.address),
-        sa.Index('fixed_ips_instance_uuid_fkey', fixed_ips.c.instance_uuid),
-        sa.Index(
-            'fixed_ips_virtual_interface_id_fkey',
-            fixed_ips.c.virtual_interface_id),
-        sa.Index('fixed_ips_host_idx', fixed_ips.c.host),
-        sa.Index(
-            'fixed_ips_network_id_host_deleted_idx', fixed_ips.c.network_id,
-            fixed_ips.c.host, fixed_ips.c.deleted),
-        sa.Index('fixed_ips_address_reserved_network_id_deleted_idx',
-              fixed_ips.c.address, fixed_ips.c.reserved,
-              fixed_ips.c.network_id, fixed_ips.c.deleted),
-        sa.Index('fixed_ips_deleted_allocated_idx', fixed_ips.c.address,
-              fixed_ips.c.deleted, fixed_ips.c.allocated),
-        sa.Index('fixed_ips_deleted_allocated_updated_at_idx',
-              fixed_ips.c.deleted, fixed_ips.c.allocated,
-              fixed_ips.c.updated_at),
-
-        # floating_ips
-        sa.Index('fixed_ip_id', floating_ips.c.fixed_ip_id),
-        sa.Index('floating_ips_host_idx', floating_ips.c.host),
-        sa.Index('floating_ips_project_id_idx', floating_ips.c.project_id),
-        sa.Index('floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
-              floating_ips.c.pool, floating_ips.c.deleted,
-              floating_ips.c.fixed_ip_id, floating_ips.c.project_id),
-
-        # group_member
-        sa.Index('instance_group_member_instance_idx',
-              group_member.c.instance_id),
-
-        # group_policy
-        sa.Index('instance_group_policy_policy_idx', group_policy.c.policy),
-
-        # instances
-        sa.Index('instances_reservation_id_idx',
-              instances.c.reservation_id),
-        sa.Index('instances_terminated_at_launched_at_idx',
-              instances.c.terminated_at,
-              instances.c.launched_at),
-        sa.Index('instances_task_state_updated_at_idx',
-              instances.c.task_state,
-              instances.c.updated_at),
-        sa.Index('instances_uuid_deleted_idx', instances.c.uuid,
-              instances.c.deleted),
-        sa.Index('instances_host_node_deleted_idx', instances.c.host,
-              instances.c.node, instances.c.deleted),
-        sa.Index('instances_host_deleted_cleaned_idx',
-              instances.c.host, instances.c.deleted,
-              instances.c.cleaned),
-        sa.Index('instances_project_id_deleted_idx',
-              instances.c.project_id, instances.c.deleted),
-        sa.Index('instances_deleted_created_at_idx',
-              instances.c.deleted, instances.c.created_at),
-        sa.Index('instances_project_id_idx', instances.c.project_id),
-        sa.Index('instances_updated_at_project_id_idx',
-              instances.c.updated_at, instances.c.project_id),
-
-        # instance_actions
-        sa.Index('instance_uuid_idx', instance_actions.c.instance_uuid),
-        sa.Index('request_id_idx', instance_actions.c.request_id),
-        sa.Index(
-            'instance_actions_instance_uuid_updated_at_idx',
-            instance_actions.c.instance_uuid, instance_actions.c.updated_at),
-
-        # instance_extra
-        sa.Index('instance_extra_idx', instance_extra.c.instance_uuid),
-
-        # instance_faults
-        sa.Index('instance_faults_host_idx', instance_faults.c.host),
-        sa.Index('instance_faults_instance_uuid_deleted_created_at_idx',
-              instance_faults.c.instance_uuid, instance_faults.c.deleted,
-              instance_faults.c.created_at),
-
-        # instance_id_mappings
-        sa.Index('ix_instance_id_mappings_uuid', instance_id_mappings.c.uuid),
-
-        # instance_metadata
-        sa.Index('instance_metadata_instance_uuid_idx',
-              instance_metadata.c.instance_uuid),
-
-        # instance_system_metadata
-        sa.Index('instance_uuid', instance_system_metadata.c.instance_uuid),
-
-        # instance_type_extra_specs
-        sa.Index('instance_type_extra_specs_instance_type_id_key_idx',
-              instance_type_extra_specs.c.instance_type_id,
-              instance_type_extra_specs.c.key),
-
-        # migrations
-        sa.Index('migrations_by_host_nodes_and_status_idx',
-              migrations.c.deleted, migrations.c.source_compute,
-              migrations.c.dest_compute, migrations.c.source_node,
-              migrations.c.dest_node, migrations.c.status),
-        sa.Index('migrations_instance_uuid_and_status_idx',
-              migrations.c.deleted, migrations.c.instance_uuid,
-              migrations.c.status),
-        sa.Index('migrations_updated_at_idx', migrations.c.updated_at),
-
-        # networks
-        sa.Index('networks_host_idx', networks.c.host),
-        sa.Index('networks_cidr_v6_idx', networks.c.cidr_v6),
-        sa.Index('networks_bridge_deleted_idx', networks.c.bridge,
-              networks.c.deleted),
-        sa.Index('networks_project_id_deleted_idx', networks.c.project_id,
-              networks.c.deleted),
-        sa.Index('networks_uuid_project_id_deleted_idx',
-              networks.c.uuid, networks.c.project_id, networks.c.deleted),
-        sa.Index('networks_vlan_deleted_idx', networks.c.vlan,
-              networks.c.deleted),
-
-        # pci_devices
-        sa.Index('ix_pci_devices_compute_node_id_parent_addr_deleted',
-              pci_devices.c.compute_node_id,
-              pci_devices.c.parent_addr,
-              pci_devices.c.deleted),
-
-        # project_user_quotas
-        sa.Index('project_user_quotas_project_id_deleted_idx',
-              project_user_quotas.c.project_id,
-              project_user_quotas.c.deleted),
-        sa.Index('project_user_quotas_user_id_deleted_idx',
-              project_user_quotas.c.user_id, project_user_quotas.c.deleted),
-
-        # reservations
-        sa.Index('ix_reservations_project_id', reservations.c.project_id),
-        sa.Index('ix_reservations_user_id_deleted',
-              reservations.c.user_id, reservations.c.deleted),
-        sa.Index('reservations_uuid_idx', reservations.c.uuid),
-        sa.Index('reservations_deleted_expire_idx',
-              reservations.c.deleted, reservations.c.expire),
-
-        # security_group_instance_association
-        sa.Index('security_group_instance_association_instance_uuid_idx',
-              security_group_instance_association.c.instance_uuid),
-
-        # task_log
-        sa.Index('ix_task_log_period_beginning', task_log.c.period_beginning),
-        sa.Index('ix_task_log_host', task_log.c.host),
-        sa.Index('ix_task_log_period_ending', task_log.c.period_ending),
-
-        # quota_classes
-        sa.Index('ix_quota_classes_class_name', quota_classes.c.class_name),
-
-        # quota_usages
-        sa.Index('ix_quota_usages_project_id', quota_usages.c.project_id),
-        sa.Index('ix_quota_usages_user_id_deleted',
-              quota_usages.c.user_id, quota_usages.c.deleted),
-
-        # virtual_interfaces
-        sa.Index('virtual_interfaces_instance_uuid_fkey',
-              virtual_interfaces.c.instance_uuid),
-        sa.Index('virtual_interfaces_network_id_idx',
-              virtual_interfaces.c.network_id),
-        sa.Index('virtual_interfaces_uuid_idx',
-              virtual_interfaces.c.uuid),
-    ]
-
     # MySQL specific indexes
     if migrate_engine.name == 'mysql':
         # created first (to preserve ordering for schema diffs)
@@ -1506,34 +1445,18 @@ def upgrade(migrate_engine):
         #   index: instance_type_id
         #
         # Yeah, I don't get it either...
-        mysql_pre_indexes = [
+        mysql_specific_indexes = [
             sa.Index(
-                'instance_type_id', instance_type_projects.c.instance_type_id),
+                'instance_type_id',
+                instance_type_projects.c.instance_type_id),
             sa.Index('usage_id', reservations.c.usage_id),
             sa.Index(
                 'security_group_id',
                 security_group_instance_association.c.security_group_id),
         ]
 
-        for index in mysql_pre_indexes:
+        for index in mysql_specific_indexes:
             index.create(migrate_engine)
-
-        # mysql-specific index by leftmost 100 chars.  (mysql gets angry if the
-        # index key length is too long.)
-        sql = ("create index migrations_by_host_nodes_and_status_idx ON "
-               "migrations (deleted, source_compute(100), dest_compute(100), "
-               "source_node(100), dest_node(100), status)")
-        migrate_engine.execute(sql)
-
-    MYSQL_INDEX_SKIPS = [
-        # we create this one manually for MySQL above
-        'migrations_by_host_nodes_and_status_idx'
-    ]
-
-    for index in common_indexes:
-        if migrate_engine.name == 'mysql' and index.name in MYSQL_INDEX_SKIPS:
-            continue
-        index.create(migrate_engine)
 
     # Common foreign keys
     fkeys = [
