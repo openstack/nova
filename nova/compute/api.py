@@ -2036,17 +2036,15 @@ class API(base.Base):
             self._check_multiple_instances_with_neutron_ports(
                 requested_networks)
 
-        if availability_zone:
-            available_zones = availability_zones.\
-                get_availability_zones(context.elevated(), self.host_api,
-                                       get_only_available=True)
-            if forced_host is None and availability_zone not in \
-                    available_zones:
+        if availability_zone and forced_host is None:
+            azs = availability_zones.get_availability_zones(
+                context.elevated(), self.host_api, get_only_available=True)
+            if availability_zone not in azs:
                 msg = _('The requested availability zone is not available')
                 raise exception.InvalidRequest(msg)
 
         filter_properties = scheduler_utils.build_filter_properties(
-                scheduler_hints, forced_host, forced_node, instance_type)
+            scheduler_hints, forced_host, forced_node, instance_type)
 
         return self._create_instance(
             context, instance_type,
