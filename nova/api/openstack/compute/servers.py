@@ -546,6 +546,84 @@ class ServersController(wsgi.Controller):
         create_kwargs['requested_networks'] = requested_networks
 
     @staticmethod
+    def _validate_host_availability_zone(context, availability_zone, host):
+        """Ensure the host belongs in the availability zone.
+
+        This is slightly tricky and it's probably worth recapping how host
+        aggregates and availability zones are related before reading. Hosts can
+        belong to zero or more host aggregates, but they will always belong to
+        exactly one availability zone. If the user has set the availability
+        zone key on one of the host aggregates that the host is a member of
+        then the host will belong to this availability zone. If the user has
+        not set the availability zone key on any of the host aggregates that
+        the host is a member of or the host is not a member of any host
+        aggregates, then the host will belong to the default availability zone.
+        Setting the availability zone key on more than one of host aggregates
+        that the host is a member of is an error and will be rejected by the
+        API.
+
+        Given the above, our host-availability zone check needs to vary
+        behavior based on whether we're requesting the default availability
+        zone or not. If we are not, then we simply ask "does this host belong
+        to a host aggregate and, if so, do any of the host aggregates have the
+        requested availability zone metadata set". By comparison, if we *are*
+        requesting the default availability zone then we want to ask the
+        inverse, or "does this host not belong to a host aggregate or, if it
+        does, is the availability zone information unset (or, naughty naughty,
+        set to the default) for each of the host aggregates". If both cases, if
+        the answer is no then we warn about the mismatch and then use the
+        actual availability zone of the host to avoid mismatches.
+
+        :param context: The nova auth request context
+        :param availability_zone: The name of the requested availability zone
+        :param host: The name of the requested host
+        :returns: The availability zone that should actually be used for the
+            request
+        """
+        aggregates = objects.AggregateList.get_by_host(context, host=host)
+        if not aggregates:
+            # a host is assigned to the default availability zone if it is not
+            # a member of any host aggregates
+            if availability_zone == CONF.default_availability_zone:
+                return availability_zone
+
+            LOG.warning(
+                "Requested availability zone '%s' but forced host '%s' "
+                "does not belong to any availability zones; ignoring "
+                "requested availability zone to avoid bug #1934770",
+                availability_zone, host,
+            )
+            return None
+
+        # only one host aggregate will have the availability_zone field set so
+        # use the first non-null value
+        host_availability_zone = next(
+            (a.availability_zone for a in aggregates if a.availability_zone),
+            None,
+        )
+
+        if availability_zone == host_availability_zone:
+            # if there's an exact match, use what the user requested
+            return availability_zone
+
+        if (
+            availability_zone == CONF.default_availability_zone and
+            host_availability_zone is None
+        ):
+            # special case the default availability zone since this won't (or
+            # rather shouldn't) be explicitly stored on any host aggregate
+            return availability_zone
+
+        # no match, so use the host's availability zone information, if any
+        LOG.warning(
+            "Requested availability zone '%s' but forced host '%s' "
+            "does not belong to this availability zone; overwriting "
+            "requested availability zone to avoid bug #1934770",
+            availability_zone, host,
+        )
+        return None
+
+    @staticmethod
     def _process_hosts_for_create(
             context, target, server_dict, create_kwargs, host, node):
         """Processes hosts request parameter for server create
@@ -665,6 +743,8 @@ class ServersController(wsgi.Controller):
         if host or node:
             context.can(server_policies.SERVERS % 'create:forced_host',
                         target=target)
+            availability_zone = self._validate_host_availability_zone(
+                context, availability_zone, host)
 
         if api_version_request.is_supported(req, min_version='2.74'):
             self._process_hosts_for_create(context, target, server_dict,

@@ -420,6 +420,9 @@ class ServersPolicyTest(base.BasePolicyTest):
 
     @mock.patch('nova.compute.api.API.create')
     @mock.patch('nova.compute.api.API.parse_availability_zone')
+    @mock.patch.object(
+        servers.ServersController, '_validate_host_availability_zone',
+        new=mock.Mock(return_value=None))
     def test_create_forced_host_server_policy(self, mock_az, mock_create):
         # 'create' policy is checked before 'create:forced_host' so
         # we have to allow it for everyone otherwise it will
