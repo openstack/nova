@@ -112,6 +112,8 @@ class Claim(NopClaim):
                    self._test_pci()]
         reasons = [r for r in reasons if r is not None]
         if len(reasons) > 0:
+            LOG.info('Failed to claim: %s', '; '.join(reasons),
+                     instance=self.instance)
             raise exception.ComputeResourcesUnavailable(reason=
                     "; ".join(reasons))
 
