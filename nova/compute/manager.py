@@ -1736,7 +1736,8 @@ class ComputeManager(manager.Manager):
             raise exception.InstanceExists(name=instance.name)
 
     def _allocate_network_async(self, context, instance, requested_networks,
-                                security_groups, resource_provider_mapping):
+                                security_groups, resource_provider_mapping,
+                                network_arqs):
         """Method used to allocate networks in the background.
 
         Broken out for testing.
@@ -1761,7 +1762,8 @@ class ComputeManager(manager.Manager):
                         requested_networks=requested_networks,
                         security_groups=security_groups,
                         bind_host_id=bind_host_id,
-                        resource_provider_mapping=resource_provider_mapping)
+                        resource_provider_mapping=resource_provider_mapping,
+                        network_arqs=network_arqs)
                 LOG.debug('Instance network_info: |%s|', nwinfo,
                           instance=instance)
                 instance.system_metadata['network_allocated'] = 'True'
@@ -1788,7 +1790,8 @@ class ComputeManager(manager.Manager):
         # Not reached.
 
     def _build_networks_for_instance(self, context, instance,
-            requested_networks, security_groups, resource_provider_mapping):
+            requested_networks, security_groups, resource_provider_mapping,
+            network_arqs):
 
         # If we're here from a reschedule the network may already be allocated.
         if strutils.bool_from_string(
@@ -1803,12 +1806,14 @@ class ComputeManager(manager.Manager):
 
         network_info = self._allocate_network(context, instance,
                 requested_networks, security_groups,
-                resource_provider_mapping)
+                resource_provider_mapping,
+                network_arqs)
 
         return network_info
 
     def _allocate_network(self, context, instance, requested_networks,
-                          security_groups, resource_provider_mapping):
+                          security_groups, resource_provider_mapping,
+                          network_arqs):
         """Start network allocation asynchronously.  Return an instance
         of NetworkInfoAsyncWrapper that can be used to retrieve the
         allocated networks when the operation has finished.
@@ -1822,7 +1827,8 @@ class ComputeManager(manager.Manager):
 
         return network_model.NetworkInfoAsyncWrapper(
                 self._allocate_network_async, context, instance,
-                requested_networks, security_groups, resource_provider_mapping)
+                requested_networks, security_groups, resource_provider_mapping,
+                network_arqs)
 
     def _default_root_device_name(self, instance, image_meta, root_bdm):
         """Gets a default root device name from the driver.
@@ -2560,12 +2566,30 @@ class ComputeManager(manager.Manager):
                          resource_provider_mapping, accel_uuids):
         resources = {}
         network_info = None
+        spec_arqs = {}
+        network_arqs = {}
+
+        try:
+            if accel_uuids:
+                arqs = self._get_bound_arq_resources(
+                    context, instance, accel_uuids)
+                spec_arqs, network_arqs = self._split_network_arqs(
+                    arqs, requested_networks)
+                LOG.debug("ARQs for spec:%s, ARQs for network:%s",
+                    spec_arqs, network_arqs)
+        except (Exception, eventlet.timeout.Timeout) as exc:
+            LOG.exception(exc)
+            compute_utils.delete_arqs_if_needed(context, instance)
+            msg = _('Failure getting accelerator requests.')
+            raise exception.BuildAbortException(
+                    reason=msg, instance_uuid=instance.uuid)
+
         try:
             LOG.debug('Start building networks asynchronously for instance.',
                       instance=instance)
             network_info = self._build_networks_for_instance(context, instance,
                     requested_networks, security_groups,
-                    resource_provider_mapping)
+                    resource_provider_mapping, network_arqs)
             resources['network_info'] = network_info
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):
@@ -2622,20 +2646,7 @@ class ComputeManager(manager.Manager):
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
 
-        arqs = []
-        if instance.flavor.extra_specs.get('accel:device_profile'):
-            try:
-                arqs = self._get_bound_arq_resources(
-                    context, instance, accel_uuids)
-            except (Exception, eventlet.timeout.Timeout) as exc:
-                LOG.exception(exc)
-                self._build_resources_cleanup(instance, network_info)
-                compute_utils.delete_arqs_if_needed(context, instance)
-                msg = _('Failure getting accelerator requests.')
-                raise exception.BuildAbortException(
-                    reason=msg, instance_uuid=instance.uuid)
-
-        resources['accel_info'] = arqs
+        resources['accel_info'] = list(spec_arqs.values())
         try:
             yield resources
         except Exception as exc:
@@ -2715,6 +2726,26 @@ class ComputeManager(manager.Manager):
         else:
             arqs = resolved_arqs
         return arqs
+
+    def _split_network_arqs(self, arqs, requested_networks):
+        """splif arq request by exra spec from ARQ requested by port.
+
+        Return ARQ groups tuple:(spec_arqs, port_arqs)
+        Each item in the tuple is a dict like:
+            {
+                arq1_uuid: arq1
+            }
+        """
+        port_arqs = {}
+        spec_arqs = {}
+        port_arqs_uuids = [req_net.arq_uuid for req_net in requested_networks]
+        for arq in arqs:
+            if arq['uuid'] in port_arqs_uuids:
+                port_arqs.update({arq['uuid']: arq})
+            else:
+                spec_arqs.update({arq['uuid']: arq})
+
+        return spec_arqs, port_arqs
 
     def _cleanup_allocated_networks(self, context, instance,
             requested_networks):

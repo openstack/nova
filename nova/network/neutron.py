@@ -990,7 +990,8 @@ class API:
     def allocate_for_instance(self, context, instance,
                               requested_networks,
                               security_groups=None, bind_host_id=None,
-                              resource_provider_mapping=None):
+                              resource_provider_mapping=None,
+                              network_arqs=None):
         """Allocate network resources for the instance.
 
         :param context: The request context.
@@ -1003,6 +1004,8 @@ class API:
             (for example Neutron port) requesting resources for this instance
             mapped to a list of resource provider UUIDs that are fulfilling
             such a resource request.
+        :param network_arqs: dict keyed by arq uuid, of ARQs allocated to
+            ports.
         :returns: network info as from get_instance_nw_info()
         """
         LOG.debug('allocate_for_instance()', instance=instance)
@@ -1084,7 +1087,7 @@ class API:
             created_port_ids = self._update_ports_for_instance(
                 context, instance,
                 neutron, admin_client, requests_and_created_ports, nets,
-                bind_host_id, requested_ports_dict)
+                bind_host_id, requested_ports_dict, network_arqs)
 
         #
         # Perform a full update of the network_info_cache,
@@ -1108,7 +1111,7 @@ class API:
 
     def _update_ports_for_instance(self, context, instance, neutron,
             admin_client, requests_and_created_ports, nets,
-            bind_host_id, requested_ports_dict):
+            bind_host_id, requested_ports_dict, network_arqs):
         """Update ports from network_requests.
 
         Updates the pre-existing ports and the ones created in
@@ -1127,6 +1130,8 @@ class API:
         :param bind_host_id: a string for port['binding:host_id']
         :param requested_ports_dict: dict, keyed by port ID, of ports requested
             by the user
+        :param network_arqs: dict keyed by arq uuid, of ARQs allocated to
+            ports.
         :returns: tuple with the following::
 
             * list of network dicts in their requested order
@@ -1167,10 +1172,14 @@ class API:
                 port_req_body['port'][constants.BINDING_PROFILE] = \
                     get_binding_profile(requested_ports_dict[request.port_id])
             try:
+                port_arq = None
+                if network_arqs:
+                    port_arq = network_arqs.get(request.arq_uuid, None)
                 self._populate_neutron_extension_values(
                     context, instance, request.pci_request_id, port_req_body,
                     network=network, neutron=neutron,
-                    bind_host_id=bind_host_id)
+                    bind_host_id=bind_host_id,
+                    port_arq=port_arq)
                 self._populate_pci_mac_address(instance,
                     request.pci_request_id, port_req_body)
 
@@ -1392,7 +1401,8 @@ class API:
                                           address=pci_dev.address)
 
     def _populate_neutron_binding_profile(self, instance, pci_request_id,
-                                          port_req_body):
+                                          port_req_body,
+                                          port_arq):
         """Populate neutron binding:profile.
 
         Populate it with SR-IOV related information
@@ -1417,6 +1427,12 @@ class API:
             pci_dev = pci_devices.pop()
             profile = copy.deepcopy(get_binding_profile(port_req_body['port']))
             profile.update(self._get_pci_device_profile(pci_dev))
+            port_req_body['port'][constants.BINDING_PROFILE] = profile
+
+        if port_arq:
+            # PCI SRIOV device according port ARQ
+            profile = copy.deepcopy(get_binding_profile(port_req_body['port']))
+            profile.update(cyborg.get_arq_pci_device_profile(port_arq))
             port_req_body['port'][constants.BINDING_PROFILE] = profile
 
     @staticmethod
@@ -1454,7 +1470,8 @@ class API:
     def _populate_neutron_extension_values(self, context, instance,
                                            pci_request_id, port_req_body,
                                            network=None, neutron=None,
-                                           bind_host_id=None):
+                                           bind_host_id=None,
+                                           port_arq=None):
         """Populate neutron extension values for the instance.
 
         If the extensions loaded contain QOS_QUEUE then pass the rxtx_factor.
@@ -1466,7 +1483,8 @@ class API:
         port_req_body['port'][constants.BINDING_HOST_ID] = bind_host_id
         self._populate_neutron_binding_profile(instance,
                                                pci_request_id,
-                                               port_req_body)
+                                               port_req_body,
+                                               port_arq)
 
         if self._has_dns_extension():
             # If the DNS integration extension is enabled in Neutron, most

@@ -582,7 +582,8 @@ class TestAPIBase(test.TestCase):
                 expected_populate_calls.append(
                     mock.call(mock.ANY, self.instance, mock.ANY, mock.ANY,
                               network=network, neutron=mocked_client,
-                              bind_host_id=bind_host_id))
+                              bind_host_id=bind_host_id,
+                              port_arq=mock.ANY))
 
                 if not request.port_id:
                     port_id = uuids.fake
@@ -5680,7 +5681,8 @@ class TestAPI(TestAPIBase):
                           self.api._update_ports_for_instance,
                           self.context, instance, ntrn, ntrn,
                           requests_and_created_ports, nets, bind_host_id=None,
-                          requested_ports_dict=None)
+                          requested_ports_dict=None,
+                          network_arqs = None)
         # assert the calls
         mock_update_port.assert_has_calls([
             mock.call(ntrn, instance, uuids.preexisting_port_id, mock.ANY),
@@ -6626,12 +6628,50 @@ class TestAPIPortbinding(TestAPIBase):
         devspec = mock.Mock()
         devspec.get_tags.return_value = {'physical_network': 'physnet1'}
         mock_get_pci_device_devspec.return_value = devspec
-        self.api._populate_neutron_binding_profile(instance,
-                                                   pci_req_id, port_req_body)
+        self.api._populate_neutron_binding_profile(
+            instance, pci_req_id, port_req_body, None)
 
         self.assertEqual(profile,
                          port_req_body['port'][
                              constants.BINDING_PROFILE])
+
+    def test_populate_neutron_extension_values_binding_arq(self):
+        host_id = 'my_host_id'
+        instance = {'host': host_id}
+        port_req_body = {'port': {}}
+        profile = {'arq_uuid': self.arqs[0]['uuid'],
+                   'pci_slot': '0000:0c:0.0',
+                   'physical_network': 'physicalnet1'}
+        self.api._populate_neutron_binding_profile(instance,
+                                                   pci_request_id=None,
+                                                   port_req_body=port_req_body,
+                                                   port_arq=self.arqs[0])
+
+        self.assertEqual(
+            profile,
+            port_req_body['port'][constants.BINDING_PROFILE])
+
+    @mock.patch.object(neutronapi.API, '_refresh_neutron_extensions_cache')
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.get_arqs_for_instance')
+    def test_populate_neutron_extension_values_with_arq(self,
+            mock_get_arq, mock_referesh_cache):
+        host_id = 'my_host_id'
+        instance = {'host': host_id}
+        port_req_body = {'port': {}}
+        profile = {'arq_uuid': self.arqs[0]['uuid'],
+                    'pci_slot': '0000:0c:0.0',
+                    'physical_network': 'physicalnet1'}
+        mock_referesh_cache.return_value = []
+        instance = self._fake_instance_object(self.instance)
+        mock_get_arq.return_value = self.arqs
+        self.api._populate_neutron_extension_values(
+            self.context, instance, None, port_req_body,
+            bind_host_id=host_id,
+            port_arq=self.arqs[0])
+
+        self.assertEqual(
+            profile,
+            port_req_body['port'][constants.BINDING_PROFILE])
 
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
@@ -6661,8 +6701,8 @@ class TestAPIPortbinding(TestAPIBase):
         devspec = mock.Mock()
         devspec.get_tags.return_value = {'physical_network': 'physnet1'}
         mock_get_pci_device_devspec.return_value = devspec
-        self.api._populate_neutron_binding_profile(instance,
-                                                   pci_req_id, port_req_body)
+        self.api._populate_neutron_binding_profile(
+            instance, pci_req_id, port_req_body, None)
 
         self.assertEqual(profile,
                          port_req_body['port'][
@@ -6688,7 +6728,7 @@ class TestAPIPortbinding(TestAPIBase):
         self.assertRaises(
             exception.PciDeviceNotFound,
             self.api._populate_neutron_binding_profile,
-            instance, pci_req_id, port_req_body)
+            instance, pci_req_id, port_req_body, None)
 
     @mock.patch.object(pci_manager, 'get_instance_pci_devs', return_value=[])
     def test_populate_neutron_binding_profile_pci_dev_not_found(
@@ -6699,7 +6739,7 @@ class TestAPIPortbinding(TestAPIBase):
         pci_req_id = 'my_req_id'
         self.assertRaises(exception.PciDeviceNotFound,
                           api._populate_neutron_binding_profile,
-                          instance, pci_req_id, port_req_body)
+                          instance, pci_req_id, port_req_body, None)
         mock_get_instance_pci_devs.assert_called_once_with(
             instance, pci_req_id)
 
@@ -6730,8 +6770,8 @@ class TestAPIPortbinding(TestAPIBase):
             for i in range(2):
                 mydev = objects.PciDevice.create(None, pci_dev)
                 mock_get_instance_pci_devs.return_value = [mydev]
-                api._populate_neutron_binding_profile(instance,
-                                                  pci_req_id, port_req_body)
+                api._populate_neutron_binding_profile(
+                    instance, pci_req_id, port_req_body, None)
                 self.assertEqual(0, mock_parse_whitelist.call_count)
 
     def _populate_pci_mac_address_fakes(self):
@@ -7387,7 +7427,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
             created_port_ids = api._update_ports_for_instance(
                 self.context, self.instance,
                 mock_neutron, mock_admin, requests_and_created_ports, nets,
-                bind_host_id, requested_ports_dict)
+                bind_host_id, requested_ports_dict, None)
 
         self.assertEqual([net1, net2], ordered_nets, "ordered_nets")
         self.assertEqual([uuids.port1, uuids.port2], ordered_ports,
