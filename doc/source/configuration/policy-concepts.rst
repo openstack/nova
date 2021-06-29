@@ -206,6 +206,44 @@ With these new defaults, you can solve the problem of:
    to provide access to project level user to perform live migration for their
    server or any other project with their token.
 
+Nova supported scope & Roles
+-----------------------------
+
+Nova supports the below combination of scopes and roles where roles can be
+overridden in the policy.yaml file but scope is not override-able.
+
+#. SYSTEM_ADMIN: ``admin`` role on ``system`` scope
+
+#. SYSTEM_READER: ``reader`` role on ``system`` scope
+
+#. PROJECT_ADMIN: ``admin`` role on ``project`` scope
+
+   .. note::
+
+      PROJECT_ADMIN has the limitation for the below policies
+
+      * ``os_compute_api:servers:create:forced_host``
+      * ``os_compute_api:servers:compute:servers:create:requested_destination``
+
+      To create a server on specific host via force host or requested
+      destination, you need to pass the hostname in ``POST /servers``
+      API request but there is no way for PROJECT_ADMIN to get the hostname
+      via API. This limitation will be addressed in a future release.
+
+
+#. PROJECT_MEMBER: ``member`` role on ``project`` scope
+
+#. PROJECT_READER: ``reader`` role on ``project`` scope
+
+#. PROJECT_MEMBER_OR_SYSTEM_ADMIN: ``admin`` role on ``system`` scope
+   or ``member`` role on ``project`` scope. Such policy rules are scoped
+   as both ``system`` as well as ``project``.
+
+#. PROJECT_READER_OR_SYSTEM_READER: ``reader`` role on ``system`` scope
+   or ``project`` scope. Such policy rules are scoped as both ``system``
+   as well as ``project``.
+
+   .. note:: As of now, only ``system`` and ``project`` scopes are supported in Nova.
 
 Backward Compatibility
 ----------------------
@@ -277,6 +315,31 @@ Here is step wise guide for migration:
    policy names are available to use. If old policy names which are renamed
    are overwritten in policy file, then warning will be logged. Please migrate
    those policies to new policy names.
+
+Below table show how legacy rules are mapped to new rules:
+
++--------------------+----------------------------------+-----------------+-------------------+
+| Legacy Rules       |    New Rules                     |                 |                   |
++====================+==================================+=================+===================+
+|                    |                                  | *Roles*         | *Scope*           |
+|                    +----------------------------------+-----------------+-------------------+
+|                    | SYSTEM_ADMIN                     | admin           | system            |
+| Project Admin      +----------------------------------+-----------------+                   |
+| Role               | SYSTEM_READER                    | reader          |                   |
+|                    |                                  |                 |                   |
++--------------------+----------------------------------+-----------------+-------------------+
+|                    | PROJECT_ADMIN                    | admin           | project           |
+|                    +----------------------------------+-----------------+                   |
+|                    | PROJECT_MEMBER                   | member          |                   |
+|                    +----------------------------------+-----------------+                   |
+| Project admin or   | PROJECT_READER                   | reader          |                   |
+| owner role         +----------------------------------+-----------------+-------------------+
+|                    | PROJECT_MEMBER_OR_SYSTEM_ADMIN   | admin on system | system            |
+|                    |                                  | or member on    | OR                |
+|                    |                                  | project         | project           |
+|                    +----------------------------------+-----------------+                   |
+|                    | PROJECT_READER_OR_SYSTEM_READER  | reader          |                   |
++--------------------+----------------------------------+-----------------+-------------------+
 
 We expect all deployments to migrate to new policy by 23.0.0 release so that
 we can remove the support of old policies.
