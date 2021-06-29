@@ -100,20 +100,20 @@ profiling and benchmarking scenarios so not all changes are relevant here):
     [notifications]
     notification_format = unversioned
 
-Change the code in ``nova/scheduler/driver.py`` as follows to start the
-profiler at the start of ``select_destinations`` call and to dump the
+Change the code in ``nova/scheduler/manager.py`` as follows to start the
+profiler at the start of the ``_select_destinations`` call and to dump the
 statistics at the end. For example:
 
 .. code-block:: diff
 
-    diff --git nova/scheduler/driver.py nova/scheduler/driver.py
-    index 555236e8a1..efa84b5a47 100644
-    --- nova/scheduler/driver.py
-    +++ nova/scheduler/driver.py
-    @@ -95,6 +95,10 @@ class SchedulerDriver:
-                 determined by the configuration option
-                 `CONF.scheduler.max_attempts`.
-             """
+    diff --git nova/scheduler/manager.py nova/scheduler/manager.py
+    index 9cee6b3bfc..4859b21fb1 100644
+    --- nova/scheduler/manager.py
+    +++ nova/scheduler/manager.py
+    @@ -237,6 +237,10 @@ class SchedulerManager(manager.Manager):
+             alloc_reqs_by_rp_uuid, provider_summaries,
+             allocation_request_version=None, return_alternates=False,
+         ):
     +        from eventlet.green import profile
     +        pr = profile.Profile()
     +        pr.start()
@@ -121,15 +121,14 @@ statistics at the end. For example:
              self.notifier.info(
                  context, 'scheduler.select_destinations.start',
                  {'request_spec': spec_obj.to_legacy_request_spec_dict()})
-    @@ -114,6 +118,10 @@ class SchedulerDriver:
-                 context=context, request_spec=spec_obj,
+    @@ -260,6 +264,9 @@ class SchedulerManager(manager.Manager):
                  action=fields_obj.NotificationAction.SELECT_DESTINATIONS,
                  phase=fields_obj.NotificationPhase.END)
-    +
+
     +        pr.stop()
     +        pr.dump_stats('/tmp/select_destinations/%s.prof' % ':'.join(instance_uuids))
     +
-             return host_selections
+             return selections
 
          def _schedule(
 
