@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Improved detection of anti-affinity policy violation when performing live
+    and cold migrations. Most of the violations caused by race conditions due
+    to performing concurrent live or cold migrations should now be addressed
+    by extra checks in the compute service. Upon detection, cold migration
+    operations are automatically rescheduled, while live migrations have two
+    checks and will be rescheduled if detected by the first one, otherwise the
+    live migration will fail cleanly and revert the instance state back to its
+    previous value.
