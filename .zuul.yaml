@@ -517,7 +517,7 @@
             irrelevant-files: *nova-base-irrelevant-files
         - nova-ceph-multistore:
             irrelevant-files: *nova-base-irrelevant-files
-        - neutron-tempest-linuxbridge:
+        - neutron-linuxbridge-tempest:
             irrelevant-files:
               # NOTE(mriedem): This job has its own irrelevant-files section
               # so that we only run it on changes to networking and libvirt/vif
@@ -576,7 +576,7 @@
         - nova-tox-validate-backport
         - nova-ceph-multistore:
             irrelevant-files: *nova-base-irrelevant-files
-        - neutron-tempest-linuxbridge:
+        - neutron-linuxbridge-tempest:
             irrelevant-files:
               # NOTE(mriedem): This job has its own irrelevant-files section
               # so that we only run it on changes to networking and libvirt/vif
@@ -607,9 +607,9 @@
             irrelevant-files: *nova-base-irrelevant-files
         - nova-tempest-v2-api:
             irrelevant-files: *nova-base-irrelevant-files
-        - neutron-tempest-dvr-ha-multinode-full:
+        - neutron-ovs-tempest-dvr-ha-multinode-full:
             irrelevant-files: *nova-base-irrelevant-files
-        - neutron-tempest-iptables_hybrid:
+        - neutron-ovs-tempest-iptables_hybrid:
             irrelevant-files: *nova-base-irrelevant-files
         - os-vif-ovs:
             irrelevant-files: *nova-base-irrelevant-files
