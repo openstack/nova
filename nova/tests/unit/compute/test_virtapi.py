@@ -81,7 +81,6 @@ class FakeVirtAPITest(VirtAPIBaseTest):
 class FakeCompute(object):
     def __init__(self):
         self.conductor_api = mock.MagicMock()
-        self.db = mock.MagicMock()
         self._events = []
         self.instance_events = mock.MagicMock()
         self.instance_events.prepare_for_instance_event.side_effect = \

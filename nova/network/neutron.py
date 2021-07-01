@@ -36,7 +36,6 @@ from oslo_utils import uuidutils
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context as nova_context
-from nova.db import base
 from nova import exception
 from nova.i18n import _
 from nova.network import constants
@@ -299,11 +298,10 @@ def _ensure_no_port_binding_failure(port):
         raise exception.PortBindingFailed(port_id=port['id'])
 
 
-class API(base.Base):
+class API:
     """API for interacting with the neutron 2.x API."""
 
     def __init__(self):
-        super(API, self).__init__()
         self.last_neutron_extension_sync = None
         self.extensions = {}
         self.pci_whitelist = pci_whitelist.Whitelist(

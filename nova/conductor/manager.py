@@ -42,7 +42,6 @@ from nova.conductor.tasks import cross_cell_migrate
 from nova.conductor.tasks import live_migrate
 from nova.conductor.tasks import migrate
 from nova import context as nova_context
-from nova.db import base
 from nova import exception
 from nova.i18n import _
 from nova.image import glance
@@ -224,7 +223,7 @@ def obj_target_cell(obj, cell):
 
 
 @profiler.trace_cls("rpc")
-class ComputeTaskManager(base.Base):
+class ComputeTaskManager:
     """Namespace for compute methods.
 
     This class presents an rpc API for nova-conductor under the 'compute_task'
@@ -236,7 +235,6 @@ class ComputeTaskManager(base.Base):
     target = messaging.Target(namespace='compute_task', version='1.23')
 
     def __init__(self):
-        super(ComputeTaskManager, self).__init__()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.volume_api = cinder.API()
         self.image_api = glance.API()
