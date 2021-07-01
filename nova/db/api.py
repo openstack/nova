@@ -74,7 +74,7 @@ def not_equal(*values):
     return IMPL.not_equal(*values)
 
 
-def create_context_manager(connection):
+def create_context_manager(connection=None):
     """Create a database context manager object for a cell database connection.
 
     :param connection: The database connection string
@@ -117,9 +117,9 @@ def service_get_by_uuid(context, service_uuid):
     return IMPL.service_get_by_uuid(context, service_uuid)
 
 
-def service_get_minimum_version(context, binary):
+def service_get_minimum_version(context, binaries):
     """Get the minimum service version in the database."""
-    return IMPL.service_get_minimum_version(context, binary)
+    return IMPL.service_get_minimum_version(context, binaries)
 
 
 def service_get_by_host_and_topic(context, host, topic):
@@ -395,9 +395,9 @@ def certificate_get_all_by_user_and_project(context, user_id, project_id):
 ####################
 
 
-def migration_update(context, id, values):
+def migration_update(context, migration_id, values):
     """Update a migration instance."""
-    return IMPL.migration_update(context, id, values)
+    return IMPL.migration_update(context, migration_id, values)
 
 
 def migration_create(context, values):
@@ -522,31 +522,31 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
     return IMPL.virtual_interface_get_by_uuid(context, vif_uuid)
 
 
-def virtual_interface_get_by_instance(context, instance_id):
+def virtual_interface_get_by_instance(context, instance_uuid):
     """Gets all virtual interfaces for instance.
 
     :param instance_uuid: UUID of the instance to filter on.
     """
-    return IMPL.virtual_interface_get_by_instance(context, instance_id)
+    return IMPL.virtual_interface_get_by_instance(context, instance_uuid)
 
 
 def virtual_interface_get_by_instance_and_network(
-    context, instance_id, network_id,
+    context, instance_uuid, network_id,
 ):
     """Get all virtual interface for instance that's associated with
     network.
     """
-    return IMPL.virtual_interface_get_by_instance_and_network(context,
-                                                              instance_id,
-                                                              network_id)
+    return IMPL.virtual_interface_get_by_instance_and_network(
+        context, instance_uuid, network_id,
+    )
 
 
-def virtual_interface_delete_by_instance(context, instance_id):
+def virtual_interface_delete_by_instance(context, instance_uuid):
     """Delete virtual interface records associated with instance.
 
     :param instance_uuid: UUID of the instance to filter on.
     """
-    return IMPL.virtual_interface_delete_by_instance(context, instance_id)
+    return IMPL.virtual_interface_delete_by_instance(context, instance_uuid)
 
 
 def virtual_interface_delete(context, id):
@@ -786,16 +786,18 @@ def instance_update_and_get_original(context, instance_uuid, values,
     return rv
 
 
-def instance_add_security_group(context, instance_id, security_group_id):
+def instance_add_security_group(context, instance_uuid, security_group_id):
     """Associate the given security group with the given instance."""
-    return IMPL.instance_add_security_group(context, instance_id,
-                                            security_group_id)
+    return IMPL.instance_add_security_group(
+        context, instance_uuid, security_group_id,
+    )
 
 
-def instance_remove_security_group(context, instance_id, security_group_id):
+def instance_remove_security_group(context, instance_uuid, security_group_id):
     """Disassociate the given security group from the given instance."""
-    return IMPL.instance_remove_security_group(context, instance_id,
-                                            security_group_id)
+    return IMPL.instance_remove_security_group(
+        context, instance_uuid, security_group_id,
+    )
 
 
 ####################
@@ -1126,9 +1128,9 @@ def pci_device_destroy(context, node_id, address):
     return IMPL.pci_device_destroy(context, node_id, address)
 
 
-def pci_device_update(context, node_id, address, value):
+def pci_device_update(context, node_id, address, values):
     """Update a pci device."""
-    return IMPL.pci_device_update(context, node_id, address, value)
+    return IMPL.pci_device_update(context, node_id, address, values)
 
 
 ####################
@@ -1265,9 +1267,9 @@ def actions_get(context, instance_uuid, limit=None, marker=None,
     return IMPL.actions_get(context, instance_uuid, limit, marker, filters)
 
 
-def action_get_by_request_id(context, uuid, request_id):
+def action_get_by_request_id(context, instance_uuid, request_id):
     """Get the action by request_id and given instance."""
-    return IMPL.action_get_by_request_id(context, uuid, request_id)
+    return IMPL.action_get_by_request_id(context, instance_uuid, request_id)
 
 
 def action_event_start(context, values):

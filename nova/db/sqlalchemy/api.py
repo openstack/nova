@@ -174,6 +174,7 @@ def require_context(f):
     def wrapper(*args, **kwargs):
         nova.context.require_context(args[0])
         return f(*args, **kwargs)
+    wrapper.__signature__ = inspect.signature(f)
     return wrapper
 
 
@@ -202,6 +203,7 @@ def select_db_reader_mode(f):
 
         with reader_mode.using(context):
             return f(*args, **kwargs)
+    wrapper.__signature__ = inspect.signature(f)
     return wrapper
 
 
@@ -213,11 +215,12 @@ def pick_context_manager_writer(f):
     Wrapped function must have a RequestContext in the arguments.
     """
     @functools.wraps(f)
-    def wrapped(context, *args, **kwargs):
+    def wrapper(context, *args, **kwargs):
         ctxt_mgr = get_context_manager(context)
         with ctxt_mgr.writer.using(context):
             return f(context, *args, **kwargs)
-    return wrapped
+    wrapper.__signature__ = inspect.signature(f)
+    return wrapper
 
 
 def pick_context_manager_reader(f):
@@ -228,11 +231,12 @@ def pick_context_manager_reader(f):
     Wrapped function must have a RequestContext in the arguments.
     """
     @functools.wraps(f)
-    def wrapped(context, *args, **kwargs):
+    def wrapper(context, *args, **kwargs):
         ctxt_mgr = get_context_manager(context)
         with ctxt_mgr.reader.using(context):
             return f(context, *args, **kwargs)
-    return wrapped
+    wrapper.__signature__ = inspect.signature(f)
+    return wrapper
 
 
 def pick_context_manager_reader_allow_async(f):
@@ -243,11 +247,12 @@ def pick_context_manager_reader_allow_async(f):
     Wrapped function must have a RequestContext in the arguments.
     """
     @functools.wraps(f)
-    def wrapped(context, *args, **kwargs):
+    def wrapper(context, *args, **kwargs):
         ctxt_mgr = get_context_manager(context)
         with ctxt_mgr.reader.allow_async.using(context):
             return f(context, *args, **kwargs)
-    return wrapped
+    wrapper.__signature__ = inspect.signature(f)
+    return wrapper
 
 
 def model_query(
@@ -1539,8 +1544,10 @@ def instance_get_all(context, columns_to_join=None):
 
 @require_context
 @pick_context_manager_reader_allow_async
-def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
-                                limit=None, marker=None, columns_to_join=None):
+def instance_get_all_by_filters(
+    context, filters, sort_key='created_at', sort_dir='desc', limit=None,
+    marker=None, columns_to_join=None,
+):
     """Get all instances matching all filters sorted by the primary key.
 
     See instance_get_all_by_filters_sort for more information.
@@ -2541,7 +2548,7 @@ def _instance_extra_create(context, values):
 
 
 @pick_context_manager_writer
-def instance_extra_update_by_uuid(context, instance_uuid, values):
+def instance_extra_update_by_uuid(context, instance_uuid, updates):
     """Update the instance extra record by instance uuid
 
     :param instance_uuid: UUID of the instance tied to the record
@@ -2549,10 +2556,10 @@ def instance_extra_update_by_uuid(context, instance_uuid, values):
     """
     rows_updated = model_query(context, models.InstanceExtra).\
         filter_by(instance_uuid=instance_uuid).\
-        update(values)
+        update(updates)
     if not rows_updated:
         LOG.debug("Created instance_extra for %s", instance_uuid)
-        create_values = copy.copy(values)
+        create_values = copy.copy(updates)
         create_values["instance_uuid"] = instance_uuid
         _instance_extra_create(context, create_values)
         rows_updated = 1
@@ -3305,23 +3312,23 @@ def migration_create(context, values):
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
-def migration_update(context, id, values):
+def migration_update(context, migration_id, values):
     """Update a migration instance."""
-    migration = migration_get(context, id)
+    migration = migration_get(context, migration_id)
     migration.update(values)
 
     return migration
 
 
 @pick_context_manager_reader
-def migration_get(context, id):
+def migration_get(context, migration_id):
     """Finds a migration by the ID."""
     result = model_query(context, models.Migration, read_deleted="yes").\
-                     filter_by(id=id).\
+                     filter_by(id=migration_id).\
                      first()
 
     if not result:
-        raise exception.MigrationNotFound(migration_id=id)
+        raise exception.MigrationNotFound(migration_id=migration_id)
 
     return result
 
@@ -3340,16 +3347,16 @@ def migration_get_by_uuid(context, migration_uuid):
 
 
 @pick_context_manager_reader
-def migration_get_by_id_and_instance(context, id, instance_uuid):
+def migration_get_by_id_and_instance(context, migration_id, instance_uuid):
     """Finds a migration by the migration ID and the instance UUID."""
     result = model_query(context, models.Migration).\
-                     filter_by(id=id).\
+                     filter_by(id=migration_id).\
                      filter_by(instance_uuid=instance_uuid).\
                      first()
 
     if not result:
-        raise exception.MigrationNotFoundForInstance(migration_id=id,
-                                                     instance_id=instance_uuid)
+        raise exception.MigrationNotFoundForInstance(
+            migration_id=migration_id, instance_id=instance_uuid)
 
     return result
 
