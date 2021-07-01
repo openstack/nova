@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    On some hardware platforms, an SR-IOV virtual function for a NIC port may
+    exist without being associated with a parent physical function that has
+    an assocatied netdev. In such a case the the PF interface name lookup
+    will fail. As the ``PciDeviceNotFoundById`` exception was not handled
+    this would prevent the nova compute agent from starting on affected
+    hardware. See: https://bugs.launchpad.net/nova/+bug/1915255 for more
+    details. This edgecase has now been addressed, however, features
+    that depend on the PF name such as minimum bandwidth based QoS cannot
+    be supported on these platforms.

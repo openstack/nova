@@ -1269,11 +1269,24 @@ class Host(object):
                     }
                     parent_ifname = None
                     # NOTE(sean-k-mooney): if the VF is a parent of a netdev
-                    # the PF should also have a netdev.
+                    # the PF should also have a netdev, however on some exotic
+                    # hardware such as Cavium ThunderX this may not be the case
+                    # see bug #1915255 for details. As such we wrap this in a
+                    # try except block.
                     if device.name() in net_dev_parents:
-                        parent_ifname = pci_utils.get_ifname_by_pci_address(
-                            pci_address, pf_interface=True)
-                        result['parent_ifname'] = parent_ifname
+                        try:
+                            parent_ifname = (
+                                pci_utils.get_ifname_by_pci_address(
+                                    pci_address, pf_interface=True))
+                            result['parent_ifname'] = parent_ifname
+                        except exception.PciDeviceNotFoundById:
+                            # NOTE(sean-k-mooney): we ignore this error as it
+                            # is expected when the virtual function is not a
+                            # NIC or the VF does not have a parent PF with a
+                            # netdev. We do not log here as this is called
+                            # in a periodic task and that would be noisy at
+                            # debug level.
+                            pass
                     if device.name() in vdpa_parents:
                         result['dev_type'] = fields.PciDeviceType.VDPA
                     return result
