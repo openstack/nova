@@ -3441,6 +3441,9 @@ class NodeCacheTestCase(test.NoDBTestCase):
         mock_instances.return_value = instances
         mock_nodes.return_value = nodes
         mock_hosts.side_effect = hosts
+        parent_mock = mock.MagicMock()
+        parent_mock.attach_mock(mock_nodes, 'get_node_list')
+        parent_mock.attach_mock(mock_instances, 'get_uuids_by_host')
         if not can_send_146:
             mock_can_send.side_effect = (
                 exception.IronicAPIVersionNotAvailable(version='1.46'))
@@ -3452,6 +3455,15 @@ class NodeCacheTestCase(test.NoDBTestCase):
             kwargs['conductor_group'] = partition_key
 
         self.driver._refresh_cache()
+
+        # assert if get_node_list() is called before get_uuids_by_host()
+        parent_mock.assert_has_calls(
+            [
+                mock.call.get_node_list(fields=ironic_driver._NODE_FIELDS,
+                                        **kwargs),
+                mock.call.get_uuids_by_host(mock.ANY, self.host)
+            ]
+        )
 
         mock_hash_ring.assert_called_once_with(mock.ANY)
         mock_instances.assert_called_once_with(mock.ANY, self.host)

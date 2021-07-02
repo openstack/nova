@@ -788,10 +788,15 @@ class IronicDriver(virt_driver.ComputeDriver):
     def _refresh_cache(self):
         ctxt = nova_context.get_admin_context()
         self._refresh_hash_ring(ctxt)
-        instances = objects.InstanceList.get_uuids_by_host(ctxt, CONF.host)
         node_cache = {}
 
         def _get_node_list(**kwargs):
+            # NOTE(TheJulia): This call can take a substantial amount
+            # of time as it may be attempting to retrieve thousands of
+            # baremetal nodes. Depending on the version of Ironic,
+            # this can be as long as 2-10 seconds per every thousand
+            # nodes, and this call may retrieve all nodes in a deployment,
+            # depending on if any filter paramters are applied.
             return self._get_node_list(fields=_NODE_FIELDS, **kwargs)
 
         # NOTE(jroll) if partition_key is set, we need to limit nodes that
@@ -814,6 +819,15 @@ class IronicDriver(virt_driver.ComputeDriver):
                 nodes = _get_node_list()
         else:
             nodes = _get_node_list()
+
+        # NOTE(saga): As _get_node_list() will take a long
+        # time to return in large clusters we need to call it before
+        # get_uuids_by_host() method. Otherwise the instances list we get from
+        # get_uuids_by_host() method will become stale.
+        # A stale instances list can cause a node that is managed by this
+        # compute host to be excluded in error and cause the compute node
+        # to be orphaned and associated resource provider to be deleted.
+        instances = objects.InstanceList.get_uuids_by_host(ctxt, CONF.host)
 
         for node in nodes:
             # NOTE(jroll): we always manage the nodes for instances we manage

@@ -1,0 +1,13 @@
+---
+fixes:
+  - |
+    Minimizes a race condition window when using the ``ironic`` virt driver
+    where the data generated for the Resource Tracker may attempt to compare
+    potentially stale instance information with the latest known baremetal
+    node information. While this doesn't completely prevent nor resolve the
+    underlying race condition identified in
+    `bug 1841481 <https://bugs.launchpad.net/nova/+bug/1841481>`_,
+    this change allows Nova to have the latest state information, as opposed
+    to state information which may be out of date due to the time which it may
+    take to retrieve the status from Ironic. This issue was most observable
+    on baremetal clusters with several thousand physical nodes.
