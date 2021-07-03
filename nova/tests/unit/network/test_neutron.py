@@ -5830,9 +5830,11 @@ class TestAPI(TestAPIBase):
             else:
                 self.assertNotIn(pci_request.PCI_TRUSTED_TAG, spec)
 
-        # Only the port with a resource_request will have pci_req.requester_id.
+        # Only SRIOV ports and those with a resource_request will have
+        # pci_req.requester_id.
         self.assertEqual(
-            [None, None, None, None, uuids.trusted_port, None],
+            [uuids.portid_1, uuids.portid_3, uuids.portid_4, uuids.portid_5,
+             uuids.trusted_port, uuids.portid_vdpa],
             [pci_req.requester_id for pci_req in pci_requests.requests])
 
         self.assertCountEqual(
@@ -6382,6 +6384,41 @@ class TestAPI(TestAPIBase):
             self.assertRaises(exception.InvalidRoutedNetworkConfiguration,
                               self.api.get_segment_id_for_subnet,
                               self.context, uuids.subnet_id)
+
+    @mock.patch.object(neutronapi.LOG, 'debug')
+    def test_get_port_pci_slot(self, mock_debug):
+        fake_port = {'id': uuids.fake_port_id}
+        request = objects.InstancePCIRequest(requester_id=uuids.fake_port_id,
+                                             request_id=uuids.pci_request_id)
+        bad_request = objects.InstancePCIRequest(
+            requester_id=uuids.wrong_port_id)
+        device = objects.PciDevice(request_id=uuids.pci_request_id,
+                                   address='fake-pci-address')
+        bad_device = objects.PciDevice(request_id=uuids.wrong_request_id)
+        # Test the happy path
+        instance = objects.Instance(
+            pci_requests=objects.InstancePCIRequests(requests=[request]),
+            pci_devices=objects.PciDeviceList(objects=[device]))
+        self.assertEqual(
+            'fake-pci-address',
+            self.api._get_port_pci_slot(self.context, instance, fake_port))
+        # Test not finding the request
+        instance = objects.Instance(
+            pci_requests=objects.InstancePCIRequests(
+                requests=[objects.InstancePCIRequest(bad_request)]))
+        self.assertIsNone(
+            self.api._get_port_pci_slot(self.context, instance, fake_port))
+        mock_debug.assert_called_with('No PCI request found for port %s',
+                                      uuids.fake_port_id, instance=instance)
+        mock_debug.reset_mock()
+        # Test not finding the device
+        instance = objects.Instance(
+            pci_requests=objects.InstancePCIRequests(requests=[request]),
+            pci_devices=objects.PciDeviceList(objects=[bad_device]))
+        self.assertIsNone(
+            self.api._get_port_pci_slot(self.context, instance, fake_port))
+        mock_debug.assert_called_with('No PCI device found for request %s',
+                                      uuids.pci_request_id, instance=instance)
 
 
 class TestAPIModuleMethods(test.NoDBTestCase):
