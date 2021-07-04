@@ -21,16 +21,18 @@ from nova.policies import base
 BASE_POLICY_NAME = 'os_compute_api:os-volumes'
 POLICY_NAME = 'os_compute_api:os-volumes:%s'
 
-DEPRECATED_POLICY = policy.DeprecatedRule(
-    BASE_POLICY_NAME,
-    base.RULE_ADMIN_OR_OWNER,
-)
-
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    BASE_POLICY_NAME,
+    base.RULE_ADMIN_OR_OWNER,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='22.0.0'
+)
 
 
 volumes_policies = [
@@ -47,9 +49,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
            },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'create',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -63,9 +63,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
            },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'detail',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
@@ -79,9 +77,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
            },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'show',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
@@ -95,9 +91,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
            },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'delete',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -111,9 +105,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
            },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'snapshots:list',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
@@ -127,9 +119,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
            },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'snapshots:create',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -143,9 +133,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
            },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
             name=POLICY_NAME % 'snapshots:detail',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
@@ -159,9 +147,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
            },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'snapshots:show',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
@@ -175,9 +161,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
            },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'snapshots:delete',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -191,9 +175,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
            }
       ],
       scope_types=['system', 'project'],
-      deprecated_rule=DEPRECATED_POLICY,
-      deprecated_reason=DEPRECATED_REASON,
-      deprecated_since='22.0.0'),
+      deprecated_rule=DEPRECATED_POLICY),
 ]
 
 

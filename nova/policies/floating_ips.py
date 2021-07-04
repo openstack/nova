@@ -21,16 +21,18 @@ from nova.policies import base
 ROOT_POLICY = 'os_compute_api:os-floating-ips'
 BASE_POLICY_NAME = 'os_compute_api:os-floating-ips:%s'
 
-DEPRECATED_FIP_POLICY = policy.DeprecatedRule(
-    ROOT_POLICY,
-    base.RULE_ADMIN_OR_OWNER,
-)
-
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_FIP_POLICY = policy.DeprecatedRule(
+    ROOT_POLICY,
+    base.RULE_ADMIN_OR_OWNER,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='22.0.0'
+)
 
 
 floating_ips_policies = [
@@ -46,9 +48,7 @@ floating_ips_policies = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_FIP_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'remove',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -61,9 +61,7 @@ floating_ips_policies = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_FIP_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'list',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
@@ -75,9 +73,7 @@ floating_ips_policies = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_FIP_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'create',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -89,9 +85,7 @@ floating_ips_policies = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_FIP_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
@@ -103,9 +97,7 @@ floating_ips_policies = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_FIP_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'delete',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -117,9 +109,7 @@ floating_ips_policies = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_FIP_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_FIP_POLICY),
 ]
 
 

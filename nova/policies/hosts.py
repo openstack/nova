@@ -22,16 +22,18 @@ BASE_POLICY_NAME = 'os_compute_api:os-hosts'
 
 POLICY_NAME = 'os_compute_api:os-hosts:%s'
 
-DEPRECATED_POLICY = policy.DeprecatedRule(
-    BASE_POLICY_NAME,
-    base.RULE_ADMIN_API,
-)
-
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    BASE_POLICY_NAME,
+    base.RULE_ADMIN_API,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='22.0.0'
+)
 
 hosts_policies = [
     policy.DocumentedRuleDefault(
@@ -47,9 +49,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
             },
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'show',
         check_str=base.SYSTEM_READER,
@@ -63,9 +63,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
             }
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'update',
         check_str=base.SYSTEM_ADMIN,
@@ -79,9 +77,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
             },
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'reboot',
         check_str=base.SYSTEM_ADMIN,
@@ -95,9 +91,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
             },
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'shutdown',
         check_str=base.SYSTEM_ADMIN,
@@ -111,9 +105,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
             },
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'start',
         check_str=base.SYSTEM_ADMIN,
@@ -127,9 +119,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
             }
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
 ]
 
 

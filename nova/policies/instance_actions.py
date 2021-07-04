@@ -21,16 +21,19 @@ from nova.policies import base
 ROOT_POLICY = 'os_compute_api:os-instance-actions'
 BASE_POLICY_NAME = 'os_compute_api:os-instance-actions:%s'
 
-DEPRECATED_INSTANCE_ACTION_POLICY = policy.DeprecatedRule(
-    ROOT_POLICY,
-    base.RULE_ADMIN_OR_OWNER,
-)
-
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_INSTANCE_ACTION_POLICY = policy.DeprecatedRule(
+    ROOT_POLICY,
+    base.RULE_ADMIN_OR_OWNER,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='21.0.0',
+)
+
 
 instance_actions_policies = [
     policy.DocumentedRuleDefault(
@@ -82,9 +85,7 @@ passes, the name of the host.""",
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_INSTANCE_ACTION_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_INSTANCE_ACTION_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
@@ -96,9 +97,7 @@ passes, the name of the host.""",
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_INSTANCE_ACTION_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_INSTANCE_ACTION_POLICY),
 ]
 
 

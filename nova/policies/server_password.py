@@ -20,16 +20,18 @@ from nova.policies import base
 
 BASE_POLICY_NAME = 'os_compute_api:os-server-password:%s'
 
-DEPRECATED_POLICY = policy.DeprecatedRule(
-    'os_compute_api:os-server-password',
-    base.RULE_ADMIN_OR_OWNER,
-)
-
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    'os_compute_api:os-server-password',
+    base.RULE_ADMIN_OR_OWNER,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='21.0.0'
+)
 
 
 server_password_policies = [
@@ -45,9 +47,7 @@ server_password_policies = [
             },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'clear',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -60,9 +60,7 @@ server_password_policies = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
 ]
 
 

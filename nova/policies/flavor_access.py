@@ -29,16 +29,18 @@ POLICY_ROOT = 'os_compute_api:os-flavor-access:%s'
 # SYSTEM_READER rule in base class is defined with the deprecated rule of admin
 # not admin or owner which is the main reason that we need to explicitly
 # deprecate this policy here.
-DEPRECATED_FLAVOR_ACCESS_POLICY = policy.DeprecatedRule(
-    BASE_POLICY_NAME,
-    base.RULE_ADMIN_OR_OWNER,
-)
-
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_FLAVOR_ACCESS_POLICY = policy.DeprecatedRule(
+    BASE_POLICY_NAME,
+    base.RULE_ADMIN_OR_OWNER,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='21.0.0'
+)
 
 flavor_access_policies = [
     policy.DocumentedRuleDefault(
@@ -78,9 +80,7 @@ to a flavor via an os-flavor-access API.
             },
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_FLAVOR_ACCESS_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_FLAVOR_ACCESS_POLICY),
 ]
 
 

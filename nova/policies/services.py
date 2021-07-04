@@ -19,16 +19,20 @@ from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:os-services:%s'
-DEPRECATED_SERVICE_POLICY = policy.DeprecatedRule(
-    'os_compute_api:os-services',
-    base.RULE_ADMIN_API,
-)
 
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_SERVICE_POLICY = policy.DeprecatedRule(
+    'os_compute_api:os-services',
+    base.RULE_ADMIN_API,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='21.0.0',
+)
+
 
 services_policies = [
     policy.DocumentedRuleDefault(
@@ -42,9 +46,7 @@ services_policies = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_SERVICE_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_SERVICE_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'update',
         check_str=base.SYSTEM_ADMIN,
@@ -57,9 +59,7 @@ services_policies = [
             },
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_SERVICE_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_SERVICE_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'delete',
         check_str=base.SYSTEM_ADMIN,
@@ -71,9 +71,7 @@ services_policies = [
             }
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_SERVICE_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_SERVICE_POLICY),
 ]
 
 

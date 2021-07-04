@@ -21,16 +21,18 @@ from nova.policies import base
 ROOT_POLICY = 'os_compute_api:os-baremetal-nodes'
 BASE_POLICY_NAME = 'os_compute_api:os-baremetal-nodes:%s'
 
-DEPRECATED_BAREMETAL_POLICY = policy.DeprecatedRule(
-    ROOT_POLICY,
-    base.RULE_ADMIN_API,
-)
-
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_BAREMETAL_POLICY = policy.DeprecatedRule(
+    ROOT_POLICY,
+    base.RULE_ADMIN_API,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='22.0.0'
+)
 
 
 baremetal_nodes_policies = [
@@ -48,9 +50,7 @@ These APIs are proxy calls to the Ironic service and are deprecated.
             }
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_BAREMETAL_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_BAREMETAL_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
         check_str=base.SYSTEM_READER,
@@ -62,9 +62,7 @@ These APIs are proxy calls to the Ironic service and are deprecated.
             }
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_BAREMETAL_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0')
+        deprecated_rule=DEPRECATED_BAREMETAL_POLICY)
 ]
 
 

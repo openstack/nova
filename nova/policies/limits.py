@@ -20,16 +20,19 @@ from nova.policies import base
 
 BASE_POLICY_NAME = 'os_compute_api:limits'
 OTHER_PROJECT_LIMIT_POLICY_NAME = 'os_compute_api:limits:other_project'
-DEPRECATED_POLICY = policy.DeprecatedRule(
-    'os_compute_api:os-used-limits',
-    base.RULE_ADMIN_API,
-)
 
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    'os_compute_api:os-used-limits',
+    base.RULE_ADMIN_API,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='21.0.0'
+)
 
 limits_policies = [
     policy.DocumentedRuleDefault(
@@ -59,9 +62,7 @@ os_compute_api:limits passes""",
             }
         ],
         scope_types=['system'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
 ]
 
 

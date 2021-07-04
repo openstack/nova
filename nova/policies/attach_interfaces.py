@@ -20,16 +20,19 @@ from nova.policies import base
 
 BASE_POLICY_NAME = 'os_compute_api:os-attach-interfaces'
 POLICY_ROOT = 'os_compute_api:os-attach-interfaces:%s'
-DEPRECATED_INTERFACES_POLICY = policy.DeprecatedRule(
-    BASE_POLICY_NAME,
-    base.RULE_ADMIN_OR_OWNER,
-)
 
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_INTERFACES_POLICY = policy.DeprecatedRule(
+    BASE_POLICY_NAME,
+    base.RULE_ADMIN_OR_OWNER,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='21.0.0',
+)
 
 attach_interfaces_policies = [
     policy.DocumentedRuleDefault(
@@ -43,9 +46,7 @@ attach_interfaces_policies = [
             },
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_INTERFACES_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_INTERFACES_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
         check_str=base.PROJECT_READER_OR_SYSTEM_READER,
@@ -57,9 +58,7 @@ attach_interfaces_policies = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_INTERFACES_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_INTERFACES_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -71,9 +70,7 @@ attach_interfaces_policies = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_INTERFACES_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0'),
+        deprecated_rule=DEPRECATED_INTERFACES_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -85,9 +82,7 @@ attach_interfaces_policies = [
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_INTERFACES_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='21.0.0')
+        deprecated_rule=DEPRECATED_INTERFACES_POLICY)
 ]
 
 

@@ -21,16 +21,18 @@ from nova.policies import base
 ROOT_POLICY = 'os_compute_api:os-multinic'
 BASE_POLICY_NAME = 'os_compute_api:os-multinic:%s'
 
-DEPRECATED_POLICY = policy.DeprecatedRule(
-    ROOT_POLICY,
-    base.RULE_ADMIN_OR_OWNER,
-)
-
 DEPRECATED_REASON = """
 Nova API policies are introducing new default roles with scope_type
 capabilities. Old policies are deprecated and silently going to be ignored
 in nova 23.0.0 release.
 """
+
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    ROOT_POLICY,
+    base.RULE_ADMIN_OR_OWNER,
+    deprecated_reason=DEPRECATED_REASON,
+    deprecated_since='22.0.0'
+)
 
 
 multinic_policies = [
@@ -48,9 +50,7 @@ deprecated.""",
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'remove',
         check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
@@ -65,9 +65,7 @@ deprecated.""",
             }
         ],
         scope_types=['system', 'project'],
-        deprecated_rule=DEPRECATED_POLICY,
-        deprecated_reason=DEPRECATED_REASON,
-        deprecated_since='22.0.0'),
+        deprecated_rule=DEPRECATED_POLICY),
 ]
 
 
