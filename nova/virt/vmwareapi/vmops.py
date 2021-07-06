@@ -1949,12 +1949,9 @@ class VMwareVMOps(object):
                                                             self._cluster,
                                                             vm_ref,
                                                             operation='remove')
-            except vexc.VimFaultException as e:
-                with excutils.save_and_reraise_exception() as ctx:
-                    if 'InvalidArgument' in e.fault_list:
-                        LOG.debug('DRS override was already deleted.',
-                                  instance=instance)
-                        ctx.reraise = False
+            except Exception:
+                LOG.exception('Could not remove DRS override.',
+                              instance=instance)
 
         self._clean_up_after_special_spawning(context, flavor.memory_mb,
                                               flavor)
