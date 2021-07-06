@@ -41,10 +41,9 @@ from nova.db.api import legacy_migrations
 from nova.db.api import models
 from nova.db import migration
 from nova import test
-from nova.tests import fixtures as nova_fixtures
 
 
-class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
+class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
     """Test that the models match the database after migrations are run."""
 
     def setUp(self):
@@ -55,12 +54,8 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
         with mock.patch.object(migration, 'get_engine', return_value=engine):
             migration.db_sync(database='api')
 
-    @property
-    def migrate_engine(self):
+    def get_engine(self):
         return self.engine
-
-    def get_engine(self, context=None):
-        return self.migrate_engine
 
     def get_metadata(self):
         return models.API_BASE.metadata
@@ -126,31 +121,34 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
         return new_diff
 
 
-class TestNovaAPIMigrationsSQLite(NovaAPIModelsSync,
-                                  test_fixtures.OpportunisticDBTestMixin,
-                                  testtools.TestCase):
+class TestModelsSyncSQLite(
+    NovaModelsMigrationsSync,
+    test_fixtures.OpportunisticDBTestMixin,
+    testtools.TestCase,
+):
     pass
 
 
-class TestNovaAPIMigrationsMySQL(NovaAPIModelsSync,
-                                 test_fixtures.OpportunisticDBTestMixin,
-                                 testtools.TestCase):
+class TestModelsSyncMySQL(
+    NovaModelsMigrationsSync,
+    test_fixtures.OpportunisticDBTestMixin,
+    testtools.TestCase,
+):
     FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
 
-class TestNovaAPIMigrationsPostgreSQL(NovaAPIModelsSync,
-        test_fixtures.OpportunisticDBTestMixin, testtools.TestCase):
+class TestModelsSyncPostgreSQL(
+    NovaModelsMigrationsSync,
+    test_fixtures.OpportunisticDBTestMixin,
+    testtools.TestCase,
+):
     FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
 
-class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
+class NovaMigrationsWalk(test_migrations.WalkVersionsMixin):
+
     def setUp(self):
-        # NOTE(sdague): the oslo_db base test case completely
-        # invalidates our logging setup, we actually have to do that
-        # before it is called to keep this from vomiting all over our
-        # test output.
-        self.useFixture(nova_fixtures.StandardLogging())
-        super(NovaAPIMigrationsWalk, self).setUp()
+        super(NovaMigrationsWalk, self).setUp()
         self.engine = enginefacade.writer.get_engine()
 
     @property
@@ -178,37 +176,46 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         special_cases = [
             self.INIT_VERSION + 1,  # initial change
         ]
-        return (train_placeholders +
-                ussuri_placeholders +
-                victoria_placeholders +
-                wallaby_placeholders +
-                special_cases)
+        return (
+            train_placeholders +
+            ussuri_placeholders +
+            victoria_placeholders +
+            wallaby_placeholders +
+            special_cases
+        )
 
     def migrate_up(self, version, with_data=False):
         if with_data:
             check = getattr(self, '_check_%03d' % version, None)
             if version not in self._skippable_migrations():
-                self.assertIsNotNone(check,
-                                     ('API DB Migration %i does not have a '
-                                      'test. Please add one!') % version)
-        super(NovaAPIMigrationsWalk, self).migrate_up(version, with_data)
+                self.assertIsNotNone(
+                    check, 'DB Migration %i does not have a test.' % version)
+
+        super().migrate_up(version, with_data)
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
 
 
-class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
-                                      test_fixtures.OpportunisticDBTestMixin,
-                                      test.NoDBTestCase):
+class TestMigrationsWalkSQLite(
+    NovaMigrationsWalk,
+    test_fixtures.OpportunisticDBTestMixin,
+    test.NoDBTestCase,
+):
     pass
 
 
-class TestNovaAPIMigrationsWalkMySQL(NovaAPIMigrationsWalk,
-                                     test_fixtures.OpportunisticDBTestMixin,
-                                     test.NoDBTestCase):
+class TestMigrationsWalkMySQL(
+    NovaMigrationsWalk,
+    test_fixtures.OpportunisticDBTestMixin,
+    test.NoDBTestCase,
+):
     FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
 
-class TestNovaAPIMigrationsWalkPostgreSQL(NovaAPIMigrationsWalk,
-        test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase):
+class TestMigrationsWalkPostgreSQL(
+    NovaMigrationsWalk,
+    test_fixtures.OpportunisticDBTestMixin,
+    test.NoDBTestCase,
+):
     FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
