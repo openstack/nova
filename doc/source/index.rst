@@ -177,7 +177,7 @@ Once you are running nova, the following information is extremely useful.
 * :doc:`Admin Guide </admin/index>`: A collection of guides for administrating
   nova.
 * :doc:`Flavors </user/flavors>`: What flavors are and why they are used.
-* :doc:`Upgrades </user/upgrade>`: How nova is designed to be upgraded for minimal
+* :doc:`Upgrades </admin/upgrades>`: How nova is designed to be upgraded for minimal
   service impact, and the order you should do them in.
 * :doc:`Quotas </user/quotas>`: Managing project quotas in nova.
 * :doc:`Aggregates </admin/aggregates>`: Aggregates are a useful way of grouping
@@ -198,7 +198,7 @@ Once you are running nova, the following information is extremely useful.
 
    admin/index
    user/flavors
-   user/upgrade
+   admin/upgrades
    user/quotas
    user/filter-scheduler
    admin/vendordata

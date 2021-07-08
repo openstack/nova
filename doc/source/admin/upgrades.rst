@@ -1,19 +1,4 @@
-..
-      Copyright 2014 Rackspace
-      All Rights Reserved.
-
-      Licensed under the Apache License, Version 2.0 (the "License"); you may
-      not use this file except in compliance with the License. You may obtain
-      a copy of the License at
-
-          http://www.apache.org/licenses/LICENSE-2.0
-
-      Unless required by applicable law or agreed to in writing, software
-      distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-      WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-      License for the specific language governing permissions and limitations
-      under the License.
-
+========
 Upgrades
 ========
 
@@ -28,14 +13,14 @@ This document is trying to describe how we can achieve that.
 Once we have introduced the key concepts relating to upgrade, we will
 introduce the process needed for a no downtime upgrade of nova.
 
+
 .. _minimal_downtime_upgrade:
 
 Minimal Downtime Upgrade Process
 --------------------------------
 
-
 Plan your upgrade
-'''''''''''''''''
+~~~~~~~~~~~~~~~~~
 
 * Read and ensure you understand the release notes for the next release.
 
@@ -50,17 +35,27 @@ Plan your upgrade
   You may find you need to add extra nova-conductor workers to deal with the
   additional upgrade related load.
 
-
 Rolling upgrade process
-'''''''''''''''''''''''
+~~~~~~~~~~~~~~~~~~~~~~~
 
-To reduce downtime, the compute services can be upgraded in a rolling fashion. It
-means upgrading a few services at a time. This results in a condition where
+To reduce downtime, the compute services can be upgraded in a rolling fashion.
+It means upgrading a few services at a time. This results in a condition where
 both old (N) and new (N+1) nova-compute services co-exist for a certain time
 period. Note that, there is no upgrade of the hypervisor here, this is just
 upgrading the nova services. If reduced downtime is not a concern (or lower
 complexity is desired), all services may be taken down and restarted at the
 same time.
+
+.. important::
+
+    Nova does not currently support the coexistence of N and N+2 or greater
+    :program:`nova-compute` or :program:`nova-conductor` services in the same
+    deployment. The `nova-conductor`` service will fail to start when a
+    ``nova-compute`` service that is older than the previous release (N-2 or
+    greater) is detected. Similarly, in a :doc:`deployment with multiple cells
+    </user/cellsv2-layout>`, neither the super conductor service nor any
+    per-cell conductor service will start if any other conductor service in the
+    deployment is older than the previous release.
 
 #. Before maintenance window:
 
@@ -158,49 +153,54 @@ same time.
 
    * At this point, you must also ensure you update the configuration, to stop
      using any deprecated features or options, and perform any required work
-     to transition to alternative features. All the deprecated options should
-     be supported for one cycle, but should be removed before your next
+     to transition to alternative features. All deprecated options are
+     supported for at least one cycle, but should be removed before your next
      upgrade is performed.
 
 
 Current Database Upgrade Types
 ------------------------------
 
-Currently Nova has 2 types of database upgrades that are in use.
+Currently Nova has two types of database upgrades that are in use.
 
-#. Schema Migrations
-#. Data Migrations
+- Schema Migrations
+- Data Migrations
 
+Nova does not support database downgrades.
+
+.. _schema-migrations:
 
 Schema Migrations
-''''''''''''''''''
+~~~~~~~~~~~~~~~~~
 
-Schema migrations are defined in
-``nova/db/main/legacy_migrations/versions`` and in
-``nova/db/api/legacy_migrations/versions``. They are
-the routines that transform our database structure, which should be
-additive and able to be applied to a running system before service
-code has been upgraded.
+Schema migrations are defined in ``nova/db/main/migrations/versions`` and
+``nova/db/api/migrations/versions``. They are the routines that transform our
+database structure, which should be additive and able to be applied to a
+running system before service code has been upgraded.
+
+For information on developing your own schema migrations as part of a feature
+or bugfix, refer to :doc:`/reference/database-migrations`.
 
 .. note::
 
-  The API database migrations should be assumed to run before the
-  migrations for the main/cell databases. This is because the former
-  contains information about how to find and connect to the latter.
-  Some management commands that operate on multiple cells will attempt
-  to list and iterate over cell mapping records, which require a
-  functioning API database schema.
+   The API database migrations should be assumed to run before the
+   migrations for the main/cell databases. This is because the former
+   contains information about how to find and connect to the latter.
+   Some management commands that operate on multiple cells will attempt
+   to list and iterate over cell mapping records, which require a
+   functioning API database schema.
 
 .. _data-migrations:
 
 Data Migrations
-'''''''''''''''''
+~~~~~~~~~~~~~~~
 
 Online data migrations occur in two places:
 
 #. Inline migrations that occur as part of normal run-time
    activity as data is read in the old format and written in the
    new format
+
 #. Background online migrations that are performed using
    ``nova-manage`` to complete transformations that will not occur
    incidentally due to normal runtime activity.
@@ -209,12 +209,11 @@ An example of online data migrations are the flavor migrations done as part
 of Nova object version 1.18. This included a transient migration of flavor
 storage from one database location to another.
 
-.. note::
+For information on developing your own schema migrations as part of a feature
+or bugfix, refer to :doc:`/reference/database-migrations`.
 
-  Database downgrades are not supported.
-
-Migration policy:
-'''''''''''''''''
+Migration policy
+~~~~~~~~~~~~~~~~
 
 The following guidelines for schema and data migrations are followed in order
 to ease upgrades:
@@ -232,17 +231,11 @@ to ease upgrades:
   #. Data migration, by the objects layer, must completely migrate data from
      the old version of the schema to the new version.
 
-     * `Data migration example
-       <http://specs.openstack.org/openstack/nova-specs/specs/kilo/implemented/flavor-from-sysmeta-to-blob.html>`_
-     * `Data migration enforcement example
-       <https://review.opendev.org/#/c/174480/15/nova/db/sqlalchemy/migrate_repo/versions/291_enforce_flavors_migrated.py>`_
-       (for sqlalchemy migrate/deprecated scripts):
-
   #. The column can then be removed with a migration at the start of N+2.
 
-* All schema migrations should be idempotent.  (For example, a migration
+* All schema migrations should be idempotent. For example, a migration
   should check if an element exists in the schema before attempting to add
-  it.)  This logic comes for free in the autogenerated workflow of
+  it. This logic comes for free in the autogenerated workflow of
   the online migrations.
 
 * Constraints - When adding a foreign or unique key constraint, the schema
@@ -256,16 +249,6 @@ to ease upgrades:
   of data migration performed, there should exist a nova-manage option for an
   operator to manually request that rows be migrated.
 
-  * See `flavor migration spec
-    <http://specs.openstack.org/openstack/nova-specs/specs/kilo/implemented/flavor-from-sysmeta-to-blob.html>`_
-    for an example of data migrations in the object layer.
-
-*Future* work -
-   #. Adding plumbing to enforce that relevant data migrations are completed
-      before running `contract` in the expand/migrate/contract schema migration
-      workflow.  A potential solution would be for `contract` to run a gating
-      test for each specific subtract operation to determine if the operation
-      can be completed.
 
 Concepts
 --------
@@ -308,8 +291,8 @@ Graceful service shutdown
 
     .. note::
 
-      While this is true for the RabbitMQ RPC backend, we need to confirm
-      what happens for other RPC backends.
+       While this is true for the RabbitMQ RPC backend, we need to confirm
+       what happens for other RPC backends.
 
 API load balancer draining
     When upgrading API nodes, you can make your load balancer only send new
@@ -327,7 +310,7 @@ Expand/Contract DB Migrations
     migration without affecting runtime code.
 
 Online Data Migrations using objects
-    In Kilo we are moving all data migration into the DB objects code.
+    Since Kilo, we have moved all data migration into the DB objects code.
     When trying to migrate data in the database from the old format to the
     new format, this is done in the object code when reading or saving things
     that are in the old format. For records that are not updated, you need to
@@ -353,10 +336,6 @@ nova-conductor object backports
 Testing
 -------
 
-Once we have all the pieces in place, we hope to move the Grenade testing
-to follow this new pattern.
-
-The current tests only cover the existing upgrade process where:
-
-* old computes can run with new control plane
-* but control plane is turned off for DB migrations
+We use the "grenade" jobs to test upgrades. The current tests only cover the
+existing upgrade process where old computes can run with new control plane but
+control plane is turned off for DB migrations.

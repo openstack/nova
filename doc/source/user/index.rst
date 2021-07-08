@@ -72,9 +72,6 @@ Once you are running nova, the following information is extremely useful.
 * :doc:`Admin Guide </admin/index>`: A collection of guides for administrating
   nova.
 
-* :doc:`Upgrades </user/upgrade>`: How nova is designed to be upgraded for minimal
-  service impact, and the order you should do them in.
-
 * :doc:`Quotas </user/quotas>`: Managing project quotas in nova.
 
 * :doc:`Availablity Zones </admin/availability-zones>`: Availability Zones are
