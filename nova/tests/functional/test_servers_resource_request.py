@@ -1017,11 +1017,16 @@ class PortResourceRequestBasedSchedulingTest(
             networks=[{'port': self.neutron.port_1['id']}])
         self._wait_for_state_change(server, 'ACTIVE')
 
-        # attach an OVS port with too big resource request
+        # decrease the resource inventory so that the OVS port will not fit
+        self._set_provider_inventories(
+            self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
+            {"inventories": {
+                orc.NET_BW_IGR_KILOBIT_PER_SEC: {"total": 10},
+                orc.NET_BW_EGR_KILOBIT_PER_SEC: {"total": 10},
+            }})
+
+        # try to attach an OVS port with too big resource request
         ovs_port = self.neutron.port_with_resource_request
-        resources = self.neutron._ports[
-            ovs_port['id']]['resource_request']['resources']
-        resources['NET_BW_IGR_KILOBIT_PER_SEC'] = 1000000
 
         post = {
             'interfaceAttachment': {
@@ -1033,6 +1038,9 @@ class PortResourceRequestBasedSchedulingTest(
 
         self.assertEqual(400, ex.response.status_code)
         self.assertIn('Failed to allocate additional resources', str(ex))
+        self.assertNotIn(
+            'Failed to retrieve allocation candidates from placement API',
+            self.stdlog.logger.output)
 
     def test_interface_attach_with_resource_request_pci_claim_fails(self):
         # boot a server with a single SRIOV port that has no resource request
