@@ -62,8 +62,10 @@ class _TestFlavor(object):
             # but the object has tz-aware datetimes. If we're comparing
             # a model to an object (as opposed to a fake dict), just
             # ignore the datetimes in the comparison.
-            if (isinstance(db, api_models.API_BASE) and
-                  isinstance(value, datetime.datetime)):
+            if (
+                isinstance(db, api_models.BASE) and
+                isinstance(value, datetime.datetime)
+            ):
                 continue
             test.assertEqual(db[field], obj[field])
 

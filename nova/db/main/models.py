@@ -31,17 +31,13 @@ from sqlalchemy import schema
 from nova.db import types
 
 CONF = cfg.CONF
+
+# we don't configure 'cls' since we have models that don't use the
+# TimestampMixin
 BASE = declarative.declarative_base()
 
 
-def MediumText():
-    return sa.Text().with_variant(
-        sqlalchemy.dialects.mysql.MEDIUMTEXT(), 'mysql')
-
-
-class NovaBase(models.TimestampMixin,
-               models.ModelBase):
-    metadata = None
+class NovaBase(models.TimestampMixin, models.ModelBase):
 
     def __copy__(self):
         """Implement a safe copy.copy().
@@ -133,7 +129,7 @@ class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
     vcpus_used = sa.Column(sa.Integer, nullable=False)
     memory_mb_used = sa.Column(sa.Integer, nullable=False)
     local_gb_used = sa.Column(sa.Integer, nullable=False)
-    hypervisor_type = sa.Column(MediumText(), nullable=False)
+    hypervisor_type = sa.Column(types.MediumText(), nullable=False)
     hypervisor_version = sa.Column(sa.Integer, nullable=False)
     hypervisor_hostname = sa.Column(sa.String(255))
 
@@ -155,7 +151,7 @@ class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
     # Points are "json translatable" and it must have all dictionary keys
     # above, since it is copied from <cpu> tag of getCapabilities()
     # (See libvirt.virtConnection).
-    cpu_info = sa.Column(MediumText(), nullable=False)
+    cpu_info = sa.Column(types.MediumText(), nullable=False)
     disk_available_least = sa.Column(sa.Integer)
     host_ip = sa.Column(types.IPAddress())
     supported_instances = sa.Column(sa.Text)
@@ -265,7 +261,7 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
 
     launch_index = sa.Column(sa.Integer)
     key_name = sa.Column(sa.String(255))
-    key_data = sa.Column(MediumText())
+    key_data = sa.Column(types.MediumText())
 
     power_state = sa.Column(sa.Integer)
     vm_state = sa.Column(sa.String(255))
@@ -287,7 +283,7 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
     # *not* flavorid, this is the internal primary_key
     instance_type_id = sa.Column(sa.Integer)
 
-    user_data = sa.Column(MediumText())
+    user_data = sa.Column(types.MediumText())
 
     reservation_id = sa.Column(sa.String(255))
 
@@ -305,7 +301,7 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
 
     # To remember on which host an instance booted.
     # An instance may have moved to another host by live migration.
-    launched_on = sa.Column(MediumText())
+    launched_on = sa.Column(types.MediumText())
 
     # locked is superseded by locked_by and locked is not really
     # necessary but still used in API code so it remains.
@@ -369,7 +365,7 @@ class InstanceInfoCache(BASE, NovaBase, models.SoftDeleteMixin):
     id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
 
     # text column used for storing a json object of network data for api
-    network_info = sa.Column(MediumText())
+    network_info = sa.Column(types.MediumText())
 
     instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'),
                            nullable=False)
@@ -644,7 +640,7 @@ class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
     # for no device to suppress devices.
     no_device = sa.Column(sa.Boolean)
 
-    connection_info = sa.Column(MediumText())
+    connection_info = sa.Column(types.MediumText())
 
     tag = sa.Column(sa.String(255))
 
@@ -767,7 +763,7 @@ class KeyPair(BASE, NovaBase, models.SoftDeleteMixin):
     user_id = sa.Column(sa.String(255))
 
     fingerprint = sa.Column(sa.String(255))
-    public_key = sa.Column(MediumText())
+    public_key = sa.Column(types.MediumText())
     type = sa.Column(sa.Enum('ssh', 'x509', name='keypair_types'),
                   nullable=False, server_default='ssh')
 
@@ -1323,7 +1319,7 @@ class InstanceFault(BASE, NovaBase, models.SoftDeleteMixin):
                            sa.ForeignKey('instances.uuid'))
     code = sa.Column(sa.Integer(), nullable=False)
     message = sa.Column(sa.String(255))
-    details = sa.Column(MediumText())
+    details = sa.Column(types.MediumText())
     host = sa.Column(sa.String(255))
 
 

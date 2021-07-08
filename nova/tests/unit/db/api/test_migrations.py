@@ -60,7 +60,7 @@ class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
         return self.engine
 
     def get_metadata(self):
-        return models.API_BASE.metadata
+        return models.BASE.metadata
 
     def include_object(self, object_, name, type_, reflected, compare_to):
         if type_ == 'table':

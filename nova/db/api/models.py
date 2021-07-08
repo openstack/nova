@@ -15,26 +15,23 @@ from oslo_db.sqlalchemy import models
 from oslo_log import log as logging
 import sqlalchemy as sa
 import sqlalchemy.dialects.mysql
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext import declarative
 from sqlalchemy import orm
 from sqlalchemy import schema
 
+from nova.db import types
+
 LOG = logging.getLogger(__name__)
-
-
-def MediumText():
-    return sa.Text().with_variant(
-        sqlalchemy.dialects.mysql.MEDIUMTEXT(), 'mysql')
 
 
 class _NovaAPIBase(models.ModelBase, models.TimestampMixin):
     pass
 
 
-API_BASE = declarative_base(cls=_NovaAPIBase)
+BASE = declarative.declarative_base(cls=_NovaAPIBase)
 
 
-class AggregateHost(API_BASE):
+class AggregateHost(BASE):
     """Represents a host that is member of an aggregate."""
     __tablename__ = 'aggregate_hosts'
     __table_args__ = (schema.UniqueConstraint(
@@ -48,7 +45,7 @@ class AggregateHost(API_BASE):
         sa.Integer, sa.ForeignKey('aggregates.id'), nullable=False)
 
 
-class AggregateMetadata(API_BASE):
+class AggregateMetadata(BASE):
     """Represents a metadata key/value pair for an aggregate."""
     __tablename__ = 'aggregate_metadata'
     __table_args__ = (
@@ -64,7 +61,7 @@ class AggregateMetadata(API_BASE):
         sa.Integer, sa.ForeignKey('aggregates.id'), nullable=False)
 
 
-class Aggregate(API_BASE):
+class Aggregate(BASE):
     """Represents a cluster of hosts that exists in this zone."""
     __tablename__ = 'aggregates'
     __table_args__ = (
@@ -102,7 +99,7 @@ class Aggregate(API_BASE):
         return self.metadetails['availability_zone']
 
 
-class CellMapping(API_BASE):
+class CellMapping(BASE):
     """Contains information on communicating with a cell"""
     __tablename__ = 'cell_mappings'
     __table_args__ = (
@@ -123,7 +120,7 @@ class CellMapping(API_BASE):
         primaryjoin='CellMapping.id == HostMapping.cell_id')
 
 
-class InstanceMapping(API_BASE):
+class InstanceMapping(BASE):
     """Contains the mapping of an instance to which cell it is in"""
     __tablename__ = 'instance_mappings'
     __table_args__ = (
@@ -154,7 +151,7 @@ class InstanceMapping(API_BASE):
         primaryjoin='InstanceMapping.cell_id == CellMapping.id')
 
 
-class HostMapping(API_BASE):
+class HostMapping(BASE):
     """Contains mapping of a compute host to which cell it is in"""
     __tablename__ = "host_mappings"
     __table_args__ = (
@@ -168,7 +165,7 @@ class HostMapping(API_BASE):
     host = sa.Column(sa.String(255), nullable=False)
 
 
-class RequestSpec(API_BASE):
+class RequestSpec(BASE):
     """Represents the information passed to the scheduler."""
 
     __tablename__ = 'request_specs'
@@ -180,10 +177,10 @@ class RequestSpec(API_BASE):
 
     id = sa.Column(sa.Integer, primary_key=True)
     instance_uuid = sa.Column(sa.String(36), nullable=False)
-    spec = sa.Column(MediumText(), nullable=False)
+    spec = sa.Column(types.MediumText(), nullable=False)
 
 
-class Flavors(API_BASE):
+class Flavors(BASE):
     """Represents possible flavors for instances"""
     __tablename__ = 'flavors'
     __table_args__ = (
@@ -205,7 +202,7 @@ class Flavors(API_BASE):
     description = sa.Column(sa.Text)
 
 
-class FlavorExtraSpecs(API_BASE):
+class FlavorExtraSpecs(BASE):
     """Represents additional specs as key/value pairs for a flavor"""
     __tablename__ = 'flavor_extra_specs'
     __table_args__ = (
@@ -226,7 +223,7 @@ class FlavorExtraSpecs(API_BASE):
         primaryjoin='FlavorExtraSpecs.flavor_id == Flavors.id')
 
 
-class FlavorProjects(API_BASE):
+class FlavorProjects(BASE):
     """Represents projects associated with flavors"""
     __tablename__ = 'flavor_projects'
     __table_args__ = (schema.UniqueConstraint('flavor_id', 'project_id',
@@ -242,7 +239,7 @@ class FlavorProjects(API_BASE):
         primaryjoin='FlavorProjects.flavor_id == Flavors.id')
 
 
-class BuildRequest(API_BASE):
+class BuildRequest(BASE):
     """Represents the information passed to the scheduler."""
 
     __tablename__ = 'build_requests'
@@ -257,8 +254,8 @@ class BuildRequest(API_BASE):
     # TODO(mriedem): instance_uuid should be nullable=False
     instance_uuid = sa.Column(sa.String(36))
     project_id = sa.Column(sa.String(255), nullable=False)
-    instance = sa.Column(MediumText())
-    block_device_mappings = sa.Column(MediumText())
+    instance = sa.Column(types.MediumText())
+    block_device_mappings = sa.Column(types.MediumText())
     tags = sa.Column(sa.Text())
     # TODO(alaski): Drop these from the db in Ocata
     # columns_to_drop = ['request_spec_id', 'user_id', 'display_name',
@@ -269,7 +266,7 @@ class BuildRequest(API_BASE):
     #         'ramdisk_id', 'root_device_name', 'user_data']
 
 
-class KeyPair(API_BASE):
+class KeyPair(BASE):
     """Represents a public key pair for ssh / WinRM."""
     __tablename__ = 'key_pairs'
     __table_args__ = (
@@ -288,7 +285,7 @@ class KeyPair(API_BASE):
 
 
 # TODO(stephenfin): Remove this as it's now unused post-placement split
-class ResourceClass(API_BASE):
+class ResourceClass(BASE):
     """Represents the type of resource for an inventory or allocation."""
     __tablename__ = 'resource_classes'
     __table_args__ = (
@@ -300,7 +297,7 @@ class ResourceClass(API_BASE):
 
 
 # TODO(stephenfin): Remove this as it's now unused post-placement split
-class ResourceProvider(API_BASE):
+class ResourceProvider(BASE):
     """Represents a mapping to a providers of resources."""
 
     __tablename__ = "resource_providers"
@@ -332,7 +329,7 @@ class ResourceProvider(API_BASE):
 
 
 # TODO(stephenfin): Remove this as it's now unused post-placement split
-class Inventory(API_BASE):
+class Inventory(BASE):
     """Represents a quantity of available resource."""
 
     __tablename__ = "inventories"
@@ -369,7 +366,7 @@ class Inventory(API_BASE):
 
 
 # TODO(stephenfin): Remove this as it's now unused post-placement split
-class Allocation(API_BASE):
+class Allocation(BASE):
     """A use of inventory."""
 
     __tablename__ = "allocations"
@@ -396,7 +393,7 @@ class Allocation(API_BASE):
 
 
 # TODO(stephenfin): Remove this as it's now unused post-placement split
-class ResourceProviderAggregate(API_BASE):
+class ResourceProviderAggregate(BASE):
     """Associate a resource provider with an aggregate."""
 
     __tablename__ = 'resource_provider_aggregates'
@@ -411,7 +408,7 @@ class ResourceProviderAggregate(API_BASE):
 
 
 # TODO(stephenfin): Remove this as it's now unused post-placement split
-class PlacementAggregate(API_BASE):
+class PlacementAggregate(BASE):
     """A grouping of resource providers."""
     __tablename__ = 'placement_aggregates'
     __table_args__ = (
@@ -422,7 +419,7 @@ class PlacementAggregate(API_BASE):
     uuid = sa.Column(sa.String(36), index=True)
 
 
-class InstanceGroupMember(API_BASE):
+class InstanceGroupMember(BASE):
     """Represents the members for an instance group."""
     __tablename__ = 'instance_group_member'
     __table_args__ = (
@@ -434,7 +431,7 @@ class InstanceGroupMember(API_BASE):
         sa.Integer, sa.ForeignKey('instance_groups.id'), nullable=False)
 
 
-class InstanceGroupPolicy(API_BASE):
+class InstanceGroupPolicy(BASE):
     """Represents the policy type for an instance group."""
     __tablename__ = 'instance_group_policy'
     __table_args__ = (
@@ -448,7 +445,7 @@ class InstanceGroupPolicy(API_BASE):
     rules = sa.Column(sa.Text)
 
 
-class InstanceGroup(API_BASE):
+class InstanceGroup(BASE):
     """Represents an instance group.
 
     A group will maintain a collection of instances and the relationship
@@ -487,7 +484,7 @@ class InstanceGroup(API_BASE):
         return [m.instance_uuid for m in self._members]
 
 
-class Quota(API_BASE):
+class Quota(BASE):
     """Represents a single quota override for a project.
 
     If there is no row for a given project id and resource, then the
@@ -511,7 +508,7 @@ class Quota(API_BASE):
     hard_limit = sa.Column(sa.Integer)
 
 
-class ProjectUserQuota(API_BASE):
+class ProjectUserQuota(BASE):
     """Represents a single quota override for a user with in a project."""
 
     __tablename__ = 'project_user_quotas'
@@ -535,7 +532,7 @@ class ProjectUserQuota(API_BASE):
     hard_limit = sa.Column(sa.Integer)
 
 
-class QuotaClass(API_BASE):
+class QuotaClass(BASE):
     """Represents a single quota override for a quota class.
 
     If there is no row for a given quota class and resource, then the
@@ -555,7 +552,7 @@ class QuotaClass(API_BASE):
     hard_limit = sa.Column(sa.Integer)
 
 
-class QuotaUsage(API_BASE):
+class QuotaUsage(BASE):
     """Represents the current usage for a given resource."""
 
     __tablename__ = 'quota_usages'
@@ -578,7 +575,7 @@ class QuotaUsage(API_BASE):
     until_refresh = sa.Column(sa.Integer)
 
 
-class Reservation(API_BASE):
+class Reservation(BASE):
     """Represents a resource reservation for quotas."""
 
     __tablename__ = 'reservations'
@@ -604,7 +601,7 @@ class Reservation(API_BASE):
         primaryjoin='Reservation.usage_id == QuotaUsage.id')
 
 
-class Trait(API_BASE):
+class Trait(BASE):
     """Represents a trait."""
 
     __tablename__ = "traits"
@@ -618,7 +615,7 @@ class Trait(API_BASE):
 
 
 # TODO(stephenfin): Remove this as it's now unused post-placement split
-class ResourceProviderTrait(API_BASE):
+class ResourceProviderTrait(BASE):
     """Represents the relationship between traits and resource provider"""
 
     __tablename__ = "resource_provider_traits"
@@ -638,7 +635,7 @@ class ResourceProviderTrait(API_BASE):
 
 
 # TODO(stephenfin): Remove this as it's unused
-class Project(API_BASE):
+class Project(BASE):
     """The project is the Keystone project."""
 
     __tablename__ = 'projects'
@@ -655,7 +652,7 @@ class Project(API_BASE):
 
 
 # TODO(stephenfin): Remove this as it's unused
-class User(API_BASE):
+class User(BASE):
     """The user is the Keystone user."""
 
     __tablename__ = 'users'
@@ -669,7 +666,7 @@ class User(API_BASE):
 
 
 # TODO(stephenfin): Remove this as it's unused
-class Consumer(API_BASE):
+class Consumer(BASE):
     """Represents a resource consumer."""
 
     __tablename__ = 'consumers'

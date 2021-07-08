@@ -14,7 +14,7 @@
 #    under the License.
 
 from nova.db.api import models as api_models
-from nova.db.main import models
+from nova.db.main import models as main_models
 from nova import test
 
 
@@ -78,9 +78,10 @@ class TestSoftDeletesDeprecated(test.NoDBTestCase):
         # Soft deletes are deprecated. Whitelist the tables that currently
         # allow soft deletes. No new tables should be added to this whitelist.
         tables = []
-        for base in [models.BASE, api_models.API_BASE]:
+        for base in [main_models.BASE, api_models.BASE]:
             for table_name, table in base.metadata.tables.items():
                 columns = [column.name for column in table.columns]
                 if 'deleted' in columns or 'deleted_at' in columns:
                     tables.append(table_name)
+
         self.assertEqual(whitelist, sorted(tables))
