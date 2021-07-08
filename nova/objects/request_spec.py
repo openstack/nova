@@ -1186,6 +1186,54 @@ class RequestGroup(base.NovaEphemeralObject):
         obj.obj_set_defaults()
         return obj
 
+    @classmethod
+    def from_extended_port_request(cls, context, port_resource_request):
+        """Create the group objects from the resource request of a neutron port
+
+        :param context: the request context
+        :param port_resource_request: the resource_request attribute of the
+                                      neutron port
+        For example:
+
+            port_resource_request = {
+                "request_groups":
+                [
+                    {
+                        "id": <uuid>
+                        "required": [CUSTOM_PHYSNET_2,
+                                     CUSTOM_VNIC_TYPE_NORMAL],
+                        "resources":{
+                            NET_PACKET_RATE_KILOPACKET_PER_SEC: 1000
+                        }
+                    },
+                    {
+                        "id": <uuid>
+                        "required": [CUSTOM_PHYSNET_2,
+                                     CUSTOM_VNIC_TYPE_NORMAL],
+                        "resources": {
+                            "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+                            "NET_BW_EGR_KILOBIT_PER_SEC": 1000,
+                        },
+                    }
+                ]
+            }
+        """
+        group_objs = []
+        for group in port_resource_request.get("request_groups", []):
+            # NOTE(gibi): Placement rejects allocation candidates where a
+            # request group has traits but no resources specified. This is why
+            # resources are handled as mandatory below but not traits.
+            obj = cls(
+                context=context,
+                use_same_provider=True,
+                resources=group['resources'],
+                required_traits=set(group.get('required', [])),
+                requester_id=group['id'])
+            obj.obj_set_defaults()
+            group_objs.append(obj)
+
+        return group_objs
+
     def obj_make_compatible(self, primitive, target_version):
         super(RequestGroup, self).obj_make_compatible(
             primitive, target_version)

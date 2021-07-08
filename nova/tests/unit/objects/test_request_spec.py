@@ -1044,6 +1044,64 @@ class TestRequestGroupObject(test.NoDBTestCase):
         self.assertEqual([], rg.aggregates)
         self.assertEqual([], rg.provider_uuids)
 
+    def test_from_extended_port_request(self):
+        port_resource_request = {
+            "request_groups": [
+                {
+                    "id": uuids.group_id1,
+                    "resources": {
+                        "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+                        "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
+                    "required": [
+                        "CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_NORMAL"]
+                },
+                {
+                    "id": uuids.group_id2,
+                    "resources": {
+                        "NET_PACKET_RATE_KILOPACKET_PER_SEC": 1000
+                    },
+                    "required": ["CUSTOM_VNIC_TYPE_NORMAL"]
+                }
+            ],
+            "same_subtree": [
+                uuids.group_id1,
+                uuids.group_id2,
+            ],
+        }
+
+        rgs = request_spec.RequestGroup.from_extended_port_request(
+            self.context, port_resource_request)
+
+        # two separate groups are returned
+        self.assertEqual(2, len(rgs))
+
+        self.assertTrue(rgs[0].use_same_provider)
+        self.assertEqual(
+            {"NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+             "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
+            rgs[0].resources)
+        self.assertEqual(
+            {"CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_NORMAL"},
+            rgs[0].required_traits)
+        self.assertEqual(uuids.group_id1, rgs[0].requester_id)
+        # and the rest is defaulted
+        self.assertEqual(set(), rgs[0].forbidden_traits)
+        self.assertEqual([], rgs[0].aggregates)
+        self.assertEqual([], rgs[0].provider_uuids)
+
+        self.assertTrue(rgs[1].use_same_provider)
+        self.assertEqual(
+            {"NET_PACKET_RATE_KILOPACKET_PER_SEC": 1000},
+            rgs[1].resources)
+        self.assertEqual(
+            {"CUSTOM_VNIC_TYPE_NORMAL"},
+            rgs[1].required_traits)
+        self.assertEqual(uuids.group_id2, rgs[1].requester_id)
+        # and the rest is defaulted
+        self.assertEqual(set(), rgs[1].forbidden_traits)
+        self.assertEqual([], rgs[1].aggregates)
+        self.assertEqual([], rgs[1].provider_uuids)
+
     def test_compat_requester_and_provider(self):
         req_obj = objects.RequestGroup(
             requester_id=uuids.requester, provider_uuids=[uuids.rp1],

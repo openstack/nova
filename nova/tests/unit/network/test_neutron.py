@@ -5920,7 +5920,12 @@ class TestAPI(TestAPIBase):
                 port_uuid=uuids.trusted_port,
                 port_resource_request=mock.sentinel.resource_request2),
         ])
-        mock_has_extended_res_req.assert_called_once_with(self.context)
+        mock_has_extended_res_req.assert_has_calls(
+            [
+                mock.call(self.context),
+                mock.call(self.context, getclient.return_value),
+            ]
+        )
 
     @mock.patch.object(
         neutronapi.API, '_has_extended_resource_request_extension',
@@ -6034,6 +6039,80 @@ class TestAPI(TestAPIBase):
         self.assertRaises(exception.DeviceProfileError,
             self.api.create_resource_requests,
             self.context, requested_networks, pci_requests=None)
+
+    @mock.patch(
+        'nova.network.neutron.API.support_create_with_resource_request',
+        new=mock.Mock(return_value=True))
+    @mock.patch.object(
+        neutronapi.API, '_has_extended_resource_request_extension',
+        return_value=True)
+    @mock.patch(
+        'nova.objects.request_spec.RequestGroup.from_extended_port_request')
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
+    @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_create_resource_request_extended(
+        self, getclient, mock_get_port_vnic_info,
+        mock_get_physnet_tunneled_info, mock_from_port_request,
+        mock_has_extended_res_req
+    ):
+        requested_networks = objects.NetworkRequestList(
+            objects=[
+                objects.NetworkRequest(port_id=uuids.portid_1),
+                objects.NetworkRequest(port_id=uuids.portid_2),
+                objects.NetworkRequest(port_id=uuids.portid_3),
+            ])
+        pci_requests = objects.InstancePCIRequests(requests=[])
+        mock_get_port_vnic_info.side_effect = [
+            (model.VNIC_TYPE_NORMAL, None, 'netN',
+             mock.sentinel.resource_request1, None, None),
+            (model.VNIC_TYPE_NORMAL, None, 'netN',
+             mock.sentinel.resource_request2, None, None),
+            (model.VNIC_TYPE_NORMAL, None, 'netN', None, None, None),
+        ]
+        # _get_physnet_tunneled_info should be called for every NetworkRequest
+        mock_get_physnet_tunneled_info.side_effect = [
+            ('physnet1', False), ('physnet2', False), ('physnet3', False)]
+        api = neutronapi.API()
+
+        # Simulate that both port1 and port2 have such an extended resource
+        # request that is resolved to more than one request groups, but port3
+        # has no request
+        mock_from_port_request.side_effect = [
+            [
+                mock.sentinel.port1_request_group1,
+                mock.sentinel.port1_request_group2,
+            ],
+            [
+                mock.sentinel.port2_request_group1,
+                mock.sentinel.port2_request_group2,
+            ],
+        ]
+
+        result = api.create_resource_requests(
+            self.context, requested_networks, pci_requests)
+        network_metadata, port_resource_requests = result
+
+        # assert that all the request groups are collected from both ports
+        self.assertEqual(
+            [
+                mock.sentinel.port1_request_group1,
+                mock.sentinel.port1_request_group2,
+                mock.sentinel.port2_request_group1,
+                mock.sentinel.port2_request_group2,
+            ],
+            port_resource_requests)
+
+        mock_from_port_request.assert_has_calls([
+            mock.call(
+                context=None,
+                port_resource_request=mock.sentinel.resource_request1),
+            mock.call(
+                context=None,
+                port_resource_request=mock.sentinel.resource_request2),
+        ])
+        mock_has_extended_res_req.assert_called_once_with(
+            self.context, getclient.return_value)
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_associate_floating_ip_conflict(self, mock_get_client):
