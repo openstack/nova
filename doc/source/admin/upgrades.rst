@@ -53,8 +53,8 @@ same time.
     deployment. The `nova-conductor`` service will fail to start when a
     ``nova-compute`` service that is older than the previous release (N-2 or
     greater) is detected. Similarly, in a :doc:`deployment with multiple cells
-    </user/cellsv2-layout>`, neither the super conductor service nor any
-    per-cell conductor service will start if any other conductor service in the
+    </admin/cells>`, neither the super conductor service nor any per-cell
+    conductor service will start if any other conductor service in the
     deployment is older than the previous release.
 
 #. Before maintenance window:

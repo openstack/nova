@@ -2,21 +2,25 @@
 Cross-cell resize
 =================
 
-This document describes how to configure nova for cross-cell resize.
-For information on :term:`same-cell resize <Same-Cell Resize>`, refer to
-:doc:`/admin/configuration/resize`.
+.. note::
+
+   This document describes how to configure nova for cross-cell resize.
+   For information on :term:`same-cell resize <Same-Cell Resize>`, refer to
+   :doc:`/admin/configuration/resize`. For information on the cells v2 feature,
+   refer to :doc:`/admin/cells`.
 
 Historically resizing and cold migrating a server has been explicitly
-`restricted`_ to within the same cell in which the server already exists.
+`restricted`__ to within the same cell in which the server already exists.
 The cross-cell resize feature allows configuring nova to allow resizing
 and cold migrating servers across cells.
 
-The full design details are in the `Ussuri spec`_ and there is a `video`_ from
-a summit talk with a high-level overview.
+The full design details are in the `Ussuri spec`__ and there is a `video`__
+from a summit talk with a high-level overview.
 
-.. _restricted: https://opendev.org/openstack/nova/src/tag/20.0.0/nova/conductor/tasks/migrate.py#L164
-.. _Ussuri spec: https://specs.openstack.org/openstack/nova-specs/specs/ussuri/approved/cross-cell-resize.html
-.. _video: https://www.openstack.org/videos/summits/denver-2019/whats-new-in-nova-cellsv2
+.. __: https://opendev.org/openstack/nova/src/tag/20.0.0/nova/conductor/tasks/migrate.py#L164
+.. __: https://specs.openstack.org/openstack/nova-specs/specs/ussuri/approved/cross-cell-resize.html
+.. __: https://www.openstack.org/videos/summits/denver-2019/whats-new-in-nova-cellsv2
+
 
 Use case
 --------
@@ -31,6 +35,7 @@ resize to the new flavors, before some deadline, which under the covers will
 migrate their servers to the new cell with newer hardware. Administrators
 could also just cold migrate the servers during a maintenance window to the
 new cell.
+
 
 Requirements
 ------------
@@ -70,6 +75,7 @@ Networking
 The networking API must expose the ``Port Bindings Extended`` API extension
 which was added in the 13.0.0 (Rocky) release for Neutron.
 
+
 Notifications
 -------------
 
@@ -78,13 +84,14 @@ from same-cell resize is the *publisher_id* may be different in some cases
 since some events are sent from the conductor service rather than a compute
 service. For example, with same-cell resize the
 ``instance.resize_revert.start`` notification is sent from the source compute
-host in the `finish_revert_resize`_ method but with cross-cell resize that
+host in the `finish_revert_resize`__ method but with cross-cell resize that
 same notification is sent from the conductor service.
 
 Obviously the actual message queue sending the notifications would be different
 for the source and target cells assuming they use separate transports.
 
-.. _finish_revert_resize: https://opendev.org/openstack/nova/src/tag/20.0.0/nova/compute/manager.py#L4326
+.. __: https://opendev.org/openstack/nova/src/tag/20.0.0/nova/compute/manager.py#L4326
+
 
 Instance actions
 ----------------
@@ -95,6 +102,7 @@ make up those actions will be different for cross-cell resize since the event
 names are generated based on the compute service methods involved in the
 operation and there are different methods involved in a cross-cell resize.
 This is important for triage when a cross-cell resize operation fails.
+
 
 Scheduling
 ----------
@@ -107,19 +115,20 @@ cell. However, this behavior is configurable using the
 configuration option if, for example, you want to drain old cells when resizing
 or cold migrating.
 
+
 Code flow
 ---------
 
 The end user experience is meant to not change, i.e. status transitions. A
 successfully cross-cell resized server will go to ``VERIFY_RESIZE`` status
 and from there the user can either confirm or revert the resized server using
-the normal `confirmResize`_ and `revertResize`_ server action APIs.
+the normal `confirmResize`__ and `revertResize`__ server action APIs.
 
 Under the covers there are some differences from a traditional same-cell
 resize:
 
 * There is no inter-compute interaction. Everything is synchronously
-  `orchestrated`_ from the (super)conductor service. This uses the
+  `orchestrated`__ from the (super)conductor service. This uses the
   :oslo.config:option:`long_rpc_timeout` configuration option.
 
 * The orchestration tasks in the (super)conductor service are in charge of
@@ -129,15 +138,16 @@ resize:
   ``instance_mappings`` table record in the API database.
 
 * Non-volume-backed servers will have their root disk uploaded to the image
-  service as a temporary snapshot image just like during the `shelveOffload`_
+  service as a temporary snapshot image just like during the `shelveOffload`__
   operation. When finishing the resize on the destination host in the target
   cell that snapshot image will be used to spawn the guest and then the
   snapshot image will be deleted.
 
-.. _confirmResize: https://docs.openstack.org/api-ref/compute/#confirm-resized-server-confirmresize-action
-.. _revertResize: https://docs.openstack.org/api-ref/compute/#revert-resized-server-revertresize-action
-.. _orchestrated: https://opendev.org/openstack/nova/src/branch/master/nova/conductor/tasks/cross_cell_migrate.py
-.. _shelveOffload: https://docs.openstack.org/api-ref/compute/#shelf-offload-remove-server-shelveoffload-action
+.. __: https://docs.openstack.org/api-ref/compute/#confirm-resized-server-confirmresize-action
+.. __: https://docs.openstack.org/api-ref/compute/#revert-resized-server-revertresize-action
+.. __: https://opendev.org/openstack/nova/src/branch/master/nova/conductor/tasks/cross_cell_migrate.py
+.. __: https://docs.openstack.org/api-ref/compute/#shelf-offload-remove-server-shelveoffload-action
+
 
 Sequence diagram
 ----------------
@@ -230,6 +240,7 @@ status.
 
     }
 
+
 Limitations
 -----------
 
@@ -251,19 +262,21 @@ Other limitations:
 
 * The config drive associated with the server, if there is one, will be
   re-generated on the destination host in the target cell. Therefore if the
-  server was created with `personality files`_ they will be lost. However, this
-  is no worse than `evacuating`_ a server that had a config drive when the
+  server was created with `personality files`__ they will be lost. However, this
+  is no worse than `evacuating`__ a server that had a config drive when the
   source and destination compute host are not on shared storage or when
   shelve offloading and unshelving a server with a config drive. If necessary,
   the resized server can be rebuilt to regain the personality files.
+
 * The ``_poll_unconfirmed_resizes`` periodic task, which can be
   :oslo.config:option:`configured <resize_confirm_window>` to automatically
   confirm pending resizes on the target host, *might* not support cross-cell
   resizes because doing so would require an :ref:`up-call <upcall>` to the
   API to confirm the resize and cleanup the source cell database.
 
-.. _personality files: https://docs.openstack.org/api-guide/compute/server_concepts.html#server-personality
-.. _evacuating: https://docs.openstack.org/api-ref/compute/#evacuate-server-evacuate-action
+.. __: https://docs.openstack.org/api-guide/compute/server_concepts.html#server-personality
+.. __: https://docs.openstack.org/api-ref/compute/#evacuate-server-evacuate-action
+
 
 Troubleshooting
 ---------------
@@ -301,9 +314,9 @@ manually recovered, for example volume attachments or port bindings, and also
 check the (super)conductor service logs. Assuming volume attachments and
 port bindings are OK (current and pointing at the correct host), then try hard
 rebooting the server to get it back to ``ACTIVE`` status. If that fails, you
-may need to `rebuild`_ the server on the source host. Note that the guest's
+may need to `rebuild`__ the server on the source host. Note that the guest's
 disks on the source host are not deleted until the resize is confirmed so if
 there is an issue prior to confirm or confirm itself fails, the guest disks
 should still be available for rebuilding the instance if necessary.
 
-.. _rebuild: https://docs.openstack.org/api-ref/compute/#rebuild-server-rebuild-action
+.. __: https://docs.openstack.org/api-ref/compute/#rebuild-server-rebuild-action
