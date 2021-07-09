@@ -19,6 +19,7 @@ Provides common functionality for integrated unit tests
 
 import collections
 import random
+import re
 import string
 import time
 
@@ -258,9 +259,9 @@ class InstanceHelperMixin:
                 server['id'], expected_statuses, actual_status,
             ))
 
-    def _wait_for_log(self, log_line):
+    def _wait_for_log(self, log_line_regex):
         for i in range(10):
-            if log_line in self.stdlog.logger.output:
+            if re.search(log_line_regex, self.stdlog.logger.output):
                 return
             time.sleep(0.5)
 

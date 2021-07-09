@@ -177,7 +177,9 @@ class InterfaceAttachmentController(wsgi.Controller):
                 exception.NetworksWithQoSPolicyNotSupported,
                 exception.InterfaceAttachPciClaimFailed,
                 exception.InterfaceAttachResourceAllocationFailed,
-                exception.ForbiddenPortsWithAccelerator) as e:
+                exception.ForbiddenPortsWithAccelerator,
+                exception.ExtendedResourceRequestOldCompute,
+                ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except (
             exception.OperationNotSupportedForVDPAInterface,

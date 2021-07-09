@@ -113,6 +113,7 @@ SUPPORT_VNIC_TYPE_ACCELERATOR = 57
 
 MIN_COMPUTE_BOOT_WITH_EXTENDED_RESOURCE_REQUEST = 58
 MIN_COMPUTE_MOVE_WITH_EXTENDED_RESOURCE_REQUEST = 59
+MIN_COMPUTE_INT_ATTACH_WITH_EXTENDED_RES_REQ = 60
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -5097,20 +5098,37 @@ class API:
                     self.volume_api.attachment_delete(
                         context, new_attachment_id)
 
-    def support_port_attach(self, context, port):
-        """Returns false if neutron is configured with extended resource
-        request and the port has resource request.
-
-        This function is only here temporary to help mocking this check in the
-        functional test environment.
-        """
-        if not self.network_api.has_extended_resource_request_extension(
+    def ensure_compute_version_for_resource_request(
+        self, context, instance, port
+    ):
+        """Checks that the compute service version is new enough for the
+        resource request of the port.
+       """
+        if self.network_api.has_extended_resource_request_extension(
             context
         ):
-            return True
+            # TODO(gibi): Remove this check in Y where we can be sure that
+            # the compute is already upgraded to X.
+            res_req = port.get(constants.RESOURCE_REQUEST) or {}
+            groups = res_req.get('request_groups', [])
+            if groups:
+                svc = objects.Service.get_by_host_and_binary(
+                    context, instance.host, 'nova-compute')
+                if svc.version < MIN_COMPUTE_INT_ATTACH_WITH_EXTENDED_RES_REQ:
+                    raise exception.ExtendedResourceRequestOldCompute()
 
-        resource_request = port.get('resource_request', {})
-        return not resource_request.get('request_groups', [])
+        else:
+            # NOTE(gibi): Checking if the requested port has resource request
+            # as such ports are only supported if the compute service version
+            # is >= 55.
+            # TODO(gibi): Remove this check in X as there we can be sure
+            # that all computes are new enough.
+            if port.get(constants.RESOURCE_REQUEST):
+                svc = objects.Service.get_by_host_and_binary(
+                    context, instance.host, 'nova-compute')
+                if svc.version < 55:
+                    raise exception.AttachInterfaceWithQoSPolicyNotSupported(
+                        instance_uuid=instance.uuid)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
@@ -5124,18 +5142,6 @@ class API:
 
         if port_id:
             port = self.network_api.show_port(context, port_id)['port']
-            # NOTE(gibi): Checking if the requested port has resource request
-            # as such ports are only supported if the compute service version
-            # is >= 55.
-            # TODO(gibi): Remove this check in X as there we can be sure
-            # that all computes are new enough.
-            if port.get(constants.RESOURCE_REQUEST):
-                svc = objects.Service.get_by_host_and_binary(
-                    context, instance.host, 'nova-compute')
-                if svc.version < 55:
-                    raise exception.AttachInterfaceWithQoSPolicyNotSupported(
-                        instance_uuid=instance.uuid)
-
             if port.get('binding:vnic_type', "normal") == "vdpa":
                 # FIXME(sean-k-mooney): Attach works but detach results in a
                 # QEMU error; blocked until this is resolved
@@ -5148,8 +5154,8 @@ class API:
                 network_model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL):
                 raise exception.ForbiddenPortsWithAccelerator()
 
-            if not self.support_port_attach(context, port):
-                raise exception.AttachWithExtendedQoSPolicyNotSupported()
+            self.ensure_compute_version_for_resource_request(
+                context, instance, port)
 
         return self.compute_rpcapi.attach_interface(context,
             instance=instance, network_id=network_id, port_id=port_id,

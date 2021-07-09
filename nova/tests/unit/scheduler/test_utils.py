@@ -1357,36 +1357,53 @@ class TestUtils(TestUtilsBase):
         rr = utils.ResourceRequest.from_request_spec(rs)
         self.assertResourceRequestsEqual(expected, rr)
 
-    def test_resource_request_from_request_group(self):
-        rg = objects.RequestGroup.from_port_request(
+    def test_resource_request_from_request_groups(self):
+        rgs = objects.RequestGroup.from_extended_port_request(
             self.context,
-            uuids.port_id,
             port_resource_request={
-                "resources": {
-                    "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
-                    "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
-                "required": ["CUSTOM_PHYSNET_2",
-                             "CUSTOM_VNIC_TYPE_NORMAL"]
+                "request_groups": [
+                    {
+                        "id": "group1",
+                        "resources": {
+                            "NET_BW_IGR_KILOBIT_PER_SEC": 1000,
+                            "NET_BW_EGR_KILOBIT_PER_SEC": 1000},
+                        "required": ["CUSTOM_PHYSNET_2",
+                                     "CUSTOM_VNIC_TYPE_NORMAL"]
+                    },
+                    {
+                        "id": "group2",
+                        "resources": {
+                            "NET_PACKET_RATE_KILOPACKET_PER_SEC": 100,
+                        },
+                        "required": ["CUSTOM_VNIC_TYPE_NORMAL"],
+                    }
+                ],
             }
         )
         req_lvl_params = objects.RequestLevelParams(
             root_required={"CUSTOM_BLUE"},
             root_forbidden={"CUSTOM_DIRTY"},
-            same_subtree=[[uuids.group1]],
+            same_subtree=[["group1", "group2"]],
         )
 
-        rr = utils.ResourceRequest.from_request_group(rg, req_lvl_params)
+        rr = utils.ResourceRequest.from_request_groups(
+            rgs, req_lvl_params, 'none')
 
         self.assertEqual(
-            f'limit=1000&'
-            f'required{uuids.port_id}='
-                f'CUSTOM_PHYSNET_2%2C'
-                f'CUSTOM_VNIC_TYPE_NORMAL&'
-            f'resources{uuids.port_id}='
-                f'NET_BW_EGR_KILOBIT_PER_SEC%3A1000%2C'
-                f'NET_BW_IGR_KILOBIT_PER_SEC%3A1000&'
-                f'root_required=CUSTOM_BLUE%2C%21CUSTOM_DIRTY&'
-                f'same_subtree={uuids.group1}',
+            'group_policy=none&'
+            'limit=1000&'
+            'requiredgroup1='
+                'CUSTOM_PHYSNET_2%2C'
+                'CUSTOM_VNIC_TYPE_NORMAL&'
+            'requiredgroup2='
+                'CUSTOM_VNIC_TYPE_NORMAL&'
+            'resourcesgroup1='
+                'NET_BW_EGR_KILOBIT_PER_SEC%3A1000%2C'
+                'NET_BW_IGR_KILOBIT_PER_SEC%3A1000&'
+            'resourcesgroup2='
+                'NET_PACKET_RATE_KILOPACKET_PER_SEC%3A100&'
+            'root_required=CUSTOM_BLUE%2C%21CUSTOM_DIRTY&'
+            'same_subtree=group1%2Cgroup2',
             rr.to_querystring())
 
     def test_resource_request_add_group_inserts_the_group(self):

@@ -71,12 +71,8 @@ Extended resource request
 
 Since neutron 19.0.0 (Xena), neutron implements an extended resource request
 format via the the ``port-resource-request-groups`` neutron API extension. As
-of nova 24.0.0 (Xena), Nova does not fully support the new extension. If the
-extension is enabled in neutron, then nova will reject interface attach
-operation. Admins should not enable this API extension in neutron.
-
-Please note that Nova only supports the server create operation if every
-nova-compute service also upgraded to Xena version and the
+of nova 24.0.0 (Xena), nova also supports this extension if every nova-compute
+service is upgraded to Xena version and the
 :oslo.config:option:`upgrade_levels.compute` configuration does not prevent
 the computes from using the latest RPC version.
 

@@ -199,17 +199,22 @@ class ResourceRequest(object):
         return res_req
 
     @classmethod
-    def from_request_group(
+    def from_request_groups(
         cls,
-        request_group: 'objects.RequestGroup',
+        request_groups: ty.List['objects.RequestGroup'],
         request_level_params: 'objects.RequestLevelParams',
+        group_policy: str,
     ) -> 'ResourceRequest':
-        """Create a new instance of ResourceRequest from a RequestGroup."""
+        """Create a new instance of ResourceRequest from a list of
+        RequestGroup objects.
+        """
         res_req = cls()
         res_req._root_required = request_level_params.root_required
         res_req._root_forbidden = request_level_params.root_forbidden
         res_req._same_subtree = request_level_params.same_subtree
-        res_req._add_request_group(request_group)
+        res_req.group_policy = group_policy
+        for request_group in request_groups:
+            res_req._add_request_group(request_group)
         res_req.strip_zeros()
         return res_req
 
