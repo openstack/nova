@@ -978,6 +978,36 @@ class ServerGroupTestV264(ServerGroupTestV213):
         for member in [instances[0].uuid, new_instance.uuid]:
             self.assertIn(member, result_members)
 
+    @mock.patch('nova.objects.InstanceGroupList.get_by_instance_uuids')
+    def test_update_server_group_add_already_in_other(self, mock_gbiu):
+        """If any of the servers is already part of another server-group, we
+        fail.
+        """
+        req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        ctx = context.RequestContext('fake_user', 'fake')
+
+        cell1 = self.cells[uuidsentinel.cell1]
+        instances = [self._create_instance(ctx, cell1, host='host1')]
+
+        ig_uuid = self._create_instance_group(ctx, [i.uuid for i in instances])
+
+        cell1 = self.cells[uuidsentinel.cell1]
+        new_instance = self._create_instance(ctx, cell1, host='host1')
+        ig_uuid2 = self._create_instance_group(ctx, [new_instance.uuid])
+
+        mock_gbiu.return_value = objects.InstanceGroupList(
+                objects=[objects.InstanceGroup(
+                    **server_group_db({'id': ig_uuid}))])
+
+        body = {
+            'add_members': [instances[0].uuid],
+        }
+        result = self.assertRaises(webob.exc.HTTPBadRequest,
+            self.controller.update, req, ig_uuid2, body=body)
+        self.assertIn('One ore more members in add_members is already '
+                      'assigned to another server group. Server groups: {}'
+                      .format(ig_uuid), str(result))
+
 
 class ServerGroupTestV275(ServerGroupTestV264):
     wsgi_api_version = '2.75'

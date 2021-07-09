@@ -318,6 +318,19 @@ class ServerGroupController(wsgi.Controller):
                    .format(', '.join(missing_uuids)))
             raise exc.HTTPBadRequest(explanation=msg)
 
+        # check if (some of) the VMs are already members of another
+        # instance_group. We cannot support this as they might contradict.
+        found_server_groups = \
+            objects.InstanceGroupList.get_by_instance_uuids(context,
+                                                            members_to_add)
+        other_server_groups = [_x.uuid for _x in found_server_groups
+                               if _x.uuid != id]
+        if other_server_groups:
+            msg = ("One ore more members in add_members is already assigned "
+                   "to another server group. Server groups: {}"
+                   .format(', '.join(other_server_groups)))
+            raise exc.HTTPBadRequest(explanation=msg)
+
         # check if the policy is still valid with these changes
         if sg.policy in ('affinity', 'anti-affinity'):
             current_members_hosts = _get_not_deleted(context, sg.members)
