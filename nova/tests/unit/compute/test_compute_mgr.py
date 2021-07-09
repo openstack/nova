@@ -10527,6 +10527,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self._mock_rt().reportclient = reportclient
             mock_pr.side_effect = test.TestingException
             mock_r.side_effect = test.TestingException
+            request_spec = objects.RequestSpec()
 
             instance = objects.Instance(uuid=uuids.instance,
                                         id=1,
@@ -10539,7 +10540,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                               self.compute.prep_resize,
                               self.context, mock.sentinel.image,
                               instance, flavor,
-                              mock.sentinel.request_spec,
+                              request_spec,
                               {}, 'node', False,
                               migration, [])
 
@@ -10549,7 +10550,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             migration.save.assert_called_once_with()
             mock_r.assert_called_once_with(
                 self.context, instance, mock.ANY, flavor,
-                mock.sentinel.request_spec, {}, [])
+                request_spec, {}, [])
+            mock_pr.assert_called_once_with(
+                self.context, mock.sentinel.image,
+                instance, flavor, {}, 'node', migration,
+                request_spec, False)
             mock_notify_resize.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
                           'start', flavor),
