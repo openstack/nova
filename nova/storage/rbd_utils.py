@@ -405,7 +405,14 @@ class RBDDriver(object):
         # MAX_AVAIL stat will divide by the replication size when doing the
         # calculation.
         args = ['ceph', 'df', '--format=json'] + self.ceph_args()
-        out, _ = processutils.execute(*args)
+
+        try:
+            out, _ = processutils.execute(*args)
+        except processutils.ProcessExecutionError:
+            LOG.exception('Could not determine disk usage')
+            raise exception.StorageError(
+                reason='Could not determine disk usage')
+
         stats = jsonutils.loads(out)
 
         # Find the pool for which we are configured.
