@@ -743,9 +743,12 @@ class SubclassSignatureTestCase(testtools.TestCase, metaclass=abc.ABCMeta):
 class TimeOverride(fixtures.Fixture):
     """Fixture to start and remove time override."""
 
+    def __init__(self, override_time=None):
+        self.override_time = override_time
+
     def setUp(self):
         super(TimeOverride, self).setUp()
-        timeutils.set_time_override()
+        timeutils.set_time_override(override_time=self.override_time)
         self.addCleanup(timeutils.clear_time_override)
 
 
