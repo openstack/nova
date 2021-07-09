@@ -563,6 +563,23 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
             counts['user'] = {'server_groups': query.count()}
         return counts
 
+    @staticmethod
+    @api_db_api.context_manager.reader
+    def _get_from_db_by_instance_uuids(context, instance_uuids):
+        if not instance_uuids:
+            return []
+
+        members = set(instance_uuids)
+        groups = context.session.query(api_models.InstanceGroup).\
+            join(api_models.InstanceGroupMember,
+            api_models.InstanceGroupMember.group_id ==
+                api_models.InstanceGroup.id).\
+            filter(api_models.InstanceGroupMember.instance_uuid.in_(members)).\
+            options(orm.joinedload(api_models.InstanceGroup._policies)).\
+            options(orm.contains_eager(api_models.InstanceGroup._members))\
+            .all()
+        return groups
+
     @base.remotable_classmethod
     def get_by_project_id(cls, context, project_id):
         api_db_groups = cls._get_from_db(context, project_id=project_id)
@@ -589,3 +606,10 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
                      'user': {'server_groups': <count across user>}}
         """
         return cls._get_counts_from_db(context, project_id, user_id=user_id)
+
+    @base.remotable_classmethod
+    def get_by_instance_uuids(cls, context, instance_uuids):
+        api_db_groups = cls._get_from_db_by_instance_uuids(context,
+                                                           instance_uuids)
+        return base.obj_make_list(context, cls(context), objects.InstanceGroup,
+                                  api_db_groups)
