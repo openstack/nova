@@ -24,6 +24,18 @@ A full guide on configuring and using SR-IOV is provided in the
 :neutron-doc:`OpenStack Networking service documentation
 <admin/config-sriov.html>`
 
+.. note::
+
+   Nova only supports PCI addresses where the fields are restricted to the
+   following maximum value:
+
+   * domain - 0xFFFF
+   * bus - 0xFF
+   * slot - 0x1F
+   * function - 0x7
+
+   Nova will ignore PCI devices reported by the hypervisor if the address is
+   outside of these ranges.
 
 NUMA Affinity
 -------------
