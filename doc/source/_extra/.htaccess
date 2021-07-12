@@ -6,7 +6,7 @@ redirectmatch 301 ^/nova/([^/]+)/aggregates.html$ /nova/$1/user/aggregates.html
 redirectmatch 301 ^/nova/([^/]+)/api_microversion_dev.html$ /nova/$1/contributor/microversions.html
 redirectmatch 301 ^/nova/([^/]+)/api_microversion_history.html$ /nova/$1/reference/api-microversion-history.html
 redirectmatch 301 ^/nova/([^/]+)/api_plugins.html$ /nova/$1/contributor/api.html
-redirectmatch 301 ^/nova/([^/]+)/architecture.html$ /nova/$1/user/architecture.html
+redirectmatch 301 ^/nova/([^/]+)/architecture.html$ /nova/$1/admin/architecture.html
 redirectmatch 301 ^/nova/([^/]+)/block_device_mapping.html$ /nova/$1/user/block-device-mapping.html
 redirectmatch 301 ^/nova/([^/]+)/blueprints.html$ /nova/$1/contributor/blueprints.html
 redirectmatch 301 ^/nova/([^/]+)/cells.html$ /nova/$1/admin/cells.html
@@ -64,6 +64,7 @@ redirectmatch 301 ^/nova/([^/]+)/testing/zero-downtime-upgrade.html$ /nova/$1/co
 redirectmatch 301 ^/nova/([^/]+)/threading.html$ /nova/$1/reference/threading.html
 redirectmatch 301 ^/nova/([^/]+)/upgrade.html$ /nova/$1/admin/upgrades.html
 redirectmatch 301 ^/nova/([^/]+)/user/aggregates.html$ /nova/$1/admin/aggregates.html
+redirectmatch 301 ^/nova/([^/]+)/user/architecture.html$ /nova/$1/admin/architecture.html
 redirectmatch 301 ^/nova/([^/]+)/user/cells.html$ /nova/$1/admin/cells.html
 redirectmatch 301 ^/nova/([^/]+)/user/cellsv2-layout.html$ /nova/$1/admin/cells.html
 redirectmatch 301 ^/nova/([^/]+)/user/cellsv2_layout.html$ /nova/$1/admin/cells.html
@@ -77,9 +78,10 @@ redirectmatch 301 ^/nova/([^/]+)/user/vendordata.html$ /nova/$1/user/metadata.ht
 redirectmatch 301 ^/nova/([^/]+)/vendordata.html$ /nova/$1/user/metadata.html
 redirectmatch 301 ^/nova/([^/]+)/vmstates.html$ /nova/$1/reference/vm-states.html
 redirectmatch 301 ^/nova/([^/]+)/wsgi.html$ /nova/$1/user/wsgi.html
+redirectmatch 301 ^/nova/([^/]+)/admin/arch.html$ /nova/$1/admin/architecture.html
 redirectmatch 301 ^/nova/([^/]+)/admin/adv-config.html$ /nova/$1/admin/index.html
 redirectmatch 301 ^/nova/([^/]+)/admin/configuration/schedulers.html$ /nova/$1/admin/scheduling.html
 redirectmatch 301 ^/nova/([^/]+)/admin/system-admin.html$ /nova/$1/admin/index.html
 redirectmatch 301 ^/nova/([^/]+)/admin/port_with_resource_request.html$ /nova/$1/admin/ports-with-resource-requests.html
-redirectmatch 301 ^/nova/([^/]+)/admin/manage-users.html$ /nova/$1/admin/arch.html
+redirectmatch 301 ^/nova/([^/]+)/admin/manage-users.html$ /nova/$1/admin/architecture.html
 redirectmatch 301 ^/nova/([^/]+)/admin/mitigation-for-Intel-MDS-security-flaws.html /nova/$1/admin/cpu-models.html

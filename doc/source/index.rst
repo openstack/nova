@@ -107,7 +107,7 @@ For Operators
 Architecture Overview
 ---------------------
 
-* :doc:`Nova architecture </user/architecture>`: An overview of how all the parts in
+* :doc:`Nova architecture </admin/architecture>`: An overview of how all the parts in
   nova fit together.
 
 .. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
@@ -115,7 +115,7 @@ Architecture Overview
 .. toctree::
    :hidden:
 
-   user/architecture
+   admin/architecture
 
 Installation
 ------------

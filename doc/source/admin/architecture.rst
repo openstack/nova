@@ -1,45 +1,67 @@
-===================
-System architecture
-===================
+========================
+Nova System Architecture
+========================
 
-OpenStack Compute contains several main components.
+Nova comprises multiple server processes, each performing different
+functions. The user-facing interface is a REST API, while internally Nova
+components communicate via an RPC message passing mechanism.
 
-- The cloud controller represents the global state and interacts with the
-  other components. The ``API server`` acts as the web services front end for
-  the cloud controller. The ``compute controller`` provides compute server
-  resources and usually also contains the Compute service.
+The API servers process REST requests, which typically involve database
+reads/writes, optionally sending RPC messages to other Nova services,
+and generating responses to the REST calls.
+RPC messaging is done via the **oslo.messaging** library,
+an abstraction on top of message queues.
+Nova uses a messaging-based, ``shared nothing`` architecture and most of the
+major nova components can be run on multiple servers, and have a manager that
+is listening for RPC messages.
+The one major exception is ``nova-compute``, where a single process runs on the
+hypervisor it is managing (except when using the VMware or Ironic drivers).
+The manager also, optionally, has periodic tasks.
+For more details on our RPC system, please see: :doc:`/reference/rpc`
 
-- The ``object store`` is an optional component that provides storage
-  services; you can also use OpenStack Object Storage instead.
+Nova also uses a central database that is (logically) shared between all
+components. However, to aid upgrade, the DB is accessed through an object
+layer that ensures an upgraded control plane can still communicate with
+a ``nova-compute`` running the previous release.
+To make this possible ``nova-compute`` proxies DB requests over RPC to a
+central manager called ``nova-conductor``.
 
-- An ``auth manager`` provides authentication and authorization services when
-  used with the Compute system; you can also use OpenStack Identity as a
-  separate authentication service instead.
+To horizontally expand Nova deployments, we have a deployment sharding
+concept called cells. For more information please see: :doc:`/admin/cells`
 
-- A ``volume controller`` provides fast and permanent block-level storage for
-  the compute servers.
 
-- The ``network controller`` provides virtual networks to enable compute
-  servers to interact with each other and with the public network. You can also
-  use OpenStack Networking instead.
+Components
+----------
 
-- The ``scheduler`` is used to select the most suitable compute controller to
-  host an instance.
+Below you will find a helpful explanation of the key components
+of a typical Nova deployment.
 
-Compute uses a messaging-based, ``shared nothing`` architecture. All major
-components exist on multiple servers, including the compute, volume, and
-network controllers, and the Object Storage or Image service.  The state of the
-entire system is stored in a database. The cloud controller communicates with
-the internal object store using HTTP, but it communicates with the scheduler,
-network controller, and volume controller using Advanced Message Queuing
-Protocol (AMQP). To avoid blocking a component while waiting for a response,
-Compute uses asynchronous calls, with a callback that is triggered when a
-response is received.
+.. image:: /_static/images/architecture.svg
+   :width: 100%
+
+* **DB**: SQL database for data storage.
+
+* **API**: Component that receives HTTP requests, converts commands and
+  communicates with other components via the **oslo.messaging** queue or HTTP.
+
+* **Scheduler**: Decides which host gets each instance.
+
+* **Compute**: Manages communication with hypervisor and virtual machines.
+
+* **Conductor**: Handles requests that need coordination (build/resize), acts
+  as a database proxy, or handles object conversions.
+
+* **:placement-doc:`Placement <>`**: Tracks resource provider inventories and
+  usages.
+
+While all services are designed to be horizontally scalable, you should have
+significantly more computes than anything else.
+
 
 Hypervisors
-~~~~~~~~~~~
+-----------
 
-Compute controls hypervisors through an API server. Selecting the best
+Nova controls hypervisors through an API server. Selecting the best
 hypervisor to use can be difficult, and you must take budget, resource
 constraints, supported features, and required technical specifications into
 account. However, the majority of OpenStack development is done on systems
@@ -47,7 +69,7 @@ using KVM-based hypervisors. For a detailed list of features and
 support across different hypervisors, see :doc:`/user/support-matrix`.
 
 You can also orchestrate clouds using multiple hypervisors in different
-availability zones. Compute supports the following hypervisors:
+availability zones. Nova supports the following hypervisors:
 
 - :ironic-doc:`Baremetal <>`
 
@@ -75,35 +97,29 @@ For more information about hypervisors, see
 :doc:`/admin/configuration/hypervisors`
 section in the Nova Configuration Reference.
 
-Projects, users, and roles
-~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To begin using Compute, you must create a user with the
+Projects, users, and roles
+--------------------------
+
+To begin using Nova, you must create a user with the
 :keystone-doc:`Identity service <>`.
 
-The Compute system is designed to be used by different consumers in the form of
-projects on a shared system, and role-based access assignments.  Roles control
+The Nova system is designed to be used by different consumers in the form of
+projects on a shared system, and role-based access assignments. Roles control
 the actions that a user is allowed to perform.
 
 Projects are isolated resource containers that form the principal
-organizational structure within the Compute service. They consist of an
+organizational structure within the Nova service. They typically consist of an
 individual VLAN, and volumes, instances, images, keys, and users. A user can
 specify the project by appending ``project_id`` to their access key.  If no
-project is specified in the API request, Compute attempts to use a project with
+project is specified in the API request, Nova attempts to use a project with
 the same ID as the user.
 
-For projects, you can use quota controls to limit the:
-
-- Number of volumes that can be launched.
-
-- Number of processor cores and the amount of RAM that can be allocated.
-
-- Floating IP addresses assigned to any instance when it launches. This allows
-  instances to have the same publicly accessible IP addresses.
-
-- Fixed IP addresses assigned to the same instance when it launches.  This
-  allows instances to have the same publicly or privately accessible IP
-  addresses.
+For projects, you can use quota controls to limit the number of processor cores
+and the amount of RAM that can be allocated. Other projects also allow quotas
+on their own resources. For example, :neutron-doc:`neutron
+</admin/ops-quotas.html>` allows you to manage the amount of networks that can
+be created within a project.
 
 Roles control the actions a user is allowed to perform. By default, most
 actions do not require a particular role, but you can configure them by editing
@@ -122,8 +138,9 @@ consumption across available hardware resources.
    ``project``. Because of this legacy terminology, some command-line tools use
    ``--tenant_id`` where you would normally expect to enter a project ID.
 
+
 Block storage
-~~~~~~~~~~~~~
+-------------
 
 OpenStack provides two classes of block storage: ephemeral storage and
 persistent volume.
@@ -131,7 +148,7 @@ persistent volume.
 .. rubric:: Ephemeral storage
 
 Ephemeral storage includes a root ephemeral volume and an additional ephemeral
-volume.
+volume. These are provided by nova itself.
 
 The root disk is associated with an instance, and exists only for the life of
 this very instance. Generally, it is used to store an instance's root file
@@ -139,37 +156,34 @@ system, persists across the guest operating system reboots, and is removed on
 an instance deletion. The amount of the root ephemeral volume is defined by the
 flavor of an instance.
 
-In addition to the ephemeral root volume, all default types of flavors, except
-``m1.tiny``, which is the smallest one, provide an additional ephemeral block
-device sized between 20 and 160 GB (a configurable value to suit an
-environment). It is represented as a raw block device with no partition table
-or file system. A cloud-aware operating system can discover, format, and mount
-such a storage device. OpenStack Compute defines the default file system for
-different operating systems as Ext4 for Linux distributions, VFAT for non-Linux
-and non-Windows operating systems, and NTFS for Windows. However, it is
-possible to specify any other filesystem type by using ``virt_mkfs`` or
-``default_ephemeral_format`` configuration options.
+In addition to the ephemeral root volume, flavors can provide an additional
+ephemeral block device. It is represented as a raw block device with no
+partition table or file system. A cloud-aware operating system can discover,
+format, and mount such a storage device. Nova defines the default file system
+for different operating systems as ext4 for Linux distributions, VFAT for
+non-Linux and non-Windows operating systems, and NTFS for Windows. However, it
+is possible to configure other filesystem types.
 
 .. note::
 
    For example, the ``cloud-init`` package included into an Ubuntu's stock
-   cloud image, by default, formats this space as an Ext4 file system and
+   cloud image, by default, formats this space as an ext4 file system and
    mounts it on ``/mnt``. This is a cloud-init feature, and is not an OpenStack
    mechanism. OpenStack only provisions the raw storage.
 
 .. rubric:: Persistent volume
 
 A persistent volume is represented by a persistent virtualized block device
-independent of any particular instance, and provided by OpenStack Block
-Storage.
+independent of any particular instance. These are provided by the OpenStack
+Block Storage service, cinder.
 
-Only a single configured instance can access a persistent volume.  Multiple
-instances cannot access a persistent volume. This type of configuration
-requires a traditional network file system to allow multiple instances
-accessing the persistent volume. It also requires a traditional network file
-system like NFS, CIFS, or a cluster file system such as GlusterFS. These
-systems can be built within an OpenStack cluster, or provisioned outside of it,
-but OpenStack software does not provide these features.
+Persistent volumes can be accessed by a single instance or attached to multiple
+instances. This type of configuration requires a traditional network file
+system to allow multiple instances accessing the persistent volume. It also
+requires a traditional network file system like NFS, CIFS, or a cluster file
+system such as GlusterFS. These systems can be built within an OpenStack
+cluster, or provisioned outside of it, but OpenStack software does not provide
+these features.
 
 You can configure a persistent volume as bootable and use it to provide a
 persistent virtual instance similar to the traditional non-cloud-based
@@ -190,17 +204,17 @@ configuration, see :cinder-doc:`Introduction to the Block Storage service
 
 
 Building blocks
-~~~~~~~~~~~~~~~
+---------------
 
 In OpenStack the base operating system is usually copied from an image stored
-in the OpenStack Image service. This is the most common case and results in an
-ephemeral instance that starts from a known template state and loses all
-accumulated states on virtual machine deletion. It is also possible to put an
-operating system on a persistent volume in the OpenStack Block Storage volume
-system. This gives a more traditional persistent system that accumulates states
-which are preserved on the OpenStack Block Storage volume across the deletion
-and re-creation of the virtual machine. To get a list of available images on
-your system, run:
+in the OpenStack Image service, glance. This is the most common case and
+results in an ephemeral instance that starts from a known template state and
+loses all accumulated states on virtual machine deletion. It is also possible
+to put an operating system on a persistent volume in the OpenStack Block
+Storage service. This gives a more traditional persistent system that
+accumulates states which are preserved on the OpenStack Block Storage volume
+across the deletion and re-creation of the virtual machine. To get a list of
+available images on your system, run:
 
 .. code-block:: console
 
@@ -230,10 +244,9 @@ The displayed image attributes are:
   field is blank.
 
 Virtual hardware templates are called ``flavors``. By default, these are
-configurable by admin users, however that behavior can be changed by redefining
-the access controls for ``compute_extension:flavormanage`` in
-``/etc/nova/policy.yaml`` on the ``compute-api`` server.
-For more information, refer to :doc:`/configuration/policy`.
+configurable by admin users, however, that behavior can be changed by redefining
+the access controls ``policy.yaml`` on the ``nova-compute`` server. For more
+information, refer to :doc:`/configuration/policy`.
 
 For a list of flavors that are available on your system:
 
@@ -250,8 +263,9 @@ For a list of flavors that are available on your system:
    | 5   | m1.xlarge | 16384 |  160 |         0 |     8 | True      |
    +-----+-----------+-------+------+-----------+-------+-----------+
 
-Compute service architecture
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Nova service architecture
+-------------------------
 
 These basic categories describe the service architecture and information about
 the cloud controller.
