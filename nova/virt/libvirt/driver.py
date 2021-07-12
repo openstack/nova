@@ -243,6 +243,16 @@ LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 MIN_LIBVIRT_VDPA = (6, 9, 0)
 MIN_QEMU_VDPA = (5, 1, 0)
 
+REGISTER_IMAGE_PROPERTY_DEFAULTS = [
+    'hw_machine_type',
+    'hw_cdrom_bus',
+    'hw_disk_bus',
+    'hw_input_bus',
+    'hw_pointer_model',
+    'hw_video_model',
+    'hw_vif_model',
+]
+
 
 class AsyncDeviceEventsHandler:
     """A synchornization point between libvirt events an clients waiting for
@@ -806,7 +816,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._check_vtpm_support()
 
-        self._register_instance_machine_type()
+        # Set REGISTER_IMAGE_PROPERTY_DEFAULTS in the instance system_metadata
+        # to default values for properties that have not already been set.
+        self._register_all_undefined_instance_details()
 
     def _update_host_specific_capabilities(self) -> None:
         """Update driver capabilities based on capabilities of the host."""
@@ -816,34 +828,114 @@ class LibvirtDriver(driver.ComputeDriver):
             'supports_secure_boot': self._host.supports_secure_boot,
         })
 
-    def _register_instance_machine_type(self):
-        """Register the machine type of instances on this host
+    def _register_all_undefined_instance_details(self) -> None:
+        """Register the default image properties of instances on this host
 
         For each instance found on this host by InstanceList.get_by_host ensure
-        a machine type is registered within the system metadata of the instance
+        REGISTER_IMAGE_PROPERTY_DEFAULTS are registered within the system
+        metadata of the instance
         """
         context = nova_context.get_admin_context()
         hostname = self._host.get_hostname()
+        for instance in objects.InstanceList.get_by_host(
+            context, hostname, expected_attrs=['flavor', 'system_metadata']
+        ):
+            try:
+                self._register_undefined_instance_details(context, instance)
+            except Exception:
+                LOG.exception('Ignoring unknown failure while attempting '
+                              'to save the defaults for unregistered image '
+                              'properties', instance=instance)
 
-        for instance in objects.InstanceList.get_by_host(context, hostname):
-            # NOTE(lyarwood): Skip if hw_machine_type is set already in the
-            # image_meta of the instance. Note that this value comes from the
-            # system metadata of the instance where it is stored under the
-            # image_hw_machine_type key.
-            if instance.image_meta.properties.get('hw_machine_type'):
-                continue
+    def _register_undefined_instance_details(
+        self,
+        context: nova_context.RequestContext,
+        instance: 'objects.Instance',
+    ) -> None:
+        # Find any unregistered image properties against this instance
+        unregistered_image_props = [
+            p for p in REGISTER_IMAGE_PROPERTY_DEFAULTS
+            if f"image_{p}" not in instance.system_metadata
+        ]
 
-            # Fetch and record the machine type from the config
-            hw_machine_type = libvirt_utils.get_machine_type(
-                instance.image_meta)
-            # NOTE(lyarwood): As above this updates
-            # image_meta.properties.hw_machine_type within the instance and
-            # will be returned the next time libvirt_utils.get_machine_type is
-            # called for the instance image meta.
-            instance.system_metadata['image_hw_machine_type'] = hw_machine_type
-            instance.save()
-            LOG.debug("Instance machine_type updated to %s", hw_machine_type,
-                      instance=instance)
+        # Return if there's nothing left to register for this instance
+        if not unregistered_image_props:
+            return
+
+        LOG.debug(f'Attempting to register defaults for the following '
+                  f'image properties: {unregistered_image_props}',
+                  instance=instance)
+
+        # NOTE(lyarwood): Only build disk_info once per instance if we need it
+        # for hw_{disk,cdrom}_bus to avoid pulling bdms from the db etc.
+        requires_disk_info = ['hw_disk_bus', 'hw_cdrom_bus']
+        disk_info = None
+        if set(requires_disk_info) & set(unregistered_image_props):
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
+            block_device_info = driver.get_block_device_info(instance, bdms)
+            disk_info = blockinfo.get_disk_info(
+                CONF.libvirt.virt_type, instance, instance.image_meta,
+                block_device_info)
+
+        # Only pull the guest config once per instance if we need it for
+        # hw_pointer_model or hw_input_bus.
+        requires_guest_config = ['hw_pointer_model', 'hw_input_bus']
+        guest_config = None
+        if set(requires_guest_config) & set(unregistered_image_props):
+            guest_config = self._host.get_guest(instance).get_config()
+
+        for image_prop in unregistered_image_props:
+            try:
+                default_value = self._find_default_for_image_property(
+                    instance, image_prop, disk_info, guest_config)
+                instance.system_metadata[f"image_{image_prop}"] = default_value
+
+                LOG.debug(f'Found default for {image_prop} of {default_value}',
+                          instance=instance)
+            except Exception:
+                LOG.exception(f'Ignoring unknown failure while attempting '
+                              f'to find the default of {image_prop}',
+                              instance=instance)
+        instance.save()
+
+    def _find_default_for_image_property(
+        self,
+        instance: 'objects.Instance',
+        image_property: str,
+        disk_info: ty.Optional[ty.Dict[str, ty.Any]],
+        guest_config: ty.Optional[vconfig.LibvirtConfigGuest],
+    ) -> ty.Optional[str]:
+        if image_property == 'hw_machine_type':
+            return libvirt_utils.get_machine_type(instance.image_meta)
+
+        if image_property == 'hw_disk_bus' and disk_info:
+            return disk_info.get('disk_bus')
+
+        if image_property == 'hw_cdrom_bus' and disk_info:
+            return disk_info.get('cdrom_bus')
+
+        if image_property == 'hw_input_bus' and guest_config:
+            _, default_input_bus = self._get_pointer_bus_and_model(
+                guest_config, instance.image_meta)
+            return default_input_bus
+
+        if image_property == 'hw_pointer_model' and guest_config:
+            default_pointer_model, _ = self._get_pointer_bus_and_model(
+                guest_config, instance.image_meta)
+            # hw_pointer_model is of type PointerModelType ('usbtablet' instead
+            # of 'tablet')
+            if default_pointer_model == 'tablet':
+                default_pointer_model = 'usbtablet'
+            return default_pointer_model
+
+        if image_property == 'hw_video_model':
+            return self._get_video_type(instance.image_meta)
+
+        if image_property == 'hw_vif_model':
+            return self.vif_driver.get_vif_model(instance.image_meta)
+
+        return None
 
     def _prepare_cpu_flag(self, flag):
         # NOTE(kchamart) This helper method will be used while computing
@@ -4246,6 +4338,11 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             LOG.info("Instance spawned successfully.", instance=instance)
 
+        # Finally register defaults for any undefined image properties so that
+        # future changes by QEMU, libvirt or within this driver don't change
+        # the ABI of the instance.
+        self._register_undefined_instance_details(context, instance)
+
     def _get_console_output_file(self, instance, console_log):
         bytes_to_read = MAX_CONSOLE_BYTES
         log_data = b""  # The last N read bytes
@@ -5960,31 +6057,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _add_video_driver(self, guest, image_meta, flavor):
         video = vconfig.LibvirtConfigGuestVideo()
-        # NOTE(ldbragst): The following logic sets the video.type
-        # depending on supported defaults given the architecture,
-        # virtualization type, and features. The video.type attribute can
-        # be overridden by the user with image_meta.properties, which
-        # is carried out in the next if statement below this one.
-        guestarch = libvirt_utils.get_arch(image_meta)
-        if CONF.libvirt.virt_type == 'parallels':
-            video.type = 'vga'
-        elif guestarch in (fields.Architecture.PPC,
-                           fields.Architecture.PPC64,
-                           fields.Architecture.PPC64LE):
-            # NOTE(ldbragst): PowerKVM doesn't support 'cirrus' be default
-            # so use 'vga' instead when running on Power hardware.
-            video.type = 'vga'
-        elif guestarch == fields.Architecture.AARCH64:
-            # NOTE(kevinz): Only virtio device type is supported by AARCH64
-            # so use 'virtio' instead when running on AArch64 hardware.
-            video.type = 'virtio'
-        elif CONF.spice.enabled:
-            video.type = 'qxl'
-        if image_meta.properties.get('hw_video_model'):
-            video.type = image_meta.properties.hw_video_model
-            if not self._video_model_supported(video.type):
-                raise exception.InvalidVideoMode(model=video.type)
-
+        video.type = self._get_video_type(image_meta) or video.type
         # Set video memory, only if the flavor's limit is set
         video_ram = image_meta.properties.get('hw_video_ram', 0)
         max_vram = int(flavor.extra_specs.get('hw_video:ram_max_mb', 0))
@@ -5998,6 +6071,57 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(sean-k-mooney): return the video device we added
         # for simpler testing.
         return video
+
+    def _get_video_type(
+        self,
+        image_meta: objects.ImageMeta,
+    ) -> ty.Optional[str]:
+        # NOTE(ldbragst): The following logic returns the video type
+        # depending on supported defaults given the architecture,
+        # virtualization type, and features. The video type can
+        # be overridden by the user with image_meta.properties, which
+        # is carried out first.
+        if image_meta.properties.get('hw_video_model'):
+            video_type = image_meta.properties.hw_video_model
+            if not self._video_model_supported(video_type):
+                raise exception.InvalidVideoMode(model=video_type)
+            return video_type
+
+        guestarch = libvirt_utils.get_arch(image_meta)
+
+        if CONF.libvirt.virt_type == 'parallels':
+            return 'vga'
+
+        if (
+            guestarch in (
+                fields.Architecture.I686,
+                fields.Architecture.X86_64
+            ) and not CONF.spice.enabled
+        ):
+            return 'virtio'
+
+        if (
+            guestarch in (
+                fields.Architecture.PPC,
+                fields.Architecture.PPC64,
+                fields.Architecture.PPC64LE
+            )
+        ):
+            # NOTE(ldbragst): PowerKVM doesn't support 'cirrus' be default
+            # so use 'vga' instead when running on Power hardware.
+            return 'vga'
+
+        if guestarch == fields.Architecture.AARCH64:
+            # NOTE(kevinz): Only virtio device type is supported by AARCH64
+            # so use 'virtio' instead when running on AArch64 hardware.
+            return 'virtio'
+
+        if CONF.spice.enabled:
+            return 'qxl'
+
+        # NOTE(lyarwood): Return None and default to the default of
+        # LibvirtConfigGuestVideo.type that is currently virtio
+        return None
 
     def _add_qga_device(self, guest, instance):
         qga = vconfig.LibvirtConfigGuestChannel()
@@ -6966,13 +7090,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return add_video_driver
 
-    def _guest_add_pointer_device(self, guest, image_meta):
-        """Build the pointer device to add to the instance.
-
-        The configuration is determined by examining the 'hw_input_bus' image
-        metadata property, the 'hw_pointer_model' image metadata property, and
-        the '[DEFAULT] pointer_model' config option in that order.
-        """
+    def _get_pointer_bus_and_model(
+        self,
+        guest: vconfig.LibvirtConfigGuest,
+        image_meta: objects.ImageMeta,
+    ) -> ty.Tuple[ty.Optional[str], ty.Optional[str]]:
         pointer_bus = image_meta.properties.get('hw_input_bus')
         pointer_model = image_meta.properties.get('hw_pointer_model')
 
@@ -6986,7 +7108,7 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             # If the user hasn't requested anything and the host config says to
             # use something other than a USB tablet, there's nothing to do
-            return
+            return None, None
 
         # For backward compatibility, we don't want to error out if the host
         # configuration requests a USB tablet but the virtual machine mode is
@@ -6996,7 +7118,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 'USB tablet requested for guests on non-HVM host; '
                 'in order to accept this request the machine mode should '
                 'be configured as HVM.')
-            return
+            return None, None
 
         # Ditto for using a USB tablet when the SPICE agent is enabled, since
         # that has a paravirt mouse builtin which drastically reduces overhead;
@@ -7010,15 +7132,32 @@ class LibvirtDriver(driver.ComputeDriver):
                 'USB tablet requested for guests but the SPICE agent is '
                 'enabled; ignoring request in favour of default '
                 'configuration.')
-            return
+            return None, None
 
-        pointer = vconfig.LibvirtConfigGuestInput()
-        pointer.type = pointer_model
-        pointer.bus = pointer_bus
-        guest.add_device(pointer)
+        return pointer_model, pointer_bus
 
-        # returned for unit testing purposes
-        return pointer
+    def _guest_add_pointer_device(
+        self,
+        guest: vconfig.LibvirtConfigGuest,
+        image_meta: objects.ImageMeta
+    ) -> None:
+        """Build the pointer device to add to the instance.
+
+        The configuration is determined by examining the 'hw_input_bus' image
+        metadata property, the 'hw_pointer_model' image metadata property, and
+        the '[DEFAULT] pointer_model' config option in that order.
+        """
+        pointer_model, pointer_bus = self._get_pointer_bus_and_model(
+            guest, image_meta)
+
+        if pointer_model and pointer_bus:
+            pointer = vconfig.LibvirtConfigGuestInput()
+            pointer.type = pointer_model
+            pointer.bus = pointer_bus
+            guest.add_device(pointer)
+
+            # returned for unit testing purposes
+            return pointer
 
     def _guest_add_keyboard_device(self, guest, image_meta):
         """Add keyboard for graphical console use."""
