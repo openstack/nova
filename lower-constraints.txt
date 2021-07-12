@@ -1,4 +1,4 @@
-alembic==0.9.8
+alembic==1.5.0
 amqp==2.5.0
 appdirs==1.4.3
 asn1crypto==0.24.0
@@ -137,7 +137,7 @@ simplejson==3.13.2
 six==1.15.0
 smmap2==2.0.3
 sortedcontainers==2.1.0
-SQLAlchemy==1.2.19
+SQLAlchemy==1.4.13
 sqlalchemy-migrate==0.13.0
 sqlparse==0.2.4
 statsd==3.2.2
