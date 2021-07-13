@@ -1408,6 +1408,114 @@ This command requires that the
      - Invalid input
 
 
+Volume Attachment Commands
+==========================
+
+volume_attachment get_connector
+-------------------------------
+
+.. program:: nova-manage volume_attachment get_connector
+
+.. code-block:: shell
+
+    nova-manage volume_attachment get_connector
+
+Show the host connector for this compute host.
+
+When called with the ``--json`` switch this dumps a JSON string containing the
+connector information for the current host, which can be saved to a file and
+used as input for the :program:`nova-manage volume_attachment refresh` command.
+
+.. versionadded:: 24.0.0 (Xena)
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Success
+   * - 1
+     - An unexpected error occurred
+
+volume_attachment show
+----------------------
+
+.. program:: nova-manage volume_attachment show
+
+.. code-block:: shell
+
+    nova-manage volume_attachment show [INSTANCE_UUID] [VOLUME_ID]
+
+Show the details of a the volume attachment between ``VOLUME_ID`` and
+``INSTANCE_UUID``.
+
+.. versionadded:: 24.0.0 (Xena)
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Success
+   * - 1
+     - An unexpected error occurred
+   * - 2
+     - Instance not found
+   * - 3
+     - Instance is not attached to volume
+
+volume_attachment refresh
+-------------------------
+
+.. program:: nova-manage volume_attachment refresh
+
+.. code-block:: shell
+
+    nova-manage volume_attachment refresh [INSTANCE_UUID] [VOLUME_ID] [CONNECTOR_PATH]
+
+Refresh the connection info associated with a given volume attachment.
+
+The instance must be attached to the volume, have a ``vm_state`` of ``stopped``
+and not be ``locked``.
+
+``CONNECTOR_PATH`` should be the path to a JSON-formatted file containing up to
+date connector information for the compute currently hosting the instance as
+generated using the :program:`nova-manage volume_attachment get_connector`
+command.
+
+.. versionadded:: 24.0.0 (Xena)
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Success
+   * - 1
+     - An unexpected error occurred
+   * - 2
+     - Connector path does not exist
+   * - 3
+     - Failed to open connector path
+   * - 4
+     - Instance does not exist
+   * - 5
+     - Instance state invalid (must be stopped and unlocked)
+   * - 6
+     - Instance is not attached to volume
+
 Libvirt Commands
 ================
 

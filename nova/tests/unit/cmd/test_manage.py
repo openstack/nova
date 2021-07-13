@@ -16,8 +16,10 @@
 import datetime
 from io import StringIO
 import sys
+import textwrap
 import warnings
 
+from cinderclient import exceptions as cinder_exception
 import ddt
 import fixtures
 import mock
@@ -33,6 +35,7 @@ from nova.db.main import api as db
 from nova.db import migration
 from nova import exception
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova.scheduler.client import report
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -43,6 +46,27 @@ CONF = conf.CONF
 
 
 class UtilitiesTestCase(test.NoDBTestCase):
+
+    def test_format_dict(self):
+        x = {
+            'foo': 'bar',
+            'bing': 'bat',
+            'test': {'a nested': 'dict'},
+            'wow': 'a multiline\nstring',
+        }
+        self.assertEqual(
+            textwrap.dedent("""\
+                +----------+----------------------+
+                | Property | Value                |
+                +----------+----------------------+
+                | bing     | bat                  |
+                | foo      | bar                  |
+                | test     | {'a nested': 'dict'} |
+                | wow      | a multiline          |
+                |          | string               |
+                +----------+----------------------+"""),
+            manage.format_dict(x),
+        )
 
     def test_mask_passwd(self):
         # try to trip up the regex match with extra : and @.
@@ -3022,6 +3046,529 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                                               uuidsentinel.orphaned_alloc1,
                                               'instance')
         self.assertEqual((1, 0), ret)
+
+
+class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
+    """Unit tests for the nova-manage volume_attachment commands.
+
+    Tests in this class should be simple and can rely on mock, so they
+    are usually restricted to negative or side-effect type tests.
+
+    For more involved functional scenarios, use
+    nova.tests.functional.test_nova_manage.
+    """
+
+    def setUp(self):
+        super().setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+        self.commands = manage.VolumeAttachmentCommands()
+
+    @staticmethod
+    def _get_fake_connector_info():
+        return {
+            'ip': '192.168.7.8',
+            'host': 'fake-host',
+            'initiator': 'fake.initiator.iqn',
+            'wwpns': '100010604b019419',
+            'wwnns': '200010604b019419',
+            'multipath': False,
+            'platform': 'x86_64',
+            'os_type': 'linux2',
+        }
+
+    @mock.patch.object(manage, 'format_dict')
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_show(self, mock_get_im, mock_get_bdm, mock_format_dict):
+        """Test the 'show' command."""
+        ctxt = context.get_admin_context()
+        cell_ctxt = context.get_admin_context()
+
+        cm = objects.CellMapping(name='foo', uuid=uuidsentinel.cell)
+        im = objects.InstanceMapping(cell_mapping=cm)
+        mock_get_im.return_value = im
+
+        bdm = objects.BlockDeviceMapping(
+            cell_ctxt, uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
+            attachment_id=uuidsentinel.attach)
+        mock_get_bdm.return_value = bdm
+
+        with test.nested(
+            mock.patch('nova.context.RequestContext', return_value=ctxt),
+            mock.patch('nova.context.target_cell'),
+        ) as (mock_get_context, mock_target_cell):
+            fake_target_cell_mock = mock.MagicMock()
+            fake_target_cell_mock.__enter__.return_value = cell_ctxt
+            mock_target_cell.return_value = fake_target_cell_mock
+
+            ret = self.commands.show(
+                uuidsentinel.instance, uuidsentinel.volume)
+
+        self.assertEqual(0, ret)
+        mock_get_im.assert_called_once_with(ctxt, uuidsentinel.instance)
+        mock_get_bdm.assert_called_once_with(
+            cell_ctxt, uuidsentinel.volume, uuidsentinel.instance)
+        # Don't assert the output of format_dict here, just that it's called.
+        mock_format_dict.assert_called_once_with(bdm)
+
+    @mock.patch('oslo_serialization.jsonutils.dumps')
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_show_json(self, mock_get_im, mock_get_bdm, mock_dump):
+        """Test the 'show' command with --json."""
+        ctxt = context.get_admin_context()
+        cell_ctxt = context.get_admin_context()
+
+        cm = objects.CellMapping(name='foo', uuid=uuidsentinel.cell)
+        im = objects.InstanceMapping(cell_mapping=cm)
+        mock_get_im.return_value = im
+
+        bdm = objects.BlockDeviceMapping(
+            cell_ctxt, uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
+            attachment_id=uuidsentinel.attach)
+        mock_get_bdm.return_value = bdm
+
+        with test.nested(
+            mock.patch('nova.context.RequestContext', return_value=ctxt),
+            mock.patch('nova.context.target_cell'),
+        ) as (mock_get_context, mock_target_cell):
+            fake_target_cell_mock = mock.MagicMock()
+            fake_target_cell_mock.__enter__.return_value = cell_ctxt
+            mock_target_cell.return_value = fake_target_cell_mock
+
+            ret = self.commands.show(
+                uuidsentinel.instance, uuidsentinel.volume, json=True)
+
+        self.assertEqual(0, ret)
+        mock_get_im.assert_called_once_with(ctxt, uuidsentinel.instance)
+        mock_get_bdm.assert_called_once_with(
+            cell_ctxt, uuidsentinel.volume, uuidsentinel.instance)
+        # Don't assert the output of dumps here, just that it's called.
+        mock_dump.assert_called_once_with(bdm)
+
+    @mock.patch.object(manage, 'format_dict')
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_show_connection_info(
+        self, mock_get_im, mock_get_bdm, mock_format_dict
+    ):
+        """Test the 'show' command with --connection_info."""
+        ctxt = context.get_admin_context()
+        cell_ctxt = context.get_admin_context()
+
+        cm = objects.CellMapping(name='foo', uuid=uuidsentinel.cell)
+        im = objects.InstanceMapping(cell_mapping=cm)
+        mock_get_im.return_value = im
+
+        fake_connection_info = {
+            'data': {
+                'foo': 'bar'
+            }
+        }
+        bdm = objects.BlockDeviceMapping(
+            cell_ctxt, uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
+            attachment_id=uuidsentinel.attach,
+            connection_info=jsonutils.dumps(fake_connection_info))
+        mock_get_bdm.return_value = bdm
+
+        with test.nested(
+            mock.patch('nova.context.RequestContext', return_value=ctxt),
+            mock.patch('nova.context.target_cell'),
+        ) as (mock_get_context, mock_target_cell):
+            fake_target_cell_mock = mock.MagicMock()
+            fake_target_cell_mock.__enter__.return_value = cell_ctxt
+            mock_target_cell.return_value = fake_target_cell_mock
+
+            ret = self.commands.show(
+                uuidsentinel.instance, uuidsentinel.volume,
+                connection_info=True)
+
+        self.assertEqual(0, ret)
+        mock_get_im.assert_called_once_with(ctxt, uuidsentinel.instance)
+        mock_get_bdm.assert_called_once_with(
+            cell_ctxt, uuidsentinel.volume, uuidsentinel.instance)
+        # Don't assert the output of format_dict here, just that it's called.
+        mock_format_dict.assert_called_once_with(
+            fake_connection_info)
+
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_show_connection_info_json(self, mock_get_im, mock_get_bdm):
+        """Test the 'show' command with --json and --connection_info."""
+        ctxt = context.get_admin_context()
+        cell_ctxt = context.get_admin_context()
+
+        cm = objects.CellMapping(name='foo', uuid=uuidsentinel.cell)
+        im = objects.InstanceMapping(cell_mapping=cm)
+        mock_get_im.return_value = im
+
+        fake_connection_info = {
+            'data': {
+                'foo': 'bar'
+            }
+        }
+        bdm = objects.BlockDeviceMapping(
+            cell_ctxt, uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
+            attachment_id=uuidsentinel.attach,
+            connection_info=jsonutils.dumps(fake_connection_info))
+        mock_get_bdm.return_value = bdm
+
+        with test.nested(
+            mock.patch('nova.context.RequestContext', return_value=ctxt),
+            mock.patch('nova.context.target_cell'),
+        ) as (mock_get_context, mock_target_cell):
+            fake_target_cell_mock = mock.MagicMock()
+            fake_target_cell_mock.__enter__.return_value = cell_ctxt
+            mock_target_cell.return_value = fake_target_cell_mock
+
+            ret = self.commands.show(
+                uuidsentinel.instance, uuidsentinel.volume,
+                connection_info=True, json=True)
+
+        self.assertEqual(0, ret)
+        mock_get_im.assert_called_once_with(ctxt, uuidsentinel.instance)
+        mock_get_bdm.assert_called_once_with(
+            cell_ctxt, uuidsentinel.volume, uuidsentinel.instance)
+        output = self.output.getvalue().strip()
+        # We just print bdm.connection_info here so this is all we can assert
+        self.assertIn(bdm.connection_info, output)
+
+    @mock.patch('nova.context.get_admin_context')
+    def test_show_unknown_failure(self, mock_get_context):
+        """Test the 'show' command with an unknown failure"""
+        mock_get_context.side_effect = test.TestingException('oops')
+        ret = self.commands.show(uuidsentinel.instance, uuidsentinel.volume)
+        self.assertEqual(1, ret)
+
+    @mock.patch(
+        'nova.context.get_admin_context',
+        new=mock.Mock(return_value=mock.sentinel.context))
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_show_instance_not_found(self, mock_get_im):
+        """Test the 'show' command with a missing instance"""
+
+        mock_get_im.side_effect = exception.InstanceNotFound(
+            instance_id=uuidsentinel.instance)
+        ret = self.commands.show(uuidsentinel.instance, uuidsentinel.volume)
+        mock_get_im.assert_called_once_with(
+            mock.sentinel.context, uuidsentinel.instance)
+        self.assertEqual(2, ret)
+
+        mock_get_im.reset_mock()
+        mock_get_im.side_effect = exception.InstanceMappingNotFound(
+           uuid=uuidsentinel.instance)
+        ret = self.commands.show(uuidsentinel.instance, uuidsentinel.volume)
+        mock_get_im.assert_called_once_with(
+            mock.sentinel.context, uuidsentinel.instance)
+        self.assertEqual(2, ret)
+
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_show_bdm_not_found(self, mock_get_im, mock_get_bdm):
+        """Test the 'show' command with a missing bdm."""
+        ctxt = context.get_admin_context()
+        cell_ctxt = context.get_admin_context()
+
+        cm = objects.CellMapping(name='foo', uuid=uuidsentinel.cell)
+        im = objects.InstanceMapping(cell_mapping=cm)
+        mock_get_im.return_value = im
+        mock_get_bdm.side_effect = exception.VolumeBDMNotFound(
+            volume_id=uuidsentinel.volume)
+
+        with test.nested(
+            mock.patch('nova.context.RequestContext', return_value=ctxt),
+            mock.patch('nova.context.target_cell'),
+        ) as (mock_get_context, mock_target_cell):
+            fake_target_cell_mock = mock.MagicMock()
+            fake_target_cell_mock.__enter__.return_value = cell_ctxt
+            mock_target_cell.return_value = fake_target_cell_mock
+
+            ret = self.commands.show(
+                uuidsentinel.instance, uuidsentinel.volume)
+
+        self.assertEqual(3, ret)
+        mock_get_im.assert_called_once_with(ctxt, uuidsentinel.instance)
+        mock_get_bdm.assert_called_once_with(
+            cell_ctxt, uuidsentinel.volume, uuidsentinel.instance)
+
+    @mock.patch.object(manage, 'format_dict')
+    @mock.patch('nova.utils.get_root_helper')
+    @mock.patch('os_brick.initiator.connector.get_connector_properties')
+    def test_get_connector(
+        self, mock_get_connector, mock_get_root, mock_format_dict
+    ):
+        """Test the 'get_connector' command without --json."""
+        fake_connector = self._get_fake_connector_info()
+        mock_get_connector.return_value = fake_connector
+
+        ret = self.commands.get_connector()
+
+        self.assertEqual(0, ret)
+        mock_get_root.assert_called_once_with()
+        mock_get_connector.assert_called_once_with(
+            mock_get_root.return_value, CONF.my_block_storage_ip,
+            CONF.libvirt.volume_use_multipath, enforce_multipath=True,
+            host=CONF.host)
+        # Don't assert the output of format_dict here, just that it's called.
+        mock_format_dict.assert_called_once_with(fake_connector)
+
+    @mock.patch('oslo_serialization.jsonutils.dumps')
+    @mock.patch('nova.utils.get_root_helper')
+    @mock.patch('os_brick.initiator.connector.get_connector_properties')
+    def test_get_connector_json(
+        self, mock_get_connector, mock_get_root, mock_dump
+    ):
+        """Test the 'get_connector' command with --json."""
+        fake_connector = self._get_fake_connector_info()
+        mock_get_connector.return_value = fake_connector
+
+        ret = self.commands.get_connector(json=True)
+
+        self.assertEqual(0, ret)
+        mock_get_root.assert_called_once_with()
+        mock_get_connector.assert_called_once_with(
+            mock_get_root.return_value, CONF.my_block_storage_ip,
+            CONF.libvirt.volume_use_multipath, enforce_multipath=True,
+            host=CONF.host)
+        # Don't assert the output of dumps here, just that it's called.
+        mock_dump.assert_called_once_with(fake_connector)
+
+    @mock.patch('nova.utils.get_root_helper')
+    @mock.patch('os_brick.initiator.connector.get_connector_properties')
+    def test_get_connector_unknown_failure(
+        self, mock_get_connector, mock_get_root
+    ):
+        mock_get_connector.side_effect = test.TestingException('oops')
+        ret = self.commands.get_connector()
+
+        self.assertEqual(1, ret)
+        mock_get_root.assert_called_once_with()
+        mock_get_connector.assert_called_once_with(
+            mock_get_root.return_value, CONF.my_block_storage_ip,
+            CONF.libvirt.volume_use_multipath, enforce_multipath=True,
+            host=CONF.host)
+
+    @mock.patch('os.path.exists')
+    def test_refresh_missing_connector_path_file(self, mock_exists):
+        """Test refresh with a missing connector_path file.
+
+        Ensure we correctly error out.
+        """
+        mock_exists.return_value = False
+        ret = self.commands.refresh(
+            uuidsentinel.volume, uuidsentinel.instance, 'fake_path'
+        )
+        self.assertEqual(2, ret)
+        output = self.output.getvalue().strip()
+        self.assertIn('Connector file not found at fake_path', output)
+
+    @mock.patch('os.path.exists')
+    def test_refresh_invalid_connector_path_file(self, mock_exists):
+        """Test refresh with invalid connector_path file.
+
+        This is really a test of oslo_serialization.jsonutils' 'load' wrapper
+        but it's useful all the same.
+        """
+        mock_exists.return_value = True
+        with self.patch_open('fake_path', b'invalid json'):
+            ret = self.commands.refresh(
+                uuidsentinel.volume, uuidsentinel.instance, 'fake_path'
+            )
+            self.assertEqual(3, ret)
+            output = self.output.getvalue().strip()
+            self.assertIn('Failed to open fake_path', output)
+
+    @mock.patch('os.path.exists')
+    def _test_refresh(self, mock_exists):
+        ctxt = context.get_admin_context()
+        cell_ctxt = context.get_admin_context()
+        fake_connector = self._get_fake_connector_info()
+
+        mock_exists.return_value = True
+
+        with test.nested(
+            mock.patch('nova.context.RequestContext', return_value=ctxt),
+            mock.patch('nova.context.target_cell'),
+            self.patch_open('fake_path', None),
+            mock.patch(
+                'oslo_serialization.jsonutils.load',
+                return_value=fake_connector,
+            ),
+        ) as (mock_get_context, mock_target_cell, _, _):
+            fake_target_cell_mock = mock.MagicMock()
+            fake_target_cell_mock.__enter__.return_value = cell_ctxt
+            mock_target_cell.return_value = fake_target_cell_mock
+
+            ret = self.commands.refresh(
+                uuidsentinel.instance, uuidsentinel.volume, 'fake_path'
+            )
+
+        mock_exists.assert_called_once_with('fake_path')
+
+        return ret
+
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_refresh_invalid_instance_uuid(self, mock_get_instance):
+        """Test refresh with invalid instance UUID."""
+        mock_get_instance.side_effect = exception.InstanceNotFound(
+            instance_id=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED)
+        ret = self._test_refresh()
+        self.assertEqual(4, ret)
+        output = self.output.getvalue().strip()
+        self.assertIn(
+            f'Instance {uuidsentinel.instance} could not be found', output)
+
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume_and_instance')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_refresh_invalid_instance_state(
+        self, mock_get_instance, mock_get_bdm,
+    ):
+        """Test refresh with instance in an non-stopped state."""
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.ACTIVE)
+        mock_get_bdm.return_value = objects.BlockDeviceMapping(
+            uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
+            attachment_id=uuidsentinel.instance)
+
+        ret = self._test_refresh()
+        self.assertEqual(5, ret)
+        output = self.output.getvalue().strip()
+        self.assertIn('must be stopped', output)
+
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume_and_instance')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_refresh_instance_already_locked_failure(
+        self, mock_get_instance, mock_get_bdm
+    ):
+        """Test refresh with instance when instance is already locked."""
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED,
+            locked=True, locked_by='admin')
+        mock_get_bdm.return_value = objects.BlockDeviceMapping(
+            uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
+            attachment_id=uuidsentinel.instance)
+
+        ret = self._test_refresh()
+        self.assertEqual(5, ret)
+        output = self.output.getvalue().strip()
+        self.assertIn('must be unlocked', output)
+
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume_and_instance')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_refresh_invalid_volume_id(self, mock_get_instance, mock_get_bdm):
+        """Test refresh with invalid instance/volume combination."""
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED,
+            locked=False)
+        mock_get_bdm.side_effect = exception.VolumeBDMNotFound(
+            volume_id=uuidsentinel.volume)
+
+        ret = self._test_refresh()
+        self.assertEqual(6, ret)
+
+    @mock.patch('nova.volume.cinder.API.attachment_get')
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.attachment_create')
+    @mock.patch('nova.compute.api.API.unlock')
+    @mock.patch('nova.compute.api.API.lock')
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume_and_instance')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    def test_refresh_attachment_create_failure(
+        self, mock_action_start, mock_get_instance, mock_get_bdm, mock_lock,
+        mock_unlock, mock_attachment_create, mock_attachment_delete,
+        mock_attachment_get
+    ):
+        """Test refresh with instance when any other error happens.
+        """
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED,
+            locked=False)
+        mock_get_bdm.return_value = objects.BlockDeviceMapping(
+            uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
+            attachment_id=uuidsentinel.attachment)
+        mock_attachment_create.side_effect = \
+            cinder_exception.ClientException(400, '400')
+        mock_action = mock.Mock(spec=objects.InstanceAction)
+        mock_action_start.return_value = mock_action
+
+        ret = self._test_refresh()
+        self.assertEqual(1, ret)
+
+        mock_attachment_create.assert_called_once_with(
+            mock.ANY, uuidsentinel.volume, uuidsentinel.instance)
+        mock_attachment_delete.assert_not_called()
+        mock_attachment_get.assert_called_once_with(
+            mock.ANY, uuidsentinel.attachment)
+        mock_unlock.assert_called_once_with(
+            mock.ANY, mock_get_instance.return_value)
+        mock_action_start.assert_called_once()
+        mock_action.finish.assert_called_once()
+
+    @mock.patch('nova.compute.rpcapi.ComputeAPI', autospec=True)
+    @mock.patch('nova.volume.cinder.API', autospec=True)
+    @mock.patch('nova.compute.api.API', autospec=True)
+    @mock.patch.object(objects.BlockDeviceMapping, 'save')
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume_and_instance')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    def test_refresh(
+        self, mock_action_start, mock_get_instance, mock_get_bdm,
+        mock_save_bdm, mock_compute_api, mock_volume_api, mock_compute_rpcapi
+    ):
+        """Test refresh with a successful code path."""
+        fake_compute_api = mock_compute_api.return_value
+        fake_volume_api = mock_volume_api.return_value
+        fake_compute_rpcapi = mock_compute_rpcapi.return_value
+
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED,
+            host='foo', locked=False)
+        mock_get_bdm.return_value = objects.BlockDeviceMapping(
+            uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
+            attachment_id=uuidsentinel.instance)
+        mock_action = mock.Mock(spec=objects.InstanceAction)
+        mock_action_start.return_value = mock_action
+
+        fake_volume_api.attachment_create.return_value = {
+            'id': uuidsentinel.new_attachment,
+        }
+        fake_volume_api.attachment_update.return_value = {
+            'connection_info': self._get_fake_connector_info(),
+        }
+
+        ret = self._test_refresh()
+        self.assertEqual(0, ret)
+
+        fake_compute_api.lock.assert_called_once_with(
+            mock.ANY, mock_get_instance.return_value, reason=mock.ANY)
+        fake_volume_api.attachment_create.assert_called_once_with(
+            mock.ANY, uuidsentinel.volume, uuidsentinel.instance)
+        fake_compute_rpcapi.remove_volume_connection.assert_called_once_with(
+            mock.ANY, mock_get_instance.return_value, uuidsentinel.volume,
+            mock_get_instance.return_value.host)
+        fake_volume_api.attachment_delete.assert_called_once_with(
+            mock.ANY, uuidsentinel.instance)
+        fake_volume_api.attachment_update.assert_called_once_with(
+            mock.ANY, uuidsentinel.new_attachment, mock.ANY)
+        fake_volume_api.attachment_complete.assert_called_once_with(
+            mock.ANY, uuidsentinel.new_attachment)
+        fake_compute_api.unlock.assert_called_once_with(
+            mock.ANY, mock_get_instance.return_value)
+        mock_action_start.assert_called_once()
+        mock_action.finish.assert_called_once()
 
 
 class TestNovaManageMain(test.NoDBTestCase):

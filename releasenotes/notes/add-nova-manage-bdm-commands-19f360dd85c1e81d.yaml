@@ -1,0 +1,16 @@
+---
+features:
+  - |
+    A number of commands have been managed to ``nova-manage`` to help update
+    stale volume attachment connection info for a given volume and instance.
+
+    * The ``nova-manage volume_attachment show`` command can be used to show
+      the current volume attachment information for a given volume and
+      instance.
+
+    * The ``nova-manage volume_attachment get_connector`` command can
+      be used to get updated host connector for the localhost.
+
+    * Finally, the ``nova-manage volume_attachment refresh`` command can be
+      used to update the volume attachment with this updated connection
+      information.
