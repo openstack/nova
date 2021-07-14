@@ -15,18 +15,14 @@ import copy
 import random
 
 import fixtures
-from keystoneauth1 import adapter as ksa_adap
-import mock
 from neutronclient.common import exceptions as neutron_client_exc
 import os_resource_classes as orc
-from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
 from nova import exception
 from nova.network import constants as neutron_constants
 from nova.network import model as network_model
 from nova.tests.fixtures import nova as nova_fixtures
-from nova.tests.unit import fake_requests
 
 
 class _FakeNeutronClient:
@@ -665,25 +661,6 @@ class NeutronFixture(fixtures.Fixture):
             lambda *args, **kwargs: network_model.NetworkInfo.hydrate(
                 self.nw_info))
 
-        # Stub out port binding APIs which go through a KSA client Adapter
-        # rather than python-neutronclient.
-        self.test.stub_out(
-            'nova.network.neutron._get_ksa_client',
-            lambda *args, **kwargs: mock.Mock(
-                spec=ksa_adap.Adapter))
-        self.test.stub_out(
-            'nova.network.neutron.API._create_port_binding',
-            self.create_port_binding)
-        self.test.stub_out(
-            'nova.network.neutron.API._delete_port_binding',
-            self.delete_port_binding)
-        self.test.stub_out(
-            'nova.network.neutron.API._activate_port_binding',
-            self.activate_port_binding)
-        self.test.stub_out(
-            'nova.network.neutron.API._get_port_binding',
-            self.get_port_binding)
-
         self.test.stub_out(
             'nova.network.neutron.get_client', self._get_client)
 
@@ -692,13 +669,12 @@ class NeutronFixture(fixtures.Fixture):
         admin = admin or context.is_admin and not context.auth_token
         return _FakeNeutronClient(self, admin)
 
-    def create_port_binding(self, context, client, port_id, data):
+    def create_port_binding(self, port_id, body):
         if port_id not in self._ports:
-            return fake_requests.FakeResponse(
-                404, content='Port %s not found' % port_id)
+            raise neutron_client_exc.NeutronClientException(status_code=404)
 
         port = self._ports[port_id]
-        binding = copy.deepcopy(data['binding'])
+        binding = copy.deepcopy(body['binding'])
 
         # NOTE(stephenfin): We don't allow changing of backend
         binding['vif_type'] = port['binding:vif_type']
@@ -713,61 +689,36 @@ class NeutronFixture(fixtures.Fixture):
 
         self._port_bindings[port_id][binding['host']] = binding
 
-        return fake_requests.FakeResponse(
-            200, content=jsonutils.dumps({'binding': binding}),
-        )
+        return {'binding': binding}
 
-    def _get_failure_response_if_port_or_binding_not_exists(
-        self, port_id, host,
-    ):
+    def _validate_port_binding(self, port_id, host_id):
         if port_id not in self._ports:
-            return fake_requests.FakeResponse(
-                404, content='Port %s not found' % port_id)
-        if host not in self._port_bindings[port_id]:
-            return fake_requests.FakeResponse(
-                404,
-                content='Binding for host %s for port %s not found'
-                        % (host, port_id))
+            raise neutron_client_exc.NeutronClientException(status_code=404)
 
-    def delete_port_binding(self, context, client, port_id, host):
-        failure = self._get_failure_response_if_port_or_binding_not_exists(
-            port_id, host)
-        if failure is not None:
-            return failure
+        if host_id not in self._port_bindings[port_id]:
+            raise neutron_client_exc.NeutronClientException(status_code=404)
 
-        del self._port_bindings[port_id][host]
+    def delete_port_binding(self, port_id, host_id):
+        self._validate_port_binding(port_id, host_id)
+        del self._port_bindings[port_id][host_id]
 
-        return fake_requests.FakeResponse(204)
-
-    def _activate_port_binding(self, port_id, host):
+    def _activate_port_binding(self, port_id, host_id):
         # It makes sure that only one binding is active for a port
-        for h, binding in self._port_bindings[port_id].items():
-            if h == host:
+        for host, binding in self._port_bindings[port_id].items():
+            if host == host_id:
                 # NOTE(gibi): neutron returns 409 if this binding is already
                 # active but nova does not depend on this behaviour yet.
                 binding['status'] = 'ACTIVE'
             else:
                 binding['status'] = 'INACTIVE'
 
-    def activate_port_binding(self, context, client, port_id, host):
-        failure = self._get_failure_response_if_port_or_binding_not_exists(
-            port_id, host)
-        if failure is not None:
-            return failure
+    def activate_port_binding(self, port_id, host_id):
+        self._validate_port_binding(port_id, host_id)
+        self._activate_port_binding(port_id, host_id)
 
-        self._activate_port_binding(port_id, host)
-
-        return fake_requests.FakeResponse(200)
-
-    def get_port_binding(self, context, client, port_id, host):
-        failure = self._get_failure_response_if_port_or_binding_not_exists(
-            port_id, host)
-        if failure is not None:
-            return failure
-
-        binding = {"binding": self._port_bindings[port_id][host]}
-        return fake_requests.FakeResponse(
-            200, content=jsonutils.dumps(binding))
+    def show_port_binding(self, port_id, host_id):
+        self._validate_port_binding(port_id, host_id)
+        return {'binding': self._port_bindings[port_id][host_id]}
 
     def _list_resource(self, resources, retrieve_all, **_params):
         # If 'fields' is passed we need to strip that out since it will mess

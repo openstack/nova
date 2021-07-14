@@ -816,13 +816,13 @@ class PortBindingFailed(Invalid):
 
 
 class PortBindingDeletionFailed(NovaException):
-    msg_fmt = _("Failed to delete binding for port %(port_id)s and host "
-                "%(host)s.")
+    msg_fmt = _("Failed to delete binding for port(s) %(port_id)s on host "
+                "%(host)s; please check neutron logs for more information")
 
 
 class PortBindingActivationFailed(NovaException):
-    msg_fmt = _("Failed to activate binding for port %(port_id)s and host "
-                "%(host)s.")
+    msg_fmt = _("Failed to activate binding for port %(port_id)s on host "
+                "%(host)s; please check neutron logs for more information")
 
 
 class PortUpdateFailed(Invalid):
