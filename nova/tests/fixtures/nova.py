@@ -742,15 +742,17 @@ class WarningsFixture(fixtures.Fixture):
 
         # NOTE(sdague): this remains an unresolved item around the way
         # forward on is_admin, the deprecation is definitely really premature.
-        warnings.filterwarnings('ignore',
+        warnings.filterwarnings(
+            'ignore',
             message='Policy enforcement is depending on the value of is_admin.'
                     ' This key is deprecated. Please update your policy '
                     'file to use the standard policy values.')
 
         # NOTE(mriedem): Ignore scope check UserWarnings from oslo.policy.
-        warnings.filterwarnings('ignore',
-                                message="Policy .* failed scope check",
-                                category=UserWarning)
+        warnings.filterwarnings(
+            'ignore',
+            message="Policy .* failed scope check",
+            category=UserWarning)
 
         # NOTE(gibi): The UUIDFields emits a warning if the value is not a
         # valid UUID. Let's escalate that to an exception in the test to
@@ -791,12 +793,6 @@ class WarningsFixture(fixtures.Fixture):
             'ignore',
             message='Implicit coercion of SELECT and textual SELECT .*',
             category=sqla_exc.SADeprecationWarning)
-
-        # TODO(jangutter): Change (or remove) this to an error during the Train
-        # cycle when the os-vif port profile is no longer used.
-        warnings.filterwarnings(
-            'ignore', message=".* 'VIFPortProfileOVSRepresentor' .* "
-            "is deprecated", category=PendingDeprecationWarning)
 
         self.addCleanup(warnings.resetwarnings)
 
