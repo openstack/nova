@@ -84,7 +84,6 @@ class LibvirtISCSIVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         """Extend the volume."""
         LOG.debug("calling os-brick to extend iSCSI Volume", instance=instance)
         new_size = self.connector.extend_volume(connection_info['data'])
-        LOG.debug("Extend iSCSI Volume %s; new_size=%s",
-                  connection_info['data']['device_path'],
+        LOG.debug("Extend iSCSI Volume: new_size=%s",
                   new_size, instance=instance)
         return new_size
