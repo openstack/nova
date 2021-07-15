@@ -27,7 +27,6 @@ import socket
 import ssl
 
 import six
-from suds import sudsobject
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -2064,11 +2063,6 @@ def rename_vm(session, vm_ref, instance):
     rename_task = session._call_method(session.vim, "Rename_Task", vm_ref,
                                        newName=vm_name)
     session._wait_for_task(rename_task)
-
-
-def is_vim_instance(o, vim_type_name):
-    return isinstance(o, sudsobject.Factory.subclass(
-        vim_type_name, sudsobject.Object))
 
 
 def create_service_locator_name_password(client_factory, username, password):
