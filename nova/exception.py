@@ -1962,10 +1962,10 @@ class CreateWithPortResourceRequestOldVersion(Invalid):
                 "until microversion 2.72.")
 
 
-class ExtendedResourceRequestNotSupported(Invalid):
+class ExtendedResourceRequestOldCompute(Invalid):
     msg_fmt = _("The port-resource-request-groups neutron API extension is "
-                "not yet supported by Nova. Please turn off this extension in "
-                "Neutron.")
+                "not supported by old nova compute service. Upgrade your "
+                "compute services to Xena (24.0.0) or later.")
 
 
 class InvalidReservedMemoryPagesOption(Invalid):

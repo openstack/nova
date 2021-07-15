@@ -110,6 +110,8 @@ SUPPORT_ACCELERATOR_SERVICE_FOR_REBUILD = 53
 
 SUPPORT_VNIC_TYPE_ACCELERATOR = 57
 
+MIN_COMPUTE_BOOT_WITH_EXTENDED_RESOURCE_REQUEST = 58
+
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
 # trigger.
@@ -1072,6 +1074,18 @@ class API:
         # microversion.
         if port_resource_requests and not supports_port_resource_request:
             raise exception.CreateWithPortResourceRequestOldVersion()
+
+        # TODO(gibi): remove this when Nova does not need to support Wallaby
+        # computes any more.
+        if (port_resource_requests and
+            self.network_api.has_extended_resource_request_extension(context)
+        ):
+            # we only support the extended resource request if the computes are
+            # upgraded to Xena.
+            min_version = objects.service.get_minimum_version_all_cells(
+                context, ["nova-compute"])
+            if min_version < MIN_COMPUTE_BOOT_WITH_EXTENDED_RESOURCE_REQUEST:
+                raise exception.ExtendedResourceRequestOldCompute()
 
         base_options = {
             'reservation_id': reservation_id,
@@ -5062,7 +5076,7 @@ class API:
         This function is only here temporary to help mocking this check in the
         functional test environment.
         """
-        if not self.network_api._has_extended_resource_request_extension(
+        if not self.network_api.has_extended_resource_request_extension(
             context
         ):
             return True

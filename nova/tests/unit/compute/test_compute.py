@@ -9820,6 +9820,32 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(refs[i]['display_name'], name)
             self.assertEqual(refs[i]['hostname'], name)
 
+    @mock.patch("nova.objects.service.get_minimum_version_all_cells")
+    @mock.patch(
+        "nova.network.neutron.API.has_extended_resource_request_extension")
+    @mock.patch("nova.network.neutron.API.create_resource_requests")
+    def test_instance_create_with_extended_res_req_old_compute(
+        self, mock_create_res_req, mock_has_extended_res_req,
+        mock_get_min_svc_version
+    ):
+        requested_networks = objects.NetworkRequestList(
+            objects=[
+                objects.NetworkRequest(port_id=uuids.port1)
+            ]
+        )
+        mock_create_res_req.return_value = (
+            None, [objects.RequestGroup()], None)
+        mock_has_extended_res_req.return_value = True
+        mock_get_min_svc_version.return_value = 57
+
+        self.assertRaises(
+            exception.ExtendedResourceRequestOldCompute,
+            self.compute_api.create, self.context, self.default_flavor,
+            image_href=uuids.image_href_id,
+            requested_networks=requested_networks,
+            supports_port_resource_request=True,
+        )
+
     def test_instance_architecture(self):
         # Test the instance architecture.
         i_ref = self._create_fake_instance_obj()

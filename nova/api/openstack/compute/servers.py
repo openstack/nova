@@ -844,7 +844,7 @@ class ServersController(wsgi.Controller):
                 exception.DeviceProfileError,
                 exception.ComputeHostNotFound,
                 exception.ForbiddenPortsWithAccelerator,
-                exception.ExtendedResourceRequestNotSupported,
+                exception.ExtendedResourceRequestOldCompute,
                 ) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except INVALID_FLAVOR_IMAGE_EXCEPTIONS as error:
