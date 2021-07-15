@@ -1737,9 +1737,9 @@ class VMwareAPIVMTestCase(test.TestCase,
         the vm group
         """
         self._create_vm()
-        fake_server_group = collections.namedtuple('GroupInfo', ['uuid',
+        fake_server_group = collections.namedtuple('GroupInfo', ['name',
                                                                 'policies'])
-        fake_server_group.uuid = 'test_group'
+        fake_server_group.name = 'test_group'
         mock_get_sg.return_value = [fake_server_group]
         fake_factory = vmwareapi_fake.FakeFactory()
 

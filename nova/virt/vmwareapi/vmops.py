@@ -75,7 +75,7 @@ LOG = logging.getLogger(__name__)
 RESIZE_TOTAL_STEPS = 7
 
 
-GroupInfo = collections.namedtuple('GroupInfo', ['uuid', 'policies'])
+GroupInfo = collections.namedtuple('GroupInfo', ['name', 'policies'])
 
 
 class VirtualMachineInstanceConfigInfo(object):
@@ -1603,7 +1603,8 @@ class VMwareVMOps(object):
             server_group = instance_group_object.get_by_instance_uuid(
                 context, instance.uuid)
             if server_group:
-                server_group_infos.append(GroupInfo(server_group.uuid,
+                name = '{}{}'.format(constants.DRS_PREFIX, server_group.uuid)
+                server_group_infos.append(GroupInfo(name,
                                                     server_group.policies))
         except nova.exception.InstanceGroupNotFound:
             pass
@@ -1619,7 +1620,7 @@ class VMwareVMOps(object):
 
     def cleanup_server_groups(self, context, instance):
         server_group_infos = self._get_server_groups(context, instance)
-        server_group_uuids = set(group_info.uuid
+        server_group_uuids = set(group_info.name
                                  for group_info in server_group_infos)
         cluster_util.clean_empty_vm_groups(self._session, self._cluster,
                                            server_group_uuids,
