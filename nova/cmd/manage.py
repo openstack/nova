@@ -2562,7 +2562,7 @@ class PlacementCommands(object):
         """
         url = '/resource_providers'
         if 'uuid' in kwargs:
-            url += '&uuid=%s' % kwargs['uuid']
+            url += '?uuid=%s' % kwargs['uuid']
 
         resp = placement.get(url, global_request_id=context.global_id,
                              version='1.14')
