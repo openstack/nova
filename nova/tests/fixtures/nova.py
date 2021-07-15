@@ -770,6 +770,28 @@ class WarningsFixture(fixtures.Fixture):
             'error', message='Evaluating non-mapped column expression',
             category=sqla_exc.SAWarning)
 
+        # NOTE(stephenfin): Disable the annoying "TypeDecorator foo will not
+        # produce a cache key because the ``cache_ok`` flag is not set to True"
+        # warning. It's fixed in oslo.db 10.0.0 but not before.
+        # TODO(stephenfin): Remove once we bump oslo.db in lower-constraints to
+        # 10.0.0
+        warnings.filterwarnings(
+            'ignore',
+            message=r'TypeDecorator SoftDeleteInteger\(\) will not produce .*',
+            category=sqla_exc.SAWarning)
+
+        # TODO(stephenfin): Remove once we fix this is oslo.db 10.0.1 or so
+        warnings.filterwarnings(
+            'ignore',
+            message=r'Invoking and_\(\) without arguments is deprecated, .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        # TODO(stephenfin): Remove once we fix this in placement 5.0.2 or 6.0.0
+        warnings.filterwarnings(
+            'ignore',
+            message='Implicit coercion of SELECT and textual SELECT .*',
+            category=sqla_exc.SADeprecationWarning)
+
         # TODO(jangutter): Change (or remove) this to an error during the Train
         # cycle when the os-vif port profile is no longer used.
         warnings.filterwarnings(
