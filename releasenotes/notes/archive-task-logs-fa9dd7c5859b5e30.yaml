@@ -11,8 +11,11 @@ features:
     The ``task_log`` database table contains instance usage audit records if
     ``nova-compute`` has been configured with ``[DEFAULT]instance_usage_audit =
     True``. This will be the case if OpenStack Telemetry is being used in the
-    deployment, as the option causes Nova to generate audit data that Telemetry
-    then retrieves from the server usage audit log API [1].
+    deployment, as the option causes Nova to generate audit notifications that
+    Telemetry consumes from the message bus.
+
+    Usage data can also be later retrieved by calling the
+    ``/os-instance_usage_audit_log`` REST API [1].
 
     Historically, there has been no way to delete ``task_log`` table records
     other than manual database modification. Because of this, ``task_log``
