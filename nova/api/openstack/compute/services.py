@@ -266,10 +266,25 @@ class ServiceController(wsgi.Controller):
                 # service delete since we could orphan resource providers and
                 # break the ability to do things like confirm/revert instances
                 # in VERIFY_RESIZE status.
-                compute_nodes = objects.ComputeNodeList.get_all_by_host(
-                    context, service.host)
-                self._assert_no_in_progress_migrations(
-                    context, id, compute_nodes)
+                compute_nodes = []
+                try:
+                    compute_nodes = objects.ComputeNodeList.get_all_by_host(
+                        context, service.host)
+                    self._assert_no_in_progress_migrations(
+                        context, id, compute_nodes)
+                except exception.ComputeHostNotFound:
+                    # NOTE(artom) Consider the following situation:
+                    # - Using the Ironic virt driver
+                    # - Replacing (so removing and re-adding) all baremetal
+                    #   nodes associated with a single nova-compute service
+                    # The update resources periodic will have destroyed the
+                    # compute node records because they're no longer being
+                    # reported by the virt driver. If we then attempt to
+                    # manually delete the compute service record,
+                    # get_all_host() above will raise, as there are no longer
+                    # any compute node records for the host. Catch it here and
+                    # continue to allow compute service deletion.
+                    pass
 
                 aggrs = self.aggregate_api.get_aggregates_by_host(context,
                                                                   service.host)

@@ -711,11 +711,7 @@ class ServicesTestV21(test.TestCase):
                                      'topic': 'compute',
                                      'report_count': 0})
         compute.create()
-        # FIXME(artom) Until bug 1860312 is fixed, the ComputeHostNotFound
-        # error will get bubbled up to the API as an error 500.
-        self.assertRaises(
-            webob.exc.HTTPInternalServerError,
-            self.controller.delete, self.req, compute.id)
+        self.controller.delete(self.req, compute.id)
         mock_get_all_by_host.assert_called_with(
             self.req.environ['nova.context'], 'fake-compute-host')
 
