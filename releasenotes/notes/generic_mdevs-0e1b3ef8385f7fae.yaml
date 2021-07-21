@@ -1,0 +1,13 @@
+---
+deprecations:
+  - |
+    The existing config options in the ``[devices]`` group for managing virtual
+    GPUs are now renamed in order to be more generic since the mediated devices
+    framework from the linux kernel can support other devices:
+
+    - ``enabled_vgpu_types`` is now deprecated in favour of
+      ``enabled_mdev_types``
+    - Dynamic configuration groups called ``[vgpu_*]`` are now deprecated in
+      favour of ``[mdev_*]``
+
+    Support for the deprecated options will be removed in a future release.

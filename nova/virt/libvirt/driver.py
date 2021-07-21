@@ -7382,26 +7382,26 @@ class LibvirtDriver(driver.ComputeDriver):
         return total
 
     def _get_supported_vgpu_types(self):
-        if not CONF.devices.enabled_vgpu_types:
+        if not CONF.devices.enabled_mdev_types:
             return []
 
         # Make sure we register all the types as the compute service could
         # be calling this method before init_host()
-        if len(CONF.devices.enabled_vgpu_types) > 1:
+        if len(CONF.devices.enabled_mdev_types) > 1:
             nova.conf.devices.register_dynamic_opts(CONF)
 
-        for vgpu_type in CONF.devices.enabled_vgpu_types:
-            group = getattr(CONF, 'vgpu_%s' % vgpu_type, None)
+        for vgpu_type in CONF.devices.enabled_mdev_types:
+            group = getattr(CONF, 'mdev_%s' % vgpu_type, None)
             if group is None or not group.device_addresses:
-                first_type = CONF.devices.enabled_vgpu_types[0]
-                if len(CONF.devices.enabled_vgpu_types) > 1:
+                first_type = CONF.devices.enabled_mdev_types[0]
+                if len(CONF.devices.enabled_mdev_types) > 1:
                     # Only provide the warning if the operator provided more
                     # than one type as it's not needed to provide groups
                     # if you only use one vGPU type.
-                    msg = ("The vGPU type '%(type)s' was listed in '[devices] "
-                           "enabled_vgpu_types' but no corresponding "
-                           "'[vgpu_%(type)s]' group or "
-                           "'[vgpu_%(type)s] device_addresses' "
+                    msg = ("The mdev type '%(type)s' was listed in '[devices] "
+                           "enabled_mdev_types' but no corresponding "
+                           "'[mdev_%(type)s]' group or "
+                           "'[mdev_%(type)s] device_addresses' "
                            "option was defined. Only the first type "
                            "'%(ftype)s' will be used." % {'type': vgpu_type,
                                                          'ftype': first_type})
@@ -7426,7 +7426,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         reason="incorrect PCI address: %s" % device_address
                     )
                 self.pgpu_type_mapping[device_address] = vgpu_type
-        return CONF.devices.enabled_vgpu_types
+        return CONF.devices.enabled_mdev_types
 
     def _get_vgpu_type_per_pgpu(self, device_address):
         """Provides the vGPU type the pGPU supports.
@@ -7464,19 +7464,19 @@ class LibvirtDriver(driver.ComputeDriver):
             # in case we can't find a specific pGPU
             return
 
-    def _count_mediated_devices(self, enabled_vgpu_types):
+    def _count_mediated_devices(self, enabled_mdev_types):
         """Counts the sysfs objects (handles) that represent a mediated device
-        and filtered by $enabled_vgpu_types.
+        and filtered by $enabled_mdev_types.
 
         Those handles can be in use by a libvirt guest or not.
 
-        :param enabled_vgpu_types: list of enabled VGPU types on this host
+        :param enabled_mdev_types: list of enabled VGPU types on this host
         :returns: dict, keyed by parent GPU libvirt PCI device ID, of number of
         mdev device handles for that GPU
         """
 
         counts_per_parent: ty.Dict[str, int] = collections.defaultdict(int)
-        mediated_devices = self._get_mediated_devices(types=enabled_vgpu_types)
+        mediated_devices = self._get_mediated_devices(types=enabled_mdev_types)
         for mdev in mediated_devices:
             parent_vgpu_type = self._get_vgpu_type_per_pgpu(mdev['parent'])
             if mdev['type'] != parent_vgpu_type:
@@ -7487,16 +7487,16 @@ class LibvirtDriver(driver.ComputeDriver):
             counts_per_parent[mdev['parent']] += 1
         return counts_per_parent
 
-    def _count_mdev_capable_devices(self, enabled_vgpu_types):
+    def _count_mdev_capable_devices(self, enabled_mdev_types):
         """Counts the mdev-capable devices on this host filtered by
-        $enabled_vgpu_types.
+        $enabled_mdev_types.
 
-        :param enabled_vgpu_types: list of enabled VGPU types on this host
+        :param enabled_mdev_types: list of enabled VGPU types on this host
         :returns: dict, keyed by device name, to an integer count of available
             instances of each type per device
         """
         mdev_capable_devices = self._get_mdev_capable_devices(
-            types=enabled_vgpu_types)
+            types=enabled_mdev_types)
         counts_per_dev: ty.Dict[str, int] = collections.defaultdict(int)
         for dev in mdev_capable_devices:
             # dev_id is the libvirt name for the PCI device,
@@ -7516,7 +7516,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_gpu_inventories(self):
         """Returns the inventories for each physical GPU for a specific type
-        supported by the enabled_vgpu_types CONF option.
+        supported by the enabled_mdev_types CONF option.
 
         :returns: dict, keyed by libvirt PCI name, of dicts like:
                 {'pci_0000_84_00_0':
@@ -7531,16 +7531,16 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         # Bail out early if operator doesn't care about providing vGPUs
-        enabled_vgpu_types = self.supported_vgpu_types
-        if not enabled_vgpu_types:
+        enabled_mdev_types = self.supported_vgpu_types
+        if not enabled_mdev_types:
             return {}
         inventories = {}
-        count_per_parent = self._count_mediated_devices(enabled_vgpu_types)
+        count_per_parent = self._count_mediated_devices(enabled_mdev_types)
         for dev_name, count in count_per_parent.items():
             inventories[dev_name] = {'total': count}
         # Filter how many available mdevs we can create for all the supported
         # types.
-        count_per_dev = self._count_mdev_capable_devices(enabled_vgpu_types)
+        count_per_dev = self._count_mdev_capable_devices(enabled_mdev_types)
         # Combine the counts into the dict that we return to the caller.
         for dev_name, count in count_per_dev.items():
             inv_per_parent = inventories.setdefault(
