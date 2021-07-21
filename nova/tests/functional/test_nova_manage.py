@@ -30,7 +30,7 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
-from nova.tests.functional import test_servers
+from nova.tests.functional import test_servers_resource_request
 from nova import utils as nova_utils
 
 CONF = config.CONF
@@ -826,7 +826,7 @@ class TestNovaManagePlacementHealAllocations(
 
 
 class TestNovaManagePlacementHealPortAllocations(
-        test_servers.PortResourceRequestBasedSchedulingTestBase):
+    test_servers_resource_request.PortResourceRequestBasedSchedulingTestBase):
 
     def setUp(self):
         super(TestNovaManagePlacementHealPortAllocations, self).setUp()
