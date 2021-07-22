@@ -25285,14 +25285,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # And now do it correctly !
         self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
         self.flags(device_addresses=['0000:85:00.0'], group='mdev_nvidia-12')
+        self.flags(mdev_class='CUSTOM_NOTVGPU', group='mdev_nvidia-12')
         self.assertEqual(['nvidia-11', 'nvidia-12'],
                          drvr._get_supported_vgpu_types())
         self.assertEqual({'0000:84:00.0': 'nvidia-11',
                           '0000:85:00.0': 'nvidia-12'}, drvr.pgpu_type_mapping)
         self.assertEqual({'0000:84:00.0': 'VGPU',
-                          '0000:85:00.0': 'VGPU'},
+                          '0000:85:00.0': 'CUSTOM_NOTVGPU'},
                           drvr.mdev_class_mapping)
-        self.assertEqual({orc.VGPU}, drvr.mdev_classes)
+        self.assertEqual({orc.VGPU, 'CUSTOM_NOTVGPU'}, drvr.mdev_classes)
         mock_warning.assert_not_called()
 
     def test_get_supported_vgpu_types_with_duplicate_types(self):
@@ -25387,10 +25388,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         nova.conf.devices.register_dynamic_opts(CONF)
         self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
         self.flags(device_addresses=['0000:85:00.0'], group='mdev_nvidia-12')
+        self.flags(mdev_class='CUSTOM_NOTVGPU', group='mdev_nvidia-12')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertEqual(
             orc.VGPU,
             drvr._get_resource_class_for_device('pci_0000_84_00_0'))
+        self.assertEqual(
+            'CUSTOM_NOTVGPU',
+            drvr._get_resource_class_for_device('pci_0000_85_00_0')
+        )
 
     def test_get_resource_class_for_device_with_incorrect_pci_addr(self):
         self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
@@ -25426,9 +25432,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         nova.conf.devices.register_dynamic_opts(CONF)
         self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
         self.flags(device_addresses=['0000:85:00.0'], group='mdev_nvidia-12')
+        self.flags(mdev_class='CUSTOM_NOTVGPU', group='mdev_nvidia-12')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertEqual({orc.VGPU},
-                         drvr._get_supported_mdev_resource_classes())
+        self.assertEqual(
+            {orc.VGPU, 'CUSTOM_NOTVGPU'},
+            drvr._get_supported_mdev_resource_classes())
 
     @mock.patch.object(host.Host, 'device_lookup_by_name')
     @mock.patch.object(host.Host, 'list_mdev_capable_devices')

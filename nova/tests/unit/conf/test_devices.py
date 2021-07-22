@@ -32,3 +32,5 @@ class DevicesConfTestCase(test.NoDBTestCase):
         self.assertIn('mdev_nvidia-12', CONF)
         self.assertEqual([], getattr(CONF, 'mdev_nvidia-11').device_addresses)
         self.assertEqual([], getattr(CONF, 'mdev_nvidia-12').device_addresses)
+        self.assertEqual('VGPU', getattr(CONF, 'mdev_nvidia-11').mdev_class)
+        self.assertEqual('VGPU', getattr(CONF, 'mdev_nvidia-12').mdev_class)

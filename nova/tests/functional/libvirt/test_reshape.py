@@ -64,17 +64,17 @@ class VGPUReshapeTests(base.ServersTestBase):
                 fakelibvirt.FakeMdevDevice(
                     dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c01',
                     type_id=fakelibvirt.NVIDIA_11_VGPU_TYPE,
-                    parent=fakelibvirt.PGPU1_PCI_ADDR),
+                    parent=fakelibvirt.MDEVCAP_DEV1_PCI_ADDR),
             'mdev_4b20d080_1b54_4048_85b3_a6a62d165c02':
                 fakelibvirt.FakeMdevDevice(
                     dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c02',
                     type_id=fakelibvirt.NVIDIA_11_VGPU_TYPE,
-                    parent=fakelibvirt.PGPU2_PCI_ADDR),
+                    parent=fakelibvirt.MDEVCAP_DEV2_PCI_ADDR),
             'mdev_4b20d080_1b54_4048_85b3_a6a62d165c03':
                 fakelibvirt.FakeMdevDevice(
                     dev_name='mdev_4b20d080_1b54_4048_85b3_a6a62d165c03',
                     type_id=fakelibvirt.NVIDIA_11_VGPU_TYPE,
-                    parent=fakelibvirt.PGPU3_PCI_ADDR),
+                    parent=fakelibvirt.MDEVCAP_DEV3_PCI_ADDR),
         }
 
         # start a compute with vgpu support disabled so the driver will
@@ -181,9 +181,9 @@ class VGPUReshapeTests(base.ServersTestBase):
         # which ones are used.
         usages = {}
         pgpu_uuid_to_name = {}
-        for pci_device in [fakelibvirt.PGPU1_PCI_ADDR,
-                           fakelibvirt.PGPU2_PCI_ADDR,
-                           fakelibvirt.PGPU3_PCI_ADDR]:
+        for pci_device in [fakelibvirt.MDEVCAP_DEV1_PCI_ADDR,
+                           fakelibvirt.MDEVCAP_DEV2_PCI_ADDR,
+                           fakelibvirt.MDEVCAP_DEV3_PCI_ADDR]:
             gpu_rp_uuid = self.placement.get(
                 '/resource_providers?name=compute1_%s' % pci_device).body[
                 'resource_providers'][0]['uuid']
