@@ -2666,9 +2666,19 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def extend_volume(self, context, connection_info, instance,
                       requested_size):
+        volume_id = driver_block_device.get_volume_id(connection_info)
         try:
-            new_size = self._extend_volume(connection_info, instance,
-                                           requested_size)
+            new_size = self._extend_volume(
+                connection_info, instance, requested_size)
+
+            # NOTE(lyarwood): Handle cases where os-brick has ignored failures
+            # and returned an invalid new_size of None through the vol drivers
+            if new_size is None:
+                raise exception.VolumeExtendFailed(
+                    volume_id=volume_id,
+                    reason="Failure to resize underlying volume on compute."
+                )
+
         except NotImplementedError:
             raise exception.ExtendVolumeNotSupported()
 
@@ -2677,7 +2687,6 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             guest = self._host.get_guest(instance)
             state = guest.get_power_state(self._host)
-            volume_id = driver_block_device.get_volume_id(connection_info)
             active_state = state in (power_state.RUNNING, power_state.PAUSED)
             if active_state:
                 if 'device_path' in connection_info['data']:
