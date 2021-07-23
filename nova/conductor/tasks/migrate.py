@@ -249,12 +249,15 @@ class MigrationTask(base.TaskBase):
             scheduler_utils.populate_retry(legacy_props,
                                            self.instance.uuid)
 
-        port_res_req = self.network_api.get_requested_resource_for_instance(
-            self.context, self.instance.uuid)
+        port_res_req, req_lvl_params = (
+            self.network_api.get_requested_resource_for_instance(
+                self.context, self.instance.uuid)
+        )
         # NOTE(gibi): When cyborg or other module wants to handle similar
         # non-nova resources then here we have to collect all the external
         # resource requests in a single list and add them to the RequestSpec.
         self.request_spec.requested_resources = port_res_req
+        self.request_spec.request_level_params = req_lvl_params
 
         self._set_requested_destination_cell(legacy_props)
 

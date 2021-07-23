@@ -2567,8 +2567,6 @@ class ServerMoveWithPortResourceRequestTest(
             server, qos_normal_port, qos_sriov_port)
 
 
-# TODO(gibi): This would show a lot of failing tests. Disable it for now
-@unittest.skip
 class ServerMoveWithMultiGroupResourceRequestBasedSchedulingTest(
     ExtendedPortResourceRequestBasedSchedulingTestBase,
     ServerMoveWithPortResourceRequestTest,
@@ -2583,15 +2581,6 @@ class ServerMoveWithMultiGroupResourceRequestBasedSchedulingTest(
         super().setUp()
         self.neutron = self.useFixture(
             MultiGroupResourceRequestNeutronFixture(self))
-        # Turn off the blanket rejections of the extended resource request.
-        # This test class wants to prove that the extended resource request is
-        # supported.
-        patcher = mock.patch(
-            'nova.network.neutron.API.instance_has_extended_resource_request',
-            return_value=False,
-        )
-        self.addCleanup(patcher.stop)
-        patcher.start()
 
 
 class LiveMigrateAbortWithPortResourceRequestTest(
@@ -2881,14 +2870,16 @@ class ExtendedResourceRequestOldCompute(
     hasn't been upgraded to a version that support extended resource request.
     So nova rejects the operations due to the old compute.
     """
+    def setUp(self):
+        super().setUp()
+        self.neutron = self.useFixture(
+            ExtendedResourceRequestNeutronFixture(self))
 
     @mock.patch.object(
         objects.service, 'get_minimum_version_all_cells',
         new=mock.Mock(return_value=57)
     )
     def test_boot(self):
-        self.neutron = self.useFixture(
-            ExtendedResourceRequestNeutronFixture(self))
         ex = self.assertRaises(
             client.OpenStackApiException,
             self._create_server,
@@ -2901,6 +2892,63 @@ class ExtendedResourceRequestOldCompute(
             'supported by old nova compute service. Upgrade your compute '
             'services to Xena (24.0.0) or later.',
             str(ex)
+        )
+
+    @mock.patch.object(
+        objects.service, 'get_minimum_version_all_cells',
+        new=mock.Mock(return_value=58)
+    )
+    def _test_operation(self, op_callable):
+        # boot a server, service version 58 already supports that
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_with_resource_request['id']}],
+        )
+        self._wait_for_state_change(server, 'ACTIVE')
+
+        # still the move operations require service version 58 so they will
+        # fail
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            op_callable,
+            server,
+        )
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn(
+            'The port-resource-request-groups neutron API extension is not '
+            'supported by old nova compute service. Upgrade your compute '
+            'services to Xena (24.0.0) or later.',
+            str(ex)
+        )
+
+    def test_resize(self):
+        self._test_operation(
+            lambda server: self._resize_server(
+                server, self.flavor_with_group_policy['id']
+            )
+        )
+
+    def test_migrate(self):
+        self._test_operation(
+            lambda server: self._migrate_server(server),
+        )
+
+    def test_live_migrate(self):
+        self._test_operation(
+            lambda server: self._live_migrate(server),
+        )
+
+    def test_evacuate(self):
+        self._test_operation(
+            lambda server: self._evacuate_server(server),
+        )
+
+    def test_unshelve_after_shelve_offload(self):
+        def shelve_offload_then_unshelve(server):
+            self._shelve_server(server, expected_state='SHELVED_OFFLOADED')
+            self._unshelve_server(server)
+        self._test_operation(
+            lambda server: shelve_offload_then_unshelve(server),
         )
 
 
@@ -2943,32 +2991,6 @@ class ExtendedResourceRequestTempNegativeTest(
             str(ex)
         )
 
-    def test_resize(self):
-        self._test_operation(
-            'resize server operation',
-            lambda server: self._resize_server(
-                server, self.flavor_with_group_policy['id']
-            )
-        )
-
-    def test_migrate(self):
-        self._test_operation(
-            'migrate server operation',
-            lambda server: self._migrate_server(server),
-        )
-
-    def test_live_migrate(self):
-        self._test_operation(
-            'live migrate server operation',
-            lambda server: self._live_migrate(server),
-        )
-
-    def test_evacuate(self):
-        self._test_operation(
-            'evacuate server operation',
-            lambda server: self._evacuate_server(server),
-        )
-
     def test_interface_attach(self):
         self._test_operation(
             'interface attach server operation',
@@ -2976,15 +2998,4 @@ class ExtendedResourceRequestTempNegativeTest(
                 server,
                 self.neutron.port_with_sriov_resource_request['id'],
             ),
-        )
-
-    def test_unshelve_after_shelve_offload(self):
-
-        def shelve_offload_then_unshelve(server):
-            self._shelve_server(server, expected_state='SHELVED_OFFLOADED')
-            self._unshelve_server(server)
-
-        self._test_operation(
-            'unshelve server operation on a shelve offloaded server',
-            lambda server: shelve_offload_then_unshelve(server),
         )

@@ -23,10 +23,7 @@ from nova.api.openstack.compute.schemas import shelve as shelve_schemas
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
-from nova.compute import vm_states
 from nova import exception
-from nova.i18n import _
-from nova.network import neutron
 from nova.policies import shelve as shelve_policies
 
 LOG = logging.getLogger(__name__)
@@ -36,7 +33,6 @@ class ShelveController(wsgi.Controller):
     def __init__(self):
         super(ShelveController, self).__init__()
         self.compute_api = compute.API()
-        self.network_api = neutron.API()
 
     @wsgi.response(202)
     @wsgi.expected_errors((404, 403, 409, 400))
@@ -107,17 +103,6 @@ class ShelveController(wsgi.Controller):
         if support_az and unshelve_dict:
             new_az = unshelve_dict['availability_zone']
 
-        if (
-            instance.vm_state == vm_states.SHELVED_OFFLOADED and
-            self.network_api.instance_has_extended_resource_request(id)
-        ):
-            msg = _(
-                "The unshelve server operation on a shelve offloaded server "
-                "with port having extended resource request, like a "
-                "port with both QoS minimum bandwidth and packet rate "
-                "policies, is not yet supported.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         try:
             self.compute_api.unshelve(context, instance, new_az=new_az)
         except (exception.InstanceIsLocked,
@@ -128,5 +113,8 @@ class ShelveController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'unshelve',
                                                                   id)
-        except exception.InvalidRequest as e:
+        except (
+            exception.InvalidRequest,
+            exception.ExtendedResourceRequestOldCompute,
+        ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())

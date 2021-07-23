@@ -987,20 +987,21 @@ class ComputeTaskManager:
                     # when populate_filter_properties accepts it
                     filter_properties = request_spec.\
                         to_legacy_filter_properties_dict()
-
-                    external_resources = (
+                    res_req, req_lvl_params = (
                         self.network_api.get_requested_resource_for_instance(
-                            context, instance.uuid))
+                            context, instance.uuid)
+                    )
                     extra_specs = request_spec.flavor.extra_specs
                     device_profile = extra_specs.get('accel:device_profile')
-                    external_resources.extend(
+                    res_req.extend(
                         cyborg.get_device_profile_request_groups(
                             context, device_profile) if device_profile else [])
                     # NOTE(gibi): When other modules want to handle similar
                     # non-nova resources then here we have to collect all
                     # the external resource requests in a single list and
                     # add them to the RequestSpec.
-                    request_spec.requested_resources = external_resources
+                    request_spec.requested_resources = res_req
+                    request_spec.request_level_params = req_lvl_params
 
                     # NOTE(cfriesen): Ensure that we restrict the scheduler to
                     # the cell specified by the instance mapping.
@@ -1184,14 +1185,13 @@ class ComputeTaskManager:
                     # if we want to make sure that the next destination
                     # is not forced to be the original host
                     request_spec.reset_forced_destinations()
-
-                    external_resources = []
-                    external_resources += (
+                    res_req, req_lvl_params = (
                         self.network_api.get_requested_resource_for_instance(
-                            context, instance.uuid))
+                            context, instance.uuid)
+                    )
                     extra_specs = request_spec.flavor.extra_specs
                     device_profile = extra_specs.get('accel:device_profile')
-                    external_resources.extend(
+                    res_req.extend(
                         cyborg.get_device_profile_request_groups(
                             context, device_profile)
                         if device_profile else [])
@@ -1199,7 +1199,8 @@ class ComputeTaskManager:
                     # non-nova resources then here we have to collect all
                     # the external resource requests in a single list and
                     # add them to the RequestSpec.
-                    request_spec.requested_resources = external_resources
+                    request_spec.requested_resources = res_req
+                    request_spec.request_level_params = req_lvl_params
 
                 try:
                     # if this is a rebuild of instance on the same host with

@@ -1027,6 +1027,33 @@ class API:
                 return True
         return False
 
+    def get_binding_profile_allocation(
+        self,
+        context: nova_context.RequestContext,
+        port_id: str,
+        resource_provider_mapping: ty.Dict[str, ty.List[str]],
+    ) -> ty.Union[None, str, ty.Dict[str, str]]:
+        """Calculate the value of the allocation key of the binding:profile
+        based on the allocated resources.
+
+        :param context: the request context
+        :param port_id: the uuid of the neutron port
+        :param resource_provider_mapping: the mapping returned by the placement
+            defining which request group get allocated from which resource
+            providers
+        :returns: None if the port has no resource request. Returns a single
+            RP UUID if the port has a legacy resource request. Returns a dict
+            of request group id: resource provider UUID mapping if the port has
+            an extended resource request.
+        """
+        neutron = get_client(context)
+        port = self._show_port(context, port_id, neutron_client=neutron)
+        if self._has_resource_request(context, port, neutron):
+            return self._get_binding_profile_allocation(
+                context, port, neutron, resource_provider_mapping)
+        else:
+            return None
+
     def _get_binding_profile_allocation(
         self, context, port, neutron, resource_provider_mapping
     ):
@@ -1698,7 +1725,7 @@ class API:
                  neutron port only allocates from a single resource provider.
         """
         neutron = get_client(context)
-        port_allocation = {}
+        port_allocation: ty.Dict = {}
         try:
             # NOTE(gibi): we need to read the port resource information from
             # neutron here as we might delete the port below
@@ -2378,12 +2405,18 @@ class API:
                         raise exception.NetworkNotFound(network_id=id_str)
         return ports_needed_per_instance
 
-    def get_requested_resource_for_instance(self, context, instance_uuid):
+    def get_requested_resource_for_instance(
+        self,
+        context: nova_context.RequestContext,
+        instance_uuid: str
+    ) -> ty.Tuple[
+            ty.List['objects.RequestGroup'], 'objects.RequestLevelParams']:
         """Collect resource requests from the ports associated to the instance
 
         :param context: nova request context
         :param instance_uuid: The UUID of the instance
-        :return: A list of RequestGroup objects
+        :return: A two tuple with a list of RequestGroup objects and a
+            RequestLevelParams object.
         """
 
         # NOTE(gibi): We need to use an admin client as otherwise a non admin
@@ -2393,19 +2426,33 @@ class API:
         neutron = get_client(context, admin=True)
         # get the ports associated to this instance
         data = neutron.list_ports(
-            device_id=instance_uuid, fields=['id', 'resource_request'])
+            device_id=instance_uuid, fields=['id', constants.RESOURCE_REQUEST])
         resource_requests = []
+        request_level_params = objects.RequestLevelParams()
+        extended_rr = self.has_extended_resource_request_extension(
+            context, neutron)
 
         for port in data.get('ports', []):
-            if port.get('resource_request'):
-                # NOTE(gibi): explicitly orphan the RequestGroup by setting
-                # context=None as we never intended to save it to the DB.
-                resource_requests.append(
-                    objects.RequestGroup.from_port_request(
-                        context=None, port_uuid=port['id'],
+            resource_request = port.get(constants.RESOURCE_REQUEST)
+            if extended_rr and resource_request:
+                resource_requests.extend(
+                    objects.RequestGroup.from_extended_port_request(
+                        context=None,
                         port_resource_request=port['resource_request']))
+                request_level_params.extend_with(
+                    objects.RequestLevelParams.from_port_request(
+                        port_resource_request=resource_request))
+            else:
+                # keep supporting the old format of the resource_request
+                if resource_request:
+                    # NOTE(gibi): explicitly orphan the RequestGroup by setting
+                    # context=None as we never intended to save it to the DB.
+                    resource_requests.append(
+                        objects.RequestGroup.from_port_request(
+                            context=None, port_uuid=port['id'],
+                            port_resource_request=port['resource_request']))
 
-        return resource_requests
+        return resource_requests, request_level_params
 
     def validate_networks(self, context, requested_networks, num_instances):
         """Validate that the tenant can use the requested networks.
@@ -3552,7 +3599,7 @@ class API:
             # allocation key in the port binding. However during resize, cold
             # migrate, evacuate and unshelve we have to set the binding here.
             # Also note that during unshelve no migration object is created.
-            if p.get('resource_request') and (
+            if self._has_resource_request(context, p, neutron) and (
                 migration is None or not migration.is_live_migration
             ):
                 if not provider_mappings:
@@ -3579,13 +3626,9 @@ class API:
                             "compute service but are required for ports with "
                             "a resource request."))
 
-                # NOTE(gibi): In the resource provider mapping there can be
-                # more than one RP fulfilling a request group. But resource
-                # requests of a Neutron port is always mapped to a
-                # numbered request group that is always fulfilled by one
-                # resource provider. So we only pass that single RP UUID here.
-                binding_profile[constants.ALLOCATION] = \
-                    provider_mappings[p['id']][0]
+                binding_profile[constants.ALLOCATION] = (
+                    self._get_binding_profile_allocation(
+                        context, p, neutron, provider_mappings))
                 updates[constants.BINDING_PROFILE] = binding_profile
 
             port_updates.append((p['id'], updates))

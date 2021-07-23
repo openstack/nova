@@ -70,6 +70,7 @@ from nova.objects import fields as fields_obj
 from nova.objects import image_meta as image_meta_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
+from nova.objects import service as service_obj
 from nova.pci import request as pci_request
 from nova.policies import servers as servers_policies
 import nova.policy
@@ -111,6 +112,7 @@ SUPPORT_ACCELERATOR_SERVICE_FOR_REBUILD = 53
 SUPPORT_VNIC_TYPE_ACCELERATOR = 57
 
 MIN_COMPUTE_BOOT_WITH_EXTENDED_RESOURCE_REQUEST = 58
+MIN_COMPUTE_MOVE_WITH_EXTENDED_RESOURCE_REQUEST = 59
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -351,6 +353,20 @@ def block_port_accelerators():
                     raise exception.ForbiddenPortsWithAccelerator()
             return func(self, context, instance, *args, **kwargs)
         return wrapper
+    return inner
+
+
+def block_extended_resource_request(function):
+    @functools.wraps(function)
+    def inner(self, context, instance, *args, **kwargs):
+        if self.network_api.instance_has_extended_resource_request(
+                instance.uuid
+        ):
+            version = service_obj.get_minimum_version_all_cells(
+                context, ["nova-compute"])
+            if version < MIN_COMPUTE_MOVE_WITH_EXTENDED_RESOURCE_REQUEST:
+                raise exception.ExtendedResourceRequestOldCompute()
+        return function(self, context, instance, *args, **kwargs)
     return inner
 
 
@@ -3801,16 +3817,18 @@ class API:
         # during the resize.
         if instance.get_network_info().has_port_with_allocation():
             # TODO(gibi): do not directly overwrite the
-            # RequestSpec.requested_resources as others like cyborg might added
+            # RequestSpec.requested_resources and
+            # RequestSpec.request_level_paramsas others like cyborg might added
             # to things there already
             # NOTE(gibi): We need to collect the requested resource again as it
             # is intentionally not persisted in nova. Note that this needs to
             # be done here as the nova API code directly calls revert on the
             # dest compute service skipping the conductor.
-            port_res_req = (
+            port_res_req, req_lvl_params = (
                 self.network_api.get_requested_resource_for_instance(
                     context, instance.uuid))
             reqspec.requested_resources = port_res_req
+            reqspec.request_level_params = req_lvl_params
 
         instance.task_state = task_states.RESIZE_REVERTING
         instance.save(expected_task_state=[None])
@@ -3941,8 +3959,11 @@ class API:
                           min_compute_version, MIN_COMPUTE_CROSS_CELL_RESIZE)
                 return False
 
-            if self.network_api.get_requested_resource_for_instance(
-                    context, instance.uuid):
+            res_req, req_lvl_params = (
+                self.network_api.get_requested_resource_for_instance(
+                    context, instance.uuid)
+            )
+            if res_req:
                 LOG.info(
                     'Request is allowed by policy to perform cross-cell '
                     'resize but the instance has ports with resource request '
@@ -3998,9 +4019,10 @@ class API:
 
     # TODO(stephenfin): This logic would be so much easier to grok if we
     # finally split resize and cold migration into separate code paths
+    @block_extended_resource_request
+    @block_port_accelerators()
     # FIXME(sean-k-mooney): Cold migrate and resize to different hosts
     # probably works but they have not been tested so block them for now
-    @block_port_accelerators()
     @reject_vdpa_instances(instance_actions.RESIZE)
     @block_accelerators()
     @check_instance_lock
@@ -4335,6 +4357,7 @@ class API:
                             "vol_zone": volume['availability_zone']}
                         raise exception.MismatchVolumeAZException(reason=msg)
 
+    @block_extended_resource_request
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.SHELVED,
         vm_states.SHELVED_OFFLOADED])
@@ -5201,6 +5224,7 @@ class API:
 
         return _metadata
 
+    @block_extended_resource_request
     @block_port_accelerators()
     @reject_vdpa_instances(instance_actions.LIVE_MIGRATION)
     @block_accelerators()
@@ -5334,8 +5358,9 @@ class API:
         self.compute_rpcapi.live_migration_abort(context,
                 instance, migration.id)
 
-    # FIXME(sean-k-mooney): rebuild works but we have not tested evacuate yet
+    @block_extended_resource_request
     @block_port_accelerators()
+    # FIXME(sean-k-mooney): rebuild works but we have not tested evacuate yet
     @reject_vdpa_instances(instance_actions.EVACUATE)
     @reject_vtpm_instances(instance_actions.EVACUATE)
     @block_accelerators(until_service=SUPPORT_ACCELERATOR_SERVICE_FOR_REBUILD)
