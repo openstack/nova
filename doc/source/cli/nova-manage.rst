@@ -1224,6 +1224,13 @@ This command requires that the
 
     Added :option:`--force` option.
 
+.. versionchanged:: 25.0.0 (Yoga)
+
+    Added support for healing port allocations if port-resource-request-groups
+    neutron API extension is enabled and therefore ports can request multiple
+    group of resources e.g. by using both guaranteed minimum bandwidth and
+    guaranteed minimum packet rate QoS policy rules.
+
 .. rubric:: Options
 
 .. option:: --max-count <max_count>

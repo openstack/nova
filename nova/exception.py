@@ -2291,28 +2291,6 @@ class HealPortAllocationException(NovaException):
     msg_fmt = _("Healing port allocation failed.")
 
 
-class MoreThanOneResourceProviderToHealFrom(HealPortAllocationException):
-    msg_fmt = _("More than one matching resource provider %(rp_uuids)s is "
-                "available for healing the port allocation for port "
-                "%(port_id)s for instance %(instance_uuid)s. This script "
-                "does not have enough information to select the proper "
-                "resource provider from which to heal.")
-
-
-class NoResourceProviderToHealFrom(HealPortAllocationException):
-    msg_fmt = _("No matching resource provider is "
-                "available for healing the port allocation for port "
-                "%(port_id)s for instance %(instance_uuid)s. There are no "
-                "resource providers with matching traits %(traits)s in the "
-                "provider tree of the resource provider %(node_uuid)s ."
-                "This probably means that the neutron QoS configuration is "
-                "wrong. Consult with "
-                "https://docs.openstack.org/neutron/latest/admin/"
-                "config-qos-min-bw.html for information on how to configure "
-                "neutron. If the configuration is fixed the script can be run "
-                "again.")
-
-
 class UnableToQueryPorts(HealPortAllocationException):
     msg_fmt = _("Unable to query ports for instance %(instance_uuid)s: "
                 "%(error)s")

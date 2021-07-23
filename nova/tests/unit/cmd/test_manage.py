@@ -2780,6 +2780,10 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                       self.output.getvalue())
         self.assertIn("Conflict!", self.output.getvalue())
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     def test_has_request_but_no_allocation(self):
         # False because there is a full resource_request and allocation set.
         self.assertFalse(
@@ -2795,7 +2799,10 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                         ]
                     },
                     'binding:profile': {'allocation': uuidsentinel.rp1}
-                }))
+                },
+                mock.sentinel.neutron,
+            )
+        )
         # True because there is a full resource_request but no allocation set.
         self.assertTrue(
             self.cli._has_request_but_no_allocation(
@@ -2810,7 +2817,10 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                         ]
                     },
                     'binding:profile': {}
-                }))
+                },
+                mock.sentinel.neutron,
+            )
+        )
         # True because there is a full resource_request but no allocation set.
         self.assertTrue(
             self.cli._has_request_but_no_allocation(
@@ -2825,73 +2835,89 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                         ]
                     },
                     'binding:profile': None,
-                }))
-        # False because there are no resources in the resource_request.
-        self.assertFalse(
-            self.cli._has_request_but_no_allocation(
-                {
-                    'id': uuidsentinel.empty_resources,
-                    'resource_request': {
-                        'resources': {},
-                        'required': [
-                            'CUSTOM_VNIC_TYPE_NORMAL'
-                        ]
-                    },
-                    'binding:profile': {}
-                }))
-        # False because there are no resources in the resource_request.
-        self.assertFalse(
-            self.cli._has_request_but_no_allocation(
-                {
-                    'id': uuidsentinel.missing_resources,
-                    'resource_request': {
-                        'required': [
-                            'CUSTOM_VNIC_TYPE_NORMAL'
-                        ]
-                    },
-                    'binding:profile': {}
-                }))
-        # False because there are no required traits in the resource_request.
-        self.assertFalse(
-            self.cli._has_request_but_no_allocation(
-                {
-                    'id': uuidsentinel.empty_required,
-                    'resource_request': {
-                        'resources': {
-                            'NET_BW_EGR_KILOBIT_PER_SEC': 1000,
-                        },
-                        'required': []
-                    },
-                    'binding:profile': {}
-                }))
-        # False because there are no required traits in the resource_request.
-        self.assertFalse(
-            self.cli._has_request_but_no_allocation(
-                {
-                    'id': uuidsentinel.missing_required,
-                    'resource_request': {
-                        'resources': {
-                            'NET_BW_EGR_KILOBIT_PER_SEC': 1000,
-                        },
-                    },
-                    'binding:profile': {}
-                }))
-        # False because there are no resources or required traits in the
-        # resource_request.
-        self.assertFalse(
-            self.cli._has_request_but_no_allocation(
-                {
-                    'id': uuidsentinel.empty_resource_request,
-                    'resource_request': {},
-                    'binding:profile': {}
-                }))
+                },
+                mock.sentinel.neutron,
+            )
+        )
         # False because there is no resource_request.
         self.assertFalse(
             self.cli._has_request_but_no_allocation(
                 {
                     'id': uuidsentinel.missing_resource_request,
                     'binding:profile': {}
-                }))
+                },
+                mock.sentinel.neutron,
+            )
+        )
+
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=True),
+    )
+    def test_has_request_but_no_allocation_extended(self):
+        # False because there is resource_request and allocation set.
+        self.assertFalse(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.healed,
+                    'resource_request': {
+                        'request_groups': [
+                            {
+                                'id': uuidsentinel.group1,
+                                'resources': {
+                                    'NET_BW_EGR_KILOBIT_PER_SEC': 1000,
+                                },
+                                'required': [
+                                    'CUSTOM_VNIC_TYPE_NORMAL'
+                                ]
+                            },
+                        ],
+                    },
+                    'binding:profile': {
+                        'allocation': {uuidsentinel.group1: uuidsentinel.rp1}
+                    }
+                },
+                mock.sentinel.neutron,
+            )
+        )
+        # False because there no resource_request
+        self.assertFalse(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.healed,
+                    'resource_request': None,
+                    'binding:profile': {
+                        'allocation': {uuidsentinel.group1: uuidsentinel.rp1}
+                    }
+                },
+                mock.sentinel.neutron,
+            )
+        )
+        # True because we have request but no allocation set
+        self.assertTrue(
+            self.cli._has_request_but_no_allocation(
+                {
+                    'id': uuidsentinel.healed,
+                    'resource_request': {
+                        'request_groups': [
+                            {
+                                'id': uuidsentinel.group1,
+                                'resources': {
+                                    'NET_BW_EGR_KILOBIT_PER_SEC': 1000,
+                                },
+                                'required': [
+                                    'CUSTOM_VNIC_TYPE_NORMAL'
+                                ]
+                            },
+                        ],
+                    },
+                    'binding:profile': {
+                        'allocation': {}
+                    }
+                },
+                mock.sentinel.neutron,
+            )
+        )
 
     def test_update_ports_only_updates_binding_profile(self):
         """Simple test to make sure that only the port's binding:profile is

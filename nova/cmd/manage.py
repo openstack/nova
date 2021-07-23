@@ -28,6 +28,7 @@ import re
 import sys
 import time
 import traceback
+import typing as ty
 from urllib import parse as urlparse
 
 from dateutil import parser as dateutil_parser
@@ -1458,48 +1459,13 @@ class PlacementCommands(object):
                 instance_uuid=instance.uuid, error=str(e))
 
     @staticmethod
-    def _has_request_but_no_allocation(port):
-        request = port.get(constants.RESOURCE_REQUEST)
+    def _has_request_but_no_allocation(port, neutron):
+        has_res_req = neutron_api.API()._has_resource_request(
+            context.get_admin_context(), port, neutron)
+
         binding_profile = neutron_api.get_binding_profile(port)
         allocation = binding_profile.get(constants.ALLOCATION)
-        # We are defensive here about 'resources' and 'required' in the
-        # 'resource_request' as neutron API is not clear about those fields
-        # being optional.
-        return (request and request.get('resources') and
-                request.get('required') and
-                not allocation)
-
-    @staticmethod
-    def _get_rps_in_tree_with_required_traits(
-            ctxt, rp_uuid, required_traits, placement):
-        """Find the RPs that have all the required traits in the given rp tree.
-
-        :param ctxt: nova.context.RequestContext
-        :param rp_uuid: the RP uuid that will be used to query the tree.
-        :param required_traits: the traits that need to be supported by
-            the returned resource providers.
-        :param placement: nova.scheduler.client.report.SchedulerReportClient
-            to communicate with the Placement service API.
-        :raise PlacementAPIConnectFailure: if placement API cannot be reached
-        :raise ResourceProviderRetrievalFailed: if the resource provider does
-            not exist.
-        :raise ResourceProviderTraitRetrievalFailed: if resource provider
-            trait information cannot be read from placement.
-        :return: A list of RP UUIDs that supports every required traits and
-            in the tree for the provider rp_uuid.
-        """
-        try:
-            rps = placement.get_providers_in_tree(ctxt, rp_uuid)
-            matching_rps = [
-                rp['uuid']
-                for rp in rps
-                if set(required_traits).issubset(
-                    placement.get_provider_traits(ctxt, rp['uuid']).traits)
-            ]
-        except ks_exc.ClientException:
-            raise exception.PlacementAPIConnectFailure()
-
-        return matching_rps
+        return has_res_req and not allocation
 
     @staticmethod
     def _merge_allocations(alloc1, alloc2):
@@ -1525,67 +1491,105 @@ class PlacementCommands(object):
                     allocations[rp_uuid]['resources'][rc] += amount
         return allocations
 
-    def _get_port_allocation(
-            self, ctxt, node_uuid, port, instance_uuid, placement):
-        """Return the extra allocation the instance needs due to the given
-        port.
+    @staticmethod
+    def _get_resource_request_from_ports(
+        ctxt: context.RequestContext,
+        ports: ty.List[ty.Dict[str, ty.Any]]
+    ) -> ty.Tuple[
+            ty.Dict[str, ty.List['objects.RequestGroup']],
+            'objects.RequestLevelParams']:
+        """Collect RequestGroups and RequestLevelParams for all ports
 
-        :param ctxt: nova.context.RequestContext
-        :param node_uuid: the ComputeNode uuid the instance is running on.
-        :param port: the port dict returned from neutron
-        :param instance_uuid: The uuid of the instance the port is bound to
-        :param placement: nova.scheduler.client.report.SchedulerReportClient
-            to communicate with the Placement service API.
-        :raise PlacementAPIConnectFailure: if placement API cannot be reached
-        :raise ResourceProviderRetrievalFailed: compute node resource provider
-            does not exist.
-        :raise ResourceProviderTraitRetrievalFailed: if resource provider
-            trait information cannot be read from placement.
-        :raise MoreThanOneResourceProviderToHealFrom: if it cannot be decided
-            unambiguously which resource provider to heal from.
-        :raise NoResourceProviderToHealFrom: if there is no resource provider
-            found to heal from.
-        :return: A dict of resources keyed by RP uuid to be included in the
-            instance allocation dict.
+        :param ctxt: the request context
+        :param ports: a list of port dicts
+        :returns: A two tuple where the first item is a dict mapping port
+            uuids to a list of request groups coming from that port, the
+            second item is a combined RequestLevelParams object from all ports.
         """
-        matching_rp_uuids = self._get_rps_in_tree_with_required_traits(
-            ctxt, node_uuid, port[constants.RESOURCE_REQUEST]['required'],
-            placement)
+        groups = {}
+        request_level_params = objects.RequestLevelParams()
+        extended_res_req = (
+            neutron_api.API().has_extended_resource_request_extension(
+                ctxt)
+        )
 
-        if len(matching_rp_uuids) > 1:
-            # If there is more than one such RP then it is an ambiguous
-            # situation that we cannot handle here efficiently because that
-            # would require the reimplementation of most of the allocation
-            # candidate query functionality of placement. Also if more
-            # than one such RP exists then selecting the right one might
-            # need extra information from the compute node. For example
-            # which PCI PF the VF is allocated from and which RP represents
-            # that PCI PF in placement. When migration is supported with such
-            # servers then we can ask the admin to migrate these servers
-            # instead to heal their allocation.
-            raise exception.MoreThanOneResourceProviderToHealFrom(
-                rp_uuids=','.join(matching_rp_uuids),
-                port_id=port['id'],
-                instance_uuid=instance_uuid)
+        for port in ports:
+            resource_request = port.get(constants.RESOURCE_REQUEST)
+            if extended_res_req:
+                groups[port['id']] = (
+                    objects.RequestGroup.from_extended_port_request(
+                        ctxt, resource_request
+                    )
+                )
+                request_level_params.extend_with(
+                    objects.RequestLevelParams.from_port_request(
+                        resource_request
+                    )
+                )
+            else:
+                # This is the legacy format, only one group per port and no
+                # request level param support
+                # TODO(gibi): remove this path once the extended resource
+                # request extension is mandatory in neutron
+                groups[port['id']] = [
+                    objects.RequestGroup.from_port_request(
+                        ctxt, port['id'], resource_request
+                    )
+                ]
 
-        if len(matching_rp_uuids) == 0:
-            raise exception.NoResourceProviderToHealFrom(
-                port_id=port['id'],
-                instance_uuid=instance_uuid,
-                traits=port[constants.RESOURCE_REQUEST]['required'],
-                node_uuid=node_uuid)
+        return groups, request_level_params
 
-        # We found one RP that matches the traits. Assume that we can allocate
-        # the resources from it. If there is not enough inventory left on the
-        # RP then the PUT /allocations placement call will detect that.
-        rp_uuid = matching_rp_uuids[0]
+    @staticmethod
+    def _get_port_binding_profile_allocation(
+        ctxt: context.RequestContext,
+        neutron: neutron_api.ClientWrapper,
+        port: ty.Dict[str, ty.Any],
+        request_groups: ty.List['objects.RequestGroup'],
+        resource_provider_mapping: ty.Dict[str, ty.List[str]],
+    ) -> ty.Dict[str, str]:
+        """Generate the value of the allocation key of the port binding profile
+        based on the provider mapping returned from placement
 
-        port_allocation = {
-            rp_uuid: {
-                'resources': port[constants.RESOURCE_REQUEST]['resources']
+        :param ctxt: the request context
+        :param neutron: the neutron client
+        :param port: the port dict from neutron
+        :param request_groups: the list of RequestGroups object generated from
+            the port resource request
+        :param resource_provider_mapping: The dict of request group to resource
+            provider mapping returned by the Placement allocation candidate
+            query
+        :returns: a dict mapping request group ids to resource provider uuids
+            in the form as Neutron expects in the port binding profile.
+        """
+        if neutron_api.API().has_extended_resource_request_extension(
+            ctxt, neutron
+        ):
+            # The extended resource request format also means that a
+            # port has more than a one request groups.
+            # Each request group id from the port needs to be mapped to
+            # a single provider id from the provider mappings. Each
+            # group from the port is mapped to a numbered request group
+            # in placement so we can assume that they are mapped to
+            # a single provider and therefore the provider mapping list
+            # has a single provider id.
+            allocation = {
+                group.requester_id: resource_provider_mapping[
+                    group.requester_id][0]
+                for group in request_groups
             }
-        }
-        return port_allocation
+        else:
+            # This is the legacy resource request format where a port
+            # is mapped to a single request group
+            # NOTE(gibi): In the resource provider mapping there can be
+            # more than one RP fulfilling a request group. But resource
+            # requests of a Neutron port is always mapped to a
+            # numbered request group that is always fulfilled by one
+            # resource provider. So we only pass that single RP UUID
+            # here.
+            allocation = resource_provider_mapping[
+                port['id']][0]
+
+        return allocation
 
     def _get_port_allocations_to_heal(
             self, ctxt, instance, node_cache, placement, neutron, output):
@@ -1604,15 +1608,10 @@ class PlacementCommands(object):
         :raise nova.exception.ComputeHostNotFound: if compute node of the
             instance not found in the db.
         :raise PlacementAPIConnectFailure: if placement API cannot be reached
-        :raise ResourceProviderRetrievalFailed: if the resource provider
-            representing the compute node the instance is running on does not
-            exist.
-        :raise ResourceProviderTraitRetrievalFailed: if resource provider
-            trait information cannot be read from placement.
-        :raise MoreThanOneResourceProviderToHealFrom: if it cannot be decided
-            unambiguously which resource provider to heal from.
-        :raise NoResourceProviderToHealFrom: if there is no resource provider
-            found to heal from.
+        :raise AllocationUpdateFailed: if there is either no allocation
+            candidate returned from placement for the missing port allocations
+            or there are more than one candidates making the healing
+            ambiguous.
         :return: A two tuple where the first item is a dict of resources keyed
             by RP uuid to be included in the instance allocation dict. The
             second item is a list of port dicts to be updated in Neutron.
@@ -1629,7 +1628,7 @@ class PlacementCommands(object):
         # are not on any host.
         ports_to_heal = [
             port for port in self._get_ports(ctxt, instance, neutron)
-            if self._has_request_but_no_allocation(port)]
+            if self._has_request_but_no_allocation(port, neutron)]
 
         if not ports_to_heal:
             # nothing to do, return early
@@ -1638,26 +1637,107 @@ class PlacementCommands(object):
         node_uuid = self._get_compute_node_uuid(
             ctxt, instance, node_cache)
 
-        allocations = {}
+        # NOTE(gibi): We need to handle both legacy and extended resource
+        # request. So we need to handle ports with multiple request groups
+        # allocating from multiple providers.
+        # The logic what we follow here is pretty similar to the logic
+        # implemented in ComputeManager._allocate_port_resource_for_instance
+        # for the interface attach case. We just apply it to more then one
+        # ports here.
+        request_groups_per_port, req_lvl_params = (
+            self._get_resource_request_from_ports(ctxt, ports_to_heal)
+        )
+        # flatten the list of list of groups
+        request_groups = [
+            group
+            for groups in request_groups_per_port.values()
+            for group in groups
+        ]
+
+        # we can have multiple request groups, it would be enough to restrict
+        # only one of them to the compute tree but for symmetry we restrict
+        # all of them
+        for request_group in request_groups:
+            request_group.in_tree = node_uuid
+
+        # If there are multiple groups then the group_policy is mandatory in
+        # the allocation candidate query. We can assume that if this instance
+        # booted successfully then we have the policy in the flavor. If there
+        # is only one group and therefore no policy then the value of the
+        # policy in the allocation candidate query is ignored, so we simply
+        # default it here.
+        group_policy = instance.flavor.extra_specs.get("group_policy", "none")
+
+        rr = scheduler_utils.ResourceRequest.from_request_groups(
+            request_groups, req_lvl_params, group_policy)
+        res = placement.get_allocation_candidates(ctxt, rr)
+        # NOTE(gibi): the get_allocation_candidates method has the
+        # @safe_connect decorator applied. Such decorator will return None
+        # if the connection to Placement is failed. So we raise an exception
+        # here. The case when Placement successfully return a response, even
+        # if it is a negative or empty response, the method will return a three
+        # tuple. That case is handled couple of lines below.
+        if not res:
+            raise exception.PlacementAPIConnectFailure()
+        alloc_reqs, __, __ = res
+
+        if not alloc_reqs:
+            port_ids = [port['id'] for port in ports_to_heal]
+            raise exception.AllocationUpdateFailed(
+                consumer_uuid=instance.uuid,
+                error=f'Placement returned no allocation candidate to fulfill '
+                      f'the resource request of the port(s) {port_ids}'
+            )
+        if len(alloc_reqs) > 1:
+            # If there is more than one candidates then it is an ambiguous
+            # situation that we cannot handle here because selecting the right
+            # one might need extra information from the compute node. For
+            # example which PCI PF the VF is allocated from and which RP
+            # represents that PCI PF in placement.
+            # TODO(gibi): One way to get that missing information to resolve
+            # ambiguity would be to load up the InstancePciRequest objects and
+            # try to use the parent_if_name in their spec to find the proper
+            # candidate that allocates for the same port from the PF RP that
+            # has the same name.
+            port_ids = [port['id'] for port in ports_to_heal]
+            raise exception.AllocationUpdateFailed(
+                consumer_uuid=instance.uuid,
+                error=f'Placement returned more than one possible allocation '
+                      f'candidates to fulfill the resource request of the '
+                      f'port(s) {port_ids}. This script does not have enough '
+                      f'information to select the proper candidate to heal the'
+                      f'missing allocations. A possible way to heal the'
+                      f'allocation of this instance is to migrate it to '
+                      f'another compute as the migration process re-creates '
+                      f'the full allocation on the target host.'
+            )
+
+        # so we have one candidate, lets use that to get the needed allocations
+        # and the provider mapping for the ports' binding profile
+        alloc_req = alloc_reqs[0]
+        allocations = alloc_req["allocations"]
+        provider_mappings = alloc_req["mappings"]
+
         for port in ports_to_heal:
-            port_allocation = self._get_port_allocation(
-                ctxt, node_uuid, port, instance.uuid, placement)
-            rp_uuid = list(port_allocation)[0]
-            allocations = self._merge_allocations(
-                allocations, port_allocation)
-            # We also need to record the RP we are allocated from in the
+            # We also need to record the RPs we are allocated from in the
             # port. This will be sent back to Neutron before the allocation
             # is updated in placement
+            profile_allocation = self._get_port_binding_profile_allocation(
+                ctxt, neutron, port, request_groups_per_port[port['id']],
+                provider_mappings
+            )
             binding_profile = neutron_api.get_binding_profile(port)
-            binding_profile[constants.ALLOCATION] = rp_uuid
+            binding_profile[constants.ALLOCATION] = profile_allocation
             port[constants.BINDING_PROFILE] = binding_profile
 
-            output(_("Found resource provider %(rp_uuid)s having matching "
-                     "traits for port %(port_uuid)s with resource request "
-                     "%(request)s attached to instance %(instance_uuid)s") %
-                     {"rp_uuid": rp_uuid, "port_uuid": port["id"],
-                      "request": port.get(constants.RESOURCE_REQUEST),
-                      "instance_uuid": instance.uuid})
+            output(_(
+                "Found a request group : resource provider mapping "
+                "%(mapping)s for the port %(port_uuid)s with resource request "
+                "%(request)s attached to the instance %(instance_uuid)s") %
+                {"mapping": profile_allocation, "port_uuid": port['id'],
+                 "request": port.get(constants.RESOURCE_REQUEST),
+                 "instance_uuid": instance.uuid}
+            )
 
         return allocations, ports_to_heal
 
@@ -1791,15 +1871,6 @@ class PlacementCommands(object):
             a given instance with consumer project/user information
         :raise UnableToQueryPorts: If the neutron list ports query fails.
         :raise PlacementAPIConnectFailure: if placement API cannot be reached
-        :raise ResourceProviderRetrievalFailed: if the resource provider
-            representing the compute node the instance is running on does not
-            exist.
-        :raise ResourceProviderTraitRetrievalFailed: if resource provider
-            trait information cannot be read from placement.
-        :raise MoreThanOneResourceProviderToHealFrom: if it cannot be decided
-            unambiguously which resource provider to heal from.
-        :raise NoResourceProviderToHealFrom: if there is no resource provider
-            found to heal from.
         :raise UnableToUpdatePorts: if a port update failed in neutron but any
             partial update was rolled back successfully.
         :raise UnableToRollbackPortUpdates: if a port update failed in neutron
@@ -1956,15 +2027,6 @@ class PlacementCommands(object):
             a given instance with consumer project/user information
         :raise UnableToQueryPorts: If the neutron list ports query fails.
         :raise PlacementAPIConnectFailure: if placement API cannot be reached
-        :raise ResourceProviderRetrievalFailed: if the resource provider
-            representing the compute node the instance is running on does not
-            exist.
-        :raise ResourceProviderTraitRetrievalFailed: if resource provider
-            trait information cannot be read from placement.
-        :raise MoreThanOneResourceProviderToHealFrom: if it cannot be decided
-            unambiguously which resource provider to heal from.
-        :raise NoResourceProviderToHealFrom: if there is no resource provider
-            found to heal from.
         :raise UnableToUpdatePorts: if a port update failed in neutron but any
             partial update was rolled back successfully.
         :raise UnableToRollbackPortUpdates: if a port update failed in neutron
@@ -2186,13 +2248,11 @@ class PlacementCommands(object):
                 except exception.ComputeHostNotFound as e:
                     print(e.format_message())
                     return 2
-                except (exception.AllocationCreateFailed,
-                        exception.AllocationUpdateFailed,
-                        exception.NoResourceProviderToHealFrom,
-                        exception.MoreThanOneResourceProviderToHealFrom,
-                        exception.PlacementAPIConnectFailure,
-                        exception.ResourceProviderRetrievalFailed,
-                        exception.ResourceProviderTraitRetrievalFailed) as e:
+                except (
+                    exception.AllocationCreateFailed,
+                    exception.AllocationUpdateFailed,
+                    exception.PlacementAPIConnectFailure
+                ) as e:
                     print(e.format_message())
                     return 3
                 except exception.UnableToQueryPorts as e:
