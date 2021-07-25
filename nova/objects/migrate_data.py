@@ -86,7 +86,10 @@ class VIFMigrateData(obj_base.NovaObject):
     # info in the profile catch-all blob
     @supports_os_vif_delegation.setter
     def supports_os_vif_delegation(self, supported):
-        self.profile[OS_VIF_DELEGATION] = supported
+        # we can't simply set the attribute using dict notation since the
+        # getter returns a copy of the data, not the data itself
+        self.profile = dict(
+            self.profile or {}, **{OS_VIF_DELEGATION: supported})
 
     def get_dest_vif(self):
         """Get a destination VIF representation of this object.

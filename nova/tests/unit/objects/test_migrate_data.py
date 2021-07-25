@@ -316,3 +316,24 @@ class TestVIFMigrateData(test.NoDBTestCase):
         self.assertEqual(len(vifs), len(mig_vifs))
         self.assertEqual([vif['id'] for vif in vifs],
                          [mig_vif.port_id for mig_vif in mig_vifs])
+
+    def test_supports_os_vif_delegation(self):
+        # first try setting on a object without 'profile' defined
+        migrate_vif = objects.VIFMigrateData(
+            port_id=uuids.port_id, vnic_type=network_model.VNIC_TYPE_NORMAL,
+            vif_type=network_model.VIF_TYPE_OVS, vif_details={},
+            host='fake-dest-host')
+        migrate_vif.supports_os_vif_delegation = True
+        self.assertTrue(migrate_vif.supports_os_vif_delegation)
+        self.assertEqual(migrate_vif.profile, {'os_vif_delegation': True})
+
+        # now do the same but with profile defined
+        migrate_vif = objects.VIFMigrateData(
+            port_id=uuids.port_id, vnic_type=network_model.VNIC_TYPE_NORMAL,
+            vif_type=network_model.VIF_TYPE_OVS, vif_details={},
+            host='fake-dest-host', profile={'interface_name': 'eth0'})
+        migrate_vif.supports_os_vif_delegation = True
+        self.assertTrue(migrate_vif.supports_os_vif_delegation)
+        self.assertEqual(
+            migrate_vif.profile,
+            {'os_vif_delegation': True, 'interface_name': 'eth0'})

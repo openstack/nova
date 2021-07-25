@@ -10901,6 +10901,28 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           self.context, instance_ref,
                           compute_info, compute_info, False)
 
+    @mock.patch(
+        'nova.network.neutron.API.supports_port_binding_extension',
+        new=mock.Mock(return_value=True))
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver,
+        '_create_shared_storage_test_file',
+        return_value='fake')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_compare_cpu')
+    def test_check_can_live_migrate_dest_create_dummy_vif(
+        self, mock_cpu, mock_test_file,
+    ):
+        instance_ref = objects.Instance(**self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
+        result = drvr.check_can_live_migrate_destination(
+            self.context, instance_ref, compute_info, compute_info)
+        self.assertIn('vifs', result)
+        self.assertIsInstance(result.vifs, list)
+
+        for vif in result.vifs:
+            self.assertTrue(vif.supports_os_vif_delegation)
+
     @mock.patch.object(host.Host, 'compare_cpu')
     @mock.patch.object(nova.virt.libvirt, 'config')
     def test_compare_cpu_compatible_host_cpu(self, mock_vconfig, mock_compare):
