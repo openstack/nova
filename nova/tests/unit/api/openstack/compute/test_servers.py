@@ -4426,21 +4426,144 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(exception.ValidationError,
                           self.controller.create, req, body=body)
 
-    def test_create_az_with_leading_trailing_spaces(self):
+    def test_create_instance_az_with_leading_trailing_spaces(self):
         self.body['server']['availability_zone'] = '  zone1  '
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, self.req, body=self.body)
 
-    def test_create_az_with_leading_trailing_spaces_in_compat_mode(
-            self):
+    def test_create_instance_az_with_leading_trailing_spaces_compat_mode(self):
         self.body['server']['name'] = '   abc    def   '
-        self.body['server']['availability_zones'] = '  zone1  '
+        self.body['server']['availability_zone'] = '  zone1  '
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.req.set_legacy_v2()
-        with mock.patch.object(availability_zones, 'get_availability_zones',
-                               return_value=['  zone1  ']):
+        with mock.patch.object(
+            availability_zones, 'get_availability_zones',
+            return_value=['  zone1  '],
+        ) as mock_get_azs:
             self.controller.create(self.req, body=self.body)
+            mock_get_azs.assert_called_once()
+
+    def test_create_instance_invalid_az(self):
+        self.body['server']['availability_zone'] = 'zone1'
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        with mock.patch.object(
+            availability_zones, 'get_availability_zones',
+            return_value=['zone2'],
+        ) as mock_get_azs:
+            self.assertRaises(
+                webob.exc.HTTPBadRequest,
+                self.controller.create,
+                self.req, body=self.body)
+            mock_get_azs.assert_called_once()
+
+    @mock.patch.object(objects.AggregateList, 'get_by_host')
+    @mock.patch.object(servers, 'LOG')
+    def test_create_instance_az_host(self, mock_log, mock_get_host_aggs):
+        """Ensure we handle az:host format for 'availability_zone'."""
+        mock_get_host_aggs.return_value = objects.AggregateList(
+            objects=[
+                objects.Aggregate(metadata={'availability_zone': 'zone1'}),
+            ],
+        )
+
+        self.body['server']['availability_zone'] = 'zone1:host1'
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+
+        self.controller.create(self.req, body=self.body)
+
+        mock_get_host_aggs.assert_called_once()
+        mock_log.warning.assert_not_called()
+
+    @mock.patch.object(objects.AggregateList, 'get_by_host')
+    @mock.patch.object(servers, 'LOG')
+    def test_create_instance_az_host_mismatch_without_aggs(
+        self, mock_log, mock_get_host_aggs,
+    ):
+        """User requests an AZ but the host doesn't have one"""
+        mock_get_host_aggs.return_value = objects.AggregateList(objects=[])
+
+        self.body['server']['availability_zone'] = 'zone1:host1'
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+
+        self.controller.create(self.req, body=self.body)
+
+        mock_get_host_aggs.assert_called_once()
+        # we should see a log since the host doesn't belong to the requested AZ
+        self.assertIn('bug #1934770', mock_log.warning.call_args[0][0])
+
+    @mock.patch.object(objects.AggregateList, 'get_by_host')
+    @mock.patch.object(servers, 'LOG')
+    def test_create_instance_az_host_mismatch_without_aggs_in_default_az(
+        self, mock_log, mock_get_host_aggs,
+    ):
+        """User requests the default AZ and host isn't in any explicit AZ"""
+        self.flags(default_availability_zone='zone1')
+        mock_get_host_aggs.return_value = objects.AggregateList(objects=[])
+
+        self.body['server']['availability_zone'] = 'zone1:host1'
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+
+        self.controller.create(self.req, body=self.body)
+
+        mock_get_host_aggs.assert_called_once()
+        # we shouldn't see a log since the host is not in any aggregate and
+        # therefore is in the default AZ
+        mock_log.warning.assert_not_called()
+
+    @mock.patch.object(objects.AggregateList, 'get_by_host')
+    @mock.patch.object(servers, 'LOG')
+    def test_create_instance_az_host_mismatch_with_aggs(
+        self, mock_log, mock_get_host_aggs,
+    ):
+        """User requests an AZ but the host has a different one."""
+        mock_get_host_aggs.return_value = objects.AggregateList(
+            objects=[
+                objects.Aggregate(metadata={'availability_zone': 'zone2'}),
+            ],
+        )
+
+        self.body['server']['availability_zone'] = 'zone1:host1'
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+
+        self.controller.create(self.req, body=self.body)
+
+        mock_get_host_aggs.assert_called_once()
+        # we should see a log since the host belongs to a different AZ
+        self.assertIn('bug #1934770', mock_log.warning.call_args[0][0])
+
+    @mock.patch.object(objects.AggregateList, 'get_by_host')
+    @mock.patch.object(servers, 'LOG')
+    def test_create_instance_az_host_mismatch_with_aggs_in_default_az(
+        self, mock_log, mock_get_host_aggs,
+    ):
+        """User requests the default AZ and host is in aggregates without AZ"""
+        self.flags(default_availability_zone='zone1')
+        mock_get_host_aggs.return_value = objects.AggregateList(
+            objects=[objects.Aggregate(metadata={})],
+        )
+
+        self.body['server']['availability_zone'] = 'zone1:host1'
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+
+        self.controller.create(self.req, body=self.body)
+
+        mock_get_host_aggs.assert_called_once()
+        # we shouldn't see a log since none of the host aggregates have an
+        # explicit AZ set and the host is therefore in the default AZ
+        mock_log.warning.assert_not_called()
+
+    def test_create_instance_invalid_az_format(self):
+        self.body['server']['availability_zone'] = 'invalid::::zone'
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    def test_create_instance_invalid_az_as_int(self):
+        self.body['server']['availability_zone'] = 123
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          self.req, body=self.body)
 
     def test_create_instance(self):
         self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
@@ -6051,18 +6174,6 @@ class ServersControllerCreateTest(test.TestCase):
                         image_id='dummy', response='dummy'))
     def test_create_instance_raise_image_bad_request(self, mock_create):
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create,
-                          self.req, body=self.body)
-
-    def test_create_instance_invalid_availability_zone(self):
-        self.body['server']['availability_zone'] = 'invalid::::zone'
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create,
-                          self.req, body=self.body)
-
-    def test_create_instance_invalid_availability_zone_as_int(self):
-        self.body['server']['availability_zone'] = 123
-        self.assertRaises(exception.ValidationError,
                           self.controller.create,
                           self.req, body=self.body)
 
