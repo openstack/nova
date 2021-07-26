@@ -23,17 +23,7 @@ CELL1_NAME = 'cell1'
 CELL2_NAME = 'cell2'
 
 
-class AggregateImagePropertiesIsolationTestCase(
-    integrated_helpers._IntegratedTestBase,
-):
-    """Test the AggregateImagePropertiesIsolation filter."""
-
-    def setUp(self):
-        self.flags(
-            enabled_filters=['AggregateImagePropertiesIsolation'],
-            group='filter_scheduler')
-
-        super().setUp()
+class _AggregateTestCase(integrated_helpers._IntegratedTestBase):
 
     def _create_aggregate(self, metadata):
         aggregate = self.admin_api.post_aggregate(
@@ -44,6 +34,17 @@ class AggregateImagePropertiesIsolationTestCase(
         self.admin_api.add_host_to_aggregate(
             aggregate['id'], self.compute.host)
         return aggregate
+
+
+class AggregateImagePropertiesIsolationTestCase(_AggregateTestCase):
+    """Test the AggregateImagePropertiesIsolation filter."""
+
+    def setUp(self):
+        self.flags(
+            enabled_filters=['AggregateImagePropertiesIsolation'],
+            group='filter_scheduler')
+
+        super().setUp()
 
     def _create_image(self, metadata):
         image = {
@@ -130,6 +131,50 @@ class AggregateImagePropertiesIsolationTestCase(
         self._create_aggregate(metadata={'os_type': 'windows'})
         image = self._create_image(metadata={'hw_firmware_type': 'uefi'})
         self._create_server(image_uuid=image['id'])
+
+
+class AggregateInstanceExtraSpecsFilterTestCase(_AggregateTestCase):
+    """Test the AggregateInstanceExtraSpecsFilter filter."""
+
+    def setUp(self):
+        self.flags(
+            enabled_filters=['AggregateInstanceExtraSpecsFilter'],
+            group='filter_scheduler')
+
+        super().setUp()
+
+    def test_filter_passes(self):
+        """Ensure the filter allows hosts in aggregates with matching metadata.
+        """
+        self._create_aggregate(metadata={'foo': 'bar'})
+        flavor_id = self._create_flavor(extra_spec={'foo': 'bar'})
+        self._create_server(flavor_id=flavor_id)
+
+    def test_filter_rejects(self):
+        """Ensure the filter rejects hosts in aggregates with mismatched
+        metadata.
+        """
+        self._create_aggregate(metadata={'foo': 'bar'})
+        flavor_id = self._create_flavor(extra_spec={'foo': 'baz'})
+        self._create_server(flavor_id=flavor_id, expected_state='ERROR')
+
+    def test_filter_passes_with_prefix(self):
+        """Ensure the filter allows hosts in aggregates with matching metadata
+        when the namespace is used.
+        """
+        self._create_aggregate(metadata={'foo': 'bar'})
+        flavor_id = self._create_flavor(
+            extra_spec={'aggregate_instance_extra_specs:foo': 'bar'})
+        self._create_server(flavor_id=flavor_id)
+
+    def test_filter_rejects_with_prefix(self):
+        """Ensure the filter rejects hosts in aggregates with mismatched
+        metadata when the namespace is used.
+        """
+        self._create_aggregate(metadata={'foo': 'bar'})
+        flavor_id = self._create_flavor(
+            extra_spec={'aggregate_instance_extra_specs:foo': 'baz'})
+        self._create_server(flavor_id=flavor_id, expected_state='ERROR')
 
 
 class MultiCellSchedulerTestCase(test.TestCase,
