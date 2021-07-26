@@ -3268,6 +3268,7 @@ class TestAPI(TestAPIBase):
                 requested_ports[index].get(
                     constants.BINDING_PROFILE) or {},
                 nw_info.get('profile'))
+            self.assertTrue(nw_info.get('delegate_create'))
             index += 1
 
         self.assertFalse(nw_infos[0]['active'])

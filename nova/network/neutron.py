@@ -2984,7 +2984,8 @@ class API:
             ovs_interfaceid=ovs_interfaceid,
             devname=devname,
             active=vif_active,
-            preserve_on_delete=preserve_on_delete
+            preserve_on_delete=preserve_on_delete,
+            delegate_create=True,
         )
 
     def _build_network_info_model(self, context, instance, networks=None,
