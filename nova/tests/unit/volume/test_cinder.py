@@ -16,7 +16,7 @@
 from cinderclient import api_versions as cinder_api_versions
 from cinderclient import apiclient as cinder_apiclient
 from cinderclient import exceptions as cinder_exception
-from cinderclient.v2 import limits as cinder_limits
+from cinderclient.v3 import limits as cinder_limits
 from keystoneauth1 import loading as ks_loading
 from keystoneauth1 import session
 from keystoneclient import exceptions as keystone_exception
