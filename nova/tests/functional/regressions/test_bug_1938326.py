@@ -12,8 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import mock
-
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 
@@ -128,16 +126,7 @@ class TestMigrateFromDownHost(integrated_helpers._IntegratedTestBase):
         self._wait_for_service_parameter(
             'src', 'nova-compute', {'state': 'down'})
 
-        # FIXME(lyarwood): This is bug #1938326, any request to cold migrate
-        # from this compute should be rejected earlier in the flow as it is
-        # currently not running and isn't able to service the eventual request
-        # from the destination host.
-        with mock.patch.object(
-            self.computes['dest'].compute_rpcapi, 'resize_instance'
-        ) as (
-            mock_dest_rpcapi_resize
-        ):
-            # We don't want to wait here so just make the raw api call
-            self.api.post_server_action(server['id'], {'migrate': None})
-            # Assert that the dest compute attemptes to call resize_instance
-            mock_dest_rpcapi_resize.assert_called_once()
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.post_server_action,
+            server['id'], {'migrate': None})
+        self.assertEqual(409, ex.response.status_code)

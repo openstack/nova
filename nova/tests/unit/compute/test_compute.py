@@ -319,6 +319,17 @@ class BaseTestCase(test.TestCase):
             inst._context = cctxt
             inst.create()
 
+        inst.services = objects.ServiceList(ctxt)
+        inst.services.objects.append(
+            objects.Service(
+                context=ctxt,
+                host=inst.host,
+                binary='nova-compute',
+                topic='compute',
+                report_count=0
+            )
+        )
+
         # Create an instance mapping in cell1 so the API can get the instance.
         inst_map = objects.InstanceMapping(
             ctxt,
@@ -11290,8 +11301,8 @@ class ComputeAPITestCase(BaseTestCase):
             mock_attach_complete.assert_called_once_with(
                 self.context, uuids.attachment_id)
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=obj_fields.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch('nova.compute.api.API._record_action_start')
     def test_detach_volume(self, mock_record):
         # Ensure volume can be detached from instance
@@ -11368,18 +11379,13 @@ class ComputeAPITestCase(BaseTestCase):
         mock_begin_detaching.assert_not_called()
         self.assertTrue(mock_local_cleanup.called)
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=obj_fields.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(nova.volume.cinder.API, 'begin_detaching',
                        side_effect=exception.InvalidInput(reason='error'))
     def test_detach_invalid_volume(self, mock_begin_detaching):
         # Ensure exception is raised while detaching an un-attached volume
-        fake_instance = self._fake_instance({
-                    'uuid': 'f7000000-0000-0000-0000-000000000001',
-                    'locked': False,
-                    'launched_at': timeutils.utcnow(),
-                    'vm_state': vm_states.ACTIVE,
-                    'task_state': None})
+        fake_instance = self._create_fake_instance_obj()
         volume = {'id': 1, 'attach_status': 'detached', 'status': 'available'}
 
         self.assertRaises(exception.InvalidVolume,
@@ -13095,8 +13101,8 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         self.assertRaises(exception.FlavorNotFound,
             self.compute_api.create, self.context, self.flavor, None)
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=obj_fields.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch('nova.compute.api.API._validate_flavor_image_nostatus')
     @mock.patch('nova.objects.RequestSpec')
     def test_can_resize_to_visible_flavor(self, mock_reqspec,
@@ -13119,18 +13125,17 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
         with mock.patch('nova.conductor.api.ComputeTaskAPI.resize_instance'):
             self.compute_api.resize(self.context, instance, '4')
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=obj_fields.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     def test_cannot_resize_to_disabled_flavor(self):
-        instance = self._create_fake_instance_obj()
-        orig_get_flavor_by_flavor_id = \
-                flavors.get_flavor_by_flavor_id
+        instance = self._create_fake_instance_obj(services=True)
+        orig_get_flavor_by_flavor_id = flavors.get_flavor_by_flavor_id
 
-        def fake_get_flavor_by_flavor_id(flavor_id, ctxt=None,
-                                                read_deleted="yes"):
-            flavor = orig_get_flavor_by_flavor_id(flavor_id,
-                                                                ctxt,
-                                                                read_deleted)
+        def fake_get_flavor_by_flavor_id(
+            flavor_id, ctxt=None, read_deleted="yes"
+        ):
+            flavor = orig_get_flavor_by_flavor_id(
+                flavor_id, ctxt, read_deleted)
             flavor['disabled'] = True
             return flavor
 
