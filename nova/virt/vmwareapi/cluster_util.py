@@ -184,6 +184,23 @@ def fetch_cluster_groups(session, cluster_ref=None, cluster_config=None,
     return groups
 
 
+def fetch_cluster_rules(session, cluster_ref=None, cluster_config=None):
+    """Fetch all DRS rules of a cluster
+
+    The cluster can be identified by a cluster_ref or by an explicit
+    cluster_config. If identified by cluster_ref, we fetch the cluster_config.
+    """
+    if (cluster_config, cluster_ref) == (None, None):
+        msg = 'Either cluster_config or cluster_ref must be given.'
+        raise exception.ValidationError(msg)
+
+    if cluster_config is None:
+        cluster_config = session._call_method(
+            vutil, "get_object_property", cluster_ref, "configurationEx")
+
+    return {r.name: r for r in getattr(cluster_config, 'rule', [])}
+
+
 def delete_vm_group(session, cluster, vm_group):
     """Add delete impl fro removing group if deleted vm is the
        last vm in a vm group
