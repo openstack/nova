@@ -1,8 +1,9 @@
+===
 zVM
 ===
 
 z/VM System Requirements
-~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------
 
 * The appropriate APARs installed, the current list of which can be found: z/VM
   OpenStack Cloud Information (http://www.vm.ibm.com/sysman/osmntlvl.html).
@@ -12,15 +13,16 @@ z/VM System Requirements
   IBM z Systems hardware requirements are based on both the applications and
   the load on the system.
 
+
 Active Engine Guide
-~~~~~~~~~~~~~~~~~~~
+-------------------
 
 Active engine is used as an initial configuration and management tool during
 deployed machine startup. Currently the z/VM driver uses ``zvmguestconfigure``
 and ``cloud-init`` as a two stage active engine.
 
 Installation and Configuration of zvmguestconfigure
----------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Cloudlib4zvm supports initiating changes to a Linux on z Systems virtual
 machine while Linux is shut down or the virtual machine is logged off.
@@ -37,7 +39,7 @@ cloudlib4zvm service to the reader of the virtual machine as a class X file.
    The cloud-init AE relies on tailoring performed by ``zvmguestconfigure``.
 
 Installation and Configuration of cloud-init
---------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 OpenStack uses cloud-init as its activation engine. Some Linux distributions
 include cloud-init either already installed or available to be installed.
@@ -62,14 +64,15 @@ During cloud-init installation, some dependency packages may be required.
 You can use zypper and python setuptools to easily resolve these dependencies.
 See https://pypi.python.org/pypi/setuptools for more information.
 
+
 Image guide
-~~~~~~~~~~~
+-----------
 
 This guideline will describe the requirements and steps to create and
 configure images for use with z/VM.
 
 Image Requirements
-------------------
+~~~~~~~~~~~~~~~~~~
 
 * The following Linux distributions are supported for deploy:
 

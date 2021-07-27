@@ -6,8 +6,9 @@ The Compute API, is the component of OpenStack Compute that receives and
 responds to user requests, whether they be direct API calls, or via the CLI
 tools or dashboard.
 
+
 Configure Compute API password handling
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------
 
 The OpenStack Compute API enables users to specify an administrative password
 when they create, rebuild, rescue or evacuate a server instance.

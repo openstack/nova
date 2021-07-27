@@ -5,7 +5,6 @@ Hypervisors
 .. toctree::
    :maxdepth: 1
 
-   hypervisor-basics
    hypervisor-kvm
    hypervisor-qemu
    hypervisor-lxc
@@ -43,8 +42,7 @@ The following hypervisors are supported:
   on the Windows virtualization platform.
 
 * `Virtuozzo`_ 7.0.0 and newer - OS Containers and Kernel-based Virtual
-  Machines supported via libvirt virt_type=parallels. The supported formats
-  include ploop and qcow2 images.
+  Machines supported. The supported formats include ploop and qcow2 images.
 
 * `PowerVM`_ - Server virtualization with IBM PowerVM for AIX, IBM i, and Linux
   workloads on the Power Systems platform.
@@ -54,7 +52,6 @@ The following hypervisors are supported:
 
 * `Ironic`_ - OpenStack project which provisions bare metal (as opposed to virtual)
   machines.
-
 
 Nova supports hypervisors via virt drivers. Nova has the following in tree
 virt drivers:
@@ -79,7 +76,6 @@ virt drivers:
 
   This driver does not spawn any virtual machines and therefore should only be
   used during testing.
-
 
 .. _KVM: https://www.linux-kvm.org/page/Main_Page
 .. _LXC: https://linuxcontainers.org

@@ -3,7 +3,7 @@ VMware vSphere
 ==============
 
 Introduction
-~~~~~~~~~~~~
+------------
 
 OpenStack Compute supports the VMware vSphere product family and enables access
 to advanced features such as vMotion, High Availability, and Dynamic Resource
@@ -23,8 +23,9 @@ vSphere features.
 
 The following sections describe how to configure the VMware vCenter driver.
 
+
 High-level architecture
-~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------
 
 The following diagram shows a high-level view of the VMware driver
 architecture:
@@ -59,8 +60,9 @@ configure OpenStack resources such as VMs through the OpenStack dashboard.
 The figure does not show how networking fits into the architecture. For
 details, see :ref:`vmware-networking`.
 
+
 Configuration overview
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 To get started with the VMware vCenter driver, complete the following
 high-level steps:
@@ -77,7 +79,7 @@ high-level steps:
 .. _vmware-prereqs:
 
 Prerequisites and limitations
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------
 
 Use the following list to prepare a vSphere environment that runs with the
 VMware vCenter driver:
@@ -142,8 +144,9 @@ assigned to a separate availability zone. This is required as the OpenStack
 Block Storage VMDK driver does not currently work across multiple vCenter
 installations.
 
+
 VMware vCenter service account
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------
 
 OpenStack integration requires a vCenter service account with the following
 minimum permissions. Apply the permissions to the ``Datacenter`` root object,
@@ -414,10 +417,11 @@ and select the :guilabel:`Propagate to Child Objects` option.
      - Import
      -
 
+
 .. _vmware-vcdriver:
 
 VMware vCenter driver
-~~~~~~~~~~~~~~~~~~~~~
+---------------------
 
 Use the VMware vCenter driver (VMwareVCDriver) to connect OpenStack Compute
 with vCenter. This recommended configuration enables access through vCenter to
@@ -425,7 +429,7 @@ advanced vSphere features like vMotion, High Availability, and Dynamic Resource
 Scheduling (DRS).
 
 VMwareVCDriver configuration options
-------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Add the following VMware-specific configuration options to the ``nova.conf``
 file:
@@ -478,10 +482,11 @@ against host failures.
    Many ``nova.conf`` options are relevant to libvirt but do not apply to this
    driver.
 
+
 .. _vmware-images:
 
 Images with VMware vSphere
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 
 The vCenter driver supports images in the VMDK format. Disks in this format can
 be obtained from VMware Fusion or from an ESX environment.  It is also possible
@@ -492,7 +497,7 @@ sections provide additional details on the supported disks and the commands
 used for conversion and upload.
 
 Supported image types
----------------------
+~~~~~~~~~~~~~~~~~~~~~
 
 Upload images to the OpenStack Image service in VMDK format.  The following
 VMDK disk types are supported:
@@ -745,7 +750,7 @@ of the supported guest OS:
      - Windows XP Professional
 
 Convert and load images
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Using the ``qemu-img`` utility, disk images in several formats (such as,
 qcow2) can be converted to the VMDK format.
@@ -806,7 +811,7 @@ is lsiLogic, which is SCSI, so you can omit the ``vmware_adaptertype`` property
 if you are certain that the image adapter type is lsiLogic.
 
 Tag VMware images
------------------
+~~~~~~~~~~~~~~~~~
 
 In a mixed hypervisor environment, OpenStack Compute uses the
 ``hypervisor_type`` tag to match images to the correct hypervisor type.  For
@@ -826,7 +831,7 @@ Note that ``qemu`` is used for both QEMU and KVM hypervisor types.
      ubuntu-thick-scsi < ubuntuLTS-flat.vmdk
 
 Optimize images
----------------
+~~~~~~~~~~~~~~~
 
 Monolithic Sparse disks are considerably faster to download but have the
 overhead of an additional conversion step. When imported into ESX, sparse disks
@@ -885,7 +890,7 @@ In the previous cases, the converted vmdk is actually a pair of files:
 The file to be uploaded to the Image service is ``converted-flat.vmdk``.
 
 Image handling
---------------
+~~~~~~~~~~~~~~
 
 The ESX hypervisor requires a copy of the VMDK file in order to boot up a
 virtual machine. As a result, the vCenter OpenStack Compute driver must
@@ -899,7 +904,7 @@ Image service.
 Even with a cached VMDK, there is still a copy operation from the cache
 location to the hypervisor file directory in the shared data store.  To avoid
 this copy, boot the image in linked_clone mode. To learn how to enable this
-mode, see :ref:`vmware-config`.
+mode, see :oslo.config:option:`vmware.use_linked_clone`.
 
 .. note::
 
@@ -929,10 +934,11 @@ section in the ``nova.conf`` file:
 * :oslo.config:option:`image_cache.remove_unused_base_images`
 * :oslo.config:option:`image_cache.remove_unused_original_minimum_age_seconds`
 
+
 .. _vmware-networking:
 
 Networking with VMware vSphere
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------------
 
 The VMware driver supports networking with the Networking Service (neutron).
 Depending on your installation, complete these configuration steps before you
@@ -943,8 +949,9 @@ provision VMs:
    ``br-int``). All VM NICs are attached to this port group for management by
    the OpenStack Networking plug-in.
 
+
 Volumes with VMware vSphere
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------
 
 The VMware driver supports attaching volumes from the Block Storage service.
 The VMware VMDK driver for OpenStack Block Storage is recommended and should be
@@ -954,159 +961,9 @@ this has not yet been imported and published).  Also an
 iSCSI volume driver provides limited support and can be used only for
 attachments.
 
-.. _vmware-config:
-
-Configuration reference
-~~~~~~~~~~~~~~~~~~~~~~~
-
-To customize the VMware driver, use the configuration option settings below.
-
-.. TODO(sdague): for the import we just copied this in from the auto generated
-   file. We probably need a strategy for doing equivalent autogeneration, but
-   we don't as of yet.
-
-   Warning: Do not edit this file. It is automatically generated from the
-   software project's code and your changes will be overwritten.
-
-   The tool to generate this file lives in openstack-doc-tools repository.
-
-   Please make any changes needed in the code, then run the
-   autogenerate-config-doc tool from the openstack-doc-tools repository, or
-   ask for help on the documentation mailing list, IRC channel or meeting.
-
-.. _nova-vmware:
-
-.. list-table:: Description of VMware configuration options
-   :header-rows: 1
-   :class: config-ref-table
-
-   * - Configuration option = Default value
-     - Description
-   * - **[vmware]**
-     -
-   * - ``api_retry_count`` = ``10``
-     - (Integer) Number of times VMware vCenter server API must be retried on connection failures, e.g. socket error, etc.
-   * - ``ca_file`` = ``None``
-     - (String) Specifies the CA bundle file to be used in verifying the vCenter server certificate.
-   * - ``cache_prefix`` = ``None``
-     - (String) This option adds a prefix to the folder where cached images are stored
-
-       This is not the full path - just a folder prefix. This should only be used when a datastore cache is shared between compute nodes.
-
-       .. note::
-
-         This should only be used when the compute nodes are running on same host or they have a shared file system.
-
-       Possible values:
-
-       * Any string representing the cache prefix to the folder
-   * - ``cluster_name`` = ``None``
-     - (String) Name of a VMware Cluster ComputeResource.
-   * - ``console_delay_seconds`` = ``None``
-     - (Integer) Set this value if affected by an increased network latency causing repeated characters when typing in a remote console.
-   * - ``datastore_regex`` = ``None``
-     - (String) Regular expression pattern to match the name of datastore.
-
-       The datastore_regex setting specifies the datastores to use with Compute. For example, datastore_regex="nas.*" selects all the data stores that have a name starting with "nas".
-
-       .. note::
-
-         If no regex is given, it just picks the datastore with the most freespace.
-
-       Possible values:
-
-       * Any matching regular expression to a datastore must be given
-   * - ``host_ip`` = ``None``
-     - (String) Hostname or IP address for connection to VMware vCenter host.
-   * - ``host_password`` = ``None``
-     - (String) Password for connection to VMware vCenter host.
-   * - ``host_port`` = ``443``
-     - (Port number) Port for connection to VMware vCenter host.
-   * - ``host_username`` = ``None``
-     - (String) Username for connection to VMware vCenter host.
-   * - ``insecure`` = ``False``
-     - (Boolean) If true, the vCenter server certificate is not verified. If false, then the default CA truststore is used for verification.
-
-       Related options:
-
-       * ca_file: This option is ignored if "ca_file" is set.
-   * - ``integration_bridge`` = ``None``
-     - (String) This option should be configured only when using the NSX-MH Neutron plugin. This is the name of the integration bridge on the ESXi server or host. This should not be set for any other Neutron plugin. Hence the default value is not set.
-
-       Possible values:
-
-       * Any valid string representing the name of the integration bridge
-   * - ``maximum_objects`` = ``100``
-     - (Integer) This option specifies the limit on the maximum number of objects to return in a single result.
-
-       A positive value will cause the operation to suspend the retrieval when the count of objects reaches the specified limit. The server may still limit the count to something less than the configured value. Any remaining objects may be retrieved with additional requests.
-   * - ``pbm_default_policy`` = ``None``
-     - (String) This option specifies the default policy to be used.
-
-       If pbm_enabled is set and there is no defined storage policy for the specific request, then this policy will be used.
-
-       Possible values:
-
-       * Any valid storage policy such as VSAN default storage policy
-
-       Related options:
-
-       * pbm_enabled
-   * - ``pbm_enabled`` = ``False``
-     - (Boolean) This option enables or disables storage policy based placement of instances.
-
-       Related options:
-
-       * pbm_default_policy
-   * - ``pbm_wsdl_location`` = ``None``
-     - (String) This option specifies the PBM service WSDL file location URL.
-
-       Setting this will disable storage policy based placement of instances.
-
-       Possible values:
-
-       * Any valid file path e.g file:///opt/SDK/spbm/wsdl/pbmService.wsdl
-   * - ``serial_port_proxy_uri`` = ``None``
-     - (String) Identifies a proxy service that provides network access to the serial_port_service_uri.
-
-       Possible values:
-
-       * Any valid URI
-
-       Related options: This option is ignored if serial_port_service_uri is not specified.
-
-       * serial_port_service_uri
-   * - ``serial_port_service_uri`` = ``None``
-     - (String) Identifies the remote system where the serial port traffic will be sent.
-
-       This option adds a virtual serial port which sends console output to a configurable service URI. At the service URI address there will be virtual serial port concentrator that will collect console logs. If this is not set, no serial ports will be added to the created VMs.
-
-       Possible values:
-
-       * Any valid URI
-   * - ``task_poll_interval`` = ``0.5``
-     - (Floating point) Time interval in seconds to poll remote tasks invoked on VMware VC server.
-   * - ``use_linked_clone`` = ``True``
-     - (Boolean) This option enables/disables the use of linked clone.
-
-       The ESX hypervisor requires a copy of the VMDK file in order to boot up a virtual machine. The compute driver must download the VMDK via HTTP from the OpenStack Image service to a datastore that is visible to the hypervisor and cache it. Subsequent virtual machines that need the VMDK use the cached version and don't have to copy the file again from the OpenStack Image service.
-
-       If set to false, even with a cached VMDK, there is still a copy operation from the cache location to the hypervisor file directory in the shared datastore. If set to true, the above copy operation is avoided as it creates copy of the virtual machine that shares virtual disks with its parent VM.
-   * - ``wsdl_location`` = ``None``
-     - (String) This option specifies VIM Service WSDL Location
-
-       If vSphere API versions 5.1 and later is being used, this section can be ignored. If version is less than 5.1, WSDL files must be hosted locally and their location must be specified in the above section.
-
-       Optional over-ride to default location for bug work-arounds.
-
-       Possible values:
-
-       * http://<server>/vimService.wsdl
-
-       * file:///opt/stack/vmware/SDK/wsdl/vim25/vimService.wsdl
 
 Troubleshooting
-~~~~~~~~~~~~~~~
+---------------
 
 Operators can troubleshoot VMware specific failures by correlating OpenStack
 logs to vCenter logs. Every RPC call which is made by an OpenStack driver has

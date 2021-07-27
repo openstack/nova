@@ -12,11 +12,17 @@ image.
    Some OpenStack Compute features may be missing when running with Virtuozzo
    as the hypervisor. See :doc:`/user/support-matrix` for details.
 
-To enable Virtuozzo Containers, set the following options in
-``/etc/nova/nova.conf`` on all hosts running the ``nova-compute`` service.
+
+Configuration
+-------------
+
+To enable LXC, configure :oslo.config:option:`DEFAULT.compute_driver` =
+``libvirt.LibvirtDriver`` and :oslo.config:option:`libvirt.virt_type` =
+``parallels``. For example:
 
 .. code-block:: ini
 
+   [DEFAULT]
    compute_driver = libvirt.LibvirtDriver
    force_raw_images = False
 
@@ -31,6 +37,7 @@ To enable Virtuozzo Virtual Machines, set the following options in
 
 .. code-block:: ini
 
+   [DEFAULT]
    compute_driver = libvirt.LibvirtDriver
 
    [libvirt]

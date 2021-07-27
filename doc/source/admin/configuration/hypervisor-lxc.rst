@@ -24,11 +24,17 @@ LXC than other hypervisors.
    the hypervisor. See the `hypervisor support matrix
    <http://wiki.openstack.org/HypervisorSupportMatrix>`_ for details.
 
-To enable LXC, ensure the following options are set in ``/etc/nova/nova.conf``
-on all hosts running the ``nova-compute`` service.
+
+Configuration
+-------------
+
+To enable LXC, configure :oslo.config:option:`DEFAULT.compute_driver` =
+``libvirt.LibvirtDriver`` and :oslo.config:option:`libvirt.virt_type` =
+``lxc``. For example:
 
 .. code-block:: ini
 
+   [DEFAULT]
    compute_driver = libvirt.LibvirtDriver
 
    [libvirt]
