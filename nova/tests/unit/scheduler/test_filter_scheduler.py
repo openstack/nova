@@ -70,23 +70,6 @@ class FilterSchedulerTestCase(test.NoDBTestCase):
         self.topic = 'fake_topic'
         self.servicegroup_api = servicegroup.API()
 
-    @mock.patch('nova.objects.ServiceList.get_by_topic')
-    @mock.patch('nova.servicegroup.API.service_is_up')
-    def test_hosts_up(self, mock_service_is_up, mock_get_by_topic):
-        service1 = objects.Service(host='host1')
-        service2 = objects.Service(host='host2')
-        services = objects.ServiceList(objects=[service1, service2])
-
-        mock_get_by_topic.return_value = services
-        mock_service_is_up.side_effect = [False, True]
-
-        result = self.driver.hosts_up(self.context, self.topic)
-        self.assertEqual(result, ['host2'])
-
-        mock_get_by_topic.assert_called_once_with(self.context, self.topic)
-        calls = [mock.call(service1), mock.call(service2)]
-        self.assertEqual(calls, mock_service_is_up.call_args_list)
-
     @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')

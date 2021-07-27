@@ -21,7 +21,6 @@ Scheduler base class that all Schedulers should inherit from
 
 import abc
 
-from nova import objects
 from nova.scheduler import host_manager
 from nova import servicegroup
 
@@ -32,14 +31,6 @@ class Scheduler(metaclass=abc.ABCMeta):
     def __init__(self):
         self.host_manager = host_manager.HostManager()
         self.servicegroup_api = servicegroup.API()
-
-    def hosts_up(self, context, topic):
-        """Return the list of hosts that have a running service for topic."""
-
-        services = objects.ServiceList.get_by_topic(context, topic)
-        return [service.host
-                for service in services
-                if self.servicegroup_api.service_is_up(service)]
 
     @abc.abstractmethod
     def select_destinations(self, context, spec_obj, instance_uuids,
