@@ -2037,16 +2037,14 @@ class LibvirtDriver(driver.ComputeDriver):
             'disk_bus': disk_bus,
             'device_type': device_type}
 
-        # Note(cfb): If the volume has a custom block size, check that
-        #            that we are using QEMU/KVM and libvirt >= 0.10.2. The
-        #            presence of a block size is considered mandatory by
-        #            cinder so we fail if we can't honor the request.
+        # Note(cfb): If the volume has a custom block size, check that that we
+        # are using QEMU/KVM. The presence of a block size is considered
+        # mandatory by cinder so we fail if we can't honor the request.
         data = {}
         if ('data' in connection_info):
             data = connection_info['data']
         if ('logical_block_size' in data or 'physical_block_size' in data):
-            if ((CONF.libvirt.virt_type != "kvm" and
-                 CONF.libvirt.virt_type != "qemu")):
+            if CONF.libvirt.virt_type not in ["kvm", "qemu"]:
                 msg = _("Volume sets block size, but the current "
                         "libvirt hypervisor '%s' does not support custom "
                         "block size") % CONF.libvirt.virt_type
