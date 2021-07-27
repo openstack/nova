@@ -21,7 +21,6 @@ import datetime
 from oslo_utils.fixture import uuidsentinel
 
 from nova import objects
-from nova.scheduler import driver
 from nova.scheduler import host_manager
 
 
@@ -224,11 +223,3 @@ class FakeHostState(host_manager.HostState):
             self.instances = {}
         for (key, val) in attribute_dict.items():
             setattr(self, key, val)
-
-
-class FakeScheduler(driver.Scheduler):
-
-    def select_destinations(self, context, spec_obj, instance_uuids,
-            alloc_reqs_by_rp_uuid, provider_summaries,
-            allocation_request_version=None, return_alternates=False):
-        return []
