@@ -10,26 +10,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 
 
 class ConfigurableMaxDiskDevicesTest(integrated_helpers._IntegratedTestBase):
-
-    def _wait_for_volume_attach(self, server_id, volume_id):
-        for i in range(0, 100):
-            server = self.api.get_server(server_id)
-            attached_vols = [vol['id'] for vol in
-                             server['os-extended-volumes:volumes_attached']]
-            if volume_id in attached_vols:
-                return
-            time.sleep(.1)
-        self.fail('Timed out waiting for volume %s to be attached to '
-                  'server %s. Currently attached volumes: %s' %
-                  (volume_id, server_id, attached_vols))
 
     def test_boot_from_volume(self):
         # Set the maximum to 1 and boot from 1 volume. This should pass.
