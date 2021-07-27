@@ -56,5 +56,4 @@ Mitigation for MDS (Microarchitectural Data Sampling) security flaws
 It is strongly recommended to patch all compute nodes and nova instances
 against the processor-related security flaws, such as MDS (and other
 previous vulnerabilities).  For details on applying mitigation for the
-MDS flaws, refer to the :doc:`mitigation-for-Intel-MDS-security-flaws`
-document.
+MDS flaws, refer to :ref:`mitigation-for-Intel-MDS-security-flaws`.
