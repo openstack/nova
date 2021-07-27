@@ -384,18 +384,6 @@ See `the KVM documentation
 information on these limitations.
 
 
-Guest agent support
--------------------
-
-Use guest agents to enable optional access between compute nodes and guests
-through a socket, using the QMP protocol.
-
-To enable this feature, you must set ``hw_qemu_guest_agent=yes`` as a metadata
-parameter on the image you wish to use to create the guest-agent-capable
-instances from. You can explicitly disable the feature by setting
-``hw_qemu_guest_agent=no`` in the image metadata.
-
-
 KVM performance tweaks
 ----------------------
 

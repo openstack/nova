@@ -120,6 +120,7 @@ instance for these kind of workloads.
    managing-resource-providers
    resource-limits
    cpu-models
+   libvirt-misc
 
 
 Additional guides
