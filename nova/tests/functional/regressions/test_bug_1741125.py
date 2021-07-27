@@ -78,17 +78,3 @@ class TestServerResizeReschedule(integrated_helpers.ProviderUsageBaseTestCase):
                 'VERIFY_RESIZE')
         self.assertEqual(self.flavor2['name'],
                          server['flavor']['original_name'])
-
-
-class TestServerResizeRescheduleWithNoAllocations(
-        TestServerResizeReschedule):
-    """Tests the reschedule scenario using a scheduler driver which does not
-    use Placement.
-    """
-
-    def setUp(self):
-        super(TestServerResizeRescheduleWithNoAllocations, self).setUp()
-        # We need to mock the FilterScheduler to not use Placement so that
-        # allocations won't be created during scheduling.
-        self.scheduler_service.manager.driver.USES_ALLOCATION_CANDIDATES = \
-            False

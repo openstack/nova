@@ -29,18 +29,6 @@ from nova import servicegroup
 class Scheduler(metaclass=abc.ABCMeta):
     """The base class that all Scheduler classes should inherit from."""
 
-    # TODO(mriedem): We should remove this flag now so that all scheduler
-    # drivers, both in-tree and out-of-tree, must rely on placement for
-    # scheduling decisions. We're likely going to have more and more code
-    # over time that relies on the scheduler creating allocations and it
-    # will not be sustainable to try and keep compatibility code around for
-    # scheduler drivers that do not create allocations in Placement.
-    USES_ALLOCATION_CANDIDATES = True
-    """Indicates that the scheduler driver calls the Placement API for
-    allocation candidates and uses those allocation candidates in its
-    decision-making.
-    """
-
     def __init__(self):
         self.host_manager = host_manager.HostManager()
         self.servicegroup_api = servicegroup.API()
