@@ -2887,11 +2887,54 @@ class TestNovaManagePlacement(test.NoDBTestCase):
         neutron.update_port.assert_called_once_with(
             uuidsentinel.port_id, body=expected_update_body)
 
-    def test_audit_with_wrong_provider_uuid(self):
+    @mock.patch.object(manage.PlacementCommands,
+                       '_check_orphaned_allocations_for_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
+    def test_audit_with_provider_uuid(
+        self, get_resource_providers, check_orphaned_allocs,
+    ):
+        rps = [
+            {
+                "generation": 1,
+                "uuid": uuidsentinel.rp1,
+                "links": None,
+                "name": "rp1",
+                "parent_provider_uuid": None,
+                "root_provider_uuid": uuidsentinel.rp1,
+            },
+        ]
+        get_resource_providers.return_value = fake_requests.FakeResponse(
+            200, content=jsonutils.dumps({"resource_providers": rps}))
+
+        # we found one orphaned allocation per RP and we had no faults
+        check_orphaned_allocs.side_effect = ((1, 0),)
+
+        ret = self.cli.audit(
+            verbose=True, delete=False,
+            provider_uuid=uuidsentinel.fake_uuid)
+
+        # We found orphaned allocations but we left them
+        self.assertEqual(3, ret)
+
+        get_resource_providers.assert_called_once_with(
+            f'/resource_providers?uuid={uuidsentinel.fake_uuid}',
+            global_request_id=mock.ANY,
+            version='1.14')
+
+        # Only the specified RP is checked
+        check_orphaned_allocs.assert_has_calls([
+            mock.call(mock.ANY, mock.ANY, mock.ANY, rps[0], False),
+        ])
+
+        output = self.output.getvalue()
+        self.assertIn('Processed 1 allocation', output)
+
+    def test_audit_with_invalid_provider_uuid(self):
         with mock.patch.object(
-                self.cli, '_get_resource_provider',
-                side_effect=exception.ResourceProviderNotFound(
-                    name_or_uuid=uuidsentinel.fake_uuid)):
+            self.cli, '_get_resource_provider',
+            side_effect=exception.ResourceProviderNotFound(
+                name_or_uuid=uuidsentinel.fake_uuid),
+        ):
             ret = self.cli.audit(
                 provider_uuid=uuidsentinel.fake_uuid)
         self.assertEqual(127, ret)
@@ -2946,6 +2989,11 @@ class TestNovaManagePlacement(test.NoDBTestCase):
             # Nothing was found
             expected_ret = 0
         self.assertEqual(expected_ret, ret)
+
+        get_resource_providers.assert_called_once_with(
+            '/resource_providers',
+            global_request_id=mock.ANY,
+            version='1.14')
 
         call1 = mock.call(mock.ANY, mock.ANY, mock.ANY, rps[0], delete)
         call2 = mock.call(mock.ANY, mock.ANY, mock.ANY, rps[1], delete)
