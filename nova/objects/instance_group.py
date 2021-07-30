@@ -19,8 +19,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
-from sqlalchemy.orm import contains_eager
-from sqlalchemy.orm import joinedload
+from sqlalchemy import orm
 
 from nova.compute import utils as compute_utils
 from nova.db.sqlalchemy import api as db_api
@@ -37,8 +36,8 @@ LOG = logging.getLogger(__name__)
 
 def _instance_group_get_query(context, id_field=None, id=None):
     query = context.session.query(api_models.InstanceGroup).\
-            options(joinedload('_policies')).\
-            options(joinedload('_members'))
+        options(orm.joinedload('_policies')).\
+        options(orm.joinedload('_members'))
     if not context.is_admin:
         query = query.filter_by(project_id=context.project_id)
     if id and id_field:
@@ -89,7 +88,7 @@ def _instance_group_members_add_by_uuid(context, group_uuid, members):
             outerjoin(api_models.InstanceGroupMember,
             api_models.InstanceGroupMember.instance_uuid.in_(set(members))).\
             filter(api_models.InstanceGroup.uuid == group_uuid).\
-            options(contains_eager('_members')).first()
+            options(orm.contains_eager('_members')).first()
     if not group:
         raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
     return _instance_group_model_add(context, api_models.InstanceGroupMember,

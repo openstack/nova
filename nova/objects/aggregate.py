@@ -16,8 +16,7 @@ from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import uuidutils
-from sqlalchemy.orm import contains_eager
-from sqlalchemy.orm import joinedload
+from sqlalchemy import orm
 
 from nova.compute import utils as compute_utils
 from nova.db.sqlalchemy import api as db_api
@@ -36,8 +35,8 @@ DEPRECATED_FIELDS = ['deleted', 'deleted_at']
 @db_api.api_context_manager.reader
 def _aggregate_get_from_db(context, aggregate_id):
     query = context.session.query(api_models.Aggregate).\
-            options(joinedload('_hosts')).\
-            options(joinedload('_metadata'))
+            options(orm.joinedload('_hosts')).\
+            options(orm.joinedload('_metadata'))
     query = query.filter(api_models.Aggregate.id == aggregate_id)
 
     aggregate = query.first()
@@ -51,8 +50,8 @@ def _aggregate_get_from_db(context, aggregate_id):
 @db_api.api_context_manager.reader
 def _aggregate_get_from_db_by_uuid(context, aggregate_uuid):
     query = context.session.query(api_models.Aggregate).\
-            options(joinedload('_hosts')).\
-            options(joinedload('_metadata'))
+            options(orm.joinedload('_hosts')).\
+            options(orm.joinedload('_metadata'))
     query = query.filter(api_models.Aggregate.uuid == aggregate_uuid)
 
     aggregate = query.first()
@@ -415,8 +414,8 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 @db_api.api_context_manager.reader
 def _get_all_from_db(context):
     query = context.session.query(api_models.Aggregate).\
-            options(joinedload('_hosts')).\
-            options(joinedload('_metadata'))
+            options(orm.joinedload('_hosts')).\
+            options(orm.joinedload('_metadata'))
 
     return query.all()
 
@@ -424,8 +423,8 @@ def _get_all_from_db(context):
 @db_api.api_context_manager.reader
 def _get_by_host_from_db(context, host, key=None):
     query = context.session.query(api_models.Aggregate).\
-            options(joinedload('_hosts')).\
-            options(joinedload('_metadata'))
+            options(orm.joinedload('_hosts')).\
+            options(orm.joinedload('_metadata'))
     query = query.join('_hosts')
     query = query.filter(api_models.AggregateHost.host == host)
 
@@ -445,8 +444,8 @@ def _get_by_metadata_from_db(context, key=None, value=None):
         query = query.filter(api_models.AggregateMetadata.key == key)
     if value is not None:
         query = query.filter(api_models.AggregateMetadata.value == value)
-    query = query.options(contains_eager("_metadata"))
-    query = query.options(joinedload("_hosts"))
+    query = query.options(orm.contains_eager("_metadata"))
+    query = query.options(orm.joinedload("_hosts"))
 
     return query.all()
 
@@ -477,8 +476,8 @@ def _get_non_matching_by_metadata_keys_from_db(context, ignored_keys,
         query = query.filter(~api_models.AggregateMetadata.key.in_(
             ignored_keys))
 
-    query = query.options(contains_eager("_metadata"))
-    query = query.options(joinedload("_hosts"))
+    query = query.options(orm.contains_eager("_metadata"))
+    query = query.options(orm.joinedload("_hosts"))
 
     return query.all()
 

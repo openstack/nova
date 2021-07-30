@@ -36,16 +36,12 @@ from oslo_utils import fixture as utils_fixture
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
-from sqlalchemy import Column
-from sqlalchemy.exc import OperationalError
-from sqlalchemy.exc import SQLAlchemyError
+import sqlalchemy as sa
+from sqlalchemy import exc as sqla_exc
 from sqlalchemy import inspect
-from sqlalchemy import Integer
-from sqlalchemy import MetaData
 from sqlalchemy.orm import query
 from sqlalchemy.orm import session as sqla_session
 from sqlalchemy import sql
-from sqlalchemy import Table
 
 from nova import block_device
 from nova.compute import rpcapi as compute_rpcapi
@@ -173,7 +169,7 @@ class DbTestCase(test.TestCase):
 
 
 class HelperTestCase(test.TestCase):
-    @mock.patch.object(sqlalchemy_api, 'joinedload')
+    @mock.patch('sqlalchemy.orm.joinedload')
     def test_joinedload_helper(self, mock_jl):
         query = sqlalchemy_api._joinedload_all('foo.bar.baz')
 
@@ -190,7 +186,7 @@ class HelperTestCase(test.TestCase):
 
         self.assertEqual(column3.joinedload.return_value, query)
 
-    @mock.patch.object(sqlalchemy_api, 'joinedload')
+    @mock.patch('sqlalchemy.orm.joinedload')
     def test_joinedload_helper_single(self, mock_jl):
         query = sqlalchemy_api._joinedload_all('foo')
 
@@ -1757,8 +1753,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         instances = db.instance_get_all_by_filters_sort(self.ctxt, filters)
         self.assertEqual([], instances)
 
-    @mock.patch('nova.db.sqlalchemy.api.undefer')
-    @mock.patch('nova.db.sqlalchemy.api.joinedload')
+    @mock.patch('sqlalchemy.orm.undefer')
+    @mock.patch('sqlalchemy.orm.joinedload')
     def test_instance_get_all_by_filters_extra_columns(self,
                                                        mock_joinedload,
                                                        mock_undefer):
@@ -1768,8 +1764,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         mock_joinedload.assert_called_once_with('info_cache')
         mock_undefer.assert_called_once_with('extra.pci_requests')
 
-    @mock.patch('nova.db.sqlalchemy.api.undefer')
-    @mock.patch('nova.db.sqlalchemy.api.joinedload')
+    @mock.patch('sqlalchemy.orm.undefer')
+    @mock.patch('sqlalchemy.orm.joinedload')
     def test_instance_get_active_by_window_extra_columns(self,
                                                          mock_joinedload,
                                                          mock_undefer):
@@ -2942,8 +2938,9 @@ class InstanceExtraTestCase(test.TestCase):
             self.ctxt, self.instance['uuid'],
             columns=['numa_topology', 'vcpu_model', 'trusted_certs',
                      'resources'])
-        self.assertRaises(SQLAlchemyError,
-                          extra.__getitem__, 'pci_requests')
+        self.assertRaises(
+            sqla_exc.SQLAlchemyError,
+            extra.__getitem__, 'pci_requests')
         self.assertIn('numa_topology', extra)
         self.assertIn('vcpu_model', extra)
         self.assertIn('trusted_certs', extra)
@@ -5899,7 +5896,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
         super(ArchiveTestCase, self).setUp()
         self.engine = get_engine()
-        self.metadata = MetaData(self.engine)
+        self.metadata = sa.MetaData(self.engine)
         self.conn = self.engine.connect()
         self.instance_id_mappings = models.InstanceIdMapping.__table__
         self.shadow_instance_id_mappings = sqlalchemyutils.get_table(
@@ -5931,7 +5928,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         except for specificially named exceptions, are empty. This
         makes sure that archiving isn't moving unexpected content.
         """
-        metadata = MetaData(bind=self.engine)
+        metadata = sa.MetaData(bind=self.engine)
         metadata.reflect()
         for table in metadata.tables:
             if table.startswith("shadow_") and table not in exceptions:
@@ -5943,7 +5940,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         Shadow tables should have an identical schema to the main table.
         """
-        metadata = MetaData(bind=self.engine)
+        metadata = sa.MetaData(bind=self.engine)
         metadata.reflect()
         for table_name in metadata.tables:
             # some tables don't have shadow tables so skip these
@@ -5961,8 +5958,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
             shadow_table_name = f'shadow_{table_name}'
 
-            table = Table(table_name, metadata, autoload=True)
-            shadow_table = Table(shadow_table_name, metadata, autoload=True)
+            table = sa.Table(table_name, metadata, autoload=True)
+            shadow_table = sa.Table(shadow_table_name, metadata, autoload=True)
 
             columns = {c.name: c for c in table.columns}
             shadow_columns = {c.name: c for c in shadow_table.columns}
@@ -6159,7 +6156,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
             ins_stmt = main_table.insert().values(uuid=uuidstr)
             try:
                 self.conn.execute(ins_stmt)
-            except (db_exc.DBError, OperationalError):
+            except (db_exc.DBError, sqla_exc.OperationalError):
                 # This table has constraints that require a table-specific
                 # insert, so skip it.
                 return 2
@@ -6640,12 +6637,12 @@ class TestSqlalchemyTypesRepr(
 
         super(TestSqlalchemyTypesRepr, self).setUp()
         self.engine = enginefacade.writer.get_engine()
-        meta = MetaData(bind=self.engine)
-        self.table = Table(
+        meta = sa.MetaData(bind=self.engine)
+        self.table = sa.Table(
             'cidr_tbl',
             meta,
-            Column('id', Integer, primary_key=True),
-            Column('addr', col_types.CIDR())
+            sa.Column('id', sa.Integer, primary_key=True),
+            sa.Column('addr', col_types.CIDR())
         )
         self.table.create()
         self.addCleanup(meta.drop_all)

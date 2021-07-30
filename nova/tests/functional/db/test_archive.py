@@ -18,9 +18,8 @@ import re
 from dateutil import parser as dateutil_parser
 from oslo_utils import fixture as osloutils_fixture
 from oslo_utils import timeutils
+import sqlalchemy as sa
 from sqlalchemy import func
-from sqlalchemy import MetaData
-from sqlalchemy import select
 
 from nova import context
 from nova.db import api as db
@@ -179,13 +178,13 @@ class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
     def _get_table_counts(self):
         engine = sqlalchemy_api.get_engine()
         conn = engine.connect()
-        meta = MetaData(engine)
+        meta = sa.MetaData(engine)
         meta.reflect()
         shadow_tables = sqlalchemy_api._purgeable_tables(meta)
         results = {}
         for table in shadow_tables:
             r = conn.execute(
-                select([func.count()]).select_from(table)).fetchone()
+                sa.select([func.count()]).select_from(table)).fetchone()
             results[table.name] = r[0]
         return results
 

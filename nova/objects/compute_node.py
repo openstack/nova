@@ -12,12 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
-from sqlalchemy import or_
-from sqlalchemy.sql import null
+import sqlalchemy as sa
+from sqlalchemy import sql
 
 import nova.conf
 from nova.db import api as db
@@ -500,13 +499,13 @@ def _get_node_empty_ratio(context, max_count):
 
     Results are limited by ``max_count``.
     """
-    return context.session.query(models.ComputeNode).filter(or_(
+    return context.session.query(models.ComputeNode).filter(sa.or_(
         models.ComputeNode.ram_allocation_ratio == '0.0',
         models.ComputeNode.cpu_allocation_ratio == '0.0',
         models.ComputeNode.disk_allocation_ratio == '0.0',
-        models.ComputeNode.ram_allocation_ratio == null(),
-        models.ComputeNode.cpu_allocation_ratio == null(),
-        models.ComputeNode.disk_allocation_ratio == null()
+        models.ComputeNode.ram_allocation_ratio == sql.null(),
+        models.ComputeNode.cpu_allocation_ratio == sql.null(),
+        models.ComputeNode.disk_allocation_ratio == sql.null()
     )).filter(models.ComputeNode.deleted == 0).limit(max_count).all()
 
 

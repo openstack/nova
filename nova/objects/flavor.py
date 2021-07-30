@@ -15,10 +15,10 @@
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_utils import versionutils
-from sqlalchemy import or_
-from sqlalchemy.orm import joinedload
-from sqlalchemy.sql.expression import asc
-from sqlalchemy.sql import true
+import sqlalchemy as sa
+from sqlalchemy import orm
+from sqlalchemy import sql
+from sqlalchemy.sql import expression
 
 import nova.conf
 from nova.db.sqlalchemy import api as db_api
@@ -55,9 +55,9 @@ def _dict_with_extra_specs(flavor_model):
 @db_api.api_context_manager.reader
 def _get_projects_from_db(context, flavorid):
     db_flavor = context.session.query(api_models.Flavors).\
-                filter_by(flavorid=flavorid).\
-                options(joinedload('projects')).\
-                first()
+        filter_by(flavorid=flavorid).\
+        options(orm.joinedload('projects')).\
+        first()
     if not db_flavor:
         raise exception.FlavorNotFound(flavor_id=flavorid)
     return [x['project_id'] for x in db_flavor['projects']]
@@ -272,13 +272,13 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
     @db_api.api_context_manager.reader
     def _flavor_get_query_from_db(context):
         query = context.session.query(api_models.Flavors).\
-                options(joinedload('extra_specs'))
+            options(orm.joinedload('extra_specs'))
         if not context.is_admin:
-            the_filter = [api_models.Flavors.is_public == true()]
+            the_filter = [api_models.Flavors.is_public == sql.true()]
             the_filter.extend([
                 api_models.Flavors.projects.any(project_id=context.project_id)
             ])
-            query = query.filter(or_(*the_filter))
+            query = query.filter(sa.or_(*the_filter))
         return query
 
     @staticmethod
@@ -309,7 +309,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         """Returns a dict describing specific flavor_id."""
         result = Flavor._flavor_get_query_from_db(context).\
                         filter_by(flavorid=flavor_id).\
-                        order_by(asc(api_models.Flavors.id)).\
+                        order_by(expression.asc(api_models.Flavors.id)).\
                         first()
         if not result:
             raise exception.FlavorNotFound(flavor_id=flavor_id)
@@ -609,7 +609,7 @@ def _flavor_get_all_from_db(context, inactive, filters, sort_key, sort_dir,
             the_filter.extend([api_models.Flavors.projects.any(
                 project_id=context.project_id)])
         if len(the_filter) > 1:
-            query = query.filter(or_(*the_filter))
+            query = query.filter(sa.or_(*the_filter))
         else:
             query = query.filter(the_filter[0])
     marker_row = None
