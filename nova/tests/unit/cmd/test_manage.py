@@ -30,7 +30,7 @@ from nova.cmd import manage
 from nova import conf
 from nova import context
 from nova.db import api as db
-from nova.db.sqlalchemy import migration as sqla_migration
+from nova.db import migration
 from nova import exception
 from nova import objects
 from nova.scheduler.client import report
@@ -618,18 +618,17 @@ Cell %s: 456
         self.assertEqual(4, ret)
         self.assertIn('Unable to get cell list', self.output.getvalue())
 
-    @mock.patch.object(sqla_migration, 'db_version', return_value=2)
-    def test_version(self, sqla_migrate):
+    @mock.patch.object(migration, 'db_version', return_value=2)
+    def test_version(self, mock_db_version):
         self.commands.version()
-        sqla_migrate.assert_called_once_with(context=None, database='main')
+        mock_db_version.assert_called_once_with()
 
-    @mock.patch.object(sqla_migration, 'db_sync')
-    def test_sync(self, sqla_sync):
+    @mock.patch.object(migration, 'db_sync')
+    def test_sync(self, mock_db_sync):
         self.commands.sync(version=4, local_cell=True)
-        sqla_sync.assert_called_once_with(context=None,
-                                          version=4, database='main')
+        mock_db_sync.assert_called_once_with(4)
 
-    @mock.patch('nova.db.migration.db_sync')
+    @mock.patch.object(migration, 'db_sync')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid', return_value='map')
     def test_sync_cell0(self, mock_get_by_uuid, mock_db_sync):
         ctxt = context.get_admin_context()
@@ -810,17 +809,15 @@ class ApiDbCommandsTestCase(test.NoDBTestCase):
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.ApiDbCommands()
 
-    @mock.patch.object(sqla_migration, 'db_version', return_value=2)
-    def test_version(self, sqla_migrate):
+    @mock.patch.object(migration, 'db_version', return_value=2)
+    def test_version(self, mock_db_version):
         self.commands.version()
-        sqla_migrate.assert_called_once_with(context=None,
-                                             database='api')
+        mock_db_version.assert_called_once_with(database='api')
 
-    @mock.patch.object(sqla_migration, 'db_sync')
-    def test_sync(self, sqla_sync):
+    @mock.patch.object(migration, 'db_sync')
+    def test_sync(self, mock_db_sync):
         self.commands.sync(version=4)
-        sqla_sync.assert_called_once_with(context=None,
-                                          version=4, database='api')
+        mock_db_sync.assert_called_once_with(4, database='api')
 
 
 @ddt.ddt

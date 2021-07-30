@@ -48,7 +48,6 @@ import testtools
 
 from nova.db import migration
 from nova.db.sqlalchemy import migrate_repo
-from nova.db.sqlalchemy import migration as sa_migration
 from nova.db.sqlalchemy import models
 from nova import test
 from nova.tests import fixtures as nova_fixtures
@@ -78,7 +77,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     @property
     def migration_api(self):
-        return sa_migration.versioning_api
+        return migration.versioning_api
 
     @property
     def migrate_engine(self):
@@ -136,9 +135,8 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
     # Implementations for ModelsMigrationsSync
     def db_sync(self, engine):
-        with mock.patch.object(sa_migration, 'get_engine',
-                               return_value=engine):
-            sa_migration.db_sync()
+        with mock.patch.object(migration, 'get_engine', return_value=engine):
+            migration.db_sync()
 
     def get_engine(self, context=None):
         return self.migrate_engine
@@ -239,9 +237,10 @@ class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
     FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
     def test_innodb_tables(self):
-        with mock.patch.object(sa_migration, 'get_engine',
-                               return_value=self.migrate_engine):
-            sa_migration.db_sync()
+        with mock.patch.object(
+            migration, 'get_engine', return_value=self.migrate_engine,
+        ):
+            migration.db_sync()
 
         total = self.migrate_engine.execute(
             "SELECT count(*) "
