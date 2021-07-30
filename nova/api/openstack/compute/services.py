@@ -306,7 +306,8 @@ class ServiceController(wsgi.Controller):
                     # get_all_host() above will raise, as there are no longer
                     # any compute node records for the host. Catch it here and
                     # continue to allow compute service deletion.
-                    pass
+                    LOG.info('Deleting compute service with no associated '
+                             'compute nodes.')
 
                 aggrs = self.aggregate_api.get_aggregates_by_host(context,
                                                                   service.host)
