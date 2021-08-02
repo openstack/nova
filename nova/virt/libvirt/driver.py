@@ -7813,9 +7813,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     allocated_mdevs[device.uuid] = guest.uuid
         return allocated_mdevs
 
-    @staticmethod
-    def _vgpu_allocations(allocations):
-        """Filtering only the VGPU allocations from a list of allocations.
+    # TODO(sbauza): Rename this method into _mdev_allocations
+    def _vgpu_allocations(self, allocations):
+        """Filtering only the mdev allocations from a list of allocations.
 
         :param allocations: Information about resources allocated to the
                             instance via placement, of the form returned by
@@ -7824,12 +7824,14 @@ class LibvirtDriver(driver.ComputeDriver):
         if not allocations:
             # If no allocations, there is no vGPU request.
             return {}
-        RC_VGPU = orc.VGPU
+        mdev_rcs = self._get_supported_mdev_resource_classes()
         vgpu_allocations = {}
         for rp in allocations:
             res = allocations[rp]['resources']
-            if RC_VGPU in res and res[RC_VGPU] > 0:
-                vgpu_allocations[rp] = {'resources': {RC_VGPU: res[RC_VGPU]}}
+            mdev_resources = {mdev_RC: res[mdev_RC] for mdev_RC in mdev_rcs
+                              if mdev_RC in res and res[mdev_RC] > 0}
+            if mdev_resources:
+                vgpu_allocations[rp] = {'resources': mdev_resources}
         return vgpu_allocations
 
     def _get_existing_mdevs_not_assigned(self, parent, requested_types=None):
@@ -7913,7 +7915,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         'while at the moment libvirt only supports one. Only '
                         'the first allocation will be looked up.')
         rp_uuid, alloc = next(iter(vgpu_allocations.items()))
-        vgpus_asked = alloc['resources'][orc.VGPU]
+        # We only have one allocation with a supported resource class
+        vgpus_asked = list(alloc['resources'].values())[0]
 
         # Find if we allocated against a specific pGPU (and then the allocation
         # is made against a child RP) or any pGPU (in case the VGPU inventory
@@ -8455,8 +8458,8 @@ class LibvirtDriver(driver.ComputeDriver):
         root_node = provider_tree.data(nodename)
         return orc.VGPU in root_node.inventory
 
-    @staticmethod
-    def _ensure_pgpu_providers(inventories_dict, provider_tree, nodename):
+    def _ensure_pgpu_providers(self, inventories_dict, provider_tree,
+                               nodename):
         """Ensures GPU inventory providers exist in the tree for $nodename.
 
         GPU providers are named $nodename_$gpu-device-id, e.g.
@@ -8499,7 +8502,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
             # The VGPU inventory goes on a child provider of the given root
             # node, identified by $nodename.
-            pgpu_inventory = {orc.VGPU: inventory}
+            mdev_rc = self._get_resource_class_for_device(pgpu_dev_id)
+            pgpu_inventory = {mdev_rc: inventory}
             provider_tree.update_inventory(pgpu_rp_name, pgpu_inventory)
         return pgpu_rps
 
