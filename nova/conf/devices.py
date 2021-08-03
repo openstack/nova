@@ -40,7 +40,7 @@ to use for at least one physical device) or if no device addresses are provided
 ``[devices]/enabled_mdev_types``.
 
 If the same PCI address is provided for two different types, nova-compute will
-return an InvalidLibvirtGPUConfig exception at restart.
+return an InvalidLibvirtMdevConfig exception at restart.
 
 As an interim period, old configuration groups named ``[vgpu_$(MDEV_TYPE)]``
 will be accepted. A valid configuration could then be::

@@ -25293,7 +25293,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # Provide the same pGPU PCI ID for two different types
         self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
         self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-12')
-        self.assertRaises(exception.InvalidLibvirtGPUConfig,
+        self.assertRaises(exception.InvalidLibvirtMdevConfig,
                           libvirt_driver.LibvirtDriver,
                           fake.FakeVirtAPI(), False)
 
@@ -25304,7 +25304,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         nova.conf.devices.register_dynamic_opts(CONF)
         # Fat-finger the PCI address
         self.flags(device_addresses=['whoops'], group='mdev_nvidia-11')
-        self.assertRaises(exception.InvalidLibvirtGPUConfig,
+        self.assertRaises(exception.InvalidLibvirtMdevConfig,
                           libvirt_driver.LibvirtDriver,
                           fake.FakeVirtAPI(), False)
 
@@ -25687,8 +25687,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.assertRaises(exception.ComputeResourcesUnavailable,
                           drvr._allocate_mdevs, allocations=allocations)
         mock_warning.assert_called_once_with(
-            "pGPU device name %(name)s can't be guessed from the ProviderTree "
-            "roots %(roots)s", {'name': 'oops_I_did_it_again', 'roots': 'cn'})
+            "mdev-capable device name %(name)s can't be guessed from the "
+            "ProviderTree roots %(roots)s",
+            {'name': 'oops_I_did_it_again', 'roots': 'cn'})
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_vgpu_type_per_pgpu')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_mediated_devices')
@@ -25808,7 +25809,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         # mdev1 was originally created for nvidia-99 but the operator messed up
         # the configuration by removing this type, we want to hardstop.
-        self.assertRaises(exception.InvalidLibvirtGPUConfig,
+        self.assertRaises(exception.InvalidLibvirtMdevConfig,
                           drvr.init_host, host='foo')
 
     @mock.patch.object(libvirt_guest.Guest, 'detach_device')
