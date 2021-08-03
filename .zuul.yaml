@@ -189,6 +189,8 @@
         # snapshots from the LV based instance disks.
         # See bug #1913451 for more details.
         SWIFT_LOOPBACK_DISK_SIZE: 24G
+        # As above, increase the total image limit per tenant to 10G
+        GLANCE_LIMIT_IMAGE_SIZE_TOTAL: 10240
       devstack_services:
         # Disable non-essential services that we don't need for this job.
         c-bak: false
