@@ -369,9 +369,6 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         if CONF.vmware.serial_log_uri:
             try:
-                print("%s/console_log/%s" % (
-                    CONF.vmware.serial_log_uri,
-                    instance.uuid))
                 read_log_data = urllib.request.urlopen("%s/console_log/%s" % (
                     CONF.vmware.serial_log_uri,
                     instance.uuid))
