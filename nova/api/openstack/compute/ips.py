@@ -25,10 +25,6 @@ from nova.policies import ips as ips_policies
 
 class IPsController(wsgi.Controller):
     """The servers addresses API controller for the OpenStack API."""
-    # Note(gmann): here using V2 view builder instead of V3 to have V2.1
-    # server ips response same as V2 which does not include "OS-EXT-IPS:type"
-    # & "OS-EXT-IPS-MAC:mac_addr". If needed those can be added with
-    # microversion by using V2.1 view builder.
     _view_builder_class = views_addresses.ViewBuilder
 
     def __init__(self):
@@ -42,7 +38,7 @@ class IPsController(wsgi.Controller):
         context.can(ips_policies.POLICY_ROOT % 'index',
                     target={'project_id': instance.project_id})
         networks = common.get_networks_for_instance(context, instance)
-        return self._view_builder.index(networks)
+        return self._view_builder.index(req, networks)
 
     @wsgi.expected_errors(404)
     def show(self, req, server_id, id):
@@ -55,4 +51,4 @@ class IPsController(wsgi.Controller):
             msg = _("Instance is not a member of specified network")
             raise exc.HTTPNotFound(explanation=msg)
 
-        return self._view_builder.show(networks[id], id)
+        return self._view_builder.show(req, networks[id], id)
