@@ -151,9 +151,10 @@ class VMwareImage(object):
             'linked_clone': linked_clone,
             'container_format': container_format,
             'vsphere_location': get_vsphere_location(context, image_id),
-            'owner': image_meta.owner
         }
 
+        if image_meta.obj_attr_is_set('owner'):
+            props['owner'] = image_meta.owner
         if image_meta.obj_attr_is_set('size'):
             props['file_size'] = image_meta.size
         if image_meta.obj_attr_is_set('disk_format'):
