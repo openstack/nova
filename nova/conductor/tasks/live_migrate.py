@@ -346,10 +346,11 @@ class LiveMigrationTask(base.TaskBase):
         if source_type != destination_type:
             raise exception.InvalidHypervisorType()
 
-        source_version = source_info.hypervisor_version
-        destination_version = destination_info.hypervisor_version
-        if source_version > destination_version:
-            raise exception.DestinationHypervisorTooOld()
+        if not CONF.workarounds.enable_live_migration_to_old_hypervisor:
+            source_version = source_info.hypervisor_version
+            destination_version = destination_info.hypervisor_version
+            if source_version > destination_version:
+                raise exception.DestinationHypervisorTooOld()
         return source_info, destination_info
 
     def _call_livem_checks_on_host(self, destination, provider_mapping):
