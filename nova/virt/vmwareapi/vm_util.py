@@ -21,7 +21,10 @@ The VMware API VM utility module to build SOAP object specs.
 import collections
 import copy
 from functools import wraps
+import hashlib
 import operator
+import socket
+import ssl
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -2078,3 +2081,60 @@ def rename_vm(session, vm_ref, instance):
 def is_vim_instance(o, vim_type_name):
     return isinstance(o, sudsobject.Factory.subclass(
         vim_type_name, sudsobject.Object))
+
+
+def create_service_locator_name_password(client_factory, username, password):
+    """Creates a ServiceLocatorNamePassword object, which in turn is
+    derived of ServiceLocatorCredential
+    """
+    o = client_factory.create('ns0:ServiceLocatorNamePassword')
+    o.username = username
+    o.password = password
+    return o
+
+
+def get_sha1_ssl_thumbprint(url, timeout=1):
+    """Returns the sha-1 thumbprint of the ssl cert of the vcenter or None
+    """
+    try:
+        parsed_url = six.moves.urllib.parse.urlparse(url)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(timeout)
+        wrappedSocket = ssl.wrap_socket(sock)
+        thumb = None
+        wrappedSocket.connect((parsed_url.hostname, parsed_url.port or 443))
+
+        der_cert_bin = wrappedSocket.getpeercert(True)
+
+        thumb = hashlib.sha1(der_cert_bin).hexdigest().upper()
+        t = iter(thumb)
+        return ':'.join(a + b for a, b in zip(t, t))
+    except (OSError, ValueError, socket.timeout):
+        return
+
+
+def create_service_locator(client_factory, url, vcenter_instance_uuid,
+        credential, ssl_thumbprint=None):
+    """Creates a ServiceLocator WSDL-object
+
+    :param client_factory: - factory for creating the object
+    :param url: - url to the vcenter api
+    :param vcenter_instance_uuid: - uuid of the vcenter instance
+    :param credential: - An instance of ServiceLocatorCredential
+        (See: create_service_locator_name_password)
+    :param ssl_thumbprint: - The sha1 thumbprint of the cert of the instance
+        (See: get_sha1_ssl_thumbprint)
+    :returns: A ServiceLocator WSDL-object
+    """
+
+    # While it is nominally optional, operations seems to fail without it
+    # We will do a best effort
+    if not ssl_thumbprint:
+        ssl_thumbprint = get_sha1_ssl_thumbprint(url)
+
+    sl = client_factory.create('ns0:ServiceLocator')
+    sl.url = url
+    sl.instanceUuid = vcenter_instance_uuid
+    sl.credential = credential
+    sl.sslThumbprint = ssl_thumbprint
+    return sl
