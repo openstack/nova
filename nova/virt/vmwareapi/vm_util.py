@@ -969,9 +969,6 @@ def allocate_controller_key_and_unit_number(client_factory, devices,
     controller_key and unit_number that can be used for attaching a new virtual
     disk to adapter with the given adapter_type.
     """
-    if devices.__class__.__name__ == "ArrayOfVirtualDevice":
-        devices = devices.VirtualDevice
-
     taken = _find_allocated_slots(devices)
 
     ret = None

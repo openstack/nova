@@ -1347,16 +1347,8 @@ class VMwareVMOps(object):
 
         if disks:
             disk_devices = [vmdk_info.device.key for vmdk_info in disks]
-            hardware_devices = self._session._call_method(
-                vutil,
-                "get_object_property",
-                vm_ref,
-                "config.hardware.device")
-            if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
-                hardware_devices = hardware_devices.VirtualDevice
-
             device_change = []
-            for device in hardware_devices:
+            for device in vm_util.get_hardware_devices(self._session, vm_ref):
                 if getattr(device, 'macAddress', None) or \
                     device.__class__.__name__ == "VirtualDisk" and \
                     device.key not in disk_devices:
@@ -2150,11 +2142,8 @@ class VMwareVMOps(object):
             spec.deviceChange = []
             vif_model = image_meta.properties.get('hw_vif_model',
                                                   constants.DEFAULT_VIF_MODEL)
-            hardware_devices = self._session._call_method(
-                                                    vutil,
-                                                    "get_object_property",
-                                                    vm_ref,
-                                                    "config.hardware.device")
+            hardware_devices = vm_util.get_hardware_devices(self._session,
+                                                            vm_ref)
             vif_infos = vmwarevif.get_vif_info(self._session,
                                                self._cluster,
                                                vif_model,
