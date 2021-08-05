@@ -80,14 +80,15 @@ def fetch_cluster_properties(session, vm_ref):
     max_objects = 1
     vim = session.vim
     property_collector = vim.service_content.propertyCollector
+    client_factory = vim.client.factory
 
     traversal_spec = vutil.build_traversal_spec(
-        vim.client.factory,
+        client_factory,
         "v_to_r",
         "VirtualMachine",
         "resourcePool",
         False,
-        [vutil.build_traversal_spec(vim.client.factory,
+        [vutil.build_traversal_spec(client_factory,
                                     "r_to_c",
                                     "ResourcePool",
                                     "parent",
@@ -95,19 +96,19 @@ def fetch_cluster_properties(session, vm_ref):
                                     [])])
 
     object_spec = vutil.build_object_spec(
-        vim.client.factory,
+        client_factory,
         vm_ref,
         [traversal_spec])
     property_spec = vutil.build_property_spec(
-        vim.client.factory,
+        client_factory,
         "ClusterComputeResource",
         ["configurationEx"])
 
     property_filter_spec = vutil.build_property_filter_spec(
-        vim.client.factory,
+        client_factory,
         [property_spec],
         [object_spec])
-    options = vim.client.factory.create('ns0:RetrieveOptions')
+    options = client_factory.create('ns0:RetrieveOptions')
     options.maxObjects = max_objects
 
     pc_result = vim.RetrievePropertiesEx(property_collector,

@@ -2233,7 +2233,8 @@ class VMwareVMOps(object):
         folder = self._get_project_folder(dc_info, instance.project_id,
                                           'Instances')
 
-        spec = vm_util.relocate_vm_spec(self._session.vim.client.factory,
+        client_factory = self._session.vim.client.factory
+        spec = vm_util.relocate_vm_spec(client_factory,
                                         res_pool=self._root_resource_pool,
                                         folder=folder, datastore=datastore.ref)
 
@@ -2261,10 +2262,10 @@ class VMwareVMOps(object):
                     raise exception.NotFound(msg)
 
                 # Update the network device backing
-                config_spec = self._session.vim.client.factory.create(
+                config_spec = client_factory.create(
                     'ns0:VirtualDeviceConfigSpec')
                 vm_util.set_net_device_backing(
-                    self._session.vim.client.factory, device, vif_info)
+                    client_factory, device, vif_info)
                 config_spec.operation = "edit"
                 config_spec.device = device
                 spec.deviceChange.append(config_spec)
@@ -3124,30 +3125,31 @@ class VMwareVMOps(object):
                 options=options)
 
     def _get_vm_monitor_spec(self, vim):
+        client_factory = vim.client.factory
         traversal_spec_vm = vutil.build_traversal_spec(
-            vim.client.factory,
+            client_factory,
             "h_to_vm",
             "HostSystem",
             "vm",
             False,
             [])
         traversal_spec = vutil.build_traversal_spec(
-            vim.client.factory,
+            client_factory,
             "c_to_h",
             "ComputeResource",
             "host",
             False,
             [traversal_spec_vm])
         object_spec = vutil.build_object_spec(
-            vim.client.factory,
+            client_factory,
             self._cluster,
             [traversal_spec])
         property_spec = vutil.build_property_spec(
-            vim.client.factory,
+            client_factory,
             "HostSystem",
             ["vm"])
         property_spec_vm = vutil.build_property_spec(
-            vim.client.factory,
+            client_factory,
             "VirtualMachine",
             ["config.instanceUuid",
              "config.managedBy",
@@ -3156,7 +3158,7 @@ class VMwareVMOps(object):
              "summary.guest.toolsRunningStatus",
             ])
         property_filter_spec = vutil.build_property_filter_spec(
-            vim.client.factory,
+            client_factory,
             [property_spec, property_spec_vm],
             [object_spec])
         return property_filter_spec
