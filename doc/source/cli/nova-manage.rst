@@ -1144,6 +1144,15 @@ state transition. For each instance found, allocations are created against
 the compute node resource provider for that instance based on the flavor
 associated with the instance.
 
+.. note::
+    Nested allocations are only partially supported. Nested allocations due to
+    Neutron ports having QoS policies are supported since 20.0.0 (Train)
+    release. But nested allocations due to vGPU or Cyborg device profile
+    requests in the flavor are not supported. Also if you are using
+    provider.yaml files on compute hosts to define additional resources, if
+    those resources are defined on child resource providers then instances
+    using such resources are not supported.
+
 Also if the instance has any port attached that has resource request
 (e.g. :neutron-doc:`Quality of Service (QoS): Guaranteed Bandwidth
 <admin/config-qos-min-bw.html>`) but the corresponding

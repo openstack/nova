@@ -780,6 +780,50 @@ class TestNovaManagePlacementHealAllocations(
         )
         self.assertEqual(4, result, self.output.getvalue())
 
+    def test_instance_with_vgpu_is_blocked(self):
+        # we cannot boot with VGPU in these tests so manipulate the
+        # instance.flavor directly after the boot to simulate an instance with
+        # VGPU request
+        server, _ = self._boot_and_remove_allocations(self.flavor, 'cell1')
+        instance = objects.Instance.get_by_uuid(
+            context.get_admin_context(), server['id'])
+        instance.flavor.extra_specs["resources:VGPU"] = 1
+        instance.save()
+
+        result = self.cli.heal_allocations(
+            verbose=True, instance_uuid=server['id'],
+            force=True
+        )
+
+        self.assertIn(
+            f"Healing allocation for instance {server['id']} with vGPU "
+            f"resource request is not supported.",
+            self.output.getvalue()
+        )
+        self.assertEqual(8, result, self.output.getvalue())
+
+    def test_instance_with_cyborg_dev_profile_is_blocked(self):
+        # we cannot boot with cyborg device in these tests so manipulate the
+        # instance.flavor directly after the boot to simulate an instance with
+        # cyborg request
+        server, _ = self._boot_and_remove_allocations(self.flavor, 'cell1')
+        instance = objects.Instance.get_by_uuid(
+            context.get_admin_context(), server['id'])
+        instance.flavor.extra_specs["accel:device_profile"] = "foo"
+        instance.save()
+
+        result = self.cli.heal_allocations(
+            verbose=True, instance_uuid=server['id'],
+            force=True
+        )
+
+        self.assertIn(
+            f"Healing allocation for instance {server['id']} with Cyborg "
+            f"device profile request is not supported.",
+            self.output.getvalue()
+        )
+        self.assertEqual(8, result, self.output.getvalue())
+
 
 class TestNovaManagePlacementHealPortAllocations(
         test_servers.PortResourceRequestBasedSchedulingTestBase):

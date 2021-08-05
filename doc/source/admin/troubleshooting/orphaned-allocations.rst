@@ -180,8 +180,13 @@ things:
 * `Migration-based allocations`_ would be lost if manually deleted during a
   resize. These are allocations tracked by the migration resource record
   on the source compute service during a migration.
-* Healing allocations does not supported nested resource allocations before the
-  20.0.0 (Train) release.
+* Healing allocations only partially support nested allocations. Nested
+  allocations due to Neutron ports having QoS policies are supported since
+  20.0.0 (Train) release. But nested allocations due to vGPU or Cyborg device
+  profile requests in the flavor are not supported. Also if you are using
+  provider.yaml files on compute hosts to define additional resources, if those
+  resources are defined on child resource providers then instances using such
+  resources are not supported.
 
 If you do use the ``heal_allocations`` command to cleanup allocations for a
 specific trouble instance, it is recommended to take note of what the
