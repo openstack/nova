@@ -2412,7 +2412,7 @@ class VMwareVMOps(object):
         vm_props = vm_util._VM_VALUE_CACHE.get(vm_ref.value, {})
         if not vm_props or "runtime.powerState" not in vm_props:
             try:
-                if not CONF.vmware.use_property_collector:
+                if CONF.vmware.use_property_collector:
                     LOG.debug("VM instance data was not found on the cache.")
 
                 vm_props = self._session._call_method(
