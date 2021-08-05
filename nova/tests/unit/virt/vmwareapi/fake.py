@@ -759,7 +759,8 @@ class HostSystem(ManagedObject):
 
         product = DataObject()
         product.name = "VMware ESXi"
-        product.version = constants.MIN_VC_VERSION
+        # Avoid deprecation warning
+        product.version = constants.NEXT_MIN_VC_VERSION
         config = DataObject()
         config.product = product
         summary.config = config
@@ -1238,7 +1239,8 @@ class FakeVim(object):
 
         about_info = DataObject()
         about_info.name = "VMware vCenter Server"
-        about_info.version = constants.MIN_VC_VERSION
+        # Avoid deprecation warning
+        about_info.version = constants.NEXT_MIN_VC_VERSION
         about_info.instanceUuid = _FAKE_VCENTER_UUID
 
         service_content.about = about_info
