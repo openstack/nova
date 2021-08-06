@@ -99,6 +99,27 @@ NOT_SPECIFIED = object()
 
 class InstanceHelperMixin:
 
+    def _wait_for_service_parameter(
+        self, service_hostname, service_binary, expected_params,
+        max_retries=10, api=None
+    ):
+        api = api or getattr(self, 'admin_api', self.api)
+
+        retry_count = 0
+        while True:
+            service = api.get_services(
+                host=service_hostname,
+                binary=service_binary)[0]
+            if all([service[attr] == expected_params[attr]
+                    for attr in expected_params]):
+                break
+            retry_count += 1
+            if retry_count == max_retries:
+                self.fail(
+                    f'Wait for service parameter change failed, '
+                    f'expected_params={expected_params}, service={service}')
+            time.sleep(0.5)
+
     def _wait_for_server_parameter(
             self, server, expected_params, max_retries=10, api=None):
         api = api or getattr(self, 'admin_api', self.api)
