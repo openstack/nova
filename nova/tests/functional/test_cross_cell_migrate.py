@@ -71,7 +71,7 @@ class TestMultiCellMigrate(integrated_helpers.ProviderUsageBaseTestCase):
         self.created_images = []  # list of image IDs created during resize
 
         # Adjust the polling interval and timeout for long RPC calls.
-        self.flags(rpc_response_timeout=1)
+        self.flags(rpc_response_timeout=10)
         self.flags(long_rpc_timeout=60)
 
         # Set up 2 compute services in different cells
