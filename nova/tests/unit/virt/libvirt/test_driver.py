@@ -9532,8 +9532,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance = objects.Instance(**self.test_instance)
         connection_info = {
             'driver_volume_type': 'fake',
-            'data': {'device_path': '/fake',
-                     'access_mode': 'rw'}
+            'data': {
+                'volume_id': uuids.volume_id,
+                'device_path': '/fake',
+                'access_mode': 'rw'
+            }
         }
 
         new_size = 20 * units.Gi
@@ -9561,21 +9564,55 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_extend_volume_with_volume_driver_without_support(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'serial': uuids.volume_id,
+            'data': {
+                'volume_id': uuids.volume_id,
+                'device_path': '/fake',
+                'access_mode': 'rw'
+            }
+        }
 
         with mock.patch.object(drvr, '_extend_volume',
                                side_effect=NotImplementedError()):
-            connection_info = {'driver_volume_type': 'fake'}
             self.assertRaises(exception.ExtendVolumeNotSupported,
                               drvr.extend_volume, self.context,
                               connection_info, instance, 0)
+
+    def test_extend_volume_with_new_size_none(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'serial': uuids.volume_id,
+            'data': {
+                'volume_id': uuids.volume_id,
+                'device_path': '/fake',
+                'access_mode': 'rw'
+            }
+        }
+        with mock.patch.object(drvr, '_extend_volume', return_value=None):
+            self.assertRaises(
+                exception.VolumeExtendFailed,
+                drvr.extend_volume,
+                self.context,
+                connection_info,
+                instance,
+                0
+            )
 
     def test_extend_volume_disk_not_found(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         connection_info = {
             'driver_volume_type': 'fake',
-            'data': {'device_path': '/fake',
-                     'access_mode': 'rw'}
+            'serial': uuids.volume_id,
+            'data': {
+                'volume_id': uuids.volume_id,
+                'device_path': '/fake',
+                'access_mode': 'rw'
+            }
         }
         new_size = 20 * units.Gi
 
@@ -9590,6 +9627,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_extend_volume_with_instance_not_found(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'serial': uuids.volume_id,
+            'data': {
+                'volume_id': uuids.volume_id,
+                'device_path': '/fake',
+                'access_mode': 'rw'
+            }
+        }
 
         with test.nested(
             mock.patch.object(host.Host, '_get_domain',
@@ -9597,7 +9643,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   instance_id=instance.uuid)),
             mock.patch.object(drvr, '_extend_volume')
         ) as (_get_domain, _extend_volume):
-            connection_info = {'driver_volume_type': 'fake'}
             self.assertRaises(exception.InstanceNotFound,
                               drvr.extend_volume, self.context,
                               connection_info, instance, 0)
@@ -9607,9 +9652,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance = objects.Instance(**self.test_instance)
         connection_info = {
             'driver_volume_type': 'fake',
-            'data': {'device_path': '/fake',
-                     'access_mode': 'rw'}
+            'serial': uuids.volume_id,
+            'data': {
+                'volume_id': uuids.volume_id,
+                'device_path': '/fake',
+                'access_mode': 'rw'
+            }
         }
+
         new_size = 20 * units.Gi
 
         guest = mock.Mock(spec=libvirt_guest.Guest)
@@ -9631,12 +9681,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         connection_info = {
-            'serial': '58a84f6d-3f0c-4e19-a0af-eb657b790657',
+            'serial': uuids.volume_id,
             'driver_volume_type': 'fake',
-            'data': {'cluster_name': 'fake',
-                     'auth_enabled': False,
-                     'volume_id': '58a84f6d-3f0c-4e19-a0af-eb657b790657',
-                     'access_mode': 'rw'}
+            'data': {
+                'cluster_name': 'fake',
+                'auth_enabled': False,
+                'volume_id': uuids.volume_id,
+                'access_mode': 'rw'
+            }
         }
         new_size = 20 * units.Gi
 
@@ -9648,7 +9700,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         block_device.resize = mock.Mock()
         disk = mock.Mock(
             spec=vconfig.LibvirtConfigGuestDisk,
-            serial='58a84f6d-3f0c-4e19-a0af-eb657b790657',
+            serial=uuids.volume_id,
             target_dev='vdb')
         guest.get_block_device = mock.Mock(return_value=block_device)
         guest.get_all_disks = mock.Mock(return_value=[disk])
@@ -9668,12 +9720,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         connection_info = {
-            'serial': '58a84f6d-3f0c-4e19-a0af-eb657b790657',
+            'serial': uuids.volume_id,
             'driver_volume_type': 'fake',
-            'data': {'cluster_name': 'fake',
-                     'auth_enabled': False,
-                     'volume_id': '58a84f6d-3f0c-4e19-a0af-eb657b790657',
-                     'access_mode': 'rw'}
+            'data': {
+                'cluster_name': 'fake',
+                'auth_enabled': False,
+                'volume_id': uuids.volume_id,
+                'access_mode': 'rw'
+            }
         }
         new_size = 20 * units.Gi
 
@@ -9684,7 +9738,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         block_device.resize = mock.Mock()
         disk = mock.Mock(
             spec=vconfig.LibvirtConfigGuestDisk,
-            serial='12345678-abcd-abcd-abcd-0123456789012',
+            serial=uuids.different_volume_id,
             target_dev='vdb')
         guest.get_block_device = mock.Mock(return_value=block_device)
         guest.get_all_disks = mock.Mock(return_value=[disk])
@@ -9709,7 +9763,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         connection_info = {
             'serial': uuids.volume_id,
             'driver_volume_type': 'fake',
-            'data': {'access_mode': 'rw'}
+            'data': {
+                'access_mode': 'rw'
+            }
         }
 
         disk_1 = mock.Mock(spec=vconfig.LibvirtConfigGuestDisk,
@@ -9748,8 +9804,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         connection_info = {
             'serial': uuids.volume_id,
             'driver_volume_type': 'fake',
-            'data': {'device_path': mock.sentinel.device_path,
-                     'access_mode': 'rw'}
+            'data': {
+                'device_path': mock.sentinel.device_path,
+                'access_mode': 'rw'
+            }
         }
 
         block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
@@ -9786,8 +9844,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         connection_info = {
             'serial': uuids.volume_id,
             'driver_volume_type': 'fake',
-            'data': {'device_path': mock.sentinel.device_path,
-                     'access_mode': 'rw'}
+            'data': {
+                'device_path': mock.sentinel.device_path,
+                'access_mode': 'rw'
+            }
         }
 
         block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
@@ -9837,10 +9897,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         connection_info = {
             'serial': uuids.volume_id,
             'driver_volume_type': 'rbd',
-            'data': {'name': 'pool/volume',
-                     'auth_enabled': 'true',
-                     'auth_username': 'username',
-                     'access_mode': 'rw'}
+            'data': {
+                'name': 'pool/volume',
+                'auth_enabled': 'true',
+                'auth_username': 'username',
+                'access_mode': 'rw'
+            }
         }
         disk_1 = mock.Mock(spec=vconfig.LibvirtConfigGuestDisk,
                            serial=uuids.volume_id,
