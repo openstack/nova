@@ -5,7 +5,7 @@ import glob
 import os
 import subprocess
 
-BASE = 'nova/db/sqlalchemy/migrate_repo/versions'.split('/')
+BASE = 'nova/db/main/legacy_migrations/versions'.split('/')
 API_BASE = 'nova/db/sqlalchemy/api_migrations/migrate_repo/versions'.split('/')
 
 STUB = \

@@ -176,7 +176,7 @@ Schema Migrations
 ''''''''''''''''''
 
 Schema migrations are defined in
-``nova/db/sqlalchemy/migrate_repo/versions`` and in
+``nova/db/main/legacy_migrations/versions`` and in
 ``nova/db/sqlalchemy/api_migrations/migrate_repo/versions``. They are
 the routines that transform our database structure, which should be
 additive and able to be applied to a running system before service
