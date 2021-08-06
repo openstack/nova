@@ -613,6 +613,32 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                               'fake_device', 'fake_volume_id', 'fake_disk_bus',
                               'fake_device_type', tag=None, multiattach=True)
 
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc',
+                       new=mock.Mock())
+    @mock.patch.object(objects.BlockDeviceMapping, 'create', new=mock.Mock())
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test_reserve_block_device_name_raises_on_duplicate(self, mock_get):
+        instance = fake_instance.fake_instance_obj(self.context)
+        vol_bdm = objects.BlockDeviceMapping(
+            self.context,
+            id=1,
+            instance_uuid=instance.uuid,
+            volume_id="myinstanceuuid",
+            source_type='volume',
+            destination_type='volume',
+            delete_on_termination=True,
+            connection_info=None,
+            tag='fake-tag',
+            device_name='/dev/fake0',
+            attachment_id=uuids.attachment_id)
+        mock_get.return_value = objects.BlockDeviceMappingList(
+            objects=[vol_bdm])
+
+        self.assertRaises(exception.InvalidVolume,
+            self.compute.reserve_block_device_name,
+                self.context, instance, None, "myinstanceuuid",
+                None, None, 'foo', False)
+
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(time, 'sleep')
     def test_allocate_network_succeeds_after_retries(

@@ -16,6 +16,7 @@ import mock
 import time
 
 from nova import context
+from nova import exception
 from nova import objects
 from nova.tests.functional import integrated_helpers
 
@@ -68,7 +69,12 @@ class TestDuplicateVolAttachRace(integrated_helpers._IntegratedTestBase):
             # twice to mimic two callers racing each other after the checks on
             # the api.
             original_bdm = original_reserve_name(*args, **kwargs)
-            original_reserve_name(*args, **kwargs)
+
+            # Assert that a repeat call fails as an attachment already exists
+            self.assertRaises(
+                exception.InvalidVolume,
+                original_reserve_name, *args, **kwargs)
+
             return original_bdm
 
         with mock.patch.object(
@@ -86,10 +92,7 @@ class TestDuplicateVolAttachRace(integrated_helpers._IntegratedTestBase):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             ctxt, server_id)
 
-        # FIXME(lyarwood): This is bug #1937375, we now have 3 bdms for the
-        # instance, the original root disk and two duplicate volume bdms for
-        # the same volume attachment.
-        self.assertEqual(3, len(bdms))
-        self.assertEqual(volume_id, bdms[2].volume_id)
+        # Assert that the correct bdms are present
+        self.assertEqual(2, len(bdms))
         self.assertEqual(volume_id, bdms[1].volume_id)
         self.assertEqual('local', bdms[0].destination_type)
