@@ -146,7 +146,7 @@ _hints = {
     'additionalProperties': True
 }
 
-base_create = {
+create = {
     'type': 'object',
     'properties': {
         'server': {
@@ -225,33 +225,31 @@ base_create = {
     'additionalProperties': False,
 }
 
-
-base_create_v20 = copy.deepcopy(base_create)
-base_create_v20['properties']['server'][
+create_v20 = copy.deepcopy(create)
+create_v20['properties']['server'][
     'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
-base_create_v20['properties']['server']['properties'][
+create_v20['properties']['server']['properties'][
     'availability_zone'] = parameter_types.name_with_leading_trailing_spaces
-base_create_v20['properties']['server']['properties'][
+create_v20['properties']['server']['properties'][
     'key_name'] = parameter_types.name_with_leading_trailing_spaces
-base_create_v20['properties']['server']['properties'][
+create_v20['properties']['server']['properties'][
     'security_groups']['items']['properties']['name'] = (
     parameter_types.name_with_leading_trailing_spaces)
-base_create_v20['properties']['server']['properties'][
-    'user_data'] = {
-        'oneOf': [{'type': 'string', 'format': 'base64', 'maxLength': 65535},
-                  {'type': 'null'},
-        ],
-    }
+create_v20['properties']['server']['properties']['user_data'] = {
+    'oneOf': [{'type': 'string', 'format': 'base64', 'maxLength': 65535},
+              {'type': 'null'},
+    ],
+}
 
-base_create_v219 = copy.deepcopy(base_create)
-base_create_v219['properties']['server'][
+create_v219 = copy.deepcopy(create)
+create_v219['properties']['server'][
     'properties']['description'] = parameter_types.description
 
-base_create_v232 = copy.deepcopy(base_create_v219)
-base_create_v232['properties']['server'][
+create_v232 = copy.deepcopy(create_v219)
+create_v232['properties']['server'][
     'properties']['networks']['items'][
     'properties']['tag'] = parameter_types.tag
-base_create_v232['properties']['server'][
+create_v232['properties']['server'][
     'properties']['block_device_mapping_v2']['items'][
     'properties']['tag'] = parameter_types.tag
 
@@ -262,15 +260,15 @@ base_create_v232['properties']['server'][
 # in version 2.32 only. Since we need a new microversion to add request
 # body attributes, tags have been re-added in version 2.42.
 
-# NOTE(gmann) Below schema 'base_create_v233' is added (builds on 2.19 schema)
+# NOTE(gmann) Below schema 'create_v233' is added (builds on 2.19 schema)
 # to keep the above mentioned behavior while merging the extension schema code
 # into server schema file. Below is the ref code where BDM tag was originally
 # got added for 2.32 microversion *only*.
 # Ref- https://opendev.org/openstack/nova/src/commit/
 #      9882a60e69a5ab8da314a199a56defc05098b743/nova/api/
 #      openstack/compute/block_device_mapping.py#L71
-base_create_v233 = copy.deepcopy(base_create_v219)
-base_create_v233['properties']['server'][
+create_v233 = copy.deepcopy(create_v219)
+create_v233['properties']['server'][
     'properties']['networks']['items'][
     'properties']['tag'] = parameter_types.tag
 
@@ -278,9 +276,9 @@ base_create_v233['properties']['server'][
 # 1. server.networks is required
 # 2. server.networks is now either an enum or a list
 # 3. server.networks.uuid is now required to be a uuid
-base_create_v237 = copy.deepcopy(base_create_v233)
-base_create_v237['properties']['server']['required'].append('networks')
-base_create_v237['properties']['server']['properties']['networks'] = {
+create_v237 = copy.deepcopy(create_v233)
+create_v237['properties']['server']['required'].append('networks')
+create_v237['properties']['server']['properties']['networks'] = {
     'oneOf': [
         {'type': 'array',
          'items': {
@@ -299,11 +297,10 @@ base_create_v237['properties']['server']['properties']['networks'] = {
         {'type': 'string', 'enum': ['none', 'auto']},
     ]}
 
-
 # 2.42 builds on 2.37 and re-introduces the tag field to the list of network
 # objects.
-base_create_v242 = copy.deepcopy(base_create_v237)
-base_create_v242['properties']['server']['properties']['networks'] = {
+create_v242 = copy.deepcopy(create_v237)
+create_v242['properties']['server']['properties']['networks'] = {
     'oneOf': [
         {'type': 'array',
          'items': {
@@ -322,49 +319,44 @@ base_create_v242['properties']['server']['properties']['networks'] = {
         },
         {'type': 'string', 'enum': ['none', 'auto']},
     ]}
-base_create_v242['properties']['server'][
+create_v242['properties']['server'][
     'properties']['block_device_mapping_v2']['items'][
     'properties']['tag'] = parameter_types.tag
 
-
 # 2.52 builds on 2.42 and makes the following changes:
 # Allowing adding tags to instances when booting
-base_create_v252 = copy.deepcopy(base_create_v242)
-base_create_v252['properties']['server']['properties']['tags'] = {
+create_v252 = copy.deepcopy(create_v242)
+create_v252['properties']['server']['properties']['tags'] = {
     "type": "array",
     "items": parameter_types.tag,
     "maxItems": instance.MAX_TAG_COUNT
 }
 
-
 # 2.57 builds on 2.52 and removes the personality parameter.
-base_create_v257 = copy.deepcopy(base_create_v252)
-base_create_v257['properties']['server']['properties'].pop('personality')
-
+create_v257 = copy.deepcopy(create_v252)
+create_v257['properties']['server']['properties'].pop('personality')
 
 # 2.63 builds on 2.57 and makes the following changes:
 # Allowing adding trusted certificates to instances when booting
-base_create_v263 = copy.deepcopy(base_create_v257)
-base_create_v263['properties']['server']['properties'][
+create_v263 = copy.deepcopy(create_v257)
+create_v263['properties']['server']['properties'][
     'trusted_image_certificates'] = parameter_types.trusted_certs
 
-
 # Add volume type in block_device_mapping_v2.
-base_create_v267 = copy.deepcopy(base_create_v263)
-base_create_v267['properties']['server']['properties'][
+create_v267 = copy.deepcopy(create_v263)
+create_v267['properties']['server']['properties'][
     'block_device_mapping_v2']['items'][
     'properties']['volume_type'] = parameter_types.volume_type
 
-
 # Add host and hypervisor_hostname in server
-base_create_v274 = copy.deepcopy(base_create_v267)
-base_create_v274['properties']['server'][
+create_v274 = copy.deepcopy(create_v267)
+create_v274['properties']['server'][
     'properties']['host'] = parameter_types.fqdn
-base_create_v274['properties']['server'][
+create_v274['properties']['server'][
     'properties']['hypervisor_hostname'] = parameter_types.fqdn
 
 
-base_update = {
+update = {
     'type': 'object',
     'properties': {
         'server': {
@@ -382,16 +374,16 @@ base_update = {
     'additionalProperties': False,
 }
 
-
-base_update_v20 = copy.deepcopy(base_update)
-base_update_v20['properties']['server'][
+update_v20 = copy.deepcopy(update)
+update_v20['properties']['server'][
     'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
 
-base_update_v219 = copy.deepcopy(base_update)
-base_update_v219['properties']['server'][
+update_v219 = copy.deepcopy(update)
+update_v219['properties']['server'][
     'properties']['description'] = parameter_types.description
 
-base_rebuild = {
+
+rebuild = {
     'type': 'object',
     'properties': {
         'rebuild': {
@@ -415,25 +407,24 @@ base_rebuild = {
     'additionalProperties': False,
 }
 
-
-base_rebuild_v20 = copy.deepcopy(base_rebuild)
-base_rebuild_v20['properties']['rebuild'][
+rebuild_v20 = copy.deepcopy(rebuild)
+rebuild_v20['properties']['rebuild'][
     'properties']['name'] = parameter_types.name_with_leading_trailing_spaces
 
-base_rebuild_v219 = copy.deepcopy(base_rebuild)
-base_rebuild_v219['properties']['rebuild'][
+rebuild_v219 = copy.deepcopy(rebuild)
+rebuild_v219['properties']['rebuild'][
     'properties']['description'] = parameter_types.description
 
-base_rebuild_v254 = copy.deepcopy(base_rebuild_v219)
-base_rebuild_v254['properties']['rebuild'][
+rebuild_v254 = copy.deepcopy(rebuild_v219)
+rebuild_v254['properties']['rebuild'][
     'properties']['key_name'] = parameter_types.name_or_none
 
 # 2.57 builds on 2.54 and makes the following changes:
 # 1. Remove the personality parameter.
 # 2. Add the user_data parameter which is nullable so user_data can be reset.
-base_rebuild_v257 = copy.deepcopy(base_rebuild_v254)
-base_rebuild_v257['properties']['rebuild']['properties'].pop('personality')
-base_rebuild_v257['properties']['rebuild']['properties']['user_data'] = ({
+rebuild_v257 = copy.deepcopy(rebuild_v254)
+rebuild_v257['properties']['rebuild']['properties'].pop('personality')
+rebuild_v257['properties']['rebuild']['properties']['user_data'] = ({
     'oneOf': [
         {'type': 'string', 'format': 'base64', 'maxLength': 65535},
         {'type': 'null'}
@@ -442,9 +433,10 @@ base_rebuild_v257['properties']['rebuild']['properties']['user_data'] = ({
 
 # 2.63 builds on 2.57 and makes the following changes:
 # Allowing adding trusted certificates to instances when rebuilding
-base_rebuild_v263 = copy.deepcopy(base_rebuild_v257)
-base_rebuild_v263['properties']['rebuild']['properties'][
+rebuild_v263 = copy.deepcopy(rebuild_v257)
+rebuild_v263['properties']['rebuild']['properties'][
     'trusted_image_certificates'] = parameter_types.trusted_certs
+
 
 resize = {
     'type': 'object',
@@ -479,7 +471,6 @@ create_image = {
     'required': ['createImage'],
     'additionalProperties': False
 }
-
 
 create_image_v20 = copy.deepcopy(create_image)
 create_image_v20['properties']['createImage'][
