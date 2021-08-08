@@ -22,7 +22,7 @@ import webob
 from nova.api.openstack.compute import flavor_access as flavor_access_v21
 from nova.api.openstack.compute import flavor_manage as flavormanage_v21
 from nova.compute import flavors
-from nova.db import api as db
+from nova.db import constants as db_const
 from nova import exception
 from nova import objects
 from nova import test
@@ -244,7 +244,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_with_ram_exceed_max_limit(self):
-        self.request_body['flavor']['ram'] = db.MAX_INT + 1
+        self.request_body['flavor']['ram'] = db_const.MAX_INT + 1
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_without_vcpus(self):
@@ -256,7 +256,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_with_vcpus_exceed_max_limit(self):
-        self.request_body['flavor']['vcpus'] = db.MAX_INT + 1
+        self.request_body['flavor']['vcpus'] = db_const.MAX_INT + 1
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_without_disk(self):
@@ -268,7 +268,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_with_disk_exceed_max_limit(self):
-        self.request_body['flavor']['disk'] = db.MAX_INT + 1
+        self.request_body['flavor']['disk'] = db_const.MAX_INT + 1
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_with_minus_ephemeral(self):
@@ -277,7 +277,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
 
     def test_create_with_ephemeral_exceed_max_limit(self):
         self.request_body['flavor'][
-            'OS-FLV-EXT-DATA:ephemeral'] = db.MAX_INT + 1
+            'OS-FLV-EXT-DATA:ephemeral'] = db_const.MAX_INT + 1
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_with_minus_swap(self):
@@ -285,7 +285,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_with_swap_exceed_max_limit(self):
-        self.request_body['flavor']['swap'] = db.MAX_INT + 1
+        self.request_body['flavor']['swap'] = db_const.MAX_INT + 1
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_with_minus_rxtx_factor(self):
@@ -293,7 +293,8 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_with_rxtx_factor_exceed_max_limit(self):
-        self.request_body['flavor']['rxtx_factor'] = db.SQL_SP_FLOAT_MAX * 2
+        self.request_body['flavor']['rxtx_factor'] = \
+            db_const.SQL_SP_FLOAT_MAX * 2
         self._create_flavor_bad_request_case(self.request_body)
 
     def test_create_with_non_boolean_is_public(self):

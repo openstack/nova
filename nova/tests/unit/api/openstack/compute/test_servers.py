@@ -51,7 +51,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova import context
-from nova.db import api as db
+from nova.db import constants as db_const
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import models
 from nova import exception
@@ -5278,7 +5278,7 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_bdm_instance_with_size_error("0")
 
     def test_create_instance_with_size_greater_than_limit(self):
-        self._test_create_bdm_instance_with_size_error(db.MAX_INT + 1)
+        self._test_create_bdm_instance_with_size_error(db_const.MAX_INT + 1)
 
     def test_create_instance_with_bdm_delete_on_termination(self):
         bdm = [{'device_name': 'foo1', 'volume_id': fakes.FAKE_UUID,

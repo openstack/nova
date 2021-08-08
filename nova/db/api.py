@@ -31,21 +31,13 @@ from oslo_db import concurrency
 from oslo_log import log as logging
 
 import nova.conf
-from nova.db import constants
 
 
 CONF = nova.conf.CONF
-# NOTE(cdent): These constants are re-defined in this module to preserve
-# existing references to them.
-MAX_INT = constants.MAX_INT
-SQL_SP_FLOAT_MAX = constants.SQL_SP_FLOAT_MAX
+LOG = logging.getLogger(__name__)
 
 _BACKEND_MAPPING = {'sqlalchemy': 'nova.db.sqlalchemy.api'}
-
-
 IMPL = concurrency.TpoolDbapiWrapper(CONF, backend_mapping=_BACKEND_MAPPING)
-
-LOG = logging.getLogger(__name__)
 
 
 ###################
