@@ -27,17 +27,17 @@ these objects be simple dictionaries.
 
 """
 
-from oslo_db import concurrency
+from oslo_db import api
 from oslo_log import log as logging
 
 import nova.conf
 
-
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
-_BACKEND_MAPPING = {'sqlalchemy': 'nova.db.sqlalchemy.api'}
-IMPL = concurrency.TpoolDbapiWrapper(CONF, backend_mapping=_BACKEND_MAPPING)
+IMPL = api.DBAPI.from_config(
+    conf=CONF, backend_mapping={'sqlalchemy': 'nova.db.sqlalchemy.api'},
+)
 
 
 ###################
