@@ -28,7 +28,7 @@ from sqlalchemy.ext import declarative
 from sqlalchemy import orm
 from sqlalchemy import schema
 
-from nova.db.sqlalchemy import types
+from nova.db import types
 
 CONF = cfg.CONF
 BASE = declarative.declarative_base()

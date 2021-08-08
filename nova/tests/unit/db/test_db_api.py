@@ -52,7 +52,7 @@ from nova import context
 from nova.db import api as db
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova.db.sqlalchemy import models
-from nova.db.sqlalchemy import types as col_types
+from nova.db import types as col_types
 from nova import exception
 from nova.objects import fields
 from nova import test
