@@ -3192,6 +3192,7 @@ class ComputeTestCase(BaseTestCase,
                     'image_id': uuids.image,
                     'boot_index': 0
         })])
+        driver_bdms = driver_block_device.convert_all_volumes(*bdms)
 
         with (mock.patch.object(
                 objects.BlockDeviceMappingList,
@@ -3206,13 +3207,7 @@ class ComputeTestCase(BaseTestCase,
                 'swap': None,
                 'ephemerals': [],
                 'root_device_name': None,
-                'block_device_mapping': [{
-                    'connection_info': {
-                        'driver_volume_type': 'rbd'
-                    },
-                    'mount_device': '/dev/vda',
-                    'delete_on_termination': False
-                }]
+                'block_device_mapping': driver_bdms
             }
             self.assertTrue(mock_get_by_instance.called)
             self.assertEqual(block_device_info, expected)
@@ -3227,6 +3222,8 @@ class ComputeTestCase(BaseTestCase,
                     'source_type': 'volume',
                     'destination_type': 'volume'})
                ])
+        driver_bdms = driver_block_device.convert_all_volumes(*bdms)
+
         with (mock.patch.object(
                 objects.BlockDeviceMappingList,
                 'get_by_instance_uuid')) as mock_get_by_instance:
@@ -3238,13 +3235,7 @@ class ComputeTestCase(BaseTestCase,
                 'swap': None,
                 'ephemerals': [],
                 'root_device_name': None,
-                'block_device_mapping': [{
-                    'connection_info': {
-                        'driver_volume_type': 'rbd'
-                    },
-                    'mount_device': '/dev/vdd',
-                    'delete_on_termination': False
-                }]
+                'block_device_mapping': driver_bdms
             }
             self.assertFalse(mock_get_by_instance.called)
             self.assertEqual(block_device_info, expected)
@@ -3300,11 +3291,27 @@ class ComputeTestCase(BaseTestCase,
                                 'get_by_instance_uuid', return_value=bdms)
         ) as mock_get_by_instance_uuid:
             expected_block_device_info = {
-                'swap': {'device_name': '/dev/vdd', 'swap_size': 1},
-                'ephemerals': [{'device_name': '/dev/vdb', 'num': 0, 'size': 1,
-                                'virtual_name': 'ephemeral0'},
-                               {'device_name': '/dev/vdc', 'num': 1, 'size': 2,
-                                'virtual_name': 'ephemeral1'}],
+                'swap': {
+                    'device_name': '/dev/vdd',
+                    'swap_size': 1,
+                    'disk_bus': 'virtio'
+                },
+                'ephemerals': [
+                    {
+                        'device_name': '/dev/vdb',
+                        'device_type': 'disk',
+                        'disk_bus': 'virtio',
+                        'guest_format': None,
+                        'size': 1
+                    },
+                    {
+                        'device_name': '/dev/vdc',
+                        'device_type': 'disk',
+                        'disk_bus': 'virtio',
+                        'guest_format': None,
+                        'size': 2
+                    }
+                ],
                 'block_device_mapping': [],
                 'root_device_name': None
             }
