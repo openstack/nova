@@ -2435,6 +2435,26 @@ class CinderFixture(fixtures.Fixture):
     # as part of volume image metadata
     IMAGE_WITH_TRAITS_BACKED_VOL = '6194fc02-c60e-4a01-a8e5-600798208b5f'
 
+    # This represents a bootable volume backed by iSCSI storage.
+    ISCSI_BACKED_VOL = uuidsentinel.iscsi_backed_volume
+
+    # Dict of connection_info for the above volumes key'd by the volume id
+    # TODO(lyarwood): Make this unique and tracked per attachment somehow.
+    VOLUME_CONNECTION_INFO = {
+        uuidsentinel.iscsi_backed_volume: {
+            'driver_volume_type': 'iscsi',
+            'data': {
+                'target_lun': '1'
+            }
+        },
+        'fake': {
+            'driver_volume_type': 'fake',
+            'data': {
+                'foo': 'bar',
+            }
+        }
+    }
+
     def __init__(self, test, az='nova'):
         """Initialize this instance of the CinderFixture.
 
@@ -2593,7 +2613,14 @@ class CinderFixture(fixtures.Fixture):
             attachment_id = uuidutils.generate_uuid()
             if self.attachment_error_id is not None:
                 attachment_id = self.attachment_error_id
-            attachment = {'id': attachment_id, 'connection_info': {'data': {}}}
+
+            attachment = {'id': attachment_id}
+
+            if connector:
+                connection_info = self.VOLUME_CONNECTION_INFO.get(
+                    volume_id, self.VOLUME_CONNECTION_INFO.get('fake'))
+                attachment['connection_info'] = copy.deepcopy(connection_info)
+
             self.volume_to_attachment[volume_id][attachment_id] = {
                 'id': attachment_id,
                 'instance_uuid': instance_uuid,
@@ -2631,13 +2658,9 @@ class CinderFixture(fixtures.Fixture):
             LOG.info('Updating volume attachment: %s', attachment_id)
             attachment_ref = {
                 'id': attachment_id,
-                'connection_info': {
-                    'driver_volume_type': 'fake',
-                    'data': {
-                        'foo': 'bar',
-                        'target_lun': '1'
-                    }
-                }
+                'connection_info': copy.deepcopy(
+                    self.VOLUME_CONNECTION_INFO.get(
+                        volume_id, self.VOLUME_CONNECTION_INFO.get('fake')))
             }
             if attachment_id == self.SWAP_ERR_ATTACH_ID:
                 # This intentionally triggers a TypeError for the
@@ -2646,13 +2669,15 @@ class CinderFixture(fixtures.Fixture):
             return attachment_ref
 
         def fake_attachment_get(_self, context, attachment_id):
-            # Ensure the attachment exists
-            _find_attachment(attachment_id)
-            attachment_ref = {'driver_volume_type': 'fake_type',
-                              'id': attachment_id,
-                              'connection_info': {'data':
-                                                  {'foo': 'bar',
-                                                   'target_lun': '1'}}}
+            # Ensure the attachment exists and grab the volume_id
+            volume_id, _, _ = _find_attachment(attachment_id)
+
+            attachment_ref = {
+                'id': attachment_id,
+                'connection_info': copy.deepcopy(
+                    self.VOLUME_CONNECTION_INFO.get(
+                        volume_id, self.VOLUME_CONNECTION_INFO.get('fake')))
+            }
             return attachment_ref
 
         def fake_get_all_volume_types(*args, **kwargs):
