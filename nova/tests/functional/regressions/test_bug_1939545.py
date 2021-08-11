@@ -103,9 +103,9 @@ class TestLiveMigrateUpdateDevicePath(
         # Live migrate the instance to another host
         self._live_migrate(self.server)
 
-        # FIXME(lyarwood): This is bug #1939545, again get the volume bdm and
-        # assert that the saved connection_info doesn't contain device_path.
+        # Again get the volume bdm and assert that the saved connection_info
+        # contains device_path.
         bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
             ctxt, volume_id, self.server['id'])
         connection_info = jsonutils.loads(bdm.connection_info)
-        self.assertNotIn('device_path', connection_info.get('data'))
+        self.assertIn('device_path', connection_info.get('data'))
