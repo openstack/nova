@@ -13,9 +13,12 @@
 # under the License.
 
 import mock
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
+from nova import context
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
@@ -116,12 +119,16 @@ class TestVolAttachmentsDuringLiveMigration(
 
         * Mock live_migration to always rollback and raise a failure within the
           fake virt driver
-        * Launch a boot from volume instance
+        * Launch a boot from volume instance on src
         * Assert that the volume is attached correctly to the instance
+        * Assert that the expected source attachment is recorded in the bdm
+        * Wrap pre_live_migration on the dest and assert that we switch over
+          to the new attachment and connection_info on the dest.
         * Live migrate the instance to another host invoking the mocked
           live_migration method
         * Assert that the instance is still on the source host
         * Assert that the original source host volume attachment remains
+        * Assert that the original src connection_info is in the bdm
         """
         # Mock out driver.live_migration so that we always rollback
         def _fake_live_migration_with_rollback(
@@ -135,21 +142,23 @@ class TestVolAttachmentsDuringLiveMigration(
 
         volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
         server = self._build_server(
-            name='test_bfv_live_migration_failure', image_uuid='',
-            networks='none'
+            name='test_bfv_live_migration_failure',
+            image_uuid='',
+            networks='none',
+            host='src'
         )
         server['block_device_mapping_v2'] = [{
             'source_type': 'volume',
             'destination_type': 'volume',
             'boot_index': 0,
-            'uuid': volume_id
+            'uuid': volume_id,
         }]
         server = self.api.post_server({'server': server})
         self._wait_for_state_change(server, 'ACTIVE')
 
-        # Fetch the source host for use later
+        # Assert that the instance has landed correctly on src
         server = self.api.get_server(server['id'])
-        src_host = server['OS-EXT-SRV-ATTR:host']
+        self.assertEqual('src', server['OS-EXT-SRV-ATTR:host'])
 
         # Assert that the volume is connected to the instance
         self.assertIn(
@@ -162,21 +171,74 @@ class TestVolAttachmentsDuringLiveMigration(
         # Fetch the attachment_id for use later once we have migrated
         src_attachment_id = list(attachments.keys())[0]
 
-        # Migrate the instance and wait until the migration errors out thanks
-        # to our mocked version of live_migration raising TestingException
-        self._live_migrate(server, 'error', server_expected_state='ERROR')
+        # Assert that this attachment_id is stashed in the connection_info
+        # of the bdm so we can assert things again after the failure
+        ctxt = context.get_admin_context()
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            ctxt, volume_id, server['id'])
+        self.assertEqual(src_attachment_id, bdm.attachment_id)
+        connection_info = jsonutils.loads(bdm.connection_info)
+        self.assertIn('attachment_id', connection_info['data'])
+        self.assertEqual(
+            src_attachment_id, connection_info['data']['attachment_id'])
+
+        dest_pre_live_mig = self.computes['dest'].manager.pre_live_migration
+
+        # Wrap pre_live_migration on the destination so we can assert that
+        # we do switch over to the new attachment before the failure
+        # and then later rollback to the source attachment
+        def wrap_pre_live_migration(*args, **kwargs):
+
+            # Continue with pre_live_migration before we assert anything
+            migrate_data = dest_pre_live_mig(*args, **kwargs)
+
+            # Assert that we now have two attachments in the fixture, one for
+            # the src and another for the dest.
+            attachments = self.cinder.volume_to_attachment.get(volume_id)
+            self.assertEqual(2, len(attachments))
+
+            # Assert that the dest attachment id is saved in the bdm
+            # and the connection_info.
+            bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                ctxt, volume_id, server['id'])
+            self.assertNotEqual(src_attachment_id, bdm.attachment_id)
+            dest_attachment_id = bdm.attachment_id
+            connection_info = jsonutils.loads(bdm.connection_info)
+            self.assertIn('attachment_id', connection_info['data'])
+            self.assertEqual(
+                dest_attachment_id, connection_info['data']['attachment_id'])
+            return migrate_data
+
+        with mock.patch.object(
+            self.computes['dest'].manager,
+            'pre_live_migration',
+            wrap_pre_live_migration
+        ):
+            # Migrate the instance and wait until the migration errors out
+            # thanks to our mocked version of live_migration raising
+            # TestingException
+            self._live_migrate(server, 'error', server_expected_state='ERROR')
 
         # Assert that we called the fake live_migration method
         mock_lm.assert_called_once()
 
         # Assert that the instance is on the source
         server = self.api.get_server(server['id'])
-        self.assertEqual(src_host, server['OS-EXT-SRV-ATTR:host'])
+        self.assertEqual('src', server['OS-EXT-SRV-ATTR:host'])
 
         # Assert that the src attachment is still present
         attachments = self.cinder.volume_to_attachment.get(volume_id)
         self.assertIn(src_attachment_id, attachments.keys())
         self.assertEqual(1, len(attachments))
+
+        # Assert that the connection_info has reverted back to the src
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            ctxt, volume_id, server['id'])
+        self.assertEqual(src_attachment_id, bdm.attachment_id)
+        connection_info = jsonutils.loads(bdm.connection_info)
+        self.assertIn('attachment_id', connection_info['data'])
+        self.assertEqual(
+            src_attachment_id, connection_info['data']['attachment_id'])
 
 
 class LiveMigrationNeutronInteractionsTest(
