@@ -656,45 +656,6 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertIn('Specifying volume type to existing volume is '
                       'not supported', str(ex))
 
-    def test_legacy(self):
-        for legacy, new in zip(self.legacy_mapping, self.new_mapping):
-            self.assertThat(
-                legacy,
-                matchers.IsSubDictOf(new.legacy()))
-
-    def test_legacy_mapping(self):
-        got_legacy = block_device.legacy_mapping(self.new_mapping)
-
-        for legacy, expected in zip(got_legacy, self.legacy_mapping):
-            self.assertThat(expected, matchers.IsSubDictOf(legacy))
-
-    def test_legacy_source_image(self):
-        for legacy, new in zip(self.legacy_mapping_source_image,
-                               self.new_mapping_source_image):
-            if new['destination_type'] == 'volume':
-                self.assertThat(legacy, matchers.IsSubDictOf(new.legacy()))
-            else:
-                self.assertRaises(exception.InvalidBDMForLegacy, new.legacy)
-
-    def test_legacy_mapping_source_image(self):
-        got_legacy = block_device.legacy_mapping(self.new_mapping)
-
-        for legacy, expected in zip(got_legacy, self.legacy_mapping):
-            self.assertThat(expected, matchers.IsSubDictOf(legacy))
-
-    def test_legacy_mapping_from_object_list(self):
-        bdm1 = objects.BlockDeviceMapping()
-        bdm1 = objects.BlockDeviceMapping._from_db_object(
-            None, bdm1, fake_block_device.FakeDbBlockDeviceDict(
-                self.new_mapping[0]))
-        bdm2 = objects.BlockDeviceMapping()
-        bdm2 = objects.BlockDeviceMapping._from_db_object(
-            None, bdm2, fake_block_device.FakeDbBlockDeviceDict(
-                self.new_mapping[1]))
-        bdmlist = objects.BlockDeviceMappingList()
-        bdmlist.objects = [bdm1, bdm2]
-        block_device.legacy_mapping(bdmlist)
-
     def test_image_mapping(self):
         removed_fields = ['id', 'instance_uuid', 'connection_info',
                           'created_at', 'updated_at', 'deleted_at', 'deleted']

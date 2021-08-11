@@ -64,10 +64,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'swap_size': 2,
         'disk_bus': 'scsi'}
 
-    swap_legacy_driver_bdm = {
-        'device_name': '/dev/sdb1',
-        'swap_size': 2}
-
     ephemeral_bdm_dict = block_device.BlockDeviceDict(
         {'id': 2, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sdc1',
@@ -86,12 +82,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'device_type': 'disk',
         'guest_format': 'ext4',
         'disk_bus': 'scsi'}
-
-    ephemeral_legacy_driver_bdm = {
-        'device_name': '/dev/sdc1',
-        'size': 4,
-        'virtual_name': 'ephemeral0',
-        'num': 0}
 
     volume_bdm_dict = block_device.BlockDeviceDict(
         {'id': 3, 'instance_uuid': uuids.instance,
@@ -116,11 +106,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'guest_format': 'ext4',
         'boot_index': 0,
         'volume_type': None}
-
-    volume_legacy_driver_bdm = {
-        'mount_device': '/dev/sda1',
-        'connection_info': {"fake": "connection_info"},
-        'delete_on_termination': False}
 
     volume_bdm_dict_without_conn_info = block_device.BlockDeviceDict(
         {'id': 3, 'instance_uuid': uuids.instance,
@@ -172,11 +157,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'boot_index': -1,
         'volume_type': None}
 
-    volsnapshot_legacy_driver_bdm = {
-        'mount_device': '/dev/sda2',
-        'connection_info': {"fake": "connection_info"},
-        'delete_on_termination': True}
-
     volimage_bdm_dict = block_device.BlockDeviceDict(
         {'id': 5, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sda2',
@@ -202,11 +182,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'boot_index': -1,
         'volume_type': None}
 
-    volimage_legacy_driver_bdm = {
-        'mount_device': '/dev/sda2',
-        'connection_info': {"fake": "connection_info"},
-        'delete_on_termination': True}
-
     volblank_bdm_dict = block_device.BlockDeviceDict(
         {'id': 6, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sda2',
@@ -230,11 +205,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'guest_format': None,
         'boot_index': -1,
         'volume_type': None}
-
-    volblank_legacy_driver_bdm = {
-        'mount_device': '/dev/sda2',
-        'connection_info': {"fake": "connection_info"},
-        'delete_on_termination': True}
 
     def setUp(self):
         super(TestDriverBlockDevice, self).setUp()
@@ -338,9 +308,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
             # Reset the value
             test_bdm[field] = value
-
-        expected = getattr(self, "%s_legacy_driver_bdm" % name)
-        self.assertThat(expected, matchers.DictMatches(test_bdm.legacy()))
 
         # Test passthru attributes
         for passthru in test_bdm._proxy_as_attr:
@@ -1289,37 +1256,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                          driver_block_device.convert_volume(
                              self.volume_bdm_without_conn_info))
 
-    def test_legacy_block_devices(self):
-        test_snapshot = self.driver_classes['volsnapshot'](
-            self.volsnapshot_bdm)
-
-        block_device_mapping = [test_snapshot, test_snapshot]
-        legacy_bdm = driver_block_device.legacy_block_devices(
-            block_device_mapping)
-        self.assertEqual(legacy_bdm, [self.volsnapshot_legacy_driver_bdm,
-                                       self.volsnapshot_legacy_driver_bdm])
-
-        # Test that the ephemerals work as expected
-        test_ephemerals = [self.driver_classes['ephemeral'](
-            self.ephemeral_bdm) for _ in range(2)]
-        expected = [self.ephemeral_legacy_driver_bdm.copy()
-                             for _ in range(2)]
-        expected[0]['virtual_name'] = 'ephemeral0'
-        expected[0]['num'] = 0
-        expected[1]['virtual_name'] = 'ephemeral1'
-        expected[1]['num'] = 1
-        legacy_ephemerals = driver_block_device.legacy_block_devices(
-            test_ephemerals)
-        self.assertEqual(expected, legacy_ephemerals)
-
     def test_get_swap(self):
         swap = [self.swap_driver_bdm]
-        legacy_swap = [self.swap_legacy_driver_bdm]
         no_swap = [self.volume_driver_bdm]
 
         self.assertEqual(swap[0], driver_block_device.get_swap(swap))
-        self.assertEqual(legacy_swap[0],
-                          driver_block_device.get_swap(legacy_swap))
         self.assertIsNone(driver_block_device.get_swap(no_swap))
         self.assertIsNone(driver_block_device.get_swap([]))
 
