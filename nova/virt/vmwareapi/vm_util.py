@@ -1419,8 +1419,8 @@ def get_stats_from_cluster(session, cluster):
     max_mem_mb_per_host = 0
     reserved_memory_mb = 0
     # Get the Host and Resource Pool Managed Object Refs
-    props = ["host", "resourcePool",
-             "configuration.dasConfig.admissionControlPolicy"]
+    admission_policy_key = "configuration.dasConfig.admissionControlPolicy"
+    props = ["host", "resourcePool", admission_policy_key]
     if CONF.vmware.hostgroup_reservations_json_file:
         props.append("configurationEx")
     prop_dict = session._call_method(vutil,
@@ -1429,8 +1429,7 @@ def get_stats_from_cluster(session, cluster):
                                      props)
     if prop_dict:
         failover_hosts = []
-        key = 'configuration.dasConfig.admissionControlPolicy'
-        policy = prop_dict.get(key)
+        policy = prop_dict.get(admission_policy_key)
         if policy and hasattr(policy, 'failoverHosts'):
             failover_hosts = set(h.value for h in policy.failoverHosts)
 
@@ -1446,11 +1445,18 @@ def get_stats_from_cluster(session, cluster):
                          "HostSystem", host_mors,
                          ["summary.hardware", "summary.runtime",
                           "summary.quickStats"])
+            total_hypervisor_count = 0
+            # NOTE (jakobk): For the total amount of hosts it doesn't matter
+            # whether the host is in MM or unreachable, because the count is
+            # used to calculate safety margins for resource allocations, and MM
+            # or otherwise unreachable hosts is precisely what that is supposed
+            # to guard against.
             with vutil.WithRetrieval(session.vim, result) as objects:
                 for obj in objects:
+                    total_hypervisor_count += 1
                     host_props = propset_dict(obj.propSet)
                     runtime_summary = host_props['summary.runtime']
-                    if (runtime_summary.inMaintenanceMode is not False or
+                    if (runtime_summary.inMaintenanceMode or
                             runtime_summary.connectionState != "connected"):
                         continue
                     hardware_summary = host_props['summary.hardware']
@@ -1471,12 +1477,6 @@ def get_stats_from_cluster(session, cluster):
                                              threads - reserved['vcpus'])
                     max_mem_mb_per_host = max(max_mem_mb_per_host,
                                               mem_mb - reserved['memory_mb'])
-            # NOTE (jakobk): For the total amount of hosts it doesn't matter
-            # whether the host is in MM or unreachable, because the count is
-            # used to calculate safety margins for resource allocations, and MM
-            # or otherwise unreachable hosts is precisely what that is supposed
-            # to guard against.
-            total_hypervisor_count = len(result.objects)
 
             # Calculate VM-reservable memory as a ratio of total available
             # memory, depending on either the configured tolerance for failed
