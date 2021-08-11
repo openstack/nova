@@ -13,7 +13,6 @@
 # under the License.
 
 import fixtures
-import mock
 
 from oslo_serialization import jsonutils
 
@@ -69,20 +68,9 @@ class TestLiveMigrateUpdateDevicePath(
         dom = conn.lookupByUUIDString(self.server['id'])
         dom.complete_job()
 
-    # TODO(lyarwood): Move this into the os-brick fixture and repeat for all
-    # provided connectors at runtime.
-    @mock.patch(
-        'os_brick.initiator.connectors.iscsi.ISCSIConnector.connect_volume')
-    @mock.patch(
-        'os_brick.initiator.connectors.iscsi.ISCSIConnector.disconnect_volume')
-    def test_live_migrate_update_device_path(
-        self, mock_disconnect_volume, mock_connect_volume
-    ):
+    def test_live_migrate_update_device_path(self):
         self.server = self._create_server(host='src', networks='none')
         volume_id = self.cinder.ISCSI_BACKED_VOL
-
-        # TODO(lyarwood): As above, move this into the os-brick fixture.
-        mock_connect_volume.return_value = {'path': '/dev/sda'}
 
         self.api.post_server_volume(
             self.server['id'], {'volumeAttachment': {'volumeId': volume_id}})
