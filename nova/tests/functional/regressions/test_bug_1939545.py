@@ -19,7 +19,6 @@ from oslo_serialization import jsonutils
 
 from nova import context
 from nova import objects
-from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional.libvirt import base
@@ -44,9 +43,6 @@ class TestLiveMigrateUpdateDevicePath(
 
     def setUp(self):
         super().setUp()
-
-        # TODO(lyarwood): Move into base.ServersTestBase
-        self.useFixture(nova_fixtures.OSBrickFixture())
 
         # TODO(lyarwood): Move into base.ServersTestBase to allow live
         # migrations to pass without changes by the test classes.

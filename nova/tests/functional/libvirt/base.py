@@ -43,6 +43,7 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
 
         self.useFixture(nova_fixtures.LibvirtImageBackendFixture())
         self.useFixture(nova_fixtures.LibvirtFixture())
+        self.useFixture(nova_fixtures.OSBrickFixture())
 
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.LibvirtDriver._create_image',

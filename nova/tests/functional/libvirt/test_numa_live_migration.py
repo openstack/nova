@@ -23,7 +23,6 @@ from nova.compute import resource_tracker as rt
 from nova import context
 from nova import objects
 from nova import test
-from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional.libvirt import base
@@ -45,8 +44,6 @@ class NUMALiveMigrationBase(base.ServersTestBase,
 
     def setUp(self):
         super(NUMALiveMigrationBase, self).setUp()
-
-        self.useFixture(nova_fixtures.OSBrickFixture())
 
         # NOTE(artom) There's a specific code path that we want to test.
         # There's an instance.save() call in the compute manager's
