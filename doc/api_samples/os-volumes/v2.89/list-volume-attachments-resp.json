@@ -1,0 +1,22 @@
+{
+    "volumeAttachments": [
+        {
+            "attachment_id": "979ce4f8-033a-409d-85e6-6b5c0f6a6302",
+            "delete_on_termination": false,
+            "device": "/dev/sdc",
+            "serverId": "7696780b-3f53-4688-ab25-019bfcbbd806",
+            "tag": null,
+            "volumeId": "227cc671-f30b-4488-96fd-7d0bf13648d8",
+            "bdm_uuid": "c088db45-92b8-49e8-81e2-a1b77a144b3b"
+        },
+        {
+            "attachment_id": "c5684109-0311-4fca-9814-350e46ab7d2a",
+            "delete_on_termination": true,
+            "device": "/dev/sdb",
+            "serverId": "7696780b-3f53-4688-ab25-019bfcbbd806",
+            "tag": "foo",
+            "volumeId": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113",
+            "bdm_uuid": "1aa24536-6fb5-426c-8894-d627f39aa48b"
+        }
+    ]
+}

@@ -199,7 +199,7 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(VolumeAttachmentsSample, self).setUp()
-        self.useFixture(fixtures.CinderFixture(self))
+        self.cinder = self.useFixture(fixtures.CinderFixture(self))
         self.server_id = self._post_server()
 
     def _get_vol_attachment_subs(self, subs):
@@ -319,3 +319,11 @@ class UpdateVolumeAttachmentsSampleV285(VolumeAttachmentsSampleV279):
         self.assertEqual(1, len(attachments))
         self.assertEqual(self.server_id, attachments[0]['serverId'])
         self.assertTrue(attachments[0]['delete_on_termination'])
+
+
+class VolumeAttachmentsSampleV289(UpdateVolumeAttachmentsSampleV285):
+    """Microversion 2.89 adds the "attachment_id" parameter to the
+    response body of show and list.
+    """
+    microversion = '2.89'
+    scenarios = [('v2_89', {'api_major_version': 'v2.1'})]
