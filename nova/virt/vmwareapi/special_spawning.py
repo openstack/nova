@@ -115,20 +115,21 @@ class _SpecialVmSpawningServer(object):
                             "VirtualMachine", vm_mors,
                             ["config.instanceUuid", "runtime.powerState",
                              "config.hardware.memoryMB", "config.managedBy"])
-        for obj in result.objects:
-            vm_props = propset_dict(obj.propSet)
-            if 'config.instanceUuid' not in vm_props:
+        with vutil.WithRetrieval(self._session.vim, result) as objects:
+            for obj in objects:
+                vm_props = propset_dict(obj.propSet)
                 # sometimes, the vCenter finds a file it thinks is a VM and it
                 # doesn't even have a config attribute ... instead of crashing
                 # with a KeyError, we assume this VM is not running and totally
                 # doesn't matter as nova also will not be able to handle it
-                continue
+                if 'config.instanceUuid' not in vm_props:
+                    continue
 
-            vm_data.append((
-                vm_props['config.instanceUuid'],
-                vm_props['config.hardware.memoryMB'],
-                vm_props['runtime.powerState'],
-                vm_props.get('config.managedBy')))
+                vm_data.append((
+                    vm_props['config.instanceUuid'],
+                    vm_props['config.hardware.memoryMB'],
+                    vm_props['runtime.powerState'],
+                    vm_props.get('config.managedBy')))
         return vm_data
 
     def remove_host_from_hostgroup(self, context):
@@ -241,12 +242,13 @@ class _SpecialVmSpawningServer(object):
                          [host_objs[h] for h in vms_per_host],
                          ['summary.runtime'])
             host_states = {}
-            for obj in result.objects:
-                host_props = propset_dict(obj.propSet)
-                runtime_summary = host_props['summary.runtime']
-                host_states[obj.obj.value] = (
-                    runtime_summary.inMaintenanceMode is False and
-                    runtime_summary.connectionState == "connected")
+            with vutil.WithRetrieval(self._session.vim, result) as objects:
+                for obj in objects:
+                    host_props = propset_dict(obj.propSet)
+                    runtime_summary = host_props['summary.runtime']
+                    host_states[obj.obj.value] = (
+                        runtime_summary.inMaintenanceMode is False and
+                        runtime_summary.connectionState == "connected")
 
             vms_per_host = {h: vms for h, vms in vms_per_host.items()
                             if host_states[h]}

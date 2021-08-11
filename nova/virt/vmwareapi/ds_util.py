@@ -51,7 +51,7 @@ def _select_datastore(session, datastores, best_match, datastore_regex=None,
     """Find the most preferable datastore in a given RetrieveResult object.
 
     :param session: vmwareapi session
-    :param datastores: an iterator to the objects of RetrieveResult
+    :param datastores: an iterator to the results of the datastore list
     :param best_match: the current best match for datastore
     :param datastore_regex: an optional regular expression to match names
     :param storage_policy: storage policy for the datastore
@@ -62,12 +62,10 @@ def _select_datastore(session, datastores, best_match, datastore_regex=None,
     if storage_policy:
         matching_ds = _filter_datastores_matching_storage_policy(
             session, datastores, storage_policy)
-        if not matching_ds:
-            return best_match
     else:
         matching_ds = datastores
 
-    # matching_ds is actually a RetrieveResult object from vSphere API call
+    # data_stores is actually a RetrieveResult object from vSphere API call
     for obj_content in matching_ds:
         # the propset attribute "need not be set" by returning API
         if not hasattr(obj_content, 'propSet'):
@@ -141,7 +139,6 @@ def get_datastore(session, cluster, datastore_regex=None,
                                        datastore_regex,
                                        storage_policy,
                                        allowed_ds_types)
-
     if best_match:
         return best_match
 
@@ -149,12 +146,11 @@ def get_datastore(session, cluster, datastore_regex=None,
         raise exception.DatastoreNotFound(
             _("Storage policy %s did not match any datastores")
             % storage_policy)
-    elif datastore_regex:
+    if datastore_regex:
         raise exception.DatastoreNotFound(
             _("Datastore regex %s did not match any datastores")
             % datastore_regex.pattern)
-    else:
-        raise exception.DatastoreNotFound()
+    raise exception.DatastoreNotFound()
 
 
 def _get_allowed_datastores(datastores, datastore_regex):
@@ -439,7 +435,7 @@ def _filter_datastores_matching_storage_policy(session, datastores,
                                                storage_policy):
     """Get datastores matching the given storage policy.
 
-    :param datastores: an iterator over objects of a RetrieveResult
+    :param datastores: an iterator over datastore results
     :param storage_policy: the storage policy name
     :return: an iterator to datastores conforming to the given storage policy
     """

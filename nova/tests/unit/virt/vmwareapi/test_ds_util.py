@@ -289,9 +289,9 @@ class DsUtilTestCase(test.NoDBTestCase):
                 return None
 
         with mock.patch.object(self.session, '_call_method',
-                               side_effect=fake_call_method), \
+                    side_effect=fake_call_method), \
                 mock.patch('oslo_vmware.vim_util.continue_retrieval',
-                           side_effect=next_datastore), \
+                    side_effect=next_datastore), \
                 mock.patch('oslo_vmware.vim_util.cancel_retrieval'):
             yield
 
