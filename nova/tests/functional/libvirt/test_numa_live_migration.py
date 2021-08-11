@@ -22,7 +22,6 @@ from nova.compute import manager as compute_manager
 from nova.compute import resource_tracker as rt
 from nova import context
 from nova import objects
-from nova import test
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional.libvirt import base
@@ -32,8 +31,11 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
-class NUMALiveMigrationBase(base.ServersTestBase,
-                            integrated_helpers.InstanceHelperMixin):
+class NUMALiveMigrationBase(
+    base.LibvirtMigrationMixin,
+    base.ServersTestBase,
+    integrated_helpers.InstanceHelperMixin
+):
     """Base for all the test classes here. Gives us the NUMATopologyFilter and
     small helper methods.
     """
@@ -63,11 +65,6 @@ class NUMALiveMigrationBase(base.ServersTestBase,
             'nova.compute.manager.ComputeManager.'
             '_live_migration_cleanup_flags',
             lambda *args, **kwargs: (True, True)))
-
-    def _migrate_stub(self, domain, destination, params, flags):
-        raise test.TestingException('_migrate_stub() must be implemented in '
-                                    ' tests that expect the live migration '
-                                    ' to start.')
 
     def get_host(self, server_id):
         server = self.api.get_server(server_id)
@@ -104,10 +101,6 @@ class NUMALiveMigrationPositiveBase(NUMALiveMigrationBase):
 
     def setUp(self):
         super(NUMALiveMigrationPositiveBase, self).setUp()
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.tests.fixtures.libvirt.Domain.migrateToURI3',
-            self._migrate_stub))
-        self.migrate_stub_ran = False
 
     def start_computes_and_servers(self):
         # Start 2 computes
@@ -469,6 +462,11 @@ class NUMALiveMigrationLegacyBase(NUMALiveMigrationPositiveBase):
             hostname='dest',
             host_info=fakelibvirt.HostInfo())
 
+        # This duplication is required to let the LibvirtMigrationMixin know
+        # which host is which in terms of the migration.
+        self.src = self.computes['source']
+        self.dest = self.computes['dest']
+
         ctxt = context.get_admin_context()
         src_mgr = self.computes['source'].manager
         cond_mgr = self.conductor.manager.compute_task_mgr
@@ -507,8 +505,10 @@ class NUMALiveMigrationLegacyBase(NUMALiveMigrationPositiveBase):
         server2 = self._create_server(flavor_id=flavor, networks='none')
         if self.get_host(server1['id']) == 'source':
             self.migrating_server = server1
+            self.server = server1
         else:
             self.migrating_server = server2
+            self.server = server2
         self.api.post_server_action(
             self.migrating_server['id'],
             {'os-migrateLive': {'host': 'dest',
