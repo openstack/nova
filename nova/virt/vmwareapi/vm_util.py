@@ -1418,77 +1418,61 @@ def get_stats_from_cluster(session, cluster):
     total_mem_mb = 0
     max_mem_mb_per_host = 0
     reserved_memory_mb = 0
-    # Get the Host and Resource Pool Managed Object Refs
-    admission_policy_key = "configuration.dasConfig.admissionControlPolicy"
-    props = ["host", "resourcePool", admission_policy_key]
-    if CONF.vmware.hostgroup_reservations_json_file:
-        props.append("configurationEx")
-    prop_dict = session._call_method(vutil,
-                                     "get_object_properties_dict",
-                                     cluster,
-                                     props)
-    if prop_dict:
-        failover_hosts = []
-        policy = prop_dict.get(admission_policy_key)
-        if policy and hasattr(policy, 'failoverHosts'):
-            failover_hosts = set(h.value for h in policy.failoverHosts)
 
-        group_ret = getattr(prop_dict.get('configurationEx'), 'group', None)
-        host_reservations_map = _get_host_reservations_map(group_ret)
+    host_mors, host_reservations_map = \
+        get_hosts_and_reservations_for_cluster(session, cluster)
 
-        host_ret = prop_dict.get('host')
-        if host_ret:
-            host_mors = [m for m in host_ret.ManagedObjectReference
-                            if m.value not in failover_hosts]
-            result = session._call_method(vim_util,
-                         "get_properties_for_a_collection_of_objects",
-                         "HostSystem", host_mors,
-                         ["summary.hardware", "summary.runtime",
-                          "summary.quickStats"])
-            total_hypervisor_count = 0
-            # NOTE (jakobk): For the total amount of hosts it doesn't matter
-            # whether the host is in MM or unreachable, because the count is
-            # used to calculate safety margins for resource allocations, and MM
-            # or otherwise unreachable hosts is precisely what that is supposed
-            # to guard against.
-            with vutil.WithRetrieval(session.vim, result) as objects:
-                for obj in objects:
-                    total_hypervisor_count += 1
-                    host_props = propset_dict(obj.propSet)
-                    runtime_summary = host_props['summary.runtime']
-                    if (runtime_summary.inMaintenanceMode or
-                            runtime_summary.connectionState != "connected"):
-                        continue
-                    hardware_summary = host_props['summary.hardware']
-                    stats_summary = host_props['summary.quickStats']
-                    # Total vcpus is the sum of all pCPUs of individual hosts
-                    # The overcommitment ratio is factored in by the scheduler
-                    threads = hardware_summary.numCpuThreads
-                    vcpus += threads
-                    used_mem_mb += stats_summary.overallMemoryUsage
-                    mem_mb = hardware_summary.memorySize // units.Mi
-                    total_mem_mb += mem_mb
-                    reserved = _get_host_reservations(
-                                        host_reservations_map, obj.obj,
-                                        threads, mem_mb)
-                    reserved_vcpus += reserved['vcpus']
-                    reserved_memory_mb += reserved['memory_mb']
-                    max_vcpus_per_host = max(max_vcpus_per_host,
-                                             threads - reserved['vcpus'])
-                    max_mem_mb_per_host = max(max_mem_mb_per_host,
-                                              mem_mb - reserved['memory_mb'])
+    if host_mors:
+        result = session._call_method(vim_util,
+                        "get_properties_for_a_collection_of_objects",
+                        "HostSystem", host_mors,
+                        ["summary.hardware", "summary.runtime",
+                        "summary.quickStats"])
+        total_hypervisor_count = 0
+        # NOTE (jakobk): For the total amount of hosts it doesn't matter
+        # whether the host is in MM or unreachable, because the count is
+        # used to calculate safety margins for resource allocations, and MM
+        # or otherwise unreachable hosts is precisely what that is supposed
+        # to guard against.
+        with vutil.WithRetrieval(session.vim, result) as objects:
+            for obj in objects:
+                total_hypervisor_count += 1
+                host_props = propset_dict(obj.propSet)
+                runtime_summary = host_props['summary.runtime']
+                if (runtime_summary.inMaintenanceMode or
+                        runtime_summary.connectionState != "connected"):
+                    continue
+                hardware_summary = host_props['summary.hardware']
+                stats_summary = host_props['summary.quickStats']
+                # Total vcpus is the sum of all pCPUs of individual hosts
+                # The overcommitment ratio is factored in by the scheduler
+                threads = hardware_summary.numCpuThreads
+                vcpus += threads
+                used_mem_mb += stats_summary.overallMemoryUsage
+                mem_mb = hardware_summary.memorySize // units.Mi
+                total_mem_mb += mem_mb
+                reserved = _get_host_reservations(
+                                    host_reservations_map, obj.obj,
+                                    threads, mem_mb)
+                reserved_vcpus += reserved['vcpus']
+                reserved_memory_mb += reserved['memory_mb']
+                max_vcpus_per_host = max(max_vcpus_per_host,
+                                            threads - reserved['vcpus'])
+                max_mem_mb_per_host = max(max_mem_mb_per_host,
+                                            mem_mb - reserved['memory_mb'])
 
-            # Calculate VM-reservable memory as a ratio of total available
-            # memory, depending on either the configured tolerance for failed
-            # hypervisors or a single configurable ratio.
-            max_fail_hvs = \
-                CONF.vmware.memory_reservation_cluster_hosts_max_fail
-            if max_fail_hvs and total_hypervisor_count:
-                vm_reservable_memory_ratio = \
-                    (1 - max_fail_hvs / total_hypervisor_count)
-            else:
-                vm_reservable_memory_ratio = \
-                    CONF.vmware.memory_reservation_max_ratio_fallback
+        # Calculate VM-reservable memory as a ratio of total available
+        # memory, depending on either the configured tolerance for failed
+        # hypervisors or a single configurable ratio.
+        max_fail_hvs = \
+            CONF.vmware.memory_reservation_cluster_hosts_max_fail
+        if max_fail_hvs and total_hypervisor_count:
+            vm_reservable_memory_ratio = \
+                (1 - max_fail_hvs / total_hypervisor_count)
+        else:
+            vm_reservable_memory_ratio = \
+                CONF.vmware.memory_reservation_max_ratio_fallback
+
     stats = {'cpu': {'vcpus': vcpus,
                      'max_vcpus_per_host': max_vcpus_per_host,
                      'reserved_vcpus': reserved_vcpus},
@@ -1498,6 +1482,36 @@ def get_stats_from_cluster(session, cluster):
                      'reserved_memory_mb': reserved_memory_mb,
                      'vm_reservable_memory_ratio': vm_reservable_memory_ratio}}
     return stats
+
+
+def get_hosts_and_reservations_for_cluster(session, cluster):
+    # Get the Host and Resource Pool Managed Object Refs
+    admission_policy_key = "configuration.dasConfig.admissionControlPolicy"
+    props = ["host", "resourcePool", admission_policy_key]
+    if CONF.vmware.hostgroup_reservations_json_file:
+        props.append("configurationEx")
+    prop_dict = session._call_method(vutil,
+                                     "get_object_properties_dict",
+                                     cluster,
+                                     props)
+    if not prop_dict:
+        return None, None
+
+    failover_hosts = []
+    policy = prop_dict.get(admission_policy_key)
+    if policy and hasattr(policy, 'failoverHosts'):
+        failover_hosts = set(h.value for h in policy.failoverHosts)
+
+    group_ret = getattr(prop_dict.get('configurationEx'), 'group', None)
+
+    host_ret = prop_dict.get('host')
+
+    if not host_ret:
+        return None, None
+
+    host_mors = [m for m in host_ret.ManagedObjectReference
+                            if m.value not in failover_hosts]
+    return host_mors, _get_host_reservations_map(group_ret)
 
 
 def get_host_ref(session, cluster=None):
