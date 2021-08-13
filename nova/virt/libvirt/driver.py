@@ -5888,6 +5888,15 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.features.append(hv)
 
         if CONF.libvirt.virt_type in ("qemu", "kvm"):
+            # vmcoreinfo support is x86, ARM-only for now
+            guestarch = libvirt_utils.get_arch(image_meta)
+            if guestarch in (
+                fields.Architecture.I686, fields.Architecture.X86_64,
+                fields.Architecture.AARCH64,
+            ):
+                guest.features.append(
+                    vconfig.LibvirtConfigGuestFeatureVMCoreInfo())
+
             if hide_hypervisor_id:
                 guest.features.append(
                     vconfig.LibvirtConfigGuestFeatureKvmHidden())

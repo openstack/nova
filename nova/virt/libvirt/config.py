@@ -2762,6 +2762,12 @@ class LibvirtConfigGuestSEVLaunchSecurity(LibvirtConfigObject):
         return root
 
 
+class LibvirtConfigGuestFeatureVMCoreInfo(LibvirtConfigGuestFeature):
+
+    def __init__(self, **kwargs):
+        super().__init__('vmcoreinfo', **kwargs)
+
+
 class LibvirtConfigGuest(LibvirtConfigObject):
 
     def __init__(self, **kwargs):

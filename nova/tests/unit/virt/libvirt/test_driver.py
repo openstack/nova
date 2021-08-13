@@ -2570,11 +2570,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                      context=ctxt)
 
         self.assertEqual(cfg.uuid, instance_ref["uuid"])
-        self.assertEqual(2, len(cfg.features))
+        self.assertEqual(3, len(cfg.features))
         self.assertIsInstance(cfg.features[0],
                               vconfig.LibvirtConfigGuestFeatureACPI)
         self.assertIsInstance(cfg.features[1],
                               vconfig.LibvirtConfigGuestFeatureAPIC)
+        self.assertIsInstance(
+            cfg.features[2], vconfig.LibvirtConfigGuestFeatureVMCoreInfo)
         self.assertEqual(cfg.memory, 6 * units.Ki)
         self.assertEqual(cfg.vcpus, 28)
         self.assertEqual(cfg.os_type, fields.VMMode.HVM)
@@ -4862,13 +4864,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual("hypervclock", cfg.clock.timers[3].name)
         self.assertTrue(cfg.clock.timers[3].present)
 
-        self.assertEqual(3, len(cfg.features))
+        self.assertEqual(4, len(cfg.features))
         self.assertIsInstance(cfg.features[0],
                               vconfig.LibvirtConfigGuestFeatureACPI)
         self.assertIsInstance(cfg.features[1],
                               vconfig.LibvirtConfigGuestFeatureAPIC)
         self.assertIsInstance(cfg.features[2],
                               vconfig.LibvirtConfigGuestFeatureHyperV)
+        self.assertIsInstance(
+            cfg.features[3], vconfig.LibvirtConfigGuestFeatureVMCoreInfo)
 
     @mock.patch.object(host.Host, 'has_min_version',
                        new=mock.Mock(return_value=True))
@@ -4893,7 +4897,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               vconfig.LibvirtConfigGuestClock)
         self.assertEqual(cfg.clock.offset, "localtime")
 
-        num_features = 4 if hvid_hidden else 3
+        num_features = 5 if hvid_hidden else 4
         self.assertEqual(num_features, len(cfg.features))
         self.assertIsInstance(cfg.features[0],
                               vconfig.LibvirtConfigGuestFeatureACPI)
@@ -4901,9 +4905,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               vconfig.LibvirtConfigGuestFeatureAPIC)
         self.assertIsInstance(cfg.features[2],
                               vconfig.LibvirtConfigGuestFeatureHyperV)
+        self.assertIsInstance(
+            cfg.features[3], vconfig.LibvirtConfigGuestFeatureVMCoreInfo)
         if hvid_hidden:
-            self.assertIsInstance(cfg.features[3],
-                                  vconfig.LibvirtConfigGuestFeatureKvmHidden)
+            self.assertIsInstance(
+                cfg.features[4], vconfig.LibvirtConfigGuestFeatureKvmHidden)
 
         self.assertTrue(cfg.features[2].relaxed)
         self.assertTrue(cfg.features[2].spinlocks)
@@ -4979,11 +4985,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         cfg = drvr._get_guest_config(instance_ref,
                                      _fake_network_info(self, 2),
                                      image_meta, disk_info)
-        self.assertEqual(2, len(cfg.features))
+        self.assertEqual(3, len(cfg.features))
         self.assertIsInstance(cfg.features[0],
                               vconfig.LibvirtConfigGuestFeatureACPI)
         self.assertIsInstance(cfg.features[1],
                               vconfig.LibvirtConfigGuestFeatureAPIC)
+        self.assertIsInstance(
+            cfg.features[2], vconfig.LibvirtConfigGuestFeatureVMCoreInfo)
         self.assertEqual(cfg.memory, instance_ref.flavor.memory_mb * units.Ki)
         self.assertEqual(cfg.vcpus, instance_ref.flavor.vcpus)
         self.assertEqual(cfg.os_type, fields.VMMode.HVM)
