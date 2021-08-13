@@ -151,24 +151,22 @@ def update_placement(session, cluster, vm_ref, group_infos):
     client_factory = session.vim.client.factory
     config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
     config_spec.groupSpec = []
+    config_spec.rulesSpec = []
     for group_info in group_infos:
         group = _get_vm_group(cluster_config, group_info)
 
         if not group:
-            """Creating group"""
-            group_spec = _create_vm_group_spec(
-                client_factory, group_info, [vm_ref], operation="add",
-                group=group)
-            config_spec.groupSpec.append(group_spec)
-
-        if group:
+            # Creating group
+            operation = "add"
+        else:
             # VM group exists on the cluster which is assumed to be
             # created by VC admin. Add instance to this vm group and let
             # the placement policy defined by the VC admin take over
-            group_spec = _create_vm_group_spec(
-                client_factory, group_info, [vm_ref], operation="edit",
-                group=group)
-            config_spec.groupSpec.append(group_spec)
+            operation = "edit"
+        group_spec = _create_vm_group_spec(
+            client_factory, group_info, [vm_ref], operation=operation,
+            group=group)
+        config_spec.groupSpec.append(group_spec)
 
         # If server group policies are defined (by tenants), then
         # create/edit affinity/anti-affinity rules on cluster.
@@ -187,10 +185,7 @@ def update_placement(session, cluster, vm_ref, group_infos):
                 rules_spec = _create_cluster_rules_spec(
                     client_factory, rule_name, [vm_ref], policy=policy,
                     operation=operation, rule=rule)
-                if config_spec.rulesSpec is None:
-                    config_spec.rulesSpec = [rules_spec]
-                else:
-                    config_spec.rulesSpec.append(rules_spec)
+                config_spec.rulesSpec.append(rules_spec)
 
     reconfigure_cluster(session, cluster, config_spec)
 
@@ -309,10 +304,11 @@ def update_cluster_drs_vm_override(session, cluster, vm_ref, operation='add',
 
 
 @utils.synchronized('vmware-vm-group-policy')
-def clean_empty_vm_groups(session, cluster, group_names=None):
+def clean_empty_vm_groups(session, cluster, group_names=None, instance=None):
     """Delete all empty server groups
 
     Optionally filter the server groups to delete by `group_names`.
+    :param instance: Only for logging purposes
     """
     cluster_config = session._call_method(vutil,
         "get_object_property", cluster, "configurationEx")
@@ -326,8 +322,10 @@ def clean_empty_vm_groups(session, cluster, group_names=None):
             continue
 
         try:
-            LOG.debug("Deleting VM group %s", group.name)
+            LOG.debug("Deleting VM group %s", group.name, instance=instance)
             delete_vm_group(session, cluster, group)
-            LOG.debug("VM group %s deleted successfully", group.name)
+            LOG.debug("VM group %s deleted successfully", group.name,
+                instance=instance)
         except Exception as e:
-            LOG.warning("Deleting VM group %s failed: %s", group.name, e)
+            LOG.warning("Deleting VM group %s failed: %s", group.name, e,
+                instance=instance)

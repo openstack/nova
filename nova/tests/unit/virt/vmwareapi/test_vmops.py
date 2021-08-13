@@ -641,7 +641,8 @@ class VMwareVMOpsTestCase(test.TestCase):
                 mock.patch.object(vmops.VMwareVMOps, "_relocate_vm"),
                 mock.patch.object(vmops.VMwareVMOps, "_detach_volumes"),
                 mock.patch.object(vmops.VMwareVMOps, "_attach_volumes"),
-                mock.patch.object(vm_util, "update_cluster_placement")
+                mock.patch.object(vmops.VMwareVMOps,
+                                  "update_cluster_placement"),
         ) as (fake_resize_create_ephemerals_and_swap,
               fake_update_instance_progress, fake_power_on, fake_get_vm_ref,
               fake_remove_ephemerals_and_swap, fake_get_vmdk_info,
@@ -683,8 +684,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                             vmdk.adapter_type)
                 if not relocate_fails:
                     fake_update_cluster_placement.assert_called_once_with(
-                        self._session, self._context, self._instance,
-                        self._cluster.obj, 'fake-ref')
+                        self._context, self._instance)
                 else:
                     fake_update_cluster_placement.assert_not_called()
                     relocate_failed = True
@@ -797,7 +797,7 @@ class VMwareVMOpsTestCase(test.TestCase):
         vmdk = vm_util.VmdkInfo(None, None, None, 0, None)
         self._test_resize_create_ephemerals(vmdk, None)
 
-    @mock.patch.object(vm_util, 'update_cluster_placement')
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vmops.VMwareVMOps, '_resize_create_ephemerals_and_swap')
     @mock.patch.object(vmops.VMwareVMOps, '_remove_ephemerals_and_swap')
@@ -934,8 +934,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                             vmdk.adapter_type)
                 if not relocate_fails:
                     fake_update_cluster_placement.assert_called_once_with(
-                        self._session, self._context, self._instance,
-                        self._cluster.obj, 'fake-ref')
+                        self._context, self._instance)
                 else:
                     fake_update_cluster_placement.assert_not_called()
         fake_get_vm_ref.assert_has_calls(vm_ref_calls)
@@ -1654,11 +1653,13 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
     @mock.patch.object(vmops.lockutils, 'lock')
     @mock.patch.object(ds_util, 'get_datastore')
     def test_spawn_mask_block_device_info_password(self, mock_get_datastore,
-        mock_lock, mock_build_virtual_machine, mock_get_vm_config_info,
-        mock_fetch_image_if_missing, mock_debug, mock_glance):
+            mock_lock, mock_update_cluster_placement,
+            mock_build_virtual_machine, mock_get_vm_config_info,
+            mock_fetch_image_if_missing, mock_debug, mock_glance):
         # Very simple test that just ensures block_device_info auth_password
         # is masked when logged; the rest of the test just fails out early.
         data = {'auth_password': 'scrubme'}
@@ -1743,7 +1744,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch(
         'nova.virt.vmwareapi.imagecache.ImageCacheManager.enlist_image')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
-    @mock.patch.object(vm_util, 'update_cluster_placement')
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(images.VMwareImage, 'from_image')
@@ -1806,7 +1807,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                        return_value='fake_vm_folder')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
-    @mock.patch.object(vm_util, 'update_cluster_placement')
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(images.VMwareImage, 'from_image')
@@ -1871,7 +1872,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                        return_value='fake_vm_folder')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
-    @mock.patch.object(vm_util, 'update_cluster_placement')
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(images.VMwareImage, 'from_image')
@@ -2106,10 +2107,11 @@ class VMwareVMOpsTestCase(test.TestCase):
         recorded_methods = [c[1][1] for c in mock_call_method.mock_calls]
         self.assertEqual(expected_methods, recorded_methods)
 
-    @mock.patch('nova.virt.vmwareapi.vm_util.vm_needs_special_spawning')
+    @mock.patch('nova.virt.vmwareapi.vmops.utils.vm_needs_special_spawning',
+                return_value=False)
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
                        return_value='fake_vm_folder')
-    @mock.patch.object(vm_util, 'update_cluster_placement')
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
     @mock.patch(
         'nova.virt.vmwareapi.vmops.VMwareVMOps._update_vnic_index')
     @mock.patch(
@@ -2402,7 +2404,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch(
         'nova.virt.vmwareapi.imagecache.ImageCacheManager.enlist_image')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
-    @mock.patch.object(vm_util, 'update_cluster_placement')
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(images.VMwareImage, 'from_image')
@@ -2593,7 +2595,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     def test_create_swap_with_no_bdi(self):
         self._test_create_swap_from_instance(None)
 
-    @mock.patch('nova.virt.vmwareapi.vm_util.vm_needs_special_spawning')
+    @mock.patch('nova.utils.vm_needs_special_spawning')
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
                        return_value='fake_vm_folder')
     def test_build_virtual_machine(self, mock_create_folder,

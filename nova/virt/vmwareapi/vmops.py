@@ -75,6 +75,9 @@ LOG = logging.getLogger(__name__)
 RESIZE_TOTAL_STEPS = 7
 
 
+GroupInfo = collections.namedtuple('GroupInfo', ['uuid', 'policies'])
+
+
 class VirtualMachineInstanceConfigInfo(object):
     """Parameters needed to create and configure a new instance."""
 
@@ -338,8 +341,6 @@ class VMwareVMOps(object):
         vm_ref = vm_util.create_vm(self._session, instance, vm_folder,
                                    config_spec, self._root_resource_pool)
 
-        vm_util.update_cluster_placement(self._session, context, instance,
-                                         self._cluster, vm_ref)
         return vm_ref
 
     def _get_extra_specs(self, flavor, image_meta=None):
@@ -1110,6 +1111,12 @@ class VMwareVMOps(object):
         if serial_port_spec:
             reconfig_spec.deviceChange.append(serial_port_spec)
 
+    def update_cluster_placement(self, context, instance):
+        server_group_infos = self._get_server_groups(
+                context, instance, include_provider_groups=True)
+        vm_util.update_cluster_placement(self._session, instance,
+                                         self._cluster, server_group_infos)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
 
@@ -1148,6 +1155,8 @@ class VMwareVMOps(object):
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance uuid.
         vm_util.vm_ref_cache_update(instance.uuid, vm_ref)
+
+        self.update_cluster_placement(context, instance)
 
         # Update the Neutron VNIC index
         self._update_vnic_index(context, instance, network_info)
@@ -1583,11 +1592,40 @@ class VMwareVMOps(object):
             self._session._wait_for_task(reset_task)
             LOG.debug("Did hard reboot of VM", instance=instance)
 
+    def _get_server_groups(self, context, instance,
+                           include_provider_groups=False):
+        server_group_infos = []
+        try:
+            instance_group_object = objects.instance_group.InstanceGroup
+            server_group = instance_group_object.get_by_instance_uuid(
+                context, instance.uuid)
+            if server_group:
+                server_group_infos.append(GroupInfo(server_group.uuid,
+                                                    server_group.policies))
+        except nova.exception.InstanceGroupNotFound:
+            pass
+
+        if include_provider_groups:
+            needs_empty_host = utils.vm_needs_special_spawning(
+                int(instance.memory_mb), instance.flavor)
+            if CONF.vmware.special_spawning_vm_group and not needs_empty_host:
+                name = CONF.vmware.special_spawning_vm_group
+                server_group_infos.append(GroupInfo(name, None))
+
+        return server_group_infos
+
+    def cleanup_server_groups(self, context, instance):
+        server_group_infos = self._get_server_groups(context, instance)
+        server_group_uuids = set(group_info.uuid
+                                 for group_info in server_group_infos)
+        cluster_util.clean_empty_vm_groups(self._session, self._cluster,
+                                           server_group_uuids,
+                                           instance=instance)
+
     def _destroy_instance(self, context, instance, destroy_disks=True):
         # Destroy a VM instance
         try:
             vm_ref = vm_util.get_vm_ref(self._session, instance)
-            server_group_infos = vm_util._get_server_groups(context, instance)
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
                               "datastore"]
             props = self._session._call_method(vutil,
@@ -1618,10 +1656,7 @@ class VMwareVMOps(object):
                             excep, instance=instance)
 
             # Delete the VM groups it was in, if they're empty now
-            server_group_uuids = set(group_info.uuid
-                                     for group_info in server_group_infos)
-            cluster_util.clean_empty_vm_groups(self._session, self._cluster,
-                                               server_group_uuids)
+            self.cleanup_server_groups(context, instance)
 
             # Delete the folder holding the VM related content on
             # the datastore.
@@ -2119,10 +2154,7 @@ class VMwareVMOps(object):
                     LOG.error("Relocating the VM failed: %s", e,
                               instance=instance)
             else:
-                vm_util.update_cluster_placement(self._session,
-                                                 context, instance,
-                                                 self._cluster,
-                                                 vm_ref)
+                self.update_cluster_placement(context, instance)
             finally:
                 self._attach_volumes(instance, block_device_info, adapter_type)
 
@@ -2164,8 +2196,7 @@ class VMwareVMOps(object):
                     self._attach_volumes(instance, block_device_info,
                                          adapter_type)
 
-            vm_util.update_cluster_placement(self._session, context,
-                                             instance, self._cluster, vm_ref)
+            self.update_cluster_placement(context, instance)
 
         self._update_instance_progress(context, instance,
                                        step=2,

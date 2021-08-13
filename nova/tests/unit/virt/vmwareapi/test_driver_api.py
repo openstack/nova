@@ -277,7 +277,7 @@ class VMwareAPIVMTestCase(test.TestCase,
         """
         self.useFixture(
             fixtures.MonkeyPatch(
-                'nova.virt.vmwareapi.vm_util.vm_needs_special_spawning',
+                'nova.utils.vm_needs_special_spawning',
                 self._fake_vm_needs_special_spawning))
 
     def _fake_vm_needs_special_spawning(self, *args, **kwargs):
@@ -1726,7 +1726,8 @@ class VMwareAPIVMTestCase(test.TestCase,
 
     @mock.patch('nova.virt.vmwareapi.cluster_util.fetch_cluster_properties')
     @mock.patch('nova.virt.vmwareapi.cluster_util.delete_vm_group')
-    @mock.patch('nova.virt.vmwareapi.vm_util._get_server_groups')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_server_groups',
+                                          return_value=[])
     @mock.patch('nova.virt.vmwareapi.vm_util.update_cluster_placement')
     def test_destroy_with_vm_group(self, mock_update_placement,
                                          mock_get_sg,

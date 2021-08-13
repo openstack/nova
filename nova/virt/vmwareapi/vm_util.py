@@ -41,8 +41,6 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
-from nova import objects
-from nova.utils import vm_needs_special_spawning
 from nova.virt.vmwareapi import cluster_util
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vim_util
@@ -353,8 +351,6 @@ VmdkInfo = collections.namedtuple('VmdkInfo', ['path', 'adapter_type',
                                                'disk_type',
                                                'capacity_in_bytes',
                                                'device'])
-
-GroupInfo = collections.namedtuple('GroupInfo', ['uuid', 'policies'])
 
 
 def _iface_id_option_value(client_factory, iface_id, port_index):
@@ -1629,33 +1625,10 @@ def get_hosts_and_reservations_for_cluster(session, cluster):
     return host_mors, _get_host_reservations_map(group_ret)
 
 
-def _get_server_groups(context, instance, include_provider_groups=False):
-    server_group_infos = []
-    try:
-        instance_group_object = objects.instance_group.InstanceGroup
-        server_group = instance_group_object.get_by_instance_uuid(
-            context, instance.uuid)
-        if server_group:
-            server_group_infos.append(GroupInfo(server_group.uuid,
-                                                server_group.policies))
-    except nova.exception.InstanceGroupNotFound:
-        pass
-
-    if include_provider_groups:
-        needs_empty_host = vm_needs_special_spawning(int(instance.memory_mb),
-                                                     instance.flavor)
-        if CONF.vmware.special_spawning_vm_group and not needs_empty_host:
-            name = CONF.vmware.special_spawning_vm_group
-            server_group_infos.append(GroupInfo(name, None))
-
-    return server_group_infos
-
-
-def update_cluster_placement(session, context, instance, cluster, vm_ref):
-    server_group_infos = _get_server_groups(context, instance,
-                                            include_provider_groups=True)
+def update_cluster_placement(session, instance, cluster, server_group_infos):
     if not server_group_infos:
         return
+    vm_ref = get_vm_ref(session, instance)
     cluster_util.update_placement(session, cluster, vm_ref, server_group_infos)
 
 
