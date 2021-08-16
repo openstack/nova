@@ -820,16 +820,126 @@ class WarningsFixture(fixtures.Fixture):
             'error', message='Evaluating non-mapped column expression',
             category=sqla_exc.SAWarning)
 
-        # Enable deprecation warnings to capture upcoming SQLAlchemy changes
+        # Enable deprecation warnings for nova itself to capture upcoming
+        # SQLAlchemy changes
+
+        warnings.filterwarnings(
+            'ignore',
+            category=sqla_exc.SADeprecationWarning)
 
         warnings.filterwarnings(
             'error',
             module='nova',
             category=sqla_exc.SADeprecationWarning)
 
-        # TODO(stephenfin): Remove once we fix this is oslo.db 10.0.1 or so
+        # ...but filter everything out until we get around to fixing them
+        # TODO(stephenfin): Fix all of these
+
         warnings.filterwarnings(
             'ignore',
+            module='nova',
+            message=r'The Engine.execute\(\) method is considered legacy',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The autoload parameter is deprecated .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The current statement is being autocommitted .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The MetaData.bind argument is deprecated .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The legacy calling style of select\(\) .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The ``bind`` argument for schema methods .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The Column.copy\(\) method is deprecated .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The Row.keys\(\) method is considered legacy .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'Using non-integer/slice indices on Row is deprecated .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The .close\(\) method on a so-called .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The Connection.connect\(\) method is considered .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'Passing a string to Connection.execute\(\) is .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The insert.inline parameter will be removed .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'Using strings to indicate column or relationship .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'Using strings to indicate relationship names .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The Executable.execute\(\) method is considered .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
+            message=r'The Executable.scalar\(\) method is considered .*',
+            category=sqla_exc.SADeprecationWarning)
+
+        warnings.filterwarnings(
+            'ignore',
+            module='nova',
             message=r'Invoking and_\(\) without arguments is deprecated, .*',
             category=sqla_exc.SADeprecationWarning)
 
