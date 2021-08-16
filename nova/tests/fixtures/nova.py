@@ -781,6 +781,13 @@ class WarningsFixture(fixtures.Fixture):
             'error', message='Evaluating non-mapped column expression',
             category=sqla_exc.SAWarning)
 
+        # Enable deprecation warnings to capture upcoming SQLAlchemy changes
+
+        warnings.filterwarnings(
+            'error',
+            module='nova',
+            category=sqla_exc.SADeprecationWarning)
+
         # TODO(stephenfin): Remove once we fix this is oslo.db 10.0.1 or so
         warnings.filterwarnings(
             'ignore',
