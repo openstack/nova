@@ -1883,9 +1883,9 @@ class VMwareVMOps(object):
     def _get_valid_vms_from_retrieve_result(self, retrieve_result):
         """Returns list of valid vms from RetrieveResult object."""
         lst_vm_names = []
-
-        while retrieve_result:
-            for vm in retrieve_result.objects:
+        with vutil.WithRetrieval(self._session.vim, retrieve_result) as \
+                objects:
+            for vm in objects:
                 vm_uuid = None
                 conn_state = None
                 for prop in vm.propSet:
@@ -1899,9 +1899,7 @@ class VMwareVMOps(object):
                 # Ignoring the orphaned or inaccessible VMs
                 if conn_state not in ["orphaned", "inaccessible"]:
                     lst_vm_names.append(vm_uuid)
-            retrieve_result = self._session._call_method(vutil,
-                                                         'continue_retrieval',
-                                                         retrieve_result)
+
         return lst_vm_names
 
     def instance_exists(self, instance):

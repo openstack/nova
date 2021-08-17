@@ -38,22 +38,20 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
             ['VMFS', 'new-name', True, 'inMaintenance', 987654321, 12346789]
         ]
 
-    def build_result_set(self, mock_data, name_list=None):
+    def create_result_iterator(self, mock_data, name_list=None):
         # datastores will have a moref_id of ds-000 and
         # so on based on their index in the mock_data list
         if name_list is None:
             name_list = self.propset_name_list
 
-        objects = []
-        for id, row in enumerate(mock_data):
+        for id_, row in enumerate(mock_data):
             obj = ObjectContent(
-                obj=MoRef(value="ds-%03d" % id),
+                obj=MoRef(value="ds-%03d" % id_),
                 propSet=[])
             for index, value in enumerate(row):
                 obj.propSet.append(
                     DynamicProperty(name=name_list[index], val=row[index]))
-            objects.append(obj)
-        return ResultSet(objects=objects)
+            yield obj
 
     @property
     def propset_name_list(self):
@@ -62,7 +60,7 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
                 'summary.freeSpace']
 
     def test_filter_datastores_simple(self):
-        datastores = self.build_result_set(self.data)
+        datastores = self.create_result_iterator(self.data)
         best_match = ds_obj.Datastore(ref='fake_ref', name='ds',
                               capacity=0, freespace=0)
         rec = ds_util._select_datastore(None, datastores, best_match)
@@ -75,7 +73,7 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
 
     def test_filter_datastores_empty(self):
         data = []
-        datastores = self.build_result_set(data)
+        datastores = self.create_result_iterator(data)
 
         best_match = ds_obj.Datastore(ref='fake_ref', name='ds',
                               capacity=0, freespace=0)
@@ -84,7 +82,7 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         self.assertEqual(best_match, rec)
 
     def test_filter_datastores_no_match(self):
-        datastores = self.build_result_set(self.data)
+        datastores = self.create_result_iterator(self.data)
         datastore_regex = re.compile('no_match.*')
 
         best_match = ds_obj.Datastore(ref='fake_ref', name='ds',
@@ -108,7 +106,7 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
              12346789000]
         ]
         # only the DS some-name-good is accessible and matches the regex
-        datastores = self.build_result_set(data)
+        datastores = self.create_result_iterator(data)
         datastore_regex = re.compile('.*-good$')
 
         best_match = ds_obj.Datastore(ref='fake_ref', name='ds',
@@ -136,7 +134,7 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         # no matches are expected when 'summary.accessible' is missing
         prop_names = ['summary.type', 'summary.name',
                       'summary.capacity', 'summary.freeSpace']
-        datastores = self.build_result_set(data, prop_names)
+        datastores = self.create_result_iterator(data, prop_names)
         best_match = ds_obj.Datastore(ref='fake_ref', name='ds',
                               capacity=0, freespace=0)
 
@@ -153,7 +151,7 @@ class VMwareDSUtilDatastoreSelectionTestCase(test.NoDBTestCase):
             ['VMFS', 'some-other-good', True, 10 * units.Gi, 10 * units.Gi],
         ]
 
-        datastores = self.build_result_set(data)
+        datastores = self.create_result_iterator(data)
         datastore_regex = re.compile('.*-good$')
 
         # the current best match is better than all candidates

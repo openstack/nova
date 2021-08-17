@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from contextlib import contextmanager
 import re
 
 import mock
@@ -247,6 +248,7 @@ class DsUtilTestCase(test.NoDBTestCase):
                     'fake-browser', ds_path, 'fake-file')
             self.assertFalse(file_exists)
 
+    @contextmanager
     def _mock_get_datastore_calls(self, *datastores):
         """Mock vim_util calls made by get_datastore."""
 
@@ -277,23 +279,21 @@ class DsUtilTestCase(test.NoDBTestCase):
                 datastores_i[0] = iter(datastores)
                 return next(datastores_i[0])
 
-            # Continue returning results from the current iterator.
-            if (module == ds_util.vutil and
-                    method == 'continue_retrieval'):
-                try:
-                    return next(datastores_i[0])
-                except StopIteration:
-                    return None
-
-            if (method == 'continue_retrieval' or
-                method == 'cancel_retrieval'):
-                return
-
             # Sentinel that get_datastore's use of vim has changed
             self.fail('Unexpected vim call in get_datastore: %s' % method)
 
-        return mock.patch.object(self.session, '_call_method',
-                                 side_effect=fake_call_method)
+        def next_datastore(*args, **kwargs):
+            try:
+                return next(datastores_i[0])
+            except StopIteration:
+                return None
+
+        with mock.patch.object(self.session, '_call_method',
+                               side_effect=fake_call_method), \
+                mock.patch('oslo_vmware.vim_util.continue_retrieval',
+                           side_effect=next_datastore), \
+                mock.patch('oslo_vmware.vim_util.cancel_retrieval'):
+            yield
 
     def test_get_datastore(self):
         fake_objects = fake.FakeRetrieveResult()

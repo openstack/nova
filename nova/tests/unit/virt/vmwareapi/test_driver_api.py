@@ -1244,7 +1244,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self._create_vm()
         vms = self.conn._session._call_method(vim_util, "get_objects",
                 "VirtualMachine", ['config.extraConfig["nvp.vm-uuid"]'])
-        vm_ref = vm_util._get_object_for_optionvalue(vms,
+        vm_ref = vm_util._get_object_for_optionvalue(vms.objects,
                                                      self.instance["uuid"])
         self.assertIsNotNone(vm_ref, 'VM Reference cannot be none')
 
