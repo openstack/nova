@@ -9084,6 +9084,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                          uuids.volume_id)
         mock_encryptor.detach_volume.assert_not_called()
 
+        # assert that no attempt to remove the secret is made when
+        # destroy_secrets=False
+        drvr._host.find_secret.reset_mock()
+        drvr._host.delete_secret.reset_mock()
+        drvr._disconnect_volume(
+            self.context,
+            connection_info,
+            instance,
+            encryption=encryption,
+            destroy_secrets=False
+        )
+        drvr._host.delete_secret.assert_not_called()
+
         # assert that the encryptor is used if no secret is found
         drvr._host.find_secret.reset_mock()
         drvr._host.delete_secret.reset_mock()
@@ -10146,6 +10159,36 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_find_secret.assert_called_once_with('volume', uuids.volume_id)
         mock_get_encryptor.assert_not_called()
+
+    @mock.patch('nova.virt.libvirt.host.Host.delete_secret')
+    @mock.patch('nova.virt.libvirt.host.Host.find_secret', new=mock.Mock())
+    def test_detach_encryptor_skip_secret_removal(self, mock_delete_secret):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._detach_encryptor(
+            self.context,
+            {
+                'data': {
+                    'volume_id': uuids.volume_id
+                }
+            },
+            None,
+            destroy_secrets=False
+        )
+        # Assert that no attempt is made to delete the volume secert
+        mock_delete_secret.assert_not_called()
+
+        drvr._detach_encryptor(
+            self.context,
+            {
+                'data': {
+                    'volume_id': uuids.volume_id
+                }
+            },
+            None,
+            destroy_secrets=True
+        )
+        # Assert that volume secert is deleted
+        mock_delete_secret.assert_called_once_with('volume', uuids.volume_id)
 
     def test_allow_native_luksv1(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -15793,7 +15836,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_domain_destroy.assert_called_once_with()
             mock_teardown_container.assert_called_once_with(instance)
             mock_cleanup.assert_called_once_with(self.context, instance,
-                                                 network_info, None, False)
+                                                 network_info, None, False,
+                                                 destroy_secrets=True)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'cleanup')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_teardown_container')
@@ -15813,7 +15857,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                           mock.call(instance)])
         mock_teardown_container.assert_called_once_with(instance)
         mock_cleanup.assert_called_once_with(self.context, instance,
-                                             network_info, None, False)
+                                             network_info, None, False,
+                                             destroy_secrets=True)
 
     @mock.patch.object(host.Host, 'get_guest')
     def test_reboot_different_ids(self, mock_get):
@@ -16034,7 +16079,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_mdev.assert_called_once_with(instance)
         mock_destroy.assert_called_once_with(self.context, instance,
                 network_info, destroy_disks=False,
-                block_device_info=block_device_info)
+                block_device_info=block_device_info,
+                destroy_secrets=False)
 
         mock_get_guest_xml.assert_called_once_with(self.context, instance,
             network_info, mock.ANY, mock.ANY,
@@ -19320,6 +19366,59 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(1, int(instance.system_metadata['clean_attempts']))
         self.assertTrue(instance.cleaned)
         save.assert_called_once_with()
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain',
+                new=mock.Mock())
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vpmems',
+                new=mock.Mock(return_value=None))
+    def test_cleanup_destroy_secrets(self, mock_disconnect_volume):
+        block_device_info = {
+            'block_device_mapping': [
+                {
+                    'connection_info': mock.sentinel.connection_info
+                }
+            ]
+        }
+        instance = objects.Instance(self.context, **self.test_instance)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+
+        # Pass destroy_vifs=False and destroy_disks=False as we only care about
+        # asserting the behaviour of destroy_secrets in this test.
+        drvr.cleanup(
+            self.context,
+            instance,
+            network_info={},
+            block_device_info=block_device_info,
+            destroy_vifs=False,
+            destroy_disks=False,
+            destroy_secrets=False
+        )
+        drvr.cleanup(
+            self.context,
+            instance,
+            network_info={},
+            block_device_info=block_device_info,
+            destroy_vifs=False,
+            destroy_disks=False,
+        )
+
+        # Assert that disconnect_volume is called with destroy_secrets=False
+        # and destroy_secrets=True by default
+        mock_disconnect_volume.assert_has_calls([
+            mock.call(
+                self.context,
+                mock.sentinel.connection_info,
+                instance,
+                destroy_secrets=False
+            ),
+            mock.call(
+                self.context,
+                mock.sentinel.connection_info,
+                instance,
+                destroy_secrets=True
+            )
+        ])
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_allow_native_luksv1')
