@@ -79,10 +79,10 @@ def _create_shadow_tables(migrate_engine):
         columns = []
         for column in table.columns:
             column_copy = None
-            # NOTE(boris-42): BigInteger is not supported by sqlite, so
-            #                 after copy it will have NullType, other
-            #                 types that are used in Nova are supported by
-            #                 sqlite.
+
+            # NOTE(boris-42): BigInteger is not supported by sqlite, so after
+            # copy it will have NullType. The other types that are used in Nova
+            # are supported by sqlite
             if isinstance(column.type, sqla_types.NullType):
                 column_copy = sa.Column(
                     column.name, sa.BigInteger(), default=0,
@@ -93,6 +93,48 @@ def _create_shadow_tables(migrate_engine):
                     'owner', 'admin', name='shadow_instances0locked_by',
                 )
                 column_copy = sa.Column(column.name, enum)
+
+            # TODO(stephenfin): Fix these various bugs in a follow-up
+
+            # 244_increase_user_id_length_volume_usage_cache; this
+            # alteration should apply to shadow tables also
+
+            if table_name == 'volume_usage_cache' and column.name == 'user_id':
+                # nullable should be True
+                column_copy = sa.Column('user_id', sa.String(36))
+
+            # 247_nullable_mismatch; these alterations should apply to shadow
+            # tables also
+
+            if table_name == 'quota_usages' and column.name == 'resources':
+                # nullable should be False
+                column_copy = sa.Column('resource', sa.String(length=255))
+
+            if table_name == 'pci_devices':
+                if column.name == 'deleted':
+                    # nullable should be True
+                    column_copy = sa.Column(
+                        'deleted', sa.Integer, default=0, nullable=False,
+                    )
+
+                if column.name == 'product_id':
+                    # nullable should be False
+                    column_copy = sa.Column('product_id', sa.String(4))
+
+                if column.name == 'vendor_id':
+                    # nullable should be False
+                    column_copy = sa.Column('vendor_id', sa.String(4))
+
+                if column.name == 'dev_type':
+                    # nullable should be False
+                    column_copy = sa.Column('dev_type', sa.String(8))
+
+            # 280_add_nullable_false_to_keypairs_name; this should apply to the
+            # shadow table also
+
+            if table_name == 'key_pairs' and column.name == 'name':
+                # nullable should be False
+                column_copy = sa.Column('name', sa.String(length=255))
 
             # NOTE(stephenfin): By default, 'sqlalchemy.Enum' will issue a
             # 'CREATE TYPE' command on PostgreSQL, even if the type already
@@ -132,6 +174,21 @@ def _create_shadow_tables(migrate_engine):
             LOG.info(repr(shadow_table))
             LOG.exception('Exception while creating table.')
             raise
+
+    # TODO(stephenfin): Fix these various bugs in a follow-up
+
+    # 252_add_instance_extra_table; we don't create indexes for shadow tables
+    # in general and these should be removed
+
+    table = sa.Table('shadow_instance_extra', meta, autoload=True)
+    idx = sa.Index('shadow_instance_extra_idx', table.c.instance_uuid)
+    idx.create(migrate_engine)
+
+    # 373_migration_uuid; we should't create indexes for shadow tables
+
+    table = sa.Table('shadow_migrations', meta, autoload=True)
+    idx = sa.Index('shadow_migrations_uuid', table.c.uuid, unique=True)
+    idx.create(migrate_engine)
 
 
 def upgrade(migrate_engine):
@@ -916,7 +973,7 @@ def upgrade(migrate_engine):
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('name', sa.String(length=255)),
+        sa.Column('name', sa.String(length=255), nullable=False),
         sa.Column('user_id', sa.String(length=255)),
         sa.Column('fingerprint', sa.String(length=255)),
         sa.Column('public_key', MediumText()),
@@ -1050,7 +1107,7 @@ def upgrade(migrate_engine):
         sa.Column('created_at', sa.DateTime(timezone=False)),
         sa.Column('updated_at', sa.DateTime(timezone=False)),
         sa.Column('deleted_at', sa.DateTime(timezone=False)),
-        sa.Column('deleted', sa.Integer, default=0, nullable=False),
+        sa.Column('deleted', sa.Integer, default=0, nullable=True),
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column(
             'compute_node_id', sa.Integer,
@@ -1058,9 +1115,9 @@ def upgrade(migrate_engine):
                 'compute_nodes.id', name='pci_devices_compute_node_id_fkey'),
             nullable=False),
         sa.Column('address', sa.String(12), nullable=False),
-        sa.Column('product_id', sa.String(4)),
-        sa.Column('vendor_id', sa.String(4)),
-        sa.Column('dev_type', sa.String(8)),
+        sa.Column('product_id', sa.String(4), nullable=False),
+        sa.Column('vendor_id', sa.String(4), nullable=False),
+        sa.Column('dev_type', sa.String(8), nullable=False),
         sa.Column('dev_id', sa.String(255)),
         sa.Column('label', sa.String(255), nullable=False),
         sa.Column('status', sa.String(36), nullable=False),
@@ -1119,7 +1176,7 @@ def upgrade(migrate_engine):
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
         sa.Column('project_id', sa.String(length=255)),
-        sa.Column('resource', sa.String(length=255)),
+        sa.Column('resource', sa.String(length=255), nullable=False),
         sa.Column('in_use', sa.Integer, nullable=False),
         sa.Column('reserved', sa.Integer, nullable=False),
         sa.Column('until_refresh', sa.Integer),
@@ -1460,7 +1517,7 @@ def upgrade(migrate_engine):
         sa.Column('deleted', sa.Integer),
         sa.Column('instance_uuid', sa.String(length=36)),
         sa.Column('project_id', sa.String(length=36)),
-        sa.Column('user_id', sa.String(length=36)),
+        sa.Column('user_id', sa.String(length=64)),
         sa.Column('availability_zone', sa.String(length=255)),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
@@ -1502,7 +1559,6 @@ def upgrade(migrate_engine):
 
     # MySQL specific indexes
     if migrate_engine.name == 'mysql':
-        # created first (to preserve ordering for schema diffs)
         # NOTE(stephenfin): For some reason, we have to put this within the if
         # statement to avoid it being evaluated for the sqlite case. Even
         # though we don't call create except in the MySQL case... Failure to do
@@ -1545,47 +1601,6 @@ def upgrade(migrate_engine):
 
     # TODO(stephenfin): Fix these various bugs in a follow-up
 
-    # 244_increase_user_id_length_volume_usage_cache; this alternation should
-    # apply to shadow tables also
-
-    table = sa.Table('volume_usage_cache', meta, autoload=True)
-    table.c.user_id.alter(type=sa.String(64))
-
-    # 247_nullable_mismatch; these alterations should apply to shadow tables
-    # also
-
-    table = sa.Table('quota_usages', meta, autoload=True)
-    table.c.resource.alter(nullable=False)
-
-    table = sa.Table('pci_devices', meta, autoload=True)
-    table.c.deleted.alter(nullable=True)
-    table.c.product_id.alter(nullable=False)
-    table.c.vendor_id.alter(nullable=False)
-    table.c.dev_type.alter(nullable=False)
-
-    # 252_add_instance_extra_table; we don't create indexes for shadow tables
-    # in general and these should be removed
-
-    table = sa.Table('shadow_instance_extra', meta, autoload=True)
-    idx = sa.Index('shadow_instance_extra_idx', table.c.instance_uuid)
-    idx.create(migrate_engine)
-
-    # 280_add_nullable_false_to_keypairs_name; this should apply to the shadow
-    # table also
-
-    # Note: Since we are altering name field, this constraint on name needs to
-    # first be dropped before we can alter name. We then re-create the same
-    # constraint.
-    UniqueConstraint(
-        'user_id', 'name', 'deleted', table=key_pairs,
-        name='uniq_key_pairs0user_id0name0deleted'
-    ).drop()
-    key_pairs.c.name.alter(nullable=False)
-    UniqueConstraint(
-        'user_id', 'name', 'deleted', table=key_pairs,
-        name='uniq_key_pairs0user_id0name0deleted',
-    ).create()
-
     # 298_mysql_extra_specs_binary_collation; we should update the shadow table
     # also
 
@@ -1596,9 +1611,3 @@ def upgrade(migrate_engine):
             'CONVERT TO CHARACTER SET utf8 '
             'COLLATE utf8_bin'
         )
-
-    # 373_migration_uuid; we should't create indexes for shadow tables
-
-    table = sa.Table('shadow_migrations', meta, autoload=True)
-    idx = sa.Index('shadow_migrations_uuid', table.c.uuid, unique=True)
-    idx.create(migrate_engine)
