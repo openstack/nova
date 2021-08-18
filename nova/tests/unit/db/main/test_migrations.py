@@ -41,7 +41,6 @@ from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as oslodbutils
-from oslotest import timeout
 import sqlalchemy
 import sqlalchemy.exc
 import testtools
@@ -52,48 +51,12 @@ from nova.db import migration
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 
-# TODO(sdague): no tests in the nova/tests tree should inherit from
-# base test classes in another library. This causes all kinds of havoc
-# in these doing things incorrectly for what we need in subunit
-# reporting. This is a long unwind, but should be done in the future
-# and any code needed out of oslo_db should be exported / accessed as
-# a fixture.
 
-
-class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
-                             test_migrations.WalkVersionsMixin):
+class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
     """Test sqlalchemy-migrate migrations."""
 
-    TIMEOUT_SCALING_FACTOR = 4
-
-    @property
-    def INIT_VERSION(self):
-        return migration.db_initial_version()
-
-    @property
-    def REPOSITORY(self):
-        return repository.Repository(
-            os.path.abspath(os.path.dirname(legacy_migrations.__file__)))
-
-    @property
-    def migration_api(self):
-        return migration.versioning_api
-
-    @property
-    def migrate_engine(self):
-        return self.engine
-
     def setUp(self):
-        # NOTE(sdague): the oslo_db base test case completely
-        # invalidates our logging setup, we actually have to do that
-        # before it is called to keep this from vomitting all over our
-        # test output.
-        self.useFixture(nova_fixtures.StandardLogging())
-
-        super(NovaMigrationsCheckers, self).setUp()
-        # The Timeout fixture picks up env.OS_TEST_TIMEOUT, defaulting to 0.
-        self.useFixture(timeout.Timeout(
-            scaling_factor=self.TIMEOUT_SCALING_FACTOR))
+        super().setUp()
         self.engine = enginefacade.writer.get_engine()
 
     def assertColumnExists(self, engine, table_name, column):
@@ -136,10 +99,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
     # Implementations for ModelsMigrationsSync
     def db_sync(self, engine):
         with mock.patch.object(migration, 'get_engine', return_value=engine):
-            migration.db_sync()
+            migration.db_sync(database='main')
 
-    def get_engine(self, context=None):
-        return self.migrate_engine
+    def get_engine(self):
+        return self.engine
 
     def get_metadata(self):
         return models.BASE.metadata
@@ -154,47 +117,6 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                 return False
 
         return True
-
-    def _skippable_migrations(self):
-        special = [
-            self.INIT_VERSION + 1,
-        ]
-
-        train_placeholders = list(range(403, 408))
-        ussuri_placeholders = list(range(408, 413))
-        victoria_placeholders = list(range(413, 418))
-        wallaby_placeholders = list(range(418, 423))
-
-        return (special +
-                train_placeholders +
-                ussuri_placeholders +
-                victoria_placeholders +
-                wallaby_placeholders)
-
-    def migrate_up(self, version, with_data=False):
-        if with_data:
-            check = getattr(self, "_check_%03d" % version, None)
-            if version not in self._skippable_migrations():
-                self.assertIsNotNone(check,
-                                     ('DB Migration %i does not have a '
-                                      'test. Please add one!') % version)
-
-        # NOTE(danms): This is a list of migrations where we allow dropping
-        # things. The rules for adding things here are very very specific.
-        # Chances are you don't meet the critera.
-        # Reviewers: DO NOT ALLOW THINGS TO BE ADDED HERE
-        exceptions = [
-            # The base migration can do whatever it likes
-            self.INIT_VERSION + 1,
-        ]
-        # Reviewers: DO NOT ALLOW THINGS TO BE ADDED HERE
-
-        if version not in exceptions:
-            banned = ['Table', 'Column']
-        else:
-            banned = None
-        with nova_fixtures.BannedDBSchemaOperations(banned):
-            super(NovaMigrationsCheckers, self).migrate_up(version, with_data)
 
     def filter_metadata_diff(self, diff):
         # Overriding the parent method to decide on certain attributes
@@ -221,48 +143,144 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
         return [element for element in diff if not removed_column(element)]
 
-    def test_walk_versions(self):
-        self.walk_versions(snake_walk=False, downgrade=False)
 
-
-class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
-                               test_fixtures.OpportunisticDBTestMixin,
-                               testtools.TestCase):
+class TestModelsSyncSQLite(
+    NovaModelsMigrationsSync,
+    test_fixtures.OpportunisticDBTestMixin,
+    testtools.TestCase,
+):
     pass
 
 
-class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
-                              test_fixtures.OpportunisticDBTestMixin,
-                              testtools.TestCase):
+class TestModelsSyncMySQL(
+    NovaModelsMigrationsSync,
+    test_fixtures.OpportunisticDBTestMixin,
+    testtools.TestCase,
+):
     FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
     def test_innodb_tables(self):
         with mock.patch.object(
-            migration, 'get_engine', return_value=self.migrate_engine,
+            migration, 'get_engine', return_value=self.engine,
         ):
             migration.db_sync()
 
-        total = self.migrate_engine.execute(
+        total = self.engine.execute(
             "SELECT count(*) "
             "FROM information_schema.TABLES "
             "WHERE TABLE_SCHEMA = '%(database)s'" %
-            {'database': self.migrate_engine.url.database})
+            {'database': self.engine.url.database})
         self.assertGreater(total.scalar(), 0, "No tables found. Wrong schema?")
 
-        noninnodb = self.migrate_engine.execute(
+        noninnodb = self.engine.execute(
             "SELECT count(*) "
             "FROM information_schema.TABLES "
             "WHERE TABLE_SCHEMA='%(database)s' "
             "AND ENGINE != 'InnoDB' "
             "AND TABLE_NAME != 'migrate_version'" %
-            {'database': self.migrate_engine.url.database})
+            {'database': self.engine.url.database})
         count = noninnodb.scalar()
         self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
 
 
-class TestNovaMigrationsPostgreSQL(NovaMigrationsCheckers,
-                                   test_fixtures.OpportunisticDBTestMixin,
-                                   testtools.TestCase):
+class TestModelsSyncPostgreSQL(
+    NovaModelsMigrationsSync,
+    test_fixtures.OpportunisticDBTestMixin,
+    testtools.TestCase,
+):
+    FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
+
+
+class NovaMigrationsWalk(test_migrations.WalkVersionsMixin):
+
+    def setUp(self):
+        super().setUp()
+        self.engine = enginefacade.writer.get_engine()
+
+    @property
+    def INIT_VERSION(self):
+        return migration.db_initial_version('main')
+
+    @property
+    def REPOSITORY(self):
+        return repository.Repository(
+            os.path.abspath(os.path.dirname(legacy_migrations.__file__)))
+
+    @property
+    def migration_api(self):
+        return migration.versioning_api
+
+    @property
+    def migrate_engine(self):
+        return self.engine
+
+    def _skippable_migrations(self):
+        special = [
+            self.INIT_VERSION + 1,
+        ]
+
+        train_placeholders = list(range(403, 408))
+        ussuri_placeholders = list(range(408, 413))
+        victoria_placeholders = list(range(413, 418))
+        wallaby_placeholders = list(range(418, 423))
+
+        return (
+            special +
+            train_placeholders +
+            ussuri_placeholders +
+            victoria_placeholders +
+            wallaby_placeholders
+        )
+
+    def migrate_up(self, version, with_data=False):
+        if with_data:
+            check = getattr(self, "_check_%03d" % version, None)
+            if version not in self._skippable_migrations():
+                self.assertIsNotNone(
+                    check, 'DB Migration %i does not have a test' % version)
+
+        # NOTE(danms): This is a list of migrations where we allow dropping
+        # things. The rules for adding things here are very very specific.
+        # Chances are you don't meet the critera.
+        # Reviewers: DO NOT ALLOW THINGS TO BE ADDED HERE
+        exceptions = [
+            # The base migration can do whatever it likes
+            self.INIT_VERSION + 1,
+        ]
+        # Reviewers: DO NOT ALLOW THINGS TO BE ADDED HERE
+
+        if version not in exceptions:
+            banned = ['Table', 'Column']
+        else:
+            banned = None
+        with nova_fixtures.BannedDBSchemaOperations(banned):
+            super().migrate_up(version, with_data)
+
+    def test_walk_versions(self):
+        self.walk_versions(snake_walk=False, downgrade=False)
+
+
+class TestMigrationsWalkSQLite(
+    NovaMigrationsWalk,
+    test_fixtures.OpportunisticDBTestMixin,
+    test.NoDBTestCase,
+):
+    pass
+
+
+class TestMigrationsWalkMySQL(
+    NovaMigrationsWalk,
+    test_fixtures.OpportunisticDBTestMixin,
+    test.NoDBTestCase,
+):
+    FIXTURE = test_fixtures.MySQLOpportunisticFixture
+
+
+class TestMigrationsWalkPostgreSQL(
+    NovaMigrationsWalk,
+    test_fixtures.OpportunisticDBTestMixin,
+    test.NoDBTestCase,
+):
     FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
 
@@ -291,7 +309,8 @@ class ProjectTestCase(test.NoDBTestCase):
                         fname = os.path.basename(path)
                         includes_downgrade.append(fname)
 
-        helpful_msg = ("The following migrations have a downgrade "
-                       "which is not supported:"
-                       "\n\t%s" % '\n\t'.join(sorted(includes_downgrade)))
+        helpful_msg = (
+            "The following migrations have a downgrade "
+            "which is not supported:"
+            "\n\t%s" % '\n\t'.join(sorted(includes_downgrade)))
         self.assertFalse(includes_downgrade, helpful_msg)
