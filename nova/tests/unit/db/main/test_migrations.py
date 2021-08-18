@@ -35,21 +35,24 @@ For postgres on Ubuntu this can be done with the following commands::
 import glob
 import os
 
-from migrate.versioning import repository
+from alembic import command as alembic_api
+from alembic import script as alembic_script
+from migrate.versioning import api as migrate_api
 import mock
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as oslodbutils
+from oslo_log import log as logging
 import sqlalchemy
 import sqlalchemy.exc
 import testtools
 
-from nova.db.main import legacy_migrations
 from nova.db.main import models
 from nova.db import migration
 from nova import test
-from nova.tests import fixtures as nova_fixtures
+
+LOG = logging.getLogger(__name__)
 
 
 class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
@@ -96,9 +99,8 @@ class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
 
         self.assertEqual(members, index_columns)
 
-    # Implementations for ModelsMigrationsSync
     def db_sync(self, engine):
-        with mock.patch.object(migration, 'get_engine', return_value=engine):
+        with mock.patch.object(migration, '_get_engine', return_value=engine):
             migration.db_sync(database='main')
 
     def get_engine(self):
@@ -160,10 +162,7 @@ class TestModelsSyncMySQL(
     FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
     def test_innodb_tables(self):
-        with mock.patch.object(
-            migration, 'get_engine', return_value=self.engine,
-        ):
-            migration.db_sync()
+        self.db_sync(self.get_engine())
 
         total = self.engine.execute(
             "SELECT count(*) "
@@ -191,73 +190,99 @@ class TestModelsSyncPostgreSQL(
     FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
 
-class NovaMigrationsWalk(test_migrations.WalkVersionsMixin):
+class NovaModelsMigrationsLegacySync(NovaModelsMigrationsSync):
+    """Test that the models match the database after old migrations are run."""
+
+    def db_sync(self, engine):
+        # the 'nova.db.migration.db_sync' method will not use the legacy
+        # sqlalchemy-migrate-based migration flow unless the database is
+        # already controlled with sqlalchemy-migrate, so we need to manually
+        # enable version controlling with this tool to test this code path
+        repository = migration._find_migrate_repo(database='main')
+        migrate_api.version_control(
+            engine, repository, migration.MIGRATE_INIT_VERSION['main'])
+
+        # now we can apply migrations as expected and the legacy path will be
+        # followed
+        super().db_sync(engine)
+
+
+class TestModelsLegacySyncSQLite(
+    NovaModelsMigrationsLegacySync,
+    test_fixtures.OpportunisticDBTestMixin,
+    testtools.TestCase,
+):
+    pass
+
+
+class TestModelsLegacySyncMySQL(
+    NovaModelsMigrationsLegacySync,
+    test_fixtures.OpportunisticDBTestMixin,
+    testtools.TestCase,
+):
+    FIXTURE = test_fixtures.MySQLOpportunisticFixture
+
+
+class TestModelsLegacySyncPostgreSQL(
+    NovaModelsMigrationsLegacySync,
+    test_fixtures.OpportunisticDBTestMixin,
+    testtools.TestCase,
+):
+    FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
+
+
+class NovaMigrationsWalk(
+    test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase,
+):
 
     def setUp(self):
         super().setUp()
         self.engine = enginefacade.writer.get_engine()
+        self.config = migration._find_alembic_conf('api')
+        self.init_version = migration.ALEMBIC_INIT_VERSION['api']
 
-    @property
-    def INIT_VERSION(self):
-        return migration.db_initial_version('main')
+    def _migrate_up(self, revision):
+        if revision == self.init_version:  # no tests for the initial revision
+            return
 
-    @property
-    def REPOSITORY(self):
-        return repository.Repository(
-            os.path.abspath(os.path.dirname(legacy_migrations.__file__)))
-
-    @property
-    def migration_api(self):
-        return migration.versioning_api
-
-    @property
-    def migrate_engine(self):
-        return self.engine
-
-    def _skippable_migrations(self):
-        special = [
-            self.INIT_VERSION + 1,
-        ]
-
-        train_placeholders = list(range(403, 408))
-        ussuri_placeholders = list(range(408, 413))
-        victoria_placeholders = list(range(413, 418))
-        wallaby_placeholders = list(range(418, 423))
-
-        return (
-            special +
-            train_placeholders +
-            ussuri_placeholders +
-            victoria_placeholders +
-            wallaby_placeholders
+        self.assertIsNotNone(
+            getattr(self, '_check_%s' % revision, None),
+            (
+                'API DB Migration %s does not have a test; you must add one'
+            ) % revision,
         )
+        alembic_api.upgrade(self.config, revision)
 
-    def migrate_up(self, version, with_data=False):
-        if with_data:
-            check = getattr(self, "_check_%03d" % version, None)
-            if version not in self._skippable_migrations():
-                self.assertIsNotNone(
-                    check, 'DB Migration %i does not have a test' % version)
+    def test_single_base_revision(self):
+        """Ensure we only have a single base revision.
 
-        # NOTE(danms): This is a list of migrations where we allow dropping
-        # things. The rules for adding things here are very very specific.
-        # Chances are you don't meet the critera.
-        # Reviewers: DO NOT ALLOW THINGS TO BE ADDED HERE
-        exceptions = [
-            # The base migration can do whatever it likes
-            self.INIT_VERSION + 1,
-        ]
-        # Reviewers: DO NOT ALLOW THINGS TO BE ADDED HERE
+        There's no good reason for us to have diverging history, so validate
+        that only one base revision exists. This will prevent simple errors
+        where people forget to specify the base revision. If this fail for your
+        change, look for migrations that do not have a 'revises' line in them.
+        """
+        script = alembic_script.ScriptDirectory.from_config(self.config)
+        self.assertEqual(1, len(script.get_bases()))
 
-        if version not in exceptions:
-            banned = ['Table', 'Column']
-        else:
-            banned = None
-        with nova_fixtures.BannedDBSchemaOperations(banned):
-            super().migrate_up(version, with_data)
+    def test_single_head_revision(self):
+        """Ensure we only have a single head revision.
+
+        There's no good reason for us to have diverging history, so validate
+        that only one head revision exists. This will prevent merge conflicts
+        adding additional head revision points. If this fail for your change,
+        look for migrations with the same 'revises' line in them.
+        """
+        script = alembic_script.ScriptDirectory.from_config(self.config)
+        self.assertEqual(1, len(script.get_heads()))
 
     def test_walk_versions(self):
-        self.walk_versions(snake_walk=False, downgrade=False)
+        with self.engine.begin() as connection:
+            self.config.attributes['connection'] = connection
+            script = alembic_script.ScriptDirectory.from_config(self.config)
+            for revision_script in script.walk_revisions():
+                revision = revision_script.revision
+                LOG.info('Testing revision %s', revision)
+                self._migrate_up(revision)
 
 
 class TestMigrationsWalkSQLite(

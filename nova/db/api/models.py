@@ -327,6 +327,8 @@ class ResourceProvider(API_BASE):
     # parent. If parent_provider_id == NULL then root_provider_id == id
     parent_provider_id = sa.Column(
         sa.Integer, sa.ForeignKey('resource_providers.id'), nullable=True)
+    # TODO(stephenfin): Drop these from the db at some point
+    # columns_to_drop = ['can_host']
 
 
 # TODO(stephenfin): Remove this as it's now unused post-placement split

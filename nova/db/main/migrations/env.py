@@ -20,9 +20,10 @@ from sqlalchemy import pool
 # access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
+# Interpret the config file for Python logging unless we're told not to.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+if config.attributes.get('configure_logger', True):
+    fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
 # for 'autogenerate' support
@@ -57,12 +58,25 @@ def run_migrations_online():
 
     In this scenario we need to create an Engine and associate a connection
     with the context.
+
+    This is modified from the default based on the below, since we want to
+    share an engine when unit testing so in-memory database testing actually
+    works.
+
+    https://alembic.sqlalchemy.org/en/latest/cookbook.html#connection-sharing
     """
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    connectable = config.attributes.get('connection', None)
+
+    if connectable is None:
+        # only create Engine if we don't have a Connection from the outside
+        connectable = engine_from_config(
+            config.get_section(config.config_ini_section),
+            prefix="sqlalchemy.",
+            poolclass=pool.NullPool,
+        )
+
+    # when connectable is already a Connection object, calling connect() gives
+    # us a *branched connection*.
 
     with connectable.connect() as connection:
         context.configure(

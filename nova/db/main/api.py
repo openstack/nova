@@ -4517,9 +4517,14 @@ def archive_deleted_rows(context=None, max_rows=None, before=None,
         rows_archived = 0
         # skip the special sqlalchemy-migrate migrate_version table and any
         # shadow tables
-        if (tablename == 'migrate_version' or
-                tablename.startswith(_SHADOW_TABLE_PREFIX)):
+        # TODO(stephenfin): Drop 'migrate_version' once we remove support for
+        # the legacy sqlalchemy-migrate migrations
+        if (
+            tablename in ('migrate_version', 'alembic_version') or
+            tablename.startswith(_SHADOW_TABLE_PREFIX)
+        ):
             continue
+
         rows_archived, _deleted_instance_uuids, extras = (
             _archive_deleted_rows_for_table(
                 meta, tablename,

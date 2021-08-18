@@ -16,26 +16,33 @@
 
 import os
 
-from migrate import exceptions as versioning_exceptions
-from migrate.versioning import api as versioning_api
-from migrate.versioning.repository import Repository
+from alembic import command as alembic_api
+from alembic import config as alembic_config
+from alembic.runtime import migration as alembic_migration
+from migrate import exceptions as migrate_exceptions
+from migrate.versioning import api as migrate_api
+from migrate.versioning import repository as migrate_repository
 from oslo_log import log as logging
-import sqlalchemy
 
 from nova.db.api import api as api_db_api
 from nova.db.main import api as main_db_api
 from nova import exception
-from nova.i18n import _
 
-INIT_VERSION = {}
-INIT_VERSION['main'] = 401
-INIT_VERSION['api'] = 66
-_REPOSITORY = {}
+MIGRATE_INIT_VERSION = {
+    'main': 401,
+    'api': 66,
+}
+ALEMBIC_INIT_VERSION = {
+    'main': '8f2f1571d55b',
+    'api': 'd67eeaabee36',
+}
+_MIGRATE_REPO = {}
+_ALEMBIC_CONF = {}
 
 LOG = logging.getLogger(__name__)
 
 
-def get_engine(database='main', context=None):
+def _get_engine(database='main', context=None):
     if database == 'main':
         return main_db_api.get_engine(context=context)
 
@@ -43,97 +50,131 @@ def get_engine(database='main', context=None):
         return api_db_api.get_engine()
 
 
-def find_migrate_repo(database='main'):
+def _find_migrate_repo(database='main'):
     """Get the path for the migrate repository."""
-    global _REPOSITORY
-    rel_path = os.path.join(database, 'legacy_migrations')
-    path = os.path.join(os.path.abspath(os.path.dirname(__file__)), rel_path)
-    assert os.path.exists(path)
-    if _REPOSITORY.get(database) is None:
-        _REPOSITORY[database] = Repository(path)
-    return _REPOSITORY[database]
+    global _MIGRATE_REPO
+
+    path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)),
+        database, 'legacy_migrations')
+
+    if _MIGRATE_REPO.get(database) is None:
+        _MIGRATE_REPO[database] = migrate_repository.Repository(path)
+
+    return _MIGRATE_REPO[database]
+
+
+def _find_alembic_conf(database='main'):
+    """Get the path for the alembic repository."""
+    global _ALEMBIC_CONF
+
+    path = os.path.join(
+        os.path.abspath(os.path.dirname(__file__)),
+        database, 'alembic.ini')
+
+    if _ALEMBIC_CONF.get(database) is None:
+        config = alembic_config.Config(path)
+        # we don't want to use the logger configuration from the file, which is
+        # only really intended for the CLI
+        # https://stackoverflow.com/a/42691781/613428
+        config.attributes['configure_logger'] = False
+        _ALEMBIC_CONF[database] = config
+
+    return _ALEMBIC_CONF[database]
+
+
+def _is_database_under_migrate_control(engine, repository):
+    try:
+        migrate_api.db_version(engine, repository)
+        return True
+    except migrate_exceptions.DatabaseNotControlledError:
+        return False
+
+
+def _is_database_under_alembic_control(engine):
+    with engine.connect() as conn:
+        context = alembic_migration.MigrationContext.configure(conn)
+        return bool(context.get_current_revision())
+
+
+def _init_alembic_on_legacy_database(engine, database, repository, config):
+    """Init alembic in an existing environment with sqlalchemy-migrate."""
+    LOG.info(
+        'The database is still under sqlalchemy-migrate control; '
+        'applying any remaining sqlalchemy-migrate-based migrations '
+        'and fake applying the initial alembic migration'
+    )
+    migrate_api.upgrade(engine, repository)
+
+    # re-use the connection rather than creating a new one
+    with engine.begin() as connection:
+        config.attributes['connection'] = connection
+        alembic_api.stamp(config, ALEMBIC_INIT_VERSION[database])
+
+
+def _upgrade_alembic(engine, config, version):
+    # re-use the connection rather than creating a new one
+    with engine.begin() as connection:
+        config.attributes['connection'] = connection
+        alembic_api.upgrade(config, version or 'head')
 
 
 def db_sync(version=None, database='main', context=None):
     """Migrate the database to `version` or the most recent version."""
-    if version is not None:
-        try:
-            version = int(version)
-        except ValueError:
-            raise exception.NovaException(_("version should be an integer"))
 
-    current_version = db_version(database, context=context)
-    repository = find_migrate_repo(database)
-    engine = get_engine(database, context=context)
-    if version is None or version > current_version:
-        return versioning_api.upgrade(engine, repository, version)
-    else:
-        return versioning_api.downgrade(engine, repository, version)
+    if database not in ('main', 'api'):
+        raise exception.Invalid('%s is not a valid database' % database)
+
+    # if the user requested a specific version, check if it's an integer:
+    # if so, we're almost certainly in sqlalchemy-migrate land and won't
+    # support that
+    if version is not None and version.isdigit():
+        raise exception.Invalid(
+            'You requested an sqlalchemy-migrate database version; this is '
+            'no longer supported'
+        )
+
+    engine = _get_engine(database, context=context)
+
+    repository = _find_migrate_repo(database)
+    config = _find_alembic_conf(database)
+    # discard the URL encoded in alembic.ini in favour of the URL configured
+    # for the engine by the database fixtures, casting from
+    # 'sqlalchemy.engine.url.URL' to str in the process
+    config.set_main_option('sqlalchemy.url', str(engine.url))
+
+    # if we're in a deployment where sqlalchemy-migrate is already present,
+    # then apply all the updates for that and fake apply the initial alembic
+    # migration; if we're not then 'upgrade' will take care of everything
+    # this should be a one-time operation
+    if (
+        _is_database_under_migrate_control(engine, repository) and
+        not _is_database_under_alembic_control(engine)
+    ):
+        _init_alembic_on_legacy_database(engine, database, repository, config)
+
+    # apply anything later
+    LOG.info('Applying migration(s)')
+
+    _upgrade_alembic(engine, config, version)
+
+    LOG.info('Migration(s) applied')
 
 
 def db_version(database='main', context=None):
     """Display the current database version."""
-    repository = find_migrate_repo(database)
+    if database not in ('main', 'api'):
+        raise exception.Invalid('%s is not a valid database' % database)
 
-    # NOTE(mdbooth): This is a crude workaround for races in _db_version. The 2
-    # races we have seen in practise are:
-    # * versioning_api.db_version() fails because the migrate_version table
-    #   doesn't exist, but meta.tables subsequently contains tables because
-    #   another thread has already started creating the schema. This results in
-    #   the 'Essex' error.
-    # * db_version_control() fails with pymysql.error.InternalError(1050)
-    #   (Create table failed) because of a race in sqlalchemy-migrate's
-    #   ControlledSchema._create_table_version, which does:
-    #     if not table.exists(): table.create()
-    #   This means that it doesn't raise the advertised
-    #   DatabaseAlreadyControlledError, which we could have handled explicitly.
-    #
-    # I believe the correct fix should be:
-    # * Delete the Essex-handling code as unnecessary complexity which nobody
-    #   should still need.
-    # * Fix the races in sqlalchemy-migrate such that version_control() always
-    #   raises a well-defined error, and then handle that error here.
-    #
-    # Until we do that, though, we should be able to just try again if we
-    # failed for any reason. In both of the above races, trying again should
-    # succeed the second time round.
-    #
-    # For additional context, see:
-    # * https://bugzilla.redhat.com/show_bug.cgi?id=1652287
-    # * https://bugs.launchpad.net/nova/+bug/1804652
-    try:
-        return _db_version(repository, database, context)
-    except Exception:
-        return _db_version(repository, database, context)
+    repository = _find_migrate_repo(database)
+    engine = _get_engine(database, context=context)
 
+    migrate_version = None
+    if _is_database_under_migrate_control(engine, repository):
+        migrate_version = migrate_api.db_version(engine, repository)
 
-def _db_version(repository, database, context):
-    engine = get_engine(database, context=context)
-    try:
-        return versioning_api.db_version(engine, repository)
-    except versioning_exceptions.DatabaseNotControlledError as exc:
-        meta = sqlalchemy.MetaData()
-        meta.reflect(bind=engine)
-        tables = meta.tables
-        if len(tables) == 0:
-            db_version_control(
-                INIT_VERSION[database], database, context=context)
-            return versioning_api.db_version(engine, repository)
-        else:
-            LOG.exception(exc)
-            # Some pre-Essex DB's may not be version controlled.
-            # Require them to upgrade using Essex first.
-            raise exception.NovaException(
-                _("Upgrade DB using Essex release first."))
+    alembic_version = None
+    if _is_database_under_alembic_control(engine):
+        alembic_version = alembic_api.current(engine)
 
-
-def db_initial_version(database='main'):
-    """The starting version for the database."""
-    return INIT_VERSION[database]
-
-
-def db_version_control(version=None, database='main', context=None):
-    repository = find_migrate_repo(database)
-    engine = get_engine(database, context=context)
-    versioning_api.version_control(engine, repository, version)
-    return version
+    return alembic_version or migrate_version
