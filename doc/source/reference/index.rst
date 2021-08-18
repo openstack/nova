@@ -30,6 +30,8 @@ The following is a dive into some of the internals in nova.
   ``ComputeDriver.update_provider_tree`` method.
 * :doc:`/reference/upgrade-checks`: A guide to writing automated upgrade
   checks.
+* :doc:`/reference/database-migrations`: A guide to writing database
+  migrations, be they online or offline.
 * :doc:`/reference/conductor`
 
 .. todo:: Need something about versioned objects and how they fit in with
@@ -56,6 +58,7 @@ The following is a dive into some of the internals in nova.
    vm-states
    threading
    notifications
+   database-migrations
    update-provider-tree
    upgrade-checks
    conductor

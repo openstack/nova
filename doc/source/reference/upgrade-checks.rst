@@ -2,6 +2,14 @@
 Upgrade checks
 ==============
 
+.. note::
+
+   This document details how to generate upgrade checks as part of a new
+   feature or bugfix. For info on how to apply existing upgrade checks, refer
+   to the documentation for the :program:`nova-status` command in
+   :doc:`/cli/nova-status`. For info on the general upgrade process for a nova
+   deployment, refer to :doc:`/admin/upgrades`.
+
 Nova provides automated :ref:`upgrade check tooling <nova-status-checks>` to
 assist deployment tools in verifying critical parts of the deployment,
 especially when it comes to major changes during upgrades that require operator
@@ -10,15 +18,16 @@ intervention.
 This guide covers the background on nova's upgrade check tooling, how it is
 used, and what to look for in writing new checks.
 
+
 Background
-==========
+----------
 
 Nova has historically supported offline database schema migrations
-(``nova-manage db sync``) and :ref:`online data migrations <data-migrations>`
-during upgrades.
-
-The ``nova-status upgrade check`` command was introduced in the 15.0.0 Ocata
-release to aid in the verification of two major required changes in that
+(:program:`nova-manage db sync` and :program:`nova-manage api_db sync`) and
+online data migrations (:program:`nova-manage db online_data_migrations`)
+during upgrades, as discussed in :doc:`/reference/database-migrations`.
+The :program:`nova-status upgrade check` command was introduced in the 15.0.0
+(Ocata) release to aid in the verification of two major required changes in that
 release, namely Placement and Cells v2.
 
 Integration with the Placement service and deploying Cells v2 was optional
@@ -36,8 +45,9 @@ Reference the `Ocata changes`_ for implementation details.
 
 .. _Ocata changes: https://review.opendev.org/#/q/topic:bp/resource-providers-scheduler-db-filters+status:merged+file:%255Enova/cmd/status.py
 
+
 Guidelines
-==========
+----------
 
 * The checks should be able to run within a virtual environment or container.
   All that is required is a full configuration file, similar to running other
@@ -58,9 +68,9 @@ Guidelines
   host.
 
 * Checks are typically meant to be run before re-starting and upgrading to new
-  service code, which is how `grenade uses them`_, but they can also be run
+  service code, which is how `grenade uses them`__, but they can also be run
   as a :ref:`post-install verify step <verify-install-nova-status>` which is
-  how `openstack-ansible`_ also uses them. The high-level set of upgrade steps
+  how `openstack-ansible`__ also uses them. The high-level set of upgrade steps
   for upgrading nova in grenade is:
 
   * Install new code
@@ -69,6 +79,9 @@ Guidelines
   * Run the online data migrations (``nova-manage db online_data_migrations``)
   * Run the upgrade check (``nova-status upgrade check``)
   * Restart services with new code
+
+  .. __: https://github.com/openstack-dev/grenade/blob/dc7f4a4ba/projects/60_nova/upgrade.sh#L96
+  .. __: https://review.opendev.org/#/c/575125/
 
 * Checks must be idempotent so they can be run repeatedly and the results are
   always based on the latest data. This allows an operator to run the checks,
@@ -81,26 +94,27 @@ Guidelines
   should be a corresponding ``request_specs`` table entry in the ``nova_api``
   database. A ``nova-manage db online_data_migrations`` routine was added in
   the Newton release to back-fill request specs for existing instances, and
-  `in Rocky`_ an upgrade check was added to make sure all non-deleted instances
-  have a request spec so compatibility code can be removed in Stein. In older
-  releases of nova we would have added a `blocker migration`_ as part of the
-  database schema migrations to make sure the online data migrations had been
-  completed before the upgrade could proceed.
+  `in Rocky`__ an upgrade check was added to make sure all non-deleted
+  instances have a request spec so compatibility code can be removed in Stein.
+  In older releases of nova we would have added a `blocker migration`__ as part
+  of the database schema migrations to make sure the online data migrations had
+  been completed before the upgrade could proceed.
 
-  .. note:: Usage of ``nova-status upgrade check`` does not preclude the need
-            for blocker migrations within a given database, but in the case of
-            request specs the check spans multiple databases and was a better
-            fit for the nova-status tooling.
+  .. note::
+
+     Usage of ``nova-status upgrade check`` does not preclude the need
+     for blocker migrations within a given database, but in the case of
+     request specs the check spans multiple databases and was a better
+     fit for the ``nova-status`` tooling.
+
+  .. __: https://review.opendev.org/#/c/581813/
+  .. __: https://review.opendev.org/#/c/289450/
 
 * All checks should have an accompanying upgrade release note.
 
-.. _grenade uses them: https://github.com/openstack-dev/grenade/blob/dc7f4a4ba/projects/60_nova/upgrade.sh#L96
-.. _openstack-ansible: https://review.opendev.org/#/c/575125/
-.. _in Rocky: https://review.opendev.org/#/c/581813/
-.. _blocker migration: https://review.opendev.org/#/c/289450/
 
 Structure
-=========
+---------
 
 There is no graph logic for checks, meaning each check is meant to be run
 independently of other checks in the same set. For example, a project could
@@ -167,94 +181,86 @@ The results feed into a standard output for the checks:
   |          service catalog.                          |
   +----------------------------------------------------+
 
-.. note:: Long-term the framework for upgrade checks will come from the
-          `oslo.upgradecheck library`_.
-
 .. _initial change: https://review.opendev.org/#/c/411517/
 .. _cells v2 check: https://review.opendev.org/#/c/411525/
 .. _placement check: https://review.opendev.org/#/c/413250/
-.. _oslo.upgradecheck library: http://opendev.org/openstack/oslo.upgradecheck/
 
-Other
-=====
-
-Documentation
--------------
-
-Each check should be documented in the
-:ref:`history section <nova-status-checks>` of the CLI guide and have a
-release note. This is important since the checks can be run in an isolated
-environment apart from the actual deployed version of the code and since the
-checks should be idempotent, the history / change log is good for knowing
-what is being validated.
-
-Backports
----------
-
-Sometimes upgrade checks can be backported to aid in pre-empting bugs on
-stable branches. For example, a check was added for `bug 1759316`_ in Rocky
-which was also backported to stable/queens in case anyone upgrading from Pike
-to Queens would hit the same issue. Backportable checks are generally only
-made for latent bugs since someone who has already passed checks and upgraded
-to a given stable branch should not start failing after a patch release on that
-same branch. For this reason, any check being backported should have a release
-note with it.
-
-.. _bug 1759316: https://bugs.launchpad.net/nova/+bug/1759316
-
-Other projects
---------------
-
-A community-wide `goal for the Stein release`_ is adding the same type of
-``$PROJECT-status upgrade check`` tooling to other projects to ease in
-upgrading OpenStack across the board. So while the guidelines in this document
-are primarily specific to nova, they should apply generically to other projects
-wishing to incorporate the same tooling.
-
-.. _goal for the Stein release: https://governance.openstack.org/tc/goals/stein/upgrade-checkers.html
 
 FAQs
 ----
 
-#. How is the nova-status upgrade script packaged and deployed?
+- How is the ``nova-status`` upgrade script packaged and deployed?
 
-   There is a ``console_scripts`` entry for ``nova-status`` in the
-   ``setup.cfg`` file.
+  There is a ``console_scripts`` entry for ``nova-status`` in the ``setup.cfg``
+  file.
 
-#. Why are there multiple parts to the command structure, i.e. "upgrade" and
-   "check"?
+- Why are there multiple parts to the command structure, i.e. "upgrade" and
+  "check"?
 
-   This is an artifact of how the ``nova-manage`` command is structured which
-   has categories of sub-commands, like ``nova-manage db`` is a sub-category
-   made up of other sub-commands like ``nova-manage db sync``. The
-   ``nova-status upgrade check`` command was written in the same way for
-   consistency and extensibility if other sub-commands need to be added later.
+  This is an artifact of how the ``nova-manage`` command is structured which
+  has categories of sub-commands, like ``nova-manage db`` is a sub-category
+  made up of other sub-commands like ``nova-manage db sync``. The
+  ``nova-status upgrade check`` command was written in the same way for
+  consistency and extensibility if other sub-commands need to be added later.
 
-#. Where should the documentation live for projects other than nova?
+- Why is the upgrade check command not part of the standard python-\*client
+  CLIs?
 
-   As part of the standard OpenStack project `documentation guidelines`_ the
-   command should be documented under ``doc/source/cli`` in each project repo.
+  The ``nova-status`` command was modeled after the ``nova-manage`` command
+  which is meant to be admin-only and has direct access to the database,
+  unlike other CLI packages like python-novaclient which requires a token
+  and communicates with nova over the REST API. Because of this, it is also
+  possible to write commands in ``nova-manage`` and ``nova-status`` that can
+  work while the API service is down for maintenance.
 
-#. Why is the upgrade check command not part of the standard python-\*client
-   CLIs?
+- How should the checks be documented?
 
-   The ``nova-status`` command was modeled after the ``nova-manage`` command
-   which is meant to be admin-only and has direct access to the database,
-   unlike other CLI packages like python-novaclient which requires a token
-   and communicates with nova over the REST API. Because of this, it is also
-   possible to write commands in ``nova-manage`` and ``nova-status`` that can
-   work while the API service is down for maintenance.
+  Each check should be documented in the :ref:`history section
+  <nova-status-checks>` of the CLI guide and have a release note. This is
+  important since the checks can be run in an isolated environment apart from
+  the actual deployed version of the code and since the checks should be
+  idempotent, the history / change log is good for knowing what is being
+  validated.
 
-#. Can upgrade checks only be for N-1 to N version upgrades?
+- Do other projects support upgrade checks?
 
-   No, not necessarily. The upgrade checks are also an essential part of
-   `fast-forward upgrades`_ to make sure that as you roll through each release
-   performing schema (data model) updates and data migrations that you are
-   also completing all of the necessary changes. For example, if you are
-   fast forward upgrading from Ocata to Rocky, something could have been
-   added, deprecated or removed in Pike or Queens and a pre-upgrade check is
-   a way to make sure the necessary steps were taking while upgrading through
-   those releases before restarting the Rocky code at the end.
+  A community-wide `goal for the Stein release`__ is adding the same type of
+  ``$PROJECT-status upgrade check`` tooling to other projects to ease in
+  upgrading OpenStack across the board. So while the guidelines in this
+  document are primarily specific to nova, they should apply generically to
+  other projects wishing to incorporate the same tooling.
 
-.. _documentation guidelines: https://docs.openstack.org/doc-contrib-guide/project-guides.html
-.. _fast-forward upgrades: https://wiki.openstack.org/wiki/Fast_forward_upgrades
+  .. __: https://governance.openstack.org/tc/goals/stein/upgrade-checkers.html
+
+- Where should the documentation live for projects other than nova?
+
+  As part of the standard OpenStack project `documentation guidelines`__ the
+  command should be documented under ``doc/source/cli`` in each project repo.
+
+  .. __: https://docs.openstack.org/doc-contrib-guide/project-guides.html
+
+- Can upgrade checks be backported?
+
+  Sometimes upgrade checks can be backported to aid in pre-empting bugs on
+  stable branches. For example, a check was added for `bug 1759316`__ in Rocky
+  which was also backported to stable/queens in case anyone upgrading from Pike
+  to Queens would hit the same issue. Backportable checks are generally only
+  made for latent bugs since someone who has already passed checks and upgraded
+  to a given stable branch should not start failing after a patch release on
+  that same branch. For this reason, any check being backported should have a
+  release note with it.
+
+  .. __: https://bugs.launchpad.net/nova/+bug/1759316
+
+- Can upgrade checks only be for N-1 to N version upgrades?
+
+  No, not necessarily. The upgrade checks are also an essential part of
+  `fast-forward upgrades`__ to make sure that as you roll through each release
+  performing schema (data model) updates and data migrations that you are
+  also completing all of the necessary changes. For example, if you are
+  fast forward upgrading from Ocata to Rocky, something could have been
+  added, deprecated or removed in Pike or Queens and a pre-upgrade check is
+  a way to make sure the necessary steps were taking while upgrading through
+  those releases before restarting the Rocky code at the end.
+
+  .. __: https://wiki.openstack.org/wiki/Fast_forward_upgrades
