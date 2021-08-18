@@ -885,10 +885,7 @@ class VMwareVMOps(object):
                             datastore, file_path):
         """Attach cdrom to VM by reconfiguration."""
         client_factory = self._session.vim.client.factory
-        devices = self._session._call_method(vutil,
-                                             "get_object_property",
-                                             vm_ref,
-                                             "config.hardware.device")
+        devices = vm_util.get_hardware_devices(self._session, vm_ref)
         (controller_key, unit_number,
          controller_spec) = vm_util.allocate_controller_key_and_unit_number(
                                                     client_factory,
@@ -1189,10 +1186,7 @@ class VMwareVMOps(object):
             raise exception.InstanceResumeFailure(reason=reason)
 
     def _get_rescue_device(self, instance, vm_ref):
-        hardware_devices = self._session._call_method(vutil,
-                                                      "get_object_property",
-                                                      vm_ref,
-                                                      "config.hardware.device")
+        hardware_devices = vm_util.get_hardware_devices(self._session, vm_ref)
         return vm_util.find_rescue_device(hardware_devices,
                                           instance)
 
@@ -1649,8 +1643,7 @@ class VMwareVMOps(object):
         network_info = instance.get_network_info()
         client_factory = self._session.vim.client.factory
         devices = []
-        hardware_devices = self._session._call_method(
-            vutil, "get_object_property", vm_ref, "config.hardware.device")
+        hardware_devices = vm_util.get_hardware_devices(self._session, vm_ref)
         vif_model = instance.image_meta.properties.get('hw_vif_model',
             constants.DEFAULT_VIF_MODEL)
         for vif in network_info:
@@ -1959,11 +1952,8 @@ class VMwareVMOps(object):
                         "VM") % vif['id']
                 raise exception.NotFound(msg)
 
-            hardware_devices = self._session._call_method(
-                                                    vutil,
-                                                    "get_object_property",
-                                                    vm_ref,
-                                                    "config.hardware.device")
+            hardware_devices = vm_util.get_hardware_devices(self._session,
+                                                            vm_ref)
             device = vmwarevif.get_network_device(hardware_devices,
                                                   vif['address'])
             if device is None:

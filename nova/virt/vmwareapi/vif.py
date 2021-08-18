@@ -123,8 +123,6 @@ def get_vif_info(session, cluster, vif_model, network_info):
 
 def get_network_device(hardware_devices, mac_address):
     """Return the network device with MAC 'mac_address'."""
-    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
-        hardware_devices = hardware_devices.VirtualDevice
     for device in hardware_devices:
         if device.__class__.__name__ in vm_util.ALL_SUPPORTED_NETWORK_DEVICES:
             if hasattr(device, 'macAddress'):

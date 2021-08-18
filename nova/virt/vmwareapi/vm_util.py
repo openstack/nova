@@ -744,9 +744,6 @@ def get_scsi_adapter_type(hardware_devices):
     """Selects a proper iscsi adapter type from the existing
        hardware devices
     """
-    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
-        hardware_devices = hardware_devices.VirtualDevice
-
     for device in hardware_devices:
         if device.__class__.__name__ in scsi_controller_classes:
             # find the controllers which still have available slots
@@ -840,9 +837,6 @@ def allocate_controller_key_and_unit_number(client_factory, devices,
 
 def get_rdm_disk(hardware_devices, uuid):
     """Gets the RDM disk key."""
-    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
-        hardware_devices = hardware_devices.VirtualDevice
-
     for device in hardware_devices:
         if (device.__class__.__name__ == "VirtualDisk" and
             device.backing.__class__.__name__ ==
@@ -1277,9 +1271,6 @@ def propset_dict(propset):
 
 
 def get_vmdk_backed_disk_device(hardware_devices, uuid):
-    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
-        hardware_devices = hardware_devices.VirtualDevice
-
     for device in hardware_devices:
         if (device.__class__.__name__ == "VirtualDisk" and
                 device.backing.__class__.__name__ ==
@@ -1289,9 +1280,6 @@ def get_vmdk_backed_disk_device(hardware_devices, uuid):
 
 
 def get_vmdk_volume_disk(hardware_devices, path=None):
-    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
-        hardware_devices = hardware_devices.VirtualDevice
-
     for device in hardware_devices:
         if (device.__class__.__name__ == "VirtualDisk"):
             if not path or path == device.backing.fileName:
@@ -1544,7 +1532,7 @@ def find_rescue_device(hardware_devices, instance):
     :param instance: nova.objects.instance.Instance object
     :return: the rescue disk device object
     """
-    for device in hardware_devices.VirtualDevice:
+    for device in hardware_devices:
         if (device.__class__.__name__ == "VirtualDisk" and
                 device.backing.__class__.__name__ ==
                 'VirtualDiskFlatVer2BackingInfo' and
@@ -1583,13 +1571,7 @@ def detach_devices_from_vm(session, vm_ref, devices):
 
 def get_ephemerals(session, vm_ref):
     devices = []
-    hardware_devices = session._call_method(vutil,
-                                            "get_object_property",
-                                            vm_ref,
-                                            "config.hardware.device")
-
-    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
-        hardware_devices = hardware_devices.VirtualDevice
+    hardware_devices = get_hardware_devices(session, vm_ref)
 
     for device in hardware_devices:
         if device.__class__.__name__ == "VirtualDisk":
@@ -1601,11 +1583,7 @@ def get_ephemerals(session, vm_ref):
 
 
 def get_swap(session, vm_ref):
-    hardware_devices = session._call_method(vutil, "get_object_property",
-                                            vm_ref, "config.hardware.device")
-
-    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
-        hardware_devices = hardware_devices.VirtualDevice
+    hardware_devices = get_hardware_devices(session, vm_ref)
 
     for device in hardware_devices:
         if (device.__class__.__name__ == "VirtualDisk" and
