@@ -10,8 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Tests for database migrations.
+"""Tests for database migrations.
+
 There are "opportunistic" tests which allows testing against all 3 databases
 (sqlite in memory, mysql, pg) in a properly configured unit test environment.
 
@@ -48,7 +48,7 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
     """Test that the models match the database after migrations are run."""
 
     def setUp(self):
-        super(NovaAPIModelsSync, self).setUp()
+        super().setUp()
         self.engine = enginefacade.writer.get_engine()
 
     def db_sync(self, engine):
@@ -76,7 +76,6 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
 
     def filter_metadata_diff(self, diff):
         # Filter out diffs that shouldn't cause a sync failure.
-
         new_diff = []
 
         # Define a whitelist of ForeignKeys that exist on the model but not in
@@ -87,12 +86,14 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
         # DB at a later release and aren't on a model anymore.
 
         column_whitelist = {
-                'build_requests': ['vm_state', 'instance_metadata',
-                    'display_name', 'access_ip_v6', 'access_ip_v4', 'key_name',
-                    'locked_by', 'image_ref', 'progress', 'request_spec_id',
-                    'info_cache', 'user_id', 'task_state', 'security_groups',
-                    'config_drive'],
-                'resource_providers': ['can_host'],
+            'build_requests': [
+                'vm_state', 'instance_metadata',
+                'display_name', 'access_ip_v6', 'access_ip_v4', 'key_name',
+                'locked_by', 'image_ref', 'progress', 'request_spec_id',
+                'info_cache', 'user_id', 'task_state', 'security_groups',
+                'config_drive',
+            ],
+            'resource_providers': ['can_host'],
         }
 
         for element in diff:
@@ -106,17 +107,22 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
                     fkey = element[1]
                     tablename = fkey.table.name
                     column_keys = fkey.column_keys
-                    if (tablename in fkey_whitelist and
-                            column_keys == fkey_whitelist[tablename]):
+                    if (
+                        tablename in fkey_whitelist and
+                        column_keys == fkey_whitelist[tablename]
+                    ):
                         continue
                 elif element[0] == 'remove_column':
                     tablename = element[2]
                     column = element[3]
-                    if (tablename in column_whitelist and
-                            column.name in column_whitelist[tablename]):
+                    if (
+                        tablename in column_whitelist and
+                        column.name in column_whitelist[tablename]
+                    ):
                         continue
 
                 new_diff.append(element)
+
         return new_diff
 
 
