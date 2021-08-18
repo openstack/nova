@@ -1721,6 +1721,18 @@ class PlacementCommands(object):
         allocations['user_id'] = instance.user_id
         return allocations
 
+    @staticmethod
+    def ensure_instance_has_no_vgpu_request(instance):
+        if instance.flavor.extra_specs.get("resources:VGPU"):
+            raise exception.HealvGPUAllocationNotSupported(
+                instance_uuid=instance.uuid)
+
+    @staticmethod
+    def ensure_instance_has_no_cyborg_device_profile_request(instance):
+        if instance.flavor.extra_specs.get("accel:device_profile"):
+            raise exception.HealDeviceProfileAllocationNotSupported(
+                instance_uuid=instance.uuid)
+
     def _heal_allocations_for_instance(self, ctxt, instance, node_cache,
                                        output, placement, dry_run,
                                        heal_port_allocations, neutron,
@@ -1776,6 +1788,9 @@ class PlacementCommands(object):
         if instance.node is None:
             output(_('Instance %s is not on a host.') % instance.uuid)
             return
+
+        self.ensure_instance_has_no_vgpu_request(instance)
+        self.ensure_instance_has_no_cyborg_device_profile_request(instance)
 
         try:
             allocations = placement.get_allocs_for_consumer(
@@ -1893,7 +1908,7 @@ class PlacementCommands(object):
         :param max_count: batch size (limit per instance query)
         :param unlimited: True if all instances in the cell should be
             processed, else False to just process $max_count instances
-        :param outout: function that takes a single message for verbose output
+        :param output: function that takes a single message for verbose output
         :param placement: nova.scheduler.client.report.SchedulerReportClient
             to communicate with the Placement service API.
         :param dry_run: Process instances and print output but do not commit
@@ -2033,6 +2048,7 @@ class PlacementCommands(object):
         * 5: Unable to query ports from neutron
         * 6: Unable to update ports in neutron
         * 7: Cannot roll back neutron port updates. Manual steps needed.
+        * 8: Cannot heal instance with vGPU or Cyborg resource request
         * 127: Invalid input.
         """
         # NOTE(mriedem): Thoughts on ways to expand this:
@@ -2161,6 +2177,12 @@ class PlacementCommands(object):
                 except exception.UnableToRollbackPortUpdates as e:
                     print(e.format_message())
                     return 7
+                except (
+                    exception.HealvGPUAllocationNotSupported,
+                    exception.HealDeviceProfileAllocationNotSupported,
+                ) as e:
+                    print(e.format_message())
+                    return 8
 
                 # Make sure we don't go over the max count. Note that we
                 # don't include instances that already have allocations in the

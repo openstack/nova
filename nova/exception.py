@@ -2240,6 +2240,24 @@ class MissingDomainCapabilityFeatureException(NovaException):
                 "including <%(feature)s> feature.")
 
 
+class HealAllocationException(NovaException):
+    msg_fmt = _("Healing instance allocation failed.")
+
+
+class HealvGPUAllocationNotSupported(HealAllocationException):
+    msg_fmt = _(
+        "Healing allocation for instance %(instance_uuid)s with vGPU resource "
+        "request is not supported."
+    )
+
+
+class HealDeviceProfileAllocationNotSupported(HealAllocationException):
+    msg_fmt = _(
+        "Healing allocation for instance %(instance_uuid)s with Cyborg device "
+        "profile request is not supported."
+    )
+
+
 class HealPortAllocationException(NovaException):
     msg_fmt = _("Healing port allocation failed.")
 

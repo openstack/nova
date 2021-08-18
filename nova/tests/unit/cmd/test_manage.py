@@ -2399,7 +2399,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                 return_value=objects.InstanceList(objects=[
                     objects.Instance(
                         uuid=uuidsentinel.instance, host='fake', node='fake',
-                        task_state=None)]))
+                        task_state=None,
+                        flavor=objects.Flavor(extra_specs={}))]))
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocs_for_consumer', return_value={})
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
@@ -2419,7 +2420,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                 return_value=objects.InstanceList(objects=[
                     objects.Instance(
                         uuid=uuidsentinel.instance, host='fake', node='fake',
-                        task_state=None, flavor=objects.Flavor(),
+                        task_state=None, flavor=objects.Flavor(extra_specs={}),
                         project_id='fake-project', user_id='fake-user')]))
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocs_for_consumer', return_value={})
@@ -2463,7 +2464,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                 new=mock.Mock(return_value=objects.InstanceList(objects=[
                     objects.Instance(
                         uuid=uuidsentinel.instance, host='fake', node='fake',
-                        task_state=None, flavor=objects.Flavor(),
+                        task_state=None, flavor=objects.Flavor(extra_specs={}),
                         project_id='fake-project', user_id='fake-user')])))
     def test_heal_allocations_get_allocs_placement_fails(self):
         self.assertEqual(3, self.cli.heal_allocations())
@@ -2480,7 +2481,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                 side_effect=[
                     objects.InstanceList(objects=[objects.Instance(
                         uuid=uuidsentinel.instance, host='fake', node='fake',
-                        task_state=None, flavor=objects.Flavor(),
+                        task_state=None, flavor=objects.Flavor(extra_specs={}),
                         project_id='fake-project', user_id='fake-user')]),
                     objects.InstanceList(objects=[])])
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -2505,7 +2506,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                         objects.Instance(
                             uuid=uuidsentinel.instance, host='fake',
                             node='fake', task_state=None,
-                            project_id='fake-project', user_id='fake-user')]),
+                            project_id='fake-project', user_id='fake-user',
+                            flavor=objects.Flavor(extra_specs={}))]),
                     objects.InstanceList()))
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocs_for_consumer')
@@ -2559,7 +2561,8 @@ class TestNovaManagePlacement(test.NoDBTestCase):
                     objects.Instance(
                         uuid=uuidsentinel.instance, host='fake', node='fake',
                         task_state=None, project_id='fake-project',
-                        user_id='fake-user')]))
+                        user_id='fake-user',
+                        flavor=objects.Flavor(extra_specs={}))]))
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get_allocs_for_consumer')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put',
