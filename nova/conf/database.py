@@ -47,10 +47,15 @@ This group should **not** be configured for the ``nova-compute`` service.
 main_db_opts = copy.deepcopy(oslo_db_opts.database_opts)
 api_db_opts = copy.deepcopy(oslo_db_opts.database_opts)
 
+# We don't support the experimental use of database reconnect on connection
+# lost, so remove the config option that would suggest we do
+main_db_opts = [opt for opt in main_db_opts if opt.name != 'use_db_reconnect']
+api_db_opts = [opt for opt in main_db_opts if opt.name != 'use_db_reconnect']
+
 
 def register_opts(conf):
-    conf.register_opts(copy.deepcopy(main_db_opts), group=main_db_group)
-    conf.register_opts(copy.deepcopy(api_db_opts), group=api_db_group)
+    conf.register_opts(main_db_opts, group=main_db_group)
+    conf.register_opts(api_db_opts, group=api_db_group)
 
 
 def list_opts():
