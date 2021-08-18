@@ -17,10 +17,21 @@
 
 import netaddr
 from oslo_utils import netutils
-from sqlalchemy.dialects import postgresql
+import sqlalchemy as sa
+import sqlalchemy.dialects.mysql
+import sqlalchemy.dialects.postgresql
 from sqlalchemy import types
 
 from nova import utils
+
+
+# NOTE(dprince): This wrapper allows us to easily match the Folsom MySQL
+# Schema. In Folsom we created tables as latin1 and converted them to utf8
+# later. This conversion causes some of the Text columns on MySQL to get
+# created as mediumtext instead of just text.
+def MediumText():
+    return sa.Text().with_variant(
+        sqlalchemy.dialects.mysql.MEDIUMTEXT(), 'mysql')
 
 
 class IPAddress(types.TypeDecorator):
@@ -30,9 +41,10 @@ class IPAddress(types.TypeDecorator):
 
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
-            return dialect.type_descriptor(postgresql.INET())
-        else:
-            return dialect.type_descriptor(types.String(39))
+            return dialect.type_descriptor(
+                sqlalchemy.dialects.postgresql.INET())
+
+        return dialect.type_descriptor(types.String(39))
 
     def process_bind_param(self, value, dialect):
         """Process/Formats the value before insert it into the db."""
@@ -40,7 +52,7 @@ class IPAddress(types.TypeDecorator):
             return value
         # NOTE(maurosr): The purpose here is to convert ipv6 to the shortened
         # form, not validate it.
-        elif netutils.is_valid_ipv6(value):
+        if netutils.is_valid_ipv6(value):
             return utils.get_shortened_ipv6(value)
         return value
 
@@ -52,9 +64,10 @@ class CIDR(types.TypeDecorator):
 
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
-            return dialect.type_descriptor(postgresql.INET())
-        else:
-            return dialect.type_descriptor(types.String(43))
+            return dialect.type_descriptor(
+                sqlalchemy.dialects.postgresql.INET())
+
+        return dialect.type_descriptor(types.String(43))
 
     def process_bind_param(self, value, dialect):
         """Process/Formats the value before insert it into the db."""

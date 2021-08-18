@@ -33,14 +33,6 @@ branch_labels = None
 depends_on = None
 
 
-# NOTE(dprince): This wrapper allows us to easily match the Folsom MySQL
-# Schema. In Folsom we created tables as latin1 and converted them to utf8
-# later. This conversion causes some of the Text columns on MySQL to get
-# created as mediumtext instead of just text.
-def MediumText():
-    return sa.Text().with_variant(dialects.mysql.MEDIUMTEXT(), 'mysql')
-
-
 def Inet():
     return sa.String(length=43).with_variant(
         dialects.postgresql.INET(), 'postgresql',
@@ -204,14 +196,14 @@ def upgrade():
         sa.Column('ramdisk_id', sa.String(length=255)),
         sa.Column('launch_index', sa.Integer),
         sa.Column('key_name', sa.String(length=255)),
-        sa.Column('key_data', MediumText()),
+        sa.Column('key_data', types.MediumText()),
         sa.Column('power_state', sa.Integer),
         sa.Column('vm_state', sa.String(length=255)),
         sa.Column('memory_mb', sa.Integer),
         sa.Column('vcpus', sa.Integer),
         sa.Column('hostname', sa.String(length=255)),
         sa.Column('host', sa.String(length=255)),
-        sa.Column('user_data', MediumText()),
+        sa.Column('user_data', types.MediumText()),
         sa.Column('reservation_id', sa.String(length=255)),
         sa.Column('launched_at', sa.DateTime),
         sa.Column('terminated_at', sa.DateTime),
@@ -220,7 +212,7 @@ def upgrade():
         sa.Column('availability_zone', sa.String(length=255)),
         sa.Column('locked', sa.Boolean),
         sa.Column('os_type', sa.String(length=255)),
-        sa.Column('launched_on', MediumText()),
+        sa.Column('launched_on', types.MediumText()),
         sa.Column('instance_type_id', sa.Integer),
         sa.Column('vm_mode', sa.String(length=255)),
         sa.Column('uuid', sa.String(length=36), nullable=False),
@@ -381,7 +373,7 @@ def upgrade():
         sa.Column('volume_id', sa.String(length=36), nullable=True),
         sa.Column('volume_size', sa.Integer),
         sa.Column('no_device', sa.Boolean),
-        sa.Column('connection_info', MediumText()),
+        sa.Column('connection_info', types.MediumText()),
         sa.Column(
             'instance_uuid', sa.String(length=36),
             sa.ForeignKey(
@@ -486,9 +478,9 @@ def upgrade():
         sa.Column('vcpus_used', sa.Integer, nullable=False),
         sa.Column('memory_mb_used', sa.Integer, nullable=False),
         sa.Column('local_gb_used', sa.Integer, nullable=False),
-        sa.Column('hypervisor_type', MediumText(), nullable=False),
+        sa.Column('hypervisor_type', types.MediumText(), nullable=False),
         sa.Column('hypervisor_version', sa.Integer, nullable=False),
-        sa.Column('cpu_info', MediumText(), nullable=False),
+        sa.Column('cpu_info', types.MediumText(), nullable=False),
         sa.Column('disk_available_least', sa.Integer),
         sa.Column('free_ram_mb', sa.Integer),
         sa.Column('free_disk_gb', sa.Integer),
@@ -686,7 +678,7 @@ def upgrade():
                 'instances.uuid', name='fk_instance_faults_instance_uuid')),
         sa.Column('code', sa.Integer, nullable=False),
         sa.Column('message', sa.String(length=255)),
-        sa.Column('details', MediumText()),
+        sa.Column('details', types.MediumText()),
         sa.Column('host', sa.String(length=255)),
         sa.Column('deleted', sa.Integer),
         sa.Index('instance_faults_host_idx', 'host'),
@@ -716,7 +708,7 @@ def upgrade():
         sa.Column('updated_at', sa.DateTime),
         sa.Column('deleted_at', sa.DateTime),
         sa.Column('id', sa.Integer, primary_key=True, nullable=False),
-        sa.Column('network_info', MediumText()),
+        sa.Column('network_info', types.MediumText()),
         sa.Column(
             'instance_uuid', sa.String(length=36),
             sa.ForeignKey(
@@ -1004,7 +996,7 @@ def upgrade():
         sa.Column('name', sa.String(length=255), nullable=False),
         sa.Column('user_id', sa.String(length=255)),
         sa.Column('fingerprint', sa.String(length=255)),
-        sa.Column('public_key', MediumText()),
+        sa.Column('public_key', types.MediumText()),
         sa.Column('deleted', sa.Integer),
         sa.Column(
             'type', sa.Enum('ssh', 'x509', name='keypair_types'),

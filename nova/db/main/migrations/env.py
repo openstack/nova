@@ -16,6 +16,8 @@ from alembic import context
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
+from nova.db.main import models
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -29,7 +31,20 @@ if config.attributes.get('configure_logger', True):
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = None
+target_metadata = models.BASE.metadata
+
+
+def include_name(name, type_, parent_names):
+    if type_ == 'table':
+        return not name.startswith('shadow_')
+
+    if type_ == 'column':
+        return (parent_names['table_name'], name) not in {
+            ('instances', 'internal_id'),
+            ('instance_extra', 'vpmems'),
+        }
+
+    return True
 
 
 def run_migrations_offline():
@@ -45,6 +60,7 @@ def run_migrations_offline():
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        include_name=include_name,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -80,7 +96,9 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            include_name=include_name,
         )
 
         with context.begin_transaction():
