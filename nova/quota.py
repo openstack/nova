@@ -24,8 +24,9 @@ from sqlalchemy import sql
 
 import nova.conf
 from nova import context as nova_context
+from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as db
+from nova.db.main import api as main_db_api
 from nova import exception
 from nova import objects
 from nova.scheduler.client import report
@@ -177,7 +178,10 @@ class DbQuotaDriver(object):
                 # displaying used limits. They are always zero.
                 usages[resource.name] = {'in_use': 0}
             else:
-                if resource.name in db.quota_get_per_project_resources():
+                if (
+                    resource.name in
+                    main_db_api.quota_get_per_project_resources()
+                ):
                     count = resource.count_as_dict(context, project_id)
                     key = 'project'
                 else:
@@ -1045,7 +1049,7 @@ class QuotaEngine(object):
         return 0
 
 
-@db.api_context_manager.reader
+@api_db_api.context_manager.reader
 def _user_id_queued_for_delete_populated(context, project_id=None):
     """Determine whether user_id and queued_for_delete are set.
 

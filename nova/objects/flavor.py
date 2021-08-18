@@ -21,8 +21,9 @@ from sqlalchemy import sql
 from sqlalchemy.sql import expression
 
 import nova.conf
+from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as db_api
+from nova.db import utils as db_utils
 from nova import exception
 from nova.notifications.objects import base as notification
 from nova.notifications.objects import flavor as flavor_notification
@@ -51,7 +52,7 @@ def _dict_with_extra_specs(flavor_model):
 # decorators with static methods. We pull these out for now and can
 # move them back into the actual staticmethods on the object when those
 # issues are resolved.
-@db_api.api_context_manager.reader
+@api_db_api.context_manager.reader
 def _get_projects_from_db(context, flavorid):
     db_flavor = context.session.query(api_models.Flavors).\
         filter_by(flavorid=flavorid).\
@@ -62,7 +63,7 @@ def _get_projects_from_db(context, flavorid):
     return [x['project_id'] for x in db_flavor['projects']]
 
 
-@db_api.api_context_manager.writer
+@api_db_api.context_manager.writer
 def _flavor_add_project(context, flavor_id, project_id):
     project = api_models.FlavorProjects()
     project.update({'flavor_id': flavor_id,
@@ -74,7 +75,7 @@ def _flavor_add_project(context, flavor_id, project_id):
                                            project_id=project_id)
 
 
-@db_api.api_context_manager.writer
+@api_db_api.context_manager.writer
 def _flavor_del_project(context, flavor_id, project_id):
     result = context.session.query(api_models.FlavorProjects).\
              filter_by(project_id=project_id).\
@@ -85,9 +86,9 @@ def _flavor_del_project(context, flavor_id, project_id):
                                              project_id=project_id)
 
 
-@db_api.api_context_manager.writer
+@api_db_api.context_manager.writer
 def _flavor_extra_specs_add(context, flavor_id, specs, max_retries=10):
-    writer = db_api.api_context_manager.writer
+    writer = api_db_api.context_manager.writer
     for attempt in range(max_retries):
         try:
             spec_refs = context.session.query(
@@ -122,7 +123,7 @@ def _flavor_extra_specs_add(context, flavor_id, specs, max_retries=10):
                     id=flavor_id, retries=max_retries)
 
 
-@db_api.api_context_manager.writer
+@api_db_api.context_manager.writer
 def _flavor_extra_specs_del(context, flavor_id, key):
     result = context.session.query(api_models.FlavorExtraSpecs).\
              filter_by(flavor_id=flavor_id).\
@@ -133,7 +134,7 @@ def _flavor_extra_specs_del(context, flavor_id, key):
             extra_specs_key=key, flavor_id=flavor_id)
 
 
-@db_api.api_context_manager.writer
+@api_db_api.context_manager.writer
 def _flavor_create(context, values):
     specs = values.get('extra_specs')
     db_specs = []
@@ -169,7 +170,7 @@ def _flavor_create(context, values):
     return _dict_with_extra_specs(db_flavor)
 
 
-@db_api.api_context_manager.writer
+@api_db_api.context_manager.writer
 def _flavor_destroy(context, flavor_id=None, flavorid=None):
     query = context.session.query(api_models.Flavors)
 
@@ -268,7 +269,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         return flavor
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _flavor_get_query_from_db(context):
         query = context.session.query(api_models.Flavors).\
             options(orm.joinedload('extra_specs'))
@@ -281,7 +282,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         return query
 
     @staticmethod
-    @db_api.require_context
+    @db_utils.require_context
     def _flavor_get_from_db(context, id):
         """Returns a dict describing specific flavor."""
         result = Flavor._flavor_get_query_from_db(context).\
@@ -292,7 +293,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         return _dict_with_extra_specs(result)
 
     @staticmethod
-    @db_api.require_context
+    @db_utils.require_context
     def _flavor_get_by_name_from_db(context, name):
         """Returns a dict describing specific flavor."""
         result = Flavor._flavor_get_query_from_db(context).\
@@ -303,7 +304,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         return _dict_with_extra_specs(result)
 
     @staticmethod
-    @db_api.require_context
+    @db_utils.require_context
     def _flavor_get_by_flavor_id_from_db(context, flavor_id):
         """Returns a dict describing specific flavor_id."""
         result = Flavor._flavor_get_query_from_db(context).\
@@ -485,7 +486,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
 
     # NOTE(mriedem): This method is not remotable since we only expect the API
     # to be able to make updates to a flavor.
-    @db_api.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _save(self, context, values):
         db_flavor = context.session.query(api_models.Flavors).\
             filter_by(id=self.id).first()
@@ -581,7 +582,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             payload=payload).emit(self._context)
 
 
-@db_api.api_context_manager.reader
+@api_db_api.context_manager.reader
 def _flavor_get_all_from_db(context, inactive, filters, sort_key, sort_dir,
                             limit, marker):
     """Returns all flavors.

@@ -32,7 +32,8 @@ from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
 from nova import context as nova_context
-from nova.db.main import api as db_session
+from nova.db.api import api as api_db_api
+from nova.db.main import api as main_db_api
 from nova import exception
 from nova.i18n import _
 from nova.objects import cell_mapping as cell_mapping_obj
@@ -86,7 +87,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         # table, or by only counting compute nodes with a service version of at
         # least 15 which was the highest service version when Newton was
         # released.
-        meta = sa.MetaData(bind=db_session.get_engine(context=context))
+        meta = sa.MetaData(bind=main_db_api.get_engine(context=context))
         compute_nodes = sa.Table('compute_nodes', meta, autoload=True)
         return sa.select([sqlfunc.count()]).select_from(compute_nodes).where(
             compute_nodes.c.deleted == 0).scalar()
@@ -103,7 +104,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         for compute nodes if there are no host mappings on a fresh install.
         """
         meta = sa.MetaData()
-        meta.bind = db_session.get_api_engine()
+        meta.bind = api_db_api.get_engine()
 
         cell_mappings = self._get_cell_mappings()
         count = len(cell_mappings)

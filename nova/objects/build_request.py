@@ -18,8 +18,9 @@ from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 from oslo_versionedobjects import exception as ovoo_exc
 
+from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as db
+from nova.db import utils as db_utils
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -163,7 +164,7 @@ class BuildRequest(base.NovaObject):
         return req
 
     @staticmethod
-    @db.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_by_instance_uuid_from_db(context, instance_uuid):
         db_req = context.session.query(api_models.BuildRequest).filter_by(
                     instance_uuid=instance_uuid).first()
@@ -177,7 +178,7 @@ class BuildRequest(base.NovaObject):
         return cls._from_db_object(context, cls(), db_req)
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _create_in_db(context, updates):
         db_req = api_models.BuildRequest()
         db_req.update(updates)
@@ -206,7 +207,7 @@ class BuildRequest(base.NovaObject):
         self._from_db_object(self._context, self, db_req)
 
     @staticmethod
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _destroy_in_db(context, instance_uuid):
         result = context.session.query(api_models.BuildRequest).filter_by(
                 instance_uuid=instance_uuid).delete()
@@ -217,7 +218,7 @@ class BuildRequest(base.NovaObject):
     def destroy(self):
         self._destroy_in_db(self._context, self.instance_uuid)
 
-    @db.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _save_in_db(self, context, req_id, updates):
         db_req = context.session.query(
             api_models.BuildRequest).filter_by(id=req_id).first()
@@ -262,7 +263,7 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
     }
 
     @staticmethod
-    @db.api_context_manager.reader
+    @api_db_api.context_manager.reader
     def _get_all_from_db(context):
         query = context.session.query(api_models.BuildRequest)
 
@@ -396,8 +397,8 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
         # exists. So it can be ignored.
         # 'deleted' and 'cleaned' are handled above.
 
-        sort_keys, sort_dirs = db.process_sort_params(sort_keys, sort_dirs,
-                                                      default_dir='desc')
+        sort_keys, sort_dirs = db_utils.process_sort_params(
+            sort_keys, sort_dirs, default_dir='desc')
 
         # For other filters that don't match this, we will do regexp matching
         # Taken from db/sqlalchemy/api.py

@@ -39,8 +39,9 @@ from nova.conductor.tasks import live_migrate
 from nova.conductor.tasks import migrate
 from nova import conf
 from nova import context
+from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as db
+from nova.db.main import api as main_db_api
 from nova import exception as exc
 from nova.image import glance as image_api
 from nova import objects
@@ -440,7 +441,7 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_create_and_bind_arqs')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'build_and_run_instance')
-    @mock.patch.object(db, 'block_device_mapping_get_all_by_instance',
+    @mock.patch.object(main_db_api, 'block_device_mapping_get_all_by_instance',
                        return_value=[])
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_schedule_instances')
@@ -547,7 +548,7 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_create_and_bind_arqs')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'build_and_run_instance')
-    @mock.patch.object(db, 'block_device_mapping_get_all_by_instance',
+    @mock.patch.object(main_db_api, 'block_device_mapping_get_all_by_instance',
                        return_value=[])
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_schedule_instances')
@@ -2740,7 +2741,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.assertEqual(0, len(build_requests))
 
-        @db.api_context_manager.reader
+        @api_db_api.context_manager.reader
         def request_spec_get_all(context):
             return context.session.query(api_models.RequestSpec).all()
 

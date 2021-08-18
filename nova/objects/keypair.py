@@ -17,8 +17,9 @@ from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
 from oslo_utils import versionutils
 
+from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as db
+from nova.db.main import api as main_db_api
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -29,7 +30,7 @@ KEYPAIR_TYPE_X509 = 'x509'
 LOG = logging.getLogger(__name__)
 
 
-@db.api_context_manager.reader
+@api_db_api.context_manager.reader
 def _get_from_db(context, user_id, name=None, limit=None, marker=None):
     query = context.session.query(api_models.KeyPair).\
             filter(api_models.KeyPair.user_id == user_id)
@@ -54,14 +55,14 @@ def _get_from_db(context, user_id, name=None, limit=None, marker=None):
     return query.all()
 
 
-@db.api_context_manager.reader
+@api_db_api.context_manager.reader
 def _get_count_from_db(context, user_id):
     return context.session.query(api_models.KeyPair).\
         filter(api_models.KeyPair.user_id == user_id).\
         count()
 
 
-@db.api_context_manager.writer
+@api_db_api.context_manager.writer
 def _create_in_db(context, values):
     kp = api_models.KeyPair()
     kp.update(values)
@@ -72,7 +73,7 @@ def _create_in_db(context, values):
     return kp
 
 
-@db.api_context_manager.writer
+@api_db_api.context_manager.writer
 def _destroy_in_db(context, user_id, name):
     result = context.session.query(api_models.KeyPair).\
              filter_by(user_id=user_id).\
@@ -143,7 +144,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
             except exception.KeypairNotFound:
                 pass
         if db_keypair is None:
-            db_keypair = db.key_pair_get(context, user_id, name)
+            db_keypair = main_db_api.key_pair_get(context, user_id, name)
         return cls._from_db_object(context, cls(), db_keypair)
 
     @base.remotable_classmethod
@@ -151,7 +152,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
         try:
             cls._destroy_in_db(context, user_id, name)
         except exception.KeypairNotFound:
-            db.key_pair_destroy(context, user_id, name)
+            main_db_api.key_pair_destroy(context, user_id, name)
 
     @base.remotable
     def create(self):
@@ -163,7 +164,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
         # letting them create in the API DB, since we won't get protection
         # from the UC.
         try:
-            db.key_pair_get(self._context, self.user_id, self.name)
+            main_db_api.key_pair_get(self._context, self.user_id, self.name)
             raise exception.KeyPairExists(key_name=self.name)
         except exception.KeypairNotFound:
             pass
@@ -180,7 +181,8 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
         try:
             self._destroy_in_db(self._context, self.user_id, self.name)
         except exception.KeypairNotFound:
-            db.key_pair_destroy(self._context, self.user_id, self.name)
+            main_db_api.key_pair_destroy(
+                self._context, self.user_id, self.name)
 
 
 @base.NovaObjectRegistry.register
@@ -222,7 +224,7 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
             limit_more = None
 
         if limit_more is None or limit_more > 0:
-            main_db_keypairs = db.key_pair_get_all_by_user(
+            main_db_keypairs = main_db_api.key_pair_get_all_by_user(
                 context, user_id, limit=limit_more, marker=marker)
         else:
             main_db_keypairs = []
@@ -233,4 +235,4 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_count_by_user(cls, context, user_id):
         return (cls._get_count_from_db(context, user_id) +
-                db.key_pair_count_by_user(context, user_id))
+                main_db_api.key_pair_count_by_user(context, user_id))

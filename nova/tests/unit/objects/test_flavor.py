@@ -19,8 +19,8 @@ from oslo_db import exception as db_exc
 from oslo_utils import uuidutils
 
 from nova import context as nova_context
+from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as db_api
 from nova import exception
 from nova import objects
 from nova.objects import fields
@@ -89,7 +89,7 @@ class _TestFlavor(object):
         mock_get.assert_called_once_with(self.context, 'm1.foo')
 
     @staticmethod
-    @db_api.api_context_manager.writer
+    @api_db_api.context_manager.writer
     def _create_api_flavor(context, altid=None):
         fake_db_flavor = dict(fake_flavor)
         del fake_db_flavor['extra_specs']

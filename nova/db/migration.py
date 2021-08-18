@@ -22,7 +22,8 @@ from migrate.versioning.repository import Repository
 from oslo_log import log as logging
 import sqlalchemy
 
-from nova.db.main import api as db_session
+from nova.db.api import api as api_db_api
+from nova.db.main import api as main_db_api
 from nova import exception
 from nova.i18n import _
 
@@ -36,10 +37,10 @@ LOG = logging.getLogger(__name__)
 
 def get_engine(database='main', context=None):
     if database == 'main':
-        return db_session.get_engine(context=context)
+        return main_db_api.get_engine(context=context)
 
     if database == 'api':
-        return db_session.get_api_engine()
+        return api_db_api.get_engine()
 
 
 def find_migrate_repo(database='main'):

@@ -16,8 +16,9 @@ from oslo_log import log as logging
 from oslo_utils import versionutils
 
 from nova import context as nova_context
-from nova.db.main import api as db
-from nova.db.main import models
+from nova.db.api import api as api_db_api
+from nova.db.main import api as main_db_api
+from nova.db.main import models as main_db_models
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -70,26 +71,26 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable_classmethod
     def get_by_id(cls, context, vif_id):
-        db_vif = db.virtual_interface_get(context, vif_id)
+        db_vif = main_db_api.virtual_interface_get(context, vif_id)
         if db_vif:
             return cls._from_db_object(context, cls(), db_vif)
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, vif_uuid):
-        db_vif = db.virtual_interface_get_by_uuid(context, vif_uuid)
+        db_vif = main_db_api.virtual_interface_get_by_uuid(context, vif_uuid)
         if db_vif:
             return cls._from_db_object(context, cls(), db_vif)
 
     @base.remotable_classmethod
     def get_by_address(cls, context, address):
-        db_vif = db.virtual_interface_get_by_address(context, address)
+        db_vif = main_db_api.virtual_interface_get_by_address(context, address)
         if db_vif:
             return cls._from_db_object(context, cls(), db_vif)
 
     @base.remotable_classmethod
     def get_by_instance_and_network(cls, context, instance_uuid, network_id):
-        db_vif = db.virtual_interface_get_by_instance_and_network(context,
-                instance_uuid, network_id)
+        db_vif = main_db_api.virtual_interface_get_by_instance_and_network(
+            context, instance_uuid, network_id)
         if db_vif:
             return cls._from_db_object(context, cls(), db_vif)
 
@@ -99,7 +100,7 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
         updates = self.obj_get_changes()
-        db_vif = db.virtual_interface_create(self._context, updates)
+        db_vif = main_db_api.virtual_interface_create(self._context, updates)
         self._from_db_object(self._context, self, db_vif)
 
     @base.remotable
@@ -108,17 +109,18 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
         if 'address' in updates:
             raise exception.ObjectActionError(action='save',
                                               reason='address is not mutable')
-        db_vif = db.virtual_interface_update(self._context, self.address,
-                                             updates)
+        db_vif = main_db_api.virtual_interface_update(
+            self._context, self.address, updates)
         return self._from_db_object(self._context, self, db_vif)
 
     @base.remotable_classmethod
     def delete_by_instance_uuid(cls, context, instance_uuid):
-        db.virtual_interface_delete_by_instance(context, instance_uuid)
+        main_db_api.virtual_interface_delete_by_instance(
+            context, instance_uuid)
 
     @base.remotable
     def destroy(self):
-        db.virtual_interface_delete(self._context, self.id)
+        main_db_api.virtual_interface_delete(self._context, self.id)
 
 
 @base.NovaObjectRegistry.register
@@ -131,15 +133,16 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
 
     @base.remotable_classmethod
     def get_all(cls, context):
-        db_vifs = db.virtual_interface_get_all(context)
+        db_vifs = main_db_api.virtual_interface_get_all(context)
         return base.obj_make_list(context, cls(context),
                                   objects.VirtualInterface, db_vifs)
 
     @staticmethod
-    @db.select_db_reader_mode
+    @main_db_api.select_db_reader_mode
     def _db_virtual_interface_get_by_instance(context, instance_uuid,
                                               use_slave=False):
-        return db.virtual_interface_get_by_instance(context, instance_uuid)
+        return main_db_api.virtual_interface_get_by_instance(
+            context, instance_uuid)
 
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid, use_slave=False):
@@ -149,7 +152,7 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
                                   objects.VirtualInterface, db_vifs)
 
 
-@db.api_context_manager.writer
+@api_db_api.context_manager.writer
 def fill_virtual_interface_list(context, max_count):
     """This fills missing VirtualInterface Objects in Nova DB"""
     count_hit = 0
@@ -287,14 +290,14 @@ def fill_virtual_interface_list(context, max_count):
 # we checked.
 # Please notice that because of virtual_interfaces_instance_uuid_fkey
 # we need to have FAKE_UUID instance object, even deleted one.
-@db.pick_context_manager_writer
+@main_db_api.pick_context_manager_writer
 def _set_or_delete_marker_for_migrate_instances(context, marker=None):
-    context.session.query(models.VirtualInterface).filter_by(
+    context.session.query(main_db_models.VirtualInterface).filter_by(
         instance_uuid=FAKE_UUID).delete()
 
     # Create FAKE_UUID instance objects, only for marker, if doesn't exist.
     # It is needed due constraint: virtual_interfaces_instance_uuid_fkey
-    instance = context.session.query(models.Instance).filter_by(
+    instance = context.session.query(main_db_models.Instance).filter_by(
         uuid=FAKE_UUID).first()
     if not instance:
         instance = objects.Instance(context)
@@ -316,9 +319,9 @@ def _set_or_delete_marker_for_migrate_instances(context, marker=None):
         db_mapping.create()
 
 
-@db.pick_context_manager_reader
+@main_db_api.pick_context_manager_reader
 def _get_marker_for_migrate_instances(context):
-    vif = (context.session.query(models.VirtualInterface).filter_by(
+    vif = (context.session.query(main_db_models.VirtualInterface).filter_by(
            instance_uuid=FAKE_UUID)).first()
     marker = vif['tag'] if vif else None
     return marker
