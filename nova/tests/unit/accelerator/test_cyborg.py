@@ -19,6 +19,7 @@ from keystoneauth1 import exceptions as ks_exc
 from requests.models import Response
 
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.accelerator import cyborg
 from nova import context
@@ -99,7 +100,7 @@ class CyborgTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.accelerator.cyborg._CyborgClient.'
                 '_get_device_profile_list')
-    def test_get_device_profile_groups(self, mock_get_dp_list):
+    def _test_get_device_profile_groups(self, mock_get_dp_list, owner):
         mock_get_dp_list.return_value = [{
             "groups": [{
                     "resources:FPGA": "1",
@@ -108,15 +109,24 @@ class CyborgTestCase(test.NoDBTestCase):
             "name": "mydp",
             "uuid": "307076c2-5aed-4f72-81e8-1b42f9aa2ec6"
         }]
-        rg = request_spec.RequestGroup(requester_id='device_profile_0')
+        request_id = cyborg.get_device_profile_group_requester_id(
+            dp_group_id=0, owner=owner)
+        rg = request_spec.RequestGroup(requester_id=request_id)
         rg.add_resource(rclass='FPGA', amount='1')
         rg.add_trait(trait_name='CUSTOM_FPGA_CARD', trait_type='required')
         expected_groups = [rg]
 
-        actual_groups = self.client.get_device_profile_groups('mydp')
+        actual_groups = self.client.get_device_profile_groups('mydp',
+                                                              owner=owner)
         self.assertEqual(len(expected_groups), len(actual_groups))
         self.assertEqual(expected_groups[0].__dict__,
                          actual_groups[0].__dict__)
+
+    def test_get_device_profile_groups_no_owner(self):
+        self._test_get_device_profile_groups(owner=None)
+
+    def test_get_device_profile_groups_port_owner(self):
+        self._test_get_device_profile_groups(owner=uuids.port)
 
     @mock.patch('nova.accelerator.cyborg._CyborgClient.'
                 '_get_device_profile_list')
@@ -125,7 +135,8 @@ class CyborgTestCase(test.NoDBTestCase):
         mock_get_dp_list.return_value = None
         self.assertRaises(exception.DeviceProfileError,
                           self.client.get_device_profile_groups,
-                          dp_name='mydp')
+                          dp_name='mydp',
+                          owner=None)
 
     @mock.patch('nova.accelerator.cyborg._CyborgClient.'
                 '_get_device_profile_list')
@@ -134,7 +145,8 @@ class CyborgTestCase(test.NoDBTestCase):
         mock_get_dp_list.return_value = [1, 2]
         self.assertRaises(exception.DeviceProfileError,
                           self.client.get_device_profile_groups,
-                          dp_name='mydp')
+                          dp_name='mydp',
+                          owner=None)
 
     def _get_arqs_and_request_groups(self):
         arq_common = {
@@ -217,6 +229,27 @@ class CyborgTestCase(test.NoDBTestCase):
             itertools.chain.from_iterable(rg_rp_map.values())))
         ret_rp_uuids = sorted([arq['device_rp_uuid'] for arq in ret_arqs])
         self.assertEqual(expected_rp_uuids, ret_rp_uuids)
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                '_create_arqs')
+    def test_create_arqs(self, mock_create_arqs):
+        # Happy path
+        arqs, rg_rp_map = self._get_arqs_and_request_groups()
+        dp_name = arqs[0]["device_profile_name"]
+
+        mock_create_arqs.return_value = arqs
+
+        ret_arqs = self.client.create_arqs(dp_name)
+
+        self.assertEqual(arqs, ret_arqs)
+
+    def test_get_arq_device_rp_uuid(self):
+        arqs, rg_rp_map = self._get_arqs_and_request_groups()
+
+        rp_uuid = self.client.get_arq_device_rp_uuid(
+            arqs[0], rg_rp_map, owner=None)
+
+        self.assertEqual(rg_rp_map['device_profile_0'][0], rp_uuid)
 
     @mock.patch('nova.accelerator.cyborg._CyborgClient.'
                 '_create_arqs')
@@ -397,6 +430,42 @@ class CyborgTestCase(test.NoDBTestCase):
                                          arq_uuid_str)
 
     @mock.patch('keystoneauth1.adapter.Adapter.get')
+    def test_get_arq_by_uuid(self, mock_cyborg_get):
+        _, bound_arqs = self._get_bound_arqs()
+        arq_uuids = [arq['uuid'] for arq in bound_arqs]
+        content = jsonutils.dumps({'arqs': bound_arqs[0]})
+        resp = fake_requests.FakeResponse(200, content)
+        mock_cyborg_get.return_value = resp
+
+        ret_arqs = self.client.get_arq_by_uuid(arq_uuids[0])
+
+        mock_cyborg_get.assert_called_once_with(
+            "%s/%s" % (self.client.ARQ_URL, arq_uuids[0]))
+        self.assertEqual(bound_arqs[0], ret_arqs['arqs'])
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient._call_cyborg')
+    def test_get_arq_by_uuid_exception(self, mock_call_cyborg):
+        mock_call_cyborg.return_value = (None, 'Some error')
+        _, bound_arqs = self._get_bound_arqs()
+        arq_uuids = [arq['uuid'] for arq in bound_arqs]
+
+        self.assertRaises(exception.AcceleratorRequestOpFailed,
+                self.client.get_arq_by_uuid,
+                arq_uuids[0])
+
+    @mock.patch('keystoneauth1.adapter.Adapter.get')
+    def test_get_arq_by_uuid_not_found(self, mock_cyborg_get):
+        _, bound_arqs = self._get_bound_arqs()
+        arq_uuids = [arq['uuid'] for arq in bound_arqs]
+        content = jsonutils.dumps({})
+        resp = fake_requests.FakeResponse(404, content)
+        mock_cyborg_get.return_value = resp
+
+        self.assertRaises(exception.AcceleratorRequestOpFailed,
+                self.client.get_arq_by_uuid,
+                arq_uuids[0])
+
+    @mock.patch('keystoneauth1.adapter.Adapter.get')
     def test_get_arq_uuids_for_instance(self, mock_cyborg_get):
         # Happy path, without only_resolved=True
         _, bound_arqs = self._get_bound_arqs()
@@ -417,3 +486,27 @@ class CyborgTestCase(test.NoDBTestCase):
         bound_arqs.sort()
         ret_arqs.sort()
         self.assertEqual(bound_arqs, ret_arqs)
+
+    def test_get_arq_pci_device_profile(self):
+        """Test extractin arq pci device info"""
+        arq = {'uuid': uuids.arq_uuid,
+                    'device_profile_name': "smart_nic",
+                    'device_profile_group_id': '5',
+                    'state': 'Bound',
+                    'device_rp_uuid': uuids.resource_provider_uuid,
+                    'hostname': "host_nodename",
+                    'instance_uuid': uuids.instance_uuid,
+                    'attach_handle_info': {
+                        'bus': '0c', 'device': '0',
+                        'domain': '0000', 'function': '0',
+                        'physical_network': 'physicalnet1'
+                    },
+                    'attach_handle_type': 'PCI'
+                }
+        expect_info = {
+                 'physical_network': "physicalnet1",
+                 'pci_slot': "0000:0c:0.0",
+                  'arq_uuid': arq['uuid']
+                }
+        bind_info = cyborg.get_arq_pci_device_profile(arq)
+        self.assertEqual(expect_info, bind_info)

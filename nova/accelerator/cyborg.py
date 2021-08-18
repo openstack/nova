@@ -59,21 +59,37 @@ def get_client(context):
     return _CyborgClient(context)
 
 
-def get_device_profile_group_requester_id(dp_group_id):
+def get_device_profile_group_requester_id(dp_group_id, owner):
     """Return the value to use in objects.RequestGroup.requester_id.
 
     The requester_id is used to match device profile groups from
-    Cyborg to the request groups in request spec.
+    Cyborg to the request groups in request spec. The request group id should
+    be unique for each dp in the flavor and in the port.
 
     :param dp_group_id: The index of the request group in the device profile.
+    :param owner: The port UUID if the dp requested by port.
     """
-    req_id = "device_profile_" + str(dp_group_id)
+    req_id = ("device_profile_" + str(dp_group_id) +
+        (str(owner) if owner else ''))
     return req_id
 
 
-def get_device_profile_request_groups(context, dp_name):
+def get_arq_pci_device_profile(arq):
+    """Extracting pci device info from ARQ
+    """
+    pci_info = arq['attach_handle_info']
+    return {
+            'physical_network': pci_info["physical_network"],
+            'pci_slot': "%s:%s:%s.%s" % (
+            pci_info["domain"], pci_info["bus"],
+            pci_info["device"], pci_info["function"]),
+            'arq_uuid': arq['uuid']
+    }
+
+
+def get_device_profile_request_groups(context, dp_name, owner=None):
     cyclient = get_client(context)
-    return cyclient.get_device_profile_groups(dp_name)
+    return cyclient.get_device_profile_groups(dp_name, owner)
 
 
 class _CyborgClient(object):
@@ -109,14 +125,16 @@ class _CyborgClient(object):
 
         return resp.json().get('device_profiles')
 
-    def get_device_profile_groups(self, dp_name):
+    def get_device_profile_groups(self, dp_name, owner):
         """Get list of profile group objects from the device profile.
 
            Cyborg API returns: {"device_profiles": [<device_profile>]}
            See module notes above for further details.
 
            :param dp_name: string: device profile name
-               Expected to be valid, not None or ''.
+                Expected to be valid, not None or ''.
+           :param owner: string: Port UUID that create the arq
+                Expected to be valid or None.
            :returns: [objects.RequestGroup]
            :raises: DeviceProfileError
         """
@@ -131,7 +149,7 @@ class _CyborgClient(object):
         dp_groups = dp_list[0]['groups']
         request_groups = []
         for dp_group_id, dp_group in enumerate(dp_groups):
-            req_id = get_device_profile_group_requester_id(dp_group_id)
+            req_id = get_device_profile_group_requester_id(dp_group_id, owner)
             rg = objects.RequestGroup(requester_id=req_id)
             for key, val in dp_group.items():
                 match = schedutils.ResourceRequest.XS_KEYPAT.match(key)
@@ -156,8 +174,17 @@ class _CyborgClient(object):
 
         return resp.json().get('arqs')
 
+    def create_arqs(self, dp_name):
+        """Create ARQs by dp_name."""
+        LOG.info('Creating ARQs for device profile %s', dp_name)
+        arqs = self._create_arqs(dp_name)
+        if not arqs:
+            msg = _('device profile name %s') % dp_name
+            raise exception.AcceleratorRequestOpFailed(op=_('create'), msg=msg)
+        return arqs
+
     def create_arqs_and_match_resource_providers(self, dp_name, rg_rp_map):
-        """Create ARQs, match them with request groups and thereby
+        """Create ARQs and match them with request groups and thereby
           determine their corresponding RPs.
 
         :param dp_name: Device profile name
@@ -167,18 +194,27 @@ class _CyborgClient(object):
             [arq], with each ARQ associated with an RP
         :raises: DeviceProfileError, AcceleratorRequestOpFailed
         """
-        LOG.info('Creating ARQs for device profile %s', dp_name)
-        arqs = self._create_arqs(dp_name)
-        if not arqs or len(arqs) == 0:
-            msg = _('device profile name %s') % dp_name
-            raise exception.AcceleratorRequestOpFailed(op=_('create'), msg=msg)
+        arqs = self.create_arqs(dp_name)
+
         for arq in arqs:
             dp_group_id = arq['device_profile_group_id']
             arq['device_rp_uuid'] = None
             requester_id = (
-                get_device_profile_group_requester_id(dp_group_id))
+                get_device_profile_group_requester_id(dp_group_id, owner=None))
             arq['device_rp_uuid'] = rg_rp_map[requester_id][0]
         return arqs
+
+    def get_arq_device_rp_uuid(self, arq, rg_rp_map, owner):
+        """Query the ARQ by uuid saved in request_net.
+        """
+        dp_group_id = arq['device_profile_group_id']
+        requester_id = (
+            get_device_profile_group_requester_id(dp_group_id, owner))
+
+        # ARQ and rp is 1:1 mapping
+        # One arq always associated with one placement request group and
+        # in placement one prefixed request group is always mapped to one RP.
+        return rg_rp_map[requester_id][0]
 
     def bind_arqs(self, bindings):
         """Initiate Cyborg bindings.
@@ -263,6 +299,39 @@ class _CyborgClient(object):
                     arq['state'] in ['Bound', 'BindFailed', 'Deleting']]
         return arqs
 
+    def get_arq_by_uuid(self, arq_uuid):
+        """Get ARQs by uuid.
+
+            The format of the returned data structure is as below:
+
+               {'uuid': $arq_uuid,
+                'device_profile_name': $dp_name,
+                'device_profile_group_id': $dp_request_group_index,
+                'state': 'Bound',
+                'device_rp_uuid': $resource_provider_uuid,
+                'hostname': $host_nodename,
+                'instance_uuid': $instance_uuid,
+                'attach_handle_info': {  # PCI bdf
+                    'bus': '0c', 'device': '0',
+                    'domain': '0000', 'function': '0'},
+                'attach_handle_type': 'PCI'
+                     # or 'TEST_PCI' for Cyborg fake driver
+               }
+
+           :raises: AcceleratorRequestOpFailed
+        """
+        resp, err_msg = self._call_cyborg(self._client.get,
+                "/".join([self.ARQ_URL, arq_uuid]))
+
+        if err_msg:
+            err_msg = err_msg + _(' ARQ: %s') % arq_uuid
+            raise exception.AcceleratorRequestOpFailed(
+                op=_('get'), msg=err_msg)
+
+        arq = resp.json()
+
+        return arq
+
     def delete_arqs_for_instance(self, instance_uuid):
         """Delete ARQs for instance, after unbinding if needed.
 
@@ -286,6 +355,10 @@ class _CyborgClient(object):
 
         This Cyborg API call is NOT idempotent, i.e., if called more than
         once, the 2nd and later calls will throw errors.
+
+        Cyborg deletes the ARQs without error, or returns 404 if there is ARQ
+        which already deleted. In either way, existed ARQs in arq_uuids wil be
+        deleted. Such 404 error can be ignored safely.
 
         If this fails, an error is logged but no exception is raised
         because this cleans up Cyborg resources, but should otherwise
