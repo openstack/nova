@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    Added support for ports with minimum guaranteed packet rate QoS policy
+    rules. Support is provided for all server operations including cold
+    migration, resize, interface attach/detach, etc.
+    This feature required adding support for the
+    ``port-resource-request-groups`` neutron API extension, as ports with such
+    a QoS policy will have multiple rules, each requesting resources.
+    For more details see the  `admin guide`_.
+  - |
+    The ``nova-manage placement heal_allocations`` `CLI`_ now allows
+    regenerating the placement allocation of servers with ports using minimum
+    guaranteed packet rate QoS policy rules.
+
+    .. _`admin guide`: https://docs.openstack.org/nova/latest/admin/ports-with-resource-requests.html
+    .. _`CLI`: https://docs.openstack.org/nova/latest/cli/nova-manage.html#placement-heal-allocations
