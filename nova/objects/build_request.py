@@ -18,8 +18,8 @@ from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 from oslo_versionedobjects import exception as ovoo_exc
 
+from nova.db.api import models as api_models
 from nova.db.main import api as db
-from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
 from nova.objects import base

@@ -6,7 +6,7 @@ import os
 import subprocess
 
 BASE = 'nova/db/main/legacy_migrations/versions'.split('/')
-API_BASE = 'nova/db/sqlalchemy/api_migrations/migrate_repo/versions'.split('/')
+API_BASE = 'nova/db/api/legacy_migrations/versions'.split('/')
 
 STUB = \
 """#    Licensed under the Apache License, Version 2.0 (the "License"); you may

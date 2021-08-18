@@ -14,8 +14,8 @@ from oslo_db import exception as db_exc
 from sqlalchemy import orm
 
 from nova import context
+from nova.db.api import models as api_models
 from nova.db.main import api as db_api
-from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova.i18n import _
 from nova.objects import base

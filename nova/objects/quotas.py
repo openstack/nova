@@ -16,9 +16,9 @@ import collections
 
 from oslo_db import exception as db_exc
 
+from nova.db.api import models as api_models
 from nova.db.main import api as db
 from nova.db.main import models as main_models
-from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova.objects import base
 from nova.objects import fields

@@ -45,9 +45,7 @@ def get_engine(database='main', context=None):
 def find_migrate_repo(database='main'):
     """Get the path for the migrate repository."""
     global _REPOSITORY
-    rel_path = os.path.join('main', 'legacy_migrations')
-    if database == 'api':
-        rel_path = os.path.join('sqlalchemy', 'api_migrations', 'migrate_repo')
+    rel_path = os.path.join(database, 'legacy_migrations')
     path = os.path.join(os.path.abspath(os.path.dirname(__file__)), rel_path)
     assert os.path.exists(path)
     if _REPOSITORY.get(database) is None:

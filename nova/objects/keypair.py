@@ -17,8 +17,8 @@ from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
 from oslo_utils import versionutils
 
+from nova.db.api import models as api_models
 from nova.db.main import api as db
-from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
 from nova.objects import base

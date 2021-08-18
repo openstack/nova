@@ -11,8 +11,8 @@
 #    under the License.
 
 from nova import context
+from nova.db.api import models as api_models
 from nova.db.main import api as db_api
-from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
 from nova import test

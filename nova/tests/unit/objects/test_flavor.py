@@ -19,8 +19,8 @@ from oslo_db import exception as db_exc
 from oslo_utils import uuidutils
 
 from nova import context as nova_context
+from nova.db.api import models as api_models
 from nova.db.main import api as db_api
-from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
 from nova.objects import fields
@@ -189,7 +189,7 @@ class _TestFlavor(object):
         flavor = flavor_obj.Flavor(context=self.context, id=123)
         self.assertRaises(exception.ObjectActionError, flavor.create)
 
-    @mock.patch('nova.db.sqlalchemy.api_models.Flavors')
+    @mock.patch('nova.db.api.models.Flavors')
     def test_create_duplicate(self, mock_flavors):
         mock_flavors.return_value.save.side_effect = db_exc.DBDuplicateEntry
         fields = dict(fake_flavor)

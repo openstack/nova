@@ -37,9 +37,9 @@ from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
 import testtools
 
+from nova.db.api import legacy_migrations
+from nova.db.api import models
 from nova.db import migration
-from nova.db.sqlalchemy.api_migrations import migrate_repo
-from nova.db.sqlalchemy import api_models
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 
@@ -63,7 +63,7 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
         return self.migrate_engine
 
     def get_metadata(self):
-        return api_models.API_BASE.metadata
+        return models.API_BASE.metadata
 
     def include_object(self, object_, name, type_, reflected, compare_to):
         if type_ == 'table':
@@ -154,7 +154,7 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     @property
     def REPOSITORY(self):
         return repository.Repository(
-            os.path.abspath(os.path.dirname(migrate_repo.__file__)))
+            os.path.abspath(os.path.dirname(legacy_migrations.__file__)))
 
     @property
     def migration_api(self):

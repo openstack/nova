@@ -15,7 +15,7 @@ from migrate import UniqueConstraint
 import sqlalchemy as sa
 from sqlalchemy import dialects
 
-from nova.db.sqlalchemy.api_models import MediumText
+from nova.db.api.models import MediumText
 from nova.objects import keypair
 
 
