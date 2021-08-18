@@ -21,7 +21,7 @@ from oslo_utils import timeutils
 from nova.compute import instance_actions
 from nova import conf
 from nova import context as nova_context
-from nova.db import api as db_api
+from nova.db.main import api as db_api
 from nova import exception
 from nova import objects
 from nova.policies import base as base_policies

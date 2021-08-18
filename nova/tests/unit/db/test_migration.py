@@ -17,8 +17,8 @@ from migrate.versioning import api as versioning_api
 import mock
 import sqlalchemy
 
+from nova.db.main import api as db_api
 from nova.db import migration
-from nova.db.sqlalchemy import api as db_api
 from nova import test
 
 

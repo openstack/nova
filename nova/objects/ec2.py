@@ -17,7 +17,7 @@ import functools
 from oslo_utils import uuidutils
 
 from nova import cache_utils
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova.objects import base
 from nova.objects import fields

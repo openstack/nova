@@ -39,8 +39,7 @@ from nova.conductor.tasks import live_migrate
 from nova.conductor.tasks import migrate
 from nova import conf
 from nova import context
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
+from nova.db.main import api as db
 from nova.db.sqlalchemy import api_models
 from nova import exception as exc
 from nova.image import glance as image_api
@@ -2741,7 +2740,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.assertEqual(0, len(build_requests))
 
-        @db_api.api_context_manager.reader
+        @db.api_context_manager.reader
         def request_spec_get_all(context):
             return context.session.query(api_models.RequestSpec).all()
 

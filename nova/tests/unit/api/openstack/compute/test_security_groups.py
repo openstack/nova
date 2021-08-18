@@ -24,7 +24,7 @@ import webob
 
 from nova.api.openstack.compute import security_groups as secgroups_v21
 from nova import context as context_maker
-import nova.db.api
+import nova.db.main.api
 from nova import exception
 from nova.network import model
 from nova.network import neutron as neutron_api
@@ -636,7 +636,7 @@ class TestSecurityGroupsV21(test.TestCase):
             _context, instance_obj.Instance(), db_inst,
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         neutron = neutron_api.API()
-        with mock.patch.object(nova.db.api, 'instance_get_by_uuid',
+        with mock.patch.object(nova.db.main.api, 'instance_get_by_uuid',
                                return_value=db_inst):
             neutron.allocate_for_instance(_context, instance, None,
                                           security_groups=[sg['id']])

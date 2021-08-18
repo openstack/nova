@@ -23,7 +23,7 @@ import mock
 from nova.compute import flavors
 import nova.conf
 import nova.context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova.image import glance
 from nova.network import model as network_model

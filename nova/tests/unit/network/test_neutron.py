@@ -33,7 +33,7 @@ from oslo_utils import uuidutils
 import requests_mock
 
 from nova import context
-from nova.db.sqlalchemy import api as db_api
+from nova.db.main import api as db_api
 from nova import exception
 from nova.network import constants
 from nova.network import model

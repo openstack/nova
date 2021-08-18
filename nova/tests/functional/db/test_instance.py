@@ -15,7 +15,7 @@ from oslo_utils import uuidutils
 
 from nova.compute import vm_states
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import objects
 from nova import test
 

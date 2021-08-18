@@ -124,5 +124,7 @@ def fake_action_event_finish(*args):
 
 
 def stub_out_action_events(test):
-    test.stub_out('nova.db.api.action_event_start', fake_action_event_start)
-    test.stub_out('nova.db.api.action_event_finish', fake_action_event_finish)
+    test.stub_out(
+        'nova.db.main.api.action_event_start', fake_action_event_start)
+    test.stub_out(
+        'nova.db.main.api.action_event_finish', fake_action_event_finish)

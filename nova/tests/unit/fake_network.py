@@ -17,7 +17,7 @@ from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import manager as compute_manager
-from nova.db import api as db
+from nova.db.main import api as db
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import base as obj_base
@@ -38,7 +38,8 @@ def fake_get_instance_nw_info(test, num_networks=1):
             }
         return fake_info_cache
 
-    test.stub_out('nova.db.api.instance_info_cache_update', update_cache_fake)
+    test.stub_out(
+        'nova.db.main.api.instance_info_cache_update', update_cache_fake)
 
     # TODO(stephenfin): This doesn't match the kind of object we would receive
     # from '_build_vif_model' and callers of same. We should fix that.

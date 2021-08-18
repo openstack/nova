@@ -15,7 +15,7 @@ import copy
 from nova.compute import multi_cell_list
 import nova.conf
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova import objects
 from nova.objects import instance as instance_obj

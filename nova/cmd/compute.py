@@ -25,12 +25,12 @@ from oslo_privsep import priv_context
 from oslo_reports import guru_meditation_report as gmr
 from oslo_reports import opts as gmr_opts
 
-from nova.cmd import common as cmd_common
 from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor import rpcapi as conductor_rpcapi
 import nova.conf
 from nova.conf import remote_debug
 from nova import config
+import nova.db.main.api
 from nova import objects
 from nova.objects import base as objects_base
 from nova import service
@@ -52,7 +52,8 @@ def main():
 
     gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
 
-    cmd_common.block_db_access('nova-compute')
+    # disable database access for this service
+    nova.db.main.api.DISABLE_DB_ACCESS = True
     objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
     objects.Service.enable_min_version_cache()
     server = service.Service.create(binary='nova-compute',

@@ -19,9 +19,8 @@ from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
 from nova import block_device
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
-from nova.db.sqlalchemy import models as db_models
+from nova.db.main import api as db
+from nova.db.main import models as db_models
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -109,7 +108,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
 
     @classmethod
     def populate_uuids(cls, context, count):
-        @db_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def get_bdms_no_uuid(context):
             return context.session.query(db_models.BlockDeviceMapping).\
                     filter_by(uuid=None).limit(count).all()
@@ -145,7 +144,7 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         #    normally a read operation. Forcing everything (transitively)
         #    which reads a BDM to be in a write transaction for a narrow
         #    temporary edge case is undesirable.
-        tctxt = db_api.get_context_manager(context).writer.independent
+        tctxt = db.get_context_manager(context).writer.independent
         with tctxt.using(context):
             query = context.session.query(db_models.BlockDeviceMapping).\
                         filter_by(id=bdm_id)

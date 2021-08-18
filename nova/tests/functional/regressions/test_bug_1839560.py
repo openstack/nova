@@ -13,7 +13,7 @@
 from oslo_log import log as logging
 
 from nova import context
-from nova.db import api as db_api
+from nova.db.main import api as db_api
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures

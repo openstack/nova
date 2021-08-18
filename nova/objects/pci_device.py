@@ -22,9 +22,8 @@ from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
-from nova.db.sqlalchemy import models as db_models
+from nova.db.main import api as db
+from nova.db.main import models as db_models
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -208,7 +207,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
 
     @classmethod
     def populate_dev_uuids(cls, context, count):
-        @db_api.pick_context_manager_reader
+        @db.pick_context_manager_reader
         def get_devs_no_uuid(context):
             return context.session.query(db_models.PciDevice).\
                     filter_by(uuid=None).limit(count).all()
@@ -264,7 +263,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         #    normally a read operation. Forcing everything (transitively) which
         #    reads a PCI device to be in a write transaction for a narrow
         #    temporary edge case is undesirable.
-        tctxt = db_api.get_context_manager(context).writer.independent
+        tctxt = db.get_context_manager(context).writer.independent
         with tctxt.using(context):
             query = context.session.query(db_models.PciDevice).\
                         filter_by(id=dev_id)

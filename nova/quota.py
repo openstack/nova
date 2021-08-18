@@ -24,8 +24,7 @@ from sqlalchemy import sql
 
 import nova.conf
 from nova import context as nova_context
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
+from nova.db.main import api as db
 from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
@@ -1046,7 +1045,7 @@ class QuotaEngine(object):
         return 0
 
 
-@db_api.api_context_manager.reader
+@db.api_context_manager.reader
 def _user_id_queued_for_delete_populated(context, project_id=None):
     """Determine whether user_id and queued_for_delete are set.
 

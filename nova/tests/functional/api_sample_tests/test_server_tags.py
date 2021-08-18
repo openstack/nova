@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.db.sqlalchemy import models
+from nova.db.main import models
 from nova.tests.functional.api_sample_tests import test_servers
 
 TAG1 = 'tag1'

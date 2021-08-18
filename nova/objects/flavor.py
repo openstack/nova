@@ -21,8 +21,7 @@ from sqlalchemy import sql
 from sqlalchemy.sql import expression
 
 import nova.conf
-from nova.db.sqlalchemy import api as db_api
-from nova.db.sqlalchemy.api import require_context
+from nova.db.main import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova.notifications.objects import base as notification
@@ -282,7 +281,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         return query
 
     @staticmethod
-    @require_context
+    @db_api.require_context
     def _flavor_get_from_db(context, id):
         """Returns a dict describing specific flavor."""
         result = Flavor._flavor_get_query_from_db(context).\
@@ -293,7 +292,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         return _dict_with_extra_specs(result)
 
     @staticmethod
-    @require_context
+    @db_api.require_context
     def _flavor_get_by_name_from_db(context, name):
         """Returns a dict describing specific flavor."""
         result = Flavor._flavor_get_query_from_db(context).\
@@ -304,7 +303,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         return _dict_with_extra_specs(result)
 
     @staticmethod
-    @require_context
+    @db_api.require_context
     def _flavor_get_by_flavor_id_from_db(context, flavor_id):
         """Returns a dict describing specific flavor_id."""
         result = Flavor._flavor_get_query_from_db(context).\

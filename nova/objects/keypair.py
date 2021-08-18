@@ -17,8 +17,7 @@ from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
 from oslo_utils import versionutils
 
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
+from nova.db.main import api as db
 from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
@@ -30,7 +29,7 @@ KEYPAIR_TYPE_X509 = 'x509'
 LOG = logging.getLogger(__name__)
 
 
-@db_api.api_context_manager.reader
+@db.api_context_manager.reader
 def _get_from_db(context, user_id, name=None, limit=None, marker=None):
     query = context.session.query(api_models.KeyPair).\
             filter(api_models.KeyPair.user_id == user_id)
@@ -55,14 +54,14 @@ def _get_from_db(context, user_id, name=None, limit=None, marker=None):
     return query.all()
 
 
-@db_api.api_context_manager.reader
+@db.api_context_manager.reader
 def _get_count_from_db(context, user_id):
     return context.session.query(api_models.KeyPair).\
         filter(api_models.KeyPair.user_id == user_id).\
         count()
 
 
-@db_api.api_context_manager.writer
+@db.api_context_manager.writer
 def _create_in_db(context, values):
     kp = api_models.KeyPair()
     kp.update(values)
@@ -73,7 +72,7 @@ def _create_in_db(context, values):
     return kp
 
 
-@db_api.api_context_manager.writer
+@db.api_context_manager.writer
 def _destroy_in_db(context, user_id, name):
     result = context.session.query(api_models.KeyPair).\
              filter_by(user_id=user_id).\

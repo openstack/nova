@@ -86,7 +86,7 @@ class TestParseArgs(test.NoDBTestCase):
 
     def setUp(self):
         super(TestParseArgs, self).setUp()
-        m = mock.patch('nova.db.sqlalchemy.api.configure')
+        m = mock.patch('nova.db.main.api.configure')
         self.nova_db_config_mock = m.start()
         self.addCleanup(self.nova_db_config_mock.stop)
 

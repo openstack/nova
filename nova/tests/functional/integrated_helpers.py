@@ -31,7 +31,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 import nova.image.glance
 from nova import objects
 from nova.objects import base as objects_base

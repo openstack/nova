@@ -24,7 +24,7 @@ from nova import availability_zones as az
 from nova.compute import api as compute_api
 import nova.conf
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import objects
 from nova import test
 

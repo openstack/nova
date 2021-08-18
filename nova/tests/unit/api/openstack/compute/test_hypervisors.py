@@ -250,7 +250,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
         host_api.compute_node_get = mock.MagicMock(
             side_effect=fake_compute_node_get)
 
-        self.stub_out('nova.db.api.compute_node_statistics',
+        self.stub_out('nova.db.main.api.compute_node_statistics',
                       fake_compute_node_statistics)
 
     def test_view_hypervisor_nodetail_noservers(self):

@@ -56,7 +56,7 @@ import testtools
 from nova.api.openstack import wsgi_app
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
-from nova.db.sqlalchemy import api as sqlalchemy_api
+from nova.db.main import api as db_api
 from nova import exception
 from nova import objects
 from nova.objects import base as objects_base
@@ -382,7 +382,7 @@ class TestCase(base.BaseTestCase):
 
     def enforce_fk_constraints(self, engine=None):
         if engine is None:
-            engine = sqlalchemy_api.get_engine()
+            engine = db_api.get_engine()
         dialect = engine.url.get_dialect()
         if dialect == sqlite.dialect:
             engine.connect().execute("PRAGMA foreign_keys = ON")

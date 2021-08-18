@@ -22,7 +22,7 @@ from migrate.versioning.repository import Repository
 from oslo_log import log as logging
 import sqlalchemy
 
-from nova.db.sqlalchemy import api as db_session
+from nova.db.main import api as db_session
 from nova import exception
 from nova.i18n import _
 

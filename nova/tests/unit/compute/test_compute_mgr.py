@@ -46,7 +46,7 @@ from nova.compute import vm_states
 from nova.conductor import api as conductor_api
 import nova.conf
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova.network import model as network_model
 from nova.network import neutron as neutronv2_api
@@ -2819,8 +2819,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.compute.utils.notify_about_volume_swap')
     @mock.patch(
-        'nova.db.api.block_device_mapping_get_by_instance_and_volume_id')
-    @mock.patch('nova.db.api.block_device_mapping_update')
+        'nova.db.main.api.block_device_mapping_get_by_instance_and_volume_id')
+    @mock.patch('nova.db.main.api.block_device_mapping_update')
     @mock.patch('nova.volume.cinder.API.get')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_volume_connector')
     @mock.patch('nova.compute.manager.ComputeManager._swap_volume')

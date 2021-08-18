@@ -25,7 +25,7 @@ fake_instance_extras = {
 
 class _TestTrustedCertsObject(object):
 
-    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid')
+    @mock.patch('nova.db.main.api.instance_extra_get_by_instance_uuid')
     def test_get_by_instance_uuid(self, mock_get):
         mock_get.return_value = fake_instance_extras
         certs = trusted_certs.TrustedCerts.get_by_instance_uuid(

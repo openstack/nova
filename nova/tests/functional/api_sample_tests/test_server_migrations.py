@@ -20,7 +20,7 @@ import mock
 
 from nova.conductor import manager as conductor_manager
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import objects
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit import fake_instance

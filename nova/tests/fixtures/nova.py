@@ -43,8 +43,8 @@ from nova.api import wsgi
 from nova.compute import multi_cell_list
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
+from nova.db.main import api as session
 from nova.db import migration
-from nova.db.sqlalchemy import api as session
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -554,8 +554,9 @@ class CellDatabases(fixtures.Fixture):
         # a new database created with the schema we need and the
         # context manager for it stashed.
         with fixtures.MonkeyPatch(
-                'nova.db.sqlalchemy.api.get_context_manager',
-                get_context_manager):
+            'nova.db.main.api.get_context_manager',
+            get_context_manager,
+        ):
             engine = ctxt_mgr.writer.get_engine()
             engine.dispose()
             self._cache_schema(connection_str)
@@ -571,10 +572,10 @@ class CellDatabases(fixtures.Fixture):
         # duration of the test (unlike the temporary ones above) and
         # provide the actual "runtime" switching of connections for us.
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.db.sqlalchemy.api.create_context_manager',
+            'nova.db.main.api.create_context_manager',
             self._wrap_create_context_manager))
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.db.sqlalchemy.api.get_context_manager',
+            'nova.db.main.api.get_context_manager',
             self._wrap_get_context_manager))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.context.target_cell',

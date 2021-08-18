@@ -191,9 +191,9 @@ class ServicesTestV21(test.TestCase):
             mock.Mock(side_effect=fake_service_get_all(fake_services_list)))
 
         self.useFixture(utils_fixture.TimeFixture(fake_utcnow()))
-        self.stub_out('nova.db.api.service_get_by_host_and_binary',
+        self.stub_out('nova.db.main.api.service_get_by_host_and_binary',
                       fake_db_service_get_by_host_binary(fake_services_list))
-        self.stub_out('nova.db.api.service_update',
+        self.stub_out('nova.db.main.api.service_update',
                       fake_db_service_update(fake_services_list))
 
         # NOTE(gibi): enable / disable a compute service tries to call
@@ -595,7 +595,7 @@ class ServicesTestV21(test.TestCase):
             self.assertIsNone(values['disabled_reason'])
             return dict(test_service.fake_service, id=service_id, **values)
 
-        self.stub_out('nova.db.api.service_update', _service_update)
+        self.stub_out('nova.db.main.api.service_update', _service_update)
 
         body = {'host': 'host1', 'binary': 'nova-compute'}
         res_dict = self.controller.update(self.req, "enable", body=body)

@@ -10,8 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.db.main import models
 from nova.db.sqlalchemy import api_models
-from nova.db.sqlalchemy import models
 from nova import test
 
 

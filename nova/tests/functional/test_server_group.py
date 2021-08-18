@@ -18,8 +18,7 @@ from oslo_config import cfg
 
 from nova.compute import instance_actions
 from nova import context
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
+from nova.db.main import api as db
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
@@ -261,9 +260,9 @@ class ServerGroupTestV21(ServerGroupTestBase):
         ctxt = context.get_admin_context()
         servers = db.instance_get_all(ctxt)
         self.assertEqual(1, len(servers))
-        ctxt_mgr = db_api.get_context_manager(ctxt)
+        ctxt_mgr = db.get_context_manager(ctxt)
         with ctxt_mgr.reader.using(ctxt):
-            bdms = db_api._block_device_mapping_get_query(ctxt).all()
+            bdms = db._block_device_mapping_get_query(ctxt).all()
         self.assertEqual(1, len(bdms))
         self.assertEqual(servers[0]['uuid'], bdms[0]['instance_uuid'])
 

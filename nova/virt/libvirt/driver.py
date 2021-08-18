@@ -8993,7 +8993,7 @@ class LibvirtDriver(driver.ComputeDriver):
         back to the source host to check the results.
 
         :param context: security context
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.db.main.models.Instance
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
         :returns: a LibvirtLiveMigrateData object
@@ -9168,7 +9168,7 @@ class LibvirtDriver(driver.ComputeDriver):
         results from check_can_live_migrate_destination.
 
         :param context: security context
-        :param instance: nova.db.sqlalchemy.models.Instance
+        :param instance: nova.db.main.models.Instance
         :param dest_check_data: result of check_can_live_migrate_destination
         :param block_device_info: result of _get_instance_block_device_info
         :returns: a LibvirtLiveMigrateData object
@@ -9423,7 +9423,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param context: security context
         :param instance:
-            nova.db.sqlalchemy.models.Instance object
+            nova.db.main.models.Instance object
             instance object that is migrated.
         :param dest: destination host
         :param post_method:
@@ -9500,7 +9500,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param context: security context
         :param instance:
-            nova.db.sqlalchemy.models.Instance object
+            nova.db.main.models.Instance object
             instance object that is migrated.
         :param dest: destination host
         :param block_migration: if true, do block migration.
@@ -9924,7 +9924,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param context: security context
         :param instance:
-            nova.db.sqlalchemy.models.Instance object
+            nova.db.main.models.Instance object
             instance object that is migrated.
         :param dest: destination host
         :param post_method:
@@ -10319,7 +10319,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                    disk_info, fallback_from_host=None):
         """:param context: security context
            :param instance:
-               nova.db.sqlalchemy.models.Instance object
+               nova.db.main.models.Instance object
                instance object that is migrated.
            :param instance_dir:
                instance path to use, calculated externally to handle block
@@ -10430,7 +10430,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :param context: security context
         :param instance:
-            nova.db.sqlalchemy.models.Instance object
+            nova.db.main.models.Instance object
             instance object that is migrated.
         :param network_info: instance network information
         :param block_migration: if true, post operation of block_migration.

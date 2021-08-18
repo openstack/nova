@@ -27,7 +27,7 @@ set -o xtrace
 set -e
 
 source .tox/py36/bin/activate
-pushd nova/db/sqlalchemy/migrate_repo
+pushd nova/db/main/legacy_migrations
 
 INIT_VERSION=$(ls -1 versions/ | head -1 | awk -F_ '{print $1}')
 INIT_VERSION=$(($INIT_VERSION-1))

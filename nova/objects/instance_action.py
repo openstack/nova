@@ -16,7 +16,7 @@ from oslo_utils import timeutils
 from oslo_utils import versionutils
 
 from nova.compute import utils as compute_utils
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova import objects
 from nova.objects import base

@@ -24,22 +24,11 @@ import fixtures
 import mock
 
 from nova.cmd import common as cmd_common
-from nova.db import api
 from nova import exception
 from nova import test
 
 
 class TestCmdCommon(test.NoDBTestCase):
-
-    @mock.patch.object(cmd_common, 'LOG')
-    @mock.patch.object(api, 'IMPL')
-    def test_block_db_access(self, mock_db_IMPL, mock_LOG):
-        cmd_common.block_db_access('unit-tests')
-
-        self.assertEqual(api.IMPL, api.IMPL.foo)
-        self.assertRaises(exception.DBNotAllowed, api.IMPL)
-        self.assertEqual('unit-tests',
-                         mock_LOG.error.call_args[0][1]['service_name'])
 
     def test_args_decorator(self):
         @cmd_common.args(bar='<bar>')

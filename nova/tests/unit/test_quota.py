@@ -21,7 +21,7 @@ from oslo_db.sqlalchemy import enginefacade
 from nova.compute import api as compute
 import nova.conf
 from nova import context
-from nova.db.sqlalchemy import models as sqa_models
+from nova.db.main import models
 from nova import exception
 from nova import objects
 from nova import quota
@@ -596,9 +596,9 @@ class DbQuotaDriverTestCase(test.TestCase):
                 'injected_file_path_bytes': 127,
                 }
 
-        self.stub_out('nova.db.api.quota_get_all_by_project_and_user',
+        self.stub_out('nova.db.main.api.quota_get_all_by_project_and_user',
                        fake_qgabpau)
-        self.stub_out('nova.db.api.quota_get_all_by_project', fake_qgabp)
+        self.stub_out('nova.db.main.api.quota_get_all_by_project', fake_qgabp)
 
         self._stub_quota_class_get_all_by_name()
 
@@ -751,7 +751,7 @@ class DbQuotaDriverTestCase(test.TestCase):
             return dict(
                 test_resource=dict(in_use=20),
                 )
-        self.stub_out('nova.db.api.quota_get', fake_quota_get)
+        self.stub_out('nova.db.main.api.quota_get', fake_quota_get)
 
     def _stub_get_by_project(self):
         def fake_qgabp(context, project_id):
@@ -766,13 +766,13 @@ class DbQuotaDriverTestCase(test.TestCase):
         def fake_quota_get_all(context, project_id):
             self.calls.append('quota_get_all')
             self.assertEqual(project_id, 'test_project')
-            return [sqa_models.ProjectUserQuota(resource='instances',
-                                                hard_limit=5),
-                    sqa_models.ProjectUserQuota(resource='cores',
-                                                hard_limit=2)]
+            return [
+                models.ProjectUserQuota(resource='instances', hard_limit=5),
+                models.ProjectUserQuota(resource='cores', hard_limit=2),
+            ]
 
-        self.stub_out('nova.db.api.quota_get_all_by_project', fake_qgabp)
-        self.stub_out('nova.db.api.quota_get_all', fake_quota_get_all)
+        self.stub_out('nova.db.main.api.quota_get_all_by_project', fake_qgabp)
+        self.stub_out('nova.db.main.api.quota_get_all', fake_quota_get_all)
 
         self._stub_quota_class_get_all_by_name()
         self._stub_quota_class_get_default()
@@ -1410,13 +1410,13 @@ class DbQuotaDriverTestCase(test.TestCase):
             self.calls.append('quota_get_all_by_project_and_user')
             return {'instances': 2, 'cores': -1}
 
-        self.stub_out('nova.db.api.quota_get_all_by_project',
+        self.stub_out('nova.db.main.api.quota_get_all_by_project',
                        fake_quota_get_all_by_project)
         self.stub_out('nova.quota.DbQuotaDriver.get_project_quotas',
                        fake_get_project_quotas)
         self.stub_out('nova.quota.DbQuotaDriver._process_quotas',
                        fake_process_quotas_in_get_user_quotas)
-        self.stub_out('nova.db.api.quota_get_all_by_project_and_user',
+        self.stub_out('nova.db.main.api.quota_get_all_by_project_and_user',
                        fake_qgabpau)
 
     def test_get_settable_quotas_with_user(self):

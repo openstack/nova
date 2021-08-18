@@ -150,7 +150,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         super(PciDevTrackerTestCase, self).setUp()
         self.fake_context = context.get_admin_context()
         self.fake_devs = fake_db_devs[:]
-        self.stub_out('nova.db.api.pci_device_get_all_by_node',
+        self.stub_out('nova.db.main.api.pci_device_get_all_by_node',
             self._fake_get_pci_devices)
         # The fake_pci_whitelist must be called before creating the fake
         # devices
@@ -472,7 +472,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
                        return_value=False)
     def test_save(self, migrate_mock):
         self.stub_out(
-                'nova.db.api.pci_device_update',
+                'nova.db.main.api.pci_device_update',
                 self._fake_pci_device_update)
         fake_pci_v3 = dict(fake_pci, address='0000:00:00.2', vendor_id='v3')
         fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_2),
@@ -484,10 +484,10 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
 
     def test_save_removed(self):
         self.stub_out(
-                'nova.db.api.pci_device_update',
+                'nova.db.main.api.pci_device_update',
                 self._fake_pci_device_update)
         self.stub_out(
-                'nova.db.api.pci_device_destroy',
+                'nova.db.main.api.pci_device_destroy',
                 self._fake_pci_device_destroy)
         self.destroy_called = 0
         self.assertEqual(len(self.tracker.pci_devs), 3)

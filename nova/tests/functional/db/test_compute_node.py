@@ -15,7 +15,7 @@ from oslo_utils.fixture import uuidsentinel
 
 import nova.conf
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import objects
 from nova.objects import compute_node
 from nova.objects import fields as obj_fields

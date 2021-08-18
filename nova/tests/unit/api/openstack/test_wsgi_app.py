@@ -46,7 +46,7 @@ document_root = /tmp
         self.useFixture(config_fixture.Config())
 
     @mock.patch('sys.argv', return_value=mock.sentinel.argv)
-    @mock.patch('nova.db.sqlalchemy.api.configure')
+    @mock.patch('nova.db.main.api.configure')
     @mock.patch('nova.api.openstack.wsgi_app._setup_service')
     @mock.patch('nova.api.openstack.wsgi_app._get_config_files')
     def test_init_application_called_twice(self, mock_get_files, mock_setup,

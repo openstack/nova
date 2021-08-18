@@ -16,9 +16,8 @@ from oslo_log import log as logging
 from oslo_utils import versionutils
 
 from nova import context as nova_context
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
-from nova.db.sqlalchemy import models
+from nova.db.main import api as db
+from nova.db.main import models
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -150,7 +149,7 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
                                   objects.VirtualInterface, db_vifs)
 
 
-@db_api.api_context_manager.writer
+@db.api_context_manager.writer
 def fill_virtual_interface_list(context, max_count):
     """This fills missing VirtualInterface Objects in Nova DB"""
     count_hit = 0
@@ -288,7 +287,7 @@ def fill_virtual_interface_list(context, max_count):
 # we checked.
 # Please notice that because of virtual_interfaces_instance_uuid_fkey
 # we need to have FAKE_UUID instance object, even deleted one.
-@db_api.pick_context_manager_writer
+@db.pick_context_manager_writer
 def _set_or_delete_marker_for_migrate_instances(context, marker=None):
     context.session.query(models.VirtualInterface).filter_by(
         instance_uuid=FAKE_UUID).delete()
@@ -317,7 +316,7 @@ def _set_or_delete_marker_for_migrate_instances(context, marker=None):
         db_mapping.create()
 
 
-@db_api.pick_context_manager_reader
+@db.pick_context_manager_reader
 def _get_marker_for_migrate_instances(context):
     vif = (context.session.query(models.VirtualInterface).filter_by(
            instance_uuid=FAKE_UUID)).first()

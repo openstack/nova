@@ -20,7 +20,7 @@ from oslo_versionedobjects import exception as ovo_exc
 
 from nova.compute import manager as compute_manager
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova import objects
 from nova.objects import aggregate
@@ -206,7 +206,7 @@ class _TestServiceObject(object):
         self.compare_obj(services[0], fake_service, allow_missing=OPTIONAL)
         mock_service_get.assert_called_once_with(self.context, 'fake-topic')
 
-    @mock.patch('nova.db.api.service_get_all_by_binary')
+    @mock.patch('nova.db.main.api.service_get_all_by_binary')
     def test_get_by_binary(self, mock_get):
         mock_get.return_value = [fake_service]
         services = service.ServiceList.get_by_binary(self.context,
@@ -216,7 +216,7 @@ class _TestServiceObject(object):
                                          'fake-binary',
                                          include_disabled=False)
 
-    @mock.patch('nova.db.api.service_get_all_by_binary')
+    @mock.patch('nova.db.main.api.service_get_all_by_binary')
     def test_get_by_binary_disabled(self, mock_get):
         mock_get.return_value = [_fake_service(disabled=True)]
         services = service.ServiceList.get_by_binary(self.context,
@@ -227,7 +227,7 @@ class _TestServiceObject(object):
                                          'fake-binary',
                                          include_disabled=True)
 
-    @mock.patch('nova.db.api.service_get_all_by_binary')
+    @mock.patch('nova.db.main.api.service_get_all_by_binary')
     def test_get_by_binary_both(self, mock_get):
         mock_get.return_value = [_fake_service(),
                                  _fake_service(disabled=True)]
@@ -319,7 +319,7 @@ class _TestServiceObject(object):
                                               version_manifest=versions),
             fake_service_dict['compute_node'])
 
-    @mock.patch('nova.db.api.service_get_minimum_version')
+    @mock.patch('nova.db.main.api.service_get_minimum_version')
     def test_get_minimum_version_none(self, mock_get):
         mock_get.return_value = None
         self.assertEqual(0,
@@ -327,7 +327,7 @@ class _TestServiceObject(object):
                                                              'nova-compute'))
         mock_get.assert_called_once_with(self.context, ['nova-compute'])
 
-    @mock.patch('nova.db.api.service_get_minimum_version')
+    @mock.patch('nova.db.main.api.service_get_minimum_version')
     def test_get_minimum_version(self, mock_get):
         mock_get.return_value = {'nova-compute': 123}
         self.assertEqual(123,
@@ -335,7 +335,7 @@ class _TestServiceObject(object):
                                                              'nova-compute'))
         mock_get.assert_called_once_with(self.context, ['nova-compute'])
 
-    @mock.patch('nova.db.api.service_get_minimum_version')
+    @mock.patch('nova.db.main.api.service_get_minimum_version')
     @mock.patch('nova.objects.service.LOG')
     def test_get_minimum_version_checks_binary(self, mock_log, mock_get):
         mock_get.return_value = None
@@ -349,7 +349,7 @@ class _TestServiceObject(object):
                           'compute')
         self.assertTrue(mock_log.warning.called)
 
-    @mock.patch('nova.db.api.service_get_minimum_version')
+    @mock.patch('nova.db.main.api.service_get_minimum_version')
     def test_get_minimum_version_with_caching(self, mock_get):
         objects.Service.enable_min_version_cache()
         mock_get.return_value = {'nova-compute': 123}
@@ -365,7 +365,7 @@ class _TestServiceObject(object):
         objects.Service._SERVICE_VERSION_CACHING = False
         objects.Service.clear_min_version_cache()
 
-    @mock.patch('nova.db.api.service_get_minimum_version')
+    @mock.patch('nova.db.main.api.service_get_minimum_version')
     def test_get_min_version_multiple_with_old(self, mock_gmv):
         mock_gmv.return_value = {'nova-api': None,
                                  'nova-scheduler': 2,
@@ -377,7 +377,7 @@ class _TestServiceObject(object):
                                                             binaries)
         self.assertEqual(0, minimum)
 
-    @mock.patch('nova.db.api.service_get_minimum_version')
+    @mock.patch('nova.db.main.api.service_get_minimum_version')
     def test_get_min_version_multiple(self, mock_gmv):
         mock_gmv.return_value = {'nova-api': 1,
                                  'nova-scheduler': 2,
@@ -390,7 +390,7 @@ class _TestServiceObject(object):
         self.assertEqual(1, minimum)
 
     @mock.patch('nova.objects.Service._send_notification')
-    @mock.patch('nova.db.api.service_get_minimum_version',
+    @mock.patch('nova.db.main.api.service_get_minimum_version',
                 return_value={'nova-compute': 2})
     def test_create_above_minimum(self, mock_get, mock_notify):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
@@ -399,7 +399,7 @@ class _TestServiceObject(object):
                             binary='nova-compute').create()
 
     @mock.patch('nova.objects.Service._send_notification')
-    @mock.patch('nova.db.api.service_get_minimum_version',
+    @mock.patch('nova.db.main.api.service_get_minimum_version',
                 return_value={'nova-compute': 2})
     def test_create_equal_to_minimum(self, mock_get, mock_notify):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
@@ -407,7 +407,7 @@ class _TestServiceObject(object):
             objects.Service(context=self.context,
                             binary='nova-compute').create()
 
-    @mock.patch('nova.db.api.service_get_minimum_version',
+    @mock.patch('nova.db.main.api.service_get_minimum_version',
                 return_value={'nova-compute': 2})
     def test_create_below_minimum(self, mock_get):
         with mock.patch('nova.objects.service.SERVICE_VERSION',

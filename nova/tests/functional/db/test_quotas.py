@@ -11,11 +11,11 @@
 #    under the License.
 
 from nova import context
-from nova.db.sqlalchemy import api as db_api
+from nova.db.main import api as db_api
 from nova import exception
 from nova.objects import quotas
 from nova import test
-from nova.tests.unit.db import test_db_api
+from nova.tests.unit.db.main import test_api as test_db_api
 
 
 class QuotasObjectTestCase(test.TestCase,

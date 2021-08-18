@@ -15,7 +15,7 @@
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova.objects import instance_fault
 from nova.tests.unit.objects import test_objects
@@ -72,7 +72,7 @@ class _TestInstanceFault(object):
         self.assertEqual(0, len(faults))
         get_mock.assert_called_once_with(self.context, ['fake-uuid'])
 
-    @mock.patch('nova.db.api.instance_fault_create')
+    @mock.patch('nova.db.main.api.instance_fault_create')
     def test_create(self, mock_create):
         mock_create.return_value = fake_faults['fake-uuid'][1]
         fault = instance_fault.InstanceFault(context=self.context)

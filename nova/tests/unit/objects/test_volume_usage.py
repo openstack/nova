@@ -45,7 +45,8 @@ fake_vol_usage = {
 
 
 class _TestVolumeUsage(object):
-    @mock.patch('nova.db.api.vol_usage_update', return_value=fake_vol_usage)
+    @mock.patch(
+        'nova.db.main.api.vol_usage_update', return_value=fake_vol_usage)
     def test_save(self, mock_upd):
         vol_usage = objects.VolumeUsage(self.context)
         vol_usage.volume_id = uuids.volume_id
@@ -63,7 +64,8 @@ class _TestVolumeUsage(object):
             'fake-project-id', 'fake-user-id', None, update_totals=False)
         self.compare_obj(vol_usage, fake_vol_usage)
 
-    @mock.patch('nova.db.api.vol_usage_update', return_value=fake_vol_usage)
+    @mock.patch(
+        'nova.db.main.api.vol_usage_update', return_value=fake_vol_usage)
     def test_save_update_totals(self, mock_upd):
         vol_usage = objects.VolumeUsage(self.context)
         vol_usage.volume_id = uuids.volume_id

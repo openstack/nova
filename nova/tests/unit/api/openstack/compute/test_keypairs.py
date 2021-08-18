@@ -74,11 +74,11 @@ class KeypairsTestV21(test.TestCase):
         fakes.stub_out_networking(self)
         fakes.stub_out_secgroup_api(self)
 
-        self.stub_out("nova.db.api.key_pair_get_all_by_user",
+        self.stub_out("nova.db.main.api.key_pair_get_all_by_user",
                       db_key_pair_get_all_by_user)
-        self.stub_out("nova.db.api.key_pair_create",
+        self.stub_out("nova.db.main.api.key_pair_create",
                       db_key_pair_create)
-        self.stub_out("nova.db.api.key_pair_destroy",
+        self.stub_out("nova.db.main.api.key_pair_destroy",
                       db_key_pair_destroy)
         self._setup_app_and_controller()
 
@@ -282,7 +282,7 @@ class KeypairsTestV21(test.TestCase):
         def db_key_pair_get_not_found(context, user_id, name):
             raise exception.KeypairNotFound(user_id=user_id, name=name)
 
-        self.stub_out("nova.db.api.key_pair_destroy",
+        self.stub_out("nova.db.main.api.key_pair_destroy",
                       db_key_pair_get_not_found)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, self.req, 'FAKE')
@@ -294,7 +294,7 @@ class KeypairsTestV21(test.TestCase):
                         name='foo', public_key='XXX', fingerprint='YYY',
                         type='ssh')
 
-        self.stub_out("nova.db.api.key_pair_get", _db_key_pair_get)
+        self.stub_out("nova.db.main.api.key_pair_get", _db_key_pair_get)
 
         res_dict = self.controller.show(self.req, 'FAKE')
         self.assertEqual('foo', res_dict['keypair']['name'])
@@ -307,7 +307,7 @@ class KeypairsTestV21(test.TestCase):
         def _db_key_pair_get(context, user_id, name):
             raise exception.KeypairNotFound(user_id=user_id, name=name)
 
-        self.stub_out("nova.db.api.key_pair_get", _db_key_pair_get)
+        self.stub_out("nova.db.main.api.key_pair_get", _db_key_pair_get)
 
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, self.req, 'FAKE')
@@ -432,7 +432,7 @@ class KeypairsTestV235(test.TestCase):
         super(KeypairsTestV235, self).setUp()
         self._setup_app_and_controller()
 
-    @mock.patch("nova.db.api.key_pair_get_all_by_user")
+    @mock.patch("nova.db.main.api.key_pair_get_all_by_user")
     def test_keypair_list_limit_and_marker(self, mock_kp_get):
         mock_kp_get.side_effect = db_key_pair_get_all_by_user
 
@@ -467,7 +467,7 @@ class KeypairsTestV235(test.TestCase):
         self.assertRaises(exception.ValidationError, self.controller.index,
                           req)
 
-    @mock.patch("nova.db.api.key_pair_get_all_by_user")
+    @mock.patch("nova.db.main.api.key_pair_get_all_by_user")
     def test_keypair_list_limit_and_marker_invalid_in_old_microversion(
             self, mock_kp_get):
         mock_kp_get.side_effect = db_key_pair_get_all_by_user
@@ -488,7 +488,7 @@ class KeypairsTestV275(test.TestCase):
         super(KeypairsTestV275, self).setUp()
         self.controller = keypairs_v21.KeypairController()
 
-    @mock.patch("nova.db.api.key_pair_get_all_by_user")
+    @mock.patch("nova.db.main.api.key_pair_get_all_by_user")
     @mock.patch('nova.objects.KeyPair.get_by_name')
     def test_keypair_list_additional_param_old_version(self, mock_get_by_name,
                                                        mock_kp_get):

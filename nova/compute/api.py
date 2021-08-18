@@ -53,8 +53,7 @@ from nova import conductor
 import nova.conf
 from nova import context as nova_context
 from nova import crypto
-from nova.db import api as db
-from nova.db.sqlalchemy import api as db_api
+from nova.db.main import api as db_api
 from nova import exception
 from nova import exception_wrapper
 from nova.i18n import _
@@ -5083,7 +5082,7 @@ class API:
 
     def get_instance_metadata(self, context, instance):
         """Get all metadata associated with an instance."""
-        return db.instance_metadata_get(context, instance.uuid)
+        return db_api.instance_metadata_get(context, instance.uuid)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
@@ -5963,7 +5962,7 @@ class HostAPI:
         """Return the task logs within a given range, optionally
         filtering by host and/or state.
         """
-        return db.task_log_get_all(
+        return db_api.task_log_get_all(
             context, task_name, period_beginning, period_ending, host=host,
             state=state)
 
@@ -6056,7 +6055,7 @@ class HostAPI:
             if cell.uuid == objects.CellMapping.CELL0_UUID:
                 continue
             with nova_context.target_cell(context, cell) as cctxt:
-                cell_stats.append(db.compute_node_statistics(cctxt))
+                cell_stats.append(db_api.compute_node_statistics(cctxt))
 
         if cell_stats:
             keys = cell_stats[0].keys()

@@ -225,7 +225,7 @@ class TestInstanceNUMACellRemote(
 
 class _TestInstanceNUMATopology(object):
 
-    @mock.patch('nova.db.api.instance_extra_update_by_uuid')
+    @mock.patch('nova.db.main.api.instance_extra_update_by_uuid')
     def test_create(self, mock_update):
         topo_obj = get_fake_obj_numa_topology(self.context)
         topo_obj.instance_uuid = fake_db_topology['instance_uuid']
@@ -245,12 +245,12 @@ class _TestInstanceNUMATopology(object):
             self.assertEqual(topo_cell.memory, obj_cell.memory)
             self.assertEqual(topo_cell.pagesize, obj_cell.pagesize)
 
-    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid')
+    @mock.patch('nova.db.main.api.instance_extra_get_by_instance_uuid')
     def test_get_by_instance_uuid(self, mock_get):
         mock_get.return_value = fake_db_topology
         self._test_get_by_instance_uuid()
 
-    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid')
+    @mock.patch('nova.db.main.api.instance_extra_get_by_instance_uuid')
     def test_get_by_instance_uuid_missing(self, mock_get):
         mock_get.return_value = None
         self.assertRaises(

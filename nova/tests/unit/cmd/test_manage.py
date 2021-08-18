@@ -29,7 +29,7 @@ from oslo_utils import uuidutils
 from nova.cmd import manage
 from nova import conf
 from nova import context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova.db import migration
 from nova import exception
 from nova import objects
@@ -333,7 +333,7 @@ Archiving.....complete
     def test_archive_deleted_rows_until_complete_quiet(self):
         self.test_archive_deleted_rows_until_complete(verbose=False)
 
-    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    @mock.patch('nova.db.main.api.purge_shadow_tables')
     @mock.patch.object(db, 'archive_deleted_rows')
     @mock.patch.object(objects.CellMappingList, 'get_all')
     def test_archive_deleted_rows_until_stopped(self, mock_get_all,
@@ -546,14 +546,14 @@ is set and run this command again.
         self.assertEqual(expected, output)
         self.assertEqual(3, result)
 
-    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    @mock.patch('nova.db.main.api.purge_shadow_tables')
     def test_purge_all(self, mock_purge):
         mock_purge.return_value = 1
         ret = self.commands.purge(purge_all=True)
         self.assertEqual(0, ret)
         mock_purge.assert_called_once_with(mock.ANY, None, status_fn=mock.ANY)
 
-    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    @mock.patch('nova.db.main.api.purge_shadow_tables')
     def test_purge_date(self, mock_purge):
         mock_purge.return_value = 1
         ret = self.commands.purge(before='oct 21 2015')
@@ -562,25 +562,25 @@ is set and run this command again.
                                            datetime.datetime(2015, 10, 21),
                                            status_fn=mock.ANY)
 
-    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    @mock.patch('nova.db.main.api.purge_shadow_tables')
     def test_purge_date_fail(self, mock_purge):
         ret = self.commands.purge(before='notadate')
         self.assertEqual(2, ret)
         self.assertFalse(mock_purge.called)
 
-    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    @mock.patch('nova.db.main.api.purge_shadow_tables')
     def test_purge_no_args(self, mock_purge):
         ret = self.commands.purge()
         self.assertEqual(1, ret)
         self.assertFalse(mock_purge.called)
 
-    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    @mock.patch('nova.db.main.api.purge_shadow_tables')
     def test_purge_nothing_deleted(self, mock_purge):
         mock_purge.return_value = 0
         ret = self.commands.purge(purge_all=True)
         self.assertEqual(3, ret)
 
-    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    @mock.patch('nova.db.main.api.purge_shadow_tables')
     @mock.patch('nova.objects.CellMappingList.get_all')
     def test_purge_all_cells(self, mock_get_cells, mock_purge):
         cell1 = objects.CellMapping(uuid=uuidsentinel.cell1, name='cell1',

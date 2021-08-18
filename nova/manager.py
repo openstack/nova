@@ -54,7 +54,7 @@ This module provides Manager, a base class for managers.
 from oslo_service import periodic_task
 
 import nova.conf
-import nova.db.api
+import nova.db.main.api
 from nova import profiler
 from nova import rpc
 

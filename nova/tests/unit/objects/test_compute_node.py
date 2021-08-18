@@ -23,7 +23,7 @@ from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
 
 from nova import conf
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -261,7 +261,7 @@ class _TestComputeNodeObject(object):
                          subs=self.subs(),
                          comparators=self.comparators())
 
-    @mock.patch('nova.db.api.compute_node_get_all_by_host')
+    @mock.patch('nova.db.main.api.compute_node_get_all_by_host')
     def test_get_first_node_by_host_for_old_compat(
             self, cn_get_all_by_host):
         another_node = fake_compute_node.copy()
@@ -288,7 +288,8 @@ class _TestComputeNodeObject(object):
             self.context, 'fake')
 
     @mock.patch.object(db, 'compute_node_create')
-    @mock.patch('nova.db.api.compute_node_get', return_value=fake_compute_node)
+    @mock.patch(
+        'nova.db.main.api.compute_node_get', return_value=fake_compute_node)
     def test_create(self, mock_get, mock_create):
         mock_create.return_value = fake_compute_node
         compute = compute_node.ComputeNode(context=self.context)
@@ -313,9 +314,10 @@ class _TestComputeNodeObject(object):
         }
         mock_create.assert_called_once_with(self.context, param_dict)
 
-    @mock.patch('nova.db.api.compute_node_create')
+    @mock.patch('nova.db.main.api.compute_node_create')
     @mock.patch('oslo_utils.uuidutils.generate_uuid')
-    @mock.patch('nova.db.api.compute_node_get', return_value=fake_compute_node)
+    @mock.patch(
+        'nova.db.main.api.compute_node_get', return_value=fake_compute_node)
     def test_create_allocates_uuid(self, mock_get, mock_gu, mock_create):
         mock_create.return_value = fake_compute_node
         mock_gu.return_value = fake_compute_node['uuid']
@@ -325,8 +327,9 @@ class _TestComputeNodeObject(object):
         mock_create.assert_called_once_with(
             self.context, {'uuid': fake_compute_node['uuid']})
 
-    @mock.patch('nova.db.api.compute_node_create')
-    @mock.patch('nova.db.api.compute_node_get', return_value=fake_compute_node)
+    @mock.patch('nova.db.main.api.compute_node_create')
+    @mock.patch(
+        'nova.db.main.api.compute_node_get', return_value=fake_compute_node)
     def test_recreate_fails(self, mock_get, mock_create):
         mock_create.return_value = fake_compute_node
         compute = compute_node.ComputeNode(context=self.context)
@@ -339,7 +342,8 @@ class _TestComputeNodeObject(object):
         mock_create.assert_called_once_with(self.context, param_dict)
 
     @mock.patch.object(db, 'compute_node_update')
-    @mock.patch('nova.db.api.compute_node_get', return_value=fake_compute_node)
+    @mock.patch(
+        'nova.db.main.api.compute_node_get', return_value=fake_compute_node)
     def test_save(self, mock_get, mock_update):
         mock_update.return_value = fake_compute_node
         compute = compute_node.ComputeNode(context=self.context)
@@ -363,7 +367,7 @@ class _TestComputeNodeObject(object):
         }
         mock_update.assert_called_once_with(self.context, 123, param_dict)
 
-    @mock.patch('nova.db.api.compute_node_update')
+    @mock.patch('nova.db.main.api.compute_node_update')
     def test_save_pci_device_pools_empty(self, mock_update):
         fake_pci = jsonutils.dumps(
             objects.PciDevicePoolList(objects=[]).obj_to_primitive())
@@ -382,7 +386,7 @@ class _TestComputeNodeObject(object):
         mock_update.assert_called_once_with(
             self.context, 123, {'pci_stats': fake_pci})
 
-    @mock.patch('nova.db.api.compute_node_update')
+    @mock.patch('nova.db.main.api.compute_node_update')
     def test_save_pci_device_pools_null(self, mock_update):
         compute_dict = fake_compute_node.copy()
         compute_dict['pci_stats'] = None
@@ -438,7 +442,7 @@ class _TestComputeNodeObject(object):
                          comparators=self.comparators())
         mock_search.assert_called_once_with(self.context, 'hyper')
 
-    @mock.patch('nova.db.api.compute_node_get_all_by_pagination',
+    @mock.patch('nova.db.main.api.compute_node_get_all_by_pagination',
                 return_value=[fake_compute_node])
     def test_get_by_pagination(self, fake_get_by_pagination):
         computes = compute_node.ComputeNodeList.get_by_pagination(
@@ -448,7 +452,7 @@ class _TestComputeNodeObject(object):
                          subs=self.subs(),
                          comparators=self.comparators())
 
-    @mock.patch('nova.db.api.compute_nodes_get_by_service_id')
+    @mock.patch('nova.db.main.api.compute_nodes_get_by_service_id')
     def test__get_by_service(self, cn_get_by_svc_id):
         cn_get_by_svc_id.return_value = [fake_compute_node]
         computes = compute_node.ComputeNodeList._get_by_service(self.context,
@@ -458,7 +462,7 @@ class _TestComputeNodeObject(object):
                          subs=self.subs(),
                          comparators=self.comparators())
 
-    @mock.patch('nova.db.api.compute_node_get_all_by_host')
+    @mock.patch('nova.db.main.api.compute_node_get_all_by_host')
     def test_get_all_by_host(self, cn_get_all_by_host):
         cn_get_all_by_host.return_value = [fake_compute_node]
         computes = compute_node.ComputeNodeList.get_all_by_host(self.context,
@@ -600,7 +604,7 @@ class _TestComputeNodeObject(object):
         primitive = compute.obj_to_primitive(target_version='1.16')
         self.assertIn('disk_allocation_ratio', primitive['nova_object.data'])
 
-    @mock.patch('nova.db.api.compute_node_update')
+    @mock.patch('nova.db.main.api.compute_node_update')
     def test_compat_allocation_ratios_old_compute(self, mock_update):
         """Tests the scenario that allocation ratios are overridden in config
         and the legacy compute node record from the database has None set for
@@ -626,7 +630,7 @@ class _TestComputeNodeObject(object):
                                 'ram_allocation_ratio': 3.0,
                                 'disk_allocation_ratio': 0.9})
 
-    @mock.patch('nova.db.api.compute_node_update')
+    @mock.patch('nova.db.main.api.compute_node_update')
     def test_compat_allocation_ratios_zero_conf(self, mock_update):
         """Tests that the override allocation ratios are set to 0.0 for
         whatever reason (maybe an old nova.conf sample file is being used)
@@ -656,7 +660,7 @@ class _TestComputeNodeObject(object):
                                 'ram_allocation_ratio': 1.5,
                                 'disk_allocation_ratio': 1.0})
 
-    @mock.patch('nova.db.api.compute_node_update')
+    @mock.patch('nova.db.main.api.compute_node_update')
     def test_compat_allocation_ratios_None_conf_zero_values(self, mock_update):
         """Tests the scenario that the CONF.*_allocation_ratio overrides are
         left to the default (None) and the compute node record allocation
@@ -684,7 +688,7 @@ class _TestComputeNodeObject(object):
                                 'ram_allocation_ratio': 1.5,
                                 'disk_allocation_ratio': 1.0})
 
-    @mock.patch('nova.db.api.compute_node_update')
+    @mock.patch('nova.db.main.api.compute_node_update')
     def test_compat_allocation_ratios_None_conf_None_values(self, mock_update):
         """Tests the scenario that the override CONF.*_allocation_ratio options
         are the default values (None), the compute node record from the DB has

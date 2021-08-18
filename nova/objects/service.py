@@ -18,7 +18,7 @@ from oslo_utils import versionutils
 
 from nova import availability_zones
 from nova import context as nova_context
-from nova.db import api as db
+from nova.db.main import api as db
 from nova import exception
 from nova.notifications.objects import base as notification
 from nova.notifications.objects import service as service_notification

@@ -19,9 +19,8 @@ import sqlalchemy as sa
 from sqlalchemy import sql
 
 import nova.conf
-from nova.db import api as db
-from nova.db.sqlalchemy import api as sa_api
-from nova.db.sqlalchemy import models
+from nova.db.main import api as db
+from nova.db.main import models
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -469,7 +468,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     @staticmethod
     @db.select_db_reader_mode
     def _db_compute_node_get_all_by_uuids(context, compute_uuids):
-        db_computes = sa_api.model_query(context, models.ComputeNode).filter(
+        db_computes = db.model_query(context, models.ComputeNode).filter(
             models.ComputeNode.uuid.in_(compute_uuids)).all()
         return db_computes
 
@@ -509,7 +508,7 @@ def _get_node_empty_ratio(context, max_count):
     )).filter(models.ComputeNode.deleted == 0).limit(max_count).all()
 
 
-@sa_api.pick_context_manager_writer
+@db.pick_context_manager_writer
 def migrate_empty_ratio(context, max_count):
     cns = _get_node_empty_ratio(context, max_count)
 
