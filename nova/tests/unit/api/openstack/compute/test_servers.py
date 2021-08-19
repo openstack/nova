@@ -316,27 +316,31 @@ class ServersControllerTest(ControllerTest):
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertEqual([(None, None, port, None)], res.as_tuples())
+        self.assertEqual([(None, None, port, None, None, None)],
+                          res.as_tuples())
 
     def test_requested_networks_enabled_with_network(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertEqual([(network, None, None, None)], res.as_tuples())
+        self.assertEqual([(network, None, None, None, None, None)],
+                          res.as_tuples())
 
     def test_requested_networks_enabled_with_network_and_port(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertEqual([(None, None, port, None)], res.as_tuples())
+        self.assertEqual([(None, None, port, None, None, None)],
+                          res.as_tuples())
 
     def test_requested_networks_with_and_duplicate_networks(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}, {'uuid': network}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertEqual([(network, None, None, None),
-                          (network, None, None, None)], res.as_tuples())
+        self.assertEqual([(network, None, None, None, None, None),
+                          (network, None, None, None, None, None)],
+                          res.as_tuples())
 
     def test_requested_networks_enabled_conflict_on_fixed_ip(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -355,7 +359,8 @@ class ServersControllerTest(ControllerTest):
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertEqual([(None, None, port, None)], res.as_tuples())
+        self.assertEqual([(None, None, port, None, None, None)],
+                          res.as_tuples())
 
     def test_get_server_by_uuid(self):
         res_dict = self.controller.show(self.request, FAKE_UUID)
@@ -4362,7 +4367,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         def create(*args, **kwargs):
             result = [('76fa36fc-c930-4bf3-8c8a-ea2a2420deb6', None,
-                       None, None)]
+                       None, None, None, None)]
             self.assertEqual(result, kwargs['requested_networks'].as_tuples())
             return old_create(*args, **kwargs)
 

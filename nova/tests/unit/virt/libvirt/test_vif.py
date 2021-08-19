@@ -207,6 +207,18 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                  'pci_slot': '0000:0a:00.1',
                  'physical_network': 'phynet1'})
 
+    vif_hw_veb_arq = network_model.VIF(id=uuids.vif,
+        address='ca:fe:de:ad:be:ef',
+        network=network_8021,
+        type=network_model.VIF_TYPE_HW_VEB,
+        vnic_type=network_model.VNIC_TYPE_ACCELERATOR_DIRECT,
+        ovs_interfaceid=None,
+        details={
+            network_model.VIF_DETAILS_VLAN: 100},
+        profile={'pci_vendor_info': '1137:0043',
+                 'pci_slot': '0000:0a:00.1',
+                 'physical_network': 'phynet1'})
+
     vif_hw_veb_trusted = network_model.VIF(id=uuids.vif,
         address='ca:fe:de:ad:be:ef',
         network=network_8021,
@@ -865,7 +877,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     @mock.patch.object(vif.designer, 'set_vif_guest_frontend_config',
                        wraps=vif.designer.set_vif_guest_frontend_config)
-    def test_model_sriov_direct(self, mock_set):
+    def _test_model_sriov(self, vinc_type, mock_set):
         """Direct attach vNICs shouldn't retrieve info from image_meta."""
         self.flags(use_virtio_for_bridges=True,
                    virt_type='kvm',
@@ -877,12 +889,18 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(
             {'properties': {'hw_vif_model': 'virtio'}})
         conf = d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
-                                 None, 'kvm', network_model.VNIC_TYPE_DIRECT)
+                                 None, 'kvm', vinc_type)
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
                                          None, None, None, None)
         self.assertIsNone(conf.vhost_queues)
         self.assertIsNone(conf.driver_name)
         self.assertIsNone(conf.model)
+
+    def test_model_sriov_direct(self):
+        self._test_model_sriov(network_model.VNIC_TYPE_DIRECT)
+
+    def test_model_accelerator_direct(self):
+        self._test_model_sriov(network_model.VNIC_TYPE_ACCELERATOR_DIRECT)
 
     def test_model_qemu(self):
         vif_objs = [
@@ -1207,6 +1225,17 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.assertIn('macvtap_source', str(e))
         self.assertIn('macvtap_mode', str(e))
         self.assertIn('physical_interface', str(e))
+
+    def test_hw_veb_driver_arq(self):
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_hw_veb_arq)
+        node = self._get_node(xml)
+        self._assertTypeAndPciEquals(node, "hostdev", self.vif_hw_veb_arq)
+        self._assertMacEquals(node, self.vif_hw_veb_arq)
+
+        conf = vconfig.LibvirtConfigGuestInterface()
+        conf.parse_dom(node)
+        self.assertEqual(conf.vlan, self.vif_hw_veb_arq["details"]["vlan"])
 
     @mock.patch('nova.virt.libvirt.vif.ensure_vlan')
     def test_macvtap_plug_vlan(self, ensure_vlan_mock):

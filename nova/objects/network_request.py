@@ -31,32 +31,46 @@ class NetworkRequest(obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added pci_request_id
     # Version 1.2: Added tag field
-    VERSION = '1.2'
+    # Version 1.3: Added arq_uuid and device_profile
+    VERSION = '1.3'
     fields = {
         'network_id': fields.StringField(nullable=True),
         'address': fields.IPAddressField(nullable=True),
         'port_id': fields.UUIDField(nullable=True),
         'pci_request_id': fields.UUIDField(nullable=True),
         'tag': fields.StringField(nullable=True),
+        # arq_uuid save cyborg managed port device, pass
+        # arq info from conductor to compute
+        'arq_uuid': fields.UUIDField(nullable=True),
+        # tranfer port's device_profile info from api to conductor
+        'device_profile': fields.StringField(nullable=True)
     }
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 2) and 'tag' in primitive:
             del primitive['tag']
+        if target_version < (1, 3) and 'arq_uuid' in primitive:
+            del primitive['arq_uuid']
+        if target_version < (1, 3) and 'device_profile' in primitive:
+            del primitive['device_profile']
 
     def obj_load_attr(self, attr):
         setattr(self, attr, None)
 
     def to_tuple(self):
         address = str(self.address) if self.address is not None else None
-        return self.network_id, address, self.port_id, self.pci_request_id
+        return (self.network_id, address, self.port_id, self.pci_request_id,
+                self.arq_uuid, self.device_profile)
 
     @classmethod
     def from_tuple(cls, net_tuple):
-        network_id, address, port_id, pci_request_id = net_tuple
+        (network_id, address, port_id, pci_request_id,
+            arq_uuid, device_profile) = net_tuple
         return cls(network_id=network_id, address=address, port_id=port_id,
-                   pci_request_id=pci_request_id)
+                   pci_request_id=pci_request_id,
+                   arq_uuid=arq_uuid,
+                   device_profile=device_profile)
 
     @property
     def auto_allocate(self):

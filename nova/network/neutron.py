@@ -1550,8 +1550,8 @@ class API:
         # NOTE(danms): Temporary and transitional
         if isinstance(requested_networks, objects.NetworkRequestList):
             requested_networks = requested_networks.as_tuples()
-        ports_to_skip = set([port_id for nets, fips, port_id, pci_request_id
-                             in requested_networks])
+        ports_to_skip = set([port_id for nets, fips, port_id, pci_request_id,
+                             arq_uuid, device_profile in requested_networks])
         # NOTE(boden): requested_networks only passed in when deallocating
         # from a failed build / spawn call. Therefore we need to include
         # preexisting ports when deallocating from a standard delete op

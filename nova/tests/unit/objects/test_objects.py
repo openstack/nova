@@ -1111,7 +1111,7 @@ object_data = {
     'NUMATopologyLimits': '1.1-4235c5da7a76c7e36075f0cd2f5cf922',
     'NetworkInterfaceMetadata': '1.2-6f3d480b40fe339067b1c0dd4d656716',
     'NetworkMetadata': '1.0-2cb8d21b34f87b0261d3e1d1ae5cf218',
-    'NetworkRequest': '1.2-af1ff2d986999fbb79377712794d82aa',
+    'NetworkRequest': '1.3-3a815ea3df7defa61e0b894dee5288ba',
     'NetworkRequestList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'NicDiagnostics': '1.0-895e9ad50e0f56d5258585e3e066aea5',
     'PCIDeviceBus': '1.0-2b891cb77e42961044689f3dc2718995',
