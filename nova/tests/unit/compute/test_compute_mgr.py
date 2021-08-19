@@ -653,6 +653,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         sec_groups = 'fake-sec-groups'
         final_result = 'meow'
         rp_mapping = {}
+        network_arqs = {}
 
         expected_sleep_times = [mock.call(t) for t in
                                 (1, 2, 4, 8, 16, 30, 30)]
@@ -663,7 +664,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             res = self.compute._allocate_network_async(self.context, instance,
                                                        req_networks,
                                                        sec_groups,
-                                                       rp_mapping)
+                                                       rp_mapping,
+                                                       network_arqs)
 
         self.assertEqual(7, mock_sleep.call_count)
         mock_sleep.assert_has_calls(expected_sleep_times)
@@ -681,6 +683,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             objects=[objects.NetworkRequest(network_id='fake')])
         sec_groups = 'fake-sec-groups'
         rp_mapping = {}
+        network_arqs = None
 
         with mock.patch.object(
                 self.compute.network_api, 'allocate_for_instance',
@@ -688,14 +691,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.assertRaises(test.TestingException,
                               self.compute._allocate_network_async,
                               self.context, instance, req_networks,
-                              sec_groups, rp_mapping)
+                              sec_groups, rp_mapping, network_arqs)
 
         mock_allocate.assert_called_once_with(
             self.context, instance,
             requested_networks=req_networks,
             security_groups=sec_groups,
             bind_host_id=instance.get('host'),
-            resource_provider_mapping=rp_mapping)
+            resource_provider_mapping=rp_mapping,
+            network_arqs=network_arqs)
 
     @mock.patch.object(manager.ComputeManager, '_instance_update')
     @mock.patch.object(time, 'sleep')
@@ -718,7 +722,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             res = self.compute._allocate_network_async(self.context, instance,
                                                        req_networks,
                                                        sec_groups,
-                                                       rp_mapping)
+                                                       rp_mapping,
+                                                       None)
         self.assertEqual(final_result, res)
         self.assertEqual(1, sleep.call_count)
 
@@ -729,7 +734,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             objects=[objects.NetworkRequest(network_id='none')])
         nwinfo = self.compute._allocate_network_async(
             self.context, mock.sentinel.instance, req_networks,
-            security_groups=['default'], resource_provider_mapping={})
+            security_groups=['default'], resource_provider_mapping={},
+            network_arqs=None)
         self.assertEqual(0, len(nwinfo))
 
     @mock.patch('nova.compute.manager.ComputeManager.'
@@ -6148,6 +6154,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                                        'fake-node']]}}
         self.resource_provider_mapping = None
         self.accel_uuids = []
+        self.network_arqs = {}
 
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
@@ -6212,11 +6219,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                        '_build_networks_for_instance')
     @mock.patch.object(virt_driver.ComputeDriver,
                        'prepare_networks_before_block_device_mapping')
-    def _test_accel_build_resources(self, accel_uuids,
-            mock_prep_net, mock_build_net, mock_prep_spawn,
-            mock_prep_bd, mock_bdnames, mock_save):
+    def _test_accel_build_resources(self, accel_uuids, network_arqs,
+            requested_networks, mock_prep_net, mock_build_net,
+            mock_prep_spawn, mock_prep_bd, mock_bdnames, mock_save):
 
-        args = (self.context, self.instance, self.requested_networks,
+        args = (self.context, self.instance, requested_networks,
                 self.security_groups, self.image, self.block_device_mapping,
                 self.resource_provider_mapping, accel_uuids)
 
@@ -6224,6 +6231,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         with self.compute._build_resources(*args) as resources:
             pass
 
+        mock_build_net.assert_called_once_with(self.context, self.instance,
+            requested_networks, mock.ANY,
+            mock.ANY, network_arqs)
         return resources
 
     @mock.patch.object(nova.compute.manager.ComputeManager,
@@ -6231,7 +6241,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_accel_build_resources_no_device_profile(self, mock_get_arqs):
         # If dp_name is None, accel path is a no-op.
         self.instance.flavor.extra_specs = {}
-        self._test_accel_build_resources(None)
+        self._test_accel_build_resources(None, {}, self.requested_networks)
         mock_get_arqs.assert_not_called()
 
     @mock.patch.object(nova.compute.manager.ComputeManager,
@@ -6244,26 +6254,56 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_get_arqs.return_value = arq_list
         arq_uuids = [arq['uuid'] for arq in arq_list]
 
-        resources = self._test_accel_build_resources(arq_uuids)
+        resources = self._test_accel_build_resources(arq_uuids,
+            {}, self.requested_networks)
 
         mock_get_arqs.assert_called_once_with(
             self.context, self.instance, arq_uuids)
         self.assertEqual(sorted(resources['accel_info']), sorted(arq_list))
 
-    @mock.patch.object(virt_driver.ComputeDriver,
-                       'clean_networks_preparation')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_bound_arq_resources')
-    def test_accel_build_resources_exception(self, mock_get_arqs,
-                                             mock_clean_net):
+    def test_accel_build_resources_exception(self, mock_get_arqs):
         dp_name = "mydp"
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
+        arq_list = fixtures.CyborgFixture.bound_arq_list
+        mock_get_arqs.return_value = arq_list
+        # ensure there are arqs
+        arq_uuids = [arq['uuid'] for arq in arq_list]
+
         mock_get_arqs.side_effect = (
             exception.AcceleratorRequestOpFailed(op='get', msg=''))
 
-        self.assertRaises(exception.NovaException,
-                          self._test_accel_build_resources, None)
-        mock_clean_net.assert_called_once()
+        self.assertRaises(exception.BuildAbortException,
+                          self._test_accel_build_resources,
+                          arq_uuids, None,
+                          self.requested_networks)
+
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_get_bound_arq_resources')
+    def test_accel_build_resources_with_port_device_profile(self,
+        mock_get_arqs):
+        # If dp_name is None, accel path is a no-op.
+        self.instance.flavor.extra_specs = {}
+        arqs = [
+                {'uuid': uuids.arq_uuid1},
+                {'uuid': uuids.arq_uuid2},
+                {'uuid': uuids.arq_uuid3}]
+        mock_get_arqs.return_value = arqs
+        accel_uuids = [arqs[0]['uuid'], arqs[1]['uuid'], arqs[2]['uuid']]
+        request_tuples = [('123', '1.2.3.4', uuids.fakeid,
+            None, arqs[0]['uuid'], 'smart_nic')]
+        requests = objects.NetworkRequestList.from_tuples(request_tuples)
+
+        expect_spec_arqs = [arqs[1], arqs[2]]
+        expect_port_arqs = {arqs[0]['uuid']: arqs[0]}
+        resources = self._test_accel_build_resources(accel_uuids,
+            expect_port_arqs, requests)
+        mock_get_arqs.assert_called_with(self.context,
+            self.instance, accel_uuids)
+
+        self.assertEqual(expect_spec_arqs,
+            resources['accel_info'])
 
     @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
                        'exit_wait_early')
@@ -6473,6 +6513,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def _test_delete_arqs_exception(self, mock_get_arqs,
             mock_clean_net, mock_prep_net, mock_prep_spawn, mock_prep_bd,
             mock_bdnames, mock_build_net, mock_save):
+        # called _get_bound_arq_resources only if we has accel_uuids
+        self.accel_uuids = {uuids.arq1}
         args = (self.context, self.instance, self.requested_networks,
                 self.security_groups, self.image, self.block_device_mapping,
                 self.resource_provider_mapping, self.accel_uuids)
@@ -6502,6 +6544,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.instance.flavor.extra_specs = {}
         self.assertRaises(exception.BuildAbortException,
             self._test_delete_arqs_exception)
+        # force delete arqs by uuid while get instance arqs failed
         mock_del_arqs.assert_not_called()
 
     def test_build_and_run_instance_called_with_proper_args(self):
@@ -6727,7 +6770,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock.call(self.context, self.instance, 'create.error', fault=exc)])
         mock_build.assert_called_once_with(self.context, self.instance,
             self.requested_networks, self.security_groups,
-            self.resource_provider_mapping)
+            self.resource_provider_mapping,
+            self.network_arqs)
         mock_shutdown.assert_called_once_with(self.context, self.instance,
             self.block_device_mapping, self.requested_networks,
             try_deallocate_networks=False)
@@ -7262,7 +7306,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                       fault=exc)])
         mock_build.assert_called_once_with(
             self.context, self.instance, self.requested_networks,
-            self.security_groups, self.resource_provider_mapping)
+            self.security_groups, self.resource_provider_mapping,
+            self.network_arqs)
         mock_shutdown.assert_called_once_with(
             self.context, self.instance, self.block_device_mapping,
             self.requested_networks, try_deallocate_networks=False)
@@ -7381,7 +7426,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             _build_networks_for_instance.assert_has_calls(
                     [mock.call(self.context, self.instance,
                         self.requested_networks, self.security_groups,
-                        self.resource_provider_mapping)])
+                        self.resource_provider_mapping,
+                        self.network_arqs)])
 
             _notify_about_instance_usage.assert_has_calls([
                 mock.call(self.context, self.instance, 'create.start',
@@ -7516,7 +7562,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_save.assert_called_once_with()
         mock_build.assert_called_once_with(self.context, self.instance,
                 self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
         mock_prep.assert_called_once_with(self.context, self.instance,
                 self.block_device_mapping)
         mock_prepnet.assert_called_once_with(self.instance, self.network_info)
@@ -7650,7 +7697,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             _build_networks_for_instance.assert_has_calls(
                     [mock.call(self.context, self.instance,
                         self.requested_networks, self.security_groups,
-                        self.resource_provider_mapping)])
+                        self.resource_provider_mapping,
+                        self.network_arqs)])
 
             save.assert_has_calls([mock.call()])
         mock_prepnet.assert_called_once_with(self.instance, self.network_info)
@@ -7677,7 +7725,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         mock_build.assert_called_once_with(self.context, self.instance,
                 self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
         # This exception is raised prior to initial prep and cleanup
         # with the virt driver, and as such these should not record
         # any calls.
@@ -7709,7 +7758,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             _build_networks.assert_has_calls(
                     [mock.call(self.context, self.instance,
                         self.requested_networks, self.security_groups,
-                        self.resource_provider_mapping)])
+                        self.resource_provider_mapping,
+                        self.network_arqs)])
         mock_prepspawn.assert_not_called()
         mock_failedspawn.assert_not_called()
 
@@ -7740,7 +7790,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_save.assert_called_once_with()
         mock_build.assert_called_once_with(self.context, self.instance,
                 self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
         mock_shutdown.assert_called_once_with(self.context, self.instance,
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
@@ -7772,7 +7823,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.assertEqual(expected_exc, e)
         mock_build_network.assert_called_once_with(self.context, self.instance,
                 self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
         mock_info_wait.assert_called_once_with(do_raise=False)
         mock_prepspawn.assert_called_once_with(self.instance)
         mock_failedspawn.assert_called_once_with(self.instance)
@@ -7803,7 +7855,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             pass
         mock_build_network.assert_called_once_with(self.context, self.instance,
                 self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
         mock_info_wait.assert_called_once_with(do_raise=False)
         mock_prepnet.assert_called_once_with(self.instance, self.network_info)
         mock_clean.assert_called_once_with(self.instance, self.network_info)
@@ -7831,7 +7884,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             pass
         mock_build_network.assert_called_once_with(self.context, self.instance,
                 self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
         mock_info_wait.assert_called_once_with(do_raise=False)
         mock_prepspawn.assert_called_once_with(self.instance)
         mock_failedspawn.assert_called_once_with(self.instance)
@@ -7866,7 +7920,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_save.assert_called_once_with()
         mock_build.assert_called_once_with(self.context, self.instance,
                 self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
         mock_shutdown.assert_called_once_with(self.context, self.instance,
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
@@ -7883,11 +7938,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         nw_info_obj = self.compute._build_networks_for_instance(self.context,
                 instance, self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
 
         mock_allocate.assert_called_once_with(self.context, instance,
                 self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
         self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 
     @mock.patch.object(manager.ComputeManager, '_allocate_network')
@@ -7898,11 +7955,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         nw_info_obj = self.compute._build_networks_for_instance(self.context,
                 instance, self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
 
         mock_allocate.assert_called_once_with(self.context, instance,
                 self.requested_networks, self.security_groups,
-                self.resource_provider_mapping)
+                self.resource_provider_mapping,
+                self.network_arqs)
         self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 
     @mock.patch.object(manager.ComputeManager, '_allocate_network')
@@ -7928,7 +7987,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_get.return_value = fake_network_info()
             self.compute._build_networks_for_instance(self.context, instance,
                     self.requested_networks, self.security_groups,
-                    self.resource_provider_mapping)
+                    self.resource_provider_mapping,
+                    self.network_arqs)
 
         mock_get.assert_called_once_with(self.context, instance)
         mock_setup.assert_called_once_with(self.context, instance,
@@ -7976,6 +8036,22 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_log.warning.call_args[0][0],
         )
         mock_unplug.assert_not_called()
+
+    def test_split_network_arqs(self):
+        arqs = [
+                {'uuid': uuids.arq_uuid1},
+                {'uuid': uuids.arq_uuid2},
+                {'uuid': uuids.arq_uuid3}]
+        request_tuples = [('123', '1.2.3.4', uuids.fakeid,
+            None, arqs[0]['uuid'], 'smart_nic')]
+        requests = objects.NetworkRequestList.from_tuples(request_tuples)
+        spec_arqs, port_arqs = self.compute._split_network_arqs(arqs,
+            requests)
+        expect_spec_arqs = {arqs[1]['uuid']: arqs[1],
+                            arqs[2]['uuid']: arqs[2]}
+        expect_port_arqs = {arqs[0]['uuid']: arqs[0]}
+        self.assertEqual(expect_spec_arqs, spec_arqs)
+        self.assertEqual(expect_port_arqs, port_arqs)
 
     def test_deallocate_network_none_requested(self):
         # Tests that we don't deallocate networks if 'none' were
@@ -8172,7 +8248,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         mock_networks.assert_called_once_with(
             self.context, self.instance, self.requested_networks,
-            self.security_groups, {uuids.port1: [uuids.rp1]})
+            self.security_groups, {uuids.port1: [uuids.rp1]},
+            self.network_arqs)
 
     def test_build_with_resource_request_sriov_port(self):
         request_spec = objects.RequestSpec(
@@ -8219,7 +8296,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         mock_networks.assert_called_once_with(
             self.context, self.instance, self.requested_networks,
-            self.security_groups, {uuids.port1: [uuids.rp1]})
+            self.security_groups, {uuids.port1: [uuids.rp1]}, {})
         mock_get_rp.assert_called_once_with(self.context, uuids.rp1)
         # As the second pci request matched with the request group from the
         # request spec. So that pci request is extended with the
