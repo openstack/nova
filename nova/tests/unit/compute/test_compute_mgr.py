@@ -6261,9 +6261,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.context, self.instance, arq_uuids)
         self.assertEqual(sorted(resources['accel_info']), sorted(arq_list))
 
+    @mock.patch.object(compute_utils,
+                       'delete_arqs_if_needed')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_bound_arq_resources')
-    def test_accel_build_resources_exception(self, mock_get_arqs):
+    def test_accel_build_resources_exception(self, mock_get_arqs,
+                                             mock_clean_arq):
         dp_name = "mydp"
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
         arq_list = fixtures.CyborgFixture.bound_arq_list
@@ -6278,6 +6281,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                           self._test_accel_build_resources,
                           arq_uuids, None,
                           self.requested_networks)
+        mock_clean_arq.assert_called_once_with(
+            self.context, self.instance, arq_uuids)
 
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_bound_arq_resources')

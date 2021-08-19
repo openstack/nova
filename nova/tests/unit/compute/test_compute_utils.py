@@ -1658,3 +1658,22 @@ class AcceleratorRequestTestCase(test.NoDBTestCase):
         mock_log_exc.assert_called_once()
         self.assertIn('Failed to delete accelerator requests for instance',
                       mock_log_exc.call_args[0][0])
+
+    @mock.patch.object(cyborgclient, 'delete_arqs_by_uuid')
+    def test_delete_with_arq_uuid(self, mock_del_arq):
+        flavor = objects.Flavor(**test_flavor.fake_flavor)
+        instance = fake_instance.fake_instance_obj(self.context, flavor=flavor)
+        arq_uuids = [uuids.arq1, uuids.arq2]
+        compute_utils.delete_arqs_if_needed(self.context, instance, arq_uuids)
+        mock_del_arq.assert_called_once_with(arq_uuids)
+
+    @mock.patch.object(cyborgclient, 'delete_arqs_by_uuid')
+    @mock.patch.object(cyborgclient, 'delete_arqs_for_instance')
+    def test_delete_with_arq_uuid_and_dp(self, mock_del_inst, mock_del_uuid):
+        flavor = objects.Flavor(**test_flavor.fake_flavor)
+        flavor['extra_specs'] = {'accel:device_profile': 'mydp'}
+        instance = fake_instance.fake_instance_obj(self.context, flavor=flavor)
+        arq_uuids = [uuids.arq1, uuids.arq2]
+        compute_utils.delete_arqs_if_needed(self.context, instance, arq_uuids)
+        mock_del_inst.assert_called_once_with(instance.uuid)
+        mock_del_uuid.assert_called_once_with(arq_uuids)

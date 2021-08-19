@@ -2579,7 +2579,11 @@ class ComputeManager(manager.Manager):
                     spec_arqs, network_arqs)
         except (Exception, eventlet.timeout.Timeout) as exc:
             LOG.exception(exc)
-            compute_utils.delete_arqs_if_needed(context, instance)
+            # ARQs created for instance or ports.
+            # The port binding isn't done yet.
+            # Unbind port won't clean port ARQs.
+            compute_utils.delete_arqs_if_needed(
+                context, instance, accel_uuids)
             msg = _('Failure getting accelerator requests.')
             raise exception.BuildAbortException(
                     reason=msg, instance_uuid=instance.uuid)
@@ -2678,7 +2682,12 @@ class ComputeManager(manager.Manager):
                             reason=str(exc))
                 finally:
                     # Call Cyborg to delete accelerator requests
-                    compute_utils.delete_arqs_if_needed(context, instance)
+                    if accel_uuids:
+                        # ARQs created for instance or ports.
+                        # Port bind may not successful.
+                        # unbind port won't clean port ARQs.
+                        compute_utils.delete_arqs_if_needed(
+                            context, instance, accel_uuids)
 
     def _get_bound_arq_resources(self, context, instance, arq_uuids):
         """Get bound accelerator requests.
