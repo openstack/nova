@@ -423,6 +423,34 @@ class TestAPIBase(test.TestCase):
                                'router_id': 'router_id1'}
         self._returned_nw_info = []
 
+        self.arqs = [
+                     {'uuid': uuids.arq_uuid1,
+                      'device_profile_name': "smart_nic",
+                      'device_profile_group_id': '5',
+                      'state': 'Bound',
+                      'device_rp_uuid': uuids.resource_provider_uuid1,
+                      'hostname': "host_nodename",
+                      'instance_uuid': uuids.instance_uuid,
+                      'attach_handle_info': {
+                         'bus': '0c', 'device': '0',
+                         'domain': '0000', 'function': '0',
+                         'physical_network': 'physicalnet1'
+                       },
+                       'attach_handle_type': 'PCI'},
+                     {'uuid': uuids.arq_uuid2,
+                      'device_profile_name': "smart_nic",
+                      'device_profile_group_id': '5',
+                      'state': 'Bound',
+                      'device_rp_uuid': uuids.resource_provider_uuid2,
+                      'hostname': "host_nodename",
+                      'instance_uuid': uuids.instance_uuid,
+                      'attach_handle_info': {
+                          'bus': '0c', 'device': '1',
+                          'domain': '0000', 'function': '0',
+                          'physical_network': 'physicalnet1'},
+                       'attach_handle_type': 'PCI'}
+                    ]
+
     def _fake_instance_object(self, instance):
         return fake_instance.fake_instance_obj(self.context, **instance)
 
@@ -3559,13 +3587,15 @@ class TestAPI(TestAPIBase):
         mock_client = mock_get_client.return_value
         mock_client.show_port.return_value = test_port
 
-        vnic_type, trusted, network_id, resource_request, numa = (
+        (vnic_type, trusted, network_id, resource_request,
+         numa, device_profile) = (
             self.api._get_port_vnic_info(
                 self.context, mock_client, test_port['port']['id']))
 
         mock_client.show_port.assert_called_once_with(test_port['port']['id'],
             fields=['binding:vnic_type', 'binding:profile', 'network_id',
-                    constants.RESOURCE_REQUEST, constants.NUMA_POLICY])
+                    constants.RESOURCE_REQUEST, constants.NUMA_POLICY,
+                    'device_profile'])
         self.assertEqual(expected_vnic_type, vnic_type)
         self.assertEqual('net-id', network_id)
         self.assertIsNone(trusted)
@@ -3612,6 +3642,18 @@ class TestAPI(TestAPIBase):
         )
 
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_5(self, mock_get_client):
+        self._test_get_port_vnic_info(mock_get_client,
+                                      model.VNIC_TYPE_ACCELERATOR_DIRECT,
+                                      model.VNIC_TYPE_ACCELERATOR_DIRECT)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_get_port_vnic_info_6(self, mock_get_client):
+        self._test_get_port_vnic_info(mock_get_client,
+                        model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL,
+                        model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL)
+
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_get_port_vnic_info_trusted(self, mock_get_client):
         test_port = {
             'port': {'id': 'my_port_id1',
@@ -3627,11 +3669,12 @@ class TestAPI(TestAPIBase):
         mock_client.list_extensions.return_value = test_ext_list
         result = self.api._get_port_vnic_info(
             self.context, mock_client, test_port['port']['id'])
-        vnic_type, trusted, network_id, resource_requests, _ = result
+        vnic_type, trusted, network_id, resource_requests, _, _ = result
 
         mock_client.show_port.assert_called_once_with(test_port['port']['id'],
             fields=['binding:vnic_type', 'binding:profile', 'network_id',
-                    constants.RESOURCE_REQUEST, constants.NUMA_POLICY])
+                    constants.RESOURCE_REQUEST, constants.NUMA_POLICY,
+                    'device_profile'])
         self.assertEqual(model.VNIC_TYPE_DIRECT, vnic_type)
         self.assertEqual('net-id', network_id)
         self.assertTrue(trusted)
@@ -5002,9 +5045,14 @@ class TestAPI(TestAPIBase):
         result = self.api._get_preexisting_port_ids(instance)
         self.assertEqual(['2', '3'], result, "Invalid preexisting ports")
 
-    def _test_unbind_ports_get_client(self, mock_neutron):
+    @mock.patch('nova.network.neutron.API._show_port')
+    def _test_unbind_ports_get_client(self, mock_neutron, mock_show):
         mock_ctx = mock.Mock(is_admin=False)
         ports = ["1", "2", "3"]
+
+        # mock_show return a fake port detail, which did not contain arq
+        # binding info. mock_neutron would give you a mock world.
+        mock_show.side_effect = [{"id": "1"}, {"id": "2"}, {"id": "3"}]
 
         self.api._unbind_ports(mock_ctx, ports, mock_neutron)
 
@@ -5789,15 +5837,15 @@ class TestAPI(TestAPIBase):
         # _get_port_vnic_info should be called for every NetworkRequest with a
         # port_id attribute (so six times)
         mock_get_port_vnic_info.side_effect = [
-            (model.VNIC_TYPE_DIRECT, None, 'netN', None, None),
+            (model.VNIC_TYPE_DIRECT, None, 'netN', None, None, None),
             (model.VNIC_TYPE_NORMAL, None, 'netN',
-             mock.sentinel.resource_request1, None),
-            (model.VNIC_TYPE_MACVTAP, None, 'netN', None, None),
-            (model.VNIC_TYPE_MACVTAP, None, 'netN', None, None),
-            (model.VNIC_TYPE_DIRECT_PHYSICAL, None, 'netN', None, None),
+             mock.sentinel.resource_request1, None, None),
+            (model.VNIC_TYPE_MACVTAP, None, 'netN', None, None, None),
+            (model.VNIC_TYPE_MACVTAP, None, 'netN', None, None, None),
+            (model.VNIC_TYPE_DIRECT_PHYSICAL, None, 'netN', None, None, None),
             (model.VNIC_TYPE_DIRECT, True, 'netN',
-             mock.sentinel.resource_request2, None),
-            (model.VNIC_TYPE_VDPA, None, 'netN', None, None),
+             mock.sentinel.resource_request2, None, None),
+            (model.VNIC_TYPE_VDPA, None, 'netN', None, None, None),
         ]
         # _get_physnet_tunneled_info should be called for every NetworkRequest
         # (so seven times)
@@ -5860,6 +5908,61 @@ class TestAPI(TestAPIBase):
                 port_uuid=uuids.trusted_port,
                 port_resource_request=mock.sentinel.resource_request2),
         ])
+
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
+    @mock.patch('nova.accelerator.cyborg.get_device_profile_request_groups')
+    @mock.patch('nova.objects.request_spec.RequestGroup.from_port_request')
+    @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_create_resource_requests_with_arq(self, getclient,
+            mock_get_port_vnic_info, mock_from_port_request,
+            mock_get_device_profile,
+            mock_get_physnet_tunneled_info):
+        requested_networks = objects.NetworkRequestList(
+                objects = [
+                        objects.NetworkRequest(port_id=uuids.portid_1)
+                ])
+
+        mock_get_port_vnic_info.side_effect = [
+            (model.VNIC_TYPE_ACCELERATOR_DIRECT, None, 'netN',
+                 None, None, 'smat_nic'),
+            (model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL, None,
+                'netN', None, None, 'smat_nic')
+        ]
+        mock_get_physnet_tunneled_info.side_effect = [
+            ('physnet1', False), ('physnet2', False)
+         ]
+        rg = objects.RequestGroup(requester_id='request_group_1')
+        rg.add_resource(rclass='CUSTOM_NIC_TRAIT', amount=1)
+        mock_get_device_profile.return_value = [rg]
+        result = self.api.create_resource_requests(
+            self.context, requested_networks, pci_requests=None)
+
+        network_metadata, port_resource_requests = result
+        self.assertEqual({'physnet1'}, network_metadata.physnets)
+        self.assertEqual([rg], port_resource_requests)
+
+    @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
+    @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_create_resource_requests_with_arq_excption(self, getclient,
+            mock_get_port_vnic_info, mock_get_physnet_tunneled_info):
+        requested_networks = objects.NetworkRequestList(
+                objects = [
+                        objects.NetworkRequest(port_id=uuids.portid_1)
+                ])
+
+        mock_get_port_vnic_info.side_effect = [
+            (model.VNIC_TYPE_ACCELERATOR_DIRECT, None, 'netN',
+                 None, None, None)
+        ]
+        mock_get_physnet_tunneled_info.side_effect = [
+            ('physnet1', False), ('physnet2', False)
+         ]
+
+        self.assertRaises(exception.DeviceProfileError,
+            self.api.create_resource_requests,
+            self.context, requested_networks, pci_requests=None)
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_associate_floating_ip_conflict(self, mock_get_client):
