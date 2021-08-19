@@ -6250,7 +6250,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         # Happy path for accels in build_resources
         dp_name = "mydp"
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
-        arq_list = fixtures.CyborgFixture.bound_arq_list
+        arq_list = [fixtures.CyborgFixture.bound_arq_list[0]]
         mock_get_arqs.return_value = arq_list
         arq_uuids = [arq['uuid'] for arq in arq_list]
 
@@ -6320,7 +6320,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_wait_inst_ev, mock_exit_wait_early):
         # Bound ARQs available on first query, quit early.
         dp_name = fixtures.CyborgFixture.dp_name
-        arq_list = fixtures.CyborgFixture.bound_arq_list
+        arq_list = [fixtures.CyborgFixture.bound_arq_list[0]]
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
         arq_events = [('accelerator-request-bound', arq['uuid'])
                       for arq in arq_list]
@@ -6351,7 +6351,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         # If no ARQ UUIDs are passed in, call Cyborg to get the ARQs.
         # Then, if bound ARQs available on first query, quit early.
         dp_name = fixtures.CyborgFixture.dp_name
-        arq_list = fixtures.CyborgFixture.bound_arq_list
+        arq_list = [fixtures.CyborgFixture.bound_arq_list[0]]
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
         arq_events = [('accelerator-request-bound', arq['uuid'])
                       for arq in arq_list]
@@ -6381,7 +6381,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_wait_inst_ev, mock_exit_wait_early):
         # If binding is in progress, must wait.
         dp_name = fixtures.CyborgFixture.dp_name
-        arq_list = fixtures.CyborgFixture.bound_arq_list
+        arq_list = [fixtures.CyborgFixture.bound_arq_list[0]]
         self.instance.flavor.extra_specs = {"accel:device_profile": dp_name}
         arq_events = [('accelerator-request-bound', arq['uuid'])
                       for arq in arq_list]

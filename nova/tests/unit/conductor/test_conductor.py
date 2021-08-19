@@ -2293,7 +2293,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         cyclient = cyborg.get_client(self.context)
 
         in_arq_list, _ = cyborg_fixture.get_arqs(dp_name)
-        mock_create.return_value = in_arq_list
+        mock_create.return_value = [in_arq_list[0]]
 
         bindings = self.conductor._create_and_bind_arqs(cyclient,
             instance.uuid, instance.flavor.extra_specs,
