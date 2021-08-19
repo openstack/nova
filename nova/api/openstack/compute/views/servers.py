@@ -525,10 +525,13 @@ class ViewBuilder(common.ViewBuilder):
         # Hide server addresses while the server is building.
         if instance.vm_state == vm_states.BUILDING:
             return {}
+
         context = request.environ["nova.context"]
         networks = common.get_networks_for_instance(context, instance)
-        return self._address_builder.index(networks,
-                                           extend_address)["addresses"]
+
+        return self._address_builder.index(
+            request, networks, extend_address,
+        )["addresses"]
 
     def _get_image(self, request, instance):
         image_ref = instance["image_ref"]

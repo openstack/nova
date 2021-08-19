@@ -24,7 +24,7 @@ class ViewBuilder(common.ViewBuilder):
 
     _collection_name = "addresses"
 
-    def basic(self, ip, extend_address=False):
+    def basic(self, request, ip, extend_address=False):
         """Return a dictionary describing an IP address."""
         address = {
             "version": ip["version"],
@@ -37,15 +37,17 @@ class ViewBuilder(common.ViewBuilder):
             })
         return address
 
-    def show(self, network, label, extend_address=False):
+    def show(self, request, network, label, extend_address=False):
         """Returns a dictionary describing a network."""
         all_ips = itertools.chain(network["ips"], network["floating_ips"])
-        return {label: [self.basic(ip, extend_address) for ip in all_ips]}
+        return {
+            label: [self.basic(request, ip, extend_address) for ip in all_ips],
+        }
 
-    def index(self, networks, extend_address=False):
+    def index(self, request, networks, extend_address=False):
         """Return a dictionary describing a list of networks."""
         addresses = collections.OrderedDict()
         for label, network in networks.items():
-            network_dict = self.show(network, label, extend_address)
+            network_dict = self.show(request, network, label, extend_address)
             addresses[label] = network_dict[label]
-        return dict(addresses=addresses)
+        return {'addresses': addresses}
