@@ -245,7 +245,7 @@ non_negative_integer = {
     'pattern': '^[0-9]*$', 'minimum': 0, 'minLength': 1
 }
 
-hostname = {
+fqdn = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
     # NOTE: 'host' is defined in "services" table, and that
     # means a hostname. The hostname grammar in RFC952 does
@@ -253,13 +253,6 @@ hostname = {
     # schema allows them, because it sometimes occurs in
     # real systems.
     'pattern': '^[a-zA-Z0-9-._]*$',
-}
-
-
-hostname_or_ip_address = {
-    # NOTE: Allow to specify hostname, ipv4 and ipv6.
-    'type': 'string', 'maxLength': 255,
-    'pattern': '^[a-zA-Z0-9-_.:]*$'
 }
 
 

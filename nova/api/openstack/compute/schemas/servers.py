@@ -359,9 +359,9 @@ base_create_v267['properties']['server']['properties'][
 # Add host and hypervisor_hostname in server
 base_create_v274 = copy.deepcopy(base_create_v267)
 base_create_v274['properties']['server'][
-    'properties']['host'] = parameter_types.hostname
+    'properties']['host'] = parameter_types.fqdn
 base_create_v274['properties']['server'][
-    'properties']['hypervisor_hostname'] = parameter_types.hostname
+    'properties']['hypervisor_hostname'] = parameter_types.fqdn
 
 
 base_update = {

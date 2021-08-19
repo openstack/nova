@@ -19,7 +19,7 @@ from nova.api.validation import parameter_types
 service_update = {
     'type': 'object',
     'properties': {
-        'host': parameter_types.hostname,
+        'host': parameter_types.fqdn,
         'binary': {
             'type': 'string', 'minLength': 1, 'maxLength': 255,
         },
@@ -34,7 +34,7 @@ service_update = {
 service_update_v211 = {
     'type': 'object',
     'properties': {
-        'host': parameter_types.hostname,
+        'host': parameter_types.fqdn,
         'binary': {
             'type': 'string', 'minLength': 1, 'maxLength': 255,
         },

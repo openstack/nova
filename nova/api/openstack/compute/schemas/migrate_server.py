@@ -17,7 +17,7 @@ import copy
 from nova.api.validation import parameter_types
 
 
-host = copy.deepcopy(parameter_types.hostname)
+host = copy.deepcopy(parameter_types.fqdn)
 host['type'] = ['string', 'null']
 
 migrate_v2_56 = {

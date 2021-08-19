@@ -85,7 +85,7 @@ add_host = {
         'add_host': {
             'type': 'object',
             'properties': {
-                'host': parameter_types.hostname,
+                'host': parameter_types.fqdn,
             },
             'required': ['host'],
             'additionalProperties': False,
@@ -102,7 +102,7 @@ remove_host = {
         'remove_host': {
             'type': 'object',
             'properties': {
-                'host': parameter_types.hostname,
+                'host': parameter_types.fqdn,
             },
             'required': ['host'],
             'additionalProperties': False,
