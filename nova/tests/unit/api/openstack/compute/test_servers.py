@@ -3762,23 +3762,29 @@ class ServersControllerRebuildTestV271(ControllerTest):
         self.assertEqual([], server['server_groups'])
 
 
-class ServersControllerUpdateTest(ControllerTest):
+class _ServersControllerUpdateTest(ControllerTest):
+
+    microversion = None
 
     def _get_request(self, body=None):
         req = fakes.HTTPRequestV21.blank(self.path_with_id % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         req.body = jsonutils.dump_as_bytes(body)
+        if self.microversion:
+            req.api_version_request = api_version_request.APIVersionRequest(
+                self.microversion)
         fake_get = fakes.fake_compute_get(
             project_id=req.environ['nova.context'].project_id,
             user_id=req.environ['nova.context'].user_id)
         self.mock_get.side_effect = fake_get
         return req
 
+
+class ServersControllerUpdateTest(_ServersControllerUpdateTest):
+
     def test_update_server_all_attributes(self):
-        body = {'server': {
-                  'name': 'server_test',
-               }}
+        body = {'server': {'name': 'server_test'}}
         req = self._get_request(body)
         res_dict = self.controller.update(req, FAKE_UUID, body=body)
 
@@ -3889,6 +3895,82 @@ class ServersControllerUpdateTest(ControllerTest):
                           req, FAKE_UUID, body=body)
 
 
+class ServersControllerUpdateTestV219(_ServersControllerUpdateTest):
+
+    microversion = '2.19'
+
+    def _update_server_desc(self, set_desc, desc=None):
+        body = {'server': {}}
+        if set_desc is not None:
+            body['server']['description'] = desc
+        req = self._get_request()
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+        return res_dict
+
+    def test_update_server_description(self):
+        res_dict = self._update_server_desc(True, 'server_desc')
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertEqual(res_dict['server']['description'], 'server_desc')
+
+    def test_update_server_empty_description(self):
+        res_dict = self._update_server_desc(True, '')
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertEqual(res_dict['server']['description'], '')
+
+    def test_update_server_without_description(self):
+        res_dict = self._update_server_desc(False)
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertIsNone(res_dict['server']['description'])
+
+    def test_update_server_remove_description(self):
+        res_dict = self._update_server_desc(True)
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertIsNone(res_dict['server']['description'])
+
+    def test_update_server_all_attributes(self):
+        body = {
+            'server': {
+                'name': 'server_test',
+                'description': 'server_desc'
+            },
+        }
+        req = self._get_request(body)
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertEqual(res_dict['server']['name'], 'server_test')
+        self.assertEqual(res_dict['server']['description'], 'server_desc')
+
+    def test_update_server_description_too_long(self):
+        body = {'server': {'description': 'x' * 256}}
+        req = self._get_request(body)
+        self.assertRaises(
+            exception.ValidationError, self.controller.update,
+            req, FAKE_UUID, body=body)
+
+    def test_update_server_description_invalid(self):
+        # Invalid non-printable control char in the desc.
+        body = {'server': {'description': "123\0d456"}}
+        req = self._get_request(body)
+        self.assertRaises(
+            exception.ValidationError, self.controller.update,
+            req, FAKE_UUID, body=body)
+
+
+class ServersControllerUpdateTestV271(_ServersControllerUpdateTest):
+
+    microversion = '2.71'
+
+    @mock.patch.object(
+        InstanceGroup, 'get_by_instance_uuid',
+        side_effect=exception.InstanceGroupNotFound(group_uuid=FAKE_UUID))
+    def test_update_with_server_group_not_exist(self, mock_sg_get):
+        body = {'server': {'name': 'server_test'}}
+        req = self._get_request(body)
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+        self.assertEqual([], res_dict['server']['server_groups'])
+
+
 class ServersControllerTriggerCrashDumpTest(ControllerTest):
 
     def setUp(self):
@@ -3957,84 +4039,6 @@ class ServersControllerTriggerCrashDumpTest(ControllerTest):
         self.assertRaises(exception.ValidationError,
                           self.controller._action_trigger_crash_dump,
                           self.req, FAKE_UUID, body=self.body)
-
-
-class ServersControllerUpdateTestV219(ServersControllerUpdateTest):
-    def _get_request(self, body=None):
-        req = super(ServersControllerUpdateTestV219, self)._get_request(
-            body=body)
-        req.api_version_request = api_version_request.APIVersionRequest('2.19')
-        return req
-
-    def _update_server_desc(self, set_desc, desc=None):
-        body = {'server': {}}
-        if set_desc:
-            body['server']['description'] = desc
-        req = self._get_request()
-        res_dict = self.controller.update(req, FAKE_UUID, body=body)
-        return res_dict
-
-    def test_update_server_description(self):
-        res_dict = self._update_server_desc(True, 'server_desc')
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['description'], 'server_desc')
-
-    def test_update_server_empty_description(self):
-        res_dict = self._update_server_desc(True, '')
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['description'], '')
-
-    def test_update_server_without_description(self):
-        res_dict = self._update_server_desc(False)
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertIsNone(res_dict['server']['description'])
-
-    def test_update_server_remove_description(self):
-        res_dict = self._update_server_desc(True)
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertIsNone(res_dict['server']['description'])
-
-    def test_update_server_all_attributes(self):
-        body = {'server': {
-                  'name': 'server_test',
-                  'description': 'server_desc'
-               }}
-        req = self._get_request(body)
-        res_dict = self.controller.update(req, FAKE_UUID, body=body)
-
-        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
-        self.assertEqual(res_dict['server']['name'], 'server_test')
-        self.assertEqual(res_dict['server']['description'], 'server_desc')
-
-    def test_update_server_description_too_long(self):
-        body = {'server': {'description': 'x' * 256}}
-        req = self._get_request(body)
-        self.assertRaises(exception.ValidationError, self.controller.update,
-                          req, FAKE_UUID, body=body)
-
-    def test_update_server_description_invalid(self):
-        # Invalid non-printable control char in the desc.
-        body = {'server': {'description': "123\0d456"}}
-        req = self._get_request(body)
-        self.assertRaises(exception.ValidationError, self.controller.update,
-                          req, FAKE_UUID, body=body)
-
-
-class ServersControllerUpdateTestV271(ServersControllerUpdateTest):
-    body = {'server': {'name': 'server_test'}}
-
-    def _get_request(self, body=None):
-        req = super(ServersControllerUpdateTestV271, self)._get_request(
-            body=body)
-        req.api_version_request = api_version_request.APIVersionRequest('2.71')
-        return req
-
-    @mock.patch.object(InstanceGroup, 'get_by_instance_uuid',
-             side_effect=exception.InstanceGroupNotFound(group_uuid=FAKE_UUID))
-    def test_update_with_server_group_not_exist(self, mock_sg_get):
-        req = self._get_request(self.body)
-        res_dict = self.controller.update(req, FAKE_UUID, body=self.body)
-        self.assertEqual([], res_dict['server']['server_groups'])
 
 
 class ServerStatusTest(test.TestCase):
@@ -6068,9 +6072,8 @@ class ServersControllerCreateTest(test.TestCase):
                           self.req, body=body)
 
     @mock.patch.object(compute_api.API, 'create')
-    def test_create_multiple_instance_with_specified_ip_neutronv2(self,
-                                                                  _api_mock):
-        _api_mock.side_effect = exception.InvalidFixedIpAndMaxCountRequest(
+    def test_create_multiple_instance_with_specified_ip(self, mock_create):
+        mock_create.side_effect = exception.InvalidFixedIpAndMaxCountRequest(
             reason="")
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
@@ -6082,13 +6085,10 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
-    @mock.patch.object(compute_api.API, 'create',
-                       side_effect=exception.MultiplePortsNotApplicable(
-                           reason="Unable to launch multiple instances with "
-                                  "a single configured port ID. Please "
-                                  "launch your instance one by one with "
-                                  "different ports."))
+    @mock.patch.object(compute_api.API, 'create')
     def test_create_multiple_instance_with_port(self, mock_create):
+        mock_create.side_effect = exception.MultiplePortsNotApplicable(
+            reason='')
         requested_networks = [{'uuid': uuids.network, 'port': uuids.port}]
         params = {'networks': requested_networks}
         self.body['server']['max_count'] = 2

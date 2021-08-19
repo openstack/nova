@@ -1620,17 +1620,6 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(11264, cn.memory_mb_used)
         self.assertEqual(17152, cn.local_gb_used)
 
-    def test_create_multiple_instance_with_neutron_port(self):
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=uuids.port_instance)])
-        self.assertRaises(exception.MultiplePortsNotApplicable,
-                          self.compute_api.create,
-                          self.context,
-                          flavor=self.default_flavor,
-                          image_href=None,
-                          max_count=2,
-                          requested_networks=requested_networks)
-
     def test_create_instance_with_oversubscribed_ram(self):
         # Test passing of oversubscribed ram policy from the scheduler.
 

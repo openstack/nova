@@ -326,41 +326,29 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_create_max_net_count(max_net_count, min_count, max_count)
 
     def test_specified_port_and_multiple_instances(self):
-        # Tests that if port is specified there is only one instance booting
-        # (i.e max_count == 1) as we can't share the same port across multiple
-        # instances.
-        port = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-        address = '10.0.0.1'
-        min_count = 1
-        max_count = 2
+        # Tests that if port is specified then there is only one instance
+        # allowed (i.e max_count == 1) as we can't share the same port across
+        # multiple instances.
         requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(address=address,
-                                            port_id=port)])
+            objects=[objects.NetworkRequest(port_id=uuids.port_id)],
+        )
 
-        self.assertRaises(exception.MultiplePortsNotApplicable,
+        self.assertRaises(
+            exception.MultiplePortsNotApplicable,
             self.compute_api.create, self.context, 'fake_flavor', 'image_id',
-            min_count=min_count, max_count=max_count,
-            requested_networks=requested_networks)
-
-    def _test_specified_ip_and_multiple_instances_helper(self,
-                                                         requested_networks):
-        # Tests that if ip is specified there is only one instance booting
-        # (i.e max_count == 1)
-        min_count = 1
-        max_count = 2
-        self.assertRaises(exception.InvalidFixedIpAndMaxCountRequest,
-            self.compute_api.create, self.context, "fake_flavor", 'image_id',
-            min_count=min_count, max_count=max_count,
-            requested_networks=requested_networks)
+            max_count=2, requested_networks=requested_networks)
 
     def test_specified_ip_and_multiple_instances(self):
-        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-        address = '10.0.0.1'
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id=network,
-                                            address=address)])
-        self._test_specified_ip_and_multiple_instances_helper(
-            requested_networks)
+        # Tests that if ip is specified then there is only one instance request
+        # allowed (i.e max_count == 1)
+        requested_networks = objects.NetworkRequestList(objects=[
+            objects.NetworkRequest(
+                network_id=uuids.net_id, address='10.0.0.1')])
+
+        self.assertRaises(
+            exception.InvalidFixedIpAndMaxCountRequest,
+            self.compute_api.create, self.context, 'fake_flavor', 'image_id',
+            max_count=2, requested_networks=requested_networks)
 
     # TODO(huaqiang): Remove in Wallaby
     @mock.patch('nova.compute.api.API._check_requested_networks',
