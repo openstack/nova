@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Add support for smartnic via Cyborg device profiles in Neutron ports with
+    vnic type ``accelerator-direct``. When such port is used Cyborg will
+    manage the smartnic and Nova will pass through the smartnic VF to the
+    server. Note that while vnic type ``accelerator-direct-physical`` also
+    exists in Neutron it is not yet supported by Nova and the server create
+    request will fail with such port.

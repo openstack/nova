@@ -2041,9 +2041,17 @@ class API:
                             % (request_net.port_id))
                         raise exception.DeviceProfileError(
                             name=device_profile, msg=err)
-                    dp_request_groups = (
-                        cyborg.get_device_profile_request_groups(
-                            context, device_profile, request_net.port_id))
+                    cyclient = cyborg.get_client(context)
+                    dp_groups = cyclient.get_device_profile_groups(
+                        device_profile)
+                    dev_num = cyborg.get_device_amount_of_dp_groups(dp_groups)
+                    if dev_num > 1:
+                        err_msg = 'request multiple devices for single port.'
+                        raise exception.DeviceProfileError(name=device_profile,
+                            msg=err_msg)
+
+                    dp_request_groups = (cyclient.get_device_request_groups(
+                        dp_groups, owner=request_net.port_id))
                     LOG.debug("device_profile request group(ARQ): %s",
                         dp_request_groups)
                     # keep device_profile to avoid get vnic info again

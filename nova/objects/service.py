@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 56
+SERVICE_VERSION = 57
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -198,6 +198,9 @@ SERVICE_VERSION_HISTORY = (
     # Add support for qos interface attach
     {'compute_rpc': '5.13'},
     # Version 56: Compute RPC v6.0:
+    {'compute_rpc': '6.0'},
+    # Version 57: Compute RPC v6.0:
+    # Add support for vnic 'accelerator-direct'.
     {'compute_rpc': '6.0'},
 )
 

@@ -40,7 +40,8 @@ class CommonMixin(object):
             uuid = uuidutils.generate_uuid()
         instance = fake_instance.fake_instance_obj(self.context,
                 id=1, uuid=uuid, vm_state=vm_states.ACTIVE,
-                task_state=None, launched_at=timeutils.utcnow())
+                task_state=None, launched_at=timeutils.utcnow(),
+                expected_attrs=['info_cache'])
         self.mock_get.return_value = instance
         return instance
 

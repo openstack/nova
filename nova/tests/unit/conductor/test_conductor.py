@@ -814,7 +814,8 @@ class _BaseTaskTestCase(object):
     def test_build_instances_exhaust_host_list(self, _mock_save, mock_notify):
         # A list of three alternate hosts for one instance
         host_lists = copy.deepcopy(fake_host_lists_alt)
-        instance = fake_instance.fake_instance_obj(self.context)
+        instance = fake_instance.fake_instance_obj(
+            self.context, expected_attrs='system_metadata')
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
@@ -4028,7 +4029,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         """Tests that when populate_retry raises MaxRetriesExceeded in
         build_instances, we don't attempt to cleanup the build request.
         """
-        instance = fake_instance.fake_instance_obj(self.context)
+        instance = fake_instance.fake_instance_obj(
+            self.context, expected_attrs=['system_metadata'])
         image = {'id': uuids.image_id}
         filter_props = {
             'retry': {

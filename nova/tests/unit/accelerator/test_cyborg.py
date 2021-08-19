@@ -116,8 +116,9 @@ class CyborgTestCase(test.NoDBTestCase):
         rg.add_trait(trait_name='CUSTOM_FPGA_CARD', trait_type='required')
         expected_groups = [rg]
 
-        actual_groups = self.client.get_device_profile_groups('mydp',
-                                                              owner=owner)
+        dp_groups = self.client.get_device_profile_groups('mydp')
+        actual_groups = self.client.get_device_request_groups(dp_groups,
+            owner=owner)
         self.assertEqual(len(expected_groups), len(actual_groups))
         self.assertEqual(expected_groups[0].__dict__,
                          actual_groups[0].__dict__)
@@ -135,8 +136,7 @@ class CyborgTestCase(test.NoDBTestCase):
         mock_get_dp_list.return_value = None
         self.assertRaises(exception.DeviceProfileError,
                           self.client.get_device_profile_groups,
-                          dp_name='mydp',
-                          owner=None)
+                          dp_name='mydp')
 
     @mock.patch('nova.accelerator.cyborg._CyborgClient.'
                 '_get_device_profile_list')
@@ -145,8 +145,7 @@ class CyborgTestCase(test.NoDBTestCase):
         mock_get_dp_list.return_value = [1, 2]
         self.assertRaises(exception.DeviceProfileError,
                           self.client.get_device_profile_groups,
-                          dp_name='mydp',
-                          owner=None)
+                          dp_name='mydp')
 
     def _get_arqs_and_request_groups(self):
         arq_common = {
@@ -510,3 +509,21 @@ class CyborgTestCase(test.NoDBTestCase):
                 }
         bind_info = cyborg.get_arq_pci_device_profile(arq)
         self.assertEqual(expect_info, bind_info)
+
+    def test_get_device_amount_of_dp_groups(self):
+        group1 = {
+                    "resources:FPGA": "1",
+                    "trait:CUSTOM_FPGA_CARD": "required"
+        }
+        group2 = {
+                    "resources:FPGA": "2",
+                    "trait:CUSTOM_FPGA_CARD": "required"
+        }
+        num = cyborg.get_device_amount_of_dp_groups([group1])
+        self.assertEqual(1, num)
+
+        num = cyborg.get_device_amount_of_dp_groups([group2])
+        self.assertEqual(2, num)
+
+        num = cyborg.get_device_amount_of_dp_groups([group1, group2])
+        self.assertEqual(3, num)

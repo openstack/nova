@@ -169,7 +169,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.launched_at = now
         instance.disable_terminate = False
         instance.info_cache = objects.InstanceInfoCache()
-        instance.info_cache.network_info = model.NetworkInfo()
+        instance.info_cache.network_info = model.NetworkInfo([])
         instance.numa_topology = None
 
         if params:
@@ -7114,6 +7114,28 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self.context, image, flavor, root_bdm=None, validate_pci=True)
         mock_request.assert_called_once_with(flavor)
 
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=56)
+    def test_check_support_vnic_accelerator_version_before_57(self, mock_get):
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(device_profile='smartnic1')])
+        self.assertRaisesRegex(exception.ForbiddenPortsWithAccelerator,
+            'Port with cyborg profile is not avaliable until upgrade'
+            ' finished.',
+            self.compute_api._check_support_vnic_accelerator,
+            self.context,
+            requested_networks)
+        mock_get.assert_called_once_with(self.context, ['nova-compute'])
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=57)
+    def test_check_support_vnic_accelerator_version_after_57(self, mock_get):
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(device_profile='smartnic1')])
+        self.compute_api._check_support_vnic_accelerator(self.context,
+            requested_networks)
+        mock_get.assert_called_once_with(self.context, ['nova-compute'])
+
     def test_validate_and_build_base_options_translate_neutron_secgroup(self):
         """Tests that _check_requested_secgroups will return a uuid for a
         requested Neutron security group and that will be returned from
@@ -7757,6 +7779,50 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         # myfunc was not called
         self.assertEqual({}, args_info)
 
+    def _test_block_port_accelerators(self, instance, args_info):
+        @compute_api.block_port_accelerators()
+        def myfunc(self, context, instance, *args, **kwargs):
+            args_info['args'] = (context, instance, *args)
+            args_info['kwargs'] = dict(**kwargs)
+
+        args = ('arg1', 'arg2')
+        kwargs = {'arg3': 'dummy3', 'arg4': 'dummy4'}
+        myfunc(mock.ANY, self.context, instance, *args, **kwargs)
+        expected_args = (self.context, instance, *args)
+        return expected_args, kwargs
+
+    def test_block_port_accelerators_no_ACCELERATOR_DIRECT(self):
+        instance = self._create_instance_obj()
+        nw_info = model.NetworkInfo.hydrate([])
+        instance.info_cache.network_info = nw_info
+        args_info = {}
+        expected_args, kwargs = self._test_block_port_accelerators(
+                                    instance, args_info)
+        self.assertEqual(expected_args, args_info['args'])
+        self.assertEqual(kwargs, args_info['kwargs'])
+
+    def test_block_port_accelerators_with_ACCELERATOR_DIRECT(self):
+        instance = self._create_instance_obj()
+        nw_info = model.NetworkInfo.hydrate(
+            [{'vnic_type': model.VNIC_TYPE_ACCELERATOR_DIRECT}])
+        instance.info_cache.network_info = nw_info
+        args_info = {}
+        self.assertRaisesRegex(exception.ForbiddenPortsWithAccelerator,
+            'Forbidden with Ports that have accelerators.',
+            self._test_block_port_accelerators, instance, args_info)
+        self.assertEqual({}, args_info)
+
+    def test_block_port_accelerators_with_ACCELERATOR_DIRECT_PHYSICAL(self):
+        instance = self._create_instance_obj()
+        nw_info = model.NetworkInfo.hydrate(
+            [{'vnic_type': model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL}])
+        instance.info_cache.network_info = nw_info
+        args_info = {}
+        self.assertRaisesRegex(exception.ForbiddenPortsWithAccelerator,
+            'Forbidden with Ports that have accelerators.',
+            self._test_block_port_accelerators, instance, args_info)
+        self.assertEqual({}, args_info)
+
     @mock.patch('nova.accelerator.cyborg._CyborgClient.'
                 'get_arq_uuids_for_instance')
     @mock.patch.object(compute_utils, 'create_image')
@@ -7824,6 +7890,31 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                     oldest_supported_service=54))
             self.assertRaises(
                 exception.ForbiddenWithAccelerators,
+                self.compute_api.shelve,
+                self.context,
+                instance)
+
+    @mock.patch('nova.accelerator.cyborg._CyborgClient.'
+                'get_arq_uuids_for_instance')
+    @mock.patch.object(compute_utils, 'create_image')
+    def test_shelve_with_unsupport_port_accelerators(
+            self, mock_create_img, mock_get_arq_uuids):
+        instance = self._create_instance_obj()
+        nw_info = model.NetworkInfo.hydrate(
+            [{'vnic_type': model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL}])
+        instance.info_cache.network_info = nw_info
+
+        with test.nested(
+            mock.patch('nova.compute.utils.is_volume_backed_instance',
+                          return_value=False),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(self.compute_api, '_record_action_start'),
+        ) as (
+            mock_volume_backend,
+            mock_instance_save, mock_record_action
+        ):
+            self.assertRaises(
+                exception.ForbiddenPortsWithAccelerator,
                 self.compute_api.shelve,
                 self.context,
                 instance)

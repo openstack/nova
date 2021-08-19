@@ -126,7 +126,10 @@ class EvacuateController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'evacuate', id)
-        except exception.ComputeServiceInUse as e:
+        except (
+            exception.ComputeServiceInUse,
+            exception.ForbiddenPortsWithAccelerator,
+        ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.ForbiddenWithAccelerators as e:
             raise exc.HTTPForbidden(explanation=e.format_message())

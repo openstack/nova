@@ -27,7 +27,7 @@ class SuspendServerController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.response(202)
-    @wsgi.expected_errors((403, 404, 409))
+    @wsgi.expected_errors((403, 404, 409, 400))
     @wsgi.action('suspend')
     def _suspend(self, req, id, body):
         """Permit admins to suspend the server."""
@@ -49,6 +49,8 @@ class SuspendServerController(wsgi.Controller):
                     'suspend', id)
         except exception.ForbiddenWithAccelerators as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
+        except exception.ForbiddenPortsWithAccelerator as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(202)
     @wsgi.expected_errors((404, 409))

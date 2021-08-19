@@ -273,6 +273,9 @@ class BaseTestCase(test.TestCase):
                                   services=False, ctxt=None):
         ctxt = ctxt or self.context
         flavor = objects.Flavor.get_by_name(ctxt, type_name)
+        info_cache = objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo([]))
+
         inst = objects.Instance(context=ctxt)
         inst.vm_state = vm_states.ACTIVE
         inst.task_state = None
@@ -304,6 +307,7 @@ class BaseTestCase(test.TestCase):
         inst.flavor = flavor
         inst.old_flavor = None
         inst.new_flavor = None
+        inst.info_cache = info_cache
         if params:
             inst.flavor.update(params.pop('flavor', {}))
             inst.update(params)
@@ -6315,9 +6319,7 @@ class ComputeTestCase(BaseTestCase,
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
-        params = {'info_cache': objects.InstanceInfoCache(
-            network_info=network_model.NetworkInfo([]))}
-        instance = self._create_fake_instance_obj(params=params, ctxt=c)
+        instance = self._create_fake_instance_obj(ctxt=c)
         instance.host = self.compute.host
         dest = 'desthost'
 

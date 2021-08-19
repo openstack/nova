@@ -37,7 +37,7 @@ class ShelveController(wsgi.Controller):
         self.network_api = neutron.API()
 
     @wsgi.response(202)
-    @wsgi.expected_errors((404, 403, 409))
+    @wsgi.expected_errors((404, 403, 409, 400))
     @wsgi.action('shelve')
     def _shelve(self, req, id, body):
         """Move an instance into shelved mode."""
@@ -61,9 +61,11 @@ class ShelveController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'shelve', id)
+        except exception.ForbiddenPortsWithAccelerator as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(202)
-    @wsgi.expected_errors((404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('shelveOffload')
     def _shelve_offload(self, req, id, body):
         """Force removal of a shelved instance from the compute node."""
@@ -79,6 +81,9 @@ class ShelveController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                               'shelveOffload',
                                                               id)
+
+        except exception.ForbiddenPortsWithAccelerator as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 404, 409))

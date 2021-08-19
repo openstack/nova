@@ -159,6 +159,10 @@ class ForbiddenWithAccelerators(Forbidden):
     msg_fmt = _("Forbidden with instances that have accelerators.")
 
 
+class ForbiddenPortsWithAccelerator(Forbidden):
+    msg_fmt = _("Forbidden with Ports that have accelerators.")
+
+
 class AdminRequired(Forbidden):
     msg_fmt = _("User does not have admin privileges")
 
