@@ -844,12 +844,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'ignore',
             module='nova',
-            message=r'The autoload parameter is deprecated .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
             message=r'The current statement is being autocommitted .*',
             category=sqla_exc.SADeprecationWarning)
 

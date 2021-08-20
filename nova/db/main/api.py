@@ -4162,7 +4162,7 @@ def _get_fk_stmts(metadata, conn, table, column, records):
         fk_shadow_tablename = _SHADOW_TABLE_PREFIX + fk_table.name
         try:
             fk_shadow_table = schema.Table(
-                fk_shadow_tablename, metadata, autoload=True)
+                fk_shadow_tablename, metadata, autoload_with=conn)
         except sqla_exc.NoSuchTableError:
             # No corresponding shadow table; skip it.
             continue
@@ -4257,7 +4257,8 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before,
     rows_archived = 0
     deleted_instance_uuids = []
     try:
-        shadow_table = schema.Table(shadow_tablename, metadata, autoload=True)
+        shadow_table = schema.Table(
+            shadow_tablename, metadata, autoload_with=conn)
     except sqla_exc.NoSuchTableError:
         # No corresponding shadow table; skip it.
         return rows_archived, deleted_instance_uuids, {}

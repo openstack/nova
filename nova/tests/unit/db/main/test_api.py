@@ -5714,8 +5714,10 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
             shadow_table_name = f'shadow_{table_name}'
 
-            table = sa.Table(table_name, metadata, autoload=True)
-            shadow_table = sa.Table(shadow_table_name, metadata, autoload=True)
+            table = sa.Table(table_name, metadata, autoload_with=self.engine)
+            shadow_table = sa.Table(
+                shadow_table_name, metadata, autoload_with=self.engine,
+            )
 
             columns = {c.name: c for c in table.columns}
             shadow_columns = {c.name: c for c in shadow_table.columns}
