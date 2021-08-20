@@ -28,7 +28,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 from oslotest import output
-import sqlalchemy
+import sqlalchemy as sa
 import testtools
 
 from nova.compute import rpcapi as compute_rpcapi
@@ -125,17 +125,19 @@ class TestDatabaseFixture(testtools.TestCase):
         self.useFixture(db_fixture)
         engine = main_db_api.get_engine()
         conn = engine.connect()
-        result = conn.execute("select * from instance_types")
+        result = conn.execute(sa.text("SELECT * FROM instance_types"))
         rows = result.fetchall()
         self.assertEqual(0, len(rows), "Rows %s" % rows)
 
         # insert a 6th instance type, column 5 below is an int id
         # which has a constraint on it, so if new standard instance
         # types are added you have to bump it.
-        conn.execute("insert into instance_types VALUES "
-                     "(NULL, NULL, NULL, 't1.test', 6, 4096, 2, 0, NULL, '87'"
-                     ", 1.0, 40, 0, 0, 1, 0)")
-        result = conn.execute("select * from instance_types")
+        conn.execute(sa.text(
+            "INSERT INTO instance_types VALUES "
+            "(NULL, NULL, NULL, 't1.test', 6, 4096, 2, 0, NULL, '87'"
+            ", 1.0, 40, 0, 0, 1, 0)"
+        ))
+        result = conn.execute(sa.text("SELECT * FROM instance_types"))
         rows = result.fetchall()
         self.assertEqual(1, len(rows), "Rows %s" % rows)
 
@@ -145,7 +147,7 @@ class TestDatabaseFixture(testtools.TestCase):
         db_fixture.reset()
         engine = main_db_api.get_engine()
         conn = engine.connect()
-        result = conn.execute("select * from instance_types")
+        result = conn.execute(sa.text("SELECT * FROM instance_types"))
         rows = result.fetchall()
         self.assertEqual(0, len(rows), "Rows %s" % rows)
 
@@ -156,14 +158,19 @@ class TestDatabaseFixture(testtools.TestCase):
         self.useFixture(db_fixture)
         engine = api_db_api.get_engine()
         conn = engine.connect()
-        result = conn.execute("select * from cell_mappings")
+        result = conn.execute(sa.text("SELECT * FROM cell_mappings"))
         rows = result.fetchall()
         self.assertEqual(0, len(rows), "Rows %s" % rows)
 
         uuid = uuidutils.generate_uuid()
-        conn.execute("insert into cell_mappings (uuid, name) VALUES "
-                     "('%s', 'fake-cell')" % (uuid,))
-        result = conn.execute("select * from cell_mappings")
+        conn.execute(
+            sa.text(
+                "INSERT INTO cell_mappings (uuid, name) VALUES (:uuid, :name)"
+            ),
+            uuid=uuid,
+            name='fake-cell',
+        )
+        result = conn.execute(sa.text("SELECT * FROM cell_mappings"))
         rows = result.fetchall()
         self.assertEqual(1, len(rows), "Rows %s" % rows)
 
@@ -173,7 +180,7 @@ class TestDatabaseFixture(testtools.TestCase):
         db_fixture.reset()
         engine = api_db_api.get_engine()
         conn = engine.connect()
-        result = conn.execute("select * from cell_mappings")
+        result = conn.execute(sa.text("SELECT * FROM cell_mappings"))
         rows = result.fetchall()
         self.assertEqual(0, len(rows), "Rows %s" % rows)
 
@@ -202,9 +209,14 @@ class TestDatabaseFixture(testtools.TestCase):
         engine = api_db_api.get_engine()
         conn = engine.connect()
         uuid = uuidutils.generate_uuid()
-        conn.execute("insert into cell_mappings (uuid, name) VALUES "
-                     "('%s', 'fake-cell')" % (uuid,))
-        result = conn.execute("select * from cell_mappings")
+        conn.execute(
+            sa.text(
+                "INSERT INTO cell_mappings (uuid, name) VALUES (:uuid, :name)"
+            ),
+            uuid=uuid,
+            name='fake-cell',
+        )
+        result = conn.execute(sa.text("SELECT * FROM cell_mappings"))
         rows = result.fetchall()
         self.assertEqual(1, len(rows), "Rows %s" % rows)
 
@@ -227,13 +239,13 @@ class TestDefaultFlavorsFixture(testtools.TestCase):
 
         engine = api_db_api.get_engine()
         conn = engine.connect()
-        result = conn.execute("select * from flavors")
+        result = conn.execute(sa.text("SELECT * FROM flavors"))
         rows = result.fetchall()
         self.assertEqual(0, len(rows), "Rows %s" % rows)
 
         self.useFixture(fixtures.DefaultFlavorsFixture())
 
-        result = conn.execute("select * from flavors")
+        result = conn.execute(sa.text("SELECT * FROM flavors"))
         rows = result.fetchall()
         self.assertEqual(6, len(rows), "Rows %s" % rows)
 
@@ -323,7 +335,7 @@ class TestSynchronousThreadPoolExecutorFixture(testtools.TestCase):
 
 class TestBannedDBSchemaOperations(testtools.TestCase):
     def test_column(self):
-        column = sqlalchemy.Column()
+        column = sa.Column()
         with fixtures.BannedDBSchemaOperations(['Column']):
             self.assertRaises(exception.DBNotAllowed,
                               column.drop)
@@ -331,7 +343,7 @@ class TestBannedDBSchemaOperations(testtools.TestCase):
                               column.alter)
 
     def test_table(self):
-        table = sqlalchemy.Table()
+        table = sa.Table()
         with fixtures.BannedDBSchemaOperations(['Table']):
             self.assertRaises(exception.DBNotAllowed,
                               table.drop)

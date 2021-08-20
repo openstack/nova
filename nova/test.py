@@ -388,7 +388,7 @@ class TestCase(base.BaseTestCase):
             engine = db_api.get_engine()
         dialect = engine.url.get_dialect()
         if dialect == sqlite.dialect:
-            engine.connect().execute("PRAGMA foreign_keys = ON")
+            engine.connect().exec_driver_sql("PRAGMA foreign_keys = ON")
 
     def start_service(self, name, host=None, cell_name=None, **kwargs):
         # Disallow starting multiple scheduler services

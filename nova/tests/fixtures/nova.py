@@ -892,12 +892,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'ignore',
             module='nova',
-            message=r'Passing a string to Connection.execute\(\) is .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
             message=r'Using strings to indicate column or relationship .*',
             category=sqla_exc.SADeprecationWarning)
 

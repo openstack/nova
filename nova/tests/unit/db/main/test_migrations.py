@@ -37,6 +37,8 @@ from oslo_db.sqlalchemy import utils as oslodbutils
 from oslo_log.fixture import logging_error as log_fixture
 from oslo_log import log as logging
 from oslotest import base
+import sqlalchemy as sa
+import sqlalchemy.exc
 
 from nova.db.main import models
 from nova.db import migration
@@ -137,21 +139,29 @@ class TestModelsSyncMySQL(
     def test_innodb_tables(self):
         self.db_sync(self.get_engine())
 
-        total = self.engine.execute(
-            "SELECT count(*) "
-            "FROM information_schema.TABLES "
-            "WHERE TABLE_SCHEMA = '%(database)s'" %
-            {'database': self.engine.url.database})
+        with self.engine.connect() as conn:
+            total = conn.execute(
+                sa.text(
+                    "SELECT count(*) "
+                    "FROM information_schema.TABLES "
+                    "WHERE TABLE_SCHEMA = :database"
+                ),
+                {'database': self.engine.url.database},
+            )
         self.assertGreater(total.scalar(), 0, "No tables found. Wrong schema?")
 
-        noninnodb = self.engine.execute(
-            "SELECT count(*) "
-            "FROM information_schema.TABLES "
-            "WHERE TABLE_SCHEMA='%(database)s' "
-            "AND ENGINE != 'InnoDB' "
-            "AND TABLE_NAME != 'migrate_version'" %
-            {'database': self.engine.url.database})
-        count = noninnodb.scalar()
+        with self.engine.connect() as conn:
+            noninnodb = conn.execute(
+                sa.text(
+                    "SELECT count(*) "
+                    "FROM information_schema.TABLES "
+                    "WHERE TABLE_SCHEMA = :database "
+                    "AND ENGINE != 'InnoDB' "
+                    "AND TABLE_NAME != 'migrate_version'"
+                ),
+                {'database': self.engine.url.database},
+            )
+            count = noninnodb.scalar()
         self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
 
 
