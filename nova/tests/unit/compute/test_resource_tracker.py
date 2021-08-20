@@ -4192,5 +4192,9 @@ class TestCleanComputeNodeCache(BaseTestCase):
         invalid_nodename = "invalid-node"
         self.rt.compute_nodes[_NODENAME] = self.compute
         self.rt.compute_nodes[invalid_nodename] = mock.sentinel.compute
-        self.rt.clean_compute_node_cache([self.compute])
-        mock_remove.assert_called_once_with(invalid_nodename)
+        with mock.patch.object(
+            self.rt.reportclient, "invalidate_resource_provider",
+        ) as mock_invalidate:
+            self.rt.clean_compute_node_cache([self.compute])
+            mock_remove.assert_called_once_with(invalid_nodename)
+            mock_invalidate.assert_called_once_with(invalid_nodename)

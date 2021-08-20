@@ -153,9 +153,8 @@ class NodeRebalanceDeletedComputeNodeRaceTestCase(
         self.assertEqual(0, len(rps), rps)
 
         # host_b[3]: Should recreate compute node and resource provider.
-        # FIXME(mgoddard): Resource provider not recreated here, because it
-        # exists in the provider tree. See
-        # https://bugs.launchpad.net/nova/+bug/1841481.
+        # FIXME(mgoddard): Resource provider not recreated here, due to
+        # https://bugs.launchpad.net/nova/+bug/1853159.
         host_b.manager.update_available_resource(self.ctxt)
 
         # Verify that the node was recreated.
@@ -170,14 +169,11 @@ class NodeRebalanceDeletedComputeNodeRaceTestCase(
         self.assertEqual(0, len(rps), rps)
 
         # But the RP exists in the provider tree.
-        self.assertTrue(host_b.manager.rt.reportclient._provider_tree.exists(
+        self.assertFalse(host_b.manager.rt.reportclient._provider_tree.exists(
             self.nodename))
 
         # host_b[1]: Should add compute node to RT cache and recreate resource
         # provider.
-        # FIXME(mgoddard): Resource provider not recreated here, because it
-        # exists in the provider tree. See
-        # https://bugs.launchpad.net/nova/+bug/1841481.
         host_b.manager.update_available_resource(self.ctxt)
 
         # Verify that the node still exists.
@@ -186,13 +182,10 @@ class NodeRebalanceDeletedComputeNodeRaceTestCase(
         # And it is now in the RT cache.
         self.assertIn(self.nodename, host_b.manager.rt.compute_nodes)
 
-        # There is still no RP.
+        # The resource provider has now been created.
         rps = self._get_all_providers()
-        self.assertEqual(0, len(rps), rps)
-
-        # But the RP it exists in the provider tree.
-        self.assertTrue(host_b.manager.rt.reportclient._provider_tree.exists(
-            self.nodename))
+        self.assertEqual(1, len(rps), rps)
+        self.assertEqual(self.nodename, rps[0]['name'])
 
         # This fails due to the lack of a resource provider.
         self.assertIn(
