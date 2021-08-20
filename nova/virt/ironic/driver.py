@@ -167,7 +167,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         # Image type support flags
         "supports_image_type_aki": False,
-        "supports_image_type_ami": False,
+        "supports_image_type_ami": True,
         "supports_image_type_ari": False,
         "supports_image_type_iso": False,
         "supports_image_type_qcow2": True,
