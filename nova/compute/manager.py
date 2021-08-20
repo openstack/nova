@@ -8246,6 +8246,14 @@ class ComputeManager(manager.Manager):
             self.network_api.setup_networks_on_host(context, instance,
                                                              self.host)
 
+            # NOTE(lyarwood): The above call to driver.pre_live_migration
+            # can result in the virt drivers attempting to stash additional
+            # metadata into the connection_info of the underlying bdm.
+            # Ensure this is saved to the database by calling .save() against
+            # the driver BDMs we passed down via block_device_info.
+            for driver_bdm in block_device_info['block_device_mapping']:
+                driver_bdm.save()
+
         except Exception:
             # If we raise, migrate_data with the updated attachment ids
             # will not be returned to the source host for rollback.

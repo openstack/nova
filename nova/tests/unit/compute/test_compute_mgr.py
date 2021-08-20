@@ -9273,6 +9273,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                   mock_gibdi, mock_plm, mock_nwapi, mock_notify,
                   mock_bdm_save, mock_attach_complete, mock_notify_about_inst):
 
+            mock_driver_bdm = mock.Mock(spec=driver_bdm_volume)
+            mock_gibdi.return_value = {
+                'block_device_mapping': [mock_driver_bdm]}
+
             mock_get_bdms.return_value = [vol_bdm, image_bdm]
             mock_attach.return_value = {'id': new_attachment_id}
             mock_plm.return_value = migrate_data
@@ -9297,7 +9301,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self.assertEqual(vol_bdm.attachment_id, new_attachment_id)
             self.assertEqual(migrate_data.old_vol_attachment_ids[volume_id],
                              orig_attachment_id)
+            # Initially save of the attachment_id
             mock_bdm_save.assert_called_once_with()
+            # Later save via the driver bdm for connection_info updates etc.
+            mock_driver_bdm.save.assert_called_once_with()
             mock_attach_complete.assert_called_once_with(self.context,
                                                          new_attachment_id)
 
