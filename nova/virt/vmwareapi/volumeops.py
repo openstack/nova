@@ -46,10 +46,7 @@ class VMwareVolumeOps(object):
         """Attach disk to VM by reconfiguration."""
         instance_name = instance.name
         client_factory = self._session.vim.client.factory
-        devices = self._session._call_method(vutil,
-                                             "get_object_property",
-                                             vm_ref,
-                                             "config.hardware.device")
+        devices = vm_util.get_hardware_devices(self._session, vm_ref)
         (controller_key, unit_number,
          controller_spec) = vm_util.allocate_controller_key_and_unit_number(
                                                               client_factory,
@@ -309,11 +306,8 @@ class VMwareVolumeOps(object):
 
     def _get_vmdk_base_volume_device(self, volume_ref):
         # Get the vmdk file name that the VM is pointing to
-        hardware_devices = self._session._call_method(
-                                                    vutil,
-                                                    "get_object_property",
-                                                    volume_ref,
-                                                    "config.hardware.device")
+        hardware_devices = vm_util.get_hardware_devices(self._session,
+                                                        volume_ref)
         return vm_util.get_vmdk_volume_disk(hardware_devices)
 
     def _attach_volume_vmdk(self, connection_info, instance,
@@ -364,8 +358,8 @@ class VMwareVolumeOps(object):
                 reason=_("Unable to find iSCSI Target"))
         if adapter_type is None:
             # Get the vmdk file name that the VM is pointing to
-            hardware_devices = self._session._call_method(
-                vutil, "get_object_property", vm_ref, "config.hardware.device")
+            hardware_devices = vm_util.get_hardware_devices(self._session,
+                                                            vm_ref)
             adapter_type = vm_util.get_scsi_adapter_type(hardware_devices)
 
         self.attach_disk_to_vm(vm_ref, instance,
@@ -491,10 +485,7 @@ class VMwareVolumeOps(object):
 
     def _get_vmdk_backed_disk_device(self, vm_ref, connection_info_data):
         # Get the vmdk file name that the VM is pointing to
-        hardware_devices = self._session._call_method(vutil,
-                                                      "get_object_property",
-                                                      vm_ref,
-                                                      "config.hardware.device")
+        hardware_devices = vm_util.get_hardware_devices(self._session, vm_ref)
 
         # Get disk uuid
         disk_uuid = self._get_volume_uuid(vm_ref,
@@ -560,10 +551,7 @@ class VMwareVolumeOps(object):
                 reason=_("Unable to find iSCSI Target"))
 
         # Get the vmdk file name that the VM is pointing to
-        hardware_devices = self._session._call_method(vutil,
-                                                      "get_object_property",
-                                                      vm_ref,
-                                                      "config.hardware.device")
+        hardware_devices = vm_util.get_hardware_devices(self._session, vm_ref)
         device = vm_util.get_rdm_disk(hardware_devices, uuid)
         if device is None:
             raise exception.DiskNotFound(message=_("Unable to find volume"))

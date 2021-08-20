@@ -376,9 +376,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         devices.append(ide_controller)
         fake._update_object("VirtualMachine", vm)
         # return the scsi type, not ide
-        hardware_device = vm.get("config.hardware.device")
         self.assertEqual(constants.DEFAULT_ADAPTER_TYPE,
-                         vm_util.get_scsi_adapter_type(hardware_device))
+                         vm_util.get_scsi_adapter_type(devices))
 
     def test_get_scsi_adapter_type_with_error(self):
         vm = fake.VirtualMachine()
@@ -392,10 +391,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         # has exceeded SCSI_MAX_CONNECT_NUMBER
         for i in range(0, constants.SCSI_MAX_CONNECT_NUMBER):
             scsi_controller.device.append('device' + str(i))
-        hardware_device = vm.get("config.hardware.device")
         self.assertRaises(exception.StorageError,
                           vm_util.get_scsi_adapter_type,
-                          hardware_device)
+                          devices)
 
     def test_find_allocated_slots(self):
         disk1 = fake.VirtualDisk(200, 0)
@@ -1715,10 +1713,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expected, result)
 
     def _get_devices(self, filename):
-        devices = fake._create_array_of_type('VirtualDevice')
-        devices.VirtualDevice = self._vmdk_path_and_adapter_type_devices(
-            filename)
-        return devices
+        return self._vmdk_path_and_adapter_type_devices(filename)
 
     def test_find_rescue_device(self):
         filename = '[test_datastore] uuid/uuid-rescue.vmdk'
