@@ -11,6 +11,9 @@
 #    under the License.
 
 import fixtures
+import mock
+
+from os_brick.initiator import connector as brick_connector
 
 
 def get_connector_properties(
@@ -53,3 +56,21 @@ class OSBrickFixture(fixtures.Fixture):
         self.useFixture(fixtures.MonkeyPatch(
             'os_brick.initiator.connector.get_connector_properties',
             get_connector_properties))
+
+        for connector in brick_connector.unix_connector_list:
+            self.useFixture(
+                fixtures.MonkeyPatch(
+                    f"{connector}.connect_volume",
+                    mock.Mock(return_value={'path': '/dev/sda'})
+                )
+            )
+            self.useFixture(
+                fixtures.MonkeyPatch(
+                    f"{connector}.disconnect_volume", mock.Mock()
+                )
+            )
+            self.useFixture(
+                fixtures.MonkeyPatch(
+                    f"{connector}.extend_volume", mock.Mock()
+                )
+            )
