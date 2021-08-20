@@ -373,18 +373,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         )
 
         # First node in set should have been removed from DB
+        # Last node in set should have been added to DB.
         for db_node in db_nodes:
             if db_node.hypervisor_hostname == 'node1':
                 db_node.destroy.assert_called_once_with()
                 rc_mock.delete_resource_provider.assert_called_once_with(
                     self.context, db_node, cascade=True)
-                mock_rt.remove_node.assert_called_once_with(
-                    'node1')
+                mock_rt.remove_node.assert_called_once_with('node1')
                 mock_log.error.assert_called_once_with(
                     "Failed to delete compute node resource provider for "
                     "compute node %s: %s", db_node.uuid, mock.ANY)
             else:
                 self.assertFalse(db_node.destroy.called)
+        self.assertEqual(1, mock_rt.remove_node.call_count)
+        mock_rt.clean_compute_node_cache.assert_called_once_with(db_nodes)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete_resource_provider')
