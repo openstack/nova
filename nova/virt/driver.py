@@ -1617,6 +1617,7 @@ class ComputeDriver(object):
         """
         return True
 
+    # TODO(lyarwood): This is no longer used and should be removed.
     @property
     def need_legacy_block_device_info(self):
         """Tell the caller if the driver requires legacy block device info.
