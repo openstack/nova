@@ -22,7 +22,8 @@ realtime_validators = [
         name='hw:cpu_realtime',
         description=(
             'Determine whether realtime mode should be enabled for the '
-            'instance or not. Only supported by the libvirt driver.'
+            'instance or not. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': bool,
@@ -32,7 +33,9 @@ realtime_validators = [
     base.ExtraSpecValidator(
         name='hw:cpu_realtime_mask',
         description=(
-            'A exclusion mask of CPUs that should not be enabled for realtime.'
+            'A exclusion mask of CPUs that should not be enabled for '
+            'realtime. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': str,
@@ -46,7 +49,8 @@ hide_hypervisor_id_validator = [
         name='hw:hide_hypervisor_id',
         description=(
             'Determine whether the hypervisor ID should be hidden from the '
-            'guest. Only supported by the libvirt driver.'
+            'guest. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': bool,
@@ -60,12 +64,15 @@ cpu_policy_validators = [
         name='hw:cpu_policy',
         description=(
             'The policy to apply when determining what host CPUs the guest '
-            'CPUs can run on. If ``shared`` (default), guest CPUs can be '
-            'overallocated but cannot float across host cores. If '
-            '``dedicated``, guest CPUs cannot be overallocated but are '
-            'individually pinned to their own host core. ``mixed`` is a '
-            'policy with which the guest is mixing the overallocated and '
-            'pinned guest CPUs.'
+            'CPUs can run on. '
+            'If ``shared`` (default), guest CPUs can be overallocated but '
+            'cannot float across host cores. '
+            'If ``dedicated``, guest CPUs cannot be overallocated but are '
+            'individually pinned to their own host core. '
+            'If ``mixed``, the policy for each instance CPU can be specified '
+            'using the ``hw:cpu_dedicated_mask`` or ``hw:cpu_realtime_mask`` '
+            'extra specs.'
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': str,
@@ -81,10 +88,12 @@ cpu_policy_validators = [
         name='hw:cpu_thread_policy',
         description=(
             'The policy to apply when determining whether the destination '
-            'host can have hardware threads enabled or not. If ``prefer`` '
-            '(default), hosts with hardware threads will be preferred. If '
-            '``require``, hosts with hardware threads will be required. If '
-            '``isolate``, hosts with hardware threads will be forbidden.'
+            'host can have hardware threads enabled or not. '
+            'If ``prefer`` (default), hosts with hardware threads will be '
+            'preferred. '
+            'If ``require``, hosts with hardware threads will be required. '
+            'If ``isolate``, hosts with hardware threads will be forbidden. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': str,
@@ -101,9 +110,12 @@ cpu_policy_validators = [
         description=(
             'The policy to apply when determining whether emulator threads '
             'should be offloaded to a separate isolated core or to a pool '
-            'of shared cores. If ``share``, emulator overhead threads will '
-            'be offloaded to a pool of shared cores. If ``isolate``, '
-            'emulator overhead threads will be offloaded to their own core.'
+            'of shared cores. '
+            'If ``share``, emulator overhead threads will be offloaded to a '
+            'pool of shared cores. '
+            'If ``isolate``, emulator overhead threads will be offloaded to '
+            'their own core. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': str,
@@ -117,15 +129,18 @@ cpu_policy_validators = [
     base.ExtraSpecValidator(
         name='hw:cpu_dedicated_mask',
         description=(
-            'A mapping of **guest** CPUs to be pinned to **host** CPUs for an '
-            'instance with a ``mixed`` CPU policy. For **guest** CPUs which '
-            'are not in this mapping it will float across host cores.'
+            'A mapping of **guest** (instance) CPUs to be pinned to **host** '
+            'CPUs for an instance with a ``mixed`` CPU policy. '
+            'Any **guest** CPUs which are not in this mapping will float '
+            'across host cores. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': str,
             'description': (
                 'The **guest** CPU mapping to be pinned to **host** CPUs for '
-                'an instance with a ``mixed`` CPU policy.'),
+                'an instance with a ``mixed`` CPU policy.'
+            ),
             # This pattern is identical to 'hw:cpu_realtime_mask' pattern.
             'pattern': r'\^?\d+((-\d+)?(,\^?\d+(-\d+)?)?)*',
         },
@@ -136,9 +151,10 @@ hugepage_validators = [
     base.ExtraSpecValidator(
         name='hw:mem_page_size',
         description=(
-            'The size of memory pages to allocate to the guest with. Can be '
-            'one of the three alias - ``large``, ``small`` or ``any``, - or '
-            'an actual size. Only supported by the libvirt virt driver.'
+            'The size of memory pages to allocate to the guest with. '
+            'Can be one of the three alias - ``large``, ``small`` or '
+            '``any``, - or an actual size. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': str,
@@ -153,8 +169,10 @@ numa_validators = [
         name='hw:numa_nodes',
         description=(
             'The number of virtual NUMA nodes to allocate to configure the '
-            'guest with. Each virtual NUMA node will be mapped to a unique '
-            'host NUMA node. Only supported by the libvirt virt driver.'
+            'guest with. '
+            'Each virtual NUMA node will be mapped to a unique host NUMA '
+            'node. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': int,
@@ -163,16 +181,18 @@ numa_validators = [
         },
     ),
     base.ExtraSpecValidator(
-        name='hw:numa_cpus.{id}',
+        name='hw:numa_cpus.{num}',
         description=(
-            'A mapping of **guest** CPUs to the **guest** NUMA node '
-            'identified by ``{id}``. This can be used to provide asymmetric '
-            'CPU-NUMA allocation and is necessary where the number of guest '
-            'NUMA nodes is not a factor of the number of guest CPUs.'
+            'A mapping of **guest** (instance) CPUs to the **guest** (not '
+            'host!) NUMA node identified by ``{num}``. '
+            'This can be used to provide asymmetric CPU-NUMA allocation and '
+            'is necessary where the number of guest NUMA nodes is not a '
+            'factor of the number of guest CPUs. '
+            'Only supported by the libvirt virt driver.'
         ),
         parameters=[
             {
-                'name': 'id',
+                'name': 'num',
                 'pattern': r'\d+',  # positive integers
                 'description': 'The ID of the **guest** NUMA node.',
             },
@@ -181,22 +201,24 @@ numa_validators = [
             'type': str,
             'description': (
                 'The guest CPUs, in the form of a CPU map, to allocate to the '
-                'guest NUMA node identified by ``{id}``.'
+                'guest NUMA node identified by ``{num}``.'
             ),
             'pattern': r'\^?\d+((-\d+)?(,\^?\d+(-\d+)?)?)*',
         },
     ),
     base.ExtraSpecValidator(
-        name='hw:numa_mem.{id}',
+        name='hw:numa_mem.{num}',
         description=(
-            'A mapping of **guest** memory to the **guest** NUMA node '
-            'identified by ``{id}``. This can be used to provide asymmetric '
-            'memory-NUMA allocation and is necessary where the number of '
-            'guest NUMA nodes is not a factor of the total guest memory.'
+            'A mapping of **guest** memory to the **guest** (not host!) NUMA '
+            'node identified by ``{num}``. '
+            'This can be used to provide asymmetric memory-NUMA allocation '
+            'and is necessary where the number of guest NUMA nodes is not a '
+            'factor of the total guest memory. '
+            'Only supported by the libvirt virt driver.'
         ),
         parameters=[
             {
-                'name': 'id',
+                'name': 'num',
                 'pattern': r'\d+',  # positive integers
                 'description': 'The ID of the **guest** NUMA node.',
             },
@@ -205,7 +227,7 @@ numa_validators = [
             'type': int,
             'description': (
                 'The guest memory, in MB, to allocate to the guest NUMA node '
-                'identified by ``{id}``.'
+                'identified by ``{num}``.'
             ),
             'min': 1,
         },
@@ -214,7 +236,17 @@ numa_validators = [
         name='hw:pci_numa_affinity_policy',
         description=(
             'The NUMA affinity policy of any PCI passthrough devices or '
-            'SR-IOV network interfaces attached to the instance.'
+            'SR-IOV network interfaces attached to the instance. '
+            'If ``required`, only PCI devices from one of the host NUMA '
+            'nodes the instance VCPUs are allocated from can be used by said '
+            'instance. '
+            'If ``preferred``, any PCI device can be used, though preference '
+            'will be given to those from the same NUMA node as the instance '
+            'VCPUs. '
+            'If ``legacy`` (default), behavior is as with ``required`` unless '
+            'the PCI device does not support provide NUMA affinity '
+            'information, in which case affinity is ignored. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': str,
@@ -234,11 +266,13 @@ cpu_topology_validators = [
         name='hw:cpu_sockets',
         description=(
             'The number of virtual CPU threads to emulate in the guest '
-            'CPU topology.'
+            'CPU topology. '
+            'Defaults to the number of vCPUs requested. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': int,
-            'description': 'A number of vurtla CPU sockets',
+            'description': 'A number of virtual CPU sockets',
             'min': 1,
         },
     ),
@@ -246,7 +280,9 @@ cpu_topology_validators = [
         name='hw:cpu_cores',
         description=(
             'The number of virtual CPU cores to emulate per socket in the '
-            'guest CPU topology.'
+            'guest CPU topology. '
+            'Defaults to ``1``.'
+            'Only supported by the libvirt virt driver. '
         ),
         value={
             'type': int,
@@ -259,6 +295,8 @@ cpu_topology_validators = [
         description=(
             'The number of virtual CPU threads to emulate per core in the '
             'guest CPU topology.'
+            'Defaults to ``1``. '
+            'Only supported by the libvirt virt driver. '
         ),
         value={
             'type': int,
@@ -270,9 +308,11 @@ cpu_topology_validators = [
         name='hw:max_cpu_sockets',
         description=(
             'The max number of virtual CPU threads to emulate in the '
-            'guest CPU topology. This is used to limit the topologies that '
-            'can be requested by an image and will be used to validate the '
-            '``hw_cpu_sockets`` image metadata property.'
+            'guest CPU topology. '
+            'This is used to limit the topologies that can be requested by '
+            'an image and will be used to validate the ``hw_cpu_sockets`` '
+            'image metadata property. '
+            'Only supported by the libvirt virt driver. '
         ),
         value={
             'type': int,
@@ -284,9 +324,11 @@ cpu_topology_validators = [
         name='hw:max_cpu_cores',
         description=(
             'The max number of virtual CPU cores to emulate per socket in the '
-            'guest CPU topology. This is used to limit the topologies that '
-            'can be requested by an image and will be used to validate the '
-            '``hw_cpu_cores`` image metadata property.'
+            'guest CPU topology. '
+            'This is used to limit the topologies that can be requested by an '
+            'image and will be used to validate the ``hw_cpu_cores`` image '
+            'metadata property. '
+            'Only supported by the libvirt virt driver. '
         ),
         value={
             'type': int,
@@ -298,9 +340,11 @@ cpu_topology_validators = [
         name='hw:max_cpu_threads',
         description=(
             'The max number of virtual CPU threads to emulate per core in the '
-            'guest CPU topology. This is used to limit the topologies that '
-            'can be requested by an image and will be used to validate the '
-            '``hw_cpu_threads`` image metadata property.'
+            'guest CPU topology. '
+            'This is used to limit the topologies that can be requested by an '
+            'image and will be used to validate the ``hw_cpu_threads`` image '
+            'metadata property. '
+            'Only supported by the libvirt virt driver. '
         ),
         value={
             'type': int,
@@ -316,7 +360,8 @@ feature_flag_validators = [
     base.ExtraSpecValidator(
         name='hw:boot_menu',
         description=(
-            'Whether to show a boot menu when booting the guest.'
+            'Whether to show a boot menu when booting the guest. '
+            'Only supported by the libvirt virt driver. '
         ),
         value={
             'type': bool,
@@ -326,8 +371,9 @@ feature_flag_validators = [
     base.ExtraSpecValidator(
         name='hw:mem_encryption',
         description=(
-            'Whether to enable memory encryption for the guest. Only '
-            'supported by the libvirt driver on hosts with AMD SEV support.'
+            'Whether to enable memory encryption for the guest. '
+            'Only supported by the libvirt virt driver on hosts with AMD SEV '
+            'support.'
         ),
         value={
             'type': bool,
@@ -338,7 +384,9 @@ feature_flag_validators = [
         name='hw:pmem',
         description=(
             'A comma-separated list of ``$LABEL``\\ s defined in config for '
-            'vPMEM devices.'
+            'vPMEM devices. '
+            'Only supported by the libvirt virt driver on hosts with PMEM '
+            'devices.'
         ),
         value={
             'type': str,
@@ -352,7 +400,18 @@ feature_flag_validators = [
         name='hw:pmu',
         description=(
             'Whether to enable the Performance Monitory Unit (PMU) for the '
-            'guest. Only supported by the libvirt driver.'
+            'guest. '
+            'If this option is not specified, the presence of the vPMU is '
+            'determined by the hypervisor. '
+            'The vPMU is used by tools like ``perf`` in the guest to provide '
+            'more accurate information for profiling application and '
+            'monitoring guest performance. '
+            'For realtime workloads, the emulation of a vPMU can introduce '
+            'additional latency which may be undesirable. '
+            'If the telemetry it provides is not required, such workloads '
+            'should disable this feature. '
+            'For most workloads, the default of unset will be correct. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': bool,
@@ -362,8 +421,8 @@ feature_flag_validators = [
     base.ExtraSpecValidator(
         name='hw:serial_port_count',
         description=(
-            'The number of serial ports to allocate to the guest. Only '
-            'supported by the libvirt virt driver.'
+            'The number of serial ports to allocate to the guest. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': int,
@@ -374,7 +433,8 @@ feature_flag_validators = [
     base.ExtraSpecValidator(
         name='hw:tpm_model',
         description=(
-            'The model of the attached TPM device.'
+            'The model of the attached TPM device. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': str,
@@ -388,8 +448,10 @@ feature_flag_validators = [
     base.ExtraSpecValidator(
         name='hw:tpm_version',
         description=(
-            "The TPM version. Required if requesting a vTPM via the "
-            "'hw:tpm_model' extra spec or equivalent image metadata property."
+            "The TPM version. "
+            "Required if requesting a vTPM via the 'hw:tpm_model' extra spec "
+            "or equivalent image metadata property. "
+            "Only supported by the libvirt virt driver."
         ),
         value={
             'type': str,
@@ -403,8 +465,12 @@ feature_flag_validators = [
     base.ExtraSpecValidator(
         name='hw:watchdog_action',
         description=(
-            'The action to take when the watchdog timer is kicked. Only '
-            'supported by the libvirt virt driver.'
+            'The action to take when the watchdog timer is kicked. '
+            'Watchdog devices keep an eye on the instance and carry out the '
+            'specified action if the server hangs. '
+            'The watchdog uses the ``i6300esb`` device, emulating a PCI Intel '
+            '6300ESB. '
+            'Only supported by the libvirt virt driver.'
         ),
         value={
             'type': str,

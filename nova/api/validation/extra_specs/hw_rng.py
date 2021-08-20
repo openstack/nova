@@ -44,7 +44,7 @@ EXTRA_SPEC_VALIDATORS = [
     ),
     base.ExtraSpecValidator(
         name='hw_rng:rate_period',
-        description='The duration of a read period in seconds.',
+        description='The duration of a read period in milliseconds.',
         value={
             'type': int,
             'min': 0,

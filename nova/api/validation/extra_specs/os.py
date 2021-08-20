@@ -24,7 +24,7 @@ EXTRA_SPEC_VALIDATORS = [
         name='os:secure_boot',
         description=(
             'Determine whether secure boot is enabled or not. Only supported '
-            'by the libvirt and HyperV drivers.'
+            'by the libvirt and HyperV virt drivers.'
         ),
         value={
             'type': str,
