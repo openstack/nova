@@ -183,7 +183,8 @@ class TestDatabaseArchive(integrated_helpers._IntegratedTestBase):
         results = {}
         for table in shadow_tables:
             r = conn.execute(
-                sa.select([func.count()]).select_from(table)).fetchone()
+                sa.select(func.count()).select_from(table)
+            ).fetchone()
             results[table.name] = r[0]
         return results
 

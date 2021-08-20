@@ -5751,14 +5751,15 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 where(self.instance_id_mappings.c.uuid.in_(self.uuidstrs[:4]))\
                 .values(deleted=1, deleted_at=timeutils.utcnow())
         self.conn.execute(update_statement)
-        qiim = sql.select([self.instance_id_mappings]).where(self.
-                                instance_id_mappings.c.uuid.in_(self.uuidstrs))
+        qiim = sql.select(self.instance_id_mappings).where(
+            self.instance_id_mappings.c.uuid.in_(self.uuidstrs)
+        )
         rows = self.conn.execute(qiim).fetchall()
         # Verify we have 6 in main
         self.assertEqual(len(rows), 6)
-        qsiim = sql.select([self.shadow_instance_id_mappings]).\
-                where(self.shadow_instance_id_mappings.c.uuid.in_(
-                                                                self.uuidstrs))
+        qsiim = sql.select(self.shadow_instance_id_mappings).where(
+            self.shadow_instance_id_mappings.c.uuid.in_(self.uuidstrs)
+        )
         rows = self.conn.execute(qsiim).fetchall()
         # Verify we have 0 in shadow
         self.assertEqual(len(rows), 0)
@@ -5829,10 +5830,12 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 where(self.instances.c.uuid.in_(self.uuidstrs[2:4]))\
                 .values(deleted=1, deleted_at=timeutils.utcnow())
         self.conn.execute(update_statement)
-        qiim = sql.select([self.instances]).where(self.
-                                instances.c.uuid.in_(self.uuidstrs))
-        qsiim = sql.select([self.shadow_instances]).\
-                where(self.shadow_instances.c.uuid.in_(self.uuidstrs))
+        qiim = sql.select(self.instances).where(
+            self. instances.c.uuid.in_(self.uuidstrs)
+        )
+        qsiim = sql.select(self.shadow_instances).where(
+            self.shadow_instances.c.uuid.in_(self.uuidstrs)
+        )
 
         # Verify we have 6 in main
         rows = self.conn.execute(qiim).fetchall()
@@ -5923,13 +5926,15 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 where(main_table.c.uuid.in_(self.uuidstrs[:4]))\
                 .values(deleted=1, deleted_at=timeutils.utcnow())
         self.conn.execute(update_statement)
-        qmt = sql.select([main_table]).where(main_table.c.uuid.in_(
-                                             self.uuidstrs))
+        qmt = sql.select(main_table).where(
+            main_table.c.uuid.in_(self.uuidstrs)
+        )
         rows = self.conn.execute(qmt).fetchall()
         # Verify we have 6 in main
         self.assertEqual(len(rows), 6)
-        qst = sql.select([shadow_table]).\
-                where(shadow_table.c.uuid.in_(self.uuidstrs))
+        qst = sql.select(shadow_table).where(
+            shadow_table.c.uuid.in_(self.uuidstrs)
+        )
         rows = self.conn.execute(qst).fetchall()
         # Verify we have 0 in shadow
         self.assertEqual(len(rows), 0)
@@ -5972,15 +5977,16 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 where(self.instance_id_mappings.c.uuid.in_(self.uuidstrs[:2]))\
                 .values(deleted=1)
         self.conn.execute(update_statement)
-        qiim = sql.select([self.instance_id_mappings]).where(self.
-                            instance_id_mappings.c.uuid.in_(self.uuidstrs[:2]))
+        qiim = sql.select(self.instance_id_mappings).where(
+            self. instance_id_mappings.c.uuid.in_(self.uuidstrs[:2])
+        )
         rows = self.conn.execute(qiim).fetchall()
         # Verify we have 2 in main
         self.assertEqual(len(rows), 2)
 
-        qsiim = sql.select([self.shadow_instance_id_mappings]).\
-                where(self.shadow_instance_id_mappings.c.uuid.in_(
-                                                            self.uuidstrs[:2]))
+        qsiim = sql.select(self.shadow_instance_id_mappings).where(
+            self.shadow_instance_id_mappings.c.uuid.in_(self.uuidstrs[:2])
+        )
         shadow_rows = self.conn.execute(qsiim).fetchall()
         # Verify we have 0 in shadow
         self.assertEqual(len(shadow_rows), 0)
@@ -6036,22 +6042,25 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 .values(deleted=1, deleted_at=timeutils.utcnow())
         self.conn.execute(update_statement2)
         # Verify we have 6 in each main table
-        qiim = sql.select([self.instance_id_mappings]).where(
-                         self.instance_id_mappings.c.uuid.in_(self.uuidstrs))
+        qiim = sql.select(self.instance_id_mappings).where(
+            self.instance_id_mappings.c.uuid.in_(self.uuidstrs)
+        )
         rows = self.conn.execute(qiim).fetchall()
         self.assertEqual(len(rows), 6)
-        qi = sql.select([self.instances]).where(self.instances.c.uuid.in_(
-                                             self.uuidstrs))
+        qi = sql.select(self.instances).where(
+            self.instances.c.uuid.in_(self.uuidstrs)
+        )
         rows = self.conn.execute(qi).fetchall()
         self.assertEqual(len(rows), 6)
         # Verify we have 0 in each shadow table
-        qsiim = sql.select([self.shadow_instance_id_mappings]).\
-                where(self.shadow_instance_id_mappings.c.uuid.in_(
-                                                            self.uuidstrs))
+        qsiim = sql.select(self.shadow_instance_id_mappings).where(
+            self.shadow_instance_id_mappings.c.uuid.in_(self.uuidstrs)
+        )
         rows = self.conn.execute(qsiim).fetchall()
         self.assertEqual(len(rows), 0)
-        qsi = sql.select([self.shadow_instances]).\
-                where(self.shadow_instances.c.uuid.in_(self.uuidstrs))
+        qsi = sql.select(self.shadow_instances).where(
+            self.shadow_instances.c.uuid.in_(self.uuidstrs)
+        )
         rows = self.conn.execute(qsi).fetchall()
         self.assertEqual(len(rows), 0)
         # Archive 7 rows, which should be 4 in one table and 3 in the other.
@@ -6112,13 +6121,15 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
             updated_at=timeutils.utcnow())
         self.conn.execute(update_statement)
         # Verify we have 6 in main
-        qtl = sql.select([self.task_log]).where(
-            self.task_log.c.id.in_(range(1, 7)))
+        qtl = sql.select(self.task_log).where(
+            self.task_log.c.id.in_(range(1, 7))
+        )
         rows = self.conn.execute(qtl).fetchall()
         self.assertEqual(len(rows), 6)
         # Verify we have 0 in shadow
-        qstl = sql.select([self.shadow_task_log]).where(
-            self.shadow_task_log.c.id.in_(range(1, 7)))
+        qstl = sql.select(self.shadow_task_log).where(
+            self.shadow_task_log.c.id.in_(range(1, 7))
+        )
         rows = self.conn.execute(qstl).fetchall()
         self.assertEqual(len(rows), 0)
         # Make sure 'before' comparison is for < not <=
