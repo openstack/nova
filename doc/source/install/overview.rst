@@ -48,6 +48,14 @@ Object Storage require additional nodes.
    or how to determine which architecture is required, see the `Architecture
    Design Guide <https://docs.openstack.org/arch-design/>`_.
 
+.. warning::
+
+   Once a cloud has been deployed, changing the host name of *any* node in the
+   deployment is not supported. In some cases, it may be possible to remove a
+   node from the deployment, and add it again under a different host name.
+   Renaming a node in situ will result in problems that will require multiple
+   manual fixes.
+
 This example architecture differs from a minimal production architecture as
 follows:
 
