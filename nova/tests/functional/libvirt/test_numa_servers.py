@@ -138,22 +138,16 @@ class NUMAServersTest(NUMAServersTestBase):
             'hw:cpu_max_sockets': '2',
             'hw:cpu_max_cores': '2',
             'hw:cpu_max_threads': '8',
-            'hw:cpu_policy': 'dedicated',
-            'hw:mem_page_size': 'any'
-        }
+            'hw:cpu_policy': 'dedicated'}
         flavor_id = self._create_flavor(vcpu=8, extra_spec=extra_spec)
-        self._run_build_test(flavor_id, end_status='ERROR')
+        server = self._run_build_test(flavor_id)
 
-        # FIXME(sean-k-mooney): The instance should boot but
-        # it fails due to https://bugs.launchpad.net/nova/+bug/1910466
-        msg = "IndexError: list index out of range"
-        self.assertIn(msg, self.stdlog.logger.output)
-        # ctx = nova_context.get_admin_context()
-        # inst = objects.Instance.get_by_uuid(ctx, server['id'])
-        # self.assertEqual(2, len(inst.numa_topology.cells))
-        # self.assertLessEqual(inst.vcpu_model.topology.sockets, 2)
-        # self.assertLessEqual(inst.vcpu_model.topology.cores, 2)
-        # self.assertLessEqual(inst.vcpu_model.topology.threads, 8)
+        ctx = nova_context.get_admin_context()
+        inst = objects.Instance.get_by_uuid(ctx, server['id'])
+        self.assertEqual(2, len(inst.numa_topology.cells))
+        self.assertLessEqual(inst.vcpu_model.topology.sockets, 2)
+        self.assertLessEqual(inst.vcpu_model.topology.cores, 2)
+        self.assertLessEqual(inst.vcpu_model.topology.threads, 8)
 
     def test_create_server_with_numa_fails(self):
         """Create a two NUMA node instance on a host with only one node.
@@ -252,7 +246,7 @@ class NUMAServersTest(NUMAServersTestBase):
 
         inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
         self.assertEqual(1, len(inst.numa_topology.cells))
-        self.assertEqual(5, inst.numa_topology.cells[0].cpu_topology.cores)
+        self.assertEqual(5, inst.vcpu_model.topology.sockets)
 
     def test_create_server_with_mixed_policy(self):
         """Create a server using the 'hw:cpu_policy=mixed' extra spec.
@@ -302,7 +296,6 @@ class NUMAServersTest(NUMAServersTestBase):
         # sanity check the instance topology
         inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
         self.assertEqual(1, len(inst.numa_topology.cells))
-        self.assertEqual(4, inst.numa_topology.cells[0].cpu_topology.cores)
         self.assertEqual({0}, inst.numa_topology.cells[0].cpuset)
         self.assertEqual({1, 2, 3}, inst.numa_topology.cells[0].pcpuset)
         self.assertEqual(
@@ -511,8 +504,6 @@ class NUMAServersTest(NUMAServersTestBase):
         ctx = nova_context.get_admin_context()
         inst = objects.Instance.get_by_uuid(ctx, server['id'])
         self.assertEqual(1, len(inst.numa_topology.cells))
-        self.assertEqual(1, inst.numa_topology.cells[0].cpu_topology.cores)
-        self.assertEqual(2, inst.numa_topology.cells[0].cpu_topology.threads)
 
     def test_create_server_with_pcpu_fails(self):
         """Create a pinned instance on a host with no PCPUs.
