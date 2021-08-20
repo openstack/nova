@@ -974,15 +974,14 @@ class LibvirtDriver(driver.ComputeDriver):
                     # vGPU type. We can't recreate the mdev until the operator
                     # modifies the configuration.
                     parent = "{}:{}:{}.{}".format(*parent[4:].split('_'))
-                    msg = ("The instance UUID %(inst)s uses a VGPU that "
-                           "its parent pGPU %(parent)s no longer "
-                           "supports as the instance vGPU type %(type)s "
-                           "is not accepted for the pGPU. Please correct "
+                    msg = ("The instance UUID %(inst)s uses a mediated device "
+                           "type %(type)s that is no longer supported by the "
+                           "parent PCI device, %(parent)s. Please correct "
                            "the configuration accordingly." %
                            {'inst': instance_uuid,
                             'parent': parent,
                             'type': dev_info['type']})
-                    raise exception.InvalidLibvirtGPUConfig(reason=msg)
+                    raise exception.InvalidLibvirtMdevConfig(reason=msg)
                 self._create_new_mediated_device(parent, uuid=mdev_uuid)
 
     def _check_file_backed_memory_support(self):
@@ -7430,7 +7429,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 return [first_type]
             for device_address in group.device_addresses:
                 if device_address in self.pgpu_type_mapping:
-                    raise exception.InvalidLibvirtGPUConfig(
+                    raise exception.InvalidLibvirtMdevConfig(
                         reason="duplicate types for PCI ID %s" % device_address
                     )
                 # Just checking whether the operator fat-fingered the address.
@@ -7438,7 +7437,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 try:
                     pci_utils.parse_address(device_address)
                 except exception.PciDeviceWrongAddressFormat:
-                    raise exception.InvalidLibvirtGPUConfig(
+                    raise exception.InvalidLibvirtMdevConfig(
                         reason="incorrect PCI address: %s" % device_address
                     )
                 self.pgpu_type_mapping[device_address] = vgpu_type
@@ -7468,12 +7467,12 @@ class LibvirtDriver(driver.ComputeDriver):
         except (exception.PciDeviceWrongAddressFormat, IndexError):
             # this is not a valid PCI address
             LOG.warning("The PCI address %s was invalid for getting the "
-                        "related vGPU type", device_address)
+                        "related mdev type", device_address)
             return
         try:
             return self.pgpu_type_mapping.get(device_address)
         except KeyError:
-            LOG.warning("No vGPU type was configured for PCI address: %s",
+            LOG.warning("No mdev type was configured for PCI address: %s",
                         device_address)
             # We accept to return None instead of raising an exception
             # because we prefer the callers to return the existing exceptions
@@ -7893,7 +7892,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # The provider doesn't exist, return a better understandable
             # exception
             raise exception.ComputeResourcesUnavailable(
-                reason='vGPU resource is not available')
+                reason='mdev-capable resource is not available')
         # FIXME(sbauza): The functional reshape test assumes that we could
         # run _allocate_mdevs() against non-nested RPs but this is impossible
         # as all inventories have been reshaped *before now* since it's done
@@ -7916,14 +7915,14 @@ class LibvirtDriver(driver.ComputeDriver):
                     break
             else:
                 LOG.warning(
-                    "pGPU device name %(name)s can't be guessed from the "
-                    "ProviderTree roots %(roots)s",
+                    "mdev-capable device name %(name)s can't be guessed from "
+                    "the ProviderTree roots %(roots)s",
                     {'name': rp_name,
                      'roots': ', '.join([root.name for root in roots])})
                 # We f... have no idea what was the parent device
                 # If we can't find devices having available VGPUs, just raise
                 raise exception.ComputeResourcesUnavailable(
-                    reason='vGPU resource is not available')
+                    reason='mdev-capable resource is not available')
 
         supported_types = self.supported_vgpu_types
         # Which mediated devices are created but not assigned to a guest ?
@@ -7941,7 +7940,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if not chosen_mdev:
                 # If we can't find devices having available VGPUs, just raise
                 raise exception.ComputeResourcesUnavailable(
-                    reason='vGPU resource is not available')
+                    reason='mdev-capable resource is not available')
             else:
                 chosen_mdevs.append(chosen_mdev)
         return chosen_mdevs
@@ -7962,7 +7961,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # operation to support reallocating mediated devices.
                 if error_code == libvirt.VIR_ERR_CONFIG_UNSUPPORTED:
                     reason = _("Suspend is not supported for instances having "
-                               "attached vGPUs.")
+                               "attached mediated devices.")
                     raise exception.InstanceFaultRollback(
                         exception.InstanceSuspendFailure(reason=reason))
                 else:

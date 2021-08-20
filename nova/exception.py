@@ -2364,8 +2364,8 @@ class AcceleratorRequestBindingFailed(NovaException):
         self.arqs = arqs or []
 
 
-class InvalidLibvirtGPUConfig(NovaException):
-    msg_fmt = _('Invalid configuration for GPU devices: %(reason)s')
+class InvalidLibvirtMdevConfig(NovaException):
+    msg_fmt = _('Invalid configuration for mdev-capable devices: %(reason)s')
 
 
 class RequiredMixedInstancePolicy(Invalid):
