@@ -120,7 +120,6 @@ class SRIOVServersTest(_PCIServersTestBase):
         # fixture already stubbed.
         self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
 
-        self.useFixture(nova_fixtures.OSBrickFixture())
         self.useFixture(fixtures.MonkeyPatch(
             'nova.tests.fixtures.libvirt.Domain.migrateToURI3',
             self._migrate_stub))
