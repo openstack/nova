@@ -2138,7 +2138,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.assertEqual(2048, stats['memory_mb'])
         self.assertEqual(1000, stats['memory_mb_used'])
         self.assertEqual('VMware vCenter Server', stats['hypervisor_type'])
-        self.assertEqual(5001000, stats['hypervisor_version'])
+        self.assertEqual(5005000, stats['hypervisor_version'])
         self.assertEqual(self.node_name, stats['hypervisor_hostname'])
         self.assertIsNone(stats['cpu_info'])
         self.assertEqual(
