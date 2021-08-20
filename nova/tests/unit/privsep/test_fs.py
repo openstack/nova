@@ -65,13 +65,15 @@ class PrivsepFilesystemHelpersTestCase(test.NoDBTestCase):
         nova.privsep.fs.vginfo('vg')
         mock_execute.assert_called_with('vgs', '--noheadings', '--nosuffix',
                                         '--separator', '|', '--units', 'b',
-                                        '-o', 'vg_size,vg_free', 'vg')
+                                        '-o', 'vg_size,vg_free', 'vg',
+                                        attempts=3, delay_on_retry=True)
 
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_lvlist(self, mock_execute):
         nova.privsep.fs.lvlist('vg')
         mock_execute.assert_called_with('lvs', '--noheadings', '-o',
-                                        'lv_name', 'vg')
+                                        'lv_name', 'vg',
+                                        attempts=3, delay_on_retry=True)
 
     @mock.patch('oslo_concurrency.processutils.execute')
     def test_lvinfo(self, mock_execute):
