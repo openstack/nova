@@ -341,6 +341,15 @@ class CinderFixture(fixtures.Fixture):
         self.test.stub_out(
             'nova.volume.cinder.API.get_all_volume_types',
             fake_get_all_volume_types)
+        # TODO(lyarwood): These legacy cinderv2 APIs aren't currently wired
+        # into the fixture but should be in the future before we migrate any
+        # remaining legacy exports to cinderv3 attachments.
+        self.test.stub_out(
+            'nova.volume.cinder.API.initialize_connection',
+            lambda *args, **kwargs: None)
+        self.test.stub_out(
+            'nova.volume.cinder.API.terminate_connection',
+            lambda *args, **kwargs: None)
 
     def volume_ids_for_instance(self, instance_uuid):
         for volume_id, attachments in self.volume_to_attachment.items():
