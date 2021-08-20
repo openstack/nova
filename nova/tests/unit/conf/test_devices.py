@@ -20,15 +20,15 @@ CONF = nova.conf.CONF
 class DevicesConfTestCase(test.NoDBTestCase):
 
     def test_register_dynamic_opts(self):
-        self.flags(enabled_vgpu_types=['nvidia-11', 'nvidia-12'],
+        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
                    group='devices')
 
-        self.assertNotIn('vgpu_nvidia-11', CONF)
-        self.assertNotIn('vgpu_nvidia-12', CONF)
+        self.assertNotIn('mdev_nvidia-11', CONF)
+        self.assertNotIn('mdev_nvidia-12', CONF)
 
         nova.conf.devices.register_dynamic_opts(CONF)
 
-        self.assertIn('vgpu_nvidia-11', CONF)
-        self.assertIn('vgpu_nvidia-12', CONF)
-        self.assertEqual([], getattr(CONF, 'vgpu_nvidia-11').device_addresses)
-        self.assertEqual([], getattr(CONF, 'vgpu_nvidia-12').device_addresses)
+        self.assertIn('mdev_nvidia-11', CONF)
+        self.assertIn('mdev_nvidia-12', CONF)
+        self.assertEqual([], getattr(CONF, 'mdev_nvidia-11').device_addresses)
+        self.assertEqual([], getattr(CONF, 'mdev_nvidia-12').device_addresses)

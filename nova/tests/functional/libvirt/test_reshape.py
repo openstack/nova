@@ -79,7 +79,7 @@ class VGPUReshapeTests(base.ServersTestBase):
 
         # start a compute with vgpu support disabled so the driver will
         # ignore the content of the above HostMdevDeviceInfo
-        self.flags(enabled_vgpu_types='', group='devices')
+        self.flags(enabled_mdev_types='', group='devices')
 
         hostname = self.start_compute(
             hostname='compute1',
@@ -106,7 +106,7 @@ class VGPUReshapeTests(base.ServersTestBase):
 
         # enabled vgpu support
         self.flags(
-            enabled_vgpu_types=fakelibvirt.NVIDIA_11_VGPU_TYPE,
+            enabled_mdev_types=fakelibvirt.NVIDIA_11_VGPU_TYPE,
             group='devices')
         # We don't want to restart the compute service or it would call for
         # a reshape but we still want to accept some vGPU types so we call

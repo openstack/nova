@@ -132,7 +132,7 @@ class VGPUTests(VGPUTestBase):
 
         # Start compute1 supporting only nvidia-11
         self.flags(
-            enabled_vgpu_types=fakelibvirt.NVIDIA_11_VGPU_TYPE,
+            enabled_mdev_types=fakelibvirt.NVIDIA_11_VGPU_TYPE,
             group='devices')
 
         # for the sake of resizing, we need to patch the two methods below
@@ -293,7 +293,7 @@ class VGPUMultipleTypesTests(VGPUTestBase):
         self.flavor = self._create_flavor(extra_spec=extra_spec)
 
         self.flags(
-            enabled_vgpu_types=[fakelibvirt.NVIDIA_11_VGPU_TYPE,
+            enabled_mdev_types=[fakelibvirt.NVIDIA_11_VGPU_TYPE,
                                 fakelibvirt.NVIDIA_12_VGPU_TYPE],
             group='devices')
         # we need to call the below again to ensure the updated
@@ -304,8 +304,8 @@ class VGPUMultipleTypesTests(VGPUTestBase):
         #  - 0000:81:01.0 will only support nvidia-12
         pgpu1_pci_addr = self.libvirt2pci_address(fakelibvirt.PGPU1_PCI_ADDR)
         pgpu2_pci_addr = self.libvirt2pci_address(fakelibvirt.PGPU2_PCI_ADDR)
-        self.flags(device_addresses=[pgpu1_pci_addr], group='vgpu_nvidia-11')
-        self.flags(device_addresses=[pgpu2_pci_addr], group='vgpu_nvidia-12')
+        self.flags(device_addresses=[pgpu1_pci_addr], group='mdev_nvidia-11')
+        self.flags(device_addresses=[pgpu2_pci_addr], group='mdev_nvidia-12')
 
         # Prepare traits for later on
         self._create_trait('CUSTOM_NVIDIA_11')
