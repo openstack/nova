@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from nova.scheduler import filter_scheduler
+from nova.scheduler import driver as scheduler_driver
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -25,7 +25,7 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
     "max_server_per_host" rule in the group's anti-affinity policy which
     allows having more than one server from the same anti-affinity group
     on the same host. As a result, the scheduler filter logic changed and
-    a regression was introduced because of how the FilterScheduler is tracking
+    a regression was introduced because of how the scheduler is tracking
     which hosts are selected for each instance in a multi-create request.
 
     This test uses a custom weigher to ensure that when creating two servers
@@ -71,11 +71,11 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
         group = self.api.post_server_groups(
             {'name': 'test group', 'policy': 'anti-affinity'})
 
-        # Stub out FilterScheduler._get_alternate_hosts so we can assert what
+        # Stub out Scheduler._get_alternate_hosts so we can assert what
         # is coming back for alternate hosts is what we'd expect after the
         # initial hosts are selected for each instance.
         original_get_alternate_hosts = (
-            filter_scheduler.FilterScheduler._get_alternate_hosts)
+            scheduler_driver.SchedulerDriver._get_alternate_hosts)
 
         def stub_get_alternate_hosts(*a, **kw):
             # Intercept the result so we can assert there are no alternates.
@@ -94,8 +94,10 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
                 hosts.add(selection_list[0].service_host)
             self.assertEqual(2, len(hosts), hosts)
             return selections_to_return
-        self.stub_out('nova.scheduler.filter_scheduler.FilterScheduler.'
-                      '_get_alternate_hosts', stub_get_alternate_hosts)
+
+        self.stub_out(
+            'nova.scheduler.driver.SchedulerDriver._get_alternate_hosts',
+            stub_get_alternate_hosts)
 
         # Now create two servers in that group.
         server_req = self._build_server(networks='none')

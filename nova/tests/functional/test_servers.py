@@ -3654,10 +3654,10 @@ class ServerDeleteBuildTests(integrated_helpers.ProviderUsageBaseTestCase):
             networks='none')
 
         with test.nested(
-            mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                       '_ensure_sufficient_hosts'),
-            mock.patch('nova.conductor.manager.ComputeTaskManager.'
-                       '_bury_in_cell0')
+            mock.patch('nova.scheduler.driver.SchedulerDriver'
+                       '._ensure_sufficient_hosts'),
+            mock.patch('nova.conductor.manager.ComputeTaskManager'
+                       '._bury_in_cell0'),
         ) as (mock_suff_hosts, mock_bury):
             mock_suff_hosts.side_effect = test.TestingException('oops')
             server = self.api.post_server({'server': server_req})

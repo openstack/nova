@@ -33,7 +33,7 @@ better to begin the process with a candidate task or method *within* the
 service that can be associated with an identifier. For example,
 ``select_destinations`` in the ``FilterScheduler`` can be associated with the
 list of ``instance_uuids`` passed to it and it runs only once for that set of
-instance uuids.
+instance UUIDs.
 
 The process for profiling is:
 
@@ -100,52 +100,19 @@ profiling and benchmarking scenarios so not all changes are relevant here):
     [notifications]
     notification_format = unversioned
 
-Change the code in ``nova/scheduler/filter_scheduler.py`` as follows:
+Change the code in ``nova/scheduler/driver.py`` as follows to start the
+profiler at the start of ``select_destinations`` call and to dump the
+statistics at the end. For example:
 
 .. code-block:: diff
 
-
-    diff --git a/nova/scheduler/filter_scheduler.py b/nova/scheduler/filter_scheduler.py
-    index 672f23077e..cb0f87fe48 100644
-    --- a/nova/scheduler/filter_scheduler.py
-    +++ b/nova/scheduler/filter_scheduler.py
-    @@ -49,92 +49,99 @@ class FilterScheduler(driver.Scheduler):
-         def select_destinations(self, context, spec_obj, instance_uuids,
-                 alloc_reqs_by_rp_uuid, provider_summaries,
-                 allocation_request_version=None, return_alternates=False):
-             """Returns a list of lists of Selection objects, which represent the
-             hosts and (optionally) alternates for each instance.
-
-             :param context: The RequestContext object
-             :param spec_obj: The RequestSpec object
-             :param instance_uuids: List of UUIDs, one for each value of the spec
-                                    object's num_instances attribute
-             :param alloc_reqs_by_rp_uuid: Optional dict, keyed by resource provider
-                                           UUID, of the allocation_requests that may
-                                           be used to claim resources against
-                                           matched hosts. If None, indicates either
-                                           the placement API wasn't reachable or
-                                           that there were no allocation_requests
-                                           returned by the placement API. If the
-                                           latter, the provider_summaries will be an
-                                           empty dict, not None.
-             :param provider_summaries: Optional dict, keyed by resource provider
-                                        UUID, of information that will be used by
-                                        the filters/weighers in selecting matching
-                                        hosts for a request. If None, indicates that
-                                        the scheduler driver should grab all compute
-                                        node information locally and that the
-                                        Placement API is not used. If an empty dict,
-                                        indicates the Placement API returned no
-                                        potential matches for the requested
-                                        resources.
-             :param allocation_request_version: The microversion used to request the
-                                                allocations.
-             :param return_alternates: When True, zero or more alternate hosts are
-                                       returned with each selected host. The number
-                                       of alternates is determined by the
-                                       configuration option
-                                       `CONF.scheduler.max_attempts`.
+    diff --git nova/scheduler/driver.py nova/scheduler/driver.py
+    index 555236e8a1..efa84b5a47 100644
+    --- nova/scheduler/driver.py
+    +++ nova/scheduler/driver.py
+    @@ -95,6 +95,10 @@ class SchedulerDriver:
+                 determined by the configuration option
+                 `CONF.scheduler.max_attempts`.
              """
     +        from eventlet.green import profile
     +        pr = profile.Profile()
@@ -153,26 +120,18 @@ Change the code in ``nova/scheduler/filter_scheduler.py`` as follows:
     +
              self.notifier.info(
                  context, 'scheduler.select_destinations.start',
-                 dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
-             compute_utils.notify_about_scheduler_action(
-                 context=context, request_spec=spec_obj,
-                 action=fields_obj.NotificationAction.SELECT_DESTINATIONS,
-                 phase=fields_obj.NotificationPhase.START)
-
-             host_selections = self._schedule(context, spec_obj, instance_uuids,
-                     alloc_reqs_by_rp_uuid, provider_summaries,
-                     allocation_request_version, return_alternates)
-             self.notifier.info(
-                 context, 'scheduler.select_destinations.end',
-                 dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
-             compute_utils.notify_about_scheduler_action(
+                 {'request_spec': spec_obj.to_legacy_request_spec_dict()})
+    @@ -114,6 +118,10 @@ class SchedulerDriver:
                  context=context, request_spec=spec_obj,
                  action=fields_obj.NotificationAction.SELECT_DESTINATIONS,
                  phase=fields_obj.NotificationPhase.END)
+    +
     +        pr.stop()
     +        pr.dump_stats('/tmp/select_destinations/%s.prof' % ':'.join(instance_uuids))
     +
              return host_selections
+
+         def _schedule(
 
 Make a ``/tmp/select_destinations`` directory that is writable by the user
 nova-scheduler will run as. This is where the profile output will go.
@@ -189,7 +148,7 @@ Create a server (which will call ``select_destinations``)::
     openstack server create --image cirros-0.4.0-x86_64-disk --flavor c1 x1
 
 In ``/tmp/select_destinations`` there should be a file with a name using the
-uuid of the created server with a ``.prof`` extension.
+UUID of the created server with a ``.prof`` extension.
 
 Change to that directory and view the profile using the pstats
 `interactive mode`_::
