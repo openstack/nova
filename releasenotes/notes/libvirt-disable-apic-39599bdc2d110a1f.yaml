@@ -1,0 +1,13 @@
+---
+issues:
+  - |
+    Linux guest images that have known kernel bugs related to virtualized apic
+    initialization previously would sporadically hang. For images where the
+    kernel cannot be upgraded, a ``[workarounds]`` config option has been
+    introduced:
+
+    ``[workarounds]libvirt_disable_apic``
+
+    This option is primarily intended for CI and development clouds as a bridge
+    for operators to mitigate the issue while they work with their upstream
+    image vendors.

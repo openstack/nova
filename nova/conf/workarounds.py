@@ -354,6 +354,16 @@ Related options:
 * :oslo.config:option:`image_cache.subdirectory_name`
 * :oslo.config:option:`update_resources_interval`
 """),
+    cfg.BoolOpt('libvirt_disable_apic',
+               default=False,
+               help="""
+With some kernels initializing the guest apic can result in a kernel hang that
+renders the guest unusable. This happens as a result of a kernel bug. In most
+cases the correct fix it to update the guest image kernel to one that is
+patched however in some cases this is not possible. This workaround allows the
+emulation of an apic to be disabled per host however it is not recommended to
+use outside of a CI or developer cloud.
+"""),
 ]
 
 

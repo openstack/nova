@@ -4917,6 +4917,37 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(cfg.features[2].vapic)
         self.assertEqual(hvid_hidden, cfg.features[2].vendorid_spoof)
 
+    @mock.patch.object(host.Host, 'has_min_version',
+                       new=mock.Mock(return_value=True))
+    def test_get_guest_config_apic_workaround(self):
+        self.flags(virt_type='qemu', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance_ref, image_meta)
+
+        cfg = drvr._get_guest_config(
+            instance_ref, _fake_network_info(self), image_meta, disk_info)
+
+        self.assertEqual(3, len(cfg.features))
+        self.assertIsInstance(
+            cfg.features[0], vconfig.LibvirtConfigGuestFeatureACPI)
+        self.assertIsInstance(
+            cfg.features[1], vconfig.LibvirtConfigGuestFeatureAPIC)
+        self.assertIsInstance(
+            cfg.features[2], vconfig.LibvirtConfigGuestFeatureVMCoreInfo)
+
+        self.flags(libvirt_disable_apic=True, group='workarounds')
+        cfg = drvr._get_guest_config(
+            instance_ref, _fake_network_info(self), image_meta, disk_info)
+
+        self.assertEqual(2, len(cfg.features))
+        self.assertIsInstance(
+            cfg.features[0], vconfig.LibvirtConfigGuestFeatureACPI)
+        self.assertIsInstance(
+            cfg.features[1], vconfig.LibvirtConfigGuestFeatureVMCoreInfo)
+
     def test_get_guest_config_windows_hyperv_feature2(self):
         self._test_get_guest_config_windows_hyperv()
 
