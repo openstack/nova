@@ -444,13 +444,6 @@ class AvailabilityZoneFilterTest(AggregateRequestFiltersTest):
         # Use custom weigher to make sure that we have a predictable
         # scheduling sort order.
         self.useFixture(nova_fixtures.HostNameWeigherFixture())
-
-        # NOTE(danms): Do this before calling setUp() so that
-        # the scheduler service that is started sees the new value
-        filters = CONF.filter_scheduler.enabled_filters
-        filters.remove('AvailabilityZoneFilter')
-        self.flags(enabled_filters=filters, group='filter_scheduler')
-
         super(AvailabilityZoneFilterTest, self).setUp()
 
     def test_filter_with_az(self):
@@ -729,7 +722,6 @@ class TestAggregateFiltersTogether(AggregateRequestFiltersTest):
         # NOTE(danms): Do this before calling setUp() so that
         # the scheduler service that is started sees the new value
         filters = CONF.filter_scheduler.enabled_filters
-        filters.remove('AvailabilityZoneFilter')
 
         # NOTE(shilpasd): To test `isolate_aggregates` request filter, removed
         # following filters which also filters hosts based on aggregate

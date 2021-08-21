@@ -1,0 +1,18 @@
+---
+deprecations:
+  - |
+    The ``AvailabilityZoneFilter`` scheduler filters is now deprecated
+    for removal in a future release. The functionality of the
+    ``AvailabilityZoneFilter`` has been replaced by the
+    ``map_az_to_placement_aggregate`` pre-filter which was introduced in
+    18.0.0 (Rocky). This pre-filter is now enabled by default and will be
+    mandatory in a future release.
+upgrades:
+  - |
+    The ``AvailabilityZoneFilter``  has been removed from the default
+    ``[scheduler] enabled_filters`` list. The ``AvailabilityZoneFilter``
+    is replaced by an optional placement pre-filter which is enabled by
+    ``[scheduler] query_placement_for_availability_zone``.
+    The pre-filter is now enabled by default. If you choose to disable the
+    AZ pre-filter, you will need to re-add ``AvailabilityZoneFilter`` to the
+    ``[scheduler] enabled_filters`` config value.

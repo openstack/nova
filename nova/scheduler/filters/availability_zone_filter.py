@@ -37,6 +37,21 @@ class AvailabilityZoneFilter(filters.BaseHostFilter):
 
     RUN_ON_REBUILD = False
 
+    def __init__(self):
+        super().__init__()
+        if CONF.scheduler.query_placement_for_availability_zone:
+            LOG.warning(
+                "The 'AvailabilityZoneFilter' is deprecated since the 24.0.0 "
+                "(Xena) release. Since the 18.0.0 (Rocky) release, nova "
+                "has supported mapping AZs to placement aggregates. "
+                "The feature is enabled by the "
+                "'query_placement_for_availability_zone' config option and "
+                "is now enabled by default. As such, the "
+                "'AvailabilityZoneFilter' is no longer required. Nova is "
+                "currently configured to use both placement and the "
+                "AvailabilityZoneFilter for AZ enforcement."
+            )
+
     def host_passes(self, host_state, spec_obj):
         availability_zone = spec_obj.availability_zone
 
