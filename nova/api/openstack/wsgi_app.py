@@ -30,6 +30,8 @@ CONF = cfg.CONF
 
 CONFIG_FILES = ['api-paste.ini', 'nova.conf']
 
+LOG = logging.getLogger(__name__)
+
 objects.register_all()
 
 
@@ -78,8 +80,12 @@ def error_application(exc, name):
     return application
 
 
-def init_application(name):
-    conf_files = _get_config_files()
+@utils.run_once('Global data already initialized, not re-initializing.',
+                LOG.info)
+def init_global_data(conf_files):
+    # NOTE(melwitt): parse_args initializes logging and calls global rpc.init()
+    # and db_api.configure(). The db_api.configure() call does not initiate any
+    # connection to the database.
     config.parse_args([], default_config_files=conf_files)
 
     logging.setup(CONF, "nova")
@@ -94,11 +100,25 @@ def init_application(name):
             logging.getLogger(__name__),
             logging.DEBUG)
 
+
+def init_application(name):
+    conf_files = _get_config_files()
+
+    # NOTE(melwitt): The init_application method can be called multiple times
+    # within a single python interpreter instance if any exception is raised
+    # during it (example: DBConnectionError while setting up the service) and
+    # apache/mod_wsgi reloads the init_application script. So, we initialize
+    # global data separately and decorate the method to run only once in a
+    # python interpreter instance.
+    init_global_data(conf_files)
+
     try:
         _setup_service(CONF.host, name)
     except exception.ServiceTooOld as exc:
         return error_application(exc, name)
 
+    # This global init is safe because if we got here, we already successfully
+    # set up the service and setting up the profile cannot fail.
     service.setup_profiler(name, CONF.host)
 
     conf = conf_files[0]
