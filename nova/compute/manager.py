@@ -7809,12 +7809,6 @@ class ComputeManager(manager.Manager):
             context, requested_networks, pci_reqs,
             affinity_policy=pci_numa_affinity_policy)
 
-        # We only support one port per attach request so we at most have one
-        # pci request
-        if pci_reqs.requests:
-            pci_req = pci_reqs.requests[0]
-            requested_networks[0].pci_request_id = pci_req.request_id
-
         result = self._allocate_port_resource_for_instance(
             context, instance, pci_reqs, request_groups)
         provider_mappings, resources = result
