@@ -68,6 +68,9 @@ Nova Specific Commandments
 - [N364] Check non-existent mock assertion methods and attributes.
 - [N365] Check misuse of assertTrue/assertIsNone.
 - [N366] The assert_has_calls is a method rather than a variable.
+- [N367] Disallow aliasing the mock.Mock and similar classes in tests.
+- [N368] Reject if the mock.Mock class is used as a replacement value instead of and
+  instance of a mock.Mock during patching in tests.
 
 Creating Unit Tests
 -------------------

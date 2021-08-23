@@ -10936,7 +10936,7 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch(
                 'nova.compute.utils.'
                 'update_pci_request_spec_with_allocated_interface_name',
-                new=mock.NonCallableMock),
+                new=mock.NonCallableMock()),
         ) as (
             mock_get_nodename, mock_get_alloc_candidates, mock_add_res,
             mock_update_pci

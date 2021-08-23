@@ -130,6 +130,13 @@ useless_assertion_re = re.compile(
 # Regex for misuse of assert_has_calls
 mock_assert_has_calls_re = re.compile(r"\.assert_has_calls\s?=")
 
+# Regex for catching aliasing mock.Mock class in test
+mock_class_aliasing_re = re.compile(
+    r"^[A-Za-z0-9_.]+\s*=\s*mock\.(Magic|NonCallable)?Mock$")
+# Regex for catching aliasing mock.Mock class in test
+mock_class_as_new_value_in_patching_re = re.compile(
+    r"mock\.patch(\.object)?.* new=mock\.(Magic|NonCallable)?Mock[^(]")
+
 
 class BaseASTChecker(ast.NodeVisitor):
     """Provides a simple framework for writing AST-based checks.
@@ -939,3 +946,58 @@ def check_assert_has_calls(logical_line, filename):
     if ('nova/tests/' in filename and
             mock_assert_has_calls_re.search(logical_line)):
         yield (0, msg)
+
+
+@core.flake8ext
+def do_not_alias_mock_class(logical_line, filename):
+    """Check for aliasing Mock class
+
+    Aliasing Mock class almost always a bad idea. Consider the test code
+    trying to catch the instantiation of the Rados class but instead
+    introducing a global change on the Mock object:
+    https://github.com/openstack/nova/blob/10b1dc84f47a71061340f8e0ae0fe32dca44061a/nova/tests/unit/storage/test_rbd.py#L122-L125
+    After this code every test that assumes that mock.Mock().shutdown is a new
+    auto-generated mock.Mock() object will fail a shutdown is now defined in
+    the Mock class level and therefore surviving between test cases.
+
+    N367
+    """
+    if 'nova/tests/' in filename:
+        res = mock_class_aliasing_re.match(logical_line)
+        if res:
+            yield (
+                0,
+                "N367: Aliasing mock.Mock class is dangerous as it easy to "
+                "introduce class level changes in Mock that survives "
+                "between test cases. If you want to mock object creation "
+                "then mock the class under test with a mock _instance_ and "
+                "set the return_value of the mock to return mock instances. "
+                "See for example: "
+                "https://review.opendev.org/c/openstack/nova/+/805657"
+            )
+
+
+@core.flake8ext
+def do_not_use_mock_class_as_new_mock_value(logical_line, filename):
+    """Check if mock.Mock class is used during set up of a patcher as new
+    kwargs.
+
+    The mock.patch and mock.patch.object takes a `new` kwargs and use that
+    value as the replacement during the patching. Using new=mock.Mock
+    (instead of new=mock.Mock() or new_callable=mock.Mock) results in code
+    under test pointing to the Mock class. This is almost always a wrong thing
+    as any changes on that class will leak between test cases uncontrollably.
+
+    N368
+    """
+    if 'nova/tests/' in filename:
+        res = mock_class_as_new_value_in_patching_re.search(logical_line)
+        if res:
+            yield (
+                0,
+                "N368: Using mock.patch(..., new=mock.Mock) causes that the "
+                "patching will introduce the Mock class as replacement value "
+                "instead of a mock object. Any change on the Mock calls will "
+                "leak out from the test and can cause interference. "
+                "Use new=mock.Mock() or new_callable=mock.Mock instead."
+            )
