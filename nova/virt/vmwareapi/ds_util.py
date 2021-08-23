@@ -44,13 +44,13 @@ DcInfo = collections.namedtuple('DcInfo',
 _DS_DC_MAPPING = {}
 
 
-def _select_datastore(session, data_stores, best_match, datastore_regex=None,
+def _select_datastore(session, datastores, best_match, datastore_regex=None,
                       storage_policy=None,
                       allowed_ds_types=ALL_SUPPORTED_DS_TYPES):
     """Find the most preferable datastore in a given RetrieveResult object.
 
     :param session: vmwareapi session
-    :param data_stores: a RetrieveResult object from vSphere API call
+    :param datastores: an iterator to the objects of RetrieveResult
     :param best_match: the current best match for datastore
     :param datastore_regex: an optional regular expression to match names
     :param storage_policy: storage policy for the datastore
@@ -60,14 +60,14 @@ def _select_datastore(session, data_stores, best_match, datastore_regex=None,
 
     if storage_policy:
         matching_ds = _filter_datastores_matching_storage_policy(
-            session, data_stores, storage_policy)
+            session, datastores, storage_policy)
         if not matching_ds:
             return best_match
     else:
-        matching_ds = data_stores
+        matching_ds = datastores
 
-    # data_stores is actually a RetrieveResult object from vSphere API call
-    for obj_content in matching_ds.objects:
+    # matching_ds is actually a RetrieveResult object from vSphere API call
+    for obj_content in matching_ds:
         # the propset attribute "need not be set" by returning API
         if not hasattr(obj_content, 'propSet'):
             continue
@@ -81,7 +81,7 @@ def _select_datastore(session, data_stores, best_match, datastore_regex=None,
                     freespace=propdict['summary.freeSpace'])
             # favor datastores with more free space
             if (best_match is None or
-                new_ds.freespace > best_match.freespace):
+                    new_ds.freespace > best_match.freespace):
                 best_match = new_ds
 
     return best_match
@@ -123,25 +123,24 @@ def get_datastore(session, cluster, datastore_regex=None,
     if not datastore_ret:
         raise exception.DatastoreNotFound()
 
-    data_store_mors = datastore_ret.ManagedObjectReference
-    data_stores = session._call_method(vim_util,
+    datastore_mors = datastore_ret.ManagedObjectReference
+    result = session._call_method(vim_util,
                             "get_properties_for_a_collection_of_objects",
-                            "Datastore", data_store_mors,
+                            "Datastore", datastore_mors,
                             ["summary.type", "summary.name",
                              "summary.capacity", "summary.freeSpace",
                              "summary.accessible",
                              "summary.maintenanceMode"])
 
     best_match = None
-    while data_stores:
+    with vutil.WithRetrieval(session.vim, result) as datastores:
         best_match = _select_datastore(session,
-                                       data_stores,
+                                       datastores,
                                        best_match,
                                        datastore_regex,
                                        storage_policy,
                                        allowed_ds_types)
-        data_stores = session._call_method(vutil, 'continue_retrieval',
-                                           data_stores)
+
     if best_match:
         return best_match
 
@@ -157,9 +156,8 @@ def get_datastore(session, cluster, datastore_regex=None,
         raise exception.DatastoreNotFound()
 
 
-def _get_allowed_datastores(data_stores, datastore_regex):
-    allowed = []
-    for obj_content in data_stores.objects:
+def _get_allowed_datastores(datastores, datastore_regex):
+    for obj_content in datastores:
         # the propset attribute "need not be set" by returning API
         if not hasattr(obj_content, 'propSet'):
             continue
@@ -168,12 +166,10 @@ def _get_allowed_datastores(data_stores, datastore_regex):
         if _is_datastore_valid(propdict,
                                datastore_regex,
                                ALL_SUPPORTED_DS_TYPES):
-            allowed.append(ds_obj.Datastore(ref=obj_content.obj,
+            yield (ds_obj.Datastore(ref=obj_content.obj,
                                     name=propdict['summary.name'],
                                     capacity=propdict['summary.capacity'],
                                     freespace=propdict['summary.freeSpace']))
-
-    return allowed
 
 
 def get_available_datastores(session, cluster=None, datastore_regex=None):
@@ -184,21 +180,17 @@ def get_available_datastores(session, cluster=None, datastore_regex=None):
                               "datastore")
     if not ds:
         return []
-    data_store_mors = ds.ManagedObjectReference
+    datastore_mors = ds.ManagedObjectReference
     # NOTE(garyk): use utility method to retrieve remote objects
-    data_stores = session._call_method(vim_util,
+    result = session._call_method(vim_util,
             "get_properties_for_a_collection_of_objects",
-            "Datastore", data_store_mors,
+            "Datastore", datastore_mors,
             ["summary.type", "summary.name", "summary.accessible",
              "summary.maintenanceMode", "summary.capacity",
              "summary.freeSpace"])
 
-    allowed = []
-    while data_stores:
-        allowed.extend(_get_allowed_datastores(data_stores, datastore_regex))
-        data_stores = session._call_method(vutil, 'continue_retrieval',
-                                           data_stores)
-    return allowed
+    with vutil.WithRetrieval(session.vim, result) as datastores:
+        return list(_get_allowed_datastores(datastores, datastore_regex))
 
 
 def get_allowed_datastore_types(disk_type):
@@ -432,29 +424,36 @@ def get_sub_folders(session, ds_browser, ds_path):
     return set()
 
 
-def _filter_datastores_matching_storage_policy(session, data_stores,
+def _filter_datastores_matching_storage_policy(session, datastores,
                                                storage_policy):
     """Get datastores matching the given storage policy.
 
-    :param data_stores: the list of retrieve result wrapped datastore objects
+    :param datastores: an iterator over objects of a RetrieveResult
     :param storage_policy: the storage policy name
-    :return: the list of datastores conforming to the given storage policy
+    :return: an iterator to datastores conforming to the given storage policy
     """
     profile_id = pbm.get_profile_id_by_name(session, storage_policy)
-    if profile_id:
-        factory = session.pbm.client.factory
-        ds_mors = [oc.obj for oc in data_stores.objects]
-        hubs = pbm.convert_datastores_to_hubs(factory, ds_mors)
-        matching_hubs = pbm.filter_hubs_by_profile(session, hubs,
-                                                   profile_id)
-        if matching_hubs:
-            matching_ds = pbm.filter_datastores_by_hubs(matching_hubs,
-                                                        ds_mors)
-            object_contents = [oc for oc in data_stores.objects
-                               if oc.obj in matching_ds]
-            data_stores.objects = object_contents
-            return data_stores
-    LOG.error("Unable to retrieve storage policy with name %s", storage_policy)
+    if not profile_id:
+        LOG.error("Unable to retrieve storage policy with name %s",
+                  storage_policy)
+        return
+
+    factory = session.pbm.client.factory
+
+    # The hub-id is the moref-value of the datastore
+    ds_mors = []
+    ref_to_oc = {}
+    for oc in datastores:
+        ds_mors.append(oc.obj)
+        ref_to_oc[vim_util.get_moref_value(oc.obj)] = oc
+
+    hubs = pbm.convert_datastores_to_hubs(factory, ds_mors)
+    matching_hubs = pbm.filter_hubs_by_profile(session, hubs,
+                                                profile_id)
+
+    # Now we have to map back all the matching ones
+    for hub in matching_hubs:
+        yield ref_to_oc[hub.hubId]
 
 
 def _update_datacenter_cache_from_objects(session, dcs):
