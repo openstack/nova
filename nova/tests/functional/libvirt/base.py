@@ -160,6 +160,31 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         return hostname
 
 
+class LibvirtMigrationMixin(object):
+    """A simple mixin to facilliate successful libvirt live migrations
+
+    Requires that the test class set self.server for the specific test instnace
+    and self.{src,dest} to indicate the direction of the migration. For any
+    scenarios more complex than this they should override _migrate_stub with
+    their own implementation.
+    """
+    def setUp(self):
+        super().setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.tests.fixtures.libvirt.Domain.migrateToURI3',
+            self._migrate_stub))
+        self.migrate_stub_ran = False
+
+    def _migrate_stub(self, domain, destination, params, flags):
+        self.dest.driver._host.get_connection().createXML(
+            params['destination_xml'],
+            'fake-createXML-doesnt-care-about-flags')
+        conn = self.src.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        dom.complete_job()
+        self.migrate_stub_ran = True
+
+
 class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
     """A custom variant of the stock neutron fixture with more networks.
 

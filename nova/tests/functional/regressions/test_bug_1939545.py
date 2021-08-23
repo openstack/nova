@@ -12,8 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import fixtures
-
 from oslo_serialization import jsonutils
 
 from nova import context
@@ -24,6 +22,7 @@ from nova.tests.functional.libvirt import base
 
 
 class TestLiveMigrateUpdateDevicePath(
+    base.LibvirtMigrationMixin,
     base.ServersTestBase,
     integrated_helpers.InstanceHelperMixin
 ):
@@ -43,12 +42,6 @@ class TestLiveMigrateUpdateDevicePath(
     def setUp(self):
         super().setUp()
 
-        # TODO(lyarwood): Move into base.ServersTestBase to allow live
-        # migrations to pass without changes by the test classes.
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.tests.fixtures.libvirt.Domain.migrateToURI3',
-            self._migrate_stub))
-
         self.start_compute(
             hostname='src',
             host_info=fakelibvirt.HostInfo(
@@ -58,15 +51,8 @@ class TestLiveMigrateUpdateDevicePath(
             host_info=fakelibvirt.HostInfo(
                 cpu_nodes=1, cpu_sockets=1, cpu_cores=4, cpu_threads=1))
 
-    def _migrate_stub(self, domain, destination, params, flags):
-        dest = self.computes['dest']
-        dest.driver._host.get_connection().createXML(
-            params['destination_xml'],
-            'fake-createXML-doesnt-care-about-flags')
-        source = self.computes['src']
-        conn = source.driver._host.get_connection()
-        dom = conn.lookupByUUIDString(self.server['id'])
-        dom.complete_job()
+        self.src = self.computes['src']
+        self.dest = self.computes['dest']
 
     def test_live_migrate_update_device_path(self):
         self.server = self._create_server(host='src', networks='none')
