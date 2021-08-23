@@ -35,7 +35,7 @@ class TestMigrateFromDownHost(integrated_helpers._IntegratedTestBase):
         # We want the service to be marked down in a reasonable time while
         # ensuring we don't accidentally mark services as down prematurely
         self.flags(report_interval=1)
-        self.flags(service_down_time=5)
+        self.flags(service_down_time=6)
 
         # Use two compute services to make it easier to assert the call from
         # the dest to the src, we could also test this for same host resize.
