@@ -30,7 +30,7 @@ repos:
         additional_dependencies:
           - hacking>=3.1.0,<3.2.0
         language: python
-        entry: flake8
+        entry: tox -epep8
         files: '^.*\.py$'
         exclude: '^(doc|releasenotes|tools)/.*$'
   - repo: https://github.com/pre-commit/mirrors-autopep8
