@@ -27,9 +27,7 @@ repos:
     hooks:
       - id: flake8
         name: flake8
-        additional_dependencies:
-          - hacking>=2.0,<3.0
         language: python
-        entry: flake8
+        entry: tox -epep8
         files: '^.*\.py$'
         exclude: '^(doc|releasenotes|tools)/.*$'
