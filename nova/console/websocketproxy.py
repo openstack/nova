@@ -313,14 +313,9 @@ class NovaProxyRequestHandler(NovaProxyRequestHandlerBase,
         if os.path.isdir(path):
             parts = urlparse.urlsplit(self.path)
             if not parts.path.endswith('/'):
-                # redirect browser - doing basically what apache does
-                new_parts = (parts[0], parts[1], parts[2] + '/',
-                              parts[3], parts[4])
-                new_url = urlparse.urlunsplit(new_parts)
-
                 # Browsers interpret "Location: //uri" as an absolute URI
                 # like "http://URI"
-                if new_url.startswith('//'):
+                if self.path.startswith('//'):
                     self.send_error(400,
                                     "URI must not start with //")
                     return None

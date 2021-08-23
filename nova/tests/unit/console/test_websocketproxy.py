@@ -659,6 +659,38 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         # Verify no redirect happens and instead a 400 Bad Request is returned.
         self.assertIn('400 URI must not start with //', result[0].decode())
 
+    def test_reject_open_redirect_3_slashes(self):
+        # This will test the behavior when an attempt is made to cause an open
+        # redirect. It should be rejected.
+        mock_req = mock.MagicMock()
+        mock_req.makefile().readline.side_effect = [
+            b'GET ///example.com/%2F.. HTTP/1.1\r\n',
+            b''
+        ]
+
+        client_addr = ('8.8.8.8', 54321)
+        mock_server = mock.MagicMock()
+        # This specifies that the server will be able to handle requests other
+        # than only websockets.
+        mock_server.only_upgrade = False
+
+        # Constructing a handler will process the mock_req request passed in.
+        handler = websocketproxy.NovaProxyRequestHandler(
+            mock_req, client_addr, mock_server)
+
+        # Collect the response data to verify at the end. The
+        # SimpleHTTPRequestHandler writes the response data to a 'wfile'
+        # attribute.
+        output = io.BytesIO()
+        handler.wfile = output
+        # Process the mock_req again to do the capture.
+        handler.do_GET()
+        output.seek(0)
+        result = output.readlines()
+
+        # Verify no redirect happens and instead a 400 Bad Request is returned.
+        self.assertIn('400 URI must not start with //', result[0].decode())
+
 
 class NovaWebsocketSecurityProxyTestCase(test.NoDBTestCase):
 
