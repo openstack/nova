@@ -119,13 +119,15 @@ class RbdTestCase(test.NoDBTestCase):
         rados_patcher = mock.patch.object(rbd_utils, 'rados')
         self.mock_rados = rados_patcher.start()
         self.addCleanup(rados_patcher.stop)
-        self.mock_rados.Rados = mock.Mock
-        self.mock_rados.Rados.ioctx = mock.Mock()
-        self.mock_rados.Rados.connect = mock.Mock()
-        self.mock_rados.Rados.shutdown = mock.Mock()
-        self.mock_rados.Rados.open_ioctx = mock.Mock()
-        self.mock_rados.Rados.open_ioctx.return_value = \
-            self.mock_rados.Rados.ioctx
+        self.mock_rados.Rados = mock.Mock()
+        self.rados_inst = mock.Mock()
+        self.mock_rados.Rados.return_value = self.rados_inst
+        self.rados_inst.ioctx = mock.Mock()
+        self.rados_inst.connect = mock.Mock()
+        self.rados_inst.shutdown = mock.Mock()
+        self.rados_inst.open_ioctx = mock.Mock()
+        self.rados_inst.open_ioctx.return_value = \
+            self.rados_inst.ioctx
         self.mock_rados.Error = Exception
 
         rbd_patcher = mock.patch.object(rbd_utils, 'rbd')
@@ -339,33 +341,31 @@ class RbdTestCase(test.NoDBTestCase):
 
     def test_connect_to_rados_default(self):
         ret = self.driver._connect_to_rados()
-        self.mock_rados.Rados.connect.assert_called_once_with(
+        self.rados_inst.connect.assert_called_once_with(
                 timeout=self.rbd_connect_timeout)
-        self.assertTrue(self.mock_rados.Rados.open_ioctx.called)
-        self.assertIsInstance(ret[0], self.mock_rados.Rados)
-        self.assertEqual(self.mock_rados.Rados.ioctx, ret[1])
-        self.mock_rados.Rados.open_ioctx.assert_called_with(self.rbd_pool)
+        self.assertTrue(self.rados_inst.open_ioctx.called)
+        self.assertEqual(self.rados_inst.ioctx, ret[1])
+        self.rados_inst.open_ioctx.assert_called_with(self.rbd_pool)
 
     def test_connect_to_rados_different_pool(self):
         ret = self.driver._connect_to_rados('alt_pool')
-        self.mock_rados.Rados.connect.assert_called_once_with(
+        self.rados_inst.connect.assert_called_once_with(
                 timeout=self.rbd_connect_timeout)
-        self.assertTrue(self.mock_rados.Rados.open_ioctx.called)
-        self.assertIsInstance(ret[0], self.mock_rados.Rados)
-        self.assertEqual(self.mock_rados.Rados.ioctx, ret[1])
-        self.mock_rados.Rados.open_ioctx.assert_called_with('alt_pool')
+        self.assertTrue(self.rados_inst.open_ioctx.called)
+        self.assertEqual(self.rados_inst.ioctx, ret[1])
+        self.rados_inst.open_ioctx.assert_called_with('alt_pool')
 
     def test_connect_to_rados_error(self):
-        self.mock_rados.Rados.open_ioctx.side_effect = self.mock_rados.Error
+        self.rados_inst.open_ioctx.side_effect = self.mock_rados.Error
         self.assertRaises(self.mock_rados.Error,
                           self.driver._connect_to_rados)
-        self.mock_rados.Rados.open_ioctx.assert_called_once_with(
+        self.rados_inst.open_ioctx.assert_called_once_with(
             self.rbd_pool)
-        self.mock_rados.Rados.shutdown.assert_called_once_with()
+        self.rados_inst.shutdown.assert_called_once_with()
 
     def test_connect_to_rados_unicode_arg(self):
         self.driver._connect_to_rados(u'unicode_pool')
-        self.mock_rados.Rados.open_ioctx.assert_called_with(
+        self.rados_inst.open_ioctx.assert_called_with(
             test.MatchType(str))
 
     def test_ceph_args_none(self):
