@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Extra sortings were added to numa_fit_instance_to_host function
+    to balance usage of hypervisor's NUMA cells. Hypervisor's NUMA
+    cells with more free resources (CPU, RAM, PCI if requested)
+    will be used first (spread strategy) when configuration option
+    ``packing_host_numa_cells_allocation_strategy`` was set to False.
+    Default value of ``packing_host_numa_cells_allocation_strategy``
+    option is set to True which leads to packing strategy usage.
