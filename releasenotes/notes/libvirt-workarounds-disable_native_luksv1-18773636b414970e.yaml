@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The ``[workarounds]disable_native_luksv1`` workaround configurable has been
+    removed after previously being deprecated during the Wallaby (23.0.0)
+    release.

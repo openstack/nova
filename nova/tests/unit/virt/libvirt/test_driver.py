@@ -118,7 +118,6 @@ from nova.virt.libvirt.storage import dmcrypt
 from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt import vif as libvirt_vif
-from nova.virt.libvirt.volume import fs as fs_drivers
 from nova.virt.libvirt.volume import volume as volume_drivers
 
 CONF = nova.conf.CONF
@@ -9039,68 +9038,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_encryptor._format_volume.assert_called_once_with(key,
                                                               **encryption)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryptor')
-    def test_connect_volume_native_luks_workaround(self,
-        mock_get_volume_encryptor, mock_get_volume_encryption):
-        self.flags(disable_native_luksv1=True, group='workarounds')
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        connection_info = {'driver_volume_type': 'fake',
-                           'data': {'device_path': '/fake',
-                                    'access_mode': 'rw',
-                                    'volume_id': uuids.volume_id}}
-        encryption = {'provider': encryptors.LUKS,
-                      'encryption_key_id': uuids.encryption_key_id}
-        instance = mock.sentinel.instance
-        mock_encryptor = mock.Mock()
-        mock_get_volume_encryptor.return_value = mock_encryptor
-        mock_get_volume_encryption.return_value = encryption
-
-        drvr._connect_volume(self.context, connection_info, instance,
-                             encryption=encryption)
-
-        # Assert that the os-brick encryptors are attached
-        mock_encryptor.attach_volume.assert_called_once_with(
-            self.context, **encryption)
-
-    def test_should_disconnect_target_multi_attach_filesystem_driver(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        volume_driver = mock.MagicMock(
-            spec=fs_drivers.LibvirtMountedFileSystemVolumeDriver)
-        self.assertTrue(drvr._should_disconnect_target(
-            self.context, None, True, volume_driver, None))
-
-    def test_should_disconnect_target_single_attach_filesystem_driver(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        volume_driver = mock.MagicMock(
-            spec=fs_drivers.LibvirtMountedFileSystemVolumeDriver)
-        self.assertTrue(drvr._should_disconnect_target(
-            self.context, None, False, volume_driver, None))
-
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryptor')
-    def test_disconnect_volume_native_luks_workaround(self,
-            mock_get_volume_encryptor, mock_get_volume_encryption):
-        self.flags(disable_native_luksv1=True, group='workarounds')
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr._host = mock.Mock()
-        drvr._host.find_secret.return_value = None
-        connection_info = {'driver_volume_type': 'fake',
-                           'data': {'device_path': '/fake',
-                                    'access_mode': 'rw',
-                                    'volume_id': uuids.volume_id}}
-        encryption = {'provider': encryptors.LUKS,
-                      'encryption_key_id': uuids.encryption_key_id}
-        instance = mock.sentinel.instance
-        mock_encryptor = mock.Mock()
-        mock_get_volume_encryptor.return_value = mock_encryptor
-        mock_get_volume_encryption.return_value = encryption
-
-        drvr._disconnect_volume(self.context, connection_info, instance)
-
-        mock_encryptor.detach_volume.assert_called_once_with(
-            **encryption)
-
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryptor')
     def test_disconnect_volume_luks(self, mock_get_volume_encryptor):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -10307,15 +10244,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(drvr._allow_native_luksv1({
             'provider': 'LuksEncryptor'}))
         self.assertTrue(drvr._allow_native_luksv1({
-            'provider': encryptors.LUKS}))
-
-        # Assert the disable_qemu_native_luksv workaround always returns False
-        self.flags(disable_native_luksv1=True, group='workarounds')
-        self.assertFalse(drvr._allow_native_luksv1({
-            'provider': 'nova.volume.encryptors.luks.LuksEncryptor'}))
-        self.assertFalse(drvr._allow_native_luksv1({
-            'provider': 'LuksEncryptor'}))
-        self.assertFalse(drvr._allow_native_luksv1({
             'provider': encryptors.LUKS}))
 
     def test_multi_nic(self):

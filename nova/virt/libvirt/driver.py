@@ -1884,12 +1884,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def _allow_native_luksv1(self, encryption=None):
         """Check if QEMU's native LUKSv1 decryption should be used.
         """
-        # NOTE(lyarwood): Native LUKSv1 decryption can be disabled via a
-        # workarounds configurable in order to aviod known performance issues
-        # with the libgcrypt lib.
-        if CONF.workarounds.disable_native_luksv1:
-            return False
-
         # NOTE(lyarwood): Ensure the LUKSv1 provider is used.
         provider = None
         if encryption:
