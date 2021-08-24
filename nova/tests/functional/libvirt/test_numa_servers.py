@@ -42,7 +42,7 @@ class NUMAServersTestBase(base.ServersTestBase):
 
         # Mock the 'NUMATopologyFilter' filter, as most tests need to inspect
         # this
-        host_manager = self.scheduler.manager.driver.host_manager
+        host_manager = self.scheduler.manager.host_manager
         numa_filter_class = host_manager.filter_cls_map['NUMATopologyFilter']
         host_pass_mock = mock.Mock(wraps=numa_filter_class().host_passes)
         _p = mock.patch('nova.scheduler.filters'

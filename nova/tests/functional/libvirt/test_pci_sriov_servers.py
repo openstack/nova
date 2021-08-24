@@ -54,7 +54,7 @@ class _PCIServersTestBase(base.ServersTestBase):
 
         # Mock the 'PciPassthroughFilter' filter, as most tests need to inspect
         # this
-        host_manager = self.scheduler.manager.driver.host_manager
+        host_manager = self.scheduler.manager.host_manager
         pci_filter_class = host_manager.filter_cls_map['PciPassthroughFilter']
         host_pass_mock = mock.Mock(wraps=pci_filter_class().host_passes)
         self.mock_filter = self.useFixture(fixtures.MockPatch(

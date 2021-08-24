@@ -10,7 +10,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from nova.scheduler import driver as scheduler_driver
+from nova.scheduler import manager as scheduler_manager
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
@@ -71,11 +71,11 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
         group = self.api.post_server_groups(
             {'name': 'test group', 'policy': 'anti-affinity'})
 
-        # Stub out Scheduler._get_alternate_hosts so we can assert what
+        # Stub out SchedulerManager._get_alternate_hosts so we can assert what
         # is coming back for alternate hosts is what we'd expect after the
         # initial hosts are selected for each instance.
         original_get_alternate_hosts = (
-            scheduler_driver.SchedulerDriver._get_alternate_hosts)
+            scheduler_manager.SchedulerManager._get_alternate_hosts)
 
         def stub_get_alternate_hosts(*a, **kw):
             # Intercept the result so we can assert there are no alternates.
@@ -96,7 +96,7 @@ class AntiAffinityMultiCreateRequest(test.TestCase,
             return selections_to_return
 
         self.stub_out(
-            'nova.scheduler.driver.SchedulerDriver._get_alternate_hosts',
+            'nova.scheduler.manager.SchedulerManager._get_alternate_hosts',
             stub_get_alternate_hosts)
 
         # Now create two servers in that group.

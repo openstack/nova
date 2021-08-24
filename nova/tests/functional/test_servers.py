@@ -3654,7 +3654,7 @@ class ServerDeleteBuildTests(integrated_helpers.ProviderUsageBaseTestCase):
             networks='none')
 
         with test.nested(
-            mock.patch('nova.scheduler.driver.SchedulerDriver'
+            mock.patch('nova.scheduler.manager.SchedulerManager'
                        '._ensure_sufficient_hosts'),
             mock.patch('nova.conductor.manager.ComputeTaskManager'
                        '._bury_in_cell0'),
