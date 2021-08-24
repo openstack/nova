@@ -66,7 +66,7 @@ def _get_not_deleted(context, uuids):
     for cell_uuid, cell_mapping in cell_mappings.items():
         inst_uuids = inst_by_cell[cell_uuid]
         LOG.debug('Querying cell %(cell)s for %(num)i instances',
-                  {'cell': cell_mapping.identity, 'num': len(uuids)})
+                  {'cell': cell_mapping.identity, 'num': len(inst_uuids)})
         filters = {'uuid': inst_uuids, 'deleted': False}
         with nova_context.target_cell(context, cell_mapping) as ctx:
             found_inst_uuids.extend([
