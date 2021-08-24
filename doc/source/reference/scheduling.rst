@@ -16,7 +16,7 @@
 ============
 
 This is an overview of how scheduling works in nova from Pike onwards. For
-information on the scheduler itself, refer to :doc:`/user/filter-scheduler`.
+information on the scheduler itself, refer to :doc:`/admin/scheduling`.
 For an overview of why we've changed how the scheduler works, refer to
 :doc:`/reference/scheduler-evolution`.
 

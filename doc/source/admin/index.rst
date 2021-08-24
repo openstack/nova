@@ -77,6 +77,7 @@ responsibilities of services and drivers are:
    remote-console-access
    service-groups
    node-down
+   scheduling
    upgrades
 
 

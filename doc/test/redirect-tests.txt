@@ -15,12 +15,12 @@
 /nova/latest/development.environment.html 301 /nova/latest/contributor/development-environment.html
 /nova/latest/devref/api.html 301 /nova/latest/contributor/api.html
 /nova/latest/devref/cells.html 301 /nova/latest/user/cells.html
-/nova/latest/devref/filter_scheduler.html 301 /nova/latest/user/filter-scheduler.html
+/nova/latest/devref/filter_scheduler.html 301 /nova/latest/admin/scheduling.html
 # catch all, if we hit something in devref assume it moved to
 # reference unless we have already triggered a hit above.
 /nova/latest/devref/any-page.html 301 /nova/latest/reference/any-page.html
 /nova/latest/feature_classification.html 301 /nova/latest/user/feature-classification.html
-/nova/latest/filter_scheduler.html 301 /nova/latest/user/filter-scheduler.html
+/nova/latest/filter_scheduler.html 301 /nova/latest/admin/scheduling.html
 /nova/latest/gmr.html 301 /nova/latest/reference/gmr.html
 /nova/latest/how_to_get_involved.html 301 /nova/latest/contributor/how-to-get-involved.html
 /nova/latest/i18n.html 301 /nova/latest/reference/i18n.html
@@ -66,6 +66,7 @@
 /nova/latest/user/aggregates.html 301 /nova/latest/admin/aggregates.html
 /nova/latest/user/cellsv2_layout.html 301 /nova/latest/user/cellsv2-layout.html
 /nova/latest/user/config-drive.html 301 /nova/latest/user/metadata.html
+/nova/latest/user/filter-scheduler.html 301 /nova/latest/admin/scheduling.html
 /nova/latest/user/metadata-service.html 301 /nova/latest/user/metadata.html
 /nova/latest/user/placement.html 301 /placement/latest/
 /nova/latest/user/user-data.html 301 /nova/latest/user/metadata.html
@@ -75,6 +76,7 @@
 /nova/latest/vmstates.html 301 /nova/latest/reference/vm-states.html
 /nova/latest/wsgi.html 301 /nova/latest/user/wsgi.html
 /nova/latest/admin/adv-config.html 301 /nova/latest/admin/index.html
+/nova/latest/admin/configuration/schedulers.html 301 /nova/latest/admin/scheduling.html
 /nova/latest/admin/system-admin.html 301 /nova/latest/admin/index.html
 /nova/latest/admin/port_with_resource_request.html 301 /nova/latest/admin/ports-with-resource-requests.html
 /nova/latest/admin/manage-users.html 301 /nova/latest/admin/arch.html

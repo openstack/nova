@@ -111,11 +111,6 @@ provided by compute nodes.
 
    $ openstack server create --flavor vgpu_1 --image cirros-0.3.5-x86_64-uec --wait test-vgpu
 
-.. note::
-
-   As of the Queens release, only the *FilterScheduler* scheduler driver
-   uses the Placement API.
-
 
 How to discover a GPU type
 --------------------------

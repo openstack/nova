@@ -80,7 +80,7 @@ Once you are running nova, the following information is extremely useful.
   arbitrary factors, such as location (country, datacenter, rack), network
   layout and/or power source.
 
-* :doc:`Filter Scheduler </user/filter-scheduler>`: How the filter scheduler is
+* :doc:`Scheduling </admin/scheduling>`: How the scheduler is
   configured, and how that will impact where compute instances land in your
   environment. If you are seeing unexpected distribution of compute instances
   in your hosts, you'll want to dive into this configuration.

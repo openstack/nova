@@ -9,7 +9,7 @@ default configuration.
 
     Other services and virt drivers may provide additional extra specs not
     listed here. In addition, it is possible to register your own extra specs.
-    For more information on the latter, refer to :doc:`/user/filter-scheduler`.
+    For more information on the latter, refer to :doc:`/admin/scheduling`.
 
 Placement
 ---------
