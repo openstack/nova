@@ -23,6 +23,7 @@ import copy
 import functools
 
 from oslo_log import log as logging
+from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import units
 from oslo_vmware import exceptions as vexc
@@ -1325,6 +1326,9 @@ def get_vmdk_adapter_type(adapter_type):
     return vmdk_adapter_type
 
 
+@loopingcall.RetryDecorator(
+    max_retry_count=20, inc_sleep_time=2, max_sleep_time=20,
+    exceptions=(vexc.VimFaultException,))
 def create_vm(session, instance, vm_folder, config_spec, res_pool_ref):
     """Create VM on ESX host."""
     LOG.debug("Creating VM on the ESX host", instance=instance)

@@ -15,6 +15,7 @@
 #    under the License.
 
 import collections
+import fixtures
 
 import mock
 from oslo_utils import units
@@ -1041,7 +1042,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             vm_util.ExtraSpecs(),
             os_type='invalid_os_type')
 
-        self.assertRaises(vexc.VMwareDriverException,
+        # Because of retries timeout will be raised
+        self.assertRaises(fixtures.TimeoutException,
                           vm_util.create_vm, session, self._instance,
                           'folder', config_spec, 'res-pool')
         self.assertTrue(found[0])
