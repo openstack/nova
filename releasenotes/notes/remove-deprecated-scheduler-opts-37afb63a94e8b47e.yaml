@@ -1,0 +1,17 @@
+---
+upgrade:
+  - |
+    A number of scheduler-related config options were renamed during the 15.0.0
+    (Ocata) release. The deprecated aliases have now been removed. These are:
+
+    - ``[DEFAULT] scheduler_max_attempts`` (now ``[scheduler] max_attempts``)
+    - ``[DEFAULT] scheduler_host_subset_size`` (now
+      ``[scheduler] host_subset_size``)
+    - ``[DEFAULT] max_io_ops_per_host`` (now
+      ``[scheduler] max_io_ops_per_host``)
+    - ``[DEFAULT] max_instances_per_host`` (now
+      ``[scheduler] max_instances_per_host``)
+    - ``[DEFAULT] scheduler_tracks_instance_changes`` (now
+      ``[scheduler] track_instance_changes``)
+    - ``[DEFAULT] scheduler_available_filters`` (now
+      ``[scheduler] available_filters``)
