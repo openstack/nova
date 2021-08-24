@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    `Bug #2122109`_: Fix API performance when getting multiple server groups.
+    We now pre-fetch the not-deleted members of all requested server groups in
+    a single query per cell instead of executing a query per server group per
+    cell.
+
+    .. _Bug #2122109: https://launchpad.net/bugs/2122109

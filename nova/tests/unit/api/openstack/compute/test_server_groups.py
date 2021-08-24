@@ -14,6 +14,7 @@
 #    under the License.
 
 import copy
+import itertools
 from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel
@@ -388,6 +389,37 @@ class ServerGroupTestV21(test.NoDBTestCase):
         # check that only the active instance is displayed
         self.assertEqual(2, len(result_members))
         self.assertIn(instances[0].uuid, result_members)
+
+    def test_display_active_members_only_when_listing(self):
+        ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID,
+                                     roles=['member', 'reader'])
+        (ig1_uuid, ig1_instances, ig1_members) = \
+                self._create_groups_and_instances(ctx)
+        (ig2_uuid, ig2_instances, ig2_members) = \
+                self._create_groups_and_instances(ctx)
+
+        # delete an instance per ig
+        for instance in (ig1_instances[1], ig2_instances[0]):
+            im = objects.InstanceMapping.get_by_instance_uuid(
+                ctx, instance.uuid)
+            with context.target_cell(ctx, im.cell_mapping) as cctxt:
+                instance._context = cctxt
+                instance.destroy()
+            # check that the instance does not exist
+            self.assertRaises(exception.InstanceNotFound,
+                              objects.Instance.get_by_uuid,
+                              ctx, instance.uuid)
+
+        res_dict = self.controller.index(self.reader_req)
+        result_members = sorted(itertools.chain.from_iterable(
+            sg['members'] for sg in res_dict['server_groups']))
+
+        # check that only the active instances are displayed
+        self.assertEqual(4, len(result_members))
+        expected_members = sorted([
+            ig1_instances[0].uuid, ig1_instances[2].uuid,
+            ig2_instances[1].uuid, ig2_instances[2].uuid])
+        self.assertEqual(expected_members, result_members)
 
     def test_display_members_rbac_default(self):
         ctx = context.RequestContext('fake_user', fakes.FAKE_PROJECT_ID)
