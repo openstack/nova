@@ -34,21 +34,23 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - volumeAttachments: volumeAttachments
-  - id: attachment_id_required
+  - id: volume_attachment_id_resp
   - serverId: server_id
   - volumeId: volumeId_resp
   - device: attachment_device_resp
   - tag: device_tag_bdm_attachment_resp
   - delete_on_termination: delete_on_termination_attachments_resp
+  - attachment_id: attachment_volume_id_resp
+  - bdm_uuid: attachment_bdm_id_resp
 
 **Example List volume attachments for an instance: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/list-volume-attachments-resp.json
    :language: javascript
 
-**Example List tagged volume attachments for an instance (v2.79): JSON response**
+**Example List tagged volume attachments for an instance (v2.89): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/v2.79/list-volume-attachments-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/v2.89/list-volume-attachments-resp.json
    :language: javascript
 
 Attach a volume to an instance
@@ -108,7 +110,7 @@ Response
 
   - volumeAttachment: volumeAttachment
   - device: device_resp
-  - id: attachment_id_required
+  - id: attachment_id_resp
   - serverId: server_id
   - volumeId: volumeId_resp
   - tag: device_tag_bdm_attachment_resp
@@ -154,21 +156,23 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - volumeAttachment: volumeAttachment
-  - id: attachment_id_required
+  - id: volume_attachment_id_resp
   - serverId: server_id
   - volumeId: volumeId_resp
   - device: attachment_device_resp
   - tag: device_tag_bdm_attachment_resp
   - delete_on_termination: delete_on_termination_attachments_resp
+  - attachment_id: attachment_volume_id_resp
+  - bdm_uuid: attachment_bdm_id_resp
 
 **Example Show a detail of a volume attachment: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/volume-attachment-detail-resp.json
    :language: javascript
 
-**Example Show a detail of a tagged volume attachment (v2.79): JSON response**
+**Example Show a detail of a tagged volume attachment (v2.89): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/v2.79/volume-attachment-detail-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/v2.89/volume-attachment-detail-resp.json
    :language: javascript
 
 Update a volume attachment

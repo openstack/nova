@@ -1177,3 +1177,14 @@ similar response to the ``GET /os-hypervisors/detail`` and ``GET
 /os-hypervisors/{hypervisor_id}`` APIs but with an additional ``uptime`` field,
 has been removed in favour of including this field in the primary ``GET
 /os-hypervisors/detail`` and ``GET /os-hypervisors/{hypervisor_id}`` APIs.
+
+.. _microversion 2.89:
+
+2.89 (Maximum in Xena)
+----------------------
+
+``attachment_id`` and ``bdm_uuid`` are now included in the responses for ``GET
+/servers/{server_id}/os-volume_attachments`` and ``GET
+/servers/{server_id}/os-volume_attachments/{volume_id}``. Additionally the
+``id`` field is dropped from the response as it duplicates the ``volumeId``
+field.

@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Microversion 2.89 has been introduced and will include the
+    ``attachment_id`` of a volume attachment, ``bdm_uuid`` of the block device
+    mapping record and removes the duplicate ``id`` from the responses for ``GET
+    /servers/{server_id}/os-volume_attachments`` and ``GET
+    /servers/{server_id}/os-volume_attachments/{volume_id}``.

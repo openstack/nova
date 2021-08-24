@@ -68,9 +68,18 @@ def _translate_volume_summary_view(context, vol):
         #                    }
         #                }
         attachment = list(vol['attachments'].items())[0]
-        d['attachments'] = [_translate_attachment_summary_view(vol['id'],
-            attachment[0],
-            attachment[1].get('mountpoint'))]
+        d['attachments'] = [
+            {
+                'id': vol['id'],
+                'volumeId': vol['id'],
+                'serverId': attachment[0],
+            }
+        ]
+
+        mountpoint = attachment[1].get('mountpoint')
+        if mountpoint:
+            d['attachments'][0]['device'] = mountpoint
+
     else:
         d['attachments'] = [{}]
 
@@ -215,8 +224,12 @@ class VolumeController(wsgi.Controller):
         return wsgi.ResponseObject(result, headers=dict(location=location))
 
 
-def _translate_attachment_detail_view(bdm, show_tag=False,
-                                      show_delete_on_termination=False):
+def _translate_attachment_detail_view(
+    bdm,
+    show_tag=False,
+    show_delete_on_termination=False,
+    show_attachment_id_bdm_uuid=False,
+):
     """Maps keys for attachment details view.
 
     :param bdm: BlockDeviceMapping object for an attached volume
@@ -225,10 +238,22 @@ def _translate_attachment_detail_view(bdm, show_tag=False,
     :param show_delete_on_termination: True if the "delete_on_termination"
         field should be in the response, False to exclude the
         "delete_on_termination" field from the response
+    :param show_attachment_id_bdm_uuid: True if the "attachment_id" and
+        "bdm_uuid" fields should be in the response. Also controls when the
+        "id" field is included.
     """
 
-    d = _translate_attachment_summary_view(
-        bdm.volume_id, bdm.instance_uuid, bdm.device_name)
+    d = {}
+
+    if not show_attachment_id_bdm_uuid:
+        d['id'] = bdm.volume_id
+
+    d['volumeId'] = bdm.volume_id
+
+    d['serverId'] = bdm.instance_uuid
+
+    if bdm.device_name:
+        d['device'] = bdm.device_name
 
     if show_tag:
         d['tag'] = bdm.tag
@@ -236,21 +261,9 @@ def _translate_attachment_detail_view(bdm, show_tag=False,
     if show_delete_on_termination:
         d['delete_on_termination'] = bdm.delete_on_termination
 
-    return d
-
-
-def _translate_attachment_summary_view(volume_id, instance_uuid, mountpoint):
-    """Maps keys for attachment summary view."""
-    d = {}
-
-    # NOTE(justinsb): We use the volume id as the id of the attachment object
-    d['id'] = volume_id
-
-    d['volumeId'] = volume_id
-
-    d['serverId'] = instance_uuid
-    if mountpoint:
-        d['device'] = mountpoint
+    if show_attachment_id_bdm_uuid:
+        d['attachment_id'] = bdm.attachment_id
+        d['bdm_uuid'] = bdm.uuid
 
     return d
 
@@ -299,11 +312,16 @@ class VolumeAttachmentController(wsgi.Controller):
         show_tag = api_version_request.is_supported(req, '2.70')
         show_delete_on_termination = api_version_request.is_supported(
             req, '2.79')
+        show_attachment_id_bdm_uuid = api_version_request.is_supported(
+            req, '2.89')
         for bdm in limited_list:
             if bdm.volume_id:
                 va = _translate_attachment_detail_view(
-                    bdm, show_tag=show_tag,
-                    show_delete_on_termination=show_delete_on_termination)
+                    bdm,
+                    show_tag=show_tag,
+                    show_delete_on_termination=show_delete_on_termination,
+                    show_attachment_id_bdm_uuid=show_attachment_id_bdm_uuid,
+                )
                 results.append(va)
 
         return {'volumeAttachments': results}
@@ -330,9 +348,16 @@ class VolumeAttachmentController(wsgi.Controller):
         show_tag = api_version_request.is_supported(req, '2.70')
         show_delete_on_termination = api_version_request.is_supported(
             req, '2.79')
-        return {'volumeAttachment': _translate_attachment_detail_view(
-            bdm, show_tag=show_tag,
-            show_delete_on_termination=show_delete_on_termination)}
+        show_attachment_id_bdm_uuid = api_version_request.is_supported(
+            req, '2.89')
+        return {
+            'volumeAttachment': _translate_attachment_detail_view(
+                bdm,
+                show_tag=show_tag,
+                show_delete_on_termination=show_delete_on_termination,
+                show_attachment_id_bdm_uuid=show_attachment_id_bdm_uuid,
+            )
+        }
 
     # TODO(mriedem): This API should return a 202 instead of a 200 response.
     @wsgi.expected_errors((400, 403, 404, 409))

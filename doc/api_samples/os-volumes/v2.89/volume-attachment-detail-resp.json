@@ -1,0 +1,11 @@
+{
+    "volumeAttachment": {
+        "attachment_id": "721a5c82-5ebc-4c6a-8339-3d33d8d027ed",
+        "delete_on_termination": true,
+        "device": "/dev/sdb",
+        "serverId": "7ebed2ce-85b3-40b5-84ae-8cc725c37ed2",
+        "tag": "foo",
+        "volumeId": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113",
+        "bdm_uuid": "c088db45-92b8-49e8-81e2-a1b77a144b3b"
+    }
+}
