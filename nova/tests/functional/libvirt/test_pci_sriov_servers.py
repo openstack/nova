@@ -1089,6 +1089,28 @@ class PCIServersTest(_PCIServersTestBase):
         self.assertEqual(500, ex.response.status_code)
         self.assertIn('NoValidHost', str(ex))
 
+    def test_resize_pci_to_vanilla(self):
+        # Start two computes, one with PCI and one without.
+        self.start_compute(
+            hostname='test_compute0',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=1))
+        self.start_compute(hostname='test_compute1')
+
+        # Boot a server with a single PCI device.
+        extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:1'}
+        pci_flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(flavor_id=pci_flavor_id, networks='none')
+
+        # Resize it to a flavor without PCI devices. We expect this to work, as
+        # test_compute1 is available.
+        # FIXME(artom) This is bug 1941005.
+        flavor_id = self._create_flavor()
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self._resize_server, server, flavor_id)
+        self.assertEqual(500, ex.response.status_code)
+        self.assertIn('NoValidHost', str(ex))
+        # self._confirm_resize(server)
+
     def _confirm_resize(self, server, host='host1'):
         # NOTE(sbauza): Unfortunately, _cleanup_resize() in libvirt checks the
         # host option to know the source hostname but given we have a global
