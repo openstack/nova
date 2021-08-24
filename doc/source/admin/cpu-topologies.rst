@@ -368,9 +368,9 @@ you can request hosts **without** SMT. To configure this, run:
      --property hw:cpu_policy=dedicated \
      --property hw:cpu_thread_policy=isolate
 
-This will ensure the instance gets scheduled to a host with SMT by requesting
-hosts that **do not** report the ``HW_CPU_HYPERTHREADING`` trait. It is also
-possible to request this trait explicitly. To configure this, run:
+This will ensure the instance gets scheduled to a host without SMT by
+requesting hosts that **do not** report the ``HW_CPU_HYPERTHREADING`` trait.
+It is also possible to request this trait explicitly. To configure this, run:
 
 .. code-block:: console
 
