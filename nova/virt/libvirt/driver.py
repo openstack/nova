@@ -419,6 +419,7 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_accelerators": True,
             "supports_bfv_rescue": True,
             "supports_vtpm": CONF.libvirt.swtpm_enabled,
+            "supports_socket_pci_numa_affinity": True,
         }
         super(LibvirtDriver, self).__init__(virtapi)
 
@@ -8395,7 +8396,6 @@ class LibvirtDriver(driver.ComputeDriver):
         traits.update(self._get_video_model_traits())
         traits.update(self._get_vif_model_traits())
         traits.update(self._get_tpm_traits())
-        traits.update({ot.COMPUTE_SOCKET_PCI_NUMA_AFFINITY: True})
 
         _, invalid_traits = ot.check_traits(traits)
         for invalid_trait in invalid_traits:

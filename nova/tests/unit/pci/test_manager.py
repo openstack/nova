@@ -252,8 +252,10 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         fake_pci_devs_json = jsonutils.dumps(fake_pci_devs)
         tracker = manager.PciDevTracker(
             self.fake_context, objects.ComputeNode(id=1, numa_topology=None))
+        # At this point we should have the original 3 fake devs
+        self.assertEqual(3, len(tracker.pci_devs))
         # We expect that the device with 32bit PCI domain is ignored, so we'll
-        # have only the 3 original fake devs
+        # still have the same 3 original fake devs.
         tracker.update_devices_from_hypervisor_resources(fake_pci_devs_json)
         self.assertEqual(3, len(tracker.pci_devs))
         mock_debug.assert_called_once_with(

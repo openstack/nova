@@ -124,6 +124,8 @@ CAPABILITY_TRAITS_MAP = {
     "supports_migrate_to_same_host": os_traits.COMPUTE_SAME_HOST_COLD_MIGRATE,
     "supports_bfv_rescue": os_traits.COMPUTE_RESCUE_BFV,
     "supports_secure_boot": os_traits.COMPUTE_SECURITY_UEFI_SECURE_BOOT,
+    "supports_socket_pci_numa_affinity":
+        os_traits.COMPUTE_SOCKET_PCI_NUMA_AFFINITY,
 }
 
 
@@ -191,6 +193,7 @@ class ComputeDriver(object):
         "supports_bfv_rescue": False,
         "supports_vtpm": False,
         "supports_secure_boot": False,
+        "supports_socket_pci_numa_affinity": False,
 
         # Image type support flags
         "supports_image_type_aki": False,
