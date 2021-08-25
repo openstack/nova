@@ -209,9 +209,10 @@ def check_instance_host(check_is_up=False):
             if check_is_up:
                 # Make sure the source compute service is not down otherwise we
                 # cannot proceed.
-                host_status = self.get_instance_host_status(instance)
-                if host_status not in (fields_obj.HostStatus.UP,
-                                       fields_obj.HostStatus.MAINTENANCE):
+                service = [
+                    service for service in instance.services
+                        if service.binary == 'nova-compute'][0]
+                if not self.servicegroup_api.service_is_up(service):
                     # ComputeServiceUnavailable would make more sense here but
                     # we do not want to leak hostnames to end users.
                     raise exception.ServiceUnavailable()

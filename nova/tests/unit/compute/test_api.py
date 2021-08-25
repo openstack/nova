@@ -171,7 +171,10 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.info_cache = objects.InstanceInfoCache()
         instance.info_cache.network_info = model.NetworkInfo([])
         instance.numa_topology = None
-
+        instance.services = self._obj_to_list_obj(
+            objects.ServiceList(self.context),
+            objects.Service(id=0, host='host1', binary='nova-compute')
+        )
         if params:
             instance.update(params)
         instance.obj_reset_changes()
@@ -1892,8 +1895,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
     # TODO(stephenfin): This is a terrible, terrible function and should be
     # broken up into its constituent parts
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch('nova.virt.hardware.numa_get_constraints')
     @mock.patch('nova.compute.api.API._allow_resize_to_same_host')
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
@@ -2124,8 +2127,8 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_resize_allow_cross_cell_resize_true(self):
         self._test_resize(allow_cross_cell_resize=True)
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch('nova.compute.flavors.get_flavor_by_flavor_id')
     @mock.patch('nova.objects.Quotas.count_as_dict')
     @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
@@ -2157,8 +2160,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 project_values={'cores': 1, 'ram': 2560},
                 project_id=fake_inst.project_id, user_id=fake_inst.user_id)
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 new=mock.Mock(return_value=False))
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
@@ -2205,8 +2208,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_migrate(host_name='target_host',
                            allow_cross_cell_resize=True)
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
                        side_effect=exception.ComputeHostNotFound(
                            host='nonexistent_host'))
@@ -2216,8 +2219,8 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.resize, self.context,
                           fake_inst, host_name='nonexistent_host')
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(quotas_obj.Quotas, 'limit_check_project_and_user')
@@ -2243,8 +2246,8 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_resize.assert_not_called()
         mock_save.assert_not_called()
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(quotas_obj.Quotas, 'limit_check_project_and_user')
@@ -2271,8 +2274,8 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_resize.assert_not_called()
         mock_save.assert_not_called()
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
     def test_resize_to_zero_disk_flavor_fails(self, get_flavor_by_flavor_id):
         fake_inst = self._create_instance_obj()
@@ -2287,8 +2290,8 @@ class _ComputeAPIUnitTestMixIn(object):
                               self.compute_api.resize, self.context,
                               fake_inst, flavor_id='flavor-id')
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch('nova.compute.api.API._validate_flavor_image_nostatus')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch('nova.compute.api.API._record_action_start')
@@ -2318,8 +2321,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
         do_test()
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(quotas_obj.Quotas,
@@ -2376,8 +2379,8 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_record.assert_not_called()
         mock_resize.assert_not_called()
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
     @mock.patch.object(compute_utils, 'upsize_quota_delta')
     @mock.patch.object(quotas_obj.Quotas, 'count_as_dict')
@@ -2403,8 +2406,8 @@ class _ComputeAPIUnitTestMixIn(object):
                               fake_inst, flavor_id='flavor-id')
             self.assertFalse(mock_save.called)
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
     @mock.patch.object(objects.Quotas, 'count_as_dict')
     @mock.patch.object(objects.Quotas, 'limit_check_project_and_user')
@@ -2437,8 +2440,8 @@ class _ComputeAPIUnitTestMixIn(object):
             self.fail("Exception not raised")
 
     # TODO(huaqiang): Remove in Wallaby
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     @mock.patch.object(compute_utils, 'is_volume_backed_instance',
                        new=mock.Mock(return_value=True))
     @mock.patch('nova.objects.service.get_minimum_version_all_cells',
@@ -3716,8 +3719,8 @@ class _ComputeAPIUnitTestMixIn(object):
                       lambda obj, context, image_id, **kwargs: self.fake_image)
         return self.fake_image['id']
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status',
-                new=mock.Mock(return_value=fields_obj.HostStatus.UP))
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=True))
     def test_resize_with_disabled_auto_disk_config_fails(self):
         fake_inst = self._create_instance_with_disabled_disk_config(
             object=True)
@@ -7980,16 +7983,13 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self.compute_api._check_compute_service_for_mixed_instance,
             fake_numa_topo)
 
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                new=mock.Mock(return_value=False))
     def test_volume_detach_while_compute_down(self):
         """Assert that requests to detach a volume from an instance on a down
         compute are rejected with ServiceUnavailable being raised
         """
         instance = self._create_instance_obj()
-        with mock.patch.object(
-            self.compute_api, 'get_instance_host_status',
-            return_value=fields_obj.HostStatus.DOWN
-        ) as mock_host_status:
-            self.assertRaises(
-                exception.ServiceUnavailable,
-                self.compute_api.detach_volume, self.context, instance, None)
-            mock_host_status.assert_called_once_with(instance)
+        self.assertRaises(
+            exception.ServiceUnavailable,
+            self.compute_api.detach_volume, self.context, instance, None)

@@ -1221,6 +1221,9 @@ class ServersPolicyTest(base.BasePolicyTest):
                                  req, body=body)
 
     @mock.patch(
+        'nova.servicegroup.api.API.service_is_up',
+        new=mock.Mock(return_value=True))
+    @mock.patch(
         'nova.objects.Instance.image_meta',
         new=objects.ImageMeta.from_dict({}))
     @mock.patch('nova.compute.api.API._check_requested_networks')
@@ -1230,10 +1233,8 @@ class ServersPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.api.openstack.common.get_instance')
     @mock.patch('nova.conductor.ComputeTaskAPI.resize_instance')
     def test_cross_cell_resize_server_policy(
-            self, mock_resize, mock_get, mock_save, mock_rs, mock_allow,
-            m_net):
-        self.stub_out('nova.compute.api.API.get_instance_host_status',
-            lambda x, y: "UP")
+        self, mock_resize, mock_get, mock_save, mock_rs, mock_allow, m_net
+    ):
 
         # 'migrate' policy is checked before 'resize:cross_cell' so
         # we have to allow it for everyone otherwise it will
@@ -1244,12 +1245,23 @@ class ServersPolicyTest(base.BasePolicyTest):
         req = fakes.HTTPRequest.blank('', version='2.56')
 
         def fake_get(*args, **kwargs):
-            return fake_instance.fake_instance_obj(
+            inst = fake_instance.fake_instance_obj(
                 self.project_member_context,
                 id=1, uuid=uuids.fake_id, project_id=self.project_id,
                 user_id='fake-user', vm_state=vm_states.ACTIVE,
                 expected_attrs=['system_metadata', 'info_cache'],
-                launched_at=timeutils.utcnow())
+                launched_at=timeutils.utcnow(), host='host')
+            inst.services = objects.ServiceList(self.project_member_context)
+            inst.services.objects.append(
+                objects.Service(
+                    context=self.project_member_context,
+                    host=inst.host,
+                    binary='nova-compute',
+                    topic='compute',
+                    report_count=0
+                )
+            )
+            return inst
 
         mock_get.side_effect = fake_get
 
