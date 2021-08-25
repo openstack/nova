@@ -11558,10 +11558,6 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.info('Deletion of %s complete', target_del, instance=instance)
         return True
 
-    @property
-    def need_legacy_block_device_info(self):
-        return False
-
     def default_root_device_name(self, instance, image_meta, root_bdm):
         disk_bus = blockinfo.get_disk_bus_for_device_type(
             instance, CONF.libvirt.virt_type, image_meta, "disk")

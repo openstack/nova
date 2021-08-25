@@ -83,9 +83,8 @@ class DriverBlockDevice(dict):
 
     Uses block device objects internally to do the database access.
 
-    _fields and _legacy_fields class attributes present a set of fields that
-    are expected on a certain DriverBlockDevice type. We may have more legacy
-    versions in the future.
+    The _fields class attribute present a set of fields that
+    are expected on a certain DriverBlockDevice type.
 
     If an attribute access is attempted for a name that is found in the
     _proxy_as_attr set, it will be proxied to the underlying object. This
@@ -103,7 +102,6 @@ class DriverBlockDevice(dict):
     """
 
     _fields = set()
-    _legacy_fields = set()
 
     _proxy_as_attr_inherited = set(['uuid', 'is_volume'])
     _update_on_save = {'disk_bus': None,
@@ -179,14 +177,6 @@ class DriverBlockDevice(dict):
         else:
             return super(DriverBlockDevice, self).get(name, default)
 
-    def legacy(self):
-        """Basic legacy transformation.
-
-        Basic method will just drop the fields that are not in
-        _legacy_fields set. Override this in subclass if needed.
-        """
-        return {key: self.get(key) for key in self._legacy_fields}
-
     def attach(self, **kwargs):
         """Make the device available to be used by VMs.
 
@@ -223,7 +213,6 @@ class DriverBlockDevice(dict):
 
 class DriverSwapBlockDevice(DriverBlockDevice):
     _fields = set(['device_name', 'swap_size', 'disk_bus'])
-    _legacy_fields = _fields - set(['disk_bus'])
 
     _update_on_save = {'disk_bus': None,
                        'device_name': None}
@@ -241,8 +230,6 @@ class DriverSwapBlockDevice(DriverBlockDevice):
 class DriverEphemeralBlockDevice(DriverBlockDevice):
     _new_only_fields = set(['disk_bus', 'device_type', 'guest_format'])
     _fields = set(['device_name', 'size']) | _new_only_fields
-    _legacy_fields = (_fields - _new_only_fields |
-                      set(['num', 'virtual_name']))
 
     def _transform(self):
         if not block_device.new_format_is_ephemeral(self._bdm_obj):
@@ -255,20 +242,19 @@ class DriverEphemeralBlockDevice(DriverBlockDevice):
             'guest_format': self._bdm_obj.guest_format
         })
 
-    def legacy(self, num=0):
-        legacy_bdm = super(DriverEphemeralBlockDevice, self).legacy()
-        legacy_bdm['num'] = num
-        legacy_bdm['virtual_name'] = 'ephemeral' + str(num)
-        return legacy_bdm
-
 
 class DriverVolumeBlockDevice(DriverBlockDevice):
-    _legacy_fields = set(['connection_info', 'mount_device',
-                          'delete_on_termination'])
-    _new_fields = set(['guest_format', 'device_type',
-                       'disk_bus', 'boot_index',
-                       'attachment_id'])
-    _fields = _legacy_fields | _new_fields
+    _new_fields = set([
+        'guest_format',
+        'device_type',
+        'disk_bus',
+        'boot_index',
+        'attachment_id'])
+    _fields = set([
+        'connection_info',
+        'mount_device',
+        'delete_on_termination'
+    ]) | _new_fields
 
     _valid_source = 'volume'
     _valid_destination = 'volume'
@@ -882,19 +868,6 @@ def refresh_conn_infos(block_device_mapping, *refresh_args, **refresh_kwargs):
         if hasattr(device, 'refresh_connection_info'):
             device.refresh_connection_info(*refresh_args, **refresh_kwargs)
     return block_device_mapping
-
-
-def legacy_block_devices(block_device_mapping):
-    bdms = [bdm.legacy() for bdm in block_device_mapping]
-
-    # Re-enumerate ephemeral devices
-    if all(isinstance(bdm, DriverEphemeralBlockDevice)
-           for bdm in block_device_mapping):
-        for i, dev in enumerate(bdms):
-            dev['virtual_name'] = dev['virtual_name'][:-1] + str(i)
-            dev['num'] = i
-
-    return bdms
 
 
 def get_swap(transformed_list):

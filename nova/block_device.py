@@ -311,30 +311,6 @@ def snapshot_from_bdm(snapshot_id, template):
     return BlockDeviceDict(snapshot_dict)
 
 
-def legacy_mapping(block_device_mapping):
-    """Transform a list of block devices of an instance back to the
-    legacy data format.
-    """
-
-    legacy_block_device_mapping = []
-
-    for bdm in block_device_mapping:
-        try:
-            legacy_block_device = BlockDeviceDict(bdm).legacy()
-        except exception.InvalidBDMForLegacy:
-            continue
-
-        legacy_block_device_mapping.append(legacy_block_device)
-
-    # Re-enumerate the ephemeral devices
-    for i, dev in enumerate(dev for dev in legacy_block_device_mapping
-                            if dev['virtual_name'] and
-                            is_ephemeral(dev['virtual_name'])):
-        dev['virtual_name'] = dev['virtual_name'][:-1] + str(i)
-
-    return legacy_block_device_mapping
-
-
 def from_legacy_mapping(legacy_block_device_mapping, image_uuid='',
                         root_device_name=None, no_root=False):
     """Transform a legacy list of block devices to the new data format."""

@@ -1893,10 +1893,6 @@ class IronicDriver(virt_driver.ComputeDriver):
                         instance=instance)
             raise exception.ConsoleTypeUnavailable(console_type='serial')
 
-    @property
-    def need_legacy_block_device_info(self):
-        return False
-
     def prepare_networks_before_block_device_mapping(self, instance,
                                                      network_info):
         """Prepare networks before the block devices are mapped to instance.

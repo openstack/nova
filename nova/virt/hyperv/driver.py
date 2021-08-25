@@ -144,10 +144,6 @@ class HyperVDriver(driver.ComputeDriver):
                         'has been deprecated In Queens, and will be removed '
                         'in Rocky.')
 
-    @property
-    def need_legacy_block_device_info(self):
-        return False
-
     def init_host(self, host):
         self._serialconsoleops.start_console_handlers()
         event_handler = eventhandler.InstanceEventHandler(

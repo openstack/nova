@@ -1430,7 +1430,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         }
 
         manager = compute_manager.ComputeManager()
-        manager.use_legacy_block_device_info = False
         mock_bdm_saves = [mock.patch.object(bdm, 'save') for bdm in bdms]
         with test.nested(*mock_bdm_saves):
             block_device_info = manager._prep_block_device(self.context,

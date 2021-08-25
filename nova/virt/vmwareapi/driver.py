@@ -172,10 +172,6 @@ class VMwareVCDriver(driver.ComputeDriver):
                         '%(version)s in the 16.0.0 release.',
                         {'version': constants.NEXT_MIN_VC_VERSION})
 
-    @property
-    def need_legacy_block_device_info(self):
-        return False
-
     def _update_pbm_location(self):
         if CONF.vmware.pbm_wsdl_location:
             pbm_wsdl_loc = CONF.vmware.pbm_wsdl_location

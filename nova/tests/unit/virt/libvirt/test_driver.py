@@ -943,10 +943,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         inst = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self.assertPublicAPISignatures(baseinst, inst)
 
-    def test_legacy_block_device_info(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertFalse(drvr.need_legacy_block_device_info)
-
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_cpu_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_storage_bus_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_video_model_traits')

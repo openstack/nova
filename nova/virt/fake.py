@@ -654,10 +654,6 @@ class FakeDriver(driver.ComputeDriver):
     def unquiesce(self, context, instance, image_meta):
         pass
 
-    @property
-    def need_legacy_block_device_info(self):
-        return False
-
 
 class FakeVirtAPI(virtapi.VirtAPI):
     @contextlib.contextmanager

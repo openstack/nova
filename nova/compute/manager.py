@@ -578,8 +578,6 @@ class ComputeManager(manager.Manager):
         # compute manager via the virtapi, so we want it to be fully
         # initialized before that happens.
         self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
-        self.use_legacy_block_device_info = \
-                            self.driver.need_legacy_block_device_info
         self.rt = resource_tracker.ResourceTracker(
             self.host, self.driver, reportclient=self.reportclient)
 
@@ -1945,23 +1943,6 @@ class ComputeManager(manager.Manager):
                                                 swap,
                                                 block_device_mapping)
 
-    def _block_device_info_to_legacy(self, block_device_info):
-        """Convert BDI to the old format for drivers that need it."""
-
-        if self.use_legacy_block_device_info:
-            ephemerals = driver_block_device.legacy_block_devices(
-                driver.block_device_info_get_ephemerals(block_device_info))
-            mapping = driver_block_device.legacy_block_devices(
-                driver.block_device_info_get_mapping(block_device_info))
-            swap = block_device_info['swap']
-            if swap:
-                swap = swap.legacy()
-
-            block_device_info.update({
-                'ephemerals': ephemerals,
-                'swap': swap,
-                'block_device_mapping': mapping})
-
     def _add_missing_dev_names(self, bdms, instance):
         for bdm in bdms:
             if bdm.device_name is not None:
@@ -1983,7 +1964,6 @@ class ComputeManager(manager.Manager):
                 mapping, context, instance, self.volume_api, self.driver,
                 wait_func=self._await_block_device_map_created)
 
-            self._block_device_info_to_legacy(block_device_info)
             return block_device_info
 
         except exception.OverQuota as e:
@@ -2098,8 +2078,6 @@ class ComputeManager(manager.Manager):
             driver_block_device.refresh_conn_infos(
                 driver.block_device_info_get_mapping(block_device_info),
                 context, instance, self.volume_api, self.driver)
-
-        self._block_device_info_to_legacy(block_device_info)
 
         return block_device_info
 
