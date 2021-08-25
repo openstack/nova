@@ -407,6 +407,40 @@ Possible values:
 * An integer or float value between 1-100, where the value corresponds to
   the percent of RAM to be unallocated.
 """),
+    cfg.FloatOpt("hv_ram_class_weight_multiplier",
+        default=1.0,
+        help="""
+HV RAM class multiplier
+
+Multiplier for weighing based on pre-defined weights to prefer certain sizes of
+HVs over others.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'hv_ram_class' weigher is enabled.
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multipler ratio
+  for this weigher.
+"""),
+    cfg.DictOpt("hv_ram_class_weights_gib",
+        default={1024: 1, 3072: 0.5},
+        help="""
+A mapping of upper bounds of RAM in GiB to a weight
+
+This mapping is used in the 'hv_ram_class' weigher to divide hypervisors into
+classes, each of which gets a static weight reported.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'hv_ram_class' weigher is enabled.
+
+Possible values:
+
+* Multiple integer keys mapping to integer or float values, where the value
+  corresponds to a weight and the integer to an upper bound of memory.
+"""),
     cfg.FloatOpt("cpu_weight_multiplier",
         default=1.0,
         help="""
