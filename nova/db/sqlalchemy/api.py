@@ -5640,8 +5640,12 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
                         "%(tablename)s: %(error)s",
                         {'tablename': tablename, 'error': six.text_type(ex)})
 
-    if ((max_rows is None or rows_archived < max_rows)
-            and 'instance_uuid' in columns):
+    if ((max_rows is None or rows_archived < max_rows) and
+            # NOTE(melwitt): The pci_devices table uses the 'instance_uuid'
+            # column to track the allocated association of a PCI device and its
+            # records are not tied to the lifecycles of instance records.
+            (tablename != 'pci_devices' and
+             'instance_uuid' in columns)):
         instances = models.BASE.metadata.tables['instances']
         limit = max_rows - rows_archived if max_rows is not None else None
         extra = _archive_if_instance_deleted(table, shadow_table, instances,

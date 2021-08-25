@@ -135,6 +135,19 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         # Verify we have some system_metadata since we'll check that later.
         self.assertTrue(len(instance.system_metadata),
                         'No system_metadata for instance: %s' % server_id)
+        # Create a pci_devices record to simulate an instance that had a PCI
+        # device allocated at the time it was deleted. There is a window of
+        # time between deletion of the instance record and freeing of the PCI
+        # device in nova-compute's _complete_deletion method during RT update.
+        db.pci_device_update(admin_context, 1, 'fake-address',
+                             {'compute_node_id': 1,
+                              'address': 'fake-address',
+                              'vendor_id': 'fake',
+                              'product_id': 'fake',
+                              'dev_type': 'fake',
+                              'label': 'fake',
+                              'status': 'allocated',
+                              'instance_uuid': instance.uuid})
         # Now try and archive the soft deleted records.
         results, deleted_instance_uuids = db.archive_deleted_rows(max_rows=100)
         # verify system_metadata was dropped
@@ -147,6 +160,8 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         # by the archive
         self.assertIn('instance_actions', results)
         self.assertIn('instance_actions_events', results)
+        # Verify that the pci_devices record has not been dropped
+        self.assertNotIn('pci_devices', results)
 
     def _get_table_counts(self):
         engine = sqlalchemy_api.get_engine()
