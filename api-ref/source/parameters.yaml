@@ -1780,7 +1780,7 @@ attachment_bdm_id_resp:
   description: |
     The UUID of the block device mapping record in Nova for the attachment.
   in: body
-  required: false
+  required: true
   type: string
   min_version: 2.89
 attachment_device_put_req:
@@ -1826,7 +1826,7 @@ attachment_volume_id_resp:
   description: |
     The UUID of the associated volume attachment in Cinder.
   in: body
-  required: false
+  required: true
   type: string
   min_version: 2.89
 attachment_volumeId_resp:
@@ -7378,9 +7378,9 @@ volume:
   type: object
 volume_attachment_id_resp:
   description: |
-    The volumeId of the attachment.
+    The volume ID of the attachment.
   in: body
-  required: false
+  required: true
   type: string
   max_version: 2.88
 volume_id:
