@@ -831,6 +831,41 @@ does not replace the PCIPassthroughFilter but extends it.
 * ``[pci] alias``
 * ``[pci] device_spec``
 """),
+    cfg.IntOpt("vm_size_threshold_vm_size_mb",
+        default=64 * 1024,
+        help="""
+Amount of RAM in MiB to see a VM as small enough to fit on small HVs
+
+When using the vm_size_threshold filter, requested VMs up to, but not including
+this size will be allowed to spawn on a small HV (see
+vm_size_threshold_hv_size_mb for the threshold there).
+
+Possible values:
+
+* Any positive integer
+
+Related options:
+
+* vm_size_threshold_hv_size_mb
+
+"""),
+    cfg.IntOpt("vm_size_threshold_hv_size_mb",
+        default=1500 * 1024,
+        help="""
+Amount of RAM in MiB to see a HV as small enough to put only small VMs on it
+
+When using the vm_size_threshold filter, hosts having the defined amount of RAM
+or more will not be allowed to spawn small VMs as defined by
+(vm_size_threshold_vm_size_mb).
+
+Possible values:
+
+* Any positive integer
+
+Related options:
+
+* vm_size_threshold_vm_size_mb
+"""),
 ]
 
 metrics_group = cfg.OptGroup(
