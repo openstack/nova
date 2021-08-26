@@ -92,13 +92,6 @@ class VMwareVCDriver(driver.ComputeDriver):
         "supports_image_type_ploop": False,
     }
 
-    # Legacy nodename is of the form: <mo id>(<cluster name>)
-    # e.g. domain-26(TestCluster)
-    # We assume <mo id> consists of alphanumeric, _ and -.
-    # We assume cluster name is everything between the first ( and the last ).
-    # We pull out <mo id> for re-use.
-    LEGACY_NODENAME = re.compile(r'([\w-]+)\(.+\)')
-
     # The vCenter driver includes API that acts on ESX hosts or groups
     # of ESX hosts in clusters or non-cluster logical-groupings.
     #
