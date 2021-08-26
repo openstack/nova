@@ -53,6 +53,7 @@ def normalize(weight_list, minval=None, maxval=None):
 
 class WeighedObject(object):
     """Object with weight information."""
+
     def __init__(self, obj, weight):
         self.obj = obj
         self.weight = weight

@@ -724,6 +724,7 @@ class VMwareAPISession(api.VMwareAPISession):
     """Sets up a session with the VC/ESX host and handles all
     the calls made to the host.
     """
+
     def __init__(self, host_ip=CONF.vmware.host_ip,
                  host_port=CONF.vmware.host_port,
                  username=CONF.vmware.host_username,

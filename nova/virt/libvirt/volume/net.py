@@ -22,6 +22,7 @@ LOG = logging.getLogger(__name__)
 
 class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
+
     def __init__(self, host):
         super(LibvirtNetVolumeDriver,
               self).__init__(host, is_block_dev=False)

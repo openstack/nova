@@ -907,6 +907,7 @@ class libvirtError(Exception):
     Alternatively, you can use the `make_libvirtError` convenience function to
     allow you to specify these attributes in one shot.
     """
+
     def __init__(self, defmsg, conn=None, dom=None, net=None, pool=None,
                  vol=None):
         Exception.__init__(self, defmsg)
@@ -2137,6 +2138,7 @@ _EventAddHandleFunc = FakeHandler
 class LibvirtFixture(fixtures.Fixture):
     """Performs global setup/stubbing for all libvirt tests.
     """
+
     def __init__(self, stub_os_vif=True):
         self.stub_os_vif = stub_os_vif
 

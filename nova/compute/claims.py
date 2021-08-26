@@ -163,6 +163,7 @@ class MoveClaim(Claim):
 
     Move can be either a migrate/resize, live-migrate or an evacuate operation.
     """
+
     def __init__(
         self, context, instance, nodename, flavor, image_meta, tracker,
         compute_node, pci_requests, migration, limits=None,

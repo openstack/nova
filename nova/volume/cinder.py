@@ -412,6 +412,7 @@ def translate_cinder_exception(method):
 def translate_create_exception(method):
     """Transforms the exception for create but keeps its traceback intact.
     """
+
     def wrapper(self, ctx, size, *args, **kwargs):
         try:
             res = method(self, ctx, size, *args, **kwargs)
@@ -426,6 +427,7 @@ def translate_create_exception(method):
 def translate_volume_exception(method):
     """Transforms the exception for the volume but keeps its traceback intact.
     """
+
     def wrapper(self, ctx, volume_id, *args, **kwargs):
         try:
             res = method(self, ctx, volume_id, *args, **kwargs)
@@ -441,6 +443,7 @@ def translate_attachment_exception(method):
     """Transforms the exception for the attachment but keeps its traceback
     intact.
     """
+
     def wrapper(self, ctx, attachment_id, *args, **kwargs):
         try:
             res = method(self, ctx, attachment_id, *args, **kwargs)
@@ -455,6 +458,7 @@ def translate_snapshot_exception(method):
     """Transforms the exception for the snapshot but keeps its traceback
        intact.
     """
+
     def wrapper(self, ctx, snapshot_id, *args, **kwargs):
         try:
             res = method(self, ctx, snapshot_id, *args, **kwargs)
@@ -466,6 +470,7 @@ def translate_snapshot_exception(method):
 
 def translate_mixed_exceptions(method):
     """Transforms exceptions that can come from both volumes and snapshots."""
+
     def wrapper(self, ctx, res_id, *args, **kwargs):
         try:
             res = method(self, ctx, res_id, *args, **kwargs)

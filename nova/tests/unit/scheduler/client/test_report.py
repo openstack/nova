@@ -4213,6 +4213,7 @@ class TestAggregateAddRemoveHost(SchedulerReportClientTestCase):
     access the SchedulerReportClient provider_tree attribute and are called
     from the nova API, not the nova compute manager/resource tracker.
     """
+
     def setUp(self):
         super(TestAggregateAddRemoveHost, self).setUp()
         self.mock_get = self.useFixture(

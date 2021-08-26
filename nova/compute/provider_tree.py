@@ -48,6 +48,7 @@ class _Provider(object):
     tree should be done using the ProviderTree interface, since it controls
     thread-safety.
     """
+
     def __init__(self, name, uuid=None, generation=None, parent_uuid=None):
         if uuid is None:
             uuid = uuidutils.generate_uuid()

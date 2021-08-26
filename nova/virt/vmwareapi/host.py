@@ -47,6 +47,7 @@ def _get_ds_capacity_and_freespace(session, cluster=None,
 
 class VCState(object):
     """Manages information about the vCenter cluster"""
+
     def __init__(self, session, host_name, cluster, datastore_regex):
         super(VCState, self).__init__()
         self._session = session

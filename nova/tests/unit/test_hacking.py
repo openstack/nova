@@ -51,6 +51,7 @@ class HackingTestCase(test.NoDBTestCase):
     just assertTrue if the check is expected to fail and assertFalse if it
     should pass.
     """
+
     def test_virt_driver_imports(self):
 
         expect = (0, "N311: importing code from other virt drivers forbidden")

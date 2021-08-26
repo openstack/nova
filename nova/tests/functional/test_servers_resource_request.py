@@ -1638,6 +1638,7 @@ class MultiGroupResourceRequestBasedSchedulingTest(
     and packet rate resource requests. This also means that the neutron fixture
     simulates the new resource_request format for all ports.
     """
+
     def setUp(self):
         super().setUp()
         self.neutron = self.useFixture(
@@ -2972,6 +2973,7 @@ class ExtendedResourceRequestOldCompute(
     hasn't been upgraded to a version that support extended resource request.
     So nova rejects the operations due to the old compute.
     """
+
     def setUp(self):
         super().setUp()
         self.neutron = self.useFixture(

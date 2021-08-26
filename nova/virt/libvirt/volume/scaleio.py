@@ -34,6 +34,7 @@ class LibvirtScaleIOVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
     Implements Libvirt part of volume driver for ScaleIO cinder driver.
     Uses the ScaleIO connector from the os-brick projects
     """
+
     def __init__(self, host):
         super(LibvirtScaleIOVolumeDriver, self).__init__(host,
                                                          is_block_dev=False)

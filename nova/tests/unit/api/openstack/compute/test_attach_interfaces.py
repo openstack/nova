@@ -560,6 +560,7 @@ class InterfaceAttachTestsV249(test.NoDBTestCase):
 
 class InterfaceAttachTestsV270(test.NoDBTestCase):
     """os-interface API tests for microversion 2.70"""
+
     def setUp(self):
         super(InterfaceAttachTestsV270, self).setUp()
         self.attachments = (

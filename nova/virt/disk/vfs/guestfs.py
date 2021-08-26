@@ -51,6 +51,7 @@ class VFSGuestFS(vfs.VFS):
     the host filesystem, thus avoiding any potential for symlink
     attacks from the guest filesystem.
     """
+
     def __init__(self, image, partition=None):
         """Create a new local VFS instance
 

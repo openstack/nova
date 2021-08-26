@@ -31,6 +31,7 @@ LOG = logging.getLogger(__name__)
 @profiler.trace_cls("volume_api")
 class LibvirtBaseVolumeDriver(object):
     """Base class for volume drivers."""
+
     def __init__(self, host, is_block_dev):
         self.host = host
         self.is_block_dev = is_block_dev
@@ -156,6 +157,7 @@ class LibvirtBaseVolumeDriver(object):
 
 class LibvirtVolumeDriver(LibvirtBaseVolumeDriver):
     """Class for volumes backed by local file."""
+
     def __init__(self, host):
         super(LibvirtVolumeDriver,
               self).__init__(host, is_block_dev=True)
@@ -171,6 +173,7 @@ class LibvirtVolumeDriver(LibvirtBaseVolumeDriver):
 
 class LibvirtFakeVolumeDriver(LibvirtBaseVolumeDriver):
     """Driver to attach fake volumes to libvirt."""
+
     def __init__(self, host):
         super(LibvirtFakeVolumeDriver,
               self).__init__(host, is_block_dev=True)

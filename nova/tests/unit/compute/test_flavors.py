@@ -39,6 +39,7 @@ class TestValidateExtraSpecKeys(test.NoDBTestCase):
 
 class TestGetFlavorByFlavorID(test.TestCase):
     """Test cases for flavor  code."""
+
     def test_will_not_get_instance_by_unknown_flavor_id(self):
         # Ensure get by flavor raises error with wrong flavorid.
         self.assertRaises(exception.FlavorNotFound,

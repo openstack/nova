@@ -521,6 +521,7 @@ class Flat(Image):
     creating an overlay. By default it creates raw files, but will use qcow2
     when creating a disk from a qcow2 if force_raw_images is not set in config.
     """
+
     def __init__(self, instance=None, disk_name=None, path=None):
         self.disk_name = disk_name
         path = (path or os.path.join(libvirt_utils.get_instance_path(instance),

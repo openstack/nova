@@ -54,6 +54,7 @@ def catch_notimplementederror(f):
     If a particular call makes a driver raise NotImplementedError, we
     log it so that we can extract this information afterwards as needed.
     """
+
     def wrapped_func(self, *args, **kwargs):
         try:
             return f(self, *args, **kwargs)

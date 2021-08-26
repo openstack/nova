@@ -25,6 +25,7 @@ from nova import config
 
 class ConfFixture(config_fixture.Config):
     """Fixture to manage global conf settings."""
+
     def setUp(self):
         super(ConfFixture, self).setUp()
 

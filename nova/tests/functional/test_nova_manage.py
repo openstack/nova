@@ -1641,6 +1641,7 @@ class TestNovaManagePlacementHealPortAllocationsExtended(
     extended format. Note that this will test the extended format handling but
     only with a single request group per port.
     """
+
     def setUp(self):
         super().setUp()
         self.neutron = self.useFixture(
@@ -1667,6 +1668,7 @@ class TestNovaManagePlacementHealPortAllocationsMultiGroup(
     with the MultiGroupResourceRequestNeutronFixture to test with extended
     resource request with multiple groups.
     """
+
     def setUp(self):
         super().setUp()
         self.neutron = self.useFixture(

@@ -49,6 +49,7 @@ HOST_INSTANCE_SEMAPHORE = "host_instance"
 
 class ReadOnlyDict(IterableUserDict):
     """A read-only dict."""
+
     def __init__(self, source=None):
         self.data = {}
         if source:

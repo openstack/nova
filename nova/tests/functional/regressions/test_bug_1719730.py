@@ -31,6 +31,7 @@ class TestRescheduleWithServerGroup(test.TestCase,
     we hit an exception "'NoneType' object is not iterable" in the
     RequestSpec.from_primitives method and the reschedule fails.
     """
+
     def setUp(self):
         super(TestRescheduleWithServerGroup, self).setUp()
 

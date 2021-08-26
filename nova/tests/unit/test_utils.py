@@ -907,6 +907,7 @@ class TestObjectCallHelpers(test.NoDBTestCase):
 
 class GetKSAAdapterTestCase(test.NoDBTestCase):
     """Tests for nova.utils.get_endpoint_data()."""
+
     def setUp(self):
         super(GetKSAAdapterTestCase, self).setUp()
         self.sess = mock.create_autospec(ks_session.Session, instance=True)
@@ -1072,6 +1073,7 @@ class TestGetConfGroup(test.NoDBTestCase):
 
 class TestGetAuthAndSession(test.NoDBTestCase):
     """Tests for nova.utils._get_auth_and_session"""
+
     def setUp(self):
         super(TestGetAuthAndSession, self).setUp()
 

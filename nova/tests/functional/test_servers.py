@@ -4546,6 +4546,7 @@ class ServerTestV256SingleCellMultiHostTestCase(ServerTestV256Common):
     """Happy path test where we create a server on one host, migrate it to
     another host of our choosing and ensure it lands there.
     """
+
     def test_migrate_server_to_host_in_same_cell(self):
         server = self._create_server()
         server = self._wait_for_state_change(server, 'ACTIVE')

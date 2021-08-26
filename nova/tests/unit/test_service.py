@@ -48,6 +48,7 @@ CONF.register_opts(test_service_opts)
 
 class FakeManager(manager.Manager):
     """Fake manager for tests."""
+
     def test_method(self):
         return 'manager'
 

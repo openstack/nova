@@ -29,6 +29,7 @@ class InstanceListWithDeletedServicesTestCase(
     service uuid migration routine gets a ServiceNotFound error when loading
     up a deleted service by hostname.
     """
+
     def setUp(self):
         super(InstanceListWithDeletedServicesTestCase, self).setUp()
         self.useFixture(nova_fixtures.RealPolicyFixture())

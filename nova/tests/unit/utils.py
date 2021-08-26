@@ -298,6 +298,7 @@ class ItemsMatcher(CustomMockCallMatcher):
     But the following will fail::
         my_mock(..., listy_kwarg=['foo', 'bar'], ...)
     """
+
     def __init__(self, iterable):
         # NOTE(gibi): we need the extra iter() call as Counter handles dicts
         # directly to initialize item count. However if a dict passed to

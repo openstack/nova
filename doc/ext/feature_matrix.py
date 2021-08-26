@@ -34,6 +34,7 @@ class Matrix(object):
     * self.features is a list of MatrixFeature instances, the rows and cells
     * self.targets is a dict of (MatrixTarget.key, MatrixTarget), the columns
     """
+
     def __init__(self):
         self.features = []
         self.targets = {}

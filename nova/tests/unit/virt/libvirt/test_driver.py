@@ -20516,6 +20516,7 @@ class HostStateTestCase(test.NoDBTestCase):
 
     class FakeConnection(libvirt_driver.LibvirtDriver):
         """Fake connection object."""
+
         def __init__(self):
             super(HostStateTestCase.FakeConnection,
                   self).__init__(fake.FakeVirtAPI(), True)
@@ -21384,6 +21385,7 @@ class TraitsComparisonMixin(object):
 @ddt.ddt
 class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver."""
+
     def setUp(self):
         super(LibvirtDriverTestCase, self).setUp()
         self.flags(sysinfo_serial="none", group="libvirt")
@@ -28033,6 +28035,7 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
 
 class LXCSnapshotTests(LibvirtSnapshotTests):
     """Repeat all of the Libvirt snapshot tests, but with LXC enabled"""
+
     def setUp(self):
         super(LXCSnapshotTests, self).setUp()
         self.flags(virt_type='lxc', group='libvirt')

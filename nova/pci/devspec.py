@@ -203,6 +203,7 @@ class WhitelistPciAddress(object):
         | passthrough_whitelist = {"vendor_id":"1137","product_id":"0071"}
 
     """
+
     def __init__(
         self, pci_addr: PCISpecAddressType, is_physical_function: bool
     ) -> None:

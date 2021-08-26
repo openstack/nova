@@ -147,6 +147,7 @@ class _BaseTestCase(object):
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""
+
     def setUp(self):
         super(ConductorTestCase, self).setUp()
         self.conductor = conductor_manager.ConductorManager()
@@ -308,6 +309,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests."""
+
     def setUp(self):
         super(ConductorRPCAPITestCase, self).setUp()
         self.conductor_service = self.start_service(
@@ -318,6 +320,7 @@ class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
 
 class ConductorAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor API Tests."""
+
     def setUp(self):
         super(ConductorAPITestCase, self).setUp()
         self.conductor_service = self.start_service(
@@ -4333,6 +4336,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
         test_compute.BaseTestCase):
     """Conductor compute_task RPC namespace Tests."""
+
     def setUp(self):
         super(ConductorTaskRPCAPITestCase, self).setUp()
         self.conductor_service = self.start_service(
@@ -4675,6 +4679,7 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
 
 class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     """Compute task API Tests."""
+
     def setUp(self):
         super(ConductorTaskAPITestCase, self).setUp()
         self.conductor_service = self.start_service(

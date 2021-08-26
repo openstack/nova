@@ -168,6 +168,7 @@ class LibvirtMigrationMixin(object):
     scenarios more complex than this they should override _migrate_stub with
     their own implementation.
     """
+
     def setUp(self):
         super().setUp()
         self.useFixture(fixtures.MonkeyPatch(

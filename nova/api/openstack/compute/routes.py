@@ -848,6 +848,7 @@ class APIRouterV21(base_wsgi.Router):
     and method. The URL mapping based on the plain list `ROUTE_LIST` is built
     at here.
     """
+
     def __init__(self, custom_routes=None):
         """:param custom_routes: the additional routes can be added by this
                parameter. This parameter is used to test on some fake routes

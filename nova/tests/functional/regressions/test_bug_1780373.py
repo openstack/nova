@@ -34,6 +34,7 @@ class TestMultiCreateServerGroupMemberOverQuota(
     to bypass the server_group_members quota check when creating multiple
     servers in the same request.
     """
+
     def setUp(self):
         super(TestMultiCreateServerGroupMemberOverQuota, self).setUp()
         self.flags(server_group_members=2, group='quota')
