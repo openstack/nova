@@ -150,7 +150,7 @@ For all other types of ports, some manual configuration is required.
    networks on a given host. There is only one configuration option that must
    be set:
 
-   ``[neutron_tunneled] numa_nodes``
+   ``[neutron_tunnel] numa_nodes``
      This should be set to a list of one or NUMA nodes to which instances using
      tunneled networks will be affinitized.
 
@@ -191,7 +191,7 @@ Now, take an example for a deployment using L3 networks.
 
 .. code-block:: ini
 
-   [neutron_tunneled]
+   [neutron_tunnel]
    numa_nodes = 0
 
 This is much simpler as all tunneled traffic uses the same logical interface.
