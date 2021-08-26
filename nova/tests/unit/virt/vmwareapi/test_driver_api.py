@@ -254,7 +254,6 @@ class VMwareAPIVMTestCase(test.TestCase,
             'owner': ''
         })
         self.fake_image_uuid = self.image.id
-        self.vnc_host = 'ha-host'
 
         # create compute node resource provider
         self.cn_rp = dict(
@@ -1895,7 +1894,8 @@ class VMwareAPIVMTestCase(test.TestCase,
         opt_val = OptionValue(key='', value=5906)
         fake_vm.set(vm_util.VNC_CONFIG_KEY, opt_val)
         vnc_console = self.conn.get_vnc_console(self.context, self.instance)
-        self.assertEqual(self.vnc_host, vnc_console.host)
+        host = vmwareapi_fake._get_objects('HostSystem').objects[0]
+        self.assertEqual(host.name, vnc_console.host)
         self.assertEqual(5906, vnc_console.port)
 
     @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
@@ -2348,6 +2348,7 @@ class VMwareAPIVMTestCase(test.TestCase,
     @mock.patch('nova.virt.vmwareapi.ds_util.get_available_datastores')
     def test_datastore_regex_configured_vcstate(self, mock_get_ds_ref):
         vcstate = self.conn._vc_state
+        vcstate._stats = {}  # Clear cache to force new collection
         self.conn.get_available_resource(self.node_name)
         mock_get_ds_ref.assert_called_with(
             vcstate._session, vcstate._cluster, vcstate._datastore_regex)
@@ -2377,6 +2378,7 @@ class VMwareAPIVMTestCase(test.TestCase,
 
     @mock.patch('nova.virt.vmwareapi.ds_util.get_available_datastores')
     def test_update_provider_tree(self, mock_get_avail_ds):
+        self.assertEqual(CONF.reserved_host_memory_mb, 512)
         ds1 = ds_obj.Datastore(ref='fake-ref', name='datastore1',
                                capacity=10 * units.Gi, freespace=3 * units.Gi)
         ds2 = ds_obj.Datastore(ref='fake-ref', name='datastore2',
@@ -2388,6 +2390,8 @@ class VMwareAPIVMTestCase(test.TestCase,
         self.assertFalse(self.pt.has_inventory(self.node_name))
         # now update it
         self.conn.update_provider_tree(self.pt, self.node_name)
+        vcstate = self.conn._vc_state
+        vcstate._stats = {}  # Clear cache to force new collection
         expected = {
             orc.VCPU: {
                 'total': 32,
@@ -2395,7 +2399,6 @@ class VMwareAPIVMTestCase(test.TestCase,
                 'min_unit': 1,
                 'max_unit': 16,
                 'step_size': 1,
-                'allocation_ratio': 16.0,
             },
             orc.MEMORY_MB: {
                 'total': 2048,
@@ -2403,15 +2406,13 @@ class VMwareAPIVMTestCase(test.TestCase,
                 'min_unit': 1,
                 'max_unit': 1024,
                 'step_size': 1,
-                'allocation_ratio': 1.5,
             },
-            orc.DISK_GB: {
-                'total': 95,
+            orc.DISK_GB: {   # Fix this
+                'total': 1024.0,
                 'reserved': 0,
                 'min_unit': 1,
-                'max_unit': 25,
+                'max_unit': 500.0,
                 'step_size': 1,
-                'allocation_ratio': 1.0,
             },
             nova.utils.MEMORY_RESERVABLE_MB_RESOURCE: {
                 'total': 2048 - 512,  # 512 CONF.reserved_host_memory_mb
@@ -2826,16 +2827,39 @@ class VMwareAPIVMTestCase(test.TestCase,
                 break
         self.assertTrue(version_arg_found)
 
+    def _mock_get_stats_from_cluster_per_host(self,
+                                              memory_mb_reserved=0):
+        return {
+            'host1': {
+                'available': True,
+                'vcpus': 16,
+                'vcpus_used': 0,
+                'vcpus_reserved': 2,
+                'memory_mb': 1024,
+                'memory_mb_used': 0,
+                'memory_mb_reserved': memory_mb_reserved,
+                'cpu_info': {},
+            },
+            'host2': {
+                'available': True,
+                'vcpus': 16,
+                'vcpus_used': 0,
+                'vcpus_reserved': 0,
+                'memory_mb': 1024,
+                'memory_mb_used': 0,
+                'memory_mb_reserved': 0,
+                'cpu_info': {},
+            },
+        }
+
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     def test_host_state_service_disabled(self, mock_service):
         service = self._create_service(disabled=False, host='fake-mini')
         mock_service.return_value = service
 
-        fake_stats = {'cpu': {'vcpus': 4, 'reserved_vcpus': 0},
-                      'mem': {'total': '8194', 'free': '2048',
-                              'reserved_memory_mb': 0}}
+        fake_stats = self._mock_get_stats_from_cluster_per_host()
         with test.nested(
-            mock.patch.object(vm_util, 'get_stats_from_cluster',
+            mock.patch.object(vm_util, 'get_stats_from_cluster_per_host',
                               side_effect=[vexc.VimConnectionException('fake'),
                                            fake_stats, fake_stats]),
             mock.patch.object(service, 'save')) as (mock_stats,
