@@ -45,6 +45,7 @@ from nova import objects
 import nova.privsep.path
 from nova import utils
 from nova.virt import driver
+from nova.virt.vmwareapi import cluster_util
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
@@ -147,10 +148,8 @@ class VMwareVCDriver(driver.ComputeDriver):
                                       self._nodename,
                                       self._cluster_ref,
                                       self._datastore_regex)
-        host_stats = self._vc_state.get_host_stats()
-        self.capabilities['resource_scheduling'] = host_stats.get(
-            'resource_scheduling')
-
+        self.capabilities['resource_scheduling'] = \
+            cluster_util.is_drs_enabled(self._session, self._cluster_ref)
         # Register the OpenStack extension
         self._register_openstack_extension()
 
