@@ -408,6 +408,8 @@ class ViewBuilder(common.ViewBuilder):
                 trusted_certs = instance.trusted_certs.ids
             server["server"]["trusted_image_certificates"] = trusted_certs
 
+        # TODO(stephenfin): Remove this check once we remove the
+        # OS-EXT-SRV-ATTR:hostname policy checks from the policy is Y or later
         if api_version_request.is_supported(request, min_version='2.90'):
             # API 2.90 made this field visible to non-admins, but we only show
             # it if it's not already added
