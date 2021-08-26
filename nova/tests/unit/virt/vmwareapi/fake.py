@@ -801,9 +801,9 @@ class HostSystem(ManagedObject):
         vswitch_do.name = "vSwitch0"
         vswitch_do.portgroup = ["PortGroup-vmnet0"]
 
-        net_swicth = DataObject()
-        net_swicth.HostVirtualSwitch = [vswitch_do]
-        self.set("config.network.vswitch", net_swicth)
+        net_switch = DataObject()
+        net_switch.HostVirtualSwitch = [vswitch_do]
+        self.set("config.network.vswitch", net_switch)
 
         host_pg_do = DataObject()
         host_pg_do.key = "PortGroup-vmnet0"

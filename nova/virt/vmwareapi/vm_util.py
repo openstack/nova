@@ -26,6 +26,9 @@ import operator
 import socket
 import ssl
 
+import six
+from suds import sudsobject
+
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
@@ -34,8 +37,6 @@ from oslo_utils import units
 from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
 from oslo_vmware import vim_util as vutil
-import six
-from suds import sudsobject
 
 import nova.conf
 from nova import exception
@@ -1968,8 +1969,8 @@ def find_rescue_device(hardware_devices, instance):
     raise exception.NotFound(msg)
 
 
-def get_ephemeral_name(id):
-    return 'ephemeral_%d.vmdk' % id
+def get_ephemeral_name(id_):
+    return 'ephemeral_%d.vmdk' % id_
 
 
 def _detach_and_delete_devices_config_spec(client_factory, devices):
@@ -2051,11 +2052,11 @@ def folder_ref_cache_get(path):
     return _FOLDER_PATH_REF_MAPPING.get(path)
 
 
-def _get_vm_name(display_name, id):
+def _get_vm_name(display_name, id_):
     if display_name:
-        return '%s (%s)' % (display_name[:41], id[:36])
-    else:
-        return id[:36]
+        return '%s (%s)' % (display_name[:41], id_[:36])
+
+    return id_[:36]
 
 
 def rename_vm(session, vm_ref, instance):

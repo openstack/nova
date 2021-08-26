@@ -13,9 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from oslo_log import log as logging
-from oslo_vmware import vim_util as vutil
+from oslo_vmware import vim_util
 
 from nova import exception
 from nova.i18n import _
@@ -82,29 +81,29 @@ def fetch_cluster_properties(session, vm_ref):
     property_collector = vim.service_content.propertyCollector
     client_factory = vim.client.factory
 
-    traversal_spec = vutil.build_traversal_spec(
+    traversal_spec = vim_util.build_traversal_spec(
         client_factory,
         "v_to_r",
         "VirtualMachine",
         "resourcePool",
         False,
-        [vutil.build_traversal_spec(client_factory,
-                                    "r_to_c",
-                                    "ResourcePool",
-                                    "parent",
-                                    False,
-                                    [])])
+        [vim_util.build_traversal_spec(client_factory,
+                                       "r_to_c",
+                                       "ResourcePool",
+                                       "parent",
+                                       False,
+                                       [])])
 
-    object_spec = vutil.build_object_spec(
+    object_spec = vim_util.build_object_spec(
         client_factory,
         vm_ref,
         [traversal_spec])
-    property_spec = vutil.build_property_spec(
+    property_spec = vim_util.build_property_spec(
         client_factory,
         "ClusterComputeResource",
         ["configurationEx"])
 
-    property_filter_spec = vutil.build_property_filter_spec(
+    property_filter_spec = vim_util.build_property_filter_spec(
         client_factory,
         [property_spec],
         [object_spec])
@@ -115,7 +114,7 @@ def fetch_cluster_properties(session, vm_ref):
         specSet=[property_filter_spec], options=options)
     result = None
     """ Retrieving needed hardware properties from ESX hosts """
-    with vutil.WithRetrieval(vim, pc_result) as pc_objects:
+    with vim_util.WithRetrieval(vim, pc_result) as pc_objects:
         for objContent in pc_objects:
             LOG.debug("Retrieving cluster: %s", objContent)
             result = objContent
@@ -146,7 +145,7 @@ def delete_vm_group(session, cluster, vm_group):
 def update_placement(session, cluster, vm_ref, group_infos):
     """Updates cluster for vm placement using DRS"""
     cluster_config = session._call_method(
-        vutil, "get_object_property", cluster, "configurationEx")
+        vim_util, "get_object_property", cluster, "configurationEx")
 
     client_factory = session.vim.client.factory
     config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
@@ -258,7 +257,7 @@ def _get_rule(cluster_config, rule_name):
 
 def _is_drs_enabled(session, cluster):
     """Check if DRS is enabled on a given cluster"""
-    drs_config = session._call_method(vutil, "get_object_property", cluster,
+    drs_config = session._call_method(vim_util, "get_object_property", cluster,
                                       "configuration.drsConfig")
     if drs_config and hasattr(drs_config, 'enabled'):
         return drs_config.enabled
@@ -310,7 +309,7 @@ def clean_empty_vm_groups(session, cluster, group_names=None, instance=None):
     Optionally filter the server groups to delete by `group_names`.
     :param instance: Only for logging purposes
     """
-    cluster_config = session._call_method(vutil,
+    cluster_config = session._call_method(vim_util,
         "get_object_property", cluster, "configurationEx")
 
     for group in cluster_config.group:
