@@ -31,6 +31,7 @@ from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import units
+from oslo_utils.versionutils import convert_version_to_int
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
@@ -1330,18 +1331,17 @@ def get_vm_state(session, instance):
     return constants.POWER_STATES[vm_state]
 
 
-def _get_host_reservations(host_reservations_map, host_moref, host_vcpus,
-                           host_memory_mb):
+def _set_host_reservations(stats, host_reservations_map, host_moref):
     """Compute the number of vcpus and memory in MB reserved for the host from
     the configured reservations or the default.
 
     For every host, both vcpus and memory can be given as static number or in
     percent, with static number taking priority.
     """
-    reservations = {
-        'vcpus': 0,
-        'memory_mb': 0
-    }
+    host_vcpus = stats["vcpus"]
+    host_memory_mb = stats["memory_mb"]
+    stats["vcpus_reserved"] = 0
+    stats["memory_mb_reserved"] = 0
 
     default_key = _HOST_RESERVATIONS_DEFAULT_KEY
     host_reservations = host_reservations_map.get(default_key, {})
@@ -1349,28 +1349,27 @@ def _get_host_reservations(host_reservations_map, host_moref, host_vcpus,
     for key in ['vcpus', 'vcpus_percent', 'memory_mb', 'memory_percent']:
         if key in group_reservations:
             host_reservations[key] = group_reservations[key]
+
     if not host_reservations:
-        return reservations
+        return
 
     # compute the number of vcpus
     if host_reservations.get('vcpus') is not None:
         vcpus = max(0, host_reservations['vcpus'])
-        reservations['vcpus'] = min(host_vcpus, vcpus)
+        stats['vcpus_reserved'] = min(host_vcpus, vcpus)
     elif host_reservations.get('vcpus_percent') is not None:
         percent = max(0, min(100, host_reservations['vcpus_percent']))
         # This will round down.
-        reservations['vcpus'] = host_vcpus * percent // 100
+        stats['vcpus_reserved'] = host_vcpus * percent // 100
 
     # compute the memory in MB
     if host_reservations.get('memory_mb') is not None:
         memory_mb = max(0, host_reservations['memory_mb'])
-        reservations['memory_mb'] = min(host_memory_mb, memory_mb)
+        stats['memory_mb_reserved'] = min(host_memory_mb, memory_mb)
     elif host_reservations.get('memory_percent') is not None:
         percent = max(0, min(100, host_reservations['memory_percent']))
         # This will round down.
-        reservations['memory_mb'] = host_memory_mb * percent // 100
-
-    return reservations
+        stats['memory_mb_reserved'] = host_memory_mb * percent // 100
 
 
 def _get_host_reservations_map(groups=None):
@@ -1409,79 +1408,176 @@ def _get_host_reservations_map(groups=None):
     return hrm
 
 
+# Only for satisfying the tests, and to ensure it is producing the same results
 def get_stats_from_cluster(session, cluster):
-    """Get the aggregate resource stats of a cluster."""
-    vcpus = 0
-    max_vcpus_per_host = 0
-    reserved_vcpus = 0
-    used_mem_mb = 0
-    total_mem_mb = 0
-    max_mem_mb_per_host = 0
-    reserved_memory_mb = 0
+    return aggregate_stats_from_cluster(
+        get_stats_from_cluster_per_host(session, cluster))
 
+
+def aggregate_stats_from_cluster(host_stats):
+    """Get the aggregate resource stats of a cluster."""
+    total_vcpus = 0
+    total_vcpus_used = 0
+    total_vcpus_reserved = 0
+    max_vcpus_per_host = 0
+
+    total_memory_mb = 0
+    total_memory_mb_used = 0
+    total_memory_mb_reserved = 0
+    max_mem_mb_per_host = 0
+
+    # NOTE (jakobk): For the total amount of hosts it doesn't matter
+    # whether the host is in MM or unreachable, because the count is
+    # used to calculate safety margins for resource allocations, and MM
+    # or otherwise unreachable hosts is precisely what that is supposed
+    # to guard against.
+    total_hypervisor_count = len(host_stats)
+    previous_cpu_info = None
+    cpu_infos_equal = True
+
+    for stats in host_stats.values():
+        if not stats["available"]:
+            continue
+        # Total vcpus is the sum of all pCPUs of individual hosts
+        # The overcommitment ratio is factored in by the scheduler
+        vcpus = stats["vcpus"]
+        total_vcpus += vcpus
+        vcpus_used = stats["vcpus_used"]
+        total_vcpus_used += vcpus_used
+        vcpus_reserved = stats["vcpus_reserved"]
+        total_vcpus_reserved += vcpus_reserved
+        max_vcpus_per_host = max(max_vcpus_per_host,
+                                 vcpus - vcpus_reserved)
+
+        memory_mb = stats["memory_mb"]
+        total_memory_mb += memory_mb
+        memory_mb_used = stats["memory_mb_used"]
+        total_memory_mb_used += memory_mb_used
+        memory_mb_reserved = stats["memory_mb_reserved"]
+        total_memory_mb_reserved += memory_mb_reserved
+        max_mem_mb_per_host = max(max_mem_mb_per_host,
+                                  memory_mb - memory_mb_reserved)
+
+        if cpu_infos_equal and previous_cpu_info:
+            cpu_infos_equal = (previous_cpu_info == stats["cpu_info"])
+
+        previous_cpu_info = stats["cpu_info"]
+
+    # Calculate VM-reservable memory as a ratio of total available
+    # memory, depending on either the configured tolerance for failed
+    # hypervisors or a single configurable ratio.
+    max_fail_hvs = \
+        CONF.vmware.memory_reservation_cluster_hosts_max_fail
+    if max_fail_hvs and total_hypervisor_count:
+        vm_reservable_memory_ratio = \
+            (1 - max_fail_hvs / total_hypervisor_count)
+    else:
+        vm_reservable_memory_ratio = \
+            CONF.vmware.memory_reservation_max_ratio_fallback
+
+    return {
+        "vcpus": total_vcpus,
+        "vcpus_used": total_vcpus_used,
+        "vcpus_reserved": total_vcpus_reserved,
+        "max_vcpus_per_host": max_vcpus_per_host,
+        "memory_mb": total_memory_mb,
+        "memory_mb_used": total_memory_mb_used,
+        "memory_mb_reserved": total_memory_mb_reserved,
+        "max_mem_mb_per_host": max_mem_mb_per_host,
+        "vm_reservable_memory_ratio": vm_reservable_memory_ratio,
+        "cpu_info": (previous_cpu_info if cpu_infos_equal
+                     else "CPUs for this cluster have different values!")
+    }
+
+
+def _host_props_to_cpu_info(host_props):
+    processor_type = None
+    cpu_vendor = None
+    hardware_cpu_pkg = host_props.get("hardware.cpuPkg")
+    if hardware_cpu_pkg and hardware_cpu_pkg.HostCpuPackage:
+        t = hardware_cpu_pkg.HostCpuPackage[0]
+        processor_type = t.description
+        cpu_vendor = t.vendor.title()
+
+    features = []
+    if "config.featureCapability" in host_props:
+        feature_capability = host_props["config.featureCapability"]
+        for feature in feature_capability.HostFeatureCapability:
+            if not feature.featureName.startswith("cpuid."):
+                continue
+            if feature.value != "1":
+                continue
+
+            name = feature.featureName
+            features.append(name.split(".", 1)[1].lower())
+    cpu_info = {
+        "model": processor_type,
+        "vendor": cpu_vendor,
+        "features": sorted(features)
+    }
+    hardware_cpu_info = host_props.get("hardware.cpuInfo")
+    if hardware_cpu_info:
+        cpu_info["topology"] = {
+            "cores": hardware_cpu_info.numCpuCores,
+            "sockets": hardware_cpu_info.numCpuPackages,
+            "threads": hardware_cpu_info.numCpuThreads
+        }
+    return cpu_info
+
+
+def _set_hypervisor_type_and_version(stats, host_props):
+    product = host_props.get("summary.config.product")
+    if not product:
+        return
+
+    stats["hypervisor_type"] = product.name
+    stats["hypervisor_version"] = convert_version_to_int(product.version)
+
+
+def _process_host_stats(obj, host_reservations_map):
+    host_props = propset_dict(obj.propSet)
+    runtime_summary = host_props["summary.runtime"]
+    hardware_summary = host_props.get("summary.hardware")
+    stats_summary = host_props.get("summary.quickStats")
+    # Total vcpus is the sum of all pCPUs of individual hosts
+    # The overcommitment ratio is factored in by the scheduler
+    threads = getattr(hardware_summary, "numCpuThreads", 0)
+    mem_mb = getattr(hardware_summary, "memorySize", 0) // units.Mi
+
+    stats = {
+        "available": (not runtime_summary.inMaintenanceMode and
+                      runtime_summary.connectionState == "connected"),
+        "vcpus": threads,
+        "vcpus_used": 0,
+        "memory_mb": mem_mb,
+        "memory_mb_used": getattr(stats_summary, "overallMemoryUsage", 0),
+        "cpu_info": _host_props_to_cpu_info(host_props),
+    }
+
+    _set_hypervisor_type_and_version(stats, host_props)
+    _set_host_reservations(stats, host_reservations_map, obj.obj)
+    return host_props["name"], stats
+
+
+def get_stats_from_cluster_per_host(session, cluster):
+    """Get the resource stats per host of a cluster."""
     host_mors, host_reservations_map = \
         get_hosts_and_reservations_for_cluster(session, cluster)
 
-    if host_mors:
-        result = session._call_method(vim_util,
-                        "get_properties_for_a_collection_of_objects",
-                        "HostSystem", host_mors,
-                        ["summary.hardware", "summary.runtime",
-                        "summary.quickStats"])
-        total_hypervisor_count = 0
-        # NOTE (jakobk): For the total amount of hosts it doesn't matter
-        # whether the host is in MM or unreachable, because the count is
-        # used to calculate safety margins for resource allocations, and MM
-        # or otherwise unreachable hosts is precisely what that is supposed
-        # to guard against.
-        with vutil.WithRetrieval(session.vim, result) as objects:
-            for obj in objects:
-                total_hypervisor_count += 1
-                host_props = propset_dict(obj.propSet)
-                runtime_summary = host_props['summary.runtime']
-                if (runtime_summary.inMaintenanceMode or
-                        runtime_summary.connectionState != "connected"):
-                    continue
-                hardware_summary = host_props['summary.hardware']
-                stats_summary = host_props['summary.quickStats']
-                # Total vcpus is the sum of all pCPUs of individual hosts
-                # The overcommitment ratio is factored in by the scheduler
-                threads = hardware_summary.numCpuThreads
-                vcpus += threads
-                used_mem_mb += stats_summary.overallMemoryUsage
-                mem_mb = hardware_summary.memorySize // units.Mi
-                total_mem_mb += mem_mb
-                reserved = _get_host_reservations(
-                                    host_reservations_map, obj.obj,
-                                    threads, mem_mb)
-                reserved_vcpus += reserved['vcpus']
-                reserved_memory_mb += reserved['memory_mb']
-                max_vcpus_per_host = max(max_vcpus_per_host,
-                                            threads - reserved['vcpus'])
-                max_mem_mb_per_host = max(max_mem_mb_per_host,
-                                            mem_mb - reserved['memory_mb'])
+    if not host_mors:
+        return {}
 
-        # Calculate VM-reservable memory as a ratio of total available
-        # memory, depending on either the configured tolerance for failed
-        # hypervisors or a single configurable ratio.
-        max_fail_hvs = \
-            CONF.vmware.memory_reservation_cluster_hosts_max_fail
-        if max_fail_hvs and total_hypervisor_count:
-            vm_reservable_memory_ratio = \
-                (1 - max_fail_hvs / total_hypervisor_count)
-        else:
-            vm_reservable_memory_ratio = \
-                CONF.vmware.memory_reservation_max_ratio_fallback
-
-    stats = {'cpu': {'vcpus': vcpus,
-                     'max_vcpus_per_host': max_vcpus_per_host,
-                     'reserved_vcpus': reserved_vcpus},
-             'mem': {'total': total_mem_mb,
-                     'free': total_mem_mb - used_mem_mb,
-                     'max_mem_mb_per_host': max_mem_mb_per_host,
-                     'reserved_memory_mb': reserved_memory_mb,
-                     'vm_reservable_memory_ratio': vm_reservable_memory_ratio}}
-    return stats
+    result = session._call_method(vim_util,
+                    "get_properties_for_a_collection_of_objects",
+                    "HostSystem", host_mors,
+                    ["name", "summary.hardware", "summary.runtime",
+                     "summary.quickStats", "summary.config.product",
+                     "hardware.cpuPkg", "hardware.cpuInfo",
+                     "config.featureCapability",
+                    ])
+    with vutil.WithRetrieval(session.vim, result) as objects:
+        return dict(_process_host_stats(obj, host_reservations_map)
+                    for obj in objects if hasattr(obj, "propSet"))
 
 
 def get_hosts_and_reservations_for_cluster(session, cluster):

@@ -51,7 +51,6 @@ from nova.virt import block_device
 from nova.virt import driver
 from nova.virt.vmwareapi import cluster_util
 from nova.virt.vmwareapi import constants
-from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
 from nova.virt.vmwareapi.rpc import VmwareRpcService
@@ -368,29 +367,17 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         return '%s.%s' % (mo_id, self._vcenter_uuid)
 
-    def _get_available_resources(self, host_stats):
-        return {'vcpus': host_stats['vcpus'],
-               'memory_mb': host_stats['host_memory_total'],
-               'local_gb': host_stats['disk_total'],
-               'vcpus_used': 0,
-               'memory_mb_used': host_stats['host_memory_total'] -
-                                 host_stats['host_memory_free'],
-               'local_gb_used': host_stats['disk_used'],
-               'vcpus_reserved': CONF.reserved_host_cpus +
-                                 host_stats['vcpus_reserved'],
-               'memory_mb_reserved': CONF.reserved_host_memory_mb +
-                                     host_stats['host_memory_reserved'],
-               'hypervisor_type': host_stats['hypervisor_type'],
-               'hypervisor_version': host_stats['hypervisor_version'],
-               'hypervisor_hostname': host_stats['hypervisor_hostname'],
-                # The VMWare driver manages multiple hosts, so there are
-                # likely many different CPU models in use. As such it is
-                # impossible to provide any meaningful info on the CPU
-                # model of the "host"
-               'cpu_info': None,
-               'supported_instances': host_stats['supported_instances'],
-               'numa_topology': None,
-               }
+    def _get_available_resources(self, host_stats, nodename):
+        stats = host_stats[nodename].copy()
+        stats["memory_mb_reserved"] = min(stats["memory_mb"],
+                                          stats["memory_mb_reserved"] +
+                                          CONF.reserved_host_memory_mb)
+        stats["vcpus_reserved"] = min(stats["vcpus"],
+                                      stats["vcpus_reserved"] +
+                                      CONF.reserved_host_cpus)
+        stats["cpu_info"] = jsonutils.dumps(stats['cpu_info'], sort_keys=True)
+
+        return stats
 
     def get_available_resource(self, nodename):
         """Retrieve resource info.
@@ -401,8 +388,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         :returns: dictionary describing resources
 
         """
-        host_stats = self._vc_state.get_host_stats(refresh=True)
-        stats_dict = self._get_available_resources(host_stats)
+        host_stats = self._vc_state.get_host_stats()
+        stats_dict = self._get_available_resources(host_stats, nodename)
         return stats_dict
 
     def get_available_nodes(self, refresh=False):
@@ -410,6 +397,15 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         This driver supports only one compute node.
         """
+        # get_available_nodes is called at the beginning of polling
+        # the resources of all the nodes via
+        #    get_inventory & get_available_resource
+        # We follow here the same pattern as in the ironic driver and use this
+        # function call as an indicator of a new polling cycle and refresh
+        # the host stats cached in _vc_state by calling...
+        self._vc_state.get_host_stats(refresh=True)
+        # In the following calls to get_inventory and get_available_resource
+        # for each node, we then return the cached data
         return [self._nodename]
 
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
@@ -459,78 +455,67 @@ class VMwareVCDriver(driver.ComputeDriver):
         :raises: ReshapeFailed if the requested tree reshape fails for
             whatever reason.
         """
-        # NOTE(cdent): This is a side-effecty method, we are changing the
-        # the provider tree in place (on purpose).
+        stats = self.get_available_resource(nodename)
+        result = {}
+
+        # NOTE(yikun): If the inv record does not exists, the allocation_ratio
+        # will use the CONF.xxx_allocation_ratio value if xxx_allocation_ratio
+        # is set, and fallback to use the initial_xxx_allocation_ratio
+        # otherwise.
         inv = provider_tree.data(nodename).inventory
         ratios = self._get_allocation_ratios(inv)
-        stats = vm_util.get_stats_from_cluster(self._session,
-                                               self._cluster_ref)
-        datastores = ds_util.get_available_datastores(self._session,
-                                                      self._cluster_ref,
-                                                      self._datastore_regex)
-        total_disk_capacity = sum([ds.capacity for ds in datastores])
-        max_free_space = max([ds.freespace for ds in datastores])
-        reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
-            CONF.reserved_host_disk_mb)
-        result = {
-            orc.DISK_GB: {
-                'total': total_disk_capacity // units.Gi,
+
+        local_gb = stats["local_gb"]
+        local_gb_max_free = stats.get("local_gb_max_free", "local_gb")
+        if local_gb > 0 and local_gb_max_free > 0:
+            reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
+                CONF.reserved_host_disk_mb)
+            result[orc.DISK_GB] = {
+                'total': local_gb,
                 'reserved': reserved_disk_gb,
                 'min_unit': 1,
-                'max_unit': max_free_space // units.Gi,
+                'max_unit': local_gb_max_free,
                 'step_size': 1,
+                'allocation_ratio': ratios[orc.DISK_GB],
             }
-        }
-        if stats['cpu']['max_vcpus_per_host'] > 0:
-            reserved_vcpus = stats['cpu'].get('reserved_vcpus', 0)
-            reserved_vcpus += CONF.reserved_host_cpus
-            result.update({orc.VCPU: {
-                'total': stats['cpu']['vcpus'],
+
+        vcpus = stats["vcpus"]
+        max_vcpus = stats.get("max_vcpus_per_host", vcpus)
+        if vcpus > 0 and max_vcpus > 0:
+            reserved_vcpus = stats["vcpus_reserved"]
+            result[orc.VCPU] = {
+                'total': vcpus,
                 'reserved': reserved_vcpus,
                 'min_unit': 1,
-                'max_unit': stats['cpu']['max_vcpus_per_host'],
+                'max_unit': max_vcpus,
                 'step_size': 1,
                 'allocation_ratio': ratios[orc.VCPU],
-            }})
-        if stats['mem']['max_mem_mb_per_host'] > 0:
-            reserved_memory_mb = stats['mem'].get('reserved_memory_mb', 0)
-            reserved_memory_mb += CONF.reserved_host_memory_mb
-            result.update({orc.MEMORY_MB: {
-                'total': stats['mem']['total'],
+            }
+
+        memory_mb = stats["memory_mb"]
+        reserved_memory_mb = stats["memory_mb_reserved"]
+        max_memory_mb = stats.get("max_mem_mb_per_host", memory_mb)
+        if memory_mb > 0 and max_memory_mb > 0:
+            result[orc.MEMORY_MB] = {
+                'total': memory_mb,
                 'reserved': reserved_memory_mb,
                 'min_unit': 1,
-                'max_unit': stats['mem']['max_mem_mb_per_host'],
+                'max_unit': max_memory_mb,
                 'step_size': 1,
                 'allocation_ratio': ratios[orc.MEMORY_MB],
-            }})
-            available_memory_mb = stats['mem']['total'] - reserved_memory_mb
-            result.update({
-                utils.MEMORY_RESERVABLE_MB_RESOURCE: {
-                    'total': available_memory_mb,
-                    'reserved': int(available_memory_mb *
-                        (1 - stats['mem']['vm_reservable_memory_ratio'])),
-                    'min_unit': 1,
-                    'max_unit': stats['mem']['max_mem_mb_per_host'],
-                    'step_size': 1,
-            }})
+            }
 
-        # If a sharing DISK_GB provider exists in the provider tree, then our
-        # storage is shared, and we should not report the DISK_GB inventory in
-        # the compute node provider.
-        # TODO(cdent): We don't do this yet, in part because of the issues
-        # in bug #1784020, but also because we can represent all datastores
-        # as shared providers and should do once update_provider_tree is
-        # working well.
-        if provider_tree.has_sharing_provider(orc.DISK_GB):
-            LOG.debug('Ignoring sharing provider - see bug #1784020')
-        result[orc.DISK_GB] = {
-            'total': total_disk_capacity // units.Gi,
-            'reserved': reserved_disk_gb,
-            'min_unit': 1,
-            'max_unit': max_free_space // units.Gi,
-            'step_size': 1,
-            'allocation_ratio': ratios[orc.DISK_GB],
-        }
+            available_memory_mb = memory_mb - reserved_memory_mb
+            reserved_reservable_memory = int(available_memory_mb *
+                        (1 - stats.get("vm_reservable_memory_ratio", 0)))
+            if available_memory_mb > 0:
+                result[utils.MEMORY_RESERVABLE_MB_RESOURCE] = {
+                        'total': available_memory_mb,
+                        'reserved': reserved_reservable_memory,
+                        'min_unit': 1,
+                        'max_unit': max_memory_mb,
+                        'step_size': 1,
+            }
 
         provider_tree.update_inventory(nodename, result)
 

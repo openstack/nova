@@ -748,10 +748,90 @@ class HostStorageSystem(ManagedObject):
 
 class HostSystem(ManagedObject):
     """Host System class."""
+    NUM_CPU_CORES = 8
+    NUM_CPU_PKGS = 2
+    NUM_CPU_THREADS = 16
 
-    def __init__(self, name="ha-host", connected=True, ds_ref=None,
+    @staticmethod
+    def create_summary_hardware():
+        hardware = DataObject()
+        hardware.numCpuCores = HostSystem.NUM_CPU_CORES
+        hardware.numCpuPkgs = HostSystem.NUM_CPU_PKGS
+        hardware.numCpuThreads = HostSystem.NUM_CPU_THREADS
+        hardware.vendor = "Intel"
+        hardware.cpuModel = "Intel(R) Xeon(R)"
+        hardware.uuid = "host-uuid"
+        hardware.memorySize = units.Gi
+        return hardware
+
+    @staticmethod
+    def create_summary(connected, maintenance_mode):
+        summary = DataObject()
+        summary.hardware = HostSystem.create_summary_hardware()
+        summary.runtime = HostSystem.create_summary_runtime(connected,
+                                                            maintenance_mode)
+        quickstats = DataObject()
+        quickstats.overallMemoryUsage = 500
+        summary.quickStats = quickstats
+
+        product = DataObject()
+        product.name = "VMware ESXi"
+        # Avoid deprecation warning
+        product.version = constants.NEXT_MIN_VC_VERSION
+        config = DataObject()
+        config.product = product
+        summary.config = config
+
+        return summary
+
+    @staticmethod
+    def create_summary_runtime(connected, maintenance_mode):
+        runtime = DataObject()
+        if connected:
+            runtime.connectionState = "connected"
+        else:
+            runtime.connectionState = "disconnected"
+
+        runtime.inMaintenanceMode = maintenance_mode
+        return runtime
+
+    @staticmethod
+    def create_cpu_pkgs():
+        cpuPkg = DataObject('HostCpuPackage')
+        cpuPkg.description = 'Intel(R) Xeon(R) CPU E5-4650 v4 @ 2.20GHz'
+        cpuPkg.vendor = 'intel'
+        cpu_pkgs = _create_array_of_type('HostCpuPackage')
+        cpu_pkgs.HostCpuPackage = HostSystem.NUM_CPU_PKGS * [cpuPkg]
+        return cpu_pkgs
+
+    @staticmethod
+    def create_hardware_cpu_info():
+        cpuInfo = DataObject('CpuInfo')
+        cpuInfo.numCpuCores = HostSystem.NUM_CPU_CORES
+        cpuInfo.numCpuPackages = HostSystem.NUM_CPU_PKGS
+        cpuInfo.numCpuThreads = HostSystem.NUM_CPU_THREADS
+        return cpuInfo
+
+    @staticmethod
+    def create_config_feature_capability():
+        aes = DataObject('HostFeatureCapability')
+        aes.featureName = 'cpuid.AES'
+        aes.value = '1'
+        avx = DataObject('HostFeatureCapability')
+        avx.featureName = 'cpuid.AVX'
+        avx.value = '1'
+        amd = DataObject('HostFeatureCapability')
+        amd.featureName = 'cpuid.AMD'
+        amd.value = '0'
+        caps = _create_array_of_type('HostFeatureCapability')
+        caps.HostFeatureCapability = [aes, avx, amd]
+        return caps
+
+    def __init__(self, name=None, connected=True, ds_ref=None,
                  maintenance_mode=False):
         super(HostSystem, self).__init__("host")
+        if not name:
+            name = "ha-{}".format(self.mo_id)
         self.set("name", name)
         if _no_objects_of_type("HostNetworkSystem"):
             create_host_network_system()
@@ -772,50 +852,31 @@ class HostSystem(ManagedObject):
         datastores.ManagedObjectReference = [ds_ref]
         self.set("datastore", datastores)
 
-        summary = DataObject()
-        hardware = DataObject()
-        hardware.numCpuCores = 8
-        hardware.numCpuPkgs = 2
-        hardware.numCpuThreads = 16
-        hardware.vendor = "Intel"
-        hardware.cpuModel = "Intel(R) Xeon(R)"
-        hardware.uuid = "host-uuid"
-        hardware.memorySize = units.Gi
-        summary.hardware = hardware
-
-        runtime = DataObject()
-        if connected:
-            runtime.connectionState = "connected"
-        else:
-            runtime.connectionState = "disconnected"
-
-        runtime.inMaintenanceMode = maintenance_mode
-
-        summary.runtime = runtime
-
-        quickstats = DataObject()
-        quickstats.overallMemoryUsage = 500
-        summary.quickStats = quickstats
-
-        product = DataObject()
-        product.name = "VMware ESXi"
-        # Avoid deprecation warning
-        product.version = constants.NEXT_MIN_VC_VERSION
-        config = DataObject()
-        config.product = product
-        summary.config = config
+        caps = self.create_config_feature_capability()
+        self.set('config.featureCapability', caps)
 
         pnic_do = DataObject()
         pnic_do.device = "vmnic0"
         net_info_pnic = DataObject()
         net_info_pnic.PhysicalNic = [pnic_do]
 
-        self.set("summary", summary)
-        self.set("capability.maxHostSupportedVcpus", 600)
-        self.set("summary.hardware", hardware)
-        self.set("summary.runtime", runtime)
-        self.set("summary.quickStats", quickstats)
         self.set("config.network.pnic", net_info_pnic)
+
+        cpu_pkgs = self.create_cpu_pkgs()
+        self.set('hardware.cpuPkg', cpu_pkgs)
+
+        cpu_info = self.create_hardware_cpu_info()
+        self.set('hardware.cpuInfo', cpu_info)
+
+        summary = self.create_summary(connected, maintenance_mode)
+        self.set("summary", summary)
+        self.set("summary.config", summary.config)
+        self.set("summary.config.product", summary.config.product)
+        self.set("summary.hardware", summary.hardware)
+        self.set("summary.runtime", summary.runtime)
+        self.set("summary.quickStats", summary.quickStats)
+
+        self.set("capability.maxHostSupportedVcpus", 600)
         self.set("connected", connected)
 
         if _no_objects_of_type("Network"):

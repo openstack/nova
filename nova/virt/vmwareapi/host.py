@@ -16,6 +16,7 @@
 """
 Management class for host-related functions (start, reboot, etc).
 """
+from copy import deepcopy
 
 from oslo_log import log as logging
 from oslo_utils import units
@@ -41,24 +42,26 @@ def _get_ds_capacity_and_freespace(session, cluster=None,
                                    datastore_regex=None):
     capacity = 0
     freespace = 0
+    max_freespace = 0
     try:
         for ds in ds_util.get_available_datastores(session, cluster,
                                                    datastore_regex):
             capacity += ds.capacity
             freespace += ds.freespace
+            max_freespace = max(max_freespace, ds.freespace)
     except exception.DatastoreNotFound:
         pass
 
-    return capacity, freespace
+    return capacity, freespace, max_freespace
 
 
 class VCState(object):
     """Manages information about the vCenter cluster"""
 
-    def __init__(self, session, host_name, cluster, datastore_regex):
+    def __init__(self, session, cluster_node_name, cluster, datastore_regex):
         super(VCState, self).__init__()
         self._session = session
-        self._host_name = host_name
+        self._cluster_node_name = cluster_node_name
         self._cluster = cluster
         self._datastore_regex = datastore_regex
         self._stats = {}
@@ -88,43 +91,57 @@ class VCState(object):
         """Update the current state of the cluster."""
         data = {}
         try:
-            capacity, freespace = _get_ds_capacity_and_freespace(self._session,
-                self._cluster, self._datastore_regex)
+            capacity, free, max_free = _get_ds_capacity_and_freespace(
+                self._session, self._cluster, self._datastore_regex)
 
             # Get cpu, memory stats from the cluster
-            stats = vm_util.get_stats_from_cluster(self._session,
-                                                   self._cluster)
+            per_host_stats = vm_util.get_stats_from_cluster_per_host(
+                self._session, self._cluster)
         except (vexc.VimConnectionException, vexc.VimAttributeException) as ex:
             # VimAttributeException is thrown when vpxd service is down
             LOG.warning("Failed to connect with %(node)s. "
                         "Error: %(error)s",
-                        {'node': self._host_name, 'error': ex})
+                        {'node': self._cluster_node_name, 'error': ex})
             self._set_host_enabled(False)
             return data
 
-        data["vcpus"] = stats['cpu']['vcpus']
-        data["vcpus_reserved"] = stats['cpu']['reserved_vcpus']
-        data["disk_total"] = capacity // units.Gi
-        data["disk_available"] = freespace // units.Gi
-        data["disk_used"] = data["disk_total"] - data["disk_available"]
-        data["host_memory_total"] = stats['mem']['total']
-        data["host_memory_free"] = stats['mem']['free']
-        data['host_memory_reserved'] = stats['mem']['reserved_memory_mb']
-        data["hypervisor_type"] = self._hypervisor_type
-        data["hypervisor_version"] = self._hypervisor_version
-        data["hypervisor_hostname"] = self._host_name
-        data["supported_instances"] = [
-            (obj_fields.Architecture.I686,
-             obj_fields.HVType.VMWARE,
-             obj_fields.VMMode.HVM),
-            (obj_fields.Architecture.X86_64,
-             obj_fields.HVType.VMWARE,
-             obj_fields.VMMode.HVM)]
+        local_gb = capacity / units.Gi
+        local_gb_used = (capacity - free) / units.Gi
+        local_gb_max_free = max_free / units.Gi
+
+        defaults = {
+            "local_gb": local_gb,
+            "local_gb_used": local_gb_used,
+            "local_gb_max_free": local_gb_max_free,
+            "supported_instances": [
+                (obj_fields.Architecture.I686,
+                 obj_fields.HVType.VMWARE,
+                 obj_fields.VMMode.HVM),
+                (obj_fields.Architecture.X86_64,
+                 obj_fields.HVType.VMWARE,
+                 obj_fields.VMMode.HVM)],
+            "numa_topology": None,
+        }
+
+        for host, stats in per_host_stats.items():
+            data[host] = self._merge_stats(host, stats, defaults)
+
+        cluster_stats = vm_util.aggregate_stats_from_cluster(per_host_stats)
+        cluster_stats["hypervisor_type"] = self._hypervisor_type
+        cluster_stats["hypervisor_version"] = self._hypervisor_version
+        data[self._cluster_node_name] = self._merge_stats(
+            self._cluster_node_name, cluster_stats, defaults)
 
         self._stats = data
         if self._auto_service_disabled:
             self._set_host_enabled(True)
         return data
+
+    def _merge_stats(self, host, stats, defaults):
+        result = deepcopy(defaults)
+        result["hypervisor_hostname"] = host
+        result.update(stats)
+        return result
 
     def _set_host_enabled(self, enabled):
         """Sets the compute host's ability to accept new instances."""
