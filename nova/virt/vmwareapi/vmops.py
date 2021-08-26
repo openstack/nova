@@ -21,11 +21,11 @@ Class for VM tasks like spawn, snapshot, suspend, resume etc.
 
 import collections
 import copy
+import decorator
 import os
 import re
 import time
 
-import decorator
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils

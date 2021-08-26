@@ -114,8 +114,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         super(VMwareVCDriver, self).__init__(virtapi)
 
         if (CONF.vmware.host_ip is None or
-            CONF.vmware.host_username is None or
-            CONF.vmware.host_password is None):
+                CONF.vmware.host_username is None or
+                CONF.vmware.host_password is None):
             raise Exception(_("Must specify host_ip, host_username and "
                               "host_password to use vmwareapi.VMwareVCDriver"))
 
@@ -176,7 +176,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                   'vCenter version %(min_version)s or greater.') % {
                       'version': vc_version,
                       'min_version': constants.MIN_VC_VERSION})
-        elif v_utils.convert_version_to_int(vc_version) < next_min_ver:
+        if v_utils.convert_version_to_int(vc_version) < next_min_ver:
             LOG.warning('Running Nova with a VMware vCenter version less '
                         'than %(version)s is deprecated. The required '
                         'minimum version of vCenter will be raised to '
