@@ -15,7 +15,7 @@
 
 
 from oslo_log import log as logging
-from oslo_vmware import vim_util as vutil
+from oslo_vmware import vim_util
 
 from nova import exception
 from nova.i18n import _
@@ -119,15 +119,15 @@ def fetch_cluster_groups(session, cluster_ref=None, cluster_config=None,
 
     if cluster_config is None:
         cluster_config = session._call_method(
-            vutil, "get_object_property", cluster_ref, "configurationEx")
+            vim_util, "get_object_property", cluster_ref, "configurationEx")
 
     groups = {}
     for group in getattr(cluster_config, 'group', []):
         if group_type == 'vm':
-            if not vutil.is_vim_instance(group, 'ClusterVmGroup'):
+            if not vim_util.is_vim_instance(group, 'ClusterVmGroup'):
                 continue
         elif group_type == 'host':
-            if not vutil.is_vim_instance(group, 'ClusterHostGroup'):
+            if not vim_util.is_vim_instance(group, 'ClusterHostGroup'):
                 continue
 
         groups[group.name] = group
@@ -147,7 +147,7 @@ def fetch_cluster_rules(session, cluster_ref=None, cluster_config=None):
 
     if cluster_config is None:
         cluster_config = session._call_method(
-            vutil, "get_object_property", cluster_ref, "configurationEx")
+            vim_util, "get_object_property", cluster_ref, "configurationEx")
 
     return {r.name: r for r in getattr(cluster_config, 'rule', [])}
 
@@ -180,7 +180,7 @@ def update_vm_group_membership(session, cluster, vm_group_name, vm_ref,
     on that group.
     """
     cluster_config = session._call_method(
-        vutil, "get_object_property", cluster, "configurationEx")
+        vim_util, "get_object_property", cluster, "configurationEx")
 
     client_factory = session.vim.client.factory
     config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
@@ -203,8 +203,9 @@ def update_vm_group_membership(session, cluster, vm_group_name, vm_ref,
             return
         filtered_vms = []
         found = False
+        vm_ref_value = vim_util.get_moref_value(vm_ref)
         for ref in group.vm:
-            if (vutil.get_moref_value(ref) == vutil.get_moref_value(vm_ref)):
+            if vim_util.get_moref_value(ref) == vm_ref_value:
                 found = True
             else:
                 filtered_vms.append(ref)
@@ -302,7 +303,7 @@ def add_rule(session, cluster_ref, rule):
 def get_rule(session, cluster_ref, rule_name):
     """Get a DRS rule from the cluster by name"""
     cluster_config = session._call_method(
-        vutil, "get_object_property", cluster_ref, "configurationEx")
+        vim_util, "get_object_property", cluster_ref, "configurationEx")
     return _get_rule(cluster_config, rule_name)
 
 
@@ -321,7 +322,7 @@ def get_rules_by_prefix(session, cluster_ref, rule_prefix):
     for.
     """
     cluster_config = session._call_method(
-        vutil, "get_object_property", cluster_ref, "configurationEx")
+        vim_util, "get_object_property", cluster_ref, "configurationEx")
 
     return [rule for rule in getattr(cluster_config, 'rule', [])
             if rule.name.startswith(rule_prefix)]
@@ -345,7 +346,7 @@ def update_rule(session, cluster_ref, rule):
 
 def is_drs_enabled(session, cluster):
     """Check if DRS is enabled on a given cluster"""
-    drs_config = session._call_method(vutil, "get_object_property", cluster,
+    drs_config = session._call_method(vim_util, "get_object_property", cluster,
                                       "configuration.drsConfig")
     if drs_config and hasattr(drs_config, 'enabled'):
         return drs_config.enabled
