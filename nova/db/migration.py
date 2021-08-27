@@ -36,8 +36,6 @@ ALEMBIC_INIT_VERSION = {
     'main': '8f2f1571d55b',
     'api': 'd67eeaabee36',
 }
-_MIGRATE_REPO = {}
-_ALEMBIC_CONF = {}
 
 LOG = logging.getLogger(__name__)
 
@@ -52,35 +50,27 @@ def _get_engine(database='main', context=None):
 
 def _find_migrate_repo(database='main'):
     """Get the path for the migrate repository."""
-    global _MIGRATE_REPO
 
     path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
         database, 'legacy_migrations')
 
-    if _MIGRATE_REPO.get(database) is None:
-        _MIGRATE_REPO[database] = migrate_repository.Repository(path)
-
-    return _MIGRATE_REPO[database]
+    return migrate_repository.Repository(path)
 
 
 def _find_alembic_conf(database='main'):
     """Get the path for the alembic repository."""
-    global _ALEMBIC_CONF
 
     path = os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
         database, 'alembic.ini')
 
-    if _ALEMBIC_CONF.get(database) is None:
-        config = alembic_config.Config(path)
-        # we don't want to use the logger configuration from the file, which is
-        # only really intended for the CLI
-        # https://stackoverflow.com/a/42691781/613428
-        config.attributes['configure_logger'] = False
-        _ALEMBIC_CONF[database] = config
-
-    return _ALEMBIC_CONF[database]
+    config = alembic_config.Config(path)
+    # we don't want to use the logger configuration from the file, which is
+    # only really intended for the CLI
+    # https://stackoverflow.com/a/42691781/613428
+    config.attributes['configure_logger'] = False
+    return config
 
 
 def _is_database_under_migrate_control(engine, repository):
