@@ -67,10 +67,6 @@ class RescueTestV21(test.NoDBTestCase):
 
     @ddt.data(
         exception.InstanceIsLocked(instance_uuid=uuids.instance),
-        exception.OperationNotSupportedForVTPM(
-            instance_uuid=uuids.instance, operation='foo'),
-        exception.OperationNotSupportedForVDPAInterface(
-            instance_uuid=uuids.instance, operation='foo'),
         exception.InvalidVolume(reason='foo'),
     )
     @mock.patch.object(compute.api.API, 'rescue')
@@ -79,6 +75,23 @@ class RescueTestV21(test.NoDBTestCase):
         mock_rescue.side_effect = exc
         body = {"rescue": {"adminPass": "AABBCC112233"}}
         self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._rescue,
+                          self.fake_req, UUID, body=body)
+        self.assertTrue(mock_rescue.called)
+
+    @ddt.data(
+        exception.OperationNotSupportedForVTPM(
+            instance_uuid=uuids.instance, operation='foo'),
+        exception.OperationNotSupportedForVDPAInterface(
+            instance_uuid=uuids.instance, operation='foo'),
+    )
+    @mock.patch.object(compute.api.API, 'rescue')
+    def test_rescue_raise_badrequest_for_not_supported_features(
+        self, exc, mock_rescue):
+        """Test that exceptions are translated into HTTP BadRequest errors."""
+        mock_rescue.side_effect = exc
+        body = {"rescue": {"adminPass": "AABBCC112233"}}
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._rescue,
                           self.fake_req, UUID, body=body)
         self.assertTrue(mock_rescue.called)

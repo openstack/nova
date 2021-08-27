@@ -140,6 +140,15 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                               allowed=0)
         self._test_migrate_exception(exc_info, webob.exc.HTTPForbidden)
 
+    def test_migrate_raise_badrequest_for_accelerator(self):
+        exc_info = exception.ForbiddenWithAccelerators()
+        self._test_migrate_exception(exc_info, webob.exc.HTTPBadRequest)
+
+    def test_migrate_raise_badrequest_for_vdpainterface(self):
+        exc_info = exception.OperationNotSupportedForVDPAInterface(
+                instance_uuid=uuids.instance, operation='foo')
+        self._test_migrate_exception(exc_info, webob.exc.HTTPBadRequest)
+
     def _test_migrate_live_succeeded(self, param):
         instance = self._stub_instance_get()
 
@@ -290,21 +299,21 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         self._test_migrate_live_failed_with_exception(
             exception.OperationNotSupportedForSEV(
                 instance_uuid=uuids.instance, operation='foo'),
-            expected_exc=webob.exc.HTTPConflict,
+            expected_exc=webob.exc.HTTPBadRequest,
             check_response=False)
 
     def test_migrate_live_vtpm_not_supported(self):
         self._test_migrate_live_failed_with_exception(
             exception.OperationNotSupportedForVTPM(
                 instance_uuid=uuids.instance, operation='foo'),
-            expected_exc=webob.exc.HTTPConflict,
+            expected_exc=webob.exc.HTTPBadRequest,
             check_response=False)
 
     def test_migrate_live_vdpa_interfaces_not_supported(self):
         self._test_migrate_live_failed_with_exception(
             exception.OperationNotSupportedForVDPAInterface(
                 instance_uuid=uuids.instance, operation='foo'),
-            expected_exc=webob.exc.HTTPConflict,
+            expected_exc=webob.exc.HTTPBadRequest,
             check_response=False)
 
     def test_migrate_live_pre_check_error(self):
@@ -319,9 +328,10 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
 
     @mock.patch('nova.compute.api.API.live_migrate',
                 side_effect=exception.ForbiddenWithAccelerators)
-    def test_live_migration_raises_http_forbidden(self, mock_migrate):
+    def test_live_migration_raises_badrequest_for_accelerators(
+        self, mock_migrate):
         body = self._get_migration_body(host='hostname')
-        self.assertRaises(webob.exc.HTTPForbidden,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._migrate_live,
                           self.req, fakes.FAKE_UUID, body=body)
 

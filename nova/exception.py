@@ -155,12 +155,24 @@ class Forbidden(NovaException):
     code = 403
 
 
-class ForbiddenWithAccelerators(Forbidden):
-    msg_fmt = _("Forbidden with instances that have accelerators.")
+class NotSupported(NovaException):
+    # This exception use return code as 400 and can be used
+    # directly or as base exception for operations whihc are not
+    # supported in Nova. Any feature that is not yet implemented
+    # but plan to implement in future (example: Cyborg
+    # integration operations), should use this exception as base
+    # and override the msg_fmt with feature details.
+    # Example: MultiattachNotSupportedByVirtDriver exception.
+    msg_fmt = _("Bad Request - Feature is not supported in Nova")
+    code = 400
 
 
-class ForbiddenPortsWithAccelerator(Forbidden):
-    msg_fmt = _("Forbidden with Ports that have accelerators.")
+class ForbiddenWithAccelerators(NotSupported):
+    msg_fmt = _("Feature not supported with instances that have accelerators.")
+
+
+class ForbiddenPortsWithAccelerator(NotSupported):
+    msg_fmt = _("Feature not supported with Ports that have accelerators.")
 
 
 class AdminRequired(Forbidden):
@@ -281,14 +293,13 @@ class VolumeExtendFailed(Invalid):
                 "Reason: %(reason)s")
 
 
-class MultiattachNotSupportedByVirtDriver(NovaException):
+class MultiattachNotSupportedByVirtDriver(NotSupported):
     # This exception indicates the compute hosting the instance does not
     # support multiattach volumes. This should generally be considered a
-    # 409 HTTPConflict error in the API since we expect all virt drivers to
+    # 400 HTTPBadRequest error in the API since we expect all virt drivers to
     # eventually support multiattach volumes.
     msg_fmt = _("Volume %(volume_id)s has 'multiattach' set, "
                 "which is not supported for this instance.")
-    code = 409
 
 
 class MultiattachNotSupportedOldMicroversion(Invalid):
@@ -538,24 +549,21 @@ class UnableToMigrateToSelf(Invalid):
                 "to current host (%(host)s).")
 
 
-class OperationNotSupportedForSEV(NovaException):
+class OperationNotSupportedForSEV(NotSupported):
     msg_fmt = _("Operation '%(operation)s' not supported for SEV-enabled "
                 "instance (%(instance_uuid)s).")
-    code = 409
 
 
-class OperationNotSupportedForVTPM(NovaException):
+class OperationNotSupportedForVTPM(NotSupported):
     msg_fmt = _("Operation '%(operation)s' not supported for vTPM-enabled "
                 "instance (%(instance_uuid)s).")
-    code = 409
 
 
-class OperationNotSupportedForVDPAInterface(NovaException):
+class OperationNotSupportedForVDPAInterface(NotSupported):
     msg_fmt = _(
         "Operation '%(operation)s' not supported for instance with "
         "vDPA ports ((instance_uuid)s)."
     )
-    code = 409
 
 
 class InvalidHypervisorType(Invalid):

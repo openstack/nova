@@ -1039,12 +1039,10 @@ class ServersController(wsgi.Controller):
         try:
             self.compute_api.resize(context, instance, flavor_id,
                                     auto_disk_config=auto_disk_config)
-        except (exception.QuotaError,
-                exception.ForbiddenWithAccelerators) as error:
+        except exception.QuotaError as error:
             raise exc.HTTPForbidden(
                 explanation=error.format_message())
         except (
-            exception.OperationNotSupportedForVDPAInterface,
             exception.InstanceIsLocked,
             exception.InstanceNotReady,
             exception.MixedInstanceNotSupportByComputeService,
@@ -1067,7 +1065,6 @@ class ServersController(wsgi.Controller):
             exception.CannotResizeDisk,
             exception.CannotResizeToSameFlavor,
             exception.FlavorNotFound,
-            exception.ForbiddenPortsWithAccelerator,
             exception.ExtendedResourceRequestOldCompute,
         ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
@@ -1212,11 +1209,7 @@ class ServersController(wsgi.Controller):
                                      image_href,
                                      password,
                                      **kwargs)
-        except (
-            exception.InstanceIsLocked,
-            exception.OperationNotSupportedForVTPM,
-            exception.OperationNotSupportedForVDPAInterface,
-        ) as e:
+        except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
@@ -1230,8 +1223,7 @@ class ServersController(wsgi.Controller):
         except exception.KeypairNotFound:
             msg = _("Invalid key_name provided.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except (exception.QuotaError,
-                exception.ForbiddenWithAccelerators) as error:
+        except exception.QuotaError as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
         except (exception.AutoDiskConfigDisabledByImage,
                 exception.CertificateValidationFailed,

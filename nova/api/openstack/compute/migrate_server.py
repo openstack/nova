@@ -57,14 +57,12 @@ class MigrateServerController(wsgi.Controller):
         try:
             self.compute_api.resize(req.environ['nova.context'], instance,
                                     host_name=host_name)
-        except (exception.TooManyInstances, exception.QuotaError,
-                exception.ForbiddenWithAccelerators) as e:
+        except (exception.TooManyInstances, exception.QuotaError) as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         except (
             exception.InstanceIsLocked,
             exception.InstanceNotReady,
             exception.ServiceUnavailable,
-            exception.OperationNotSupportedForVDPAInterface,
         ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
@@ -143,12 +141,6 @@ class MigrateServerController(wsgi.Controller):
                               "'%(ex)s'", {'ex': ex})
             else:
                 raise exc.HTTPBadRequest(explanation=ex.format_message())
-        except (
-            exception.OperationNotSupportedForSEV,
-            exception.OperationNotSupportedForVTPM,
-            exception.OperationNotSupportedForVDPAInterface,
-        ) as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except (
@@ -159,8 +151,6 @@ class MigrateServerController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'os-migrateLive', id)
-        except exception.ForbiddenWithAccelerators as e:
-            raise exc.HTTPForbidden(explanation=e.format_message())
 
     def _get_force_param_for_live_migration(self, body, host):
         force = body["os-migrateLive"].get("force", False)
