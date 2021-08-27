@@ -758,7 +758,7 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def get_info(self, instance, use_cache=True):
         """Return info about the VM instance."""
-        return self._vmops.get_info(instance)
+        return self._vmops.get_info(instance, use_cache=use_cache)
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics."""

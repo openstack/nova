@@ -1793,10 +1793,7 @@ class VMwareVMOps(object):
                 raise error_util.NoRootDiskDefined()
 
             lst_properties = ["datastore", "summary.config.guestId"]
-            props = self._session._call_method(vutil,
-                                               "get_object_properties_dict",
-                                               vm_ref,
-                                               lst_properties)
+            props = self._get_instance_props(instance, lst_properties)
             os_type = props['summary.config.guestId']
             datastores = props['datastore']
             return (vmdk, datastores, os_type)
@@ -1858,7 +1855,7 @@ class VMwareVMOps(object):
         """Reboot a VM instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
-        props = self._get_instance_props(vm_ref)
+        props = self._get_instance_props(instance)
         pwr_state = props.get('runtime.powerState')
         tools_status = props.get('summary.guest.toolsStatus')
         tools_running_status = props.get('summary.guest.toolsRunningStatus')
@@ -1890,11 +1887,8 @@ class VMwareVMOps(object):
             vm_ref = vm_util.get_vm_ref(self._session, instance)
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
                               "datastore"]
-            props = self._session._call_method(vutil,
-                                               "get_object_properties_dict",
-                                               vm_ref,
-                                               lst_properties)
-            pwr_state = props['runtime.powerState']
+            props = self._get_instance_props(instance, lst_properties)
+            pwr_state = props["runtime.powerState"]
 
             vm_config_pathname = props.get('config.files.vmPathName')
             vm_ds_path = None
@@ -1972,10 +1966,7 @@ class VMwareVMOps(object):
     def suspend(self, instance):
         """Suspend the specified instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        pwr_state = self._session._call_method(vutil,
-                                               "get_object_property",
-                                               vm_ref,
-                                               "runtime.powerState")
+        pwr_state = self._get_instance_property(instance, "runtime.powerState")
         # Only PoweredOn VMs can be suspended.
         if pwr_state == "poweredOn":
             LOG.debug("Suspending the VM", instance=instance)
@@ -1994,10 +1985,7 @@ class VMwareVMOps(object):
     def resume(self, instance):
         """Resume the specified instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        pwr_state = self._session._call_method(vutil,
-                                               "get_object_property",
-                                               vm_ref,
-                                               "runtime.powerState")
+        pwr_state = self._get_instance_property(instance, "runtime.powerState")
         if pwr_state.lower() == "suspended":
             LOG.debug("Resuming the VM", instance=instance)
             suspend_task = self._session._call_method(
@@ -2128,11 +2116,10 @@ class VMwareVMOps(object):
            :return: True if the instance was shutdown within time limit,
                     False otherwise.
         """
-        LOG.debug("Performing Soft shutdown on instance",
-                 instance=instance)
+        LOG.debug("Performing Soft shutdown on instance", instance=instance)
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
-        props = self._get_instance_props(vm_ref)
+        props = self._get_instance_props(instance)
 
         if props.get("runtime.powerState") != "poweredOn":
             LOG.debug("Instance not in poweredOn state.",
@@ -2151,9 +2138,10 @@ class VMwareVMOps(object):
 
             while timeout > 0:
                 wait_time = min(retry_interval, timeout)
-                props = self._get_instance_props(vm_ref)
+                pwr_state = self._get_instance_property(instance,
+                                                        "runtime.powerState")
 
-                if props.get("runtime.powerState") == "poweredOff":
+                if pwr_state == "poweredOff":
                     LOG.info("Soft shutdown succeeded.",
                              instance=instance)
                     return True
@@ -2181,22 +2169,35 @@ class VMwareVMOps(object):
             LOG.debug("Failed to find instance", instance=instance)
             return False
 
-    def _get_instance_props(self, vm_ref):
-        lst_properties = ["config.instanceUuid",
-                          "runtime.powerState",
-                          "summary.guest.toolsStatus",
-                          "summary.guest.toolsRunningStatus",
-                         ]
+    def _get_instance_props(self, instance, lst_properties=None,
+                            skip_update=False):
+        lst_properties = (lst_properties or
+            ["config.instanceUuid",
+             "runtime.powerState",
+             "summary.guest.toolsStatus",
+             "summary.guest.toolsRunningStatus"])
 
-        self.update_cached_instances()
+        if not skip_update:
+            self.update_cached_instances()
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
         vm_props = vm_util._VM_VALUE_CACHE.get(vm_ref.value, {})
 
         if set(vm_props.keys()).issuperset(lst_properties):
             return vm_props
-        else:
-            return self._session._call_method(
-                vutil, "get_object_properties_dict",
-                vm_ref, lst_properties)
+
+        try:
+            return self._session._call_method(vutil,
+                                              "get_object_properties_dict",
+                                              vm_ref, lst_properties)
+        except vexc.ManagedObjectNotFoundException:
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
+
+    def _get_instance_property(self, instance, prop):
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        try:
+            return vim_util.get_object_property(self._session, vm_ref, prop)
+        except vexc.ManagedObjectNotFoundException:
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
     def power_on(self, instance):
         vm_util.power_on_instance(self._session, instance)
@@ -3317,36 +3318,23 @@ class VMwareVMOps(object):
             LOG.info("Automatically hard rebooting", instance=instance)
             self.compute_api.reboot(ctxt, instance, "HARD")
 
-    def get_info(self, instance):
+    def get_info(self, instance, use_cache=True):
         """Return data about the VM instance."""
         powerstate_property = 'runtime.powerState'
-
-        if not vm_util._VM_VALUE_CACHE:
-            self.update_cached_instances()
-
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
-        vm_props = vm_util._VM_VALUE_CACHE.get(vm_ref.value, {})
-        if not vm_props or powerstate_property not in vm_props:
-            if CONF.vmware.use_property_collector:
-                LOG.debug("VM instance data was not found on the cache.")
-
-            vm_props = self._session._call_method(
-                vutil, "get_object_properties_dict",
-                vm_ref, [powerstate_property])
-
+        # if use_cache is true, then we are fine with possibly slightly
+        # outdated values in favour of less api load, so no polling of updates
+        # => skip_update=use_cache
+        vm_props = self._get_instance_props(instance, [powerstate_property],
+                                            skip_update=use_cache)
         return hardware.InstanceInfo(
             state=constants.POWER_STATES[vm_props[powerstate_property]])
 
     def _get_diagnostics(self, instance):
         """Return data about VM diagnostics."""
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
         lst_properties = ["summary.config",
                           "summary.quickStats",
                           "summary.runtime"]
-        vm_props = self._session._call_method(vutil,
-                                              "get_object_properties_dict",
-                                              vm_ref,
-                                              lst_properties)
+        vm_props = self._get_instance_props(instance, lst_properties)
         data = {}
         # All of values received are objects. Convert them to dictionaries
         for value in vm_props.values():
@@ -3381,11 +3369,8 @@ class VMwareVMOps(object):
 
     def _get_vnc_console_connection(self, instance):
         """Return connection info for a vnc console."""
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
-        opt_value = self._session._call_method(vutil,
-                                               'get_object_property',
-                                               vm_ref,
-                                               vm_util.VNC_CONFIG_KEY)
+        opt_value = self._get_instance_property(instance,
+                                                vm_util.VNC_CONFIG_KEY)
         if opt_value:
             port = int(opt_value.value)
         else:

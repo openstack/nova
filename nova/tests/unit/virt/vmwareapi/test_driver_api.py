@@ -409,7 +409,7 @@ class VMwareAPIVMTestCase(test.TestCase,
                 return vm
         self.fail('Unable to find VM backing!')
 
-    def _get_info(self, uuid=None, node=None, name=None):
+    def _get_info(self, uuid=None, node=None, name=None, use_cache=False):
         uuid = uuid if uuid else self.uuid
         node = node if node else self.instance_node
         name = name if node else '1'
@@ -417,7 +417,7 @@ class VMwareAPIVMTestCase(test.TestCase,
             None,
             **{'uuid': uuid,
                'name': name,
-               'node': node}))
+               'node': node}), use_cache)
 
     def _check_vm_record(self, num_instances=1, powered_on=True, uuid=None):
         """Check if the spawned VM's properties correspond to the instance in
@@ -1512,18 +1512,25 @@ class VMwareAPIVMTestCase(test.TestCase,
         self.conn.poll_rebooting_instances(60, instances)
         mock_reboot.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_property')
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_props')
     @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
-    def test_reboot_not_poweredon(self, mock_update_cached_instances,
-                                  mock_get_instance_props):
-        mock_get_instance_props.return_value = {
-            "runtime.powerState": "poweredOff",
+    def test_suspend_poweredon(self, mock_update_cached_instances,
+                               mock_get_instance_props,
+                               mock_get_instance_property):
+        values = {
+            "runtime.powerState": "poweredOn",
             "summary.guest.toolsStatus": "toolsOk",
             "summary.guest.toolsRunningStatus": "guestToolsRunning"}
+        mock_get_instance_property.return_value = values["runtime.powerState"]
+        mock_get_instance_props.return_value = values
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.suspend(self.context, self.instance)
+        mock_get_instance_property.return_value = values["runtime.powerState"]
+        values["runtime.powerState"] = "suspended"
+        mock_get_instance_props.return_value = values
         info = self._get_info()
         self._check_vm_info(info, power_state.SUSPENDED)
         self.assertRaises(exception.InstanceRebootFailure, self.conn.reboot,
