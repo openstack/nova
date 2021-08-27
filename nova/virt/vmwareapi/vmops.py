@@ -185,6 +185,9 @@ class VMwareVMOps(object):
         # set when our driver's init_host() is called
         self._compute_host = None
 
+        # pre-warm the cache, so we don't have to do extra queries per instance
+        self.update_vmref_cache()
+
     def _get_base_folder(self):
         # Enable more than one compute node to run on the same host
         if CONF.vmware.cache_prefix:
@@ -4074,3 +4077,13 @@ class VMwareVMOps(object):
         extra_specs = self._get_extra_specs(instance.flavor, image_meta)
         return self._get_vm_config_info(context, instance, image_info,
                                         extra_specs)
+
+    def update_vmref_cache(self):
+        """List all VMs in the cluster and cache their morefs"""
+        props = ['config.instanceUuid']
+        instances = self._list_instances_in_cluster(props, include_moref=True)
+        for vm_uuid, props in instances:
+            if vm_uuid != props.get('config.instanceUuid'):
+                continue
+
+            vm_util.vm_ref_cache_update(vm_uuid, props['obj'])

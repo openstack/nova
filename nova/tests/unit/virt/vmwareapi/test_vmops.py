@@ -214,14 +214,16 @@ class VMwareVMOpsTestCase(test.TestCase):
         path = ds_obj.DatastorePath(ds_name, base_name)
         return ds_name, ds_ref, ops, path, dc_ref
 
+    @mock.patch.object(vmops.VMwareVMOps, 'update_vmref_cache')
     @mock.patch.object(ds_util, 'mkdir')
-    def test_create_folder_if_missing(self, mock_mkdir):
+    def test_create_folder_if_missing(self, mock_mkdir, cache_mock):
         ds_name, ds_ref, ops, path, dc = self._setup_create_folder_mocks()
         ops._create_folder_if_missing(ds_name, ds_ref, 'folder')
         mock_mkdir.assert_called_with(ops._session, path, dc)
 
+    @mock.patch.object(vmops.VMwareVMOps, 'update_vmref_cache')
     @mock.patch.object(ds_util, 'mkdir')
-    def test_create_folder_if_missing_exception(self, mock_mkdir):
+    def test_create_folder_if_missing_exception(self, mock_mkdir, cache_mock):
         ds_name, ds_ref, ops, path, dc = self._setup_create_folder_mocks()
         ds_util.mkdir.side_effect = vexc.FileAlreadyExistsException()
         ops._create_folder_if_missing(ds_name, ds_ref, 'folder')
