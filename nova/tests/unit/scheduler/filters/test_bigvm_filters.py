@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import time
-
 import nova.conf
 from nova import objects
 from nova.scheduler.filters import bigvm_filter
@@ -31,10 +29,8 @@ class TestBigVmClusterUtilizationFilter(test.NoDBTestCase):
         super(TestBigVmClusterUtilizationFilter, self).setUp()
         self.hv_size = CONF.bigvm_mb + 1024
         self.filt_cls = bigvm_filter.BigVmClusterUtilizationFilter()
-        self.filt_cls._HV_SIZE_CACHE = {
-            uuidsentinel.host1: self.hv_size,
-            'last_modified': time.time()
-        }
+        self.filt_cls._HV_SIZE_CACHE.cache = {}
+        self.filt_cls._HV_SIZE_CACHE.set(uuidsentinel.host1, self.hv_size)
 
     def test_big_vm_with_small_vm_passes(self):
         spec_obj = objects.RequestSpec(
@@ -58,7 +54,7 @@ class TestBigVmClusterUtilizationFilter(test.NoDBTestCase):
             flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
-        self.filt_cls._HV_SIZE_CACHE[host.uuid] = None
+        self.filt_cls._HV_SIZE_CACHE.set(host.uuid, None)
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_big_vm_without_enough_ram(self):
@@ -123,10 +119,8 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
         super(TestBigVmFlavorHostSizeFilter, self).setUp()
         self.hv_size = CONF.bigvm_mb + 1024
         self.filt_cls = bigvm_filter.BigVmFlavorHostSizeFilter()
-        self.filt_cls._HV_SIZE_CACHE = {
-            uuidsentinel.host1: self.hv_size,
-            'last_modified': time.time()
-        }
+        self.filt_cls._HV_SIZE_CACHE.cache = {}
+        self.filt_cls._HV_SIZE_CACHE.set(uuidsentinel.host1, self.hv_size)
 
     def test_big_vm_with_small_vm_passes(self):
         spec_obj = objects.RequestSpec(
@@ -150,7 +144,7 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
             flavor=objects.Flavor(memory_mb=CONF.bigvm_mb, extra_specs={}))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
-        self.filt_cls._HV_SIZE_CACHE[host.uuid] = None
+        self.filt_cls._HV_SIZE_CACHE.set(host.uuid, None)
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_memory_match_with_tolerance(self):
@@ -206,7 +200,7 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
-        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 2 + 1024
+        self.filt_cls._HV_SIZE_CACHE.set(host.uuid, CONF.bigvm_mb * 2 + 1024)
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_extra_specs_half_positive(self):
@@ -217,7 +211,7 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
-        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 2 + 1024
+        self.filt_cls._HV_SIZE_CACHE.set(host.uuid, CONF.bigvm_mb * 2 + 1024)
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_extra_specs_half_positive_with_unknown(self):
@@ -228,7 +222,7 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
-        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 2 + 1024
+        self.filt_cls._HV_SIZE_CACHE.set(host.uuid, CONF.bigvm_mb * 2 + 1024)
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_extra_specs_half_negative(self):
@@ -251,7 +245,7 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
-        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 3 + 1024
+        self.filt_cls._HV_SIZE_CACHE.set(host.uuid, CONF.bigvm_mb * 3 + 1024)
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_extra_specs_fractional_third(self):
@@ -262,7 +256,7 @@ class TestBigVmFlavorHostSizeFilter(test.NoDBTestCase):
                                   name='random-name'))
         host = fakes.FakeHostState('host1', 'compute',
                 {'uuid': uuidsentinel.host1})
-        self.filt_cls._HV_SIZE_CACHE[host.uuid] = CONF.bigvm_mb * 3 + 1024
+        self.filt_cls._HV_SIZE_CACHE.set(host.uuid, CONF.bigvm_mb * 3 + 1024)
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_extra_specs_fractional_divbyzero(self):

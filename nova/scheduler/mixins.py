@@ -12,33 +12,32 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-import time
+from oslo_cache.backends.dictionary import DictCacheBackend
+from oslo_cache import core as cache_core
+from oslo_log import log as logging
 
 from nova import context
 from nova.scheduler.client import report
 
+LOG = logging.getLogger(__name__)
+
 
 class HypervisorSizeMixin(object):
 
-    _HV_SIZE_CACHE_RETENTION_TIME = 10 * 60
-    _HV_SIZE_CACHE = {}
+    _HV_SIZE_CACHE = DictCacheBackend({'expiration_time': 10 * 60})
 
     def _get_hv_size(self, host_state):
-        # expire the cache 10min after last write
-        time_diff = time.time() - self._HV_SIZE_CACHE.get('last_modified', 0)
-        if time_diff > self._HV_SIZE_CACHE_RETENTION_TIME:
-            self._HV_SIZE_CACHE = {}
+        hv_size_mb = self._HV_SIZE_CACHE.get(host_state.uuid)
+        if hv_size_mb != cache_core.NO_VALUE:
+            return hv_size_mb
 
-        if host_state.uuid not in self._HV_SIZE_CACHE:
-            placement_client = report.SchedulerReportClient()
-            elevated = context.get_admin_context()
-            res = placement_client._get_inventory(elevated, host_state.uuid)
-            if not res:
-                return None
-            inventories = res.get('inventories', {})
-            hv_size_mb = inventories.get('MEMORY_MB', {}).get('max_unit')
-            self._HV_SIZE_CACHE[host_state.uuid] = hv_size_mb
+        placement_client = report.SchedulerReportClient()
+        elevated = context.get_admin_context()
+        res = placement_client._get_inventory(elevated, host_state.uuid)
+        if not res:
+            return None
+        inventories = res.get('inventories', {})
+        hv_size_mb = inventories.get('MEMORY_MB', {}).get('max_unit')
+        self._HV_SIZE_CACHE.set(host_state.uuid, hv_size_mb)
 
-            self._HV_SIZE_CACHE['last_modified'] = time.time()
-
-        return self._HV_SIZE_CACHE[host_state.uuid]
+        return hv_size_mb
