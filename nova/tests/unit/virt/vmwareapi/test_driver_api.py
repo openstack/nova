@@ -1386,7 +1386,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self._snapshot_delete_vm_snapshot_exception(vexc.TaskInProgress,
                                                     5)
 
-    def test_reboot(self):
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_props')
+    def test_reboot(self, mock_get_instance_props):
+        mock_get_instance_props.return_value = {
+            "runtime.powerState": "poweredOn"}
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
@@ -1396,7 +1399,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
 
-    def test_reboot_hard(self):
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_props')
+    def test_reboot_hard(self, mock_get_instance_props):
+        mock_get_instance_props.return_value = {
+            "runtime.powerState": "poweredOn"}
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
@@ -1406,8 +1412,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
 
-    def test_reboot_with_uuid(self):
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_props')
+    def test_reboot_with_uuid(self, mock_get_instance_props):
         """Test fall back to use name when can't find by uuid."""
+        mock_get_instance_props.return_value = {
+            "runtime.powerState": "poweredOn"}
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
@@ -1430,11 +1439,23 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.conn.poll_rebooting_instances(60, instances)
         mock_reboot.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY)
 
-    def test_reboot_not_poweredon(self):
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_property')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_props')
+    def test_suspend_poweredon(self, mock_get_instance_props,
+                               mock_get_instance_property):
+        values = {
+            "runtime.powerState": "poweredOn",
+            "summary.guest.toolsStatus": "toolsOk",
+            "summary.guest.toolsRunningStatus": "guestToolsRunning"}
+        mock_get_instance_property.return_value = values["runtime.powerState"]
+        mock_get_instance_props.return_value = values
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
         self.conn.suspend(self.context, self.instance)
+        mock_get_instance_property.return_value = values["runtime.powerState"]
+        values["runtime.powerState"] = "suspended"
+        mock_get_instance_props.return_value = values
         info = self._get_info()
         self._check_vm_info(info, power_state.SUSPENDED)
         self.assertRaises(exception.InstanceRebootFailure, self.conn.reboot,

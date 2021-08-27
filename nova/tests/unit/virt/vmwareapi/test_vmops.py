@@ -573,38 +573,32 @@ class VMwareVMOpsTestCase(test.TestCase):
         """
         instance = self._instance
         vm_ref = mock.Mock()
-        return_props = []
-        expected_methods = ['get_object_properties_dict']
         props_on = {'runtime.powerState': 'poweredOn',
                    'summary.guest.toolsStatus': vmware_tools_status,
                    'summary.guest.toolsRunningStatus': 'guestToolsRunning'}
         props_off = {'runtime.powerState': 'poweredOff',
                     'summary.guest.toolsStatus': vmware_tools_status,
                     'summary.guest.toolsRunningStatus': 'guestToolsRunning'}
+        call_list = [
+            ('get_object_properties_dict',
+             props_on if returns_on > 0 else props_off
+             )]
 
         # initialize expected instance methods and returned properties
         if vmware_tools_status == "toolsOk":
             if returns_on > 0:
-                expected_methods.append('ShutdownGuest')
-                for x in range(returns_on + 1):
-                    return_props.append(props_on)
-                for x in range(returns_on):
-                    expected_methods.append('get_object_properties_dict')
-            for x in range(returns_off):
-                return_props.append(props_off)
-                if returns_on > 0:
-                    expected_methods.append('get_object_properties_dict')
-        else:
-            return_props.append(props_off)
+                call_list.append(('ShutdownGuest', None))
+                for _ in range(returns_on):
+                    call_list.append(('get_object_property',
+                                      props_on['runtime.powerState']))
+            for _ in range(returns_off):
+                call_list.append(('get_object_property',
+                                  props_off['runtime.powerState']))
 
         def fake_call_method(module, method, *args, **kwargs):
-            expected_method = expected_methods.pop(0)
+            expected_method, return_val = call_list.pop(0)
             self.assertEqual(expected_method, method)
-            if expected_method == 'get_object_properties_dict':
-                props = return_props.pop(0)
-                return props
-            elif expected_method == 'ShutdownGuest':
-                return
+            return return_val
 
         with test.nested(
                 mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
@@ -615,8 +609,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                  retry_interval)
 
         self.assertEqual(succeeds, result)
-        mock_get_vm_ref.assert_called_once_with(self._session,
-                                                self._instance)
+        mock_get_vm_ref.assert_called_with(self._session, self._instance)
 
     def test_clean_shutdown_first_time(self):
         self._test_clean_shutdown(timeout=10,
@@ -3821,26 +3814,24 @@ class VMwareVMOpsTestCase(test.TestCase):
         base_folder = self._vmops._get_base_folder()
         self.assertEqual('my_prefix_base', base_folder)
 
-    def _test_reboot_vm(self, reboot_type="SOFT", tool_status=True):
-
-        expected_methods = ['get_object_properties_dict']
-        if reboot_type == "SOFT":
-            expected_methods.append('RebootGuest')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_instance_props')
+    def _test_reboot_vm(self, get_instance_props, reboot_type="SOFT",
+                        tool_status=True):
+        if tool_status:
+            get_instance_props.return_value = {
+                "runtime.powerState": "poweredOn",
+                "summary.guest.toolsStatus": "toolsOk",
+                "summary.guest.toolsRunningStatus": "guestToolsRunning"}
         else:
-            expected_methods.append('ResetVM_Task')
+            get_instance_props.return_value = {
+                    "runtime.powerState": "poweredOn"}
 
         def fake_call_method(module, method, *args, **kwargs):
-            expected_method = expected_methods.pop(0)
-            self.assertEqual(expected_method, method)
-            if expected_method == 'get_object_properties_dict' and tool_status:
-                return {
-                    "runtime.powerState": "poweredOn",
-                    "summary.guest.toolsStatus": "toolsOk",
-                    "summary.guest.toolsRunningStatus": "guestToolsRunning"}
-            elif expected_method == 'get_object_properties_dict':
-                return {"runtime.powerState": "poweredOn"}
-            elif expected_method == 'ResetVM_Task':
-                return 'fake-task'
+            if reboot_type == "SOFT":
+                self.assertEqual('RebootGuest', method)
+            else:
+                self.assertEqual('ResetVM_Task', method)
+            return 'fake-task'
 
         with test.nested(
             mock.patch.object(vm_util, "get_vm_ref",
