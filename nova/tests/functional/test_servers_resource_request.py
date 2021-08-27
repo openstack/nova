@@ -35,6 +35,7 @@ from nova.policies import servers as servers_policies
 from nova.scheduler import utils
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.fixtures import NeutronFixture
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_requests
@@ -43,6 +44,87 @@ from nova.virt import fake
 CONF = cfg.CONF
 
 LOG = logging.getLogger(__name__)
+
+
+class ResourceRequestNeutronFixture(NeutronFixture):
+    port_with_sriov_resource_request = {
+        'id': '7059503b-a648-40fd-a561-5ca769304bee',
+        'name': '',
+        'description': '',
+        'network_id': NeutronFixture.network_2['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c5',
+        # Do neutron really adds fixed_ips to an direct vnic_type port?
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.13.3',
+                'subnet_id': NeutronFixture.subnet_2['id']
+            }
+        ],
+        'tenant_id': NeutronFixture.tenant_id,
+        'project_id': NeutronFixture.tenant_id,
+        'device_id': '',
+        'resource_request': {
+            "resources": {
+                orc.NET_BW_IGR_KILOBIT_PER_SEC: 10000,
+                orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
+            "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_DIRECT"]
+        },
+        'binding:profile': {},
+        'binding:vif_details': {},
+        'binding:vif_type': 'hw_veb',
+        'binding:vnic_type': 'direct',
+        'port_security_enabled': False,
+    }
+    port_macvtap_with_resource_request = {
+        'id': 'cbb9707f-3559-4675-a973-4ea89c747f02',
+        'name': '',
+        'description': '',
+        'network_id': NeutronFixture.network_2['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': '52:54:00:1e:59:c6',
+        # Do neutron really adds fixed_ips to an direct vnic_type port?
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.13.4',
+                'subnet_id': NeutronFixture.subnet_2['id']
+            }
+        ],
+        'tenant_id': NeutronFixture.tenant_id,
+        'project_id': NeutronFixture.tenant_id,
+        'device_id': '',
+        'resource_request': {
+            "resources": {
+                orc.NET_BW_IGR_KILOBIT_PER_SEC: 10000,
+                orc.NET_BW_EGR_KILOBIT_PER_SEC: 10000},
+            "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_MACVTAP"]
+        },
+        'binding:profile': {},
+        'binding:vif_details': {},
+        'binding:vif_type': 'hw_veb',
+        'binding:vnic_type': 'macvtap',
+        'port_security_enabled': False,
+    }
+
+    def __init__(self, test):
+        super().__init__(test)
+        # add extra ports and the related network to the neutron fixture
+        # specifically for resource_request tests. It cannot be added globally
+        # in the base fixture init as it adds a second network that makes auto
+        # allocation based test to fail due to ambiguous networks.
+        self._ports[
+            self.port_with_sriov_resource_request['id']] = \
+            copy.deepcopy(self.port_with_sriov_resource_request)
+        self._ports[self.sriov_port['id']] = \
+            copy.deepcopy(self.sriov_port)
+        self._networks[
+            self.network_2['id']] = self.network_2
+        self._subnets[
+            self.subnet_2['id']] = self.subnet_2
+        macvtap = self.port_macvtap_with_resource_request
+        self._ports[macvtap['id']] = copy.deepcopy(macvtap)
 
 
 class PortResourceRequestBasedSchedulingTestBase(
@@ -74,6 +156,9 @@ class PortResourceRequestBasedSchedulingTestBase(
                 FakeDriverWithPciResourcesConfigFixture())
 
         super(PortResourceRequestBasedSchedulingTestBase, self).setUp()
+        # override the default neutron fixture by mocking over it
+        self.neutron = self.useFixture(
+            ResourceRequestNeutronFixture(self))
         # Make ComputeManager._allocate_network_async synchronous to detect
         # errors in tests that involve rescheduling.
         self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
@@ -96,22 +181,6 @@ class PortResourceRequestBasedSchedulingTestBase(
             {'extra_specs': {'group_policy': 'isolate'}})
 
         self._create_networking_rp_tree('host1', self.compute1_rp_uuid)
-
-        # add extra ports and the related network to the neutron fixture
-        # specifically for these tests. It cannot be added globally in the
-        # fixture init as it adds a second network that makes auto allocation
-        # based test to fail due to ambiguous networks.
-        self.neutron._ports[
-            self.neutron.port_with_sriov_resource_request['id']] = \
-            copy.deepcopy(self.neutron.port_with_sriov_resource_request)
-        self.neutron._ports[self.neutron.sriov_port['id']] = \
-            copy.deepcopy(self.neutron.sriov_port)
-        self.neutron._networks[
-            self.neutron.network_2['id']] = self.neutron.network_2
-        self.neutron._subnets[
-            self.neutron.subnet_2['id']] = self.neutron.subnet_2
-        macvtap = self.neutron.port_macvtap_with_resource_request
-        self.neutron._ports[macvtap['id']] = copy.deepcopy(macvtap)
 
     def assertComputeAllocationMatchesFlavor(
             self, allocations, compute_rp_uuid, flavor):
