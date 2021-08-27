@@ -163,33 +163,76 @@ def update_placement(session, cluster, vm_ref, group_infos):
     reconfigure_cluster(session, cluster, config_spec)
 
 
+def create_vm_rule(client_factory, name, vm_refs, policy='affinity',
+                   rule=None):
+    """Create a ClusterAffinityRuleSpec or ClusterAntiAffinityRuleSpec object
+
+    :param:policy: Defines with of the object types is created. "affinity" and
+                   "soft-affinity" map to ClusterAffinityRuleSpec,
+                   "anti-affinity" and "soft-anti-affinity" map to
+                   ClusterAntiAffinityRuleSpec. Ignored if "rule" is given
+    :param:rule: if given, don't create any object, but instead update the
+                 given object's attributes. "policy" is ignored here.
+    """
+    if rule is None:
+        if policy in ('affinity', 'soft-affinity'):
+            obj_type = 'ns0:ClusterAffinityRuleSpec'
+        elif policy in ('anti-affinity', 'soft-anti-affinity'):
+            obj_type = 'ns0:ClusterAntiAffinityRuleSpec'
+        else:
+            msg = 'Policy {} is not supported.'.format(policy)
+            raise exception.ValidationError(msg)
+
+        rule = client_factory.create(obj_type)
+
+    rule.name = name
+    rule.enabled = True
+    rule.vm = vm_refs
+
+    return rule
+
+
+def create_rule_spec(client_factory, rule, operation='add'):
+    """Create a ClusterRuleSpec object"""
+    rule_spec = client_factory.create('ns0:ClusterRuleSpec')
+    rule_spec.operation = operation
+    rule_spec.info = rule
+    if operation == 'remove':
+        rule_spec.removeKey = rule.key
+    return rule_spec
+
+
 def _create_cluster_rules_spec(client_factory, name, vm_refs,
                                policy='affinity', operation="add",
                                rule=None):
+    if operation == 'edit':
+        vm_refs = vm_refs + rule.vm
+    rule = create_vm_rule(client_factory, name, vm_refs, policy, rule)
+    return create_rule_spec(client_factory, rule, operation)
 
-    rules_spec = client_factory.create('ns0:ClusterRuleSpec')
-    rules_spec.operation = operation
-    if policy == 'affinity' or policy == 'soft-affinity':
-        policy_class = 'ns0:ClusterAffinityRuleSpec'
-    elif policy == 'anti-affinity' or policy == 'soft-anti-affinity':
-        policy_class = 'ns0:ClusterAntiAffinityRuleSpec'
-    else:
-        msg = _('%s policy is not supported.') % policy
-        raise exception.Invalid(msg)
 
-    rules_info = client_factory.create(policy_class)
+def _create_cluster_group_rules_spec(client_factory, name, vm_group_name,
+                                     host_group_name, policy='affinity',
+                                     rule=None):
+    rules_info = client_factory.create('ns0:ClusterVmHostRuleInfo')
     rules_info.name = name
     rules_info.enabled = True
     rules_info.mandatory = True
-    if operation == "edit":
-        rules_info.vm = rule.vm + vm_refs
+    rules_info.vmGroupName = vm_group_name
+    if policy == 'affinity':
+        rules_info.affineHostGroupName = host_group_name
+    elif policy == 'anti-affinity':
+        rules_info.antiAffineHostGroupName = host_group_name
+    else:
+        msg = _('%s policy is not supported.') % policy
+        raise exception.ValidationError(msg)
+
+    if rule is not None:
         rules_info.key = rule.key
         rules_info.ruleUuid = rule.ruleUuid
-    else:
-        rules_info.vm = vm_refs
 
-    rules_spec.info = rules_info
-    return rules_spec
+    operation = 'add' if rule is None else 'edit'
+    return create_rule_spec(client_factory, rules_info, operation)
 
 
 def _get_rule(cluster_config, rule_name):
