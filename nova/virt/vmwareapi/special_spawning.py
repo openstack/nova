@@ -147,10 +147,8 @@ class _SpecialVmSpawningServer(object):
 
         client_factory = self._session.vim.client.factory
 
-        group_spec = client_factory.create('ns0:ClusterGroupSpec')
-        group_spec.operation = 'remove'
-        group_spec.removeKey = group.name
-
+        group_spec = cluster_util.create_group_spec(client_factory, group,
+                                                    'remove')
         config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
         config_spec.groupSpec = [group_spec]
         cluster_util.reconfigure_cluster(self._session, self._cluster,
@@ -271,9 +269,11 @@ class _SpecialVmSpawningServer(object):
             # we need to either create the group from scratch or at least add a
             # host to it
             operation = 'add' if group is None else 'edit'
-            group_spec = cluster_util._create_host_group_spec(client_factory,
+            group = cluster_util.create_host_group(client_factory,
                 CONF.vmware.bigvm_deployment_free_host_hostgroup_name,
-                [host_ref], operation, group)
+                [host_ref], group)
+            group_spec = cluster_util.create_group_spec(client_factory,
+                group, operation)
             config_spec.groupSpec = [group_spec]
 
             # create the appropriate rule for VMs to leave the host
