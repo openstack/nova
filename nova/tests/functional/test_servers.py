@@ -2175,17 +2175,14 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         # evacuate the server and force the destination host which bypasses
         # the scheduler
+
         post = {
-            'evacuate': {
-                'host': dest_hostname,
-                'force': True
-            }
+            'host': dest_hostname,
+            'force': True
         }
-        self.api.post_server_action(server['id'], post)
-        expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
-                           'status': 'ACTIVE'}
-        server = self._wait_for_server_parameter(server,
-                                                 expected_params)
+
+        server = self._evacuate_server(
+            server, extra_post_args=post, expected_host=dest_hostname)
 
         # Run the periodics to show those don't modify allocations.
         self._run_periodics()
@@ -2282,15 +2279,11 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         # evacuate the server specify the target but do not force the
         # destination host to use the scheduler to validate the target host
         post = {
-            'evacuate': {
-                'host': dest_hostname,
-            }
+            'host': dest_hostname
         }
-        self.api.post_server_action(server['id'], post)
-        expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
-                           'status': 'ACTIVE'}
-        server = self._wait_for_server_parameter(server,
-                                                 expected_params)
+
+        server = self._evacuate_server(
+            server, extra_post_args=post, expected_host=dest_hostname)
 
         # Run the periodics to show those don't modify allocations.
         self._run_periodics()
@@ -3029,14 +3022,9 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'true'})
 
-        post = {
-            'evacuate': {}
-        }
-        self.api.post_server_action(created_server['id'], post)
-        expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
-                           'status': 'ACTIVE'}
-        new_server = self._wait_for_server_parameter(created_server,
-                                                     expected_params)
+        new_server = self._evacuate_server(
+            created_server, expected_host=dest_hostname)
+
         inst_dest_host = new_server["OS-EXT-SRV-ATTR:host"]
 
         self.assertEqual(dest_hostname, inst_dest_host)
@@ -5039,16 +5027,17 @@ class ConsumerGenerationConflictTest(
         with mock.patch('keystoneauth1.adapter.Adapter.put',
                         autospec=True) as mock_put:
             mock_put.return_value = rsp
-            post = {
-                'evacuate': {
-                    'force': force
-                }
-            }
-            if force:
-                post['evacuate']['host'] = dest_hostname
 
-            self.api.post_server_action(server['id'], post)
-            server = self._wait_for_state_change(server, 'ERROR')
+            post = {
+                'force': force,
+            }
+
+            if force:
+                post['host'] = dest_hostname
+
+            server = self._evacuate_server(
+                server, expected_state='ERROR', extra_post_args=post,
+                expected_migration_status='error')
 
         self.assertEqual(1, mock_put.call_count)
 
@@ -5261,17 +5250,14 @@ class ServerMovingTestsWithNestedResourceRequests(
         # evacuate the server and force the destination host which bypasses
         # the scheduler
         post = {
-            'evacuate': {
-                'host': dest_hostname,
-                'force': True
-            }
+            'host': dest_hostname,
+            'force': True
         }
-        self.api.post_server_action(server['id'], post)
-        self._wait_for_migration_status(server, ['error'])
-        expected_params = {'OS-EXT-SRV-ATTR:host': source_hostname,
-                           'status': 'ACTIVE'}
-        server = self._wait_for_server_parameter(server,
-                                                 expected_params)
+
+        server = self._evacuate_server(
+            server, extra_post_args=post, expected_migration_status='error',
+            expected_host=source_hostname)
+
         self.assertIn('Unable to move instance %s to host host2. The instance '
                       'has complex allocations on the source host so move '
                       'cannot be forced.' %
@@ -5470,20 +5456,18 @@ class ServerMovingTestsFromFlatToNested(
 
         # try to force evacuate from flat to nested.
         post = {
-            'evacuate': {
-                'host': 'host2',
-                'force': True,
-            }
+            'host': 'host2',
+            'force': True,
         }
 
-        self.api.post_server_action(server['id'], post)
+        self._evacuate_server(
+            server, extra_post_args=post, expected_host='host1',
+            expected_migration_status='error')
+
         # We expect that the evacuation will fail as force evacuate tries to
         # blindly copy the source allocation to the destination but on the
         # destination there is no inventory of CUSTOM_MAGIC on the compute node
         # provider as that resource is reported on a child provider.
-        self._wait_for_server_parameter(server,
-            {'OS-EXT-SRV-ATTR:host': 'host1',
-             'status': 'ACTIVE'})
 
         migration = self._wait_for_migration_status(server, ['error'])
         self.assertEqual('host1', migration['source_compute'])
