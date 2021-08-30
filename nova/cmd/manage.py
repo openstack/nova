@@ -2452,7 +2452,7 @@ class PlacementCommands(object):
         else:
             try:
                 placement.delete_allocation_for_instance(
-                    ctxt, consumer_uuid, consumer_type)
+                    ctxt, consumer_uuid, consumer_type, force=True)
             except exception.AllocationDeleteFailed:
                 return False
         return True

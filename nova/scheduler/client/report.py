@@ -2050,8 +2050,9 @@ class SchedulerReportClient(object):
         return r.status_code == 204
 
     @safe_connect
-    def delete_allocation_for_instance(self, context, uuid,
-                                       consumer_type='instance'):
+    def delete_allocation_for_instance(
+        self, context, uuid, consumer_type='instance', force=False
+    ):
         """Delete the instance allocation from placement
 
         :param context: The security context
@@ -2059,13 +2060,42 @@ class SchedulerReportClient(object):
                      as the consumer UUID towards placement
         :param consumer_type: The type of the consumer specified by uuid.
                               'instance' or 'migration' (Default: instance)
+        :param force: True if the allocations should be deleted without regard
+                      to consumer generation conflicts, False will attempt to
+                      GET and PUT empty allocations and use the consumer
+                      generation which could result in a conflict and need to
+                      retry the operation.
         :return: Returns True if the allocation is successfully deleted by this
                  call. Returns False if the allocation does not exist.
         :raises AllocationDeleteFailed: If the allocation cannot be read from
-                placement or it is changed by another process while we tried to
-                delete it.
+                placement (if force=False), is changed by another process while
+                we tried to delete it (if force=False), or if some other server
+                side error occurred (if force=True)
         """
         url = '/allocations/%s' % uuid
+        if force:
+            # Do not bother with consumer generations, just delete the
+            # allocations.
+            r = self.delete(url, global_request_id=context.global_id)
+            if r:
+                LOG.info('Deleted allocations for %(consumer_type)s %(uuid)s',
+                         {'consumer_type': consumer_type, 'uuid': uuid})
+                return True
+
+            # Check for 404 since we don't need to log a warning if we
+            # tried to delete something which doesn't actually exist.
+            if r.status_code != 404:
+                LOG.warning(
+                    'Unable to delete allocation for %(consumer_type)s '
+                    '%(uuid)s: (%(code)i %(text)s)',
+                    {'consumer_type': consumer_type,
+                     'uuid': uuid,
+                     'code': r.status_code,
+                     'text': r.text})
+                raise exception.AllocationDeleteFailed(consumer_uuid=uuid,
+                                                       error=r.text)
+            return False
+
         # We read the consumer generation then try to put an empty allocation
         # for that consumer. If between the GET and the PUT the consumer
         # generation changes then we raise AllocationDeleteFailed.
@@ -2245,7 +2275,8 @@ class SchedulerReportClient(object):
             instance_uuids = objects.InstanceList.get_uuids_by_host_and_node(
                 context, host, nodename)
             for instance_uuid in instance_uuids:
-                self.delete_allocation_for_instance(context, instance_uuid)
+                self.delete_allocation_for_instance(
+                    context, instance_uuid, force=True)
         # Ensure to delete resource provider in tree by top-down
         # traversable order.
         rps_to_refresh = self.get_providers_in_tree(context, rp_uuid)

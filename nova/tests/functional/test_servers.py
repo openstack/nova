@@ -5063,68 +5063,6 @@ class ConsumerGenerationConflictTest(
     def test_evacuate_fails_allocating_on_dest_host(self):
         self._test_evacuate_fails_allocating_on_dest_host(force=False)
 
-    def test_server_delete_fails_due_to_conflict(self):
-        source_hostname = self.compute1.host
-
-        server = self._boot_and_check_allocations(self.flavor, source_hostname)
-
-        rsp = fake_requests.FakeResponse(
-            409, jsonutils.dumps({'text': 'consumer generation conflict'}))
-
-        with mock.patch('keystoneauth1.adapter.Adapter.put',
-                        autospec=True) as mock_put:
-            mock_put.return_value = rsp
-
-            self.api.delete_server(server['id'])
-            server = self._wait_for_state_change(server,
-                                                 'ERROR')
-            self.assertEqual(1, mock_put.call_count)
-
-        # We still have the allocations as deletion failed
-        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
-        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor)
-
-        self.assertFlavorMatchesAllocation(self.flavor, server['id'],
-                                           source_rp_uuid)
-
-        # retry the delete to make sure that allocations are removed this time
-        self._delete_and_check_allocations(server)
-
-    def test_server_local_delete_fails_due_to_conflict(self):
-        source_hostname = self.compute1.host
-
-        server = self._boot_and_check_allocations(self.flavor, source_hostname)
-        source_compute_id = self.admin_api.get_services(
-            host=self.compute1.host, binary='nova-compute')[0]['id']
-        self.compute1.stop()
-        self.admin_api.put_service(
-            source_compute_id, {'forced_down': 'true'})
-
-        rsp = fake_requests.FakeResponse(
-            409, jsonutils.dumps({'text': 'consumer generation conflict'}))
-
-        with mock.patch('keystoneauth1.adapter.Adapter.put',
-                        autospec=True) as mock_put:
-            mock_put.return_value = rsp
-
-            ex = self.assertRaises(client.OpenStackApiException,
-                                   self.api.delete_server, server['id'])
-            self.assertEqual(409, ex.response.status_code)
-            self.assertIn('Failed to delete allocations for consumer',
-                          jsonutils.loads(ex.response.content)[
-                              'conflictingRequest']['message'])
-            self.assertEqual(1, mock_put.call_count)
-
-        # We still have the allocations as deletion failed
-        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
-        self.assertFlavorMatchesUsage(source_rp_uuid, self.flavor)
-
-        self.assertFlavorMatchesAllocation(self.flavor, server['id'],
-                                           source_rp_uuid)
-
-        # retry the delete to make sure that allocations are removed this time
-        self._delete_and_check_allocations(server)
-
 
 class ServerMovingTestsWithNestedComputes(ServerMovingTests):
     """Runs all the server moving tests while the computes have nested trees.

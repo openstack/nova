@@ -461,7 +461,8 @@ class SchedulerManager(manager.Manager):
 
         LOG.debug("Cleaning up allocations for %s", instance_uuids)
         for uuid in instance_uuids:
-            self.placement_client.delete_allocation_for_instance(context, uuid)
+            self.placement_client.delete_allocation_for_instance(
+                context, uuid, force=True)
 
     def _legacy_find_hosts(
         self, context, num_instances, spec_obj, hosts, num_alts,

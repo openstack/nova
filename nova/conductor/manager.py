@@ -1608,7 +1608,7 @@ class ComputeTaskManager:
                 except exception.InstanceMappingNotFound:
                     pass
                 self.report_client.delete_allocation_for_instance(
-                    context, instance.uuid)
+                    context, instance.uuid, force=True)
                 continue
             else:
                 if host.service_host not in host_az:
