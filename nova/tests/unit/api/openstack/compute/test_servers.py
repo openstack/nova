@@ -4479,6 +4479,14 @@ class ServersControllerCreateTest(test.TestCase):
         self.body['server']['availability_zone'] = 'zone1:host1'
         self.req.body = jsonutils.dump_as_bytes(self.body)
 
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual('zone1', kwargs['availability_zone'])
+            return old_create(*args, **kwargs)
+
+        self.stub_out('nova.compute.api.API.create', create)
+
         self.controller.create(self.req, body=self.body)
 
         mock_get_host_aggs.assert_called_once()
@@ -4494,6 +4502,14 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.body['server']['availability_zone'] = 'zone1:host1'
         self.req.body = jsonutils.dump_as_bytes(self.body)
+
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertIsNone(kwargs['availability_zone'])
+            return old_create(*args, **kwargs)
+
+        self.stub_out('nova.compute.api.API.create', create)
 
         self.controller.create(self.req, body=self.body)
 
@@ -4512,6 +4528,14 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.body['server']['availability_zone'] = 'zone1:host1'
         self.req.body = jsonutils.dump_as_bytes(self.body)
+
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual('zone1', kwargs['availability_zone'])
+            return old_create(*args, **kwargs)
+
+        self.stub_out('nova.compute.api.API.create', create)
 
         self.controller.create(self.req, body=self.body)
 
@@ -4535,6 +4559,14 @@ class ServersControllerCreateTest(test.TestCase):
         self.body['server']['availability_zone'] = 'zone1:host1'
         self.req.body = jsonutils.dump_as_bytes(self.body)
 
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertIsNone(kwargs['availability_zone'])
+            return old_create(*args, **kwargs)
+
+        self.stub_out('nova.compute.api.API.create', create)
+
         self.controller.create(self.req, body=self.body)
 
         mock_get_host_aggs.assert_called_once()
@@ -4554,6 +4586,14 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.body['server']['availability_zone'] = 'zone1:host1'
         self.req.body = jsonutils.dump_as_bytes(self.body)
+
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual('zone1', kwargs['availability_zone'])
+            return old_create(*args, **kwargs)
+
+        self.stub_out('nova.compute.api.API.create', create)
 
         self.controller.create(self.req, body=self.body)
 
