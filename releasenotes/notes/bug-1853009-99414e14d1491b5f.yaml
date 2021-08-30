@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Fixes an issue with multiple ``nova-compute`` services used with Ironic,
+    where a rebalance operation could result in a compute node being deleted
+    from the database and not recreated. See `bug 1853009
+    <https://bugs.launchpad.net/nova/+bug/1853009>`__ for details.

@@ -358,7 +358,20 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def destroy(self):
-        db.compute_node_delete(self._context, self.id)
+        if self.obj_attr_is_set('host') and self.host:
+            # NOTE(melwitt): If our host is set, avoid a race between
+            # nova-computes during ironic driver node rebalances which can
+            # change node ownership.
+            constraint = db.constraint(host=db.equal_any(self.host))
+        else:
+            constraint = None
+
+        try:
+            db.compute_node_delete(
+                self._context, self.id, constraint=constraint)
+        except exception.ConstraintNotMet:
+            raise exception.ObjectActionError(action='destroy',
+                                              reason='host changed')
 
     def update_from_virt_driver(self, resources):
         # NOTE(pmurray): the virt driver provides a dict of values that

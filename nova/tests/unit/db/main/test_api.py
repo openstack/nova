@@ -5471,6 +5471,13 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         nodes = db.compute_node_get_all(self.ctxt)
         self.assertEqual(len(nodes), 0)
 
+    def test_compute_node_delete_different_host(self):
+        compute_node_id = self.item['id']
+        constraint = db.constraint(host=db.equal_any('different-host'))
+        self.assertRaises(exception.ConstraintNotMet,
+                          db.compute_node_delete,
+                          self.ctxt, compute_node_id, constraint=constraint)
+
     def test_compute_node_search_by_hypervisor(self):
         nodes_created = []
         new_service = copy.copy(self.service_dict)
