@@ -3833,13 +3833,16 @@ class ServersControllerRebuildTestV290(ControllerTest):
         # There's nothing to check here from the return value since the
         # 'rebuild' API is a cast and we immediately fetch the instance from
         # the database after this cast...which returns a mocked Instance
-        self.controller._action_rebuild(
+        server = self.controller._action_rebuild(
             req, FAKE_UUID, body=body,
         ).obj['server']
 
         # ...so instead we check the call to the API itself
         self.mock_rebuild.assert_called_once()
         self.assertIn('hostname', self.mock_rebuild.call_args[0][1])
+
+        # ...and check for the presence of *a* hostname field in the response
+        self.assertIn('OS-EXT-SRV-ATTR:hostname', server)
 
     def test_rebuild_server_with_hostname_old_version(self):
         """Tests that trying to rebuild with hostname before 2.90 fails."""
