@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Addressed an issue that prevented instances with 1 vcpu using multiqueue
+    feature from being created successfully when their vif_type is TAP.
