@@ -45,7 +45,8 @@ also controlled by this policy rule, like the ``GET /servers*`` APIs.
 
 Microversion 2.90 made the ``OS-EXT-SRV-ATTR:hostname`` attribute available to
 all users, so this policy has no effect on that field for microversions 2.90
-and greater.
+and greater. Controlling the visibility of this attribute for all microversions
+is therefore deprecated and will be removed in a future release.
 """,
         operations=[
             {
