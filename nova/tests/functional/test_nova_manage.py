@@ -9,14 +9,17 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 import collections
 import datetime
 from io import StringIO
-import mock
+import os.path
 
 import fixtures
+import mock
 from neutronclient.common import exceptions as neutron_client_exc
 import os_resource_classes as orc
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel
 from oslo_utils import timeutils
 
@@ -250,6 +253,233 @@ class NovaManageCellV2Test(test.TestCase):
         cns = objects.ComputeNodeList.get_all(self.context)
         self.assertEqual(1, len(cns))
         self.assertEqual(0, cns[0].mapped)
+
+
+class TestNovaManageVolumeAttachmentRefresh(
+    integrated_helpers._IntegratedTestBase
+):
+    """Functional tests for 'nova-manage volume_attachment refresh'."""
+
+    def setUp(self):
+        super().setUp()
+        self.tmpdir = self.useFixture(fixtures.TempDir()).path
+        self.ctxt = context.get_admin_context()
+        self.cli = manage.VolumeAttachmentCommands()
+        self.flags(my_ip='192.168.1.100')
+        self.fake_connector = {
+            'ip': '192.168.1.128',
+            'initiator': 'fake_iscsi.iqn',
+            'host': 'compute',
+        }
+        self.connector_path = os.path.join(self.tmpdir, 'fake_connector')
+        with open(self.connector_path, 'w') as fh:
+            jsonutils.dump(self.fake_connector, fh)
+
+    def _assert_instance_actions(self, server):
+        actions = self.api.get_instance_actions(server['id'])
+        self.assertEqual('unlock', actions[0]['action'])
+        self.assertEqual('refresh_volume_attachment', actions[1]['action'])
+        self.assertEqual('lock', actions[2]['action'])
+        self.assertEqual('stop', actions[3]['action'])
+        self.assertEqual('attach_volume', actions[4]['action'])
+        self.assertEqual('create', actions[5]['action'])
+
+    def test_refresh(self):
+        server = self._create_server()
+        volume_id = self.cinder.IMAGE_BACKED_VOL
+        self.api.post_server_volume(
+            server['id'], {'volumeAttachment': {'volumeId': volume_id}})
+        self._wait_for_volume_attach(server['id'], volume_id)
+        self._stop_server(server)
+
+        attachments = self.cinder.volume_to_attachment[volume_id]
+        original_attachment_id = list(attachments.keys())[0]
+
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            self.ctxt, volume_id, server['id'])
+        self.assertEqual(original_attachment_id, bdm.attachment_id)
+
+        # The CinderFixture also stashes the attachment id in the
+        # connection_info of the attachment so we can assert when and if it is
+        # refreshed by recreating the attachments.
+        connection_info = jsonutils.loads(bdm.connection_info)
+        self.assertIn('attachment_id', connection_info['data'])
+        self.assertEqual(
+            original_attachment_id, connection_info['data']['attachment_id'])
+
+        result = self.cli.refresh(
+            volume_id=volume_id,
+            instance_uuid=server['id'],
+            connector_path=self.connector_path)
+        self.assertEqual(0, result)
+
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            self.ctxt, volume_id, server['id'])
+
+        attachments = self.cinder.volume_to_attachment[volume_id]
+        new_attachment_id = list(attachments.keys())[0]
+
+        # Assert that the two attachment ids we have are not the same
+        self.assertNotEqual(original_attachment_id, new_attachment_id)
+
+        # Assert that we are using the new attachment id
+        self.assertEqual(new_attachment_id, bdm.attachment_id)
+
+        # Assert that this new attachment id is also in the saved
+        # connection_info of the bdm that has been refreshed
+        connection_info = jsonutils.loads(bdm.connection_info)
+        self.assertIn('attachment_id', connection_info['data'])
+        self.assertEqual(
+            new_attachment_id, connection_info['data']['attachment_id'])
+
+        # Assert that we have actions we expect against the instance
+        self._assert_instance_actions(server)
+
+    def test_refresh_rpcapi_remove_volume_connection_rollback(self):
+        server = self._create_server()
+        volume_id = self.cinder.IMAGE_BACKED_VOL
+        self.api.post_server_volume(
+            server['id'], {'volumeAttachment': {'volumeId': volume_id}})
+        self._wait_for_volume_attach(server['id'], volume_id)
+        self._stop_server(server)
+
+        attachments = self.cinder.volume_to_attachment[volume_id]
+        original_attachment_id = list(attachments.keys())[0]
+
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            self.ctxt, volume_id, server['id'])
+        self.assertEqual(original_attachment_id, bdm.attachment_id)
+
+        connection_info = jsonutils.loads(bdm.connection_info)
+        self.assertIn('attachment_id', connection_info['data'])
+        self.assertEqual(
+            original_attachment_id, connection_info['data']['attachment_id'])
+
+        with (
+            mock.patch(
+                'nova.compute.rpcapi.ComputeAPI.remove_volume_connection',
+                side_effect=test.TestingException)
+        ) as (
+            mock_remove_volume_connection
+        ):
+            result = self.cli.refresh(
+                volume_id=volume_id,
+                instance_uuid=server['id'],
+                connector_path=self.connector_path)
+
+        # Assert that we hit our mock
+        mock_remove_volume_connection.assert_called_once()
+
+        # Assert that this is caught as an unknown exception
+        self.assertEqual(1, result)
+
+        # Assert that we still only have a single attachment
+        attachments = self.cinder.volume_to_attachment[volume_id]
+        self.assertEqual(1, len(attachments))
+        self.assertEqual(list(attachments.keys())[0], original_attachment_id)
+
+        # Assert that we have actions we expect against the instance
+        self._assert_instance_actions(server)
+
+    def test_refresh_cinder_attachment_update_rollback(self):
+        server = self._create_server()
+        volume_id = self.cinder.IMAGE_BACKED_VOL
+        self.api.post_server_volume(
+            server['id'], {'volumeAttachment': {'volumeId': volume_id}})
+        self._wait_for_volume_attach(server['id'], volume_id)
+        self._stop_server(server)
+
+        attachments = self.cinder.volume_to_attachment[volume_id]
+        original_attachment_id = list(attachments.keys())[0]
+
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            self.ctxt, volume_id, server['id'])
+        self.assertEqual(original_attachment_id, bdm.attachment_id)
+
+        connection_info = jsonutils.loads(bdm.connection_info)
+        self.assertIn('attachment_id', connection_info['data'])
+        self.assertEqual(
+            original_attachment_id, connection_info['data']['attachment_id'])
+
+        with (
+            mock.patch(
+                'nova.volume.cinder.API.attachment_update',
+                side_effect=test.TestingException)
+        ) as (
+            mock_attachment_update
+        ):
+            result = self.cli.refresh(
+                volume_id=volume_id,
+                instance_uuid=server['id'],
+                connector_path=self.connector_path)
+
+        # Assert that we hit our mock
+        mock_attachment_update.assert_called_once()
+
+        # Assert that this is caught as an unknown exception
+        self.assertEqual(1, result)
+
+        # Assert that we still only have a single attachment
+        attachments = self.cinder.volume_to_attachment[volume_id]
+        new_attachment_id = list(attachments.keys())[0]
+        self.assertEqual(1, len(attachments))
+        self.assertNotEqual(new_attachment_id, original_attachment_id)
+
+        # Assert that this new attachment id is saved in the bdm and the stale
+        # connection_info associated with the original volume attachment has
+        # been cleared.
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            self.ctxt, volume_id, server['id'])
+        self.assertEqual(new_attachment_id, bdm.attachment_id)
+        self.assertIsNone(bdm.connection_info)
+
+        # Assert that we have actions we expect against the instance
+        self._assert_instance_actions(server)
+
+    def test_refresh_pre_cinderv3_without_attachment_id(self):
+        """Test the refresh command when the bdm has no attachment_id.
+        """
+        server = self._create_server()
+        volume_id = self.cinder.IMAGE_BACKED_VOL
+        self.api.post_server_volume(
+            server['id'], {'volumeAttachment': {'volumeId': volume_id}})
+        self._wait_for_volume_attach(server['id'], volume_id)
+        self._stop_server(server)
+
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            self.ctxt, volume_id, server['id'])
+
+        # Drop the attachment_id from the bdm before continuing and delete the
+        # attachment from the fixture to mimic this being attached via the
+        # legacy export style cinderv2 APIs.
+        del self.cinder.volume_to_attachment[volume_id]
+        bdm.attachment_id = None
+        bdm.save()
+
+        result = self.cli.refresh(
+            volume_id=volume_id,
+            instance_uuid=server['id'],
+            connector_path=self.connector_path)
+        self.assertEqual(0, result)
+
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            self.ctxt, volume_id, server['id'])
+
+        attachments = self.cinder.volume_to_attachment[volume_id]
+        new_attachment_id = list(attachments.keys())[0]
+
+        # Assert that we are using the new attachment id
+        self.assertEqual(new_attachment_id, bdm.attachment_id)
+
+        # Assert that this new attachment id is also in the saved
+        # connection_info of the bdm that has been refreshed
+        connection_info = jsonutils.loads(bdm.connection_info)
+        self.assertIn('attachment_id', connection_info['data'])
+        self.assertEqual(
+            new_attachment_id, connection_info['data']['attachment_id'])
+
+        # Assert that we have actions we expect against the instance
+        self._assert_instance_actions(server)
 
 
 class TestNovaManagePlacementHealAllocations(
