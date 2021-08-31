@@ -50,11 +50,13 @@ from oslotest import base
 from oslotest import mock_fixture
 import six
 from six.moves import builtins
+from sqlalchemy.dialects import sqlite
 import testtools
 
 from nova.api.openstack import wsgi_app
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
+from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import exception
 from nova import objects
 from nova.objects import base as objects_base
@@ -382,6 +384,22 @@ class TestCase(base.BaseTestCase):
         group = kw.pop('group', None)
         for k, v in kw.items():
             CONF.set_override(k, v, group)
+
+    def enforce_fk_constraints(self, engine=None):
+        if engine is None:
+            engine = sqlalchemy_api.get_engine()
+        dialect = engine.url.get_dialect()
+        if dialect == sqlite.dialect:
+            # We're seeing issues with foreign key support in SQLite 3.6.20
+            # SQLAlchemy doesn't support it at all with < SQLite 3.6.19
+            # It works fine in SQLite 3.7.
+            # So return early to skip this test if running SQLite < 3.7
+            import sqlite3
+            tup = sqlite3.sqlite_version_info
+            if tup[0] < 3 or (tup[0] == 3 and tup[1] < 7):
+                self.skipTest(
+                    'sqlite version too old for reliable SQLA foreign_keys')
+            engine.connect().execute("PRAGMA foreign_keys = ON")
 
     def start_service(self, name, host=None, cell_name=None, **kwargs):
         # Disallow starting multiple scheduler services
