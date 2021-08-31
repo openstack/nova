@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 57
+SERVICE_VERSION = 58
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -201,6 +201,9 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '6.0'},
     # Version 57: Compute RPC v6.0:
     # Add support for vnic 'accelerator-direct'.
+    {'compute_rpc': '6.0'},
+    # Version 58: Compute RPC v6.0:
+    # Add support for booting with neutron extended resource request
     {'compute_rpc': '6.0'},
 )
 

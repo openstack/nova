@@ -1642,29 +1642,15 @@ class MultiGroupResourceRequestBasedSchedulingTest(
         super().setUp()
         self.neutron = self.useFixture(
             MultiGroupResourceRequestNeutronFixture(self))
-        # Turn off the blanket rejections of the extended resource request.
-        # This test class wants to prove that the extended resource request is
-        # supported.
-        patcher = mock.patch(
-            'nova.network.neutron.API.support_create_with_resource_request',
-            return_value=True,
-        )
-        self.addCleanup(patcher.stop)
-        patcher.start()
+        # Turn off the blanket rejections of the extended resource request in
+        # port attach. This test class wants to prove that the extended
+        # resource request is supported.
         patcher = mock.patch(
             'nova.compute.api.API.support_port_attach',
             return_value=True,
         )
         self.addCleanup(patcher.stop)
         patcher.start()
-
-    @unittest.expectedFailure
-    def test_boot_server_with_two_ports_one_having_resource_request(self):
-        super().test_boot_server_with_two_ports_one_having_resource_request()
-
-    @unittest.expectedFailure
-    def test_one_ovs_one_sriov_port(self):
-        super().test_one_ovs_one_sriov_port()
 
     @unittest.expectedFailure
     def test_interface_attach_with_resource_request(self):
@@ -1681,14 +1667,6 @@ class MultiGroupResourceRequestBasedSchedulingTest(
     @unittest.expectedFailure
     def test_delete_bound_port_in_neutron_with_resource_request(self):
         super().test_delete_bound_port_in_neutron_with_resource_request()
-
-    @unittest.expectedFailure
-    def test_two_sriov_ports_one_with_request_two_available_pfs(self):
-        super().test_two_sriov_ports_one_with_request_two_available_pfs()
-
-    @unittest.expectedFailure
-    def test_sriov_macvtap_port_with_resource_request(self):
-        super().test_sriov_macvtap_port_with_resource_request()
 
 
 class ServerMoveWithPortResourceRequestTest(
@@ -2609,12 +2587,6 @@ class ServerMoveWithMultiGroupResourceRequestBasedSchedulingTest(
         # This test class wants to prove that the extended resource request is
         # supported.
         patcher = mock.patch(
-            'nova.network.neutron.API.support_create_with_resource_request',
-            return_value=True,
-        )
-        self.addCleanup(patcher.stop)
-        patcher.start()
-        patcher = mock.patch(
             'nova.network.neutron.API.instance_has_extended_resource_request',
             return_value=False,
         )
@@ -2903,6 +2875,35 @@ class CrossCellResizeWithQoSPort(PortResourceRequestBasedSchedulingTestBase):
             server, qos_normal_port, qos_sriov_port)
 
 
+class ExtendedResourceRequestOldCompute(
+        PortResourceRequestBasedSchedulingTestBase):
+    """Tests that simulate that there are compute services in the system that
+    hasn't been upgraded to a version that support extended resource request.
+    So nova rejects the operations due to the old compute.
+    """
+
+    @mock.patch.object(
+        objects.service, 'get_minimum_version_all_cells',
+        new=mock.Mock(return_value=57)
+    )
+    def test_boot(self):
+        self.neutron = self.useFixture(
+            ExtendedResourceRequestNeutronFixture(self))
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._create_server,
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_with_resource_request['id']}],
+        )
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn(
+            'The port-resource-request-groups neutron API extension is not '
+            'supported by old nova compute service. Upgrade your compute '
+            'services to Xena (24.0.0) or later.',
+            str(ex)
+        )
+
+
 class ExtendedResourceRequestTempNegativeTest(
         PortResourceRequestBasedSchedulingTestBase):
     """A set of temporary tests to show that nova currently rejects requests
@@ -2910,31 +2911,6 @@ class ExtendedResourceRequestTempNegativeTest(
     are  expected to be removed when support for the extension is implemented
     in nova.
     """
-
-    def test_boot(self):
-        """The neutron fixture used in this test enables the
-        extended-resource-request API extension. This results in any new
-        server to boot. This is harsh but without nova support for this
-        extension there is no way that this extension is helpful. So treat
-        this as a deployment configuration error.
-        """
-        self.neutron = self.useFixture(
-            ExtendedResourceRequestNeutronFixture(self))
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self._create_server,
-            flavor=self.flavor,
-            networks=[{'port': self.neutron.port_1['id']}],
-        )
-
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn(
-            'The port-resource-request-groups neutron API extension is not '
-            'yet supported by Nova. Please turn off this extension in '
-            'Neutron.',
-            str(ex)
-        )
-
     def _test_operation(self, op_name, op_callable):
         # boot a server with a qos port still using the old Neutron resource
         # request API extension

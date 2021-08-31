@@ -7244,7 +7244,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self.context, instance.host, 'nova-compute')
 
     @mock.patch(
-        'nova.network.neutron.API._has_extended_resource_request_extension',
+        'nova.network.neutron.API.has_extended_resource_request_extension',
         new=mock.Mock(return_value=False)
     )
     @mock.patch('nova.compute.rpcapi.ComputeAPI.attach_interface')

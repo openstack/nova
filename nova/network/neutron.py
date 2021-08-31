@@ -470,10 +470,11 @@ class API:
                 'error.', {'port_id': port_id},
                 instance=instance)
 
-    def _create_port_minimal(self, port_client, instance, network_id,
+    def _create_port_minimal(self, context, port_client, instance, network_id,
                              fixed_ip=None, security_group_ids=None):
         """Attempts to create a port for the instance on the given network.
 
+        :param context: The request context.
         :param port_client: The client to use to create the port.
         :param instance: Create the port for the given instance.
         :param network_id: Create the port on the given network.
@@ -510,7 +511,7 @@ class API:
             # such ports are currently not supported as they would at least
             # need resource allocation manipulation in placement but might also
             # need a new scheduling if resource on this host is not available.
-            if port.get(constants.RESOURCE_REQUEST, None):
+            if self._has_resource_request(context, port, port_client):
                 msg = (
                     "The auto-created port %(port_id)s is being deleted due "
                     "to its network having QoS policy.")
@@ -979,8 +980,8 @@ class API:
                 if not request.port_id:
                     # create minimal port, if port not already created by user
                     created_port = self._create_port_minimal(
-                            neutron, instance, request.network_id,
-                            request.address, security_group_ids)
+                        context, neutron, instance, request.network_id,
+                        request.address, security_group_ids)
                     created_port_id = created_port['id']
                     created_port_ids.append(created_port_id)
 
@@ -997,7 +998,7 @@ class API:
 
     def _has_resource_request(self, context, port, neutron):
         resource_request = port.get(constants.RESOURCE_REQUEST) or {}
-        if self._has_extended_resource_request_extension(context, neutron):
+        if self.has_extended_resource_request_extension(context, neutron):
             return bool(resource_request.get(constants.REQUEST_GROUPS, []))
         else:
             return bool(resource_request)
@@ -1008,7 +1009,7 @@ class API:
         # if we query with a non admin context.
         admin_context = nova_context.get_admin_context()
 
-        if not self._has_extended_resource_request_extension(admin_context):
+        if not self.has_extended_resource_request_extension(admin_context):
             # Short circuit if the extended resource request API extension is
             # not available
             return False
@@ -1025,6 +1026,44 @@ class API:
             if resource_request.get(constants.REQUEST_GROUPS, []):
                 return True
         return False
+
+    def _get_binding_profile_allocation(
+        self, context, port, neutron, resource_provider_mapping
+    ):
+        # TODO(gibi): remove this condition and the else branch once Nova does
+        # not need to support old Neutron sending the legacy resource request
+        # extension
+        if self.has_extended_resource_request_extension(
+            context, neutron
+        ):
+            # The extended resource request format also means that a
+            # port has more than a one request groups
+            request_groups = port.get(
+                constants.RESOURCE_REQUEST, {}).get(
+                constants.REQUEST_GROUPS, [])
+            # Each request group id from the port needs to be mapped to
+            # a single provider id from the provider mappings. Each
+            # group from the port is mapped to a numbered request group
+            # in placement so we can assume that they are mapped to
+            # a single provider and therefore the provider mapping list
+            # has a single provider id.
+            allocation = {
+                group['id']: resource_provider_mapping[group['id']][0]
+                for group in request_groups
+            }
+        else:
+            # This is the legacy resource request format where a port
+            # is mapped to a single request group
+            # NOTE(gibi): In the resource provider mapping there can be
+            # more than one RP fulfilling a request group. But resource
+            # requests of a Neutron port is always mapped to a
+            # numbered request group that is always fulfilled by one
+            # resource provider. So we only pass that single RP UUID
+            # here.
+            allocation = resource_provider_mapping[
+                port['id']][0]
+
+        return allocation
 
     def allocate_for_instance(self, context, instance,
                               requested_networks,
@@ -1095,15 +1134,12 @@ class API:
         for port in requested_ports_dict.values():
             # only communicate the allocations if the port has resource
             # requests
-            if port.get(constants.RESOURCE_REQUEST):
+            if self._has_resource_request(context, port, neutron):
+
                 profile = get_binding_profile(port)
-                # NOTE(gibi): In the resource provider mapping there can be
-                # more than one RP fulfilling a request group. But resource
-                # requests of a Neutron port is always mapped to a
-                # numbered request group that is always fulfilled by one
-                # resource provider. So we only pass that single RP UUID here.
-                profile[constants.ALLOCATION] = resource_provider_mapping[
-                    port['id']][0]
+                profile[constants.ALLOCATION] = (
+                    self._get_binding_profile_allocation(
+                        context, port, neutron, resource_provider_mapping))
                 port[constants.BINDING_PROFILE] = profile
 
         # Create ports from the list of ordered_networks. The returned
@@ -1305,7 +1341,7 @@ class API:
     # the this extension mandatory. In Xena this extension will be optional to
     # support the scenario where Neutron upgraded first. So Neutron can mark
     # this mandatory earliest in Yoga.
-    def _has_extended_resource_request_extension(self, context, neutron=None):
+    def has_extended_resource_request_extension(self, context, neutron=None):
         self._refresh_neutron_extensions_cache(context, neutron=neutron)
         return constants.RESOURCE_REQUEST_GROUPS_EXTENSION in self.extensions
 
@@ -2032,7 +2068,7 @@ class API:
         This function is only here temporarily to help mocking this check in
         the functional test environment.
         """
-        return not (self._has_extended_resource_request_extension(context))
+        return not (self.has_extended_resource_request_extension(context))
 
     def create_resource_requests(
             self, context, requested_networks, pci_requests=None,
@@ -2048,8 +2084,6 @@ class API:
         :type pci_requests: nova.objects.InstancePCIRequests
         :param affinity_policy: requested pci numa affinity policy
         :type affinity_policy: nova.objects.fields.PCINUMAAffinityPolicy
-        :raises ExtendedResourceRequestNotSupported: if the
-            extended-resource-request Neutron API extension is enabled.
 
         :returns: A three tuple with an instance of ``objects.NetworkMetadata``
             for use by the scheduler or None, a list of RequestGroup
@@ -2060,15 +2094,12 @@ class API:
         if not requested_networks or requested_networks.no_allocate:
             return None, [], None
 
-        if not self.support_create_with_resource_request(context):
-            raise exception.ExtendedResourceRequestNotSupported()
-
         physnets = set()
         tunneled = False
 
         neutron = get_client(context, admin=True)
         has_extended_resource_request_extension = (
-            self._has_extended_resource_request_extension(context, neutron))
+            self.has_extended_resource_request_extension(context, neutron))
         resource_requests = []
         request_level_params = objects.RequestLevelParams()
 
