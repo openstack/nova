@@ -127,6 +127,113 @@ class ResourceRequestNeutronFixture(NeutronFixture):
         self._ports[macvtap['id']] = copy.deepcopy(macvtap)
 
 
+class ExtendedResourceRequestNeutronFixture(ResourceRequestNeutronFixture):
+    def list_extensions(self, *args, **kwargs):
+        extensions = super().list_extensions(*args, **kwargs)
+        extensions['extensions'].append(
+            # As defined in neutron_lib/api/definitions/
+            # port_resource_request_groups.py
+            {
+                "updated": "2021-08-02T10:00:00-00:00",
+                "name": constants.RESOURCE_REQUEST_GROUPS_EXTENSION,
+                "links": [],
+                "alias": "port-resource-request-groups",
+                "description":
+                    "Support requesting multiple groups of resources and "
+                    "traits from the same RP subtree in resource_request"
+            }
+        )
+        return extensions
+
+    def _translate_port_to_new_resource_request(self, port):
+        """Translates the old resource request definition to the new format in
+        place.
+        """
+        # NOTE(gibi): Neutron sends the new format if
+        # port-resource-request-groups API extension is enabled.
+        # TODO(gibi): make this the default definition format after nova
+        # not need to support the old format any more which will happen after
+        # Neutron does not support the old format any more.
+        # old format:
+        #
+        # 'resource_request': {
+        #     "resources": {
+        #             orc.NET_BW_IGR_KILOBIT_PER_SEC: 1000,
+        #             orc.NET_BW_EGR_KILOBIT_PER_SEC: 1000},
+        #     "required": ["CUSTOM_PHYSNET2", "CUSTOM_VNIC_TYPE_NORMAL"]
+        # },
+        #
+        # new format:
+        #
+        # 'resource_request': {
+        #    "request_groups":
+        #    [
+        #        {
+        #            "id": "group1",
+        #            "required": [<CUSTOM_VNIC_TYPE traits>],
+        #            "resources":
+        #            {
+        #                NET_KILOPACKET_PER_SEC:
+        #                <amount requested via the QoS policy>
+        #            }
+        #        },
+        #        {
+        #            "id": "group2",
+        #            "required": [<CUSTOM_PHYSNET_ traits>,
+        #                         <CUSTOM_VNIC_TYPE traits>],
+        #            "resources":
+        #            {
+        #                <NET_BW_[E|I]GR_KILOBIT_PER_SEC resource class name>:
+        #                <requested bandwidth amount from the QoS policy>
+        #            }
+        #        },
+        #    ],
+        #    "same_subtree": ["group1", "group2"]
+        # }
+        groups = []
+        same_subtree = []
+        # NOTE(gibi): in case of the old format Neutron sends None in the
+        # resource_request if the port has no QoS policy implicating
+        # resource request.
+        old_rr = port.get('resource_request')
+        # NOTE(gibi): In the new format Neutron also sends None if the port
+        # has no QoS policy implicating resource request
+        new_rr = None
+        if old_rr:
+            # use the port id as group id as we know that in the old format
+            # we can have only one group per port
+            old_rr['id'] = port['id']
+            # nest the old request as one of the groups in the new format
+            groups.append(old_rr)
+            # Neutron might generate an empty list if only one group is
+            # requested, but it is equally correct to list that single group
+            # as well. We do the later as that allows some testing already with
+            # a single group
+            same_subtree = [old_rr['id']]
+
+            new_rr = {
+                "request_groups": groups,
+                "same_subtree": same_subtree
+            }
+
+        port['resource_request'] = new_rr
+
+    def show_port(self, port_id, **_params):
+        port_dict = super().show_port(port_id, **_params)
+        # this is an in place transformation but it is OK as the base class
+        # returns a deep copy of the port
+        self._translate_port_to_new_resource_request(port_dict['port'])
+        return port_dict
+
+    def list_ports(self, is_admin, retrieve_all=True, **_params):
+        ports_dict = super().list_ports(is_admin, retrieve_all=True, **_params)
+        for port in ports_dict['ports']:
+            # this is an in place transformation but it is OK as the base class
+            # returns a deep copy of the port
+            self._translate_port_to_new_resource_request(port)
+        return ports_dict
+
+
 class PortResourceRequestBasedSchedulingTestBase(
         integrated_helpers.ProviderUsageBaseTestCase):
 

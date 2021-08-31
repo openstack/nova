@@ -31,3 +31,4 @@ ALLOCATION = 'allocation'
 RESOURCE_REQUEST = 'resource_request'
 SEGMENT = 'Segment'
 NUMA_POLICY = 'numa_affinity_policy'
+RESOURCE_REQUEST_GROUPS_EXTENSION = "Port Resource Request Groups"
