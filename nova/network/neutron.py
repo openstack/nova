@@ -1002,6 +1002,30 @@ class API:
         else:
             return bool(resource_request)
 
+    def instance_has_extended_resource_request(self, instance_uuid):
+        # NOTE(gibi): We need to use an admin context to query neutron ports as
+        # neutron does not fill the resource_request field in the port response
+        # if we query with a non admin context.
+        admin_context = nova_context.get_admin_context()
+
+        if not self._has_extended_resource_request_extension(admin_context):
+            # Short circuit if the extended resource request API extension is
+            # not available
+            return False
+
+        # So neutron supports the extended resource request but does the
+        # instance has a port with such request
+        search_opts = {'device_id': instance_uuid,
+                       'fields': [constants.RESOURCE_REQUEST]}
+        ports = self.list_ports(
+            admin_context, **search_opts).get('ports', [])
+
+        for port in ports:
+            resource_request = port.get(constants.RESOURCE_REQUEST) or {}
+            if resource_request.get(constants.REQUEST_GROUPS, []):
+                return True
+        return False
+
     def allocate_for_instance(self, context, instance,
                               requested_networks,
                               security_groups=None, bind_host_id=None,

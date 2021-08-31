@@ -6667,6 +6667,86 @@ class TestAPI(TestAPIBase):
         )
 
 
+class TestInstanceHasExtendedResourceRequest(TestAPIBase):
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch.object(neutronapi, 'get_client')
+        self.addCleanup(patcher.stop)
+        self.mock_client = patcher.start().return_value
+        self.extension = {
+            "extensions": [
+                {
+                    "name": constants.RESOURCE_REQUEST_GROUPS_EXTENSION,
+                }
+            ]
+        }
+
+    def test_no_extension(self):
+        self.mock_client.list_extensions.return_value = {
+            "extensions": []
+        }
+
+        self.assertFalse(
+            self.api.instance_has_extended_resource_request(uuids.instance))
+
+        self.mock_client.list_extensions.assert_called_once_with()
+        self.mock_client.list_ports.assert_not_called()
+
+    def test_no_port(self):
+        self.mock_client.list_extensions.return_value = self.extension
+        self.mock_client.list_ports.return_value = {
+            "ports": []
+        }
+
+        self.assertFalse(
+            self.api.instance_has_extended_resource_request(uuids.instance))
+
+        self.mock_client.list_extensions.assert_called_once_with()
+        self.mock_client.list_ports.assert_called_once_with(
+            device_id=uuids.instance,
+            fields=['resource_request'])
+
+    def test_port_without_request(self):
+        self.mock_client.list_extensions.return_value = self.extension
+        self.mock_client.list_ports.return_value = {
+            "ports": [
+                {"resource_request": {}}
+            ]
+        }
+
+        self.assertFalse(
+            self.api.instance_has_extended_resource_request(uuids.instance))
+
+        self.mock_client.list_extensions.assert_called_once_with()
+        self.mock_client.list_ports.assert_called_once_with(
+            device_id=uuids.instance,
+            fields=['resource_request'])
+
+    def test_port_with_request(self):
+        self.mock_client.list_extensions.return_value = self.extension
+        self.mock_client.list_ports.return_value = {
+            "ports": [
+                {
+                    "resource_request": {
+                        "request_groups": [
+                            {
+                                "CUSTOM_FOO": 1000,
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+
+        self.assertTrue(
+            self.api.instance_has_extended_resource_request(uuids.instance))
+
+        self.mock_client.list_extensions.assert_called_once_with()
+        self.mock_client.list_ports.assert_called_once_with(
+            device_id=uuids.instance,
+            fields=['resource_request'])
+
+
 class TestAPIModuleMethods(test.NoDBTestCase):
 
     def test_gather_port_ids_and_networks_wrong_params(self):

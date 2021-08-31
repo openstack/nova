@@ -23,7 +23,9 @@ from nova.api.openstack.compute.schemas import shelve as shelve_schemas
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
+from nova.compute import vm_states
 from nova import exception
+from nova.i18n import _
 from nova.network import neutron
 from nova.policies import shelve as shelve_policies
 
@@ -104,6 +106,17 @@ class ShelveController(wsgi.Controller):
         support_az = api_version_request.is_supported(req, '2.77')
         if support_az and unshelve_dict:
             new_az = unshelve_dict['availability_zone']
+
+        if (
+            instance.vm_state == vm_states.SHELVED_OFFLOADED and
+            self.network_api.instance_has_extended_resource_request(id)
+        ):
+            msg = _(
+                "The unshelve server operation on a shelve offloaded server "
+                "with port having extended resource request, like a "
+                "port with both QoS minimum bandwidth and packet rate "
+                "policies, is not yet supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             self.compute_api.unshelve(context, instance, new_az=new_az)

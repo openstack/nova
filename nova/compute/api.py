@@ -5051,6 +5051,21 @@ class API:
                     self.volume_api.attachment_delete(
                         context, new_attachment_id)
 
+    def support_port_attach(self, context, port):
+        """Returns false if neutron is configured with extended resource
+        request and the port has resource request.
+
+        This function is only here temporary to help mocking this check in the
+        functional test environment.
+        """
+        if not self.network_api._has_extended_resource_request_extension(
+            context
+        ):
+            return True
+
+        resource_request = port.get('resource_request', {})
+        return not resource_request.get('request_groups', [])
+
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.STOPPED],
@@ -5086,6 +5101,9 @@ class API:
                 network_model.VNIC_TYPE_ACCELERATOR_DIRECT,
                 network_model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL):
                 raise exception.ForbiddenPortsWithAccelerator()
+
+            if not self.support_port_attach(context, port):
+                raise exception.AttachWithExtendedQoSPolicyNotSupported()
 
         return self.compute_rpcapi.attach_interface(context,
             instance=instance, network_id=network_id, port_id=port_id,

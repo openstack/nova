@@ -7204,6 +7204,10 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         mock_get_service.assert_called_once_with(
             self.context, instance.host, 'nova-compute')
 
+    @mock.patch(
+        'nova.network.neutron.API._has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False)
+    )
     @mock.patch('nova.compute.rpcapi.ComputeAPI.attach_interface')
     @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
     @mock.patch('nova.compute.api.API._record_action_start')

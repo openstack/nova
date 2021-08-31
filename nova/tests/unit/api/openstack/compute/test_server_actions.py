@@ -14,6 +14,7 @@
 #    under the License.
 
 import ddt
+import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
@@ -99,6 +100,12 @@ class ServerActionsControllerTestV21(test.TestCase):
             self.controller.compute_api, 'compute_task_api')
         mock_conductor.start()
         self.addCleanup(mock_conductor.stop)
+        self.mock_neutron_extension_list = self.useFixture(
+            fixtures.MockPatch(
+                'nova.network.neutron.API._refresh_neutron_extensions_cache'
+            )
+        ).mock
+        self.mock_neutron_extension_list.return_value = {'extensions': []}
 
     def _get_controller(self):
         return self.servers.ServersController()

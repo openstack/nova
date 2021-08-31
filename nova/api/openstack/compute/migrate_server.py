@@ -56,6 +56,13 @@ class MigrateServerController(wsgi.Controller):
             body['migrate'] is not None):
             host_name = body['migrate'].get('host')
 
+        if self.network_api.instance_has_extended_resource_request(id):
+            msg = _(
+                "The migrate server operation with port having extended "
+                "resource request, like a port with both QoS minimum "
+                "bandwidth and packet rate policies, is not yet supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
             self.compute_api.resize(req.environ['nova.context'], instance,
                                     host_name=host_name)
@@ -119,6 +126,13 @@ class MigrateServerController(wsgi.Controller):
                                                         strict=True)
             disk_over_commit = strutils.bool_from_string(disk_over_commit,
                                                          strict=True)
+
+        if self.network_api.instance_has_extended_resource_request(id):
+            msg = _(
+                "The live migrate server operation with port having extended "
+                "resource request, like a port with both QoS minimum "
+                "bandwidth and packet rate policies, is not yet supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
 
         try:
             self.compute_api.live_migrate(context, instance, block_migration,

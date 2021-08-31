@@ -128,6 +128,17 @@ class ResourceRequestNeutronFixture(NeutronFixture):
 
 
 class ExtendedResourceRequestNeutronFixture(ResourceRequestNeutronFixture):
+    @classmethod
+    def create_with_existing_neutron_state(cls, existing_fixture):
+        """Creates a new fixture but initialize it from an existing neutron
+        fixture to carry over the state from it.
+        """
+        fixture = cls(existing_fixture.test)
+        fixture._ports = existing_fixture._ports
+        fixture._networks = existing_fixture._networks
+        fixture._subnets = existing_fixture._subnets
+        return fixture
+
     def list_extensions(self, *args, **kwargs):
         extensions = super().list_extensions(*args, **kwargs)
         extensions['extensions'].append(
@@ -2620,18 +2631,16 @@ class ExtendedResourceRequestTempNegativeTest(
     are  expected to be removed when support for the extension is implemented
     in nova.
     """
-    def setUp(self):
-        super().setUp()
-        self.neutron = self.useFixture(
-            ExtendedResourceRequestNeutronFixture(self))
 
     def test_boot(self):
-        """The neutron fixture used in this test class enables the
+        """The neutron fixture used in this test enables the
         extended-resource-request API extension. This results in any new
         server to boot. This is harsh but without nova support for this
         extension there is no way that this extension is helpful. So treat
         this as a deployment configuration error.
         """
+        self.neutron = self.useFixture(
+            ExtendedResourceRequestNeutronFixture(self))
         ex = self.assertRaises(
             client.OpenStackApiException,
             self._create_server,
@@ -2645,4 +2654,82 @@ class ExtendedResourceRequestTempNegativeTest(
             'yet supported by Nova. Please turn off this extension in '
             'Neutron.',
             str(ex)
+        )
+
+    def _test_operation(self, op_name, op_callable):
+        # boot a server with a qos port still using the old Neutron resource
+        # request API extension
+        server = self._create_server(
+            flavor=self.flavor,
+            networks=[{'port': self.neutron.port_with_resource_request['id']}],
+        )
+        self._wait_for_state_change(server, 'ACTIVE')
+
+        # enable the new extended-resource-request Neutron API extension by
+        # replacing the old neutron fixture with a new one that enables the
+        # extension. Note that we are carrying over the state of the neutron
+        # to the new extension to keep the port bound to the server.
+        self.neutron = self.useFixture(
+            ExtendedResourceRequestNeutronFixture.
+            create_with_existing_neutron_state(self.neutron))
+
+        # nova does not support this Neutron API extension yet so the
+        # operation fails
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            op_callable,
+            server,
+        )
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn(
+            f'The {op_name} with port having extended resource request, like '
+            f'a port with both QoS minimum bandwidth and packet rate '
+            f'policies, is not yet supported.',
+            str(ex)
+        )
+
+    def test_resize(self):
+        self._test_operation(
+            'resize server operation',
+            lambda server: self._resize_server(
+                server, self.flavor_with_group_policy['id']
+            )
+        )
+
+    def test_migrate(self):
+        self._test_operation(
+            'migrate server operation',
+            lambda server: self._migrate_server(server),
+        )
+
+    def test_live_migrate(self):
+        self._test_operation(
+            'live migrate server operation',
+            lambda server: self._live_migrate(server),
+        )
+
+    def test_evacuate(self):
+        self._test_operation(
+            'evacuate server operation',
+            lambda server: self._evacuate_server(server),
+        )
+
+    def test_interface_attach(self):
+        self._test_operation(
+            'interface attach server operation',
+            lambda server: self._attach_interface(
+                server,
+                self.neutron.port_with_sriov_resource_request['id'],
+            ),
+        )
+
+    def test_unshelve_after_shelve_offload(self):
+
+        def shelve_offload_then_unshelve(server):
+            self._shelve_server(server, expected_state='SHELVED_OFFLOADED')
+            self._unshelve_server(server)
+
+        self._test_operation(
+            'unshelve server operation on a shelve offloaded server',
+            lambda server: shelve_offload_then_unshelve(server),
         )

@@ -1944,6 +1944,13 @@ class AttachInterfaceWithQoSPolicyNotSupported(AttachInterfaceNotSupported):
                 "instance %(instance_uuid)s.")
 
 
+class AttachWithExtendedQoSPolicyNotSupported(AttachInterfaceNotSupported):
+    msg_fmt = _(
+        "The interface attach server operation with port having extended "
+        "resource request, like a port with both QoS minimum bandwidth and "
+        "packet rate policies, is not yet supported.")
+
+
 class NetworksWithQoSPolicyNotSupported(Invalid):
     msg_fmt = _("Using networks with QoS policy is not supported for "
                 "instance %(instance_uuid)s. (Network ID is %(network_id)s)")

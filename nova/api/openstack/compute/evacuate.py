@@ -120,6 +120,13 @@ class EvacuateController(wsgi.Controller):
             msg = _("The target host can't be the same one.")
             raise exc.HTTPBadRequest(explanation=msg)
 
+        if self.network_api.instance_has_extended_resource_request(id):
+            msg = _(
+                "The evacuate server operation with port having extended "
+                "resource request, like a port with both QoS minimum "
+                "bandwidth and packet rate policies, is not yet supported.")
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
             self.compute_api.evacuate(context, instance, host,
                                       on_shared_storage, password, force)
