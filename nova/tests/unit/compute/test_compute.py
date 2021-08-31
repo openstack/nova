@@ -8703,11 +8703,13 @@ class ComputeAPITestCase(BaseTestCase):
             objects=[objects.NetworkRequest(port_id=uuids.port_instance)])
 
         with test.nested(
-                mock.patch.object(self.compute_api.compute_task_api,
-                                  'schedule_and_build_instances'),
-                mock.patch.object(self.compute_api.network_api,
-                                  'create_resource_requests',
-                                  return_value=(None, [])),
+            mock.patch.object(
+                self.compute_api.compute_task_api,
+                'schedule_and_build_instances'),
+            mock.patch.object(
+                self.compute_api.network_api,
+                'create_resource_requests',
+                return_value=(None, [], objects.RequestLevelParams())),
         ) as (mock_sbi, _mock_create_resreqs):
             self.compute_api.create(
                 self.context,
@@ -10206,7 +10208,8 @@ class ComputeAPITestCase(BaseTestCase):
                 "_claim_pci_device_for_interface_attach",
                 return_value=None)
         ) as (cap, mock_lock, mock_create_resource_req, mock_claim_pci):
-            mock_create_resource_req.return_value = (None, [])
+            mock_create_resource_req.return_value = (
+                None, [], mock.sentinel.req_lvl_params)
             vif = self.compute.attach_interface(self.context,
                                                 instance,
                                                 network_id,
@@ -10266,7 +10269,8 @@ class ComputeAPITestCase(BaseTestCase):
               mock_allocate_res
         ):
             request_groups = [objects.RequestGroup]
-            mock_create_resource_req.return_value = (None, request_groups)
+            mock_create_resource_req.return_value = (
+                None, request_groups, mock.sentinel.req_lvl_params)
             mock_allocate_res.return_value = (
                 mock.sentinel.provider_mappings, mock.sentinel.resources)
             vif = self.compute.attach_interface(
@@ -10311,7 +10315,9 @@ class ComputeAPITestCase(BaseTestCase):
         # as this port has resource request we need to call
         # _allocate_port_resource_for_instance for it
         mock_allocate_res.assert_called_once_with(
-            self.context, instance, pci_reqs, request_groups)
+            self.context, instance, pci_reqs, request_groups,
+            mock.sentinel.req_lvl_params
+        )
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_attach_sriov_interface(self, mock_notify):
@@ -10348,7 +10354,7 @@ class ComputeAPITestCase(BaseTestCase):
                 # Simulate that the requested port is an SRIOV port
                 pci_requests.requests.append(pci_req)
                 # without resource request
-                return None, []
+                return None, [], mock.sentinel.req_lvl_params
 
             mock_create_resource_req.side_effect = create_resource_req
 
@@ -10424,7 +10430,7 @@ class ComputeAPITestCase(BaseTestCase):
                 # Simulate that the requested port is an SRIOV port
                 pci_requests.requests.append(pci_req)
                 # with resource request
-                return None, request_groups
+                return None, request_groups, mock.sentinel.req_lvl_params
 
             mock_create_resource_req.side_effect = create_resource_req
 
@@ -10475,9 +10481,11 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertIn(pci_device, instance.pci_devices.objects)
 
         # ensure that we called _allocate_port_resource_for_instance as it has
-        # resource reques
+        # resource request
         mock_allocate_res.assert_called_once_with(
-            self.context, instance, pci_reqs, request_groups)
+            self.context, instance, pci_reqs, request_groups,
+            mock.sentinel.req_lvl_params
+        )
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_interface_tagged_attach(self, mock_notify):
@@ -10498,7 +10506,8 @@ class ComputeAPITestCase(BaseTestCase):
                               '_claim_pci_device_for_interface_attach',
                               return_value=None)
         ) as (mock_capabilities, mock_create_resource_req, mock_claim_pci):
-            mock_create_resource_req.return_value = (None, [])
+            mock_create_resource_req.return_value = (
+                None, [], mock.sentinel.req_lvl_params)
             vif = self.compute.attach_interface(self.context,
                                                 instance,
                                                 network_id,
@@ -10574,7 +10583,8 @@ class ComputeAPITestCase(BaseTestCase):
         ) as (mock_notify, mock_attach, mock_allocate, mock_deallocate,
               mock_dict, mock_create_resource_req, mock_claim_pci):
 
-            mock_create_resource_req.return_value = (None, [])
+            mock_create_resource_req.return_value = (
+                None, [], mock.sentinel.req_lvl_params)
             mock_allocate.return_value = nwinfo
             mock_attach.side_effect = exception.NovaException("attach_failed")
             self.assertRaises(exception.InterfaceAttachFailed,
@@ -10652,7 +10662,7 @@ class ComputeAPITestCase(BaseTestCase):
                                     pci_requests=None, affinity_policy=None):
                 # Simulate that the requested port is an SRIOV port
                 pci_requests.requests.append(pci_req)
-                return None, []
+                return None, [], mock.sentinel.req_lvl_params
 
             mock_create_resource_req.side_effect = create_resource_req
             mock_allocate.return_value = nwinfo
@@ -10727,7 +10737,7 @@ class ComputeAPITestCase(BaseTestCase):
                                     pci_requests=None, affinity_policy=None):
                 # Simulate that the requested port is an SRIOV port
                 pci_requests.requests.append(pci_req)
-                return None, request_groups
+                return None, request_groups, mock.sentinel.req_lvl_params
 
             mock_create_resource_req.side_effect = create_resource_req
             mock_allocate_res.return_value = (
@@ -10752,7 +10762,12 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertNotIn(pci_req, instance.pci_requests.requests)
 
             mock_allocate_res.assert_called_once_with(
-                self.context, instance, pci_reqs, request_groups)
+                self.context,
+                instance,
+                pci_reqs,
+                request_groups,
+                mock.sentinel.req_lvl_params
+            )
             mock_remove_res.assert_called_once_with(
                 self.context, instance.uuid, mock.sentinel.resources)
 
@@ -10764,6 +10779,10 @@ class ComputeAPITestCase(BaseTestCase):
                 resources={"CUSTOM_FOO": 13},
                 requester_id=uuids.requester_id)
             ]
+        req_lvl_params = objects.RequestLevelParams(
+            root_required={"CUSTOM_BLUE"},
+            same_subtree=[[uuids.group1, uuids.group2]]
+        )
 
         with test.nested(
             mock.patch.object(objects.ComputeNode, 'get_by_nodename'),
@@ -10792,7 +10811,9 @@ class ComputeAPITestCase(BaseTestCase):
                 alloc_reqs, mock.sentinel.provider_sums, mock.sentinel.version)
 
             res = self.compute._allocate_port_resource_for_instance(
-                self.context, instance, pci_reqs, request_groups)
+                self.context, instance, pci_reqs, request_groups,
+                req_lvl_params
+            )
             provider_mappings, resources = res
 
             self.assertEqual(
@@ -10808,6 +10829,11 @@ class ComputeAPITestCase(BaseTestCase):
                 request_groups[0].requester_id)
             self.assertEqual(request_groups[0], actual_rg)
             self.assertEqual(uuids.compute_node, actual_rg.in_tree)
+            self.assertEqual({"CUSTOM_BLUE"}, resource_request._root_required)
+            self.assertEqual(
+                [[uuids.group1, uuids.group2]],
+                resource_request._same_subtree
+            )
             mock_add_res.assert_called_once_with(
                 self.context, instance.uuid, mock.sentinel.resources)
             mock_update_pci.assert_called_once_with(
@@ -10822,6 +10848,10 @@ class ComputeAPITestCase(BaseTestCase):
                 resources={"CUSTOM_FOO": 13},
                 requester_id=uuids.requester_id)
             ]
+        req_lvl_params = objects.RequestLevelParams(
+            root_required={"CUSTOM_BLUE"},
+            same_subtree=[[uuids.group1, uuids.group2]]
+        )
 
         with test.nested(
             mock.patch.object(objects.ComputeNode, 'get_by_nodename'),
@@ -10847,7 +10877,9 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertRaises(
                 exception.InterfaceAttachResourceAllocationFailed,
                 self.compute._allocate_port_resource_for_instance,
-                self.context, instance, pci_reqs, request_groups)
+                self.context, instance, pci_reqs, request_groups,
+                req_lvl_params,
+            )
 
             mock_get_nodename.assert_called_once_with(
                 self.context, instance.node)
@@ -10862,6 +10894,10 @@ class ComputeAPITestCase(BaseTestCase):
                 resources={"CUSTOM_FOO": 13},
                 requester_id=uuids.requester_id)
             ]
+        req_lvl_params = objects.RequestLevelParams(
+            root_required={"CUSTOM_BLUE"},
+            same_subtree=[[uuids.group1, uuids.group2]]
+        )
 
         with test.nested(
             mock.patch.object(objects.ComputeNode, 'get_by_nodename'),
@@ -10896,7 +10932,9 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertRaises(
                 exception.InterfaceAttachResourceAllocationFailed,
                 self.compute._allocate_port_resource_for_instance,
-                self.context, instance, pci_reqs, request_groups)
+                self.context, instance, pci_reqs, request_groups,
+                req_lvl_params
+            )
 
             mock_get_nodename.assert_called_once_with(
                 self.context, instance.node)
@@ -10907,6 +10945,11 @@ class ComputeAPITestCase(BaseTestCase):
                 request_groups[0].requester_id)
             self.assertEqual(request_groups[0], actual_rg)
             self.assertEqual(uuids.compute_node, actual_rg.in_tree)
+            self.assertEqual({"CUSTOM_BLUE"}, resource_request._root_required)
+            self.assertEqual(
+                [[uuids.group1, uuids.group2]],
+                resource_request._same_subtree
+            )
             mock_add_res.assert_called_once_with(
                 self.context, instance.uuid, mock.sentinel.resources)
 
@@ -10918,6 +10961,10 @@ class ComputeAPITestCase(BaseTestCase):
                 resources={"CUSTOM_FOO": 13},
                 requester_id=uuids.requester_id)
             ]
+        req_lvl_params = objects.RequestLevelParams(
+            root_required={"CUSTOM_BLUE"},
+            same_subtree=[[uuids.group1, uuids.group2]]
+        )
 
         with test.nested(
             mock.patch.object(objects.ComputeNode, 'get_by_nodename'),
@@ -10954,7 +11001,9 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertRaises(
                 exception.AmbiguousResourceProviderForPCIRequest,
                 self.compute._allocate_port_resource_for_instance,
-                self.context, instance, pci_reqs, request_groups)
+                self.context, instance, pci_reqs, request_groups,
+                req_lvl_params
+            )
 
             mock_get_nodename.assert_called_once_with(
                 self.context, instance.node)
@@ -10965,6 +11014,11 @@ class ComputeAPITestCase(BaseTestCase):
                 request_groups[0].requester_id)
             self.assertEqual(request_groups[0], actual_rg)
             self.assertEqual(uuids.compute_node, actual_rg.in_tree)
+            self.assertEqual({"CUSTOM_BLUE"}, resource_request._root_required)
+            self.assertEqual(
+                [[uuids.group1, uuids.group2]],
+                resource_request._same_subtree
+            )
             mock_add_res.assert_called_once_with(
                 self.context, instance.uuid, mock.sentinel.resources)
             mock_update_pci.assert_called_once_with(

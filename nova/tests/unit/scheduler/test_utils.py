@@ -1369,8 +1369,13 @@ class TestUtils(TestUtilsBase):
                              "CUSTOM_VNIC_TYPE_NORMAL"]
             }
         )
+        req_lvl_params = objects.RequestLevelParams(
+            root_required={"CUSTOM_BLUE"},
+            root_forbidden={"CUSTOM_DIRTY"},
+            same_subtree=[[uuids.group1]],
+        )
 
-        rr = utils.ResourceRequest.from_request_group(rg)
+        rr = utils.ResourceRequest.from_request_group(rg, req_lvl_params)
 
         self.assertEqual(
             f'limit=1000&'
@@ -1379,7 +1384,9 @@ class TestUtils(TestUtilsBase):
                 f'CUSTOM_VNIC_TYPE_NORMAL&'
             f'resources{uuids.port_id}='
                 f'NET_BW_EGR_KILOBIT_PER_SEC%3A1000%2C'
-                f'NET_BW_IGR_KILOBIT_PER_SEC%3A1000',
+                f'NET_BW_IGR_KILOBIT_PER_SEC%3A1000&'
+                f'root_required=CUSTOM_BLUE%2C%21CUSTOM_DIRTY&'
+                f'same_subtree={uuids.group1}',
             rr.to_querystring())
 
     def test_resource_request_add_group_inserts_the_group(self):

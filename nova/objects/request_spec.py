@@ -474,10 +474,12 @@ class RequestSpec(base.NovaObject):
         return filt_props
 
     @classmethod
-    def from_components(cls, context, instance_uuid, image, flavor,
-            numa_topology, pci_requests, filter_properties, instance_group,
-            availability_zone, security_groups=None, project_id=None,
-            user_id=None, port_resource_requests=None):
+    def from_components(
+        cls, context, instance_uuid, image, flavor,
+        numa_topology, pci_requests, filter_properties, instance_group,
+        availability_zone, security_groups=None, project_id=None,
+        user_id=None, port_resource_requests=None, request_level_params=None
+    ):
         """Returns a new RequestSpec object hydrated by various components.
 
         This helper is useful in creating the RequestSpec from the various
@@ -503,6 +505,7 @@ class RequestSpec(base.NovaObject):
         :param port_resource_requests: a list of RequestGroup objects
                                        representing the resource needs of the
                                        neutron ports
+        :param request_level_params: a RequestLevelParams object
         """
         spec_obj = cls(context)
         spec_obj.num_instances = 1
@@ -536,10 +539,11 @@ class RequestSpec(base.NovaObject):
         if port_resource_requests:
             spec_obj.requested_resources.extend(port_resource_requests)
 
-        # NOTE(efried): We don't need to handle request_level_params here yet
-        #  because they're set dynamically by the scheduler. That could change
-        #  in the future.
-        # TODO(gibi): handle same_subtree here coming from the neutron ports
+        # NOTE(gibi): later the scheduler adds more request level params but
+        # never overrides existing ones so we can initialize them here.
+        if request_level_params is None:
+            request_level_params = objects.RequestLevelParams()
+        spec_obj.request_level_params = request_level_params
 
         # NOTE(sbauza): Default the other fields that are not part of the
         # original contract

@@ -2050,13 +2050,15 @@ class API:
         :type affinity_policy: nova.objects.fields.PCINUMAAffinityPolicy
         :raises ExtendedResourceRequestNotSupported: if the
             extended-resource-request Neutron API extension is enabled.
-        :returns: A tuple with an instance of ``objects.NetworkMetadata`` for
-                  use by the scheduler or None and a list of RequestGroup
-                  objects representing the resource needs of each requested
-                  port
+
+        :returns: A three tuple with an instance of ``objects.NetworkMetadata``
+            for use by the scheduler or None, a list of RequestGroup
+            objects representing the resource needs of each requested port and
+            a RequestLevelParam object that contains global scheduling
+            instructions not specific to any of the RequestGroups
         """
         if not requested_networks or requested_networks.no_allocate:
-            return None, []
+            return None, [], None
 
         if not self.support_create_with_resource_request(context):
             raise exception.ExtendedResourceRequestNotSupported()
@@ -2068,6 +2070,7 @@ class API:
         has_extended_resource_request_extension = (
             self._has_extended_resource_request_extension(context, neutron))
         resource_requests = []
+        request_level_params = objects.RequestLevelParams()
 
         for request_net in requested_networks:
             physnet = None
@@ -2121,6 +2124,9 @@ class API:
                         resource_requests.extend(
                             objects.RequestGroup.from_extended_port_request(
                                 context=None,
+                                port_resource_request=resource_request))
+                        request_level_params.extend_with(
+                            objects.RequestLevelParams.from_port_request(
                                 port_resource_request=resource_request))
                     else:
                         # keep supporting the old format of the
@@ -2183,8 +2189,11 @@ class API:
             # Add pci_request_id into the requested network
             request_net.pci_request_id = pci_request_id
 
-        return (objects.NetworkMetadata(physnets=physnets, tunneled=tunneled),
-                resource_requests)
+        return (
+            objects.NetworkMetadata(physnets=physnets, tunneled=tunneled),
+            resource_requests,
+            request_level_params
+        )
 
     def _can_auto_allocate_network(self, context, neutron):
         """Helper method to determine if we can auto-allocate networks

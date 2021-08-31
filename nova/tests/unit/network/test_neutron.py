@@ -5789,7 +5789,7 @@ class TestAPI(TestAPIBase):
 
         result = api.create_resource_requests(
             self.context, requested_networks, pci_requests)
-        network_metadata, port_resource_requests = result
+        network_metadata, port_resource_requests, _ = result
 
         self.assertFalse(mock_get_client.called)
         self.assertIsNone(network_metadata)
@@ -5816,7 +5816,7 @@ class TestAPI(TestAPIBase):
 
         result = api.create_resource_requests(
             self.context, requested_networks, pci_requests)
-        network_metadata, port_resource_requests = result
+        network_metadata, port_resource_requests, _ = result
 
         mock_get_physnet_tunneled_info.assert_not_called()
         self.assertEqual(set(), network_metadata.physnets)
@@ -5875,7 +5875,7 @@ class TestAPI(TestAPIBase):
 
         result = api.create_resource_requests(
             self.context, requested_networks, pci_requests)
-        network_metadata, port_resource_requests = result
+        network_metadata, port_resource_requests, _ = result
 
         self.assertEqual([
                 mock.sentinel.request_group1,
@@ -5982,7 +5982,7 @@ class TestAPI(TestAPIBase):
         result = self.api.create_resource_requests(
             self.context, requested_networks, pci_requests=None)
 
-        network_metadata, port_resource_requests = result
+        network_metadata, port_resource_requests, _ = result
         mock_get_dp_group.assert_called_once_with('smat_nic')
         mock_get_physnet_tunneled_info.assert_called_once_with(
             self.context, mock.ANY, 'netN')
@@ -6047,6 +6047,12 @@ class TestAPI(TestAPIBase):
         neutronapi.API, '_has_extended_resource_request_extension',
         return_value=True)
     @mock.patch(
+        'nova.objects.request_spec.RequestLevelParams.extend_with'
+    )
+    @mock.patch(
+        'nova.objects.request_spec.RequestLevelParams.from_port_request'
+    )
+    @mock.patch(
         'nova.objects.request_spec.RequestGroup.from_extended_port_request')
     @mock.patch.object(neutronapi.API, '_get_physnet_tunneled_info')
     @mock.patch.object(neutronapi.API, "_get_port_vnic_info")
@@ -6054,6 +6060,7 @@ class TestAPI(TestAPIBase):
     def test_create_resource_request_extended(
         self, getclient, mock_get_port_vnic_info,
         mock_get_physnet_tunneled_info, mock_from_port_request,
+        mock_req_lvl_param, mock_extened_req_lvl_param,
         mock_has_extended_res_req
     ):
         requested_networks = objects.NetworkRequestList(
@@ -6088,10 +6095,15 @@ class TestAPI(TestAPIBase):
                 mock.sentinel.port2_request_group2,
             ],
         ]
+        # also both port1 and port2 has same subtree params
+        mock_req_lvl_param.side_effect = [
+            mock.sentinel.port1_req_lvl_param,
+            mock.sentinel.port2_req_lvl_param,
+        ]
 
         result = api.create_resource_requests(
             self.context, requested_networks, pci_requests)
-        network_metadata, port_resource_requests = result
+        network_metadata, port_resource_requests, req_lvl_param = result
 
         # assert that all the request groups are collected from both ports
         self.assertEqual(
@@ -6102,6 +6114,23 @@ class TestAPI(TestAPIBase):
                 mock.sentinel.port2_request_group2,
             ],
             port_resource_requests)
+        # the same subtree requests are combined from the two ports
+        mock_req_lvl_param.assert_has_calls(
+            [
+                mock.call(
+                    port_resource_request=mock.sentinel.resource_request1),
+                mock.call(
+                    port_resource_request=mock.sentinel.resource_request2),
+            ]
+
+        )
+        mock_extened_req_lvl_param.assert_has_calls(
+            [
+                mock.call(mock.sentinel.port1_req_lvl_param),
+                mock.call(mock.sentinel.port2_req_lvl_param),
+            ]
+        )
+        self.assertIsInstance(req_lvl_param, objects.RequestLevelParams)
 
         mock_from_port_request.assert_has_calls([
             mock.call(
