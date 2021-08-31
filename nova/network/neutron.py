@@ -2065,6 +2065,8 @@ class API:
         tunneled = False
 
         neutron = get_client(context, admin=True)
+        has_extended_resource_request_extension = (
+            self._has_extended_resource_request_extension(context, neutron))
         resource_requests = []
 
         for request_net in requested_networks:
@@ -2111,13 +2113,26 @@ class API:
                     resource_requests.extend(dp_request_groups)
 
                 if resource_request:
-                    # NOTE(gibi): explicitly orphan the RequestGroup by setting
-                    # context=None as we never intended to save it to the DB.
-                    resource_requests.append(
-                        objects.RequestGroup.from_port_request(
-                            context=None,
-                            port_uuid=request_net.port_id,
-                            port_resource_request=resource_request))
+                    if has_extended_resource_request_extension:
+                        # need to handle the new resource request format
+                        # NOTE(gibi): explicitly orphan the RequestGroup by
+                        # setting context=None as we never intended to save it
+                        # to the DB.
+                        resource_requests.extend(
+                            objects.RequestGroup.from_extended_port_request(
+                                context=None,
+                                port_resource_request=resource_request))
+                    else:
+                        # keep supporting the old format of the
+                        # resource_request
+                        # NOTE(gibi): explicitly orphan the RequestGroup by
+                        # setting context=None as we never intended to save it
+                        # to the DB.
+                        resource_requests.append(
+                            objects.RequestGroup.from_port_request(
+                                context=None,
+                                port_uuid=request_net.port_id,
+                                port_resource_request=resource_request))
 
             elif request_net.network_id and not request_net.auto_allocate:
                 network_id = request_net.network_id

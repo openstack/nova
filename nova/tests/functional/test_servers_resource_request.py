@@ -1675,21 +1675,6 @@ class MultiGroupResourceRequestBasedSchedulingTest(
         super().test_interface_attach_with_resource_request_no_candidates()
 
     @unittest.expectedFailure
-    def test_interface_attach_with_resource_request_pci_claim_fails(self):
-        super().test_interface_attach_with_resource_request_pci_claim_fails()
-
-    @unittest.expectedFailure
-    def test_interface_attach_sriov_with_qos_pci_update_fails(self):
-        super().test_interface_attach_sriov_with_qos_pci_update_fails()
-
-    @unittest.expectedFailure
-    def test_interface_attach_sriov_with_qos_pci_update_fails_cleanup_fails(
-        self
-    ):
-        super(
-        ).test_interface_attach_sriov_with_qos_pci_update_fails_cleanup_fails()
-
-    @unittest.expectedFailure
     def test_interface_detach_with_port_with_bandwidth_request(self):
         super().test_interface_detach_with_port_with_bandwidth_request()
 
@@ -1700,11 +1685,6 @@ class MultiGroupResourceRequestBasedSchedulingTest(
     @unittest.expectedFailure
     def test_two_sriov_ports_one_with_request_two_available_pfs(self):
         super().test_two_sriov_ports_one_with_request_two_available_pfs()
-
-    @unittest.expectedFailure
-    def test_one_sriov_port_no_vf_and_bandwidth_available_on_the_same_pf(self):
-        super(
-        ).test_one_sriov_port_no_vf_and_bandwidth_available_on_the_same_pf()
 
     @unittest.expectedFailure
     def test_sriov_macvtap_port_with_resource_request(self):
