@@ -794,6 +794,28 @@ class TestUtils(TestUtilsBase):
         )
         self.assertEqual(expected_querystring, resources.to_querystring())
 
+    def test_resources_from_request_spec_with_same_subtree(self):
+        """Tests that there same_subtree query params are added to the
+        GET /allocation_candidates query string based on the request spec
+        """
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=15, ephemeral_gb=0, swap=0)
+        req_lvl_params = objects.RequestLevelParams(
+            same_subtree=[['group1', 'group2'], ['group3', 'group4']])
+        request_spec = objects.RequestSpec(
+            flavor=flavor, request_level_params=req_lvl_params)
+
+        resources = utils.resources_from_request_spec(
+            self.context, request_spec, self.mock_host_manager)
+
+        self.assertEqual(
+            'limit=1000&'
+            'resources=DISK_GB%3A15%2CMEMORY_MB%3A1024%2CVCPU%3A1&'
+            'same_subtree=group1%2Cgroup2&'
+            'same_subtree=group3%2Cgroup4',
+            resources.to_querystring()
+        )
+
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     def test_resources_from_flavor_no_bfv(self, mock_is_bfv):

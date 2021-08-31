@@ -70,6 +70,7 @@ class ResourceRequest(object):
         self._limit = CONF.scheduler.max_placement_results
         self._root_required: ty.Set[str] = set()
         self._root_forbidden: ty.Set[str] = set()
+        self._same_subtree: ty.List[ty.List[str]] = []
         self.suffixed_groups_from_flavor = 0
         # TODO(stephenfin): Remove this parameter once we drop support for
         # 'vcpu_pin_set'
@@ -132,6 +133,7 @@ class ResourceRequest(object):
         res_req._root_required = request_spec.root_required
         # root_required+=!these
         res_req._root_forbidden = request_spec.root_forbidden
+        res_req._same_subtree = request_spec.same_subtree
 
         # TODO(efried): Handle member_of[$S], which will need to be reconciled
         # with destination.aggregates handling in resources_from_request_spec
@@ -512,6 +514,9 @@ class ResourceRequest(object):
             vals = sorted(self._root_required) + ['!' + t for t in
                                                   sorted(self._root_forbidden)]
             qparams.append(('root_required', ','.join(vals)))
+
+        for group_suffixes in self._same_subtree:
+            qparams.append(('same_subtree', ','.join(sorted(group_suffixes))))
 
         for rg in self._rg_by_id.values():
             # [('resources[$S]', 'rclass:amount,rclass:amount,...'),
