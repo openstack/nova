@@ -243,7 +243,10 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.89 - Add ``attachment_id``, ``bdm_uuid`` and remove ``id`` from the
              responses of ``GET  /servers/{server_id}/os-volume_attachments``
              and ``GET /servers/{server_id}/os-volume_attachments/{volume_id}``
-
+    * 2.90 - Add support for requesting a specific hostname when creating,
+             updating or rebuilding an instance. The
+             ``OS-EXT-SRV-ATTR:hostname`` attribute is now returned in various
+             server responses regardless of policy configuration.
 """
 
 # The minimum and maximum versions of the API supported
@@ -252,7 +255,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = '2.1'
-_MAX_API_VERSION = '2.89'
+_MAX_API_VERSION = '2.90'
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

@@ -368,7 +368,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server: server
   - flavorRef: flavorRef
   - name: server_name
@@ -404,6 +403,7 @@ Request
   - security_groups: security_groups
   - user_data: user_data
   - description: server_description
+  - hostname: server_hostname_req
   - tags: server_tags_create
   - trusted_image_certificates: server_trusted_image_certificates_create_req
   - host: server_host_create
@@ -441,6 +441,11 @@ Request
 **Example Create Server With Host and Hypervisor Hostname (v2.74)**
 
 .. literalinclude:: ../../doc/api_samples/servers/v2.74/server-create-req-with-host-and-node.json
+   :language: javascript
+
+**Example Create Server With Hostname (v2.90)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.90/server-create-req.json
    :language: javascript
 
 Response
@@ -633,8 +638,15 @@ Response
   - OS-DCF:diskConfig: disk_config
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
+  - OS-EXT-SRV-ATTR:hostname: server_hostname
   - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
   - OS-EXT-SRV-ATTR:instance_name: OS-EXT-SRV-ATTR:instance_name
+  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id
+  - OS-EXT-SRV-ATTR:launch_index: server_launch_index
+  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
+  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
+  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
+  - OS-EXT-SRV-ATTR:user_data: server_user_data
   - OS-EXT-STS:power_state: OS-EXT-STS:power_state
   - OS-EXT-STS:task_state: OS-EXT-STS:task_state
   - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
@@ -656,13 +668,6 @@ Response
   - security_groups: security_groups_obj_optional
   - security_group.name: name
   - servers_links: servers_links
-  - OS-EXT-SRV-ATTR:hostname: server_hostname
-  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
-  - OS-EXT-SRV-ATTR:launch_index: server_launch_index
-  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id
-  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
-  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
-  - OS-EXT-SRV-ATTR:user_data: server_user_data
   - locked: locked
   - host_status: host_status
   - description: server_description_resp
@@ -757,8 +762,15 @@ Response
   - OS-DCF:diskConfig: disk_config
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
+  - OS-EXT-SRV-ATTR:hostname: server_hostname
   - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
   - OS-EXT-SRV-ATTR:instance_name: OS-EXT-SRV-ATTR:instance_name
+  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id
+  - OS-EXT-SRV-ATTR:launch_index: server_launch_index
+  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
+  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
+  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
+  - OS-EXT-SRV-ATTR:user_data: server_user_data
   - OS-EXT-STS:power_state: OS-EXT-STS:power_state
   - OS-EXT-STS:task_state: OS-EXT-STS:task_state
   - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
@@ -779,13 +791,6 @@ Response
   - progress: progress
   - security_groups: security_groups_obj_optional
   - security_group.name: name
-  - OS-EXT-SRV-ATTR:hostname: server_hostname
-  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
-  - OS-EXT-SRV-ATTR:launch_index: server_launch_index
-  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id
-  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
-  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
-  - OS-EXT-SRV-ATTR:user_data: server_user_data
   - locked: locked
   - host_status: host_status
   - description: server_description_resp
@@ -830,11 +835,14 @@ Request
   - accessIPv4: accessIPv4_in
   - accessIPv6: accessIPv6_in
   - name: server_name_optional
+  - hostname: server_hostname_req
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - description: server_description
 
-.. note:: You can specify parameters to update independently.
-  e.g. ``name`` only, ``description`` only, ``name`` and ``description``, etc.
+.. note::
+
+   You can specify parameters to update independently.
+   e.g. ``name`` only, ``description`` only, ``name`` and ``description``, etc.
 
 **Example Update Server (2.63)**
 
@@ -889,18 +897,18 @@ Response
   - config_drive: config_drive_resp_update_rebuild
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone_update_rebuild
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host_update_rebuild
+  - OS-EXT-SRV-ATTR:hostname: server_hostname_update_rebuild
   - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname_update_rebuild
   - OS-EXT-SRV-ATTR:instance_name: OS-EXT-SRV-ATTR:instance_name_update_rebuild
+  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id_update_rebuild
+  - OS-EXT-SRV-ATTR:launch_index: server_launch_index_update_rebuild
+  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id_update_rebuild
+  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id_update_rebuild
+  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name_update_rebuild
+  - OS-EXT-SRV-ATTR:user_data: server_user_data_update
   - OS-EXT-STS:power_state: OS-EXT-STS:power_state_update_rebuild
   - OS-EXT-STS:task_state: OS-EXT-STS:task_state_update_rebuild
   - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state_update_rebuild
-  - OS-EXT-SRV-ATTR:hostname: server_hostname_update_rebuild
-  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id_update_rebuild
-  - OS-EXT-SRV-ATTR:launch_index: server_launch_index_update_rebuild
-  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id_update_rebuild
-  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id_update_rebuild
-  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name_update_rebuild
-  - OS-EXT-SRV-ATTR:user_data: server_user_data_update
   - os-extended-volumes:volumes_attached: os-extended-volumes:volumes_attached_update_rebuild
   - os-extended-volumes:volumes_attached.id: os-extended-volumes:volumes_attached.id_update_rebuild
   - os-extended-volumes:volumes_attached.delete_on_termination: os-extended-volumes:volumes_attached.delete_on_termination_update_rebuild

@@ -1180,11 +1180,25 @@ has been removed in favour of including this field in the primary ``GET
 
 .. _microversion 2.89:
 
-2.89 (Maximum in Xena)
-----------------------
+2.89
+----
 
 ``attachment_id`` and ``bdm_uuid`` are now included in the responses for ``GET
 /servers/{server_id}/os-volume_attachments`` and ``GET
 /servers/{server_id}/os-volume_attachments/{volume_id}``. Additionally the
 ``id`` field is dropped from the response as it duplicates the ``volumeId``
 field.
+
+.. _microversion 2.90:
+
+2.90 (Maximum in Xena)
+----------------------
+
+The ``POST /servers`` (create server), ``PUT /servers/{id}`` (update server)
+and ``POST /servers/{server_id}/action (rebuild)`` (rebuild server) APIs now
+accept a ``hostname`` parameter, allowing users to configure a hostname when
+creating the instance. When specified, this will replace the auto-generated
+hostname based on the display name.
+
+In addition, the ``OS-EXT-SRV-ATTR:hostname`` field for all server
+responses is now visible to all users. Previously this was an admin-only field.

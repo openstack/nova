@@ -22,6 +22,7 @@ into a server since Mitaka release.
 
 You can get an RDP, serial, SPICE, or VNC console for a server.
 
+
 Add (Associate) Floating Ip (addFloatingIp Action) (DEPRECATED)
 ================================================================
 
@@ -469,6 +470,7 @@ Response
 
 If successful, this method does not return content in the response body.
 
+
 .. _reboot:
 
 Reboot Server (reboot Action)
@@ -582,10 +584,16 @@ Request
   - key_name: key_name_rebuild_req
   - user_data: user_data_rebuild_req
   - trusted_image_certificates: server_trusted_image_certificates_rebuild_req
+  - hostname: server_hostname_req
 
 **Example Rebuild Server (rebuild Action) (v2.63)**
 
 .. literalinclude:: ../../doc/api_samples/servers/v2.63/server-action-rebuild.json
+   :language: javascript
+
+**Example Rebuild Server (rebuild Action) (v2.90)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.90/server-action-rebuild.json
    :language: javascript
 
 Response
@@ -661,6 +669,7 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/servers/v2.75/server-action-rebuild-resp.json
    :language: javascript
+
 
 Remove (Disassociate) Floating Ip (removeFloatingIp Action) (DEPRECATED)
 =========================================================================
@@ -790,6 +799,7 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-rescue/server-rescue.json
    :language: javascript
+
 
 Resize Server (resize Action)
 =============================

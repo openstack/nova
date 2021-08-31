@@ -355,6 +355,10 @@ create_v274['properties']['server'][
 create_v274['properties']['server'][
     'properties']['hypervisor_hostname'] = parameter_types.fqdn
 
+# Add hostname in server
+create_v290 = copy.deepcopy(create_v274)
+create_v290['properties']['server'][
+    'properties']['hostname'] = parameter_types.hostname
 
 update = {
     'type': 'object',
@@ -382,6 +386,10 @@ update_v219 = copy.deepcopy(update)
 update_v219['properties']['server'][
     'properties']['description'] = parameter_types.description
 
+
+update_v290 = copy.deepcopy(update_v219)
+update_v290['properties']['server'][
+    'properties']['hostname'] = parameter_types.hostname
 
 rebuild = {
     'type': 'object',
@@ -436,6 +444,10 @@ rebuild_v257['properties']['rebuild']['properties']['user_data'] = ({
 rebuild_v263 = copy.deepcopy(rebuild_v257)
 rebuild_v263['properties']['rebuild']['properties'][
     'trusted_image_certificates'] = parameter_types.trusted_certs
+
+rebuild_v290 = copy.deepcopy(rebuild_v263)
+rebuild_v290['properties']['rebuild']['properties'][
+    'hostname'] = parameter_types.hostname
 
 
 resize = {

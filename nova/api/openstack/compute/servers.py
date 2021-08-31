@@ -665,7 +665,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_servers.create_v257, '2.57', '2.62')
     @validation.schema(schema_servers.create_v263, '2.63', '2.66')
     @validation.schema(schema_servers.create_v267, '2.67', '2.73')
-    @validation.schema(schema_servers.create_v274, '2.74')
+    @validation.schema(schema_servers.create_v274, '2.74', '2.89')
+    @validation.schema(schema_servers.create_v290, '2.90')
     def create(self, req, body):
         """Creates a new server for a given user."""
         context = req.environ['nova.context']
@@ -675,6 +676,9 @@ class ServersController(wsgi.Controller):
         description = name
         if api_version_request.is_supported(req, min_version='2.19'):
             description = server_dict.get('description')
+        hostname = None
+        if api_version_request.is_supported(req, min_version='2.90'):
+            hostname = server_dict.get('hostname')
 
         # Arguments to be passed to instance create function
         create_kwargs = {}
@@ -772,6 +776,7 @@ class ServersController(wsgi.Controller):
                 image_uuid,
                 display_name=name,
                 display_description=description,
+                hostname=hostname,
                 availability_zone=availability_zone,
                 forced_host=host, forced_node=node,
                 metadata=server_dict.get('metadata', {}),
@@ -815,6 +820,7 @@ class ServersController(wsgi.Controller):
                 exception.MismatchVolumeAZException,
                 exception.MultiplePortsNotApplicable,
                 exception.InvalidFixedIpAndMaxCountRequest,
+                exception.AmbiguousHostnameForMultipleInstances,
                 exception.InstanceUserDataMalformed,
                 exception.PortNotFound,
                 exception.FixedIpAlreadyInUse,
@@ -888,7 +894,8 @@ class ServersController(wsgi.Controller):
     @wsgi.expected_errors(404)
     @validation.schema(schema_servers.update_v20, '2.0', '2.0')
     @validation.schema(schema_servers.update, '2.1', '2.18')
-    @validation.schema(schema_servers.update_v219, '2.19')
+    @validation.schema(schema_servers.update_v219, '2.19', '2.89')
+    @validation.schema(schema_servers.update_v290, '2.90')
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
 
@@ -899,7 +906,7 @@ class ServersController(wsgi.Controller):
                  target={'user_id': instance.user_id,
                          'project_id': instance.project_id})
         show_server_groups = api_version_request.is_supported(
-                 req, min_version='2.71')
+             req, min_version='2.71')
 
         server = body['server']
 
@@ -911,11 +918,14 @@ class ServersController(wsgi.Controller):
             # This is allowed to be None (remove description)
             update_dict['display_description'] = server['description']
 
+        if 'hostname' in server:
+            update_dict['hostname'] = server['hostname']
+
         helpers.translate_attributes(helpers.UPDATE, server, update_dict)
 
         try:
-            instance = self.compute_api.update_instance(ctxt, instance,
-                                                        update_dict)
+            instance = self.compute_api.update_instance(
+                ctxt, instance, update_dict)
 
             # NOTE(gmann): Starting from microversion 2.75, PUT and Rebuild
             # API response will show all attributes like GET /servers API.
@@ -1134,7 +1144,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_servers.rebuild_v219, '2.19', '2.53')
     @validation.schema(schema_servers.rebuild_v254, '2.54', '2.56')
     @validation.schema(schema_servers.rebuild_v257, '2.57', '2.62')
-    @validation.schema(schema_servers.rebuild_v263, '2.63')
+    @validation.schema(schema_servers.rebuild_v263, '2.63', '2.89')
+    @validation.schema(schema_servers.rebuild_v290, '2.90')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
@@ -1158,8 +1169,10 @@ class ServersController(wsgi.Controller):
 
         helpers.translate_attributes(helpers.REBUILD, rebuild_dict, kwargs)
 
-        if (api_version_request.is_supported(req, min_version='2.54') and
-                'key_name' in rebuild_dict):
+        if (
+            api_version_request.is_supported(req, min_version='2.54') and
+            'key_name' in rebuild_dict
+        ):
             kwargs['key_name'] = rebuild_dict.get('key_name')
 
         # If user_data is not specified, we don't include it in kwargs because
@@ -1171,16 +1184,24 @@ class ServersController(wsgi.Controller):
 
         # Skip policy check for 'rebuild:trusted_certs' if no trusted
         # certificate IDs were provided.
-        if ((api_version_request.is_supported(req, min_version='2.63')) and
-                # Note that this is different from server create since with
-                # rebuild a user can unset/reset the trusted certs by
-                # specifying trusted_image_certificates=None, similar to
-                # key_name.
-                ('trusted_image_certificates' in rebuild_dict)):
+        if (
+            api_version_request.is_supported(req, min_version='2.63') and
+            # Note that this is different from server create since with
+            # rebuild a user can unset/reset the trusted certs by
+            # specifying trusted_image_certificates=None, similar to
+            # key_name.
+            'trusted_image_certificates' in rebuild_dict
+        ):
             kwargs['trusted_certs'] = rebuild_dict.get(
                 'trusted_image_certificates')
             context.can(server_policies.SERVERS % 'rebuild:trusted_certs',
                         target=target)
+
+        if (
+            api_version_request.is_supported(req, min_version='2.90') and
+            'hostname' in rebuild_dict
+        ):
+            kwargs['hostname'] = rebuild_dict['hostname']
 
         for request_attribute, instance_attribute in attr_map.items():
             try:
@@ -1380,6 +1401,8 @@ class ServersController(wsgi.Controller):
                          'created_at', 'launched_at', 'terminated_at',
                          'power_state', 'task_state', 'vm_state', 'progress',
                          'user_id',)
+        if api_version_request.is_supported(req, min_version='2.90'):
+            opt_list += ('hostname',)
         return opt_list
 
     def _get_instance(self, context, instance_uuid):

@@ -2845,6 +2845,67 @@ class ServersControllerTestV283(ControllerTest):
         self.assertEqual(uuids.fake, servers[0]['id'])
 
 
+class ServersControllerTestV290(ControllerTest):
+    filters = ['hostname']
+
+    def test_get_servers_by_new_filter_for_non_admin(self):
+        def fake_get_all(context, search_opts=None, **kwargs):
+            self.assertIsNotNone(search_opts)
+            for f in self.filters:
+                self.assertIn(f, search_opts)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=uuids.fake)])
+
+        self.mock_get_all.side_effect = fake_get_all
+
+        query_str = '&'.join('%s=test_value' % f for f in self.filters)
+        req = fakes.HTTPRequest.blank(
+            self.path_with_query % query_str, version='2.90')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(uuids.fake, servers[0]['id'])
+
+    def test_get_servers_new_filters_for_non_admin_old_version(self):
+        def fake_get_all(context, search_opts=None, **kwargs):
+            self.assertIsNotNone(search_opts)
+            for f in self.filters:
+                self.assertNotIn(f, search_opts)
+            return objects.InstanceList(objects=[])
+
+        # Without policy edition, test will fail and admin filter will work.
+        self.policy.set_rules({'os_compute_api:servers:index': ''})
+        self.mock_get_all.side_effect = fake_get_all
+
+        query_str = '&'.join('%s=test_value' % f for f in self.filters)
+        req = fakes.HTTPRequest.blank(
+            self.path_with_query % query_str, version='2.89')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(0, len(servers))
+
+    def test_get_servers_by_node_fail_non_admin(self):
+        def fake_get_all(context, search_opts=None, **kwargs):
+            self.assertIsNotNone(search_opts)
+            self.assertNotIn('node', search_opts)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=uuids.fake)])
+
+        self.mock_get_all.side_effect = fake_get_all
+        self.policy.set_rules({
+            'os_compute_api:servers:index': '',
+            'os_compute_api:servers:allow_all_filters': 'role:admin',
+        })
+
+        query_str = "node=node1"
+        req = fakes.HTTPRequest.blank(
+            self.path_with_query % query_str, version='2.90')
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(1, len(servers))
+        self.assertEqual(uuids.fake, servers[0]['id'])
+
+
 class ServersControllerDeleteTest(ControllerTest):
 
     def setUp(self):
@@ -3609,6 +3670,11 @@ class ServersControllerRebuildTestV263(ControllerTest):
         server = self.controller._action_rebuild(
             self.req, FAKE_UUID, body=self.body).obj['server']
 
+        # TODO(stephenfin): This is a lie. We call '_get_server' immediately
+        # after making the call to 'nova.compute.api.API().rebuild_server' in
+        # '_action_rebuild', which means all we're testing here is the value
+        # returned by 'mock_get' above. Drop it in favour of testing the calls
+        # to the API itself
         if certs:
             self.assertEqual(certs, server['trusted_image_certificates'])
         else:
@@ -3759,6 +3825,69 @@ class ServersControllerRebuildTestV271(ControllerTest):
     def test_rebuild_with_server_group_not_exist(self, mock_sg_get):
         server = self._rebuild_server()
         self.assertEqual([], server['server_groups'])
+
+
+class ServersControllerRebuildTestV290(ControllerTest):
+    microversion = '2.90'
+    image_uuid = nova_fixtures.GlanceFixture.image3['id']
+
+    def setUp(self):
+        super().setUp()
+
+        mock_rebuild = mock.patch(
+            'nova.compute.api.API.rebuild', return_value=None)
+        self.mock_rebuild = mock_rebuild.start()
+        self.addCleanup(mock_rebuild.stop)
+
+    def _get_request(self, body=None):
+        req = fakes.HTTPRequest.blank(
+            self.path_action % FAKE_UUID,
+            use_admin_context=True,
+        )
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        req.body = jsonutils.dump_as_bytes(body)
+        req.api_version_request = api_version_request.APIVersionRequest(
+            self.microversion)
+
+        return req
+
+    def test_rebuild_server_with_hostname(self):
+        body = {
+            'rebuild': {
+                'imageRef': self.image_uuid,
+                'hostname': 'new-hostname',
+            }
+        }
+        req = self._get_request(body)
+
+        # There's nothing to check here from the return value since the
+        # 'rebuild' API is a cast and we immediately fetch the instance from
+        # the database after this cast...which returns a mocked Instance
+        self.controller._action_rebuild(
+            req, FAKE_UUID, body=body,
+        ).obj['server']
+
+        # ...so instead we check the call to the API itself
+        self.mock_rebuild.assert_called_once()
+        self.assertIn('hostname', self.mock_rebuild.call_args[0][1])
+
+    def test_rebuild_server_with_hostname_old_version(self):
+        """Tests that trying to rebuild with hostname before 2.90 fails."""
+        body = {
+            'rebuild': {
+                'imageRef': self.image_uuid,
+                'hostname': 'new-hostname',
+            }
+        }
+        req = self._get_request(body)
+        req.api_version_request = api_version_request.APIVersionRequest('2.89')
+
+        ex = self.assertRaises(
+            exception.ValidationError,
+            self.controller._action_rebuild,
+            req, FAKE_UUID, body=body)
+        self.assertIn('hostname', str(ex))
 
 
 class _ServersControllerUpdateTest(ControllerTest):
@@ -3968,6 +4097,47 @@ class ServersControllerUpdateTestV271(_ServersControllerUpdateTest):
         req = self._get_request(body)
         res_dict = self.controller.update(req, FAKE_UUID, body=body)
         self.assertEqual([], res_dict['server']['server_groups'])
+
+
+class ServersControllerUpdateTestV290(_ServersControllerUpdateTest):
+
+    microversion = '2.90'
+
+    def test_update_server_with_hostname(self):
+        body = {'server': {'hostname': 'my-hostname'}}
+        req = self._get_request(body)
+        res_dict = self.controller.update(req, FAKE_UUID, body=body)
+
+        self.assertEqual(res_dict['server']['id'], FAKE_UUID)
+        self.assertEqual(
+            res_dict['server']["OS-EXT-SRV-ATTR:hostname"], 'my-hostname')
+
+    def test_update_server_with_hostname__too_long(self):
+        body = {'server': {'hostname': 'a' * 64}}
+        req = self._get_request(body)
+        self.assertRaises(
+            exception.ValidationError, self.controller.update,
+            req, FAKE_UUID, body=body)
+
+    def test_update_server_with_hostname__invalid_fqdn(self):
+        # only hostnames are allowed, not FQDN
+        body = {'server': {'hostname': 'hostname.example.com'}}
+        req = self._get_request(body)
+        self.assertRaises(
+            exception.ValidationError, self.controller.update,
+            req, FAKE_UUID, body=body)
+
+    def test_update_server_with_hostname_old_version(self):
+        """Tests that trying to update with hostname before 2.90 fails."""
+        body = {'server': {'hostname': 'new-hostname'}}
+        req = self._get_request(body)
+        req.api_version_request = api_version_request.APIVersionRequest('2.89')
+
+        ex = self.assertRaises(
+            exception.ValidationError,
+            self.controller.update,
+            req, FAKE_UUID, body=body)
+        self.assertIn('hostname', str(ex))
 
 
 class ServersControllerTriggerCrashDumpTest(ControllerTest):
@@ -7047,6 +7217,52 @@ class ServersControllerCreateTestV274(ServersControllerCreateTest):
         # Here we use admin context, so if we do not pass it or
         # we do not anything, the test case will be failed.
         pass
+
+
+class ServersControllerCreateTestV290(ServersControllerCreateTest):
+
+    def _generate_req(self, hostname=None, api_version='2.90'):
+        if hostname:
+            self.body['server']['hostname'] = hostname
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest(api_version)
+
+    def test_create_instance_with_hostname(self):
+        self._generate_req(hostname='test-hostname')
+        self.controller.create(self.req, body=self.body).obj['server']
+
+    def test_create_instance_with_hostname_invalid(self):
+        self._generate_req(hostname='example.com')
+
+        ex = self.assertRaises(
+            exception.ValidationError,
+            self.controller.create,
+            self.req, body=self.body)
+        self.assertIn('Invalid input for field/attribute hostname.', str(ex))
+
+    def test_create_instance_with_hostname_old_version(self):
+        self._generate_req(hostname='hostname', api_version='2.89')
+
+        ex = self.assertRaises(
+            exception.ValidationError,
+            self.controller.create,
+            self.req, body=self.body)
+        self.assertIn("'hostname' was unexpected", str(ex))
+
+    @mock.patch.object(
+        compute_api.API, 'create',
+        side_effect=exception.AmbiguousHostnameForMultipleInstances())
+    def test_create_multiple_instances_with_hostname(self, mock_create):
+        self.body['server']['hostname'] = 'hostname'
+        self.body['server']['max_count'] = 2
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.90')
+        self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            self.controller.create,
+            self.req, body=self.body)
 
 
 class ServersControllerCreateTestWithMock(test.TestCase):

@@ -313,6 +313,7 @@ class ViewBuilder(common.ViewBuilder):
             show_extended_attr = context.can(
                 esa_policies.BASE_POLICY_NAME, fatal=False,
                 target={'project_id': instance.project_id})
+
         if show_extended_attr:
             properties = ['host', 'name', 'node']
             if api_version_request.is_supported(request, min_version='2.3'):
@@ -342,6 +343,7 @@ class ViewBuilder(common.ViewBuilder):
                     # the OS-EXT-SRV-ATTR prefix for the attribute key name.
                     key = "OS-EXT-SRV-ATTR:%s" % attr
                 server["server"][key] = getattr(instance, attr)
+
         if show_extended_status:
             # NOTE(gmann): Removed 'locked_by' from extended status
             # to make it same as V2. If needed it can be added with
@@ -352,6 +354,7 @@ class ViewBuilder(common.ViewBuilder):
                 # compat with v2.0.
                 key = "%s:%s" % ('OS-EXT-STS', state)
                 server["server"][key] = instance[state]
+
         if show_extended_volumes:
             # NOTE(mriedem): The os-extended-volumes prefix should not be used
             # for new attributes after v2.1. They are only in v2.1 for backward
@@ -364,7 +367,8 @@ class ViewBuilder(common.ViewBuilder):
             self._add_volumes_attachments(server["server"],
                                           bdms,
                                           add_delete_on_termination)
-        if (api_version_request.is_supported(request, min_version='2.16')):
+
+        if api_version_request.is_supported(request, min_version='2.16'):
             if show_host_status is None:
                 unknown_only = self._get_host_status_unknown_only(
                     context, instance)
@@ -403,6 +407,13 @@ class ViewBuilder(common.ViewBuilder):
             if instance.trusted_certs:
                 trusted_certs = instance.trusted_certs.ids
             server["server"]["trusted_image_certificates"] = trusted_certs
+
+        if api_version_request.is_supported(request, min_version='2.90'):
+            # API 2.90 made this field visible to non-admins, but we only show
+            # it if it's not already added
+            if not show_extended_attr:
+                server["server"]["OS-EXT-SRV-ATTR:hostname"] = \
+                    instance.hostname
 
         if show_server_groups:
             server['server']['server_groups'] = self._get_server_groups(

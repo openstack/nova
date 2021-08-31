@@ -42,6 +42,10 @@ This rule will control the visibility for a set of servers attributes:
 Microvision 2.75 added the above attributes in the ``PUT /servers/{server_id}``
 and ``POST /servers/{server_id}/action (rebuild)`` API responses which are
 also controlled by this policy rule, like the ``GET /servers*`` APIs.
+
+Microversion 2.90 made the ``OS-EXT-SRV-ATTR:hostname`` attribute available to
+all users, so this policy has no effect on that field for microversions 2.90
+and greater.
 """,
         operations=[
             {
