@@ -25758,7 +25758,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_get_existing_mdevs_not_assigned')
-    def test_allocate_mdevs_with_available_mdevs(self, get_unassigned_mdevs):
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_supported_mdev_resource_classes')
+    def test_allocate_mdevs_with_available_mdevs(self, get_supported_mdev_rcs,
+                                                 get_unassigned_mdevs):
         self.flags(enabled_mdev_types=['nvidia-11'], group='devices')
         allocations = {
             uuids.rp1: {
@@ -25767,6 +25770,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 }
             }
         }
+        get_supported_mdev_rcs.return_value = set([orc.VGPU])
         get_unassigned_mdevs.return_value = set([uuids.mdev1])
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         # Mock the fact update_provider_tree() should have run
@@ -25828,7 +25832,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                        '_get_mdev_capable_devices')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_get_existing_mdevs_not_assigned')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_supported_mdev_resource_classes')
     def test_allocate_mdevs_with_no_gpu_capacity(self,
+                                                 get_supported_mdev_rcs,
                                                  unallocated_mdevs,
                                                  get_mdev_capable_devs,
                                                  privsep_create_mdev):
@@ -25840,6 +25847,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                 }
             }
         }
+        get_supported_mdev_rcs.return_value = set([orc.VGPU])
         unallocated_mdevs.return_value = set()
         # Mock the fact all possible mediated devices are created and all of
         # them being assigned
@@ -25858,7 +25866,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           drvr._allocate_mdevs, allocations=allocations)
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
-    def test_allocate_mdevs_with_no_idea_of_the_provider(self, mock_warning):
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_supported_mdev_resource_classes')
+    def test_allocate_mdevs_with_no_idea_of_the_provider(
+        self, get_supported_mdev_rcs, mock_warning
+    ):
+        get_supported_mdev_rcs.return_value = set([orc.VGPU])
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         # Mock the fact update_provider_tree() should have run
         drvr.provider_tree = self._get_fake_provider_tree_with_vgpu()
@@ -25889,6 +25902,31 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             "mdev-capable device name %(name)s can't be guessed from the "
             "ProviderTree roots %(roots)s",
             {'name': 'oops_I_did_it_again', 'roots': 'cn'})
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_existing_mdevs_not_assigned')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_supported_mdev_resource_classes')
+    def test_allocate_mdevs_with_a_different_class(self,
+                                                   get_supported_mdev_rcs,
+                                                   get_unassigned_mdevs):
+        self.flags(enabled_mdev_types=['nvidia-11'], group='devices')
+        allocations = {
+            uuids.rp1: {
+                'resources': {
+                    'CUSTOM_NOTVGPU': 1,
+                }
+            }
+        }
+        get_supported_mdev_rcs.return_value = set(['CUSTOM_NOTVGPU'])
+        get_unassigned_mdevs.return_value = set([uuids.mdev1])
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # Mock the fact update_provider_tree() should have run
+        drvr.provider_tree = self._get_fake_provider_tree_with_vgpu()
+        self.assertEqual([uuids.mdev1],
+                         drvr._allocate_mdevs(allocations=allocations))
+        get_unassigned_mdevs.assert_called_once_with('pci_0000_06_00_0',
+                                                     ['nvidia-11'])
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_vgpu_type_per_pgpu')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_mediated_devices')
