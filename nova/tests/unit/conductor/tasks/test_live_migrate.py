@@ -78,7 +78,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         _p = mock.patch(
             'nova.network.neutron.API.'
             'get_requested_resource_for_instance',
-            return_value=[])
+            return_value=([], objects.RequestLevelParams()))
         self.mock_get_res_req = _p.start()
         self.addCleanup(_p.stop)
 
@@ -600,8 +600,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.assertRaises(exception.MigrationPreCheckError,
                               self.task._call_livem_checks_on_host, {}, {})
 
+    @mock.patch('nova.network.neutron.API.get_binding_profile_allocation')
     @mock.patch('nova.network.neutron.API.bind_ports_to_host')
-    def test_bind_ports_on_destination_merges_profiles(self, mock_bind_ports):
+    def test_bind_ports_on_destination_merges_profiles(
+        self, mock_bind_ports, mock_get_binding_profile_alloc
+    ):
         """Assert that if both the migration_data and the provider mapping
         contains binding profile related information then such information is
         merged in the resulting profile.
@@ -615,6 +618,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                         {'some-key': 'value'}))
             ])
         provider_mappings = {uuids.port1: [uuids.dest_bw_rp]}
+        mock_get_binding_profile_alloc.return_value = uuids.dest_bw_rp
 
         self.task._bind_ports_on_destination('dest-host', provider_mappings)
 
@@ -623,7 +627,59 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             vnic_types=None,
             port_profiles={uuids.port1: {'allocation': uuids.dest_bw_rp,
                                          'some-key': 'value'}})
+        mock_get_binding_profile_alloc.assert_called_once_with(
+            self.context, uuids.port1, provider_mappings)
 
+    @mock.patch('nova.network.neutron.API.get_binding_profile_allocation')
+    @mock.patch('nova.network.neutron.API.bind_ports_to_host')
+    def test_bind_ports_on_destination_merges_profiles_extended_res_req(
+        self, mock_bind_ports, mock_get_binding_profile_alloc
+    ):
+        """Assert that if both the migration_data and the provider mapping
+        contains binding profile related information and the port has extended
+        resource request then such information is merged in the resulting
+        profile.
+        """
+
+        self.task.migrate_data = objects.LibvirtLiveMigrateData(
+            vifs=[
+                objects.VIFMigrateData(
+                    port_id=uuids.port1,
+                    profile_json=jsonutils.dumps(
+                        {'some-key': 'value'}))
+            ])
+        provider_mappings = {
+            uuids.bw_group: [uuids.dest_bw_rp],
+            uuids.pps_group: [uuids.dest_pps_rp],
+            uuids.accel_group: [uuids.cyborg_rp],
+        }
+        mock_get_binding_profile_alloc.return_value = {
+            uuids.bw_group: uuids.dest_bw_rp,
+            uuids.pps_group: uuids.dest_pps_rp,
+        }
+
+        self.task._bind_ports_on_destination('dest-host', provider_mappings)
+
+        mock_bind_ports.assert_called_once_with(
+            context=self.context, instance=self.instance, host='dest-host',
+            vnic_types=None,
+            port_profiles={
+                uuids.port1: {
+                    'allocation': {
+                        uuids.bw_group: uuids.dest_bw_rp,
+                        uuids.pps_group: uuids.dest_pps_rp,
+                    },
+                    'some-key': 'value'
+                }
+            }
+        )
+        mock_get_binding_profile_alloc.assert_called_once_with(
+            self.context, uuids.port1, provider_mappings)
+
+    @mock.patch(
+        'nova.network.neutron.API.get_binding_profile_allocation',
+        new=mock.Mock(return_value=None)
+    )
     @mock.patch('nova.network.neutron.API.bind_ports_to_host')
     def test_bind_ports_on_destination_migration_data(self, mock_bind_ports):
         """Assert that if only the migration_data contains binding profile
@@ -646,8 +702,11 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             vnic_types=None,
             port_profiles={uuids.port1: {'some-key': 'value'}})
 
+    @mock.patch('nova.network.neutron.API.get_binding_profile_allocation')
     @mock.patch('nova.network.neutron.API.bind_ports_to_host')
-    def test_bind_ports_on_destination_provider_mapping(self, mock_bind_ports):
+    def test_bind_ports_on_destination_provider_mapping(
+        self, mock_bind_ports, mock_get_binding_profile_alloc
+    ):
         """Assert that if only the provider mapping contains binding
         profile related information then that is sent to neutron.
         """
@@ -658,6 +717,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                     port_id=uuids.port1)
             ])
         provider_mappings = {uuids.port1: [uuids.dest_bw_rp]}
+        mock_get_binding_profile_alloc.return_value = uuids.dest_bw_rp
 
         self.task._bind_ports_on_destination('dest-host', provider_mappings)
 
@@ -665,6 +725,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             context=self.context, instance=self.instance, host='dest-host',
             vnic_types=None,
             port_profiles={uuids.port1: {'allocation': uuids.dest_bw_rp}})
+        mock_get_binding_profile_alloc.assert_called_once_with(
+            self.context, uuids.port1, provider_mappings)
 
     @mock.patch(
         'nova.compute.utils.'
@@ -682,7 +744,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self, mock_setup, mock_reset, mock_select, mock_check, mock_call,
             mock_fill_provider_mapping, mock_update_pci_req):
         resource_req = [objects.RequestGroup(requester_id=uuids.port_id)]
-        self.mock_get_res_req.return_value = resource_req
+        self.mock_get_res_req.return_value = (
+            resource_req, objects.RequestLevelParams())
         self.instance.pci_requests = objects.InstancePCIRequests(requests=[])
 
         self.assertEqual(("host1", "node1", fake_limits1),

@@ -372,16 +372,13 @@ class LiveMigrationTask(base.TaskBase):
             self._update_migrate_vifs_from_bindings(self.migrate_data.vifs,
                                                     bindings)
 
-    @staticmethod
-    def _get_port_profile_from_provider_mapping(port_id, provider_mappings):
-        if port_id in provider_mappings:
-            # NOTE(gibi): In the resource provider mapping there can be
-            # more than one RP fulfilling a request group. But resource
-            # requests of a Neutron port is always mapped to a
-            # numbered request group that is always fulfilled by one
-            # resource provider. So we only pass that single RP UUID
-            # here.
-            return {'allocation': provider_mappings[port_id][0]}
+    def _get_port_profile_from_provider_mapping(
+        self, port_id, provider_mappings
+    ):
+        allocation = self.network_api.get_binding_profile_allocation(
+            self.context, port_id, provider_mappings)
+        if allocation:
+            return {'allocation': allocation}
         else:
             return {}
 
@@ -476,7 +473,7 @@ class LiveMigrationTask(base.TaskBase):
         # is not forced to be the original host
         request_spec.reset_forced_destinations()
 
-        port_res_req = (
+        port_res_req, req_lvl_params = (
             self.network_api.get_requested_resource_for_instance(
                 self.context, self.instance.uuid))
         # NOTE(gibi): When cyborg or other module wants to handle
@@ -484,6 +481,7 @@ class LiveMigrationTask(base.TaskBase):
         # all the external resource requests in a single list and
         # add them to the RequestSpec.
         request_spec.requested_resources = port_res_req
+        request_spec.request_level_params = req_lvl_params
 
         scheduler_utils.setup_instance_group(self.context, request_spec)
 

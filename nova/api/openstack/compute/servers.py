@@ -40,7 +40,6 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.image import glance
-from nova.network import neutron
 from nova import objects
 from nova.policies import servers as server_policies
 from nova import utils
@@ -114,7 +113,6 @@ class ServersController(wsgi.Controller):
     def __init__(self):
         super(ServersController, self).__init__()
         self.compute_api = compute.API()
-        self.network_api = neutron.API()
 
     @wsgi.expected_errors((400, 403))
     @validation.query_schema(schema_servers.query_params_v275, '2.75')
@@ -1038,15 +1036,6 @@ class ServersController(wsgi.Controller):
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
 
-        if self.network_api.instance_has_extended_resource_request(
-            instance_id
-        ):
-            msg = _(
-                "The resize server operation with port having extended "
-                "resource request, like a port with both QoS minimum "
-                "bandwidth and packet rate policies, is not yet supported.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         try:
             self.compute_api.resize(context, instance, flavor_id,
                                     auto_disk_config=auto_disk_config)
@@ -1073,11 +1062,14 @@ class ServersController(wsgi.Controller):
             msg = _("Image that the instance was started "
                     "with could not be found.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except (exception.AutoDiskConfigDisabledByImage,
-                exception.CannotResizeDisk,
-                exception.CannotResizeToSameFlavor,
-                exception.FlavorNotFound,
-                exception.ForbiddenPortsWithAccelerator) as e:
+        except (
+            exception.AutoDiskConfigDisabledByImage,
+            exception.CannotResizeDisk,
+            exception.CannotResizeToSameFlavor,
+            exception.FlavorNotFound,
+            exception.ForbiddenPortsWithAccelerator,
+            exception.ExtendedResourceRequestOldCompute,
+        ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except INVALID_FLAVOR_IMAGE_EXCEPTIONS as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())

@@ -1635,12 +1635,16 @@ class _BaseTaskTestCase(object):
         mock_schedule.return_value = [[selection]]
 
         res_req = [objects.RequestGroup()]
-        mock_get_res_req.return_value = res_req
+        mock_get_res_req.return_value = (res_req, objects.RequestLevelParams())
 
         self.conductor_manager.unshelve_instance(
             self.context, instance, request_spec)
 
         self.assertEqual(res_req, request_spec.requested_resources)
+        self.assertEqual(
+            mock_get_res_req.return_value[1],
+            request_spec.request_level_params,
+        )
 
         mock_get_res_req.assert_called_once_with(self.context, instance.uuid)
         mock_schedule.assert_called_once_with(
@@ -1673,7 +1677,7 @@ class _BaseTaskTestCase(object):
             limits=None)
         mock_schedule.return_value = [[selection]]
 
-        mock_get_res_req.return_value = []
+        mock_get_res_req.return_value = ([], objects.RequestLevelParams())
 
         dp_groups = [objects.RequestGroup(requester_id='deviceprofile2'),
                      objects.RequestGroup(requester_id='deviceprofile3')]
@@ -1684,6 +1688,10 @@ class _BaseTaskTestCase(object):
             self.context, instance, request_spec)
 
         self.assertEqual(dp_groups, request_spec.requested_resources)
+        self.assertEqual(
+            mock_get_res_req.return_value[1],
+            request_spec.request_level_params,
+        )
 
         mock_get_res_req.assert_called_once_with(self.context, instance.uuid)
         mock_schedule.assert_called_once_with(
@@ -1719,7 +1727,7 @@ class _BaseTaskTestCase(object):
         dp_groups = [objects.RequestGroup(requester_id='deviceprofile2'),
                      objects.RequestGroup(requester_id='deviceprofile3')]
         mock_get_dp.return_value = dp_groups
-        mock_get_res_req.return_value = []
+        mock_get_res_req.return_value = ([], objects.RequestLevelParams())
         arqs = ["fake-arq-uuid"]
         mock_get_arqs.side_effect = exc.AcceleratorRequestBindingFailed(
                                     arqs=arqs, msg='')
@@ -2016,7 +2024,7 @@ class _BaseTaskTestCase(object):
             mock.patch('nova.scheduler.utils.fill_provider_mapping'),
             mock.patch('nova.network.neutron.API.'
                        'get_requested_resource_for_instance',
-                       return_value=[])
+                       return_value=([], objects.RequestLevelParams()))
         ) as (rebuild_mock, sig_mock, select_dest_mock, reset_fd,
               fill_rp_mapping_mock, get_req_res_mock):
             self.conductor_manager.rebuild_instance(context=self.context,
@@ -2086,7 +2094,7 @@ class _BaseTaskTestCase(object):
             mock.patch('nova.scheduler.utils.fill_provider_mapping'),
             mock.patch('nova.network.neutron.API.'
                        'get_requested_resource_for_instance',
-                       return_value=[])
+                       return_value=([], objects.RequestLevelParams()))
         ) as (rebuild_mock, sig_mock, select_dest_mock, reset_fd,
               fill_rp_mapping_mock, get_req_res_mock):
             self.conductor_manager.rebuild_instance(context=self.context,
@@ -2160,7 +2168,7 @@ class _BaseTaskTestCase(object):
             mock.patch('nova.scheduler.utils.fill_provider_mapping'),
             mock.patch('nova.network.neutron.API.'
                        'get_requested_resource_for_instance',
-                       return_value=[])
+                       return_value=([], objects.RequestLevelParams()))
         ) as (sig_mock, select_dest_mock, reset_fd,
               fill_rp_mapping_mock, get_req_res_mock):
             ex = self.assertRaises(exc.AcceleratorRequestBindingFailed,

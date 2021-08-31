@@ -26,7 +26,6 @@ from nova.api import validation
 from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
-from nova.network import neutron
 from nova.policies import migrate_server as ms_policies
 
 LOG = logging.getLogger(__name__)
@@ -36,7 +35,6 @@ class MigrateServerController(wsgi.Controller):
     def __init__(self):
         super(MigrateServerController, self).__init__()
         self.compute_api = compute.API()
-        self.network_api = neutron.API()
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
@@ -56,13 +54,6 @@ class MigrateServerController(wsgi.Controller):
             body['migrate'] is not None):
             host_name = body['migrate'].get('host')
 
-        if self.network_api.instance_has_extended_resource_request(id):
-            msg = _(
-                "The migrate server operation with port having extended "
-                "resource request, like a port with both QoS minimum "
-                "bandwidth and packet rate policies, is not yet supported.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         try:
             self.compute_api.resize(req.environ['nova.context'], instance,
                                     host_name=host_name)
@@ -81,9 +72,12 @@ class MigrateServerController(wsgi.Controller):
                     'migrate', id)
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except (exception.ComputeHostNotFound,
-                exception.CannotMigrateToSameHost,
-                exception.ForbiddenPortsWithAccelerator) as e:
+        except (
+            exception.ComputeHostNotFound,
+            exception.CannotMigrateToSameHost,
+            exception.ForbiddenPortsWithAccelerator,
+            exception.ExtendedResourceRequestOldCompute,
+        ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(202)
@@ -127,13 +121,6 @@ class MigrateServerController(wsgi.Controller):
             disk_over_commit = strutils.bool_from_string(disk_over_commit,
                                                          strict=True)
 
-        if self.network_api.instance_has_extended_resource_request(id):
-            msg = _(
-                "The live migrate server operation with port having extended "
-                "resource request, like a port with both QoS minimum "
-                "bandwidth and packet rate policies, is not yet supported.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         try:
             self.compute_api.live_migrate(context, instance, block_migration,
                                           disk_over_commit, host, force,
@@ -164,7 +151,10 @@ class MigrateServerController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
-        except exception.ComputeHostNotFound as e:
+        except (
+            exception.ComputeHostNotFound,
+            exception.ExtendedResourceRequestOldCompute,
+        )as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,

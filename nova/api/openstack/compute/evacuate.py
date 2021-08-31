@@ -26,7 +26,6 @@ from nova.compute import api as compute
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.network import neutron
 from nova.policies import evacuate as evac_policies
 from nova import utils
 
@@ -40,7 +39,6 @@ class EvacuateController(wsgi.Controller):
         super(EvacuateController, self).__init__()
         self.compute_api = compute.API()
         self.host_api = compute.HostAPI()
-        self.network_api = neutron.API()
 
     def _get_on_shared_storage(self, req, evacuate_body):
         if api_version_request.is_supported(req, min_version='2.14'):
@@ -120,13 +118,6 @@ class EvacuateController(wsgi.Controller):
             msg = _("The target host can't be the same one.")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        if self.network_api.instance_has_extended_resource_request(id):
-            msg = _(
-                "The evacuate server operation with port having extended "
-                "resource request, like a port with both QoS minimum "
-                "bandwidth and packet rate policies, is not yet supported.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
         try:
             self.compute_api.evacuate(context, instance, host,
                                       on_shared_storage, password, force)
@@ -136,6 +127,7 @@ class EvacuateController(wsgi.Controller):
         except (
             exception.ComputeServiceInUse,
             exception.ForbiddenPortsWithAccelerator,
+            exception.ExtendedResourceRequestOldCompute,
         ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.ForbiddenWithAccelerators as e:

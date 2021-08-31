@@ -4370,9 +4370,14 @@ class TestAPI(TestAPIBase):
         mock_client.update_port.assert_called_once_with('fake-port-id',
                                                         port_req_body)
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_migration_profile(
-        self, get_client_mock):
+        self, get_client_mock
+    ):
         instance = fake_instance.fake_instance_obj(self.context)
         self.api._has_port_binding_extension = mock.Mock(return_value=True)
 
@@ -4406,9 +4411,14 @@ class TestAPI(TestAPIBase):
                 constants.BINDING_PROFILE: {
                                          'fake_profile': 'fake_data'}}})
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_binding_profile_none(
-        self, get_client_mock):
+        self, get_client_mock
+    ):
         """Tests _update_port_binding_for_instance when the binding:profile
         value is None.
         """
@@ -4435,9 +4445,14 @@ class TestAPI(TestAPIBase):
                                         'compute:%s' %
                                         instance.availability_zone}})
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
-    def test_update_port_bindings_for_instance_same_host(self,
-                                                         get_client_mock):
+    def test_update_port_bindings_for_instance_same_host(
+            self, get_client_mock
+    ):
         instance = fake_instance.fake_instance_obj(self.context)
 
         # We test two ports, one with the same host as the host passed in and
@@ -4460,6 +4475,10 @@ class TestAPI(TestAPIBase):
                       'device_owner': 'compute:%s' %
                                       instance.availability_zone}})
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_pci(self,
@@ -4567,6 +4586,10 @@ class TestAPI(TestAPIBase):
                           instance.host,
                           migration)
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_pci_no_migration(self,
@@ -4614,6 +4637,10 @@ class TestAPI(TestAPIBase):
         # No ports should be updated if the port's pci binding did not change.
         update_port_mock.assert_not_called()
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_same_host_failed_vif_type(
         self, get_client_mock):
@@ -4655,6 +4682,10 @@ class TestAPI(TestAPIBase):
                                           instance.availability_zone
                           }})
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_diff_host_unbound_vif_type(
         self, get_client_mock):
@@ -4688,6 +4719,10 @@ class TestAPI(TestAPIBase):
                                          instance.availability_zone
                 }})
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(neutronapi.API, '_get_pci_mapping_for_migration')
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
@@ -4734,6 +4769,10 @@ class TestAPI(TestAPIBase):
                 constants.BINDING_HOST_ID],
             'new-host')
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_resource_req(
             self, get_client_mock):
@@ -4760,6 +4799,68 @@ class TestAPI(TestAPIBase):
                       'binding:profile': {'allocation': uuids.dest_compute_rp},
                       'binding:host_id': 'new-host'}})
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_with_extended_resource_req(
+        self, get_client_mock
+    ):
+        instance = fake_instance.fake_instance_obj(self.context)
+        fake_ports = {
+            'ports': [
+                {
+                    'id': 'fake-port-1',
+                    'binding:vnic_type': 'normal',
+                    constants.BINDING_HOST_ID: 'old-host',
+                    constants.BINDING_PROFILE: {
+                            'allocation': {
+                                uuids.group1: uuids.source_compute_bw_rp,
+                                uuids.group2: uuids.source_compute_pps_rp,
+                            },
+                        },
+                    'resource_request': {
+                        'request_groups': [
+                            {
+                                "id": uuids.group1
+                            },
+                            {
+                                "id": uuids.group2
+                            },
+                        ],
+                    },
+                }
+            ]
+        }
+        migration = objects.Migration(
+            status='confirmed', migration_type='migration')
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+
+        self.api._update_port_binding_for_instance(
+            self.context, instance, 'new-host', migration,
+            {
+                uuids.group1: [uuids.dest_compute_bw_rp],
+                uuids.group2: [uuids.dest_compute_pps_rp],
+            }
+        )
+        get_client_mock.return_value.update_port.assert_called_once_with(
+            'fake-port-1',
+            {
+                'port': {
+                    'device_owner': 'compute:None',
+                    'binding:profile': {
+                        'allocation': {
+                            uuids.group1: uuids.dest_compute_bw_rp,
+                            uuids.group2: uuids.dest_compute_pps_rp,
+                        }
+                    },
+                    'binding:host_id': 'new-host'
+                }
+            }
+        )
+
     @mock.patch.object(neutronapi, 'get_client')
     def test_update_port_bindings_for_instance_with_resource_req_unshelve(
             self, get_client_mock):
@@ -4785,6 +4886,10 @@ class TestAPI(TestAPIBase):
                       'binding:profile': {'allocation': uuids.dest_compute_rp},
                       'binding:host_id': 'new-host'}})
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_resource_req_no_mapping(
             self, get_client_mock):
@@ -4811,6 +4916,10 @@ class TestAPI(TestAPIBase):
             "are required for ports with a resource request.",
             str(ex))
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_resource_req_live_mig(
             self, get_client_mock):
@@ -6620,27 +6729,34 @@ class TestAPI(TestAPIBase):
         ]}
         mock_client.list_ports.return_value = ports
 
-        request_groups = self.api.get_requested_resource_for_instance(
-            self.context, uuids.inst1)
+        request_groups, req_lvl_params = (
+            self.api.get_requested_resource_for_instance(
+                self.context, uuids.inst1)
+        )
 
         mock_client.list_ports.assert_called_with(
             device_id=uuids.inst1, fields=['id', 'resource_request'])
         self.assertEqual([], request_groups)
+        self.assertEqual([], req_lvl_params.same_subtree)
 
     @mock.patch('nova.network.neutron.get_client')
     def test_get_requested_resource_for_instance_no_ports(
-            self, mock_get_client):
+        self, mock_get_client
+    ):
         mock_client = mock_get_client.return_value
 
         ports = {'ports': []}
         mock_client.list_ports.return_value = ports
 
-        request_groups = self.api.get_requested_resource_for_instance(
-            self.context, uuids.inst1)
+        request_groups, req_lvl_params = (
+            self.api.get_requested_resource_for_instance(
+                self.context, uuids.inst1)
+        )
 
         mock_client.list_ports.assert_called_with(
             device_id=uuids.inst1, fields=['id', 'resource_request'])
         self.assertEqual([], request_groups)
+        self.assertEqual([], req_lvl_params.same_subtree)
 
     @mock.patch('nova.network.neutron.get_client')
     def test_get_requested_resource_for_instance_with_multiple_ports(
@@ -6662,8 +6778,10 @@ class TestAPI(TestAPIBase):
         ]}
         mock_client.list_ports.return_value = ports
 
-        request_groups = self.api.get_requested_resource_for_instance(
-            self.context, uuids.inst1)
+        request_groups, req_lvl_params = (
+            self.api.get_requested_resource_for_instance(
+                self.context, uuids.inst1)
+        )
 
         mock_client.list_ports.assert_called_with(
             device_id=uuids.inst1, fields=['id', 'resource_request'])
@@ -6674,8 +6792,96 @@ class TestAPI(TestAPIBase):
         self.assertEqual(
             uuids.port1,
             request_groups[0].requester_id)
+        self.assertEqual([], req_lvl_params.same_subtree)
 
         mock_get_client.assert_called_once_with(self.context, admin=True)
+
+    @mock.patch(
+        "nova.network.neutron.API.has_extended_resource_request_extension",
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch('nova.network.neutron.get_client')
+    def test_get_requested_resource_for_instance_with_multiple_ports_extended(
+            self, mock_get_client):
+        mock_client = mock_get_client.return_value
+
+        ports = {'ports': [
+            {
+                'id': uuids.port1,
+                'device_id': uuids.isnt1,
+                'resource_request': {
+                    'request_groups': [
+                        {
+                            'id': uuids.group1,
+                            'resources': {
+                                'NET_BW_EGR_KILOBIT_PER_SEC': 10000
+                            }
+                        },
+                        {
+                            'id': uuids.group2,
+                            'resources': {
+                                'NET_KILOPACKET_PER_SEC': 100
+                            }
+                        }
+                    ],
+                    'same_subtree': [uuids.group1, uuids.group2],
+                }
+            },
+            {
+                'id': uuids.port2,
+                'device_id': uuids.isnt1,
+                'resource_request': {
+                    'request_groups': [
+                        {
+                            'id': uuids.group3,
+                            'resources': {
+                                'NET_BW_EGR_KILOBIT_PER_SEC': 20000
+                            }
+                        },
+                    ],
+                    'same_subtree': [uuids.group3],
+                }
+            },
+            {
+                'id': uuids.port3,
+                'device_id': uuids.isnt1,
+                'resource_request': {}
+            },
+        ]}
+        mock_client.list_ports.return_value = ports
+
+        request_groups, req_lvl_params = (
+            self.api.get_requested_resource_for_instance(
+                self.context, uuids.inst1)
+        )
+
+        mock_client.list_ports.assert_called_with(
+            device_id=uuids.inst1, fields=['id', 'resource_request'])
+        self.assertEqual(3, len(request_groups))
+        self.assertEqual(
+            {'NET_BW_EGR_KILOBIT_PER_SEC': 10000},
+            request_groups[0].resources)
+        self.assertEqual(
+            uuids.group1,
+            request_groups[0].requester_id)
+        self.assertEqual(
+            {'NET_KILOPACKET_PER_SEC': 100},
+            request_groups[1].resources)
+        self.assertEqual(
+            uuids.group2,
+            request_groups[1].requester_id)
+        self.assertEqual(
+            {'NET_BW_EGR_KILOBIT_PER_SEC': 20000},
+            request_groups[2].resources)
+        self.assertEqual(
+            uuids.group3,
+            request_groups[2].requester_id)
+
+        mock_get_client.assert_called_once_with(self.context, admin=True)
+        self.assertEqual(
+            [[uuids.group1, uuids.group2], [uuids.group3]],
+            req_lvl_params.same_subtree,
+        )
 
     def test_get_segment_ids_for_network_no_segment_ext(self):
         with mock.patch.object(
@@ -6874,6 +7080,92 @@ class TestAPI(TestAPIBase):
         }
         self.assertTrue(self.api._has_resource_request(
             self.context, port_new_res_req, neutron=None)
+        )
+
+    @mock.patch(
+        "nova.network.neutron.API.has_extended_resource_request_extension",
+        new=mock.Mock(return_value=False),
+    )
+    @mock.patch("neutronclient.v2_0.client.Client.show_port")
+    def test_get_binding_profile_allocation_no_request(self, mock_show_port):
+        mock_show_port.return_value = {
+            "port": {
+            }
+        }
+        self.assertIsNone(
+            self.api.get_binding_profile_allocation(
+                self.context, uuids.port_uuid, {}))
+
+    @mock.patch(
+        "nova.network.neutron.API.has_extended_resource_request_extension",
+        new=mock.Mock(return_value=False),
+    )
+    @mock.patch("neutronclient.v2_0.client.Client.show_port")
+    def test_get_binding_profile_allocation_legacy_request(
+        self, mock_show_port
+    ):
+        mock_show_port.return_value = {
+            "port": {
+                "id": uuids.port_uuid,
+                "resource_request": {
+                    "resources": {
+                        "CUSTOM_FOO": 123,
+                    }
+                },
+            }
+        }
+        self.assertEqual(
+            uuids.rp,
+            self.api.get_binding_profile_allocation(
+                self.context, uuids.port_uuid,
+                {
+                    uuids.port_uuid: [uuids.rp]
+                }
+            )
+        )
+
+    @mock.patch(
+        "nova.network.neutron.API.has_extended_resource_request_extension",
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch("neutronclient.v2_0.client.Client.show_port")
+    def test_get_binding_profile_allocation_extended_request(
+        self, mock_show_port
+    ):
+        mock_show_port.return_value = {
+            "port": {
+                "id": uuids.port_uuid,
+                "resource_request": {
+                    "request_groups": [
+                        {
+                            "id": uuids.group1,
+                            "resources": {
+                                "CUSTOM_FOO": 123,
+                            }
+                        },
+                        {
+                            "id": uuids.group2,
+                            "resources": {
+                                "CUSTOM_BAR": 321,
+                            }
+                        },
+                    ],
+                },
+            }
+        }
+        self.assertEqual(
+            {
+                uuids.group1: uuids.rp1,
+                uuids.group2: uuids.rp2,
+            },
+            self.api.get_binding_profile_allocation(
+                self.context, uuids.port_uuid,
+                {
+                    uuids.group1: [uuids.rp1],
+                    uuids.group2: [uuids.rp2],
+                    uuids.non_port_related_group: [uuids.rp3],
+                }
+            )
         )
 
 

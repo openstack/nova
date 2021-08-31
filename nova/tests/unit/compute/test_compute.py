@@ -12035,6 +12035,21 @@ class ComputeAPITestCase(BaseTestCase):
                 host='fake_dest_host', on_shared_storage=True,
                 admin_password=None)
 
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        new=mock.Mock(return_value=58),
+    )
+    @mock.patch(
+        'nova.network.neutron.API.instance_has_extended_resource_request',
+        new=mock.Mock(return_value=True),
+    )
+    def test_evacuate_with_extended_resource_request_old_compute(self):
+        instance = self._create_fake_instance_obj(services=True)
+        self.assertRaises(exception.ExtendedResourceRequestOldCompute,
+            self.compute_api.evacuate, self.context.elevated(), instance,
+            host='fake_dest_host', on_shared_storage=True,
+            admin_password=None)
+
     @mock.patch('nova.objects.MigrationList.get_by_filters')
     def test_get_migrations(self, mock_migration):
         migration = test_migration.fake_db_migration()

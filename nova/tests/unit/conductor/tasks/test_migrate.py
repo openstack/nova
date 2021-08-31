@@ -98,7 +98,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         gbf_mock.return_value = objects.MigrationList()
         mock_get_resources = \
             self.mock_network_api.get_requested_resource_for_instance
-        mock_get_resources.return_value = []
+        mock_get_resources.return_value = ([], objects.RequestLevelParams())
 
         if requested_destination:
             self.request_spec.requested_destination = objects.Destination(
@@ -182,6 +182,10 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         mock_get_resources.assert_called_once_with(
             self.context, self.instance.uuid)
         self.assertEqual([], self.request_spec.requested_resources)
+        self.assertEqual(
+            mock_get_resources.return_value[1],
+            self.request_spec.request_level_params,
+        )
 
     def test_execute(self):
         self._test_execute()
@@ -222,7 +226,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         mock_gbf.return_value = objects.MigrationList()
         mock_get_resources = \
             self.mock_network_api.get_requested_resource_for_instance
-        mock_get_resources.return_value = []
+        mock_get_resources.return_value = ([], objects.RequestLevelParams())
 
         # We just need this hook point to set a uuid on the
         # migration before we use it for teardown

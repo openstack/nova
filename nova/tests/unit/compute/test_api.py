@@ -86,6 +86,14 @@ class _ComputeAPIUnitTestMixIn(object):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
 
+        self.useFixture(
+            fixtures.MonkeyPatch(
+                'nova.network.neutron.API.'
+                'instance_has_extended_resource_request',
+                mock.Mock(return_value=False),
+            )
+        )
+
     def _get_vm_states(self, exclude_states=None):
         vm_state = set([vm_states.ACTIVE, vm_states.BUILDING, vm_states.PAUSED,
                     vm_states.SUSPENDED, vm_states.RESCUED, vm_states.STOPPED,
@@ -1762,7 +1770,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch('nova.virt.hardware.numa_get_constraints')
     @mock.patch('nova.network.neutron.API.get_requested_resource_for_instance',
-                return_value=[])
+                return_value=([], objects.RequestLevelParams()))
     @mock.patch('nova.availability_zones.get_host_availability_zone',
                 return_value='nova')
     @mock.patch('nova.objects.Quotas.check_deltas')
@@ -1854,6 +1862,9 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual(
                 [],
                 mock_get_reqspec.return_value.requested_resources)
+            self.assertEqual(
+                mock_get_requested_resources.return_value[1],
+                mock_get_reqspec.return_value.request_level_params)
 
     def test_revert_resize(self):
         self._test_revert_resize(same_flavor=False)
@@ -2188,6 +2199,27 @@ class _ComputeAPIUnitTestMixIn(object):
             exception.ForbiddenWithAccelerators,
             self.compute_api.resize,
             self.context, fake_inst, flavor_id=new_flavor.flavorid)
+
+    @mock.patch(
+        'nova.compute.api.API.get_instance_host_status',
+        new=mock.Mock(return_value=fields_obj.HostStatus.UP)
+    )
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        new=mock.Mock(return_value=58),
+    )
+    @mock.patch(
+        'nova.network.neutron.API.instance_has_extended_resource_request',
+        new=mock.Mock(return_value=True),
+    )
+    def test_resize_with_extended_resource_request_old_compute(self):
+        fake_inst = self._create_instance_obj()
+
+        self.assertRaises(
+            exception.ExtendedResourceRequestOldCompute,
+            self.compute_api.resize,
+            self.context, fake_inst, flavor_id=uuids.new_falvor
+        )
 
     def _test_migrate(self, *args, **kwargs):
         self._test_resize(*args, flavor_id_passed=False, **kwargs)
@@ -2617,6 +2649,23 @@ class _ComputeAPIUnitTestMixIn(object):
                           block_migration='auto',
                           disk_over_commit=False)
         self.assertIsNone(instance.task_state)
+
+    @mock.patch(
+        'nova.objects.service.get_minimum_version_all_cells',
+        new=mock.Mock(return_value=58),
+    )
+    @mock.patch(
+        'nova.network.neutron.API.instance_has_extended_resource_request',
+        new=mock.Mock(return_value=True),
+    )
+    def test_live_migrate_with_extended_resource_request_old_compute(self):
+        instance = self._create_instance_obj()
+        self.assertRaises(
+            exception.ExtendedResourceRequestOldCompute,
+            self.compute_api.live_migrate, self.context, instance,
+            host_name='fake_host', block_migration='auto',
+            disk_over_commit=False
+        )
 
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
@@ -7706,8 +7755,10 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         mock_get_min_ver.assert_called_once_with(
             self.context, ['nova-compute'])
 
-    @mock.patch('nova.network.neutron.API.get_requested_resource_for_instance',
-                return_value=[objects.RequestGroup()])
+    @mock.patch(
+        'nova.network.neutron.API.get_requested_resource_for_instance',
+        return_value=([objects.RequestGroup()], objects.RequestLevelParams())
+    )
     @mock.patch('nova.objects.service.get_minimum_version_all_cells',
                 return_value=compute_api.MIN_COMPUTE_CROSS_CELL_RESIZE)
     def test_allow_cross_cell_resize_false_port_with_resource_req(
@@ -7726,8 +7777,10 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self.context, ['nova-compute'])
         mock_get_res_req.assert_called_once_with(self.context, uuids.instance)
 
-    @mock.patch('nova.network.neutron.API.get_requested_resource_for_instance',
-                return_value=[])
+    @mock.patch(
+        'nova.network.neutron.API.get_requested_resource_for_instance',
+        return_value=([], objects.RequestLevelParams())
+    )
     @mock.patch('nova.objects.service.get_minimum_version_all_cells',
                 return_value=compute_api.MIN_COMPUTE_CROSS_CELL_RESIZE)
     def test_allow_cross_cell_resize_true(
