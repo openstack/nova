@@ -52,6 +52,7 @@ If the ``group_policy`` is missing from the flavor then the server create
 request will fail with 'No valid host was found' and a warning describing the
 missing policy will be logged.
 
+
 Virt driver support
 ~~~~~~~~~~~~~~~~~~~
 
@@ -63,3 +64,27 @@ If the virt driver on the compute host does not support the needed capability
 then the PCI claim will fail on the host and re-schedule will be triggered. It
 is suggested not to configure bandwidth inventory in the neutron agents on
 these compute hosts to avoid unnecessary reschedule.
+
+
+Extended resource request
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Since neutron 19.0.0 (Xena), neutron implements an extended resource request
+format via the the ``port-resource-request-groups`` neutron API extension. As
+of nova 24.0.0 (Xena), Nova does not support the new extension. If the
+extension is enabled in neutron, then nova will reject server create and move
+operations, as well as interface attach operation. Admins should not enable
+this API extension in neutron.
+
+The extended resource request allows a single Neutron port to request
+resources in more than one request groups. This also means that using just one
+port in a server create request would require a group policy to be provided
+in the flavor. Today the only case when a single port generates more than one
+request groups is when that port has QoS policy with both minimum bandwidth
+and minimum packet rate rules. Due to the placement resource model of these
+features in this case the two request groups will always be fulfilled from
+separate resource providers and therefore neither the ``group_policy=none``
+nor the ``group_policy=isolate`` flavor extra specs will result in any
+additional restriction on the placement of the resources. In the multi port
+case the Resource Group policy section above still applies.
+

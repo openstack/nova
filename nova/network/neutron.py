@@ -2001,6 +2001,15 @@ class API:
         return (vnic_type, trusted, network_id, resource_request,
             numa_policy, device_profile)
 
+    def support_create_with_resource_request(self, context):
+        """Returns false if neutron is configured with extended resource
+        request which is not currently supported.
+
+        This function is only here temporarily to help mocking this check in
+        the functional test environment.
+        """
+        return not (self._has_extended_resource_request_extension(context))
+
     def create_resource_requests(
             self, context, requested_networks, pci_requests=None,
             affinity_policy=None):
@@ -2015,7 +2024,8 @@ class API:
         :type pci_requests: nova.objects.InstancePCIRequests
         :param affinity_policy: requested pci numa affinity policy
         :type affinity_policy: nova.objects.fields.PCINUMAAffinityPolicy
-
+        :raises ExtendedResourceRequestNotSupported: if the
+            extended-resource-request Neutron API extension is enabled.
         :returns: A tuple with an instance of ``objects.NetworkMetadata`` for
                   use by the scheduler or None and a list of RequestGroup
                   objects representing the resource needs of each requested
@@ -2023,6 +2033,9 @@ class API:
         """
         if not requested_networks or requested_networks.no_allocate:
             return None, []
+
+        if not self.support_create_with_resource_request(context):
+            raise exception.ExtendedResourceRequestNotSupported()
 
         physnets = set()
         tunneled = False

@@ -39,5 +39,15 @@ servers with neutron ports having resource requests.
 As of 23.0.0 (Wallaby), nova supports attaching neutron ports having QoS
 minimum bandwidth rules.
 
+Extended resource request
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Since neutron 19.0.0 (Xena), neutron implements an extended resource request
+format via the the ``port-resource-request-groups`` neutron API extension. As
+of nova 24.0.0 (Xena), nova does not support the new extension. If the
+extension is enabled in neutron, then nova will reject server create and move
+operations, as well as interface attach operation. Admins should not enable
+this API extension in neutron.
+
 See :nova-doc:`the admin guide <admin/port_with_resource_request.html>` for
 administrative details.
