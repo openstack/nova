@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    Nova now requires that the Placement API supports at least
+    microversion 1.36, added in Train. The related nova-upgrade
+    check has been modified to warn if this prerequisite is not
+    fulfilled.

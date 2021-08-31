@@ -148,6 +148,10 @@ Upgrade
   * Checks for computes older than the previous major release
   * Checks for any instances without ``hw_machine_type`` set.
 
+  **24.0.0 (Xena)**
+
+  *  Checks for the Placement API are modified to require version 1.36.
+
 See Also
 ========
 

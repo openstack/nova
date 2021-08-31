@@ -49,12 +49,12 @@ from nova.volume import cinder
 
 CONF = nova.conf.CONF
 
-# NOTE(efried): 1.35 is required by nova-scheduler to support the root_required
-# queryparam to make GET /allocation_candidates require that a trait be present
-# on the root provider, irrespective of how the request groups are specified.
+# NOTE(gibi): 1.36 is required by nova-scheduler to support the same_subtree
+# queryparam to make GET /allocation_candidates require that a list of request
+# groups are satisfied from the same provider subtree.
 # NOTE: If you bump this version, remember to update the history
 # section in the nova-status man page (doc/source/cli/nova-status).
-MIN_PLACEMENT_MICROVERSION = "1.35"
+MIN_PLACEMENT_MICROVERSION = "1.36"
 
 # NOTE(mriedem): 3.44 is needed to work with volume attachment records which
 # are required for supporting multi-attach capable volumes.
