@@ -506,6 +506,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # We default to not support vGPUs unless the configuration is set.
         self.pgpu_type_mapping = collections.defaultdict(str)
+        # This dict is for knowing which mdev class is supported by a specific
+        # PCI device like we do (the key being the PCI address and the value
+        # the mdev class)
+        self.mdev_class_mapping: ty.Dict[str, str] = (
+            collections.defaultdict(lambda: orc.VGPU)
+        )
+        # This set is for knowing all the mdev classes the operator provides
+        self.mdev_classes = set([])
         self.supported_vgpu_types = self._get_supported_vgpu_types()
 
         # Handles ongoing device manipultion in libvirt where we wait for the
@@ -7423,12 +7431,19 @@ class LibvirtDriver(driver.ComputeDriver):
                            "'%(ftype)s' will be used." % {'type': vgpu_type,
                                                          'ftype': first_type})
                     LOG.warning(msg)
-                # We need to reset the mapping table that we started to provide
-                # keys and values from previously processed vGPUs but since
-                # there is a problem for this vGPU type, we only want to
+                # We need to reset the mapping tables that we started to
+                # provide keys and values from previously processed vGPUs but
+                # since there is a problem for this vGPU type, we only want to
                 # support only the first type.
                 self.pgpu_type_mapping.clear()
+                self.mdev_class_mapping.clear()
+                # Given we only have one type, we default to only support the
+                # VGPU resource class.
+                self.mdev_classes = {orc.VGPU}
                 return [first_type]
+            # TODO(sbauza): Directly use the mdev_class option once we add the
+            # new configuration option.
+            mdev_class = getattr(group, 'mdev_class', orc.VGPU)
             for device_address in group.device_addresses:
                 if device_address in self.pgpu_type_mapping:
                     raise exception.InvalidLibvirtMdevConfig(
@@ -7443,7 +7458,31 @@ class LibvirtDriver(driver.ComputeDriver):
                         reason="incorrect PCI address: %s" % device_address
                     )
                 self.pgpu_type_mapping[device_address] = vgpu_type
+                self.mdev_class_mapping[device_address] = mdev_class
+                self.mdev_classes.add(mdev_class)
         return CONF.devices.enabled_mdev_types
+
+    @staticmethod
+    def _get_pci_id_from_libvirt_name(
+            libvirt_address: str
+        ) -> ty.Optional[str]:
+        """Returns a PCI ID from a libvirt pci address name.
+
+        :param libvirt_address: the libvirt PCI device name,
+                                eg.'pci_0000_84_00_0'
+        """
+        try:
+            device_address = "{}:{}:{}.{}".format(
+                *libvirt_address[4:].split('_'))
+            # Validates whether it's a PCI ID...
+            pci_utils.parse_address(device_address)
+        # .format() can return IndexError
+        except (exception.PciDeviceWrongAddressFormat, IndexError):
+            # this is not a valid PCI address
+            LOG.warning("The PCI address %s was invalid for getting the "
+                        "related mdev type", libvirt_address)
+            return None
+        return device_address
 
     def _get_vgpu_type_per_pgpu(self, device_address):
         """Provides the vGPU type the pGPU supports.
@@ -7459,17 +7498,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # The operator wanted to only support one single type so we can
             # blindly return it for every single pGPU
             return self.supported_vgpu_types[0]
-        # The libvirt name is like 'pci_0000_84_00_0'
-        try:
-            device_address = "{}:{}:{}.{}".format(
-                *device_address[4:].split('_'))
-            # Validates whether it's a PCI ID...
-            pci_utils.parse_address(device_address)
-        # .format() can return IndexError
-        except (exception.PciDeviceWrongAddressFormat, IndexError):
-            # this is not a valid PCI address
-            LOG.warning("The PCI address %s was invalid for getting the "
-                        "related mdev type", device_address)
+        device_address = self._get_pci_id_from_libvirt_name(device_address)
+        if not device_address:
             return
         try:
             return self.pgpu_type_mapping.get(device_address)
@@ -7480,6 +7510,24 @@ class LibvirtDriver(driver.ComputeDriver):
             # because we prefer the callers to return the existing exceptions
             # in case we can't find a specific pGPU
             return
+
+    def _get_resource_class_for_device(self, device_address):
+        """Returns the resource class for the inventory of this device.
+
+        :param device_address: the libvirt PCI device name,
+                               eg.'pci_0000_84_00_0'
+        """
+
+        device_address = self._get_pci_id_from_libvirt_name(device_address)
+        if not device_address:
+            # By default, we should always support VGPU as the standard RC
+            return orc.VGPU
+        # Remember, this is a defaultdict with orc.VGPU as the default RC
+        mdev_class = self.mdev_class_mapping[device_address]
+        return mdev_class
+
+    def _get_supported_mdev_resource_classes(self):
+        return self.mdev_classes
 
     def _count_mediated_devices(self, enabled_mdev_types):
         """Counts the sysfs objects (handles) that represent a mediated device

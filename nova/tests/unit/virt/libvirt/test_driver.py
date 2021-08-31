@@ -25384,8 +25384,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.flags(enabled_mdev_types=['nvidia-11'], group='devices')
         self.assertEqual(['nvidia-11'], drvr._get_supported_vgpu_types())
         # Given we only support one vGPU type, we don't have any map for PCI
-        # devices *yet*
+        # devices or mdev classes *yet*
         self.assertEqual({}, drvr.pgpu_type_mapping)
+        self.assertEqual({}, drvr.mdev_class_mapping)
+        # Remember, we only support the VGPU resource class if we only have
+        # one needed vGPU type.
+        self.assertEqual({orc.VGPU}, drvr.mdev_classes)
         # Since the operator wanted to only support one type, it's fine to not
         # provide config groups
         mock_warning.assert_not_called()
@@ -25401,6 +25405,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
         self.assertEqual(['nvidia-11'], drvr._get_supported_vgpu_types())
         self.assertEqual({}, drvr.pgpu_type_mapping)
+        self.assertEqual({}, drvr.mdev_class_mapping)
+        # Here we only support one vGPU type
+        self.assertEqual({orc.VGPU}, drvr.mdev_classes)
         msg = ("The mdev type '%(type)s' was listed in '[devices] "
                "enabled_mdev_types' but no corresponding "
                "'[mdev_%(type)s]' group or "
@@ -25419,6 +25426,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                          drvr._get_supported_vgpu_types())
         self.assertEqual({'0000:84:00.0': 'nvidia-11',
                           '0000:85:00.0': 'nvidia-12'}, drvr.pgpu_type_mapping)
+        self.assertEqual({'0000:84:00.0': 'VGPU',
+                          '0000:85:00.0': 'VGPU'},
+                          drvr.mdev_class_mapping)
+        self.assertEqual({orc.VGPU}, drvr.mdev_classes)
         mock_warning.assert_not_called()
 
     def test_get_supported_vgpu_types_with_duplicate_types(self):
@@ -25504,6 +25515,57 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         # 0000:86:00.0 wasn't configured
         self.assertIsNone(drvr._get_vgpu_type_per_pgpu('pci_0000_86_00_0'))
+
+    def test_get_resource_class_for_device(self):
+        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
+                   group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
+        self.flags(device_addresses=['0000:85:00.0'], group='mdev_nvidia-12')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual(
+            orc.VGPU,
+            drvr._get_resource_class_for_device('pci_0000_84_00_0'))
+
+    def test_get_resource_class_for_device_with_incorrect_pci_addr(self):
+        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
+                   group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
+        self.flags(device_addresses=['0000:85:00.0'], group='mdev_nvidia-12')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # 'whoops' is not a correct libvirt name corresponding to a PCI address
+        self.assertEqual(
+            orc.VGPU, drvr._get_resource_class_for_device('whoops'))
+
+    def test_get_resource_class_for_device_with_unconfigured_pgpu(self):
+        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
+                   group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
+        self.flags(device_addresses=['0000:85:00.0'], group='mdev_nvidia-12')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # 0000:86:00.0 wasn't configured but we default to orc.VGPU
+        self.assertEqual(
+            orc.VGPU, drvr._get_resource_class_for_device('pci_0000_86_00_0'))
+
+    def test_get_supported_mdev_resource_classes(self):
+        self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
+                   group='devices')
+        # we need to call the below again to ensure the updated
+        # 'device_addresses' value is read and the new groups created
+        nova.conf.devices.register_dynamic_opts(CONF)
+        self.flags(device_addresses=['0000:84:00.0'], group='mdev_nvidia-11')
+        self.flags(device_addresses=['0000:85:00.0'], group='mdev_nvidia-12')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual({orc.VGPU},
+                         drvr._get_supported_mdev_resource_classes())
 
     @mock.patch.object(host.Host, 'device_lookup_by_name')
     @mock.patch.object(host.Host, 'list_mdev_capable_devices')
