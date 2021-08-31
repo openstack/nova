@@ -29,6 +29,7 @@ MIGRATING_ATTR = 'migrating_to'
 L3_NETWORK_TYPES = ['vxlan', 'gre', 'geneve']
 ALLOCATION = 'allocation'
 RESOURCE_REQUEST = 'resource_request'
+REQUEST_GROUPS = 'request_groups'
 SEGMENT = 'Segment'
 NUMA_POLICY = 'numa_affinity_policy'
 RESOURCE_REQUEST_GROUPS_EXTENSION = "Port Resource Request Groups"
