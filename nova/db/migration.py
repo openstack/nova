@@ -128,10 +128,15 @@ def db_sync(version=None, database='main', context=None):
 
     repository = _find_migrate_repo(database)
     config = _find_alembic_conf(database)
-    # discard the URL encoded in alembic.ini in favour of the URL configured
-    # for the engine by the database fixtures, casting from
-    # 'sqlalchemy.engine.url.URL' to str in the process
-    config.set_main_option('sqlalchemy.url', str(engine.url))
+    # discard the URL stored in alembic.ini in favour of the URL configured
+    # for the engine, casting from 'sqlalchemy.engine.url.URL' to str in the
+    # process
+    # NOTE(sean-k-mooney): the engine has already url encoded the connection
+    # string using a mix of url encode styles for different parts of the url.
+    # since we are updating the alembic config parser instance we need to
+    # escape '%' to '%%' to account for ConfigParser's string interpolation.
+    url = str(engine.url).replace('%', '%%')
+    config.set_main_option('sqlalchemy.url', url)
 
     # if we're in a deployment where sqlalchemy-migrate is already present,
     # then apply all the updates for that and fake apply the initial alembic

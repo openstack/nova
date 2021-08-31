@@ -12,17 +12,53 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import urllib
+
+import fixtures
+import mock
+
 from alembic import command as alembic_api
 from alembic.runtime import migration as alembic_migration
 from migrate import exceptions as migrate_exceptions
 from migrate.versioning import api as migrate_api
-import mock
+
+from oslo_db.sqlalchemy import enginefacade
 
 from nova.db.api import api as api_db_api
 from nova.db.main import api as main_db_api
 from nova.db import migration
 from nova import exception
 from nova import test
+
+
+class TestDBURL(test.NoDBTestCase):
+
+    def test_db_sync_with_special_symbols_in_connection_string(self):
+        qargs = 'read_default_group=data with/a+percent_%-and%20symbols!'
+        url = f"sqlite:///:memory:?{qargs}"
+        self.flags(connection=url, group='database')
+        # since the engine.url is immutable it will never get updated
+        # once its created so reusing the engine instance would break
+        # this test.
+        engine = enginefacade.writer.get_engine()
+        self.useFixture(
+            fixtures.MonkeyPatch(
+                'nova.db.migration._get_engine',
+                mock.Mock(return_value=engine)))
+        alembic_config = migration._find_alembic_conf()
+        with mock.patch.object(
+                migration, '_find_alembic_conf', return_value=alembic_config):
+            migration.db_sync()
+        actual = alembic_config.get_main_option('sqlalchemy.url')
+        expected = (
+            "sqlite:///:memory:?read_default_group=data+with%2Fa"
+            "+percent_%25-and+symbols%21"
+        )
+        self.assertEqual(expected, actual)
+        self.assertEqual(
+            urllib.parse.unquote_plus(url),
+            urllib.parse.unquote_plus(actual)
+        )
 
 
 class TestDBSync(test.NoDBTestCase):
@@ -50,6 +86,13 @@ class TestDBSync(test.NoDBTestCase):
         mock_find_conf, mock_is_migrate, mock_is_alembic, mock_init,
         mock_upgrade,
     ):
+
+        # return an encoded URL to mimic sqlalchemy
+        mock_get_engine.return_value.url = (
+           'mysql+pymysql://nova:pass@192.168.24.3/nova?'
+           'read_default_file=%2Fetc%2Fmy.cnf.d%2Fnova.cnf'
+           '&read_default_group=nova'
+       )
         mock_is_migrate.return_value = has_migrate
         mock_is_alembic.return_value = has_alembic
 
@@ -59,7 +102,10 @@ class TestDBSync(test.NoDBTestCase):
         mock_find_repo.assert_called_once_with('main')
         mock_find_conf.assert_called_once_with('main')
         mock_find_conf.return_value.set_main_option.assert_called_once_with(
-            'sqlalchemy.url', str(mock_get_engine.return_value.url),
+            'sqlalchemy.url',
+            'mysql+pymysql://nova:pass@192.168.24.3/nova?'  # ...
+            'read_default_file=%%2Fetc%%2Fmy.cnf.d%%2Fnova.cnf'  # ...
+            '&read_default_group=nova'
         )
         mock_is_migrate.assert_called_once_with(
             mock_get_engine.return_value, mock_find_repo.return_value)
