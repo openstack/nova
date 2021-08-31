@@ -513,10 +513,15 @@ class PortResourceRequestBasedSchedulingTestBase(
         current_flavor = (new_flavor if new_flavor else flavor)
 
         # We expect one set of allocations for the compute resources on the
-        # compute rp and two sets for the networking resources one on the ovs
-        # bridge rp due to the qos_port resource request and one one the
-        # sriov pf2 due to qos_sriov_port resource request
-        self.assertEqual(3, len(allocations))
+        # compute rp plus the allocations due to the ports having resource
+        # requests
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                updated_non_qos_port,
+                updated_qos_port,
+                updated_qos_sriov_port
+            ),
+            len(allocations))
         self.assertComputeAllocationMatchesFlavor(
             allocations, compute_rp_uuid, current_flavor)
         self.assertPortMatchesAllocation(
@@ -524,29 +529,27 @@ class PortResourceRequestBasedSchedulingTestBase(
         self.assertPortMatchesAllocation(
             updated_qos_sriov_port, allocations, compute_rp_uuid)
 
-        # We expect that only the RP uuid of the networking RP having the port
-        # allocation is sent in the port binding for the port having resource
-        # request
-        qos_binding_profile = updated_qos_port['binding:profile']
-        self.assertEqual(self.ovs_bridge_rp_per_host[compute_rp_uuid],
-                         qos_binding_profile['allocation'])
-        qos_sriov_binding_profile = updated_qos_sriov_port['binding:profile']
-        self.assertEqual(self.sriov_dev_rp_per_host[compute_rp_uuid][self.PF2],
-                         qos_sriov_binding_profile['allocation'])
-
-        # And we expect not to have any allocation set in the port binding for
-        # the port that doesn't have resource request
-        self.assertEqual({}, updated_non_qos_port['binding:profile'])
+        self._assert_port_binding_profile_allocation(
+            updated_qos_port, compute_rp_uuid)
+        self._assert_port_binding_profile_allocation(
+            updated_qos_sriov_port, compute_rp_uuid)
+        self._assert_port_binding_profile_allocation(
+            updated_non_qos_port, compute_rp_uuid)
 
         if migration_uuid:
             migration_allocations = self.placement.get(
                 '/allocations/%s' % migration_uuid).body['allocations']
 
             # We expect one set of allocations for the compute resources on the
-            # compute rp and two sets for the networking resources one on the
-            # ovs bridge rp due to the qos_port resource request and one one
-            # the sriov pf2 due to qos_sriov_port resource request
-            self.assertEqual(3, len(migration_allocations))
+            # compute rp plus the allocations due to the ports having resource
+            # requests
+            self.assertEqual(
+                1 + self._get_number_of_expected_allocations_for_ports(
+                    updated_non_qos_port,
+                    updated_qos_port,
+                    updated_qos_sriov_port
+                ),
+                len(allocations))
             self.assertComputeAllocationMatchesFlavor(
                 migration_allocations, source_compute_rp_uuid, flavor)
             self.assertPortMatchesAllocation(
@@ -593,6 +596,32 @@ class PortResourceRequestBasedSchedulingTestBase(
         self.assertEqual(
             device_name,
             pci_requests.requests[0].spec[0]['parent_ifname'])
+
+    def _assert_port_binding_profile_allocation(self, port, compute_rp_uuid):
+        if port.get('resource_request', {}):
+            if port['binding:vnic_type'] == "normal":
+                # Normal ports are expected to have allocation on the OVS RP
+                expected_allocation = self.ovs_bridge_rp_per_host[
+                    compute_rp_uuid]
+            else:
+                # SRIOV ports are expected to have allocation on the PF2 RP
+                # see _create_sriov_networking_rp_tree() for details.
+                expected_allocation = self.sriov_dev_rp_per_host[
+                    compute_rp_uuid][self.PF2]
+            self.assertEqual(
+                expected_allocation,
+                port['binding:profile']['allocation'])
+        else:
+            # if no resource request then we expect no allocation key in the
+            # binding profile
+            self.assertNotIn(
+                'allocation', port['binding:profile'])
+
+    def _get_number_of_expected_allocations_for_ports(self, *ports):
+        # we expect one for each port that has resource request
+        return len(
+            [port for port in ports if port.get('resource_request')]
+        )
 
 
 class UnsupportedPortResourceRequestBasedSchedulingTest(
@@ -782,21 +811,19 @@ class PortResourceRequestBasedSchedulingTest(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
-        # compute rp and one set for the networking resources on the ovs bridge
-        # rp due to the qos_port resource request
-        self.assertEqual(2, len(allocations))
-
+        # compute rp plus the allocations due to the ports having resource
+        # requests
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                updated_qos_port, updated_non_qos_port),
+            len(allocations))
         self.assertComputeAllocationMatchesFlavor(
             allocations, self.compute1_rp_uuid, self.flavor)
         self.assertPortMatchesAllocation(
             updated_qos_port, allocations, self.compute1_rp_uuid)
 
-        # We expect that only the RP uuid of the networking RP having the port
-        # allocation is sent in the port binding for the port having resource
-        # request
-        qos_binding_profile = updated_qos_port['binding:profile']
-        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
-                         qos_binding_profile['allocation'])
+        self._assert_port_binding_profile_allocation(
+            updated_qos_port, self.compute1_rp_uuid)
 
         # And we expect not to have any allocation set in the port binding for
         # the port that doesn't have resource request
@@ -827,9 +854,12 @@ class PortResourceRequestBasedSchedulingTest(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
-        # compute rp and one set for the networking resources on the ovs bridge
-        # rp and on the sriov PF rp.
-        self.assertEqual(3, len(allocations))
+        # compute rp plus the allocations due to the ports having resource
+        # requests
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                ovs_port, sriov_port),
+            len(allocations))
 
         self.assertComputeAllocationMatchesFlavor(
             allocations, self.compute1_rp_uuid, self.flavor_with_group_policy)
@@ -839,16 +869,10 @@ class PortResourceRequestBasedSchedulingTest(
         self.assertPortMatchesAllocation(
             sriov_port, allocations, self.compute1_rp_uuid)
 
-        # We expect that only the RP uuid of the networking RP having the port
-        # allocation is sent in the port binding for the port having resource
-        # request
-        ovs_binding = ovs_port['binding:profile']
-        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
-                         ovs_binding['allocation'])
-        sriov_binding = sriov_port['binding:profile']
-        self.assertEqual(
-            self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
-            sriov_binding['allocation'])
+        self._assert_port_binding_profile_allocation(
+            ovs_port, self.compute1_rp_uuid)
+        self._assert_port_binding_profile_allocation(
+            sriov_port, self.compute1_rp_uuid)
 
     def test_interface_attach_with_resource_request(self):
         server = self._create_server(
@@ -877,21 +901,20 @@ class PortResourceRequestBasedSchedulingTest(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
-        # compute RP and one set for the networking resources on the OVS
-        # bridge RP.
-        self.assertEqual(2, len(allocations))
+        # compute rp plus the allocations due to the port having resource
+        # requests
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                ovs_port),
+            len(allocations))
 
         self.assertComputeAllocationMatchesFlavor(
             allocations, self.compute1_rp_uuid, self.flavor)
         self.assertPortMatchesAllocation(
             ovs_port, allocations, self.compute1_rp_uuid)
 
-        # We expect that only the RP uuid of the networking RP having the port
-        # allocation is sent in the port binding for the port having resource
-        # request
-        ovs_binding = ovs_port['binding:profile']
-        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
-                         ovs_binding['allocation'])
+        self._assert_port_binding_profile_allocation(
+            ovs_port, self.compute1_rp_uuid)
 
         # now attach an SRIOV port
         sriov_port = self.neutron.port_with_sriov_resource_request
@@ -908,9 +931,12 @@ class PortResourceRequestBasedSchedulingTest(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
-        # compute RP and one set each for the networking resources on the OVS
-        # bridge RP and on the SRIOV PF RP.
-        self.assertEqual(3, len(allocations))
+        # compute rp plus the allocations due to the ports having resource
+        # requests
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                ovs_port, sriov_port),
+            len(allocations))
 
         self.assertComputeAllocationMatchesFlavor(
             allocations, self.compute1_rp_uuid, self.flavor)
@@ -919,16 +945,10 @@ class PortResourceRequestBasedSchedulingTest(
         self.assertPortMatchesAllocation(
             sriov_port, allocations, self.compute1_rp_uuid)
 
-        # We expect that only the RP uuid of the networking RP having the port
-        # allocation is sent in the port binding for the port having resource
-        # request
-        ovs_binding = ovs_port['binding:profile']
-        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
-                         ovs_binding['allocation'])
-        sriov_binding = sriov_port['binding:profile']
-        self.assertEqual(
-            self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
-            sriov_binding['allocation'])
+        self._assert_port_binding_profile_allocation(
+            ovs_port, self.compute1_rp_uuid)
+        self._assert_port_binding_profile_allocation(
+            sriov_port, self.compute1_rp_uuid)
 
     def test_interface_attach_with_resource_request_no_candidates(self):
         server = self._create_server(
@@ -1123,7 +1143,10 @@ class PortResourceRequestBasedSchedulingTest(
             '/allocations/%s' % server['id']).body['allocations']
 
         # As the cleanup failed we leaked allocation in placement
-        self.assertEqual(2, len(allocations))
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                sriov_port),
+            len(allocations))
         self.assertComputeAllocationMatchesFlavor(
             allocations, self.compute1_rp_uuid, self.flavor)
 
@@ -1159,23 +1182,23 @@ class PortResourceRequestBasedSchedulingTest(
 
         allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
+
+        updated_port = self.neutron.show_port(port['id'])['port']
         # We expect one set of allocations for the compute resources on the
-        # compute rp and one set for the networking resources on the ovs bridge
-        # rp due to the port resource request
-        self.assertEqual(2, len(allocations))
+        # compute rp plus the allocations due to the port having resource
+        # requests
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                updated_port),
+            len(allocations))
 
         self.assertComputeAllocationMatchesFlavor(
             allocations, self.compute1_rp_uuid, self.flavor)
         self.assertPortMatchesAllocation(
-            port, allocations, self.compute1_rp_uuid)
+            updated_port, allocations, self.compute1_rp_uuid)
 
-        # We expect that only the RP uuid of the networking RP having the port
-        # allocation is sent in the port binding for the port having resource
-        # request
-        updated_port = self.neutron.show_port(port['id'])['port']
-        binding_profile = updated_port['binding:profile']
-        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
-                         binding_profile['allocation'])
+        self._assert_port_binding_profile_allocation(
+            updated_port, self.compute1_rp_uuid)
 
         self.api.detach_interface(
             server['id'], self.neutron.port_with_resource_request['id'])
@@ -1219,21 +1242,21 @@ class PortResourceRequestBasedSchedulingTest(
             '/allocations/%s' % server['id']).body['allocations']
         updated_port = self.neutron.show_port(port['id'])['port']
         # We expect one set of allocations for the compute resources on the
-        # compute rp and one set for the networking resources on the ovs bridge
-        # rp due to the port resource request
-        self.assertEqual(2, len(allocations))
+        # compute rp plus the allocations due to the port having resource
+        # requests
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                updated_port),
+            len(allocations))
+
         compute_allocations = allocations[self.compute1_rp_uuid]['resources']
         self.assertEqual(self._resources_from_flavor(self.flavor),
                          compute_allocations)
         self.assertPortMatchesAllocation(
             updated_port, allocations, self.compute1_rp_uuid)
 
-        # We expect that only the RP uuid of the networking RP having the port
-        # allocation is sent in the port binding for the port having resource
-        # request
-        binding_profile = updated_port['binding:profile']
-        self.assertEqual(self.ovs_bridge_rp_per_host[self.compute1_rp_uuid],
-                         binding_profile['allocation'])
+        self._assert_port_binding_profile_allocation(
+            updated_port, self.compute1_rp_uuid)
 
         # neutron is faked in the functional test so this test just sends in
         # a os-server-external-events notification to trigger the
@@ -1267,7 +1290,11 @@ class PortResourceRequestBasedSchedulingTest(
 
         # Nova leaks the port allocation so the server still has the same
         # allocation before the port delete.
-        self.assertEqual(2, len(allocations))
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                updated_port),
+            len(allocations))
+
         compute_allocations = allocations[self.compute1_rp_uuid]['resources']
 
         self.assertEqual(self._resources_from_flavor(self.flavor),
@@ -1319,35 +1346,34 @@ class PortResourceRequestBasedSchedulingTest(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
-        # compute rp and one set for the networking resources on the sriov PF2
-        # rp.
-        self.assertEqual(2, len(allocations))
+        # compute rp plus the allocations due to the port having resource
+        # requests
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                sriov_port, sriov_port_with_res_req),
+            len(allocations))
 
         self.assertComputeAllocationMatchesFlavor(
             allocations, self.compute1_rp_uuid, self.flavor_with_group_policy)
         self.assertPortMatchesAllocation(
             sriov_port_with_res_req, allocations, self.compute1_rp_uuid)
 
-        # We expect that only the RP uuid of the networking RP having the port
-        # allocation is sent in the port binding for the port having resource
-        # request
-        sriov_with_req_binding = sriov_port_with_res_req['binding:profile']
-        self.assertEqual(
-            self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
-            sriov_with_req_binding['allocation'])
-        # and the port without resource request does not have allocation
-        sriov_binding = sriov_port['binding:profile']
-        self.assertNotIn('allocation', sriov_binding)
+        self._assert_port_binding_profile_allocation(
+            sriov_port_with_res_req, self.compute1_rp_uuid)
+        self._assert_port_binding_profile_allocation(
+            sriov_port, self.compute1_rp_uuid)
 
         # We expect that the selected PCI device matches with the RP from
         # where the bandwidth is allocated from. The bandwidth is allocated
         # from 0000:02:00 (PF2) so the PCI device should be a VF of that PF
+        sriov_with_req_binding = sriov_port_with_res_req['binding:profile']
         self.assertEqual(
             fake.FakeDriverWithPciResources.PCI_ADDR_PF2_VF1,
             sriov_with_req_binding['pci_slot'])
         # But also the port that has no resource request still gets a pci slot
         # allocated. The 0000:02:00 has no more VF available but 0000:03:00 has
         # one VF available and that PF is also on physnet2
+        sriov_binding = sriov_port['binding:profile']
         self.assertEqual(
             fake.FakeDriverWithPciResources.PCI_ADDR_PF3_VF1,
             sriov_binding['pci_slot'])
@@ -1412,26 +1438,24 @@ class PortResourceRequestBasedSchedulingTest(
             '/allocations/%s' % server['id']).body['allocations']
 
         # We expect one set of allocations for the compute resources on the
-        # compute rp and one set for the networking resources on the sriov PF2
-        # rp.
-        self.assertEqual(2, len(allocations))
+        # compute rp plus the allocations due to the port having resource
+        # requests
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(port),
+            len(allocations))
 
         self.assertComputeAllocationMatchesFlavor(
             allocations, self.compute1_rp_uuid, self.flavor)
         self.assertPortMatchesAllocation(
             port, allocations, self.compute1_rp_uuid)
 
-        # We expect that only the RP uuid of the networking RP having the port
-        # allocation is sent in the port binding for the port having resource
-        # request
-        port_binding = port['binding:profile']
-        self.assertEqual(
-            self.sriov_dev_rp_per_host[self.compute1_rp_uuid][self.PF2],
-            port_binding['allocation'])
+        self._assert_port_binding_profile_allocation(
+            port, self.compute1_rp_uuid)
 
         # We expect that the selected PCI device matches with the RP from
         # where the bandwidth is allocated from. The bandwidth is allocated
         # from 0000:02:00 (PF2) so the PCI device should be a VF of that PF
+        port_binding = port['binding:profile']
         self.assertEqual(
             fake.FakeDriverWithPciResources.PCI_ADDR_PF2_VF1,
             port_binding['pci_slot'])
@@ -1760,11 +1784,20 @@ class ServerMoveWithPortResourceRequestTest(
         allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
-        # We expect two sets of allocations. One set for the source compute
-        # and one set for the dest compute. Each set we expect 3 allocations
-        # one for the compute RP according to the flavor, one for the ovs port
-        # and one for the SRIOV port.
-        self.assertEqual(6, len(allocations), allocations)
+        # Evacuation duplicate the resource allocation. So we expect two sets
+        # of allocations. One set for the source compute and one set for the
+        # dest compute. Each set we expect one allocation for the compute
+        # resource according to the flavor and allocations due to the ports
+        # having resource requests
+        self.assertEqual(
+            2 * (
+                1 + self._get_number_of_expected_allocations_for_ports(
+                    updated_non_qos_port,
+                    updated_qos_port,
+                    updated_qos_sriov_port
+                )
+            ),
+            len(allocations))
 
         # 1. source compute allocation
         compute_allocations = allocations[source_compute_rp_uuid]['resources']
@@ -1796,15 +1829,10 @@ class ServerMoveWithPortResourceRequestTest(
 
         # the qos ports should have their binding pointing to the RPs in the
         # dest compute RP tree
-        qos_binding_profile = updated_qos_port['binding:profile']
-        self.assertEqual(
-            self.ovs_bridge_rp_per_host[dest_compute_rp_uuid],
-            qos_binding_profile['allocation'])
-
-        qos_sriov_binding_profile = updated_qos_sriov_port['binding:profile']
-        self.assertEqual(
-            self.sriov_dev_rp_per_host[dest_compute_rp_uuid][self.PF2],
-            qos_sriov_binding_profile['allocation'])
+        self._assert_port_binding_profile_allocation(
+            updated_qos_port, dest_compute_rp_uuid)
+        self._assert_port_binding_profile_allocation(
+            updated_qos_sriov_port, dest_compute_rp_uuid)
 
         # And we expect not to have any allocation set in the port binding for
         # the port that doesn't have resource request
@@ -1825,7 +1853,16 @@ class ServerMoveWithPortResourceRequestTest(
         allocations = self.placement.get(
             '/allocations/%s' % server['id']).body['allocations']
 
-        self.assertEqual(3, len(allocations), allocations)
+        # We expect one set of allocations for the compute resources on the
+        # compute rp plus the allocations due to the ports having resource
+        # requests
+        self.assertEqual(
+            1 + self._get_number_of_expected_allocations_for_ports(
+                updated_non_qos_port,
+                updated_qos_port,
+                updated_qos_sriov_port
+            ),
+            len(allocations))
 
         # 1. dest compute allocation
         compute_allocations = allocations[dest_compute_rp_uuid]['resources']
@@ -1843,15 +1880,11 @@ class ServerMoveWithPortResourceRequestTest(
 
         # the qos ports should have their binding pointing to the RPs in the
         # dest compute RP tree
-        qos_binding_profile = updated_qos_port['binding:profile']
-        self.assertEqual(
-            self.ovs_bridge_rp_per_host[dest_compute_rp_uuid],
-            qos_binding_profile['allocation'])
+        self._assert_port_binding_profile_allocation(
+            updated_qos_port, dest_compute_rp_uuid)
 
-        qos_sriov_binding_profile = updated_qos_sriov_port['binding:profile']
-        self.assertEqual(
-            self.sriov_dev_rp_per_host[dest_compute_rp_uuid][self.PF2],
-            qos_sriov_binding_profile['allocation'])
+        self._assert_port_binding_profile_allocation(
+            updated_qos_sriov_port, dest_compute_rp_uuid)
 
         # And we expect not to have any allocation set in the port binding for
         # the port that doesn't have resource request
