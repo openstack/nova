@@ -538,6 +538,12 @@ class Resource(wsgi.Application):
             with ResourceExceptionHandler():
                 action_result = self.dispatch(meth, request, action_args)
         except Fault as ex:
+            LOG.debug(f'Request method failure captured:\n'
+                      f'  request: {request}\n'
+                      f'  method: {meth}\n'
+                      f'  exception: {ex}\n'
+                      f'  action_args: {action_args}\n',
+                      exc_info=1)
             response = ex
 
         if not response:
