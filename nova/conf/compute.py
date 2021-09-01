@@ -51,7 +51,8 @@ Allow destination machine to match source for resize. Useful when
 testing in single-host environments. By default it is not allowed
 to resize to the same host. Setting this option to true will add
 the same host to the destination options. Also set to true
-if you allow the ServerGroupAffinityFilter and need to resize.
+if you allow the ServerGroupAffinityFilter and need to resize. For changes to
+this option to take effect, the nova-api service needs to be restarted.
 """),
     cfg.ListOpt('non_inheritable_image_properties',
         default=['cache_in_nova', 'bittorrent'],
