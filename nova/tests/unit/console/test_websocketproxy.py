@@ -15,6 +15,7 @@
 """Tests for nova websocketproxy."""
 
 import copy
+import io
 import socket
 
 import mock
@@ -635,16 +636,6 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
             b''
         ]
 
-        # Collect the response data to verify at the end. The
-        # SimpleHTTPRequestHandler writes the response data by calling the
-        # request socket sendall() method.
-        self.data = b''
-
-        def fake_sendall(data):
-            self.data += data
-
-        mock_req.sendall.side_effect = fake_sendall
-
         client_addr = ('8.8.8.8', 54321)
         mock_server = mock.MagicMock()
         # This specifies that the server will be able to handle requests other
@@ -652,13 +643,21 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
         mock_server.only_upgrade = False
 
         # Constructing a handler will process the mock_req request passed in.
-        websocketproxy.NovaProxyRequestHandler(
+        handler = websocketproxy.NovaProxyRequestHandler(
             mock_req, client_addr, mock_server)
 
+        # Collect the response data to verify at the end. The
+        # SimpleHTTPRequestHandler writes the response data to a 'wfile'
+        # attribute.
+        output = io.BytesIO()
+        handler.wfile = output
+        # Process the mock_req again to do the capture.
+        handler.do_GET()
+        output.seek(0)
+        result = output.readlines()
+
         # Verify no redirect happens and instead a 400 Bad Request is returned.
-        self.data = self.data.decode()
-        self.assertIn('Error code: 400', self.data)
-        self.assertIn('Message: URI must not start with //', self.data)
+        self.assertIn('400 URI must not start with //', result[0].decode())
 
     @mock.patch('websockify.websocketproxy.select_ssl_version')
     def test_ssl_min_version_is_not_set(self, mock_select_ssl):
