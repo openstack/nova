@@ -392,8 +392,7 @@ class VolumeAttachmentController(wsgi.Controller):
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.InstanceIsLocked,
-                exception.DevicePathInUse,
-                exception.MultiattachNotSupportedByVirtDriver) as e:
+                exception.DevicePathInUse) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,

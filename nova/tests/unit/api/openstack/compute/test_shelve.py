@@ -41,10 +41,6 @@ class ShelveControllerTest(test.NoDBTestCase):
 
     @ddt.data(
         exception.InstanceIsLocked(instance_uuid=uuids.instance),
-        exception.OperationNotSupportedForVTPM(
-            instance_uuid=uuids.instance, operation='foo'),
-        exception.OperationNotSupportedForVDPAInterface(
-            instance_uuid=uuids.instance, operation='foo'),
         exception.UnexpectedTaskStateError(
             instance_uuid=uuids.instance, expected=None,
             actual=task_states.SHELVING),
@@ -62,17 +58,23 @@ class ShelveControllerTest(test.NoDBTestCase):
             webob.exc.HTTPConflict, self.controller._shelve,
             self.req, uuids.fake, {})
 
+    @ddt.data(
+        exception.ForbiddenWithAccelerators(),
+        exception.OperationNotSupportedForVTPM(
+            instance_uuid=uuids.instance, operation='foo'),
+        exception.OperationNotSupportedForVDPAInterface(
+            instance_uuid=uuids.instance, operation='foo'),
+    )
     @mock.patch('nova.compute.api.API.shelve')
     @mock.patch('nova.api.openstack.common.get_instance')
-    def test_shelve_raise_http_forbidden(
-        self, mock_get_instance, mock_shelve,
+    def test_shelve_raise_badrequest_for_not_supported_feature(
+        self, exc, mock_get_instance, mock_shelve,
     ):
         mock_get_instance.return_value = (
             fake_instance.fake_instance_obj(self.req.environ['nova.context']))
-        mock_shelve.side_effect = exception.ForbiddenWithAccelerators
-
+        mock_shelve.side_effect = exc
         self.assertRaises(
-            webob.exc.HTTPForbidden, self.controller._shelve,
+            webob.exc.HTTPBadRequest, self.controller._shelve,
             self.req, uuids.fake, {})
 
     @mock.patch('nova.api.openstack.common.get_instance')

@@ -115,20 +115,29 @@ class EvacuateTestV21(test.NoDBTestCase):
                                      uuid='BAD_UUID')
 
     @mock.patch('nova.compute.api.API.evacuate')
-    def test_evacuate__with_vtpm(self, mock_evacuate):
+    def test_evacuate_raise_badrequest_with_vtpm(self, mock_evacuate):
         mock_evacuate.side_effect = exception.OperationNotSupportedForVTPM(
             instance_uuid=uuids.instance, operation='foo')
         self._check_evacuate_failure(
-            webob.exc.HTTPConflict,
+            webob.exc.HTTPBadRequest,
             {'host': 'foo', 'onSharedStorage': 'False', 'adminPass': 'bar'})
 
     @mock.patch('nova.compute.api.API.evacuate')
-    def test_evacuate__with_vdpa_interface(self, mock_evacuate):
+    def test_evacuate_raise_badrequest_with_vdpa_interface(
+        self, mock_evacuate):
         mock_evacuate.side_effect = \
             exception.OperationNotSupportedForVDPAInterface(
                 instance_uuid=uuids.instance, operation='foo')
         self._check_evacuate_failure(
-            webob.exc.HTTPConflict,
+            webob.exc.HTTPBadRequest,
+            {'host': 'foo', 'onSharedStorage': 'False', 'adminPass': 'bar'})
+
+    @mock.patch('nova.compute.api.API.evacuate')
+    def test_evacuate_raise_badrequest_for_accelerator(self, mock_evacuate):
+        mock_evacuate.side_effect = \
+            exception.ForbiddenWithAccelerators()
+        self._check_evacuate_failure(
+            webob.exc.HTTPBadRequest,
             {'host': 'foo', 'onSharedStorage': 'False', 'adminPass': 'bar'})
 
     def test_evacuate_with_active_service(self):

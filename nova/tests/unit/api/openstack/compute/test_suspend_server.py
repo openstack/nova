@@ -21,7 +21,6 @@ from nova.api.openstack.compute import suspend_server as \
     suspend_server_v21
 from nova import exception
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
-from nova.tests.unit.api.openstack import fakes
 
 
 @ddt.ddt
@@ -46,12 +45,14 @@ class SuspendServerTestsV21(admin_only_action_common.CommonTests):
             instance_uuid=uuids.instance, operation='foo'),
         exception.OperationNotSupportedForSEV(
             instance_uuid=uuids.instance, operation='foo'),
+        exception.ForbiddenWithAccelerators(),
     )
     @mock.patch('nova.compute.api.API.suspend')
-    def test_suspend__http_conflict_error(self, exc, mock_suspend):
+    def test_suspend_raise_badrequest_for_not_supported_features(
+        self, exc, mock_suspend):
         mock_suspend.side_effect = exc
         self.assertRaises(
-            webob.exc.HTTPConflict,
+            webob.exc.HTTPBadRequest,
             self.controller._suspend,
             self.req, uuids.instance, body={})
         self.assertTrue(mock_suspend.called)
@@ -65,10 +66,3 @@ class SuspendServerTestsV21(admin_only_action_common.CommonTests):
 
     def test_actions_with_locked_instance(self):
         self._test_actions_with_locked_instance(['_suspend', '_resume'])
-
-    @mock.patch('nova.compute.api.API.suspend',
-                side_effect=exception.ForbiddenWithAccelerators)
-    def test_suspend_raises_http_forbidden(self, mock_suspend):
-        self.assertRaises(webob.exc.HTTPForbidden,
-                          self.controller._suspend,
-                          self.req, fakes.FAKE_UUID, body={})

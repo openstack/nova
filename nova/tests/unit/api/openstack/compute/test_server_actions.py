@@ -376,10 +376,6 @@ class ServerActionsControllerTestV21(test.TestCase):
 
     @ddt.data(
         exception.InstanceIsLocked(instance_uuid=uuids.instance),
-        exception.OperationNotSupportedForVTPM(
-            instance_uuid=uuids.instance, operation='foo'),
-        exception.OperationNotSupportedForVDPAInterface(
-            instance_uuid=uuids.instance, operation='foo'),
     )
     @mock.patch('nova.compute.api.API.rebuild')
     def test_rebuild__http_conflict_error(self, exc, mock_rebuild):
@@ -389,6 +385,22 @@ class ServerActionsControllerTestV21(test.TestCase):
             self.controller._action_rebuild,
             self.req, uuids.instance,
             body={'rebuild': {'imageRef': uuids.image}})
+
+    @ddt.data(
+        exception.ForbiddenWithAccelerators(),
+        exception.OperationNotSupportedForVTPM(
+            instance_uuid=uuids.instance, operation='foo'),
+        exception.OperationNotSupportedForVDPAInterface(
+            instance_uuid=uuids.instance, operation='foo'),
+    )
+    @mock.patch('nova.compute.api.API.rebuild')
+    def test_rebuild_raises_badrequest_for_not_supported_features(
+        self, exc, mock_rebuild):
+        mock_rebuild.side_effect = exc
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_rebuild,
+                          self.req, uuids.instance,
+                          body={'rebuild': {'imageRef': uuids.image}})
 
     def test_rebuild_raises_conflict_on_invalid_state(self):
         body = {'rebuild': {'imageRef': uuids.image}}
@@ -860,9 +872,18 @@ class ServerActionsControllerTestV21(test.TestCase):
 
     @mock.patch('nova.compute.api.API.resize',
                 side_effect=exception.ForbiddenWithAccelerators)
-    def test_resize_raises_http_forbidden(self, mock_resize):
+    def test_resize_raises_badrequest_for_accelerator(self, mock_resize):
         body = dict(resize=dict(flavorRef="http://localhost/3"))
-        self.assertRaises(webob.exc.HTTPForbidden,
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_resize,
+                          self.req, FAKE_UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.resize',
+                side_effect=exception.OperationNotSupportedForVDPAInterface(
+                    instance_uuid=FAKE_UUID, operation='foo'))
+    def test_resize_raises_badrequest_for_vdpaInterface(self, mock_resize):
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
 

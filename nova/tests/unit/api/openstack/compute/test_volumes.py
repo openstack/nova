@@ -977,7 +977,7 @@ class VolumeAttachTestsV260(test.NoDBTestCase):
                 side_effect=
                 exception.MultiattachNotSupportedByVirtDriver(
                     volume_id=FAKE_UUID_A)) as attach:
-            ex = self.assertRaises(webob.exc.HTTPConflict, self._post_attach)
+            ex = self.assertRaises(webob.exc.HTTPBadRequest, self._post_attach)
         create_kwargs = attach.call_args[1]
         self.assertTrue(create_kwargs['supports_multiattach'])
         self.assertIn("has 'multiattach' set, which is not supported for "

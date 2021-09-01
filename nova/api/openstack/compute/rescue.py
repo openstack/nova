@@ -65,8 +65,6 @@ class RescueController(wsgi.Controller):
                                     allow_bfv_rescue=allow_bfv_rescue)
         except (
             exception.InstanceIsLocked,
-            exception.OperationNotSupportedForVTPM,
-            exception.OperationNotSupportedForVDPAInterface,
             exception.InvalidVolume,
         ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())

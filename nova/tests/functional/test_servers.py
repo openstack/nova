@@ -5909,26 +5909,26 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server_action, self.server['id'],
             {'resize': {'flavorRef': '2', 'OS-DCF:diskConfig': 'AUTO'}})
-        self.assertEqual(403, ex.response.status_code)
+        self.assertEqual(400, ex.response.status_code)
         self._check_allocations_usage(self.server)
 
     def test_suspend_fails(self):
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server_action, self.server['id'], {'suspend': {}})
-        self.assertEqual(403, ex.response.status_code)
+        self.assertEqual(400, ex.response.status_code)
         self._check_allocations_usage(self.server)
 
     def test_migrate_fails(self):
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server_action, self.server['id'], {'migrate': {}})
-        self.assertEqual(403, ex.response.status_code)
+        self.assertEqual(400, ex.response.status_code)
         self._check_allocations_usage(self.server)
 
     def test_live_migrate_fails(self):
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server_action, self.server['id'],
             {'migrate': {'host': 'accel_host1'}})
-        self.assertEqual(403, ex.response.status_code)
+        self.assertEqual(400, ex.response.status_code)
         self._check_allocations_usage(self.server)
 
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells')
@@ -5945,7 +5945,7 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
             {'evacuate': {
                  'host': compute_to_evacuate.host,
                  'adminPass': 'MySecretPass'}})
-        self.assertEqual(403, ex.response.status_code)
+        self.assertEqual(400, ex.response.status_code)
         self._check_allocations_usage(self.server)
 
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells')
@@ -5961,7 +5961,7 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
             {'rebuild': {
                 'imageRef': rebuild_image_ref,
                 'OS-DCF:diskConfig': 'AUTO'}})
-        self.assertEqual(403, ex.response.status_code)
+        self.assertEqual(400, ex.response.status_code)
         self._check_allocations_usage(self.server)
 
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells')
@@ -5973,7 +5973,7 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         ex = self.assertRaises(client.OpenStackApiException,
             self.api.post_server_action, self.server['id'],
             {'shelve': {}})
-        self.assertEqual(403, ex.response.status_code)
+        self.assertEqual(400, ex.response.status_code)
         self._check_allocations_usage(self.server)
 
     def _test_shelve_instance_with_compute_rpc_pin(
@@ -5990,7 +5990,7 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         ex = self.assertRaises(
             client.OpenStackApiException, self.api.post_server_action,
             self.server['id'], {'shelve': {}})
-        self.assertEqual(403, ex.response.status_code)
+        self.assertEqual(400, ex.response.status_code)
 
     def test_shelve_instance_5_13(self):
         body = {'shelve': {}}

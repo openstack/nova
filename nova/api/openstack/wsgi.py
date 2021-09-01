@@ -671,6 +671,15 @@ def expected_errors(errors):
                     # calls. ResourceExceptionHandler silently
                     # converts NotAuthorized to HTTPForbidden
                     raise
+                elif isinstance(exc, exception.NotSupported):
+                    # Note(gmann): Special case to handle
+                    # NotSupported exceptions. We want to raise 400 BadRequest
+                    # for the NotSupported exception which is basically used
+                    # to raise for not supported features. Converting it here
+                    # will avoid converting every NotSupported inherited
+                    # exception in API controller.
+                    raise webob.exc.HTTPBadRequest(
+                            explanation=exc.format_message())
                 elif isinstance(exc, exception.ValidationError):
                     # Note(oomichi): Handle a validation error, which
                     # happens due to invalid API parameters, as an

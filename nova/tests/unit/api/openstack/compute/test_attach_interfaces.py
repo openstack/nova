@@ -252,6 +252,23 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         self.assertRaises(exc.HTTPBadRequest, self.attachments.create,
                           self.req, FAKE_UUID1, body=body)
 
+    @mock.patch.object(
+        compute_api.API, 'attach_interface',
+        side_effect=exception.OperationNotSupportedForVDPAInterface(
+            instance_uuid=FAKE_UUID1, operation='foo'))
+    def test_interface_vdpa_interface_not_supported(self, mock_attach):
+        body = {'interfaceAttachment': {'net_id': FAKE_NET_ID2}}
+        self.assertRaises(exc.HTTPBadRequest, self.attachments.create,
+                          self.req, FAKE_UUID1, body=body)
+
+    @mock.patch.object(
+        compute_api.API, 'detach_interface',
+        side_effect=exception.OperationNotSupportedForVDPAInterface(
+            instance_uuid=FAKE_UUID1, operation='foo'))
+    def test_detach_interface_vdpa_interface_not_supported(self, mock_detach):
+        self.assertRaises(exc.HTTPBadRequest, self.attachments.delete,
+                          self.req, FAKE_UUID1, FAKE_NET_ID1)
+
     def test_attach_interface_with_network_id(self):
         self.stub_out('nova.compute.api.API.attach_interface',
                       fake_attach_interface)

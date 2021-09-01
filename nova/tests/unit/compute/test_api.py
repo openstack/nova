@@ -7830,7 +7830,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         args_info = {}
 
         self.assertRaisesRegex(exception.ForbiddenWithAccelerators,
-            'Forbidden with instances that have accelerators.',
+            'Feature not supported with instances that have accelerators.',
             self._test_block_accelerators, instance, args_info)
         # myfunc was not called
         self.assertEqual({}, args_info)
@@ -7861,7 +7861,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         instance = self._create_instance_obj(flavor=flavor)
         args_info = {}
         self.assertRaisesRegex(exception.ForbiddenWithAccelerators,
-            'Forbidden with instances that have accelerators.',
+            'Feature not supported with instances that have accelerators.',
             self._test_block_accelerators, instance, args_info, 53)
         # myfunc was not called
         self.assertEqual({}, args_info)
@@ -7895,7 +7895,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         instance.info_cache.network_info = nw_info
         args_info = {}
         self.assertRaisesRegex(exception.ForbiddenPortsWithAccelerator,
-            'Forbidden with Ports that have accelerators.',
+            'Feature not supported with Ports that have accelerators.',
             self._test_block_port_accelerators, instance, args_info)
         self.assertEqual({}, args_info)
 
@@ -7906,7 +7906,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         instance.info_cache.network_info = nw_info
         args_info = {}
         self.assertRaisesRegex(exception.ForbiddenPortsWithAccelerator,
-            'Forbidden with Ports that have accelerators.',
+            'Feature not supported with Ports that have accelerators.',
             self._test_block_port_accelerators, instance, args_info)
         self.assertEqual({}, args_info)
 
@@ -8019,7 +8019,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         flavor = self._create_flavor(extra_specs=extra_specs)
         instance = self._create_instance_obj(flavor=flavor)
         self.assertRaisesRegex(exception.ForbiddenWithAccelerators,
-            'Forbidden with instances that have accelerators.',
+            'Feature not supported with instances that have accelerators.',
             self.compute_api.shelve, self.context, instance)
         mock_get_arq_uuuids.assert_not_called()
 

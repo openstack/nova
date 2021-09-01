@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    A few of the APIs return code was not consistent for the operations/
+    features not implemented or supported. It was returned as 403, 400, or
+    409 (for Operation Not Supported For SEV , Operation Not Supported For
+    VTPM cases). Now we have made it consistent and return 400 always when
+    any operations/features are not implemented or supported.
