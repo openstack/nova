@@ -23612,15 +23612,23 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # check that the internal event handling is cleaned up
         self.assertEqual(set(), drvr._device_event_handler._waiters)
 
-    @ddt.data(power_state.RUNNING, power_state.PAUSED)
-    def test__detach_with_retry_live_success(self, state):
+    @ddt.unpack
+    @ddt.data(
+        (power_state.RUNNING, vconfig.LibvirtConfigGuestDisk()),
+        (power_state.RUNNING, vconfig.LibvirtConfigGuestInterface()),
+        (power_state.RUNNING, vconfig.LibvirtConfigGuestHostdevPCI()),
+        (power_state.PAUSED, vconfig.LibvirtConfigGuestDisk()),
+        (power_state.PAUSED, vconfig.LibvirtConfigGuestInterface()),
+        (power_state.PAUSED, vconfig.LibvirtConfigGuestHostdevPCI()),
+    )
+    def test__detach_with_retry_live_success(self, state, device_class):
         """Test detach only from the live domain"""
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_guest = mock.Mock(spec=libvirt_guest.Guest)
         mock_guest.get_power_state.return_value = state
         mock_guest.has_persistent_configuration.return_value = False
 
-        mock_dev = mock.Mock(spec=vconfig.LibvirtConfigGuestDisk)
+        mock_dev = mock.Mock(spec_set=device_class)
         mock_dev.alias = 'virtio-disk1'
 
         mock_get_device_conf_func = mock.Mock(
