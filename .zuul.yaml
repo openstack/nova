@@ -621,3 +621,5 @@
             irrelevant-files: *nova-base-irrelevant-files
         - devstack-plugin-ceph-compute-local-ephemeral:
             irrelevant-files: *nova-base-irrelevant-files
+        - devstack-tobiko-nova:
+            irrelevant-files: *nova-base-irrelevant-files
