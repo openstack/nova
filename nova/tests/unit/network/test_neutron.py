@@ -8376,6 +8376,82 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
 
 class TestNeutronPortSecurity(test.NoDBTestCase):
 
+    def test__process_security_groups(self):
+        instance = objects.Instance(project_id=uuids.project_id)
+        mock_neutron = mock.Mock(spec=client.Client)
+        mock_neutron.list_security_groups.return_value = {
+            'security_groups': [
+                {
+                    'id': uuids.sg1,
+                    'name': 'sg1',
+                },
+                {
+                    'id': uuids.sg2,
+                    'name': 'sg2',
+                },
+                {
+                    'id': uuids.sg3,
+                    'name': 'sg3',
+                }
+            ]
+        }
+        api = neutronapi.API()
+        api._process_security_groups(
+            instance, mock_neutron, ["sg1", uuids.sg2])
+
+        mock_neutron.list_security_groups.assert_called_once_with(
+            fields=['id', 'name'], tenant_id=uuids.project_id)
+
+    def test__process_security_groups_not_found(self):
+        instance = objects.Instance(project_id=uuids.project_id)
+        mock_neutron = mock.Mock(spec=client.Client)
+        mock_neutron.list_security_groups.return_value = {
+            'security_groups': [
+                {
+                    'id': uuids.sg1,
+                    'name': 'sg1',
+                },
+                {
+                    'id': uuids.sg3,
+                    'name': 'sg3',
+                }
+            ]
+        }
+        api = neutronapi.API()
+
+        ex = self.assertRaises(
+            exception.SecurityGroupNotFound, api._process_security_groups,
+            instance, mock_neutron, ["sg1", uuids.sg2])
+
+        self.assertIn(uuids.sg2, str(ex))
+        mock_neutron.list_security_groups.assert_called_once_with(
+            fields=['id', 'name'], tenant_id=uuids.project_id)
+
+    def test__process_security_groups_non_unique_match(self):
+        instance = objects.Instance(project_id=uuids.project_id)
+        mock_neutron = mock.Mock(spec=client.Client)
+        mock_neutron.list_security_groups.return_value = {
+            'security_groups': [
+                {
+                    'id': uuids.sg1,
+                    'name': 'nonunique-name',
+                },
+                {
+                    'id': uuids.sg2,
+                    'name': 'nonunique-name',
+                }
+            ]
+        }
+        api = neutronapi.API()
+
+        ex = self.assertRaises(
+            exception.NoUniqueMatch, api._process_security_groups,
+            instance, mock_neutron, ["nonunique-name", uuids.sg2])
+
+        self.assertIn("nonunique-name", str(ex))
+        mock_neutron.list_security_groups.assert_called_once_with(
+            fields=['id', 'name'], tenant_id=uuids.project_id)
+
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_port_dns_name')
     @mock.patch.object(neutronapi.API, '_create_port_minimal')
