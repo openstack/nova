@@ -70,13 +70,24 @@ def register_dynamic_opts(conf):
     the initial configuration has been loaded.
     """
 
-    # Register the '[mdev_$(MDEV_TYPE)]/device_addresses' opts, implicitly
-    # registering the '[mdev_$(MDEV_TYPE)]' groups in the process
     for mdev_type in conf.devices.enabled_mdev_types:
+        # Register the '[mdev_$(MDEV_TYPE)]/device_addresses' opts, implicitly
+        # registering the '[mdev_$(MDEV_TYPE)]' groups in the process
         opt = cfg.ListOpt('device_addresses', default=[],
                           item_type=cfg.types.String(),
                           deprecated_group='vgpu_%s' % mdev_type)
         conf.register_opt(opt, group='mdev_%s' % mdev_type)
+
+        # Register the '[mdev_$(MDEV_TYPE)]/mdev_class' opts
+        class_opt = cfg.StrOpt(
+            'mdev_class',
+            default='VGPU',
+            regex=r'^(VGPU|CUSTOM_[A-Z0-9_]+)$',
+            max_length=255,
+            help='Class of mediated device to manage used to differentiate '
+                 'between device types. The name has to be prefixed by '
+                 'CUSTOM_ if it is not VGPU.')
+        conf.register_opt(class_opt, group='mdev_%s' % mdev_type)
 
 
 def list_opts():

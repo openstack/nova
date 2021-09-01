@@ -7441,9 +7441,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # VGPU resource class.
                 self.mdev_classes = {orc.VGPU}
                 return [first_type]
-            # TODO(sbauza): Directly use the mdev_class option once we add the
-            # new configuration option.
-            mdev_class = getattr(group, 'mdev_class', orc.VGPU)
+            mdev_class = group.mdev_class
             for device_address in group.device_addresses:
                 if device_address in self.pgpu_type_mapping:
                     raise exception.InvalidLibvirtMdevConfig(

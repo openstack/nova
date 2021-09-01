@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    A new configuration option is now available for supporting PCI devices that
+    use the `VFIO-mdev`_ kernel framework and are stateless. Instead of using
+    the ``VGPU`` resource class for both the inventory and the related
+    allocations, the operator could ask to use another custom resource class
+    for a specific mdev type by using the dynamic ``mdev_class``.
+
+    .. _`VFIO-mdev` : https://www.kernel.org/doc/html/latest/driver-api/vfio-mediated-device.html

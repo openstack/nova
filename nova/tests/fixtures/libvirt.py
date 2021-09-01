@@ -232,9 +232,10 @@ MDEV_CAPABLE_CAP_TYPE = 'mdev_types'
 
 NVIDIA_11_VGPU_TYPE = 'nvidia-11'
 NVIDIA_12_VGPU_TYPE = 'nvidia-12'
-PGPU1_PCI_ADDR = 'pci_0000_81_00_0'
-PGPU2_PCI_ADDR = 'pci_0000_81_01_0'
-PGPU3_PCI_ADDR = 'pci_0000_81_02_0'
+MLX5_CORE_TYPE = 'mlx5_core'
+MDEVCAP_DEV1_PCI_ADDR = 'pci_0000_81_00_0'
+MDEVCAP_DEV2_PCI_ADDR = 'pci_0000_81_01_0'
+MDEVCAP_DEV3_PCI_ADDR = 'pci_0000_81_02_0'
 
 os_uname = collections.namedtuple(
     'uname_result', ['sysname', 'nodename', 'release', 'version', 'machine'],
@@ -296,9 +297,9 @@ class FakePCIDevice(object):
 
     def __init__(
         self, dev_type, bus, slot, function, iommu_group, numa_node, *,
-        vf_ratio=None, multiple_gpu_types=False, parent=None,
-        vend_id=None, vend_name=None, prod_id=None, prod_name=None,
-        driver_name=None,
+        vf_ratio=None, multiple_gpu_types=False, generic_types=False,
+        parent=None, vend_id=None, vend_name=None, prod_id=None,
+        prod_name=None, driver_name=None,
     ):
         """Populate pci devices
 
@@ -312,6 +313,7 @@ class FakePCIDevice(object):
         :param vf_ratio: (int) Ratio of Virtual Functions on Physical. Only
             applicable if ``dev_type`` is one of: ``PF``, ``VF``.
         :param multiple_gpu_types: (bool) Supports different vGPU types.
+        :param generic_types: (bool) Support both mlx5 and nvidia-12 types.
         :param parent: (int, int, int) A tuple of bus, slot and function
             corresponding to the parent.
         :param vend_id: (str) The vendor ID.
@@ -329,6 +331,7 @@ class FakePCIDevice(object):
         self.numa_node = numa_node
         self.vf_ratio = vf_ratio
         self.multiple_gpu_types = multiple_gpu_types
+        self.generic_types = generic_types
         self.parent = parent
 
         self.vend_id = vend_id
@@ -414,6 +417,15 @@ class FakePCIDevice(object):
                     'type_id': NVIDIA_12_VGPU_TYPE,
                     'instances': 8,
                 })
+            if self.generic_types:
+                types = [self.mdevtypes_templ % {
+                    'type_id': MLX5_CORE_TYPE,
+                    'instances': 16,
+                }]
+                types.append(self.mdevtypes_templ % {
+                    'type_id': NVIDIA_12_VGPU_TYPE,
+                    'instances': 8,
+                })
             if not skip_capability:
                 capability = self.cap_templ % {
                     'cap_type': MDEV_CAPABLE_CAP_TYPE,
@@ -457,7 +469,8 @@ class HostPCIDevicesInfo(object):
     TOTAL_NUMA_NODES = 2
 
     def __init__(self, num_pci=0, num_pfs=2, num_vfs=8, num_mdevcap=0,
-                 numa_node=None, multiple_gpu_types=False):
+                 numa_node=None, multiple_gpu_types=False,
+                 generic_types=False):
         """Create a new HostPCIDevicesInfo object.
 
         :param num_pci: (int) The number of (non-SR-IOV) and (non-MDEV capable)
@@ -470,6 +483,7 @@ class HostPCIDevicesInfo(object):
             devices will be assigned to the specified node else they will be
             split between ``$TOTAL_NUMA_NODES`` nodes.
         :param multiple_gpu_types: (bool) Supports different vGPU types
+        :param generic_types: (bool) Supports both nvidia-12 and mlx5 types
         """
         self.devices = {}
 
@@ -509,7 +523,8 @@ class HostPCIDevicesInfo(object):
                 function=function,
                 iommu_group=iommu_group,
                 numa_node=self._calc_numa_node(dev, numa_node),
-                multiple_gpu_types=multiple_gpu_types)
+                multiple_gpu_types=multiple_gpu_types,
+                generic_types=generic_types)
 
             slot += 1
             iommu_group += 1
@@ -555,9 +570,9 @@ class HostPCIDevicesInfo(object):
 
     def add_device(
         self, dev_type, bus, slot, function, iommu_group, numa_node,
-        vf_ratio=None, multiple_gpu_types=False, parent=None,
-        vend_id=None, vend_name=None, prod_id=None, prod_name=None,
-        driver_name=None,
+        vf_ratio=None, multiple_gpu_types=False, generic_types=False,
+        parent=None, vend_id=None, vend_name=None, prod_id=None,
+        prod_name=None, driver_name=None,
     ):
         pci_dev_name = _get_libvirt_nodedev_name(bus, slot, function)
 
@@ -572,6 +587,7 @@ class HostPCIDevicesInfo(object):
             numa_node=numa_node,
             vf_ratio=vf_ratio,
             multiple_gpu_types=multiple_gpu_types,
+            generic_types=generic_types,
             parent=parent,
             vend_id=vend_id,
             vend_name=vend_name,
