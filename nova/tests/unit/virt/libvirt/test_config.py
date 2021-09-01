@@ -1604,6 +1604,24 @@ class LibvirtConfigGuestHostdevPCI(LibvirtConfigBaseTest):
         self.assertEqual(obj.mode, 'subsystem')
         self.assertEqual(obj.type, 'usb')
 
+    def test_config_alias_parse(self):
+        xml = """
+            <hostdev mode='subsystem' type='pci' managed='yes'>
+                <driver name='vfio'/>
+                <source>
+                    <address domain='0x0000' bus='0x81' slot='0x00'
+                             function='0x1'/>
+                </source>
+                <alias name='hostdev1'/>
+                <address type='pci' domain='0x0000' bus='0x00' slot='0x05'
+                         function='0x0'/>
+            </hostdev>"""
+
+        xmldoc = etree.fromstring(xml)
+        obj = config.LibvirtConfigGuestHostdevPCI()
+        obj.parse_dom(xmldoc)
+        self.assertEqual('hostdev1', obj.alias)
+
 
 class LibvirtConfigGuestHostdevMDEV(LibvirtConfigBaseTest):
 
