@@ -140,6 +140,13 @@ Normal response codes: 200
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 itemNotFound(404), gone(410), notImplemented(501)
 
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - cell_id: cell_id
+
 Delete a Cell
 =============
 
@@ -151,6 +158,13 @@ Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 itemNotFound(404), gone(410), notImplemented(501)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - cell_id: cell_id
 
 Show Cell Capacities
 ====================
