@@ -2977,8 +2977,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.assertEqual(uuids.old_volume_id, bdm.volume_id)
             self.assertEqual(uuids.new_attachment_id, bdm.attachment_id)
             self.assertEqual(1, bdm.volume_size)
-            self.assertEqual(uuids.old_volume_id,
-                             jsonutils.loads(bdm.connection_info)['serial'])
+            new_conn_info = jsonutils.loads(bdm.connection_info)
+            self.assertEqual(uuids.old_volume_id, new_conn_info['serial'])
+            self.assertEqual(uuids.old_volume_id, new_conn_info['volume_id'])
+            self.assertEqual(
+                uuids.old_volume_id, new_conn_info['data']['volume_id'])
 
     @mock.patch.object(compute_utils, 'notify_about_volume_swap')
     @mock.patch.object(objects.BlockDeviceMapping,
@@ -3049,6 +3052,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.assertEqual(2, bdm.volume_size)
             new_conn_info = jsonutils.loads(bdm.connection_info)
             self.assertEqual(uuids.new_volume_id, new_conn_info['serial'])
+            self.assertEqual(uuids.new_volume_id, new_conn_info['volume_id'])
+            self.assertEqual(
+                uuids.new_volume_id, new_conn_info['data']['volume_id'])
             self.assertNotIn('multiattach', new_conn_info)
 
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')

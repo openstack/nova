@@ -7463,7 +7463,16 @@ class ComputeManager(manager.Manager):
         # NOTE(lyarwood): Update the BDM with the modified new_cinfo and
         # correct volume_id returned by Cinder.
         save_volume_id = comp_ret['save_volume_id']
+
+        # NOTE(lyarwood): Overwrite the possibly stale serial and volume_id in
+        # the connection_info with the volume_id returned from Cinder. This
+        # could be the case during a volume migration where the new_cinfo here
+        # refers to the temporary volume *before* Cinder renames it to the
+        # original volume UUID at the end of the migration.
         new_cinfo['serial'] = save_volume_id
+        new_cinfo['volume_id'] = save_volume_id
+        if 'data' in new_cinfo:
+            new_cinfo['data']['volume_id'] = save_volume_id
         values = {
             'connection_info': jsonutils.dumps(new_cinfo),
             'source_type': 'volume',

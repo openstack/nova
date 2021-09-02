@@ -16,7 +16,6 @@ from oslo_serialization import jsonutils
 
 from nova import context
 from nova import objects
-from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.functional.libvirt import base
 from nova.virt import block_device as driver_block_device
@@ -28,9 +27,9 @@ class TestLibvirtROMultiattachMigrate(
 ):
     """Regression test for bug 1939545
 
-    This regression test asserts the current broken behaviour of Nova during
+    This regression test asserts the now fixed behaviour of Nova during
     a Cinder orchestrated volume migration that leaves the stashed
-    connection_info of the attachment pointing at a now deleted temporary
+    connection_info of the attachment pointing at the original
     volume UUID used during the migration.
 
     This is slightly different to the Nova orchestrated pure swap_volume
@@ -83,6 +82,10 @@ class TestLibvirtROMultiattachMigrate(
         self.assertEqual(
             self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL,
             connection_info['data']['volume_id'])
+        self.assertIn('volume_id', connection_info)
+        self.assertEqual(
+            self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL,
+            connection_info['volume_id'])
         self.assertIn('serial', connection_info)
         self.assertEqual(
             self.cinder.MULTIATTACH_RO_SWAP_NEW_VOL,
@@ -123,39 +126,26 @@ class TestLibvirtROMultiattachMigrate(
             server_id)
         connection_info = jsonutils.loads(bdm.connection_info)
 
-        # FIXME(lyarwood): This is bug #1943431 where only the serial within
-        # the connection_info of the temporary volume has been updated to point
-        # to the old volume UUID with the stashed volume_id provided by the
-        # backend still pointing to the temporary volume UUID that has now been
-        # deleted by cinder.
+        # Assert that only the old volume UUID is referenced within the stashed
+        # connection_info and returned by driver_block_device.get_volume_id
         self.assertIn('serial', connection_info)
         self.assertEqual(
             self.cinder.MULTIATTACH_RO_MIGRATE_OLD_VOL,
             connection_info.get('serial'))
+        self.assertIn('volume_id', connection_info)
+        self.assertEqual(
+            self.cinder.MULTIATTACH_RO_MIGRATE_OLD_VOL,
+            connection_info['volume_id'])
         self.assertIn('volume_id', connection_info.get('data'))
         self.assertEqual(
-            self.cinder.MULTIATTACH_RO_MIGRATE_NEW_VOL,
+            self.cinder.MULTIATTACH_RO_MIGRATE_OLD_VOL,
             connection_info['data']['volume_id'])
         self.assertEqual(
-            self.cinder.MULTIATTACH_RO_MIGRATE_NEW_VOL,
+            self.cinder.MULTIATTACH_RO_MIGRATE_OLD_VOL,
             driver_block_device.get_volume_id(connection_info))
 
-        # FIXME(lyarwood): As a result of the above any request to detach the
-        # migrated multiattach volume from the instance or any action that
-        # would cause the _disconnect_volume and _should_disconnect_target
-        # logic to trigger in the libvirt driver will fail as
-        # driver_block_device.get_volume_id points to the now deleted temporary
-        # volume used during the migration.
-        #
-        # Replace this with the following once fixed:
-        #
-        # self.api.delete_server_volume(
-        #    server_id, self.cinder.MULTIATTACH_RO_MIGRATE_OLD_VOL)
-        # self._wait_for_volume_detach(
-        #    server_id, self.cinder.MULTIATTACH_RO_MIGRATE_OLD_VOL)
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self.api.delete_server_volume,
-            server_id,
-            self.cinder.MULTIATTACH_RO_MIGRATE_OLD_VOL)
-        self.assertEqual(500, ex.response.status_code)
+        # Assert that the old volume can be detached from the instance
+        self.api.delete_server_volume(
+            server_id, self.cinder.MULTIATTACH_RO_MIGRATE_OLD_VOL)
+        self._wait_for_volume_detach(
+            server_id, self.cinder.MULTIATTACH_RO_MIGRATE_OLD_VOL)
