@@ -7267,6 +7267,10 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         mock_record.assert_called_once_with(
             self.context, instance, instance_actions.ATTACH_INTERFACE)
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
     @mock.patch('nova.compute.api.API._record_action_start')
     def test_attach_interface_qos_aware_port_old_compute(
@@ -7316,6 +7320,84 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                     }
                 }
             },
+        ) as mock_show_port:
+            self.compute_api.attach_interface(
+                self.context, instance, mock.sentinel.net_id,
+                mock.sentinel.port_id, mock.sentinel.ip, mock.sentinel.tag)
+
+        mock_show_port.assert_called_once_with(
+            self.context, mock.sentinel.port_id)
+        mock_get_service.assert_called_once_with(
+            self.context, instance.host, 'nova-compute')
+        mock_attach.assert_called_once_with(
+            self.context, instance=instance, network_id=mock.sentinel.net_id,
+            port_id=mock.sentinel.port_id, requested_ip=mock.sentinel.ip,
+            tag=mock.sentinel.tag)
+
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
+    @mock.patch('nova.compute.api.API._record_action_start')
+    def test_attach_interface_extended_qos_port_old_compute(
+        self, mock_record, mock_get_service
+    ):
+        instance = self._create_instance_obj()
+        service = objects.Service()
+        service.version = 59
+        mock_get_service.return_value = service
+        with mock.patch.object(
+            self.compute_api.network_api, 'show_port',
+            return_value={
+                'port': {
+                    constants.RESOURCE_REQUEST: {
+                        'request_groups': [
+                            {
+                                'resources': {'CUSTOM_RESOURCE_CLASS': 42}
+                            }
+                        ],
+                    }
+                }
+            }
+        ) as mock_show_port:
+            self.assertRaises(
+                nova.exception.ExtendedResourceRequestOldCompute,
+                self.compute_api.attach_interface,
+                self.context, instance,
+                'foo_net_id', 'foo_port_id', None
+            )
+        mock_show_port.assert_called_once_with(self.context, 'foo_port_id')
+        mock_get_service.assert_called_once_with(
+            self.context, instance.host, 'nova-compute')
+
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=True)
+    )
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.attach_interface')
+    @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
+    @mock.patch('nova.compute.api.API._record_action_start')
+    def test_attach_interface_extended_qos_port(
+        self, mock_record, mock_get_service, mock_attach
+    ):
+        instance = self._create_instance_obj()
+        service = objects.Service()
+        service.version = 60
+        mock_get_service.return_value = service
+        with mock.patch.object(
+            self.compute_api.network_api, 'show_port',
+            return_value={
+                'port': {
+                    constants.RESOURCE_REQUEST: {
+                        'request_groups': [
+                            {
+                                'resources': {'CUSTOM_RESOURCE_CLASS': 42}
+                            }
+                        ],
+                    }
+                }
+            }
         ) as mock_show_port:
             self.compute_api.attach_interface(
                 self.context, instance, mock.sentinel.net_id,

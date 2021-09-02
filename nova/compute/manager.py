@@ -7650,27 +7650,28 @@ class ComputeManager(manager.Manager):
         if not request_groups:
             return None, None
 
-        # NOTE(gibi): we assume a single RequestGroup here as:
-        # 1) there can only be a single port per interface attach request
-        # 2) a single port can only request resources in a single RequestGroup
-        #    as per the current neutron API.
-        # #2) might change in the future so both
-        # nova.network.neutron.API.create_resource_requests() and this function
-        # takes a list of groups
-        request_group = request_groups[0]
-
         # restrict the resource request to the current compute node. The
         # compute node uuid is the uuid of the root provider of the node in
         # placement
         compute_node_uuid = objects.ComputeNode.get_by_nodename(
             context, instance.node).uuid
-        request_group.in_tree = compute_node_uuid
+        # we can have multiple request groups, it would be enough to restrict
+        # only one of them to the compute tree but for symetry we restrict
+        # all of them
+        for request_group in request_groups:
+            request_group.in_tree = compute_node_uuid
 
-        # NOTE(gibi): when support is added for attaching a cyborg based
-        # smart NIC the ResourceRequest could be extended to handle multiple
-        # request groups.
-        rr = scheduler_utils.ResourceRequest.from_request_group(
-            request_group, request_level_params)
+        # NOTE(gibi): group policy is mandatory in a resource request if there
+        # are multiple groups. The policy can only come from the flavor today
+        # and a new flavor is not provided with an interface attach request and
+        # the instance's current flavor might not have a policy. Still we are
+        # attaching a single port where currently the two possible groups
+        # (one for bandwidth and one for packet rate) will always be allocated
+        # from different providers. So both possible policies (none, isolated)
+        # are always fulfilled for this single port. We still has to specify
+        # one so we specify the least restrictive now.
+        rr = scheduler_utils.ResourceRequest.from_request_groups(
+            request_groups, request_level_params, group_policy='none')
         res = self.reportclient.get_allocation_candidates(context, rr)
         alloc_reqs, provider_sums, version = res
 
@@ -10293,14 +10294,20 @@ class ComputeManager(manager.Manager):
                          {'intf': vif['id']},
                          instance=instance)
                 profile = vif.get('profile', {}) or {}  # profile can be None
-                if profile.get('allocation'):
+                rps = profile.get('allocation')
+                if rps:
+                    if isinstance(rps, dict):
+                        # if extended resource request extension is enabled
+                        # then we have a dict of providers, flatten it for the
+                        # log.
+                        rps = ','.join(rps.values())
                     LOG.error(
                         'The bound port %(port_id)s is deleted in Neutron but '
-                        'the resource allocation on the resource provider '
-                        '%(rp_uuid)s is leaked until the server '
+                        'the resource allocation on the resource providers '
+                        '%(rp_uuid)s are leaked until the server '
                         '%(server_uuid)s is deleted.',
                         {'port_id': vif['id'],
-                         'rp_uuid': vif['profile']['allocation'],
+                         'rp_uuid': rps,
                          'server_uuid': instance.uuid})
 
                 del network_info[index]

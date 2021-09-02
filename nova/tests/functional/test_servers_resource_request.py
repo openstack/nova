@@ -14,7 +14,6 @@
 
 import copy
 import logging
-import unittest
 
 from keystoneauth1 import adapter
 import mock
@@ -1342,16 +1341,12 @@ class PortResourceRequestBasedSchedulingTest(
         response = self.api.api_post('/os-server-external-events', events).body
         self.assertEqual(200, response['events'][0]['code'])
 
-        port_rp_uuid = self.ovs_bridge_rp_per_host[self.compute1_rp_uuid]
-
         # 1) Nova logs an ERROR about the leak
         self._wait_for_log(
-            'ERROR [nova.compute.manager] The bound port %(port_id)s is '
-            'deleted in Neutron but the resource allocation on the resource '
-            'provider %(rp_uuid)s is leaked until the server %(server_uuid)s '
-            'is deleted.'
+            'The bound port %(port_id)s is deleted in Neutron but the '
+            'resource allocation on the resource providers .* are leaked '
+            'until the server %(server_uuid)s is deleted.'
             % {'port_id': port['id'],
-               'rp_uuid': port_rp_uuid,
                'server_uuid': server['id']})
 
         allocations = self.placement.get(
@@ -1635,8 +1630,6 @@ class ExtendedPortResourceRequestBasedSchedulingTestBase(
                     port['id'], group_req, pps_allocations)
 
 
-# TODO(gibi): The tests are failing today as we need to fix a bunch of TODOs in
-# the code.
 class MultiGroupResourceRequestBasedSchedulingTest(
     ExtendedPortResourceRequestBasedSchedulingTestBase,
     PortResourceRequestBasedSchedulingTest,
@@ -1650,31 +1643,6 @@ class MultiGroupResourceRequestBasedSchedulingTest(
         super().setUp()
         self.neutron = self.useFixture(
             MultiGroupResourceRequestNeutronFixture(self))
-        # Turn off the blanket rejections of the extended resource request in
-        # port attach. This test class wants to prove that the extended
-        # resource request is supported.
-        patcher = mock.patch(
-            'nova.compute.api.API.support_port_attach',
-            return_value=True,
-        )
-        self.addCleanup(patcher.stop)
-        patcher.start()
-
-    @unittest.expectedFailure
-    def test_interface_attach_with_resource_request(self):
-        super().test_interface_attach_with_resource_request()
-
-    @unittest.expectedFailure
-    def test_interface_attach_with_resource_request_no_candidates(self):
-        super().test_interface_attach_with_resource_request_no_candidates()
-
-    @unittest.expectedFailure
-    def test_interface_detach_with_port_with_bandwidth_request(self):
-        super().test_interface_detach_with_port_with_bandwidth_request()
-
-    @unittest.expectedFailure
-    def test_delete_bound_port_in_neutron_with_resource_request(self):
-        super().test_delete_bound_port_in_neutron_with_resource_request()
 
 
 class ServerMoveWithPortResourceRequestTest(
@@ -2959,51 +2927,26 @@ class ExtendedResourceRequestOldCompute(
             lambda server: shelve_offload_then_unshelve(server),
         )
 
-
-class ExtendedResourceRequestTempNegativeTest(
-        PortResourceRequestBasedSchedulingTestBase):
-    """A set of temporary tests to show that nova currently rejects requests
-    that uses the extended-resource-request Neutron API extension. These test
-    are  expected to be removed when support for the extension is implemented
-    in nova.
-    """
-    def _test_operation(self, op_name, op_callable):
-        # boot a server with a qos port still using the old Neutron resource
-        # request API extension
+    @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
+    def test_interface_attach(self, mock_get_service):
+        # service version 59 allows booting
+        mock_get_service.return_value.version = 59
         server = self._create_server(
             flavor=self.flavor,
-            networks=[{'port': self.neutron.port_with_resource_request['id']}],
+            networks=[{'port': self.neutron.port_1['id']}],
         )
-        self._wait_for_state_change(server, 'ACTIVE')
-
-        # enable the new extended-resource-request Neutron API extension by
-        # replacing the old neutron fixture with a new one that enables the
-        # extension. Note that we are carrying over the state of the neutron
-        # to the new extension to keep the port bound to the server.
-        self.neutron = self.useFixture(
-            ExtendedResourceRequestNeutronFixture.
-            create_with_existing_neutron_state(self.neutron))
-
-        # nova does not support this Neutron API extension yet so the
-        # operation fails
+        self._wait_for_state_change(server, "ACTIVE")
+        # for interface attach service version 60 would be needed
         ex = self.assertRaises(
             client.OpenStackApiException,
-            op_callable,
+            self._attach_interface,
             server,
+            self.neutron.port_with_sriov_resource_request['id'],
         )
         self.assertEqual(400, ex.response.status_code)
         self.assertIn(
-            f'The {op_name} with port having extended resource request, like '
-            f'a port with both QoS minimum bandwidth and packet rate '
-            f'policies, is not yet supported.',
+            'The port-resource-request-groups neutron API extension is not '
+            'supported by old nova compute service. Upgrade your compute '
+            'services to Xena (24.0.0) or later.',
             str(ex)
-        )
-
-    def test_interface_attach(self):
-        self._test_operation(
-            'interface attach server operation',
-            lambda server: self._attach_interface(
-                server,
-                self.neutron.port_with_sriov_resource_request['id'],
-            ),
         )

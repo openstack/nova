@@ -5412,6 +5412,10 @@ class TestAPI(TestAPIBase):
         vif.destroy.assert_called_once_with()
         self.assertEqual({}, port_allocation)
 
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch('nova.network.neutron.API.get_instance_nw_info')
     @mock.patch('nova.network.neutron.API._delete_nic_metadata')
     @mock.patch.object(objects.VirtualInterface, 'get_by_uuid')
@@ -5457,6 +5461,62 @@ class TestAPI(TestAPIBase):
                 }
             },
             port_allocation)
+
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch('nova.network.neutron.API.get_instance_nw_info')
+    @mock.patch('nova.network.neutron.API._delete_nic_metadata')
+    @mock.patch.object(objects.VirtualInterface, 'get_by_uuid')
+    @mock.patch('nova.network.neutron.get_client')
+    def test_deallocate_port_for_instance_port_with_extended_allocation(
+            self, mock_get_client, mock_get_vif_by_uuid, mock_del_nic_meta,
+            mock_netinfo):
+        mock_inst = mock.Mock(project_id="proj-1",
+                              availability_zone='zone-1',
+                              uuid='inst-1')
+        mock_inst.get_network_info.return_value = [
+            model.VIF(id=uuids.port_uid, preserve_on_delete=True)
+        ]
+        vif = objects.VirtualInterface()
+        vif.tag = 'foo'
+        vif.destroy = mock.MagicMock()
+        mock_get_vif_by_uuid.return_value = vif
+
+        mock_client = mock.Mock()
+        mock_client.show_port.return_value = {
+            'port': {
+                constants.RESOURCE_REQUEST: {
+                    'request_groups': [
+                        {
+                            'id': uuids.group1,
+                            'resources': {
+                                'NET_BW_EGR_KILOBIT_PER_SEC': 1000,
+                            }
+                        }
+                    ],
+                },
+                'binding:profile': {
+                    'allocation': {uuids.group1: uuids.rp1}
+                }
+            }
+        }
+        mock_get_client.return_value = mock_client
+
+        _, port_allocation = self.api.deallocate_port_for_instance(
+            mock.sentinel.ctx, mock_inst, uuids.port_id)
+
+        self.assertEqual(
+            {
+                uuids.rp1: {
+                    "resources": {
+                        'NET_BW_EGR_KILOBIT_PER_SEC': 1000
+                    }
+                }
+            },
+            port_allocation
+        )
 
     @mock.patch('nova.network.neutron.API.get_instance_nw_info')
     @mock.patch('nova.network.neutron.API._delete_nic_metadata')

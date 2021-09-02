@@ -1754,15 +1754,27 @@ class API:
         if port:
             # if there is resource associated to this port then that needs to
             # be deallocated so lets return info about such allocation
-            resource_request = port.get(constants.RESOURCE_REQUEST)
+            resource_request = port.get(constants.RESOURCE_REQUEST) or {}
             profile = get_binding_profile(port)
-            allocated_rp = profile.get(constants.ALLOCATION)
-            if resource_request and allocated_rp:
-                port_allocation = {
-                    allocated_rp: {
-                        "resources": resource_request.get("resources", {})
+            if self.has_extended_resource_request_extension(context, neutron):
+                # new format
+                groups = resource_request.get(constants.REQUEST_GROUPS)
+                if groups:
+                    allocated_rps = profile.get(constants.ALLOCATION)
+                    for group in groups:
+                        allocated_rp = allocated_rps[group['id']]
+                        port_allocation[allocated_rp] = {
+                            "resources": group.get("resources", {})
+                        }
+            else:
+                # legacy format
+                allocated_rp = profile.get(constants.ALLOCATION)
+                if resource_request and allocated_rp:
+                    port_allocation = {
+                        allocated_rp: {
+                            "resources": resource_request.get("resources", {})
+                        }
                     }
-                }
         else:
             # Check the info_cache. If the port is still in the info_cache and
             # in that cache there is allocation in the profile then we suspect
