@@ -933,3 +933,69 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_no_errors(
             code, checks.check_assert_has_calls,
             filename="nova/tests/unit/test_context.py")
+
+    def test_do_not_alias_mock_class(self):
+        code = """
+                    my_var = mock.Mock
+                    self.mock_rados.Rados = mock.Mock
+                    self.mock_rados.Rados = mock.MagicMock
+                    self.mock_rados.Rados = mock.NonCallableMock
+               """
+        errors = [(x + 1, 0, 'N367') for x in range(4)]
+        # Check errors in 'nova/tests' directory.
+        self._assert_has_errors(
+            code, checks.do_not_alias_mock_class,
+            expected_errors=errors, filename="nova/tests/unit/test_context.py")
+        # Check no errors in other than 'nova/tests' directory.
+        self._assert_has_no_errors(
+            code, checks.do_not_alias_mock_class,
+            filename="nova/compute/api.py")
+        code = """
+                    my_var = mock.Mock()
+                    self.mock_rados.Rados = mock.Mock()
+                    self.mock_rados.Rados = mock.MagicMock()
+                    self.mock_rados.Rados = mock.NonCallableMock()
+               """
+        self._assert_has_no_errors(
+            code, checks.do_not_alias_mock_class,
+            filename="nova/tests/unit/test_context.py")
+
+    def test_do_not_use_mock_class_as_new_mock_value(self):
+        code = """
+                    patcher = mock.patch('Bar.foo', new=mock.Mock)
+                    patcher = mock.patch.object(Bar, 'foo', new=mock.Mock)
+                    patcher = mock.patch('Bar.foo', new=mock.MagicMock)
+                    patcher = mock.patch('Bar.foo', new=mock.NonCallableMock)
+                    @mock.patch('Bar.foo', new=mock.Mock)
+                    def a():
+                        pass
+
+                    with mock.patch('Bar.foo', new=mock.Mock) as m:
+                        pass
+               """
+        errors = [(x + 1, 0, 'N368') for x in range(5)] + [(9, 0, 'N368')]
+        # Check errors in 'nova/tests' directory.
+        self._assert_has_errors(
+            code, checks.do_not_use_mock_class_as_new_mock_value,
+            expected_errors=errors, filename="nova/tests/unit/test_context.py")
+        # Check no errors in other than 'nova/tests' directory.
+        self._assert_has_no_errors(
+            code, checks.do_not_use_mock_class_as_new_mock_value,
+            filename="nova/compute/api.py")
+        code = """
+                    patcher = mock.patch('Bar.foo', new=mock.Mock())
+                    patcher = mock.patch.object(Bar, 'foo', new=mock.Mock())
+                    patcher = mock.patch('Bar.foo', new=mock.MagicMock())
+                    patcher = mock.patch('Bar.foo', new=mock.NonCallableMock())
+                    @mock.patch('Bar.foo', new=mock.Mock())
+                    def a():
+                        pass
+
+                    with mock.patch('Bar.foo', new=mock.Mock()) as m:
+                        pass
+
+                    patcher = mock.patch('Bar.foo', new_callable=mock.Mock)
+               """
+        self._assert_has_no_errors(
+            code, checks.do_not_use_mock_class_as_new_mock_value,
+            filename="nova/tests/unit/test_context.py")

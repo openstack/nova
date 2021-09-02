@@ -23228,7 +23228,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         self._test_attach_interface(
             power_state.SHUTDOWN, fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG)
 
-    @mock.patch('threading.Event.wait', new=mock.Mock)
+    @mock.patch('threading.Event.wait', new=mock.Mock())
     def _test_detach_interface(self, state, device_not_found=False):
         # setup some mocks
         instance = self._create_instance()
