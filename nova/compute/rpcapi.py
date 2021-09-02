@@ -420,6 +420,7 @@ class ComputeAPI(object):
         'ussuri': '5.11',
         'victoria': '5.12',
         'wallaby': '6.0',
+        'xena': '6.0',
     }
 
     @property
