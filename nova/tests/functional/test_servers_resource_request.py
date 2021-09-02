@@ -794,34 +794,6 @@ class UnsupportedPortResourceRequestBasedSchedulingTest(
             "until microversion 2.72.",
             str(ex))
 
-    def test_unshelve_not_offloaded_server_with_port_resource_request(
-            self):
-        """If the server is not offloaded then unshelving does not cause a new
-        resource allocation therefore having port resource request is
-        irrelevant. This test asserts that such unshelve request is not
-        rejected.
-        """
-        server = self._create_server(
-            flavor=self.flavor,
-            networks=[{'port': self.neutron.port_1['id']}])
-        self._wait_for_state_change(server, 'ACTIVE')
-
-        # avoid automatic shelve offloading
-        self.flags(shelved_offload_time=-1)
-        req = {
-            'shelve': {}
-        }
-        self.api.post_server_action(server['id'], req)
-        self._wait_for_server_parameter(server, {'status': 'SHELVED'})
-
-        # We need to simulate that the above server has a port that has
-        # resource request; we cannot boot with such a port but legacy servers
-        # can exist with such a port.
-        self._add_resource_request_to_a_bound_port(self.neutron.port_1['id'])
-
-        self.api.post_server_action(server['id'], {'unshelve': None})
-        self._wait_for_state_change(server, 'ACTIVE')
-
 
 class NonAdminUnsupportedPortResourceRequestBasedSchedulingTest(
         UnsupportedPortResourceRequestBasedSchedulingTest):
@@ -2377,6 +2349,39 @@ class ServerMoveWithPortResourceRequestTest(
 
         # Assert that the InstancePCIRequests still point to host1
         self._assert_pci_request_pf_device_name(server, 'host1-ens2')
+
+        self._delete_server_and_check_allocations(
+            server, qos_normal_port, qos_sriov_port)
+
+    def test_unshelve_not_offloaded_server_with_port_resource_request(
+            self):
+        """If the server is not offloaded then unshelving does not cause a new
+        resource allocation therefore having port resource request is
+        irrelevant. Still this test asserts that such unshelve request works.
+        """
+        non_qos_normal_port = self.neutron.port_1
+        qos_normal_port = self.neutron.port_with_resource_request
+        qos_sriov_port = self.neutron.port_with_sriov_resource_request
+
+        server = self._create_server_with_ports_and_check_allocation(
+            non_qos_normal_port, qos_normal_port, qos_sriov_port)
+
+        # avoid automatic shelve offloading
+        self.flags(shelved_offload_time=-1)
+        req = {
+            'shelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_server_parameter(server, {'status': 'SHELVED'})
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
+
+        self.api.post_server_action(server['id'], {'unshelve': None})
+        self._wait_for_state_change(server, 'ACTIVE')
+        self._check_allocation(
+            server, self.compute1_rp_uuid, non_qos_normal_port,
+            qos_normal_port, qos_sriov_port, self.flavor_with_group_policy)
 
         self._delete_server_and_check_allocations(
             server, qos_normal_port, qos_sriov_port)
