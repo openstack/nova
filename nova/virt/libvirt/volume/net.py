@@ -10,13 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from os_brick import exception as os_brick_exception
-from os_brick import initiator
-from os_brick.initiator import connector
 from oslo_log import log as logging
 
 import nova.conf
-from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
 
@@ -30,9 +26,6 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         super(LibvirtNetVolumeDriver,
               self).__init__(host, is_block_dev=False)
         self.connector = None
-        if CONF.workarounds.rbd_volume_local_attach:
-            self.connector = connector.InitiatorConnector.factory(
-                initiator.RBD, utils.get_root_helper(), do_local_attach=True)
 
     def _set_auth_config_rbd(self, conf, netdisk_properties):
         # The rbd volume driver in cinder sets auth_enabled if the rbd_user is
@@ -75,30 +68,6 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
             # secret_type is always hard-coded to 'ceph' in cinder
             conf.auth_secret_type = netdisk_properties['secret_type']
 
-    def _use_rbd_volume_local_attach(self, connection_info):
-        return (connection_info['driver_volume_type'] == 'rbd' and
-            CONF.workarounds.rbd_volume_local_attach)
-
-    def connect_volume(self, connection_info, instance):
-        if self._use_rbd_volume_local_attach(connection_info):
-            LOG.debug("Calling os-brick to attach RBD Volume as block device",
-                      instance=instance)
-            device_info = self.connector.connect_volume(
-                connection_info['data'])
-            LOG.debug("Attached RBD volume %s", device_info, instance=instance)
-            connection_info['data']['device_path'] = device_info['path']
-
-    def disconnect_volume(self, connection_info, instance):
-        if self._use_rbd_volume_local_attach(connection_info):
-            LOG.debug("calling os-brick to detach RBD Volume",
-                      instance=instance)
-            try:
-                self.connector.disconnect_volume(connection_info['data'], None)
-            except os_brick_exception.VolumeDeviceNotFound as exc:
-                LOG.warning('Ignoring VolumeDeviceNotFound: %s', exc)
-                return
-            LOG.debug("Disconnected RBD Volume", instance=instance)
-
     def _get_block_config(self, conf, connection_info):
         conf.source_type = "block"
         conf.source_path = connection_info['data']['device_path']
@@ -118,15 +87,12 @@ class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
 
     def get_config(self, connection_info, disk_info):
         """Returns xml for libvirt."""
-        conf = super(LibvirtNetVolumeDriver,
-                     self).get_config(connection_info, disk_info)
-        if self._use_rbd_volume_local_attach(connection_info):
-            return self._get_block_config(conf, connection_info)
+        conf = super(
+            LibvirtNetVolumeDriver, self).get_config(
+                connection_info, disk_info)
         return self._get_net_config(conf, connection_info)
 
     def extend_volume(self, connection_info, instance, requested_size):
-        if self._use_rbd_volume_local_attach(connection_info):
-            raise NotImplementedError
         # There is nothing to do for network volumes. Cinder already
         # extended the volume and there is no local block device which
         # needs to be refreshed.
