@@ -577,8 +577,9 @@ class VideoModel(BaseNovaEnum):
     VIRTIO = 'virtio'
     GOP = 'gop'
     NONE = 'none'
+    BOCHS = 'bochs'
 
-    ALL = (CIRRUS, QXL, VGA, VMVGA, XEN, VIRTIO, GOP, NONE)
+    ALL = (CIRRUS, QXL, VGA, VMVGA, XEN, VIRTIO, GOP, NONE, BOCHS)
 
 
 class VIFModel(BaseNovaEnum):
