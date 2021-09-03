@@ -2729,7 +2729,9 @@ class LibvirtCommands(object):
                 exception.InstanceMappingNotFound) as e:
             print(str(e))
             return 2
-        except Exception:
+        except Exception as e:
+            print('Unexpected error, see nova-manage.log for the full '
+                  'trace: %s ' % str(e))
             LOG.exception('Unexpected error')
             return 1
 
@@ -2783,7 +2785,9 @@ class LibvirtCommands(object):
         ) as e:
             print(str(e))
             return 2
-        except Exception:
+        except Exception as e:
+            print('Unexpected error, see nova-manage.log for the full '
+                  'trace: %s ' % str(e))
             LOG.exception('Unexpected error')
             return 1
 
@@ -2814,7 +2818,9 @@ class LibvirtCommands(object):
         except exception.CellMappingNotFound as e:
             print(str(e))
             return 2
-        except Exception:
+        except Exception as e:
+            print('Unexpected error, see nova-manage.log for the full '
+                  'trace: %s ' % str(e))
             LOG.exception('Unexpected error')
             return 1
 
@@ -2883,7 +2889,9 @@ class VolumeAttachmentCommands(object):
         ) as e:
             print(str(e))
             return 2
-        except Exception:
+        except Exception as e:
+            print('Unexpected error, see nova-manage.log for the full '
+                  'trace: %s ' % str(e))
             LOG.exception('Unexpected error')
             return 1
 
@@ -2911,7 +2919,9 @@ class VolumeAttachmentCommands(object):
             else:
                 print(format_dict(host_connector))
             return 0
-        except Exception:
+        except Exception as e:
+            print('Unexpected error, see nova-manage.log for the full '
+                  'trace: %s ' % str(e))
             LOG.exception('Unexpected error')
             return 1
 
@@ -3114,7 +3124,9 @@ class VolumeAttachmentCommands(object):
         except exception.InvalidInput as e:
             print(str(e))
             return 2
-        except Exception:
+        except Exception as e:
+            print('Unexpected error, see nova-manage.log for the full '
+                  'trace: %s ' % str(e))
             LOG.exception('Unexpected error')
             return 1
 
