@@ -227,6 +227,7 @@ db archive_deleted_rows
 
     nova-manage db archive_deleted_rows [--max_rows <rows>] [--verbose]
       [--until-complete] [--before <date>] [--purge] [--all-cells] [--task-log]
+      [--sleep]
 
 Move deleted rows from production tables to shadow tables. Note that the
 corresponding rows in the ``instance_mappings``, ``request_specs`` and
@@ -240,7 +241,7 @@ stopping at 0, or use the :option:`--until-complete` option.
 
 .. versionchanged:: 24.0.0 (Xena)
 
-    Added :option:`--task-log` option.
+    Added :option:`--task-log`, :option:`--sleep` options.
 
 .. rubric:: Options
 
@@ -295,7 +296,12 @@ stopping at 0, or use the :option:`--until-complete` option.
     record data via the `/os-instance_usage_audit_log`__ API (example:
     Telemetry).
 
-.. __: https://docs.openstack.org/api-ref/compute/#server-usage-audit-log-os-instance-usage-audit-log
+    .. __: https://docs.openstack.org/api-ref/compute/#server-usage-audit-log-os-instance-usage-audit-log
+
+.. option:: --sleep
+
+    The amount of time in seconds to sleep between batches when
+    :option:`--until-complete` is used. Defaults to 0.
 
 .. rubric:: Return codes
 

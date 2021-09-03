@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    A ``--sleep`` option has been added to the ``nova-manage db
+    archive_deleted_rows`` CLI. When this command is run with the
+    ``--until-complete`` option, the process will archive rows in batches
+    in a tight loop, which can cause problems in busy environments where
+    the aggressive archiving interferes with other requests trying to write
+    to the database. The ``--sleep`` option can be used to specify a time to
+    sleep between batches of rows while archiving with ``--until-complete``,
+    allowing the process to be throttled.
