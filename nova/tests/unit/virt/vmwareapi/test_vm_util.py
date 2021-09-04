@@ -15,9 +15,9 @@
 #    under the License.
 
 import collections
-import fixtures
 
 import mock
+from oslo_service import fixture as oslo_svc_fixture
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
@@ -1024,6 +1024,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         """Ensure we warn when create_vm() fails after we passed an
         unrecognised guestId
         """
+        # avoid real sleeps during test due to te retry decorator on create_vm
+        self.useFixture(oslo_svc_fixture.SleepFixture())
 
         found = [False]
 
@@ -1042,8 +1044,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             vm_util.ExtraSpecs(),
             os_type='invalid_os_type')
 
-        # Because of retries timeout will be raised
-        self.assertRaises(fixtures.TimeoutException,
+        self.assertRaises(vexc.VMwareDriverException,
                           vm_util.create_vm, session, self._instance,
                           'folder', config_spec, 'res-pool')
         self.assertTrue(found[0])
