@@ -6658,6 +6658,10 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception(logger=LOG):
                 LOG.exception('Instance failed to spawn',
                               instance=instance)
+                # Set the image_ref back to initial image_ref because instance
+                # object might have been saved with image['id']
+                # https://bugs.launchpad.net/nova/+bug/1934094
+                instance.image_ref = shelved_image_ref
                 # Cleanup allocations created by the scheduler on this host
                 # since we failed to spawn the instance. We do this both if
                 # the instance claim failed with ComputeResourcesUnavailable
