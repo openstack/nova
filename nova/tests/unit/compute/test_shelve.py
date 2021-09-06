@@ -677,6 +677,30 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             self.context, self.compute.reportclient, [],
             {uuids.port_1: [uuids.rp1]})
 
+    def test_unshelve_spawn_fails_cleanup_instance_image_ref(self):
+        """Tests error handling when a instance fails to unshelve and makes
+        sure to revert instance.image_ref to the initial value instead of
+        keeping the one of shelved image
+        https://bugs.launchpad.net/nova/+bug/1934094
+        """
+        instance = self._create_fake_instance_obj()
+        # TODO(pslestang) to uncomment when bug 1934094 is fixed
+        # initial_image_ref = instance.image_ref
+
+        fake_spec = objects.RequestSpec()
+        shelved_image = {'id': uuids.image_id}
+
+        with mock.patch.object(self.compute.driver, 'spawn',
+                side_effect=test.TestingException('Spawn Failed')):
+            self.assertRaises(test.TestingException,
+                    self.compute.unshelve_instance, self.context, instance,
+                    image=shelved_image, filter_properties={},
+                    node='fake-node', request_spec=fake_spec, accel_uuids=[])
+        # FIXME(pslestang) Until bug 1934094 is fixed
+        # The instance.image_ref is set to shelved_image.id but should be
+        # equal to initial_image_ref
+        self.assertEqual(instance.image_ref, shelved_image['id'])
+
     @mock.patch.object(objects.InstanceList, 'get_by_filters')
     def test_shelved_poll_none_offloaded(self, mock_get_by_filters):
         # Test instances are not offloaded when shelved_offload_time is -1
