@@ -42,11 +42,12 @@ minimum bandwidth rules.
 Extended resource request
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Since neutron 19.0.0 (Xena), neutron implements an extended resource request
-format via the the ``port-resource-request-groups`` neutron API extension. As
-of nova 24.0.0 (Xena), nova also supports this extension if every nova-compute
-service is upgraded to Xena version and the ``[upgrade_levels]/compute``
-configuration does not prevent the computes from using the latest RPC version.
+It is expected that neutron 20.0.0 (Yoga) will implement an extended resource
+request format via the the ``port-resource-request-groups`` neutron API
+extension. As of nova 24.0.0 (Xena), nova already supports this extension if
+every nova-compute service is upgraded to Xena version and the
+``[upgrade_levels]/compute`` configuration does not prevent the computes from
+using the latest RPC version.
 
 See :nova-doc:`the admin guide <admin/port_with_resource_request.html>` for
 administrative details.
