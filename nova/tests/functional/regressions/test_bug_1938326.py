@@ -72,13 +72,16 @@ class TestMigrateFromDownHost(integrated_helpers._IntegratedTestBase):
         source_compute_id = self.api.get_services(
             host='src', binary='nova-compute')[0]['id']
         self.api.put_service(source_compute_id, {'forced_down': 'true'})
+        # NOTE(gibi): extra retries are needed as the default 10 retries with
+        # 0.5 second sleep is close to the 6 seconds down timeout
         self._wait_for_service_parameter(
             'src', 'nova-compute',
             {
                 'forced_down': True,
                 'state': 'down',
                 'status': 'enabled'
-            }
+            },
+            max_retries=20,
         )
 
         # Assert that we cannot migrate from a forced down compute
@@ -94,12 +97,15 @@ class TestMigrateFromDownHost(integrated_helpers._IntegratedTestBase):
 
         # Stop the compute service and wait until it's down
         self.computes['src'].stop()
+        # NOTE(gibi): extra retries are needed as the default 10 retries with
+        # 0.5 second sleep is close to the 6 seconds down timeout
         self._wait_for_service_parameter(
             'src', 'nova-compute',
             {
                 'state': 'down',
                 'status': 'enabled'
-            }
+            },
+            max_retries=20,
         )
 
         # Assert that requests to migrate from down computes are rejected
@@ -123,8 +129,10 @@ class TestMigrateFromDownHost(integrated_helpers._IntegratedTestBase):
 
         # Stop the compute service and wait until it's down
         self.computes['src'].stop()
+        # NOTE(gibi): extra retries are needed as the default 10 retries with
+        # 0.5 second sleep is close to the 6 seconds down timeout
         self._wait_for_service_parameter(
-            'src', 'nova-compute', {'state': 'down'})
+            'src', 'nova-compute', {'state': 'down'}, max_retries=20)
 
         ex = self.assertRaises(
             client.OpenStackApiException, self.api.post_server_action,
