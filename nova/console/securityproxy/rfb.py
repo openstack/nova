@@ -101,25 +101,31 @@ class RFBSecurityProxy(base.SecurityProxy):
 
         # Negotiate version with compute server
         compute_version = recv(compute_sock, auth.VERSION_LENGTH)
-        LOG.debug("Got version string '%s' from compute node",
-                  compute_version[:-1])
+        LOG.debug(
+            "Got version string '%s' from compute node",
+            compute_version[:-1].decode('utf-8'))
 
         if self._parse_version(compute_version) != 3.8:
-            reason = _("Security proxying requires RFB protocol "
-                       "version 3.8, but server sent %s"), compute_version[:-1]
-            raise exception.SecurityProxyNegotiationFailed(reason=reason)
+            reason = _(
+                "Security proxying requires RFB protocol version 3.8, "
+                "but server sent %s")
+            raise exception.SecurityProxyNegotiationFailed(
+                reason=reason % compute_version[:-1].decode('utf-8'))
         compute_sock.sendall(compute_version)
 
         # Negotiate version with tenant
         tenant_sock.sendall(compute_version)
         tenant_version = recv(tenant_sock, auth.VERSION_LENGTH)
-        LOG.debug("Got version string '%s' from tenant",
-                  tenant_version[:-1])
+        LOG.debug(
+            "Got version string '%s' from tenant",
+            tenant_version[:-1].decode('utf-8'))
 
         if self._parse_version(tenant_version) != 3.8:
-            reason = _("Security proxying requires RFB protocol version "
-                       "3.8, but tenant asked for %s"), tenant_version[:-1]
-            raise exception.SecurityProxyNegotiationFailed(reason=reason)
+            reason = _(
+                "Security proxying requires RFB protocol version 3.8, "
+                "but tenant asked for %s")
+            raise exception.SecurityProxyNegotiationFailed(
+                reason=reason % tenant_version[:-1].decode('utf-8'))
 
         # Negotiate security with server
         permitted_auth_types_cnt = recv(compute_sock, 1)[0]
@@ -142,7 +148,12 @@ class RFBSecurityProxy(base.SecurityProxy):
                 auth_type = ord(auth_type)
             permitted_auth_types.append(auth_type)
 
-        LOG.debug("The server sent security types %s", permitted_auth_types)
+        LOG.debug(
+            "Server sent security types: %s",
+            ", ".join(
+                '%d (%s)' % (auth.AuthType(t).value, auth.AuthType(t).name)
+                for t in permitted_auth_types
+            ))
 
         # Negotiate security with client before we say "ok" to the server
         # send 1:[None]
@@ -151,14 +162,21 @@ class RFBSecurityProxy(base.SecurityProxy):
         client_auth = recv(tenant_sock, 1)[0]
 
         if client_auth != auth.AuthType.NONE:
-            self._fail(tenant_sock, compute_sock,
-                       _("Only the security type None (%d) is supported") %
-                       auth.AuthType.NONE)
+            self._fail(
+                tenant_sock, compute_sock,
+                _("Only the security type %d (%s) is supported") % (
+                    auth.AuthType.NONE.value, auth.AuthType.NONE.name,
+                ))
 
-            reason = _("Client requested a security type other than None "
-                       "(%(none_code)d): %(auth_type)s") % {
-                           'auth_type': client_auth,
-                           'none_code': auth.AuthType.NONE}
+            reason = _(
+                "Client requested a security type other than %d (%s): "
+                "%d (%s)"
+            ) % (
+                auth.AuthType.NONE.value,
+                auth.AuthType.NONE.name,
+                auth.AuthType(client_auth).value,
+                auth.AuthType(client_auth).name,
+            )
             raise exception.SecurityProxyNegotiationFailed(reason=reason)
 
         try:
@@ -173,8 +191,10 @@ class RFBSecurityProxy(base.SecurityProxy):
 
         compute_sock.sendall(bytes((scheme.security_type(),)))
 
-        LOG.debug("Using security type %d with server, None with client",
-                  scheme.security_type())
+        LOG.debug(
+            "Using security type %d (%s) with server, %d (%s) with client",
+            scheme.security_type().value, scheme.security_type().name,
+            auth.AuthType.NONE.value, auth.AuthType.NONE.name)
 
         try:
             compute_sock = scheme.security_handshake(compute_sock)
