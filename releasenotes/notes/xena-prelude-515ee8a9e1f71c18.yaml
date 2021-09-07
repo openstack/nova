@@ -1,0 +1,43 @@
+---
+prelude: |
+    The 24.0.0 release includes many new features and bug fixes. Please be
+    sure to read the upgrade section which describes the required actions to
+    upgrade your cloud from 23.0.0 (Wallaby) to 24.0.0 (Xena).
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for Xena is v2.90.
+      Details on REST API microversions added since the 23.0.0 Wallaby release
+      can be found in the `REST API Version History`__ page.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html
+
+    - `Support for accelerators`__ in Nova servers has been improved. Now
+      Cyborg-managed SmartNICs can be attached as SR-IOV devices.
+
+      .. __: https://docs.openstack.org/api-guide/compute/accelerator-support.html
+
+
+    - Two new ``nova-manage`` CLI commands can be used for `checking`__ the
+      volume attachment connection information and for `refreshing`__ it if the
+      connection is stale (for example with a Ceph backing store and MON IP
+      addresses). Some documentation on how to use them can be found `here`__.
+
+      .. __: https://docs.openstack.org/nova/latest/cli/nova-manage.html#volume-attachment-get-connector
+      .. __: https://docs.openstack.org/nova/latest/cli/nova-manage.html#volume-attachment-refresh
+      .. __: https://docs.openstack.org/nova/latest/admin/manage-volumes.html#managing-volume-attachments
+
+    - Instance hostnames published by the metadata API service or config drives
+      can be explicitly defined at instance creation time thanks to the new
+      `2.90 API microversion`__. See the ``hostname`` field documentation on
+      the `API docs`__ for further details.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-xena
+      .. __: https://docs.openstack.org/api-ref/compute/?expanded=create-server-detail#create-server
+
+    - Libvirt virt driver now supports any PCI device, not just virtual
+      GPUs, that are using the ``VFIO-mdev`` virtualization framework, like
+      network adapters or compute accelerators. `See more in the spec`__.
+
+      .. __: https://specs.openstack.org/openstack/nova-specs/specs/xena/approved/generic-mdevs.html
