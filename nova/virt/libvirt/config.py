@@ -2204,6 +2204,8 @@ class LibvirtConfigGuestHostdevPCI(LibvirtConfigGuestHostdev):
         self.slot = None
         self.function = None
 
+        self.alias = None
+
     def __eq__(self, other):
         if not isinstance(other, LibvirtConfigGuestHostdevPCI):
             return False
@@ -2243,6 +2245,8 @@ class LibvirtConfigGuestHostdevPCI(LibvirtConfigGuestHostdev):
                         self.bus = sub.get('bus')
                         self.slot = sub.get('slot')
                         self.function = sub.get('function')
+            elif c.tag == 'alias':
+                self.alias = c.get('name')
 
 
 class LibvirtConfigGuestHostdevMDEV(LibvirtConfigGuestHostdev):
