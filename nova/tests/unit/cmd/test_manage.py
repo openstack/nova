@@ -19,7 +19,6 @@ import sys
 import textwrap
 import warnings
 
-from cinderclient import exceptions as cinder_exception
 import ddt
 import fixtures
 import mock
@@ -3247,6 +3246,10 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         """Test the 'show' command with an unknown failure"""
         mock_get_context.side_effect = test.TestingException('oops')
         ret = self.commands.show(uuidsentinel.instance, uuidsentinel.volume)
+        output = self.output.getvalue().strip()
+        self.assertIn(
+            'Unexpected error, see nova-manage.log for the full trace: oops',
+            output)
         self.assertEqual(1, ret)
 
     @mock.patch(
@@ -3350,6 +3353,10 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         mock_get_connector.side_effect = test.TestingException('oops')
         ret = self.commands.get_connector()
 
+        output = self.output.getvalue().strip()
+        self.assertIn(
+            'Unexpected error, see nova-manage.log for the full trace: oops',
+            output)
         self.assertEqual(1, ret)
         mock_get_root.assert_called_once_with()
         mock_get_connector.assert_called_once_with(
@@ -3491,7 +3498,7 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         objects.BlockDeviceMapping, 'get_by_volume_and_instance')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     @mock.patch.object(objects.InstanceAction, 'action_start')
-    def test_refresh_attachment_create_failure(
+    def test_refresh_attachment_unknown_failure(
         self, mock_action_start, mock_get_instance, mock_get_bdm, mock_lock,
         mock_unlock, mock_attachment_create, mock_attachment_delete,
         mock_attachment_get
@@ -3505,14 +3512,16 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         mock_get_bdm.return_value = objects.BlockDeviceMapping(
             uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
             attachment_id=uuidsentinel.attachment)
-        mock_attachment_create.side_effect = \
-            cinder_exception.ClientException(400, '400')
+        mock_attachment_create.side_effect = Exception('oops')
         mock_action = mock.Mock(spec=objects.InstanceAction)
         mock_action_start.return_value = mock_action
 
         ret = self._test_refresh()
         self.assertEqual(1, ret)
-
+        output = self.output.getvalue().strip()
+        self.assertIn(
+            'Unexpected error, see nova-manage.log for the full trace: oops',
+            output)
         mock_attachment_create.assert_called_once_with(
             mock.ANY, uuidsentinel.volume, uuidsentinel.instance)
         mock_attachment_delete.assert_not_called()
@@ -3640,10 +3649,14 @@ class LibvirtCommandsTestCase(test.NoDBTestCase):
     def test_get_unknown_failure(
         self, mock_get_context, mock_get_machine_type
     ):
-        mock_get_machine_type.side_effect = Exception()
+        mock_get_machine_type.side_effect = Exception('oops')
         ret = self.commands.get_machine_type(
             instance_uuid=uuidsentinel.instance
         )
+        output = self.output.getvalue().strip()
+        self.assertIn(
+            'Unexpected error, see nova-manage.log for the full trace: oops',
+            output)
         self.assertEqual(1, ret)
 
     @mock.patch('nova.virt.libvirt.machine_type_utils.get_machine_type')
@@ -3735,11 +3748,15 @@ class LibvirtCommandsTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
     @mock.patch('nova.context.get_admin_context', new=mock.Mock())
     def test_update_unknown_failure(self, mock_update):
-        mock_update.side_effect = Exception()
+        mock_update.side_effect = Exception('oops')
         ret = self.commands.update_machine_type(
             instance_uuid=uuidsentinel.instance,
             machine_type=mock.sentinel.machine_type
         )
+        output = self.output.getvalue().strip()
+        self.assertIn(
+            'Unexpected error, see nova-manage.log for the full trace: oops',
+            output)
         self.assertEqual(1, ret)
 
     @mock.patch('nova.virt.libvirt.machine_type_utils.update_machine_type')
@@ -3859,9 +3876,13 @@ class LibvirtCommandsTestCase(test.NoDBTestCase):
     def test_list_unset_machine_type_unknown_failure(
         self, mock_get_context, mock_get_instances
     ):
-        mock_get_instances.side_effect = Exception()
+        mock_get_instances.side_effect = Exception('oops')
         ret = self.commands.list_unset_machine_type(
             cell_uuid=uuidsentinel.cell_uuid)
+        output = self.output.getvalue().strip()
+        self.assertIn(
+            'Unexpected error, see nova-manage.log for the full trace: oops',
+            output)
         self.assertEqual(1, ret)
 
     @mock.patch(
