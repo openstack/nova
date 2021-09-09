@@ -219,6 +219,8 @@ MIN_QEMU_VERSION = (4, 2, 0)
 NEXT_MIN_LIBVIRT_VERSION = (7, 0, 0)
 NEXT_MIN_QEMU_VERSION = (5, 2, 0)
 
+MIN_LIBVIRT_AARCH64_CPU_COMPARE = (6, 9, 0)
+
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 
@@ -9394,6 +9396,20 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             cpu = self._vcpu_model_to_cpu_config(guest_cpu)
 
+        host_cpu = self._host.get_capabilities().host.cpu
+        if host_cpu.arch == fields.Architecture.AARCH64:
+            if self._host.has_min_version(MIN_LIBVIRT_AARCH64_CPU_COMPARE):
+                LOG.debug("On AArch64 hosts, source and destination host "
+                          "CPUs are compared to check if they're compatible"
+                          "(the only use-case supported by libvirt for "
+                          "Arm64/AArch64)")
+                cpu = host_cpu
+            else:
+                LOG.debug("You need %s libvirt version to be able to compare "
+                          "source host CPU with destination host CPU; skip "
+                          "CPU comparison", MIN_LIBVIRT_AARCH64_CPU_COMPARE)
+                return
+
         u = ("http://libvirt.org/html/libvirt-libvirt-host.html#"
              "virCPUCompareResult")
         m = _("CPU doesn't have compatibility.\n\n%(ret)s\n\nRefer to %(u)s")
@@ -9403,10 +9419,6 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug("cpu compare xml: %s", cpu_xml, instance=instance)
             ret = self._host.compare_cpu(cpu_xml)
         except libvirt.libvirtError as e:
-            if cpu.arch == fields.Architecture.AARCH64:
-                LOG.debug("Host CPU compatibility check does not make "
-                          "sense on AArch64; skip CPU comparison")
-                return
             error_code = e.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_SUPPORT:
                 LOG.debug("URI %(uri)s does not support cpu comparison. "
