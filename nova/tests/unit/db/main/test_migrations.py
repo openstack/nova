@@ -238,8 +238,8 @@ class NovaMigrationsWalk(
     def setUp(self):
         super().setUp()
         self.engine = enginefacade.writer.get_engine()
-        self.config = migration._find_alembic_conf('api')
-        self.init_version = migration.ALEMBIC_INIT_VERSION['api']
+        self.config = migration._find_alembic_conf('main')
+        self.init_version = migration.ALEMBIC_INIT_VERSION['main']
 
     def _migrate_up(self, revision):
         if revision == self.init_version:  # no tests for the initial revision
@@ -283,6 +283,22 @@ class NovaMigrationsWalk(
                 revision = revision_script.revision
                 LOG.info('Testing revision %s', revision)
                 self._migrate_up(revision)
+
+    def test_db_version_alembic(self):
+        migration.db_sync(database='main')
+
+        # FIXME(gibi): this is bug/1943436
+        ex = self.assertRaises(
+            AttributeError, migration.db_version, database='main')
+        self.assertIn(
+            "'Engine' object has no attribute 'get_main_option'",
+            str(ex)
+        )
+
+        # It should return the head of the migrations instead
+        # head = alembic_script.ScriptDirectory.from_config(
+        #     self.config).get_current_head()
+        # self.assertEqual(head, migration.db_version(database='main'))
 
 
 class TestMigrationsWalkSQLite(
