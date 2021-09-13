@@ -2319,3 +2319,36 @@ def get_vmx_path(session, vm_ref):
     vmx_path = session._call_method(vutil, 'get_object_property',
                                     vm_ref, 'config.files.vmPathName')
     return ds_obj.DatastorePath.parse(vmx_path)
+
+
+def _create_fcd_id_obj(client_factory, fcd_id):
+    id_obj = client_factory.create('ns0:ID')
+    id_obj.id = fcd_id
+    return id_obj
+
+
+def attach_fcd(
+        session, vm_ref, fcd_id, ds_ref_val, controller_key, unit_number
+    ):
+    client_factory = session.vim.client.factory
+    disk_id = _create_fcd_id_obj(client_factory, fcd_id)
+    ds_ref = vutil.get_moref(ds_ref_val, 'Datastore')
+    LOG.debug("Attaching fcd (id: %(fcd_id)s, datastore: %(ds_ref_val)s) to "
+              "vm: %(vm_ref)s.",
+              {'fcd_id': fcd_id,
+               'ds_ref_val': ds_ref_val,
+               'vm_ref': vm_ref})
+    task = session._call_method(
+        session.vim, "AttachDisk_Task", vm_ref, diskId=disk_id,
+        datastore=ds_ref, controllerKey=controller_key, unitNumber=unit_number)
+    session._wait_for_task(task)
+
+
+def detach_fcd(session, vm_ref, fcd_id):
+    client_factory = session.vim.client.factory
+    disk_id = _create_fcd_id_obj(client_factory, fcd_id)
+    LOG.debug("Detaching fcd (id: %(fcd_id)s) from vm: %(vm_ref)s.",
+              {'fcd_id': fcd_id, 'vm_ref': vm_ref})
+    task = session._call_method(
+        session.vim, "DetachDisk_Task", vm_ref, diskId=disk_id)
+    session._wait_for_task(task)
