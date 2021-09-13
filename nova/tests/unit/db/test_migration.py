@@ -17,7 +17,6 @@ import urllib
 import fixtures
 import mock
 
-from alembic import command as alembic_api
 from alembic.runtime import migration as alembic_migration
 from migrate import exceptions as migrate_exceptions
 from migrate.versioning import api as migrate_api
@@ -151,7 +150,7 @@ class TestDBSync(test.NoDBTestCase):
         self._test_db_sync(has_migrate, has_alembic)
 
 
-@mock.patch.object(alembic_api, 'current')
+@mock.patch.object(alembic_migration.MigrationContext, 'configure')
 @mock.patch.object(migrate_api, 'db_version')
 @mock.patch.object(migration, '_is_database_under_alembic_control')
 @mock.patch.object(migration, '_is_database_under_migrate_control')
@@ -161,7 +160,7 @@ class TestDBVersion(test.NoDBTestCase):
 
     def test_db_version_invalid_databse(
         self, mock_find_repo, mock_get_engine, mock_is_migrate,
-        mock_is_alembic, mock_migrate_version, mock_alembic_version,
+        mock_is_alembic, mock_migrate_version, mock_m_context_configure,
     ):
         """We only have two databases."""
         self.assertRaises(
@@ -169,7 +168,7 @@ class TestDBVersion(test.NoDBTestCase):
 
     def test_db_version_migrate(
         self, mock_find_repo, mock_get_engine, mock_is_migrate,
-        mock_is_alembic, mock_migrate_version, mock_alembic_version,
+        mock_is_alembic, mock_migrate_version, mock_m_context_configure,
     ):
         """Database is controlled by sqlalchemy-migrate."""
         mock_is_migrate.return_value = True
@@ -184,30 +183,33 @@ class TestDBVersion(test.NoDBTestCase):
         mock_is_alembic.assert_called_once()
         mock_migrate_version.assert_called_once_with(
             mock_get_engine.return_value, mock_find_repo.return_value)
-        mock_alembic_version.assert_not_called()
+        mock_m_context_configure.assert_not_called()
 
     def test_db_version_alembic(
         self, mock_find_repo, mock_get_engine, mock_is_migrate,
-        mock_is_alembic, mock_migrate_version, mock_alembic_version,
+        mock_is_alembic, mock_migrate_version, mock_m_context_configure,
     ):
         """Database is controlled by alembic."""
         mock_is_migrate.return_value = False
         mock_is_alembic.return_value = True
 
         ret = migration.db_version('main')
-        self.assertEqual(mock_alembic_version.return_value, ret)
+        mock_m_context = mock_m_context_configure.return_value
+        self.assertEqual(
+            mock_m_context.get_current_revision.return_value,
+            ret
+        )
 
         mock_find_repo.assert_called_once_with('main')
         mock_get_engine.assert_called_once_with('main', context=None)
         mock_is_migrate.assert_called_once()
         mock_is_alembic.assert_called_once()
         mock_migrate_version.assert_not_called()
-        mock_alembic_version.assert_called_once_with(
-            mock_get_engine.return_value)
+        mock_m_context_configure.assert_called_once()
 
     def test_db_version_not_controlled(
         self, mock_find_repo, mock_get_engine, mock_is_migrate,
-        mock_is_alembic, mock_migrate_version, mock_alembic_version,
+        mock_is_alembic, mock_migrate_version, mock_m_context_configure,
     ):
         """Database is not controlled."""
         mock_is_migrate.return_value = False
@@ -221,7 +223,7 @@ class TestDBVersion(test.NoDBTestCase):
         mock_is_migrate.assert_called_once()
         mock_is_alembic.assert_called_once()
         mock_migrate_version.assert_not_called()
-        mock_alembic_version.assert_not_called()
+        mock_m_context_configure.assert_not_called()
 
 
 class TestGetEngine(test.NoDBTestCase):

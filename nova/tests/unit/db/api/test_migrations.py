@@ -244,18 +244,9 @@ class NovaMigrationsWalk(
     def test_db_version_alembic(self):
         migration.db_sync(database='api')
 
-        # FIXME(gibi): this is bug/1943436
-        ex = self.assertRaises(
-            AttributeError, migration.db_version, database='api')
-        self.assertIn(
-            "'Engine' object has no attribute 'get_main_option'",
-            str(ex)
-        )
-
-        # It should return the head of the migrations instead
-        # head = alembic_script.ScriptDirectory.from_config(
-        #     self.config).get_current_head()
-        # self.assertEqual(head, migration.db_version(database='api'))
+        head = alembic_script.ScriptDirectory.from_config(
+            self.config).get_current_head()
+        self.assertEqual(head, migration.db_version(database='api'))
 
 
 class TestMigrationsWalkSQLite(

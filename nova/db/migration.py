@@ -170,6 +170,8 @@ def db_version(database='main', context=None):
 
     alembic_version = None
     if _is_database_under_alembic_control(engine):
-        alembic_version = alembic_api.current(engine)
+        with engine.connect() as conn:
+            m_context = alembic_migration.MigrationContext.configure(conn)
+            alembic_version = m_context.get_current_revision()
 
     return alembic_version or migrate_version
