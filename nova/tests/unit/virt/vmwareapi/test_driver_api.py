@@ -1873,11 +1873,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             mock.patch.object(volumeops.VMwareVolumeOps, '_get_volume_ref'),
             mock.patch.object(vm_util, 'get_vmdk_info',
                               return_value=vmdk_info),
-            mock.patch.object(volumeops.VMwareVolumeOps, 'attach_disk_to_vm'),
-            mock.patch.object(volumeops.VMwareVolumeOps,
-                              '_update_volume_details')
-        ) as (get_vm_ref, get_volume_ref, get_vmdk_info,
-              attach_disk_to_vm, update_volume_details):
+            mock.patch.object(volumeops.VMwareVolumeOps, 'attach_disk_to_vm')
+        ) as (get_vm_ref, get_volume_ref, get_vmdk_info, attach_disk_to_vm):
             self.conn.attach_volume(None, connection_info, self.instance,
                                     '/dev/vdc')
 
@@ -1886,10 +1883,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             get_volume_ref.assert_called_once_with(connection_info['data'])
             self.assertTrue(get_vmdk_info.called)
             attach_disk_to_vm.assert_called_once_with(mock.sentinel.vm_ref,
-                self.instance, adapter_type, disk_type, vmdk_path='fake-path')
-            update_volume_details.assert_called_once_with(
-                mock.sentinel.vm_ref, connection_info['data']['volume_id'],
-                disk_uuid)
+                self.instance, adapter_type, disk_type, vmdk_path='fake-path',
+                volume_uuid=connection_info['data']['volume_id'],
+                backing_uuid=disk_uuid)
 
     def test_detach_vmdk_disk_from_vm(self):
         self._create_vm()

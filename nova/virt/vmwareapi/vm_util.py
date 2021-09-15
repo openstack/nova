@@ -814,18 +814,20 @@ def get_vmdk_detach_config_spec(client_factory, device,
     return config_spec
 
 
-def get_vm_extra_config_spec(client_factory, extra_opts):
-    """Builds extra spec fields from a dictionary."""
-    config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
-    # add the key value pairs
+def create_extra_config(client_factory, extra_opts):
+    """Turn the given dict extra_opts into a list of OptionValue
+
+    The returned list can be used to set the extraConfig attribute of a
+    VirtualMachineConfigSpec.
+    """
     extra_config = []
     for key, value in extra_opts.items():
         opt = client_factory.create('ns0:OptionValue')
         opt.key = key
         opt.value = value
         extra_config.append(opt)
-        config_spec.extraConfig = extra_config
-    return config_spec
+
+    return extra_config
 
 
 def _get_device_capacity(device):

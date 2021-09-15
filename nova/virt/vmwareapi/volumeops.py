@@ -61,8 +61,13 @@ class VMwareVolumeOps(object):
     def attach_disk_to_vm(self, vm_ref, instance,
                           adapter_type, disk_type, vmdk_path=None,
                           disk_size=None, linked_clone=False,
-                          device_name=None, disk_io_limits=None):
-        """Attach disk to VM by reconfiguration."""
+                          device_name=None, disk_io_limits=None,
+                          volume_uuid=None, backing_uuid=None):
+        """Attach disk to VM by reconfiguration.
+
+        If volume_uuid and backing_uuid are given, also store the uuid of the
+        volume's device in extraConfig in the same reconfigure request.
+        """
         client_factory = self._session.vim.client.factory
         devices = vm_util.get_hardware_devices(self._session, vm_ref)
         (controller_key, unit_number,
@@ -77,6 +82,12 @@ class VMwareVolumeOps(object):
                                     unit_number, device_name, disk_io_limits)
         if controller_spec:
             vmdk_attach_config_spec.deviceChange.append(controller_spec)
+
+        if volume_uuid and backing_uuid:
+            LOG.debug("Adding volume details for %s to attach config spec.",
+                      volume_uuid, instance=instance)
+            self._add_volume_details_to_config_spec(vmdk_attach_config_spec,
+                                                    volume_uuid, backing_uuid)
 
         LOG.debug("Reconfiguring VM instance %(vm_ref)s to attach "
                   "disk %(vmdk_path)s or device %(device_name)s with type "
@@ -94,15 +105,15 @@ class VMwareVolumeOps(object):
                    'disk_type': disk_type},
                   instance=instance)
 
-    def _update_volume_details(self, vm_ref, volume_uuid, device_uuid):
-        # Store the uuid of the volume_device
+    def _add_volume_details_to_config_spec(self, config_spec, volume_uuid,
+                                           device_uuid):
+        """Store the UUID of the volume's device in extraConfig"""
         volume_option = 'volume-%s' % volume_uuid
         extra_opts = {volume_option: device_uuid}
 
         client_factory = self._session.vim.client.factory
-        extra_config_specs = vm_util.get_vm_extra_config_spec(
-                                    client_factory, extra_opts)
-        vm_util.reconfigure_vm(self._session, vm_ref, extra_config_specs)
+        config_spec.extraConfig = vm_util.create_extra_config(client_factory,
+                                                              extra_opts)
 
     def _get_volume_uuid(self, vm_ref, volume_uuid):
         prop = 'config.extraConfig["volume-%s"]' % volume_uuid
@@ -114,11 +125,23 @@ class VMwareVolumeOps(object):
             return opt_val.value
 
     def detach_disk_from_vm(self, vm_ref, instance, device,
-                            destroy_disk=False):
-        """Detach disk from VM by reconfiguration."""
+                            destroy_disk=False, volume_uuid=None):
+        """Detach disk from VM by reconfiguration.
+
+        If volume_uuid is given, also remove the key-value pair <volume_id,
+        vmdk_uuid> from the instance's extraConfig in the same reconfigure
+        request. Setting the value to an empty string will remove the key.
+        """
         client_factory = self._session.vim.client.factory
         vmdk_detach_config_spec = vm_util.get_vmdk_detach_config_spec(
                                     client_factory, device, destroy_disk)
+
+        if volume_uuid is not None:
+            LOG.debug("Adding volume details for %s to detach config spec.",
+                      volume_uuid, instance=instance)
+            self._add_volume_details_to_config_spec(vmdk_detach_config_spec,
+                                                    volume_uuid, '')
+
         disk_key = device.key
         LOG.debug("Reconfiguring VM instance %(vm_ref)s to detach "
                   "disk %(disk_key)s",
@@ -356,11 +379,9 @@ class VMwareVolumeOps(object):
 
         # Attach the disk to virtual machine instance
         self.attach_disk_to_vm(vm_ref, instance, adapter_type, vmdk.disk_type,
-                               vmdk_path=vmdk.path)
-
-        # Store the uuid of the volume_device
-        self._update_volume_details(vm_ref, data['volume_id'],
-                                    vmdk.device.backing.uuid)
+                               vmdk_path=vmdk.path,
+                               volume_uuid=data['volume_id'],
+                               backing_uuid=vmdk.device.backing.uuid)
 
         LOG.debug("Attached VMDK: %s", connection_info, instance=instance)
 
@@ -602,11 +623,8 @@ class VMwareVolumeOps(object):
                                       adapter_type=adapter_type,
                                       disk_type=disk_type)
 
-        self.detach_disk_from_vm(vm_ref, instance, device)
-
-        # Remove key-value pair <volume_id, vmdk_uuid> from instance's
-        # extra config. Setting value to empty string will remove the key.
-        self._update_volume_details(vm_ref, data['volume_id'], "")
+        self.detach_disk_from_vm(vm_ref, instance, device,
+                                 volume_uuid=data['volume_id'])
 
         LOG.debug("Detached VMDK: %s", connection_info, instance=instance)
 

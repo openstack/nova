@@ -150,22 +150,20 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             get_vm_state.assert_called_once_with(self._volumeops._session,
                                                  instance)
 
-    @mock.patch.object(vm_util, 'get_vm_extra_config_spec',
+    @mock.patch.object(vm_util, 'create_extra_config',
                        return_value=mock.sentinel.extra_config)
-    @mock.patch.object(vm_util, 'reconfigure_vm')
-    def test_update_volume_details(self, reconfigure_vm,
-                                   get_vm_extra_config_spec):
+    def test_add_volume_details_to_config_spec(self, create_extra_config):
         volume_uuid = '26f5948e-52a3-4ee6-8d48-0a379afd0828'
         device_uuid = '0d86246a-2adb-470d-a9f7-bce09930c5d'
-        self._volumeops._update_volume_details(
-            mock.sentinel.vm_ref, volume_uuid, device_uuid)
+        config_spec = mock.Mock()
+        self._volumeops._add_volume_details_to_config_spec(
+            config_spec, volume_uuid, device_uuid)
 
-        get_vm_extra_config_spec.assert_called_once_with(
+        create_extra_config.assert_called_once_with(
             self._volumeops._session.vim.client.factory,
             {'volume-%s' % volume_uuid: device_uuid})
-        reconfigure_vm.assert_called_once_with(self._volumeops._session,
-                                               mock.sentinel.vm_ref,
-                                               mock.sentinel.extra_config)
+        self.assertEqual(mock.sentinel.extra_config,
+                         config_spec.extraConfig)
 
     def _fake_connection_info(self):
         return {'driver_volume_type': 'vmdk',
@@ -249,12 +247,11 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                               return_value='fake-disk-type'),
             mock.patch.object(self._volumeops, '_consolidate_vmdk_volume'),
             mock.patch.object(self._volumeops, 'detach_disk_from_vm'),
-            mock.patch.object(self._volumeops, '_update_volume_details'),
             mock.patch.object(self._volumeops._session, '_call_method',
                               return_value=[virtual_controller])
         ) as (get_vm_ref, get_volume_ref, get_vmdk_backed_disk_device,
               _get_device_disk_type, consolidate_vmdk_volume,
-              detach_disk_from_vm, update_volume_details, session_call_method):
+              detach_disk_from_vm, session_call_method):
 
             connection_info = {'driver_volume_type': 'vmdk',
                                'serial': 'volume-fake-id',
@@ -277,11 +274,9 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                 instance, mock.sentinel.vm_ref, virtual_disk,
                 mock.sentinel.volume_ref, adapter_type=adapter_type,
                 disk_type='fake-disk-type')
-            detach_disk_from_vm.assert_called_once_with(mock.sentinel.vm_ref,
-                                                        instance,
-                                                        virtual_disk)
-            update_volume_details.assert_called_once_with(
-                mock.sentinel.vm_ref, connection_info['data']['volume_id'], "")
+            detach_disk_from_vm.assert_called_once_with(
+                mock.sentinel.vm_ref, instance, virtual_disk,
+                volume_uuid=connection_info['data']['volume_id'])
 
     def test_detach_volume_vmdk_invalid(self):
         client_factory = self._volumeops._session.vim.client.factory
@@ -486,11 +481,10 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             mock.patch.object(vm_util, 'get_vmdk_info',
                               return_value=vmdk_info),
             mock.patch.object(self._volumeops, 'attach_disk_to_vm'),
-            mock.patch.object(self._volumeops, '_update_volume_details'),
             mock.patch.object(vm_util, 'get_vm_state',
                               return_value=vm_state)
         ) as (get_vm_ref, get_volume_ref, get_vmdk_info, attach_disk_to_vm,
-              update_volume_details, get_vm_state):
+              get_vm_state):
             self._volumeops.attach_volume(connection_info, self._instance,
                                           adapter_type)
 
@@ -500,9 +494,9 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             self.assertTrue(get_vmdk_info.called)
             attach_disk_to_vm.assert_called_once_with(
                 vm_ref, self._instance, adapter_type,
-                constants.DISK_TYPE_PREALLOCATED, vmdk_path='fake-path')
-            update_volume_details.assert_called_once_with(
-                vm_ref, connection_info['data']['volume_id'], disk_uuid)
+                constants.DISK_TYPE_PREALLOCATED, vmdk_path='fake-path',
+                volume_uuid=connection_info['data']['volume_id'],
+                backing_uuid=disk_uuid)
             if adapter_type == constants.ADAPTER_TYPE_IDE:
                 get_vm_state.assert_called_once_with(self._volumeops._session,
                                                      self._instance)
