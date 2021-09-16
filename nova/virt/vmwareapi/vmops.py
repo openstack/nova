@@ -746,10 +746,13 @@ class VMwareVMOps(object):
                                                  reason=reason)
 
     def update_cluster_placement(self, context, instance):
-        server_group_infos = self._get_server_groups(
-                context, instance, include_provider_groups=True)
+        server_group_infos = self._get_server_groups(context, instance)
+        for group_info in server_group_infos:
+            self.sync_server_group(context, group_info.name)
+
+        provider_group_infos = self._get_provider_server_groups(instance)
         vm_util.update_cluster_placement(self._session, instance,
-                                         self._cluster, server_group_infos)
+                                         self._cluster, provider_group_infos)
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
@@ -1086,26 +1089,29 @@ class VMwareVMOps(object):
             self._session._wait_for_task(reset_task)
             LOG.debug("Did hard reboot of VM", instance=instance)
 
-    def _get_server_groups(self, context, instance,
-                           include_provider_groups=False):
+    def _get_server_groups(self, context, instance):
         server_group_infos = []
         try:
             instance_group_object = objects.instance_group.InstanceGroup
             server_group = instance_group_object.get_by_instance_uuid(
                 context, instance.uuid)
             if server_group:
-                name = '{}{}'.format(constants.DRS_PREFIX, server_group.uuid)
+                name = server_group.uuid
                 server_group_infos.append(GroupInfo(name,
                                                     server_group.policies))
         except nova.exception.InstanceGroupNotFound:
             pass
 
-        if include_provider_groups:
-            needs_empty_host = utils.vm_needs_special_spawning(
-                int(instance.memory_mb), instance.flavor)
-            if CONF.vmware.special_spawning_vm_group and not needs_empty_host:
-                name = CONF.vmware.special_spawning_vm_group
-                server_group_infos.append(GroupInfo(name, None))
+        return server_group_infos
+
+    def _get_provider_server_groups(self, instance):
+        server_group_infos = []
+
+        needs_empty_host = utils.vm_needs_special_spawning(
+            int(instance.memory_mb), instance.flavor)
+        if CONF.vmware.special_spawning_vm_group and not needs_empty_host:
+            name = CONF.vmware.special_spawning_vm_group
+            server_group_infos.append(GroupInfo(name, None))
 
         return server_group_infos
 
