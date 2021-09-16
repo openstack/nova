@@ -1722,43 +1722,6 @@ class VMwareAPIVMTestCase(test.TestCase,
         instances = self.conn.list_instances()
         self.assertEqual(0, len(instances))
 
-    @mock.patch('nova.virt.vmwareapi.cluster_util.delete_vm_group')
-    @mock.patch.object(vmops.VMwareVMOps, '_get_server_groups',
-                                          return_value=[])
-    @mock.patch('nova.virt.vmwareapi.vm_util.update_cluster_placement')
-    def test_destroy_with_vm_group(self, mock_update_placement,
-                                         mock_get_sg,
-                                         mock_delete_group):
-        """Test deletion of a vm group when the deleted vm is the last in
-        the vm group
-        """
-        self._create_vm()
-        fake_server_group = collections.namedtuple('GroupInfo', ['name',
-                                                                'policies'])
-        fake_server_group.name = 'test_group'
-        mock_get_sg.return_value = [fake_server_group]
-        fake_factory = vmwareapi_fake.FakeFactory()
-
-        fake_cluster_config_info = fake_factory.create(
-            'ns0:ClusterConfigInfoEx')
-        group = fake_factory.create('ns0:ClusterVmGroup')
-        group.name = 'test_group'
-        group_info = fake_factory.create('ns0:ClusterGroupInfo')
-        group_info = group
-
-        fake_cluster_config_info.group = [group_info]
-
-        def fake_call_method(module, method, *args, **kwargs):
-            if method == "get_object_property" and "configurationEx" in args:
-                return fake_cluster_config_info
-            else:
-                return self.call_method(module, method, *args, **kwargs)
-        with (mock.patch.object(
-                self.conn._session, '_call_method', fake_call_method)):
-
-            self.conn.destroy(self.context, self.instance, self.network_info)
-            mock_delete_group.assert_called_once()
-
     def test_destroy_non_existent(self):
         self.destroy_disks = True
         with mock.patch.object(self.conn._vmops,

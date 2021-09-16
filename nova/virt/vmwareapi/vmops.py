@@ -1618,14 +1618,6 @@ class VMwareVMOps(object):
 
         return server_group_infos
 
-    def cleanup_server_groups(self, context, instance):
-        server_group_infos = self._get_server_groups(context, instance)
-        server_group_uuids = set(group_info.name
-                                 for group_info in server_group_infos)
-        cluster_util.clean_empty_vm_groups(self._session, self._cluster,
-                                           server_group_uuids,
-                                           instance=instance)
-
     def _destroy_instance(self, context, instance, destroy_disks=True):
         # Destroy a VM instance
         try:
@@ -1658,9 +1650,6 @@ class VMwareVMOps(object):
                 LOG.warning("In vmwareapi:vmops:_destroy_instance, got "
                             "this exception while un-registering the VM: %s",
                             excep, instance=instance)
-
-            # Delete the VM groups it was in, if they're empty now
-            self.cleanup_server_groups(context, instance)
 
             # Delete the folder holding the VM related content on
             # the datastore.
