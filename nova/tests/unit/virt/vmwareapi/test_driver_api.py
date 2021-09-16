@@ -1698,8 +1698,7 @@ class VMwareAPIVMTestCase(test.TestCase,
                           self.instance, 'dev2')]
             self.assertEqual(exp_detach_calls, detach_volume.call_args_list)
 
-    @mock.patch('nova.virt.vmwareapi.cluster_util.fetch_cluster_properties')
-    def test_destroy(self, mock_fetch):
+    def test_destroy(self):
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
@@ -1710,8 +1709,7 @@ class VMwareAPIVMTestCase(test.TestCase,
         self.assertEqual(0, len(instances))
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
 
-    @mock.patch('nova.virt.vmwareapi.cluster_util.fetch_cluster_properties')
-    def test_destroy_no_datastore(self, mock_fetch):
+    def test_destroy_no_datastore(self):
         self._create_vm()
         info = self._get_info()
         self._check_vm_info(info, power_state.RUNNING)
@@ -1724,15 +1722,13 @@ class VMwareAPIVMTestCase(test.TestCase,
         instances = self.conn.list_instances()
         self.assertEqual(0, len(instances))
 
-    @mock.patch('nova.virt.vmwareapi.cluster_util.fetch_cluster_properties')
     @mock.patch('nova.virt.vmwareapi.cluster_util.delete_vm_group')
     @mock.patch.object(vmops.VMwareVMOps, '_get_server_groups',
                                           return_value=[])
     @mock.patch('nova.virt.vmwareapi.vm_util.update_cluster_placement')
     def test_destroy_with_vm_group(self, mock_update_placement,
                                          mock_get_sg,
-                                         mock_delete_group,
-                                         mock_fetch_cluster_props):
+                                         mock_delete_group):
         """Test deletion of a vm group when the deleted vm is the last in
         the vm group
         """
@@ -2191,8 +2187,7 @@ class VMwareAPIVMTestCase(test.TestCase,
         self.assertEqual('iscsi-name', connector['initiator'])
         self.assertIn('instance', connector)
 
-    @mock.patch('nova.virt.vmwareapi.cluster_util.fetch_cluster_properties')
-    def test_connection_info_get_after_destroy(self, mock_fetch):
+    def test_connection_info_get_after_destroy(self):
         self._create_vm()
         self.conn.destroy(self.context, self.instance, self.network_info)
         connector = self.conn.get_volume_connector(self.instance)
