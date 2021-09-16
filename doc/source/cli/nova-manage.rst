@@ -1358,6 +1358,8 @@ Specify :option:`--verbose` to get detailed progress output during execution.
    * - 255
      - An unexpected error occurred.
 
+.. _placement_audit_cli:
+
 placement audit
 ---------------
 
