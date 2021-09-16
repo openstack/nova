@@ -1833,6 +1833,13 @@ class ComputeDriver(object):
         """
         return True
 
+    def sync_server_group(self, context, sg_uuid):
+        """Sync that specific server-group into the backend
+
+        If the driver manages multiple HVs in a cluster, this method will be
+        called if a customer changed a server-group for this host via API.
+        """
+
 
 def load_compute_driver(virtapi, compute_driver=None):
     """Load a compute driver module.

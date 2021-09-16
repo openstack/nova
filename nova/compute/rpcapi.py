@@ -1542,3 +1542,9 @@ class ComputeAPI(object):
                                call_monitor_timeout=CONF.rpc_response_timeout,
                                timeout=CONF.long_rpc_timeout)
         return cctxt.call(ctxt, 'cache_images', image_ids=image_ids)
+
+    def sync_server_group(self, ctxt, host, sg_uuid):
+        version = '5.0'
+        client = self.router.client(ctxt)
+        cctxt = client.prepare(server=host, version=version)
+        return cctxt.cast(ctxt, "sync_server_group", sg_uuid=sg_uuid)

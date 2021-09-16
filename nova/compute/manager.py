@@ -11522,6 +11522,10 @@ class ComputeManager(manager.Manager):
                       "%(profile)s", {'port_id': port_id,
                                       'profile': profile})
 
+    def sync_server_group(self, context, sg_uuid):
+        """Calls the driver to update the server-group in the backend"""
+        self.driver.sync_server_group(context, sg_uuid)
+
 
 # TODO(sbauza): Remove this proxy class in the X release once we drop the 5.x
 # support.
