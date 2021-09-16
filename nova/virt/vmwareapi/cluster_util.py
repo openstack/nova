@@ -292,12 +292,56 @@ def _create_cluster_group_rules_spec(client_factory, name, vm_group_name,
     return create_rule_spec(client_factory, rules_info, operation)
 
 
+def add_rule(session, cluster_ref, rule):
+    """Add the given DRS rule to the given cluster"""
+    client_factory = session.vim.client.factory
+    config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
+    config_spec.rulesSpec = [create_rule_spec(client_factory, rule, 'add')]
+    reconfigure_cluster(session, cluster_ref, config_spec)
+
+
+def get_rule(session, cluster_ref, rule_name):
+    """Get a DRS rule from the cluster by name"""
+    cluster_config = session._call_method(
+        vutil, "get_object_property", cluster_ref, "configurationEx")
+    return _get_rule(cluster_config, rule_name)
+
+
 def _get_rule(cluster_config, rule_name):
     if not hasattr(cluster_config, 'rule'):
         return
     for rule in cluster_config.rule:
         if rule.name == rule_name:
             return rule
+
+
+def get_rules_by_prefix(session, cluster_ref, rule_prefix):
+    """Get all DRS rules starting with the given prefix
+
+    Useful, if you don't know the policy of a server-group the rule was created
+    for.
+    """
+    cluster_config = session._call_method(
+        vutil, "get_object_property", cluster_ref, "configurationEx")
+
+    return [rule for rule in getattr(cluster_config, 'rule', [])
+            if rule.name.startswith(rule_prefix)]
+
+
+def delete_rule(session, cluster_ref, rule):
+    """Delete the given DRS rule from the given cluster"""
+    client_factory = session.vim.client.factory
+    config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
+    config_spec.rulesSpec = [create_rule_spec(client_factory, rule, 'remove')]
+    reconfigure_cluster(session, cluster_ref, config_spec)
+
+
+def update_rule(session, cluster_ref, rule):
+    """Update the already modified DRS rule in the cluster"""
+    client_factory = session.vim.client.factory
+    config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
+    config_spec.rulesSpec = [create_rule_spec(client_factory, rule, 'edit')]
+    reconfigure_cluster(session, cluster_ref, config_spec)
 
 
 def is_drs_enabled(session, cluster):
