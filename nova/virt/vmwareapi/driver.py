@@ -19,8 +19,10 @@
 A connection to the VMware vCenter platform.
 """
 import os
+import random
 import re
 from six.moves import urllib
+import time
 
 import os_resource_classes as orc
 from oslo_log import log as logging
@@ -63,6 +65,9 @@ RPC_TOPIC = 'vmware-vspc'
 
 TIME_BETWEEN_API_CALL_RETRIES = 1.0
 MAX_CONSOLE_BYTES = 100 * units.Ki
+
+UUID_RE = re.compile(r'[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-'
+                     r'[a-fA-F0-9]{4}-[a-fA-F0-9]{12}')
 
 
 class VMwareVCDriver(driver.ComputeDriver):
@@ -156,9 +161,6 @@ class VMwareVCDriver(driver.ComputeDriver):
         virtapi._compute.additional_endpoints.append(
             special_spawning._SpecialVmSpawningServer(self))
 
-        # filled by init_host(). contains the ComputeNode host name
-        self._compute_host = None
-
     def _check_min_version(self):
         min_version = v_utils.convert_version_to_int(constants.MIN_VC_VERSION)
         next_min_ver = v_utils.convert_version_to_int(
@@ -203,7 +205,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         if vim is None:
             self._session._create_session()
 
-        self._compute_host = host
+        LOG.debug("Starting green server-group sync-loop thread")
+        utils.spawn(self._server_group_sync_loop, host)
 
     def cleanup_host(self, host):
         self._session.logout()
@@ -840,6 +843,54 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def sync_server_group(self, context, sg_uuid):
         self._vmops.sync_server_group(context, sg_uuid)
+
+    def _server_group_sync_loop(self, compute_host):
+        """Retrieve all groups from the cluster and from the DB and call
+        self.sync_server_group() for them.
+
+        We always wait a little not not overwhelm the cluster.
+        """
+        context = nova_context.get_admin_context()
+
+        while CONF.vmware.server_group_sync_loop_spacing >= 0:
+            LOG.debug('Starting server-group sync-loop')
+
+            InstanceList = objects.instance.InstanceList
+            instance_uuids = set(i.uuid for i in InstanceList.get_by_host(
+                context, compute_host, expected_attrs=[]))
+
+            InstanceGroupList = objects.instance_group.InstanceGroupList
+            ig_list = InstanceGroupList.get_by_instance_uuids(
+                context, instance_uuids)
+
+            sg_uuids = set(ig.uuid for ig in ig_list)
+
+            cluster_rules = cluster_util.fetch_cluster_rules(
+                self._session, cluster_ref=self._cluster_ref)
+            for rule_name in cluster_rules:
+                if not rule_name.startswith(constants.DRS_PREFIX):
+                    # not managed by us
+                    continue
+
+                # should look like
+                # NOVA_d7134f26-f2e2-42ed-b5f1-4092962e84d5-affinity
+                # NOVA_d7134f26-f2e2-42ed-b5f1-4092962e84d5-soft-anti-affinity
+                # NOVA_d7134f26-f2e2-42ed-b5f1-4092962e84d5-soft-affinity
+                m = UUID_RE.search(rule_name)
+                if not m:
+                    continue
+
+                sg_uuids.add(m.group(0))
+
+            for sg_uuid in sg_uuids:
+                spacing = CONF.vmware.server_group_sync_loop_max_group_spacing
+                sleep_time = random.uniform(0.5, spacing)
+                time.sleep(sleep_time)
+                self._vmops.sync_server_group(context, sg_uuid)
+
+            LOG.debug('Finished server-group sync-loop')
+
+            time.sleep(CONF.vmware.server_group_sync_loop_spacing)
 
 
 class VMwareAPISession(api.VMwareAPISession):
