@@ -3188,3 +3188,97 @@ class VMwareVMOps(object):
                 continue
 
             vm_util.vm_ref_cache_update(vm_uuid, props['obj'])
+
+    def sync_server_group(self, context, sg_uuid):
+        LOG.debug('Starting sync for server-group %s', sg_uuid)
+
+        @utils.synchronized('vmware-server-group-{}'.format(sg_uuid))
+        def _sync_sync_server_group(context, sg_uuid):
+            rule_prefix = '{}{}'.format(constants.DRS_PREFIX, sg_uuid)
+
+            # retrieve the server-group with its members
+            try:
+                sg = objects.instance_group.InstanceGroup.get_by_uuid(context,
+                                                                      sg_uuid)
+            except exception.InstanceGroupNotFound:
+                LOG.info('Server-group %s cannot be found in DB', sg_uuid)
+                # check if we have it in the vCenter. if yes, it's an orphan
+                # and needs deletion
+                rules = cluster_util.get_rules_by_prefix(
+                    self._session, self._cluster, rule_prefix)
+                for rule in rules:
+                    LOG.debug('Deleting DRS rule %s as orphan', rule.name)
+                    cluster_util.delete_rule(
+                        self._session, self._cluster, rule)
+                    LOG.info('Deleted rule %s as orphan', rule.name)
+                LOG.debug('Sync for server-group %s done', sg_uuid)
+                return
+
+            # retrieve the instances, because sg.members contains all members
+            # and we need to filter them for our host
+            InstanceList = objects.instance.InstanceList
+            filters = {'host': self._virtapi._compute.host, 'uuid': sg.members,
+                       'deleted': False}
+            instances = InstanceList.get_by_filters(context, filters,
+                                                    expected_attrs=[])
+
+            expected_members = {}
+            for instance in instances:
+                try:
+                    moref = vm_util.get_vm_ref(self._session, instance)
+                except exception.InstanceNotFound:
+                    LOG.warning('Could not find moref for instance %s. '
+                                'Ignoring member of server-group %s',
+                                instance.uuid, sg.uuid)
+                    continue
+                expected_members[instance.uuid] = moref
+
+            rule_name = '{}-{}'.format(rule_prefix, sg.policy)
+            rule = cluster_util.get_rule(
+                self._session, self._cluster, rule_name)
+
+            if not rule:
+                if len(expected_members) < 2:
+                    LOG.debug('Sync for server-group %s done', sg_uuid)
+                    return
+                # we have to create a new rule
+                LOG.debug('Creating missing DRS rule %s with members %s',
+                          rule_name, ', '.join(expected_members))
+                client_factory = self._session.vim.client.factory
+                rule = cluster_util.create_vm_rule(
+                    client_factory, rule_name, list(expected_members.values()),
+                    policy=sg.policy)
+                cluster_util.add_rule(
+                    self._session, self._cluster, rule)
+                LOG.info('Created missing DRS rule %s with members %s',
+                         rule_name, ', '.join(expected_members))
+                LOG.debug('Sync for server-group %s done', sg_uuid)
+                return
+
+            if len(expected_members) < 2:
+                # we have to delete the rule
+                LOG.debug('Deleting DRS rule %s with < 2 members.', rule_name)
+                cluster_util.delete_rule(
+                    self._session, self._cluster, rule)
+                LOG.info('Deleted DRS rule %s with < 2 members.', rule_name)
+                LOG.debug('Sync for server-group %s done', sg_uuid)
+                return
+
+            expected_moref_values = set(vutil.get_moref_value(m)
+                                        for m in expected_members.values())
+            existing_moref_values = set(vutil.get_moref_value(m)
+                                        for m in rule.vm)
+            if expected_moref_values == existing_moref_values:
+                LOG.debug('Sync for server-group %s done', sg_uuid)
+                return
+
+            # we have to update the DRS rule to contain the right members
+            rule.vm = list(expected_members.values())
+            LOG.debug('Updating DRS rule %s with members %s',
+                      rule_name, ', '.join(expected_members))
+            cluster_util.update_rule(self._session, self._cluster, rule)
+            LOG.info('Updated DRS rule %s with members %s',
+                     rule_name, ', '.join(expected_members))
+            LOG.debug('Sync for server-group %s done', sg_uuid)
+
+        _sync_sync_server_group(context, sg_uuid)

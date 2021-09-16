@@ -838,6 +838,9 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Detach an interface from the instance."""
         self._vmops.detach_interface(context, instance, vif)
 
+    def sync_server_group(self, context, sg_uuid):
+        self._vmops.sync_server_group(context, sg_uuid)
+
 
 class VMwareAPISession(api.VMwareAPISession):
     """Sets up a session with the VC/ESX host and handles all
