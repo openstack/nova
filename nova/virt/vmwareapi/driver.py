@@ -751,3 +751,6 @@ class VMwareVCDriver(driver.ComputeDriver):
     def detach_interface(self, context, instance, vif):
         """Detach an interface from the instance."""
         self._vmops.detach_interface(context, instance, vif)
+
+    def sync_server_group(self, context, sg_uuid):
+        self._vmops.sync_server_group(context, sg_uuid)
