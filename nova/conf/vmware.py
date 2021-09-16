@@ -307,11 +307,41 @@ Possible values:
 """),
 ]
 
+vmwareapi_driver_opts = [
+    cfg.FloatOpt('server_group_sync_loop_max_group_spacing',
+                 default=5,
+                 min=0.5,
+                 help="""
+Amount of time in seconds between server-group sync via sync-loop
+
+The sync-loop for server-groups in the driver iterates over all applicable
+server-groups and calls "sync_server_group()" on them, sleeping a random time
+before calling the sync. The amount of time slept at max can be defined by this
+config value.
+
+Possible values:
+ * floating point value of seconds passed to random.uniform(0.5, X)
+"""),
+    cfg.IntOpt('server_group_sync_loop_spacing',
+               default=3600,
+               help="""
+Amount of time in seconds to wait between server-group sync-loop runs
+
+The sync-loop thread for server-groups runs continuously, sleeping after
+syncing all groups. This setting defines how long to sleep between runs.
+
+Possible values:
+ * integer >= time in seconds to sleep between runs
+ * intger < 0: disable the sync-loop
+"""),
+]
+
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +
                   vmware_utils_opts +
                   vmwareapi_opts +
                   spbm_opts +
-                  vmops_opts)
+                  vmops_opts +
+                  vmwareapi_driver_opts)
 
 
 def register_opts(conf):
