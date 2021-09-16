@@ -20,6 +20,7 @@ from oslo_vmware import vim_util as vutil
 from nova import exception
 from nova.i18n import _
 from nova import utils
+from nova.virt.vmwareapi import constants
 
 LOG = logging.getLogger(__name__)
 
@@ -179,20 +180,23 @@ def update_placement(session, cluster, vm_ref, group_infos):
     config_spec.groupSpec = []
     config_spec.rulesSpec = []
     for group_info in group_infos:
-        group = _get_vm_group(cluster_config, group_info)
+        if not group_info.name.startswith(constants.DRS_PREFIX):
+            # We only do this, if this is an admin-defined group, because
+            # VmGroups are not used by the rules created by Nova.
+            group = _get_vm_group(cluster_config, group_info)
 
-        if not group:
-            # Creating group
-            operation = "add"
-        else:
-            # VM group exists on the cluster which is assumed to be
-            # created by VC admin. Add instance to this vm group and let
-            # the placement policy defined by the VC admin take over
-            operation = "edit"
-        group_spec = _create_vm_group_spec(
-            client_factory, group_info, [vm_ref], operation=operation,
-            group=group)
-        config_spec.groupSpec.append(group_spec)
+            if not group:
+                # Creating group
+                operation = "add"
+            else:
+                # VM group exists on the cluster which is assumed to be
+                # created by VC admin. Add instance to this vm group and let
+                # the placement policy defined by the VC admin take over
+                operation = "edit"
+            group_spec = _create_vm_group_spec(
+                client_factory, group_info, [vm_ref], operation=operation,
+                group=group)
+            config_spec.groupSpec.append(group_spec)
 
         # If server group policies are defined (by tenants), then
         # create/edit affinity/anti-affinity rules on cluster.
