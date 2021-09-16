@@ -1140,6 +1140,7 @@ class VMwareVMOps(object):
                 LOG.warning("In vmwareapi:vmops:_destroy_instance, got "
                             "this exception while un-registering the VM: %s",
                             excep, instance=instance)
+
             # Delete the folder holding the VM related content on
             # the datastore.
             if destroy_disks and vm_ds_path:
