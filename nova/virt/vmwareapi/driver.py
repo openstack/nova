@@ -205,6 +205,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         if vim is None:
             self._session._create_session()
 
+        self._vmops.set_compute_host(host)
+
         LOG.debug("Starting green server-group sync-loop thread")
         utils.spawn(self._server_group_sync_loop, host)
 

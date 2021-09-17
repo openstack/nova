@@ -158,6 +158,9 @@ class VMwareVMOps(object):
                                                         self._base_folder)
         self._network_api = neutron.API()
 
+        # set when our driver's init_host() is called
+        self._compute_host = None
+
         # pre-warm the cache, so we don't have to do extra queries per instance
         self.update_vmref_cache()
 
@@ -3195,6 +3198,10 @@ class VMwareVMOps(object):
 
             vm_util.vm_ref_cache_update(vm_uuid, props['obj'])
 
+    def set_compute_host(self, compute_host):
+        """Called by the driver on init_host() so we know the compute host"""
+        self._compute_host = compute_host
+
     def sync_server_group(self, context, sg_uuid):
         LOG.debug('Starting sync for server-group %s', sg_uuid)
 
@@ -3223,7 +3230,7 @@ class VMwareVMOps(object):
             # retrieve the instances, because sg.members contains all members
             # and we need to filter them for our host
             InstanceList = objects.instance.InstanceList
-            filters = {'host': self._virtapi._compute.host, 'uuid': sg.members,
+            filters = {'host': self._compute_host, 'uuid': sg.members,
                        'deleted': False}
             instances = InstanceList.get_by_filters(context, filters,
                                                     expected_attrs=[])
