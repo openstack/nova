@@ -205,6 +205,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         if vim is None:
             self._session._create_session()
 
+        self._vmops.set_compute_host(host)
+
     def cleanup_host(self, host):
         self._session.logout()
 

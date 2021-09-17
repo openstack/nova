@@ -151,6 +151,9 @@ class VMwareVMOps(object):
                                                         self._base_folder)
         self._network_api = neutron.API()
 
+        # set when our driver's init_host() is called
+        self._compute_host = None
+
     def _get_base_folder(self):
         # Enable more than one compute node to run on the same host
         if CONF.vmware.cache_prefix:
@@ -2215,3 +2218,7 @@ class VMwareVMOps(object):
                     'thumbprint': thumbprint}
         internal_access_path = jsonutils.dumps(mks_auth)
         return ctype.ConsoleMKS(ticket.host, ticket.port, internal_access_path)
+
+    def set_compute_host(self, compute_host):
+        """Called by the driver on init_host() so we know the compute host"""
+        self._compute_host = compute_host
