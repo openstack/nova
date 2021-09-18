@@ -218,10 +218,11 @@ SERVICE_VERSION_HISTORY = (
 # This is used to raise an error at service startup if older than N-1 computes
 # are detected. Update this at the beginning of every release cycle to point to
 # the smallest service version that was added in N-1.
-OLDEST_SUPPORTED_SERVICE_VERSION = 'Wallaby'
+OLDEST_SUPPORTED_SERVICE_VERSION = 'Xena'
 SERVICE_VERSION_ALIASES = {
     'Victoria': 52,
     'Wallaby': 54,
+    'Xena': 57,
 }
 
 
