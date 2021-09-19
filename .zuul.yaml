@@ -384,7 +384,6 @@
       - check-requirements
       - integrated-gate-compute
       - openstack-cover-jobs
-      - openstack-lower-constraints-jobs
       - openstack-python3-ussuri-jobs
       - periodic-stable-jobs
       - publish-openstack-docs-pti
@@ -432,6 +431,8 @@
               - ^setup.cfg$
               - ^tools/.*$
               - ^tox.ini$
+        - openstack-tox-lower-constraints:
+            voting: false
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
@@ -450,6 +451,8 @@
         - nova-tox-validate-backport
         - tempest-integrated-compute:
             irrelevant-files: *policies-irrelevant-files
+        - openstack-tox-lower-constraints:
+            voting: false
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
