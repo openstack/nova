@@ -14,6 +14,11 @@ if [ $parent_number -eq 2 ]; then
     commit_hash=$(git show --format='%P' --quiet | awk '{print $NF}')
 fi
 
+if git show --format='%aE' HEAD~ --quiet | grep -qi 'infra-root@openstack.org'; then
+    echo 'Bot generated change; ignoring'
+    exit 0
+fi
+
 hashes=$(git show --format='%b' --quiet $commit_hash | sed -nr 's/^.cherry picked from commit (.*).$/\1/p')
 checked=0
 branches+=""
