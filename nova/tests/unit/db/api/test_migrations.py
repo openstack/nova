@@ -198,8 +198,9 @@ class NovaMigrationsWalk(
         self.config = migration._find_alembic_conf('api')
         self.init_version = migration.ALEMBIC_INIT_VERSION['api']
 
-    def _migrate_up(self, revision):
+    def _migrate_up(self, connection, revision):
         if revision == self.init_version:  # no tests for the initial revision
+            alembic_api.upgrade(self.config, revision)
             return
 
         self.assertIsNotNone(
@@ -208,7 +209,16 @@ class NovaMigrationsWalk(
                 'API DB Migration %s does not have a test; you must add one'
             ) % revision,
         )
+
+        pre_upgrade = getattr(self, '_pre_upgrade_%s' % revision, None)
+        if pre_upgrade:
+            pre_upgrade(connection)
+
         alembic_api.upgrade(self.config, revision)
+
+        post_upgrade = getattr(self, '_check_%s' % revision, None)
+        if post_upgrade:
+            post_upgrade(connection)
 
     def test_single_base_revision(self):
         """Ensure we only have a single base revision.
@@ -236,16 +246,22 @@ class NovaMigrationsWalk(
         with self.engine.begin() as connection:
             self.config.attributes['connection'] = connection
             script = alembic_script.ScriptDirectory.from_config(self.config)
-            for revision_script in script.walk_revisions():
-                revision = revision_script.revision
+            revisions = [x.revision for x in script.walk_revisions()]
+
+            # for some reason, 'walk_revisions' gives us the revisions in
+            # reverse chronological order so we have to invert this
+            revisions.reverse()
+            self.assertEqual(revisions[0], self.init_version)
+
+            for revision in revisions:
                 LOG.info('Testing revision %s', revision)
-                self._migrate_up(revision)
+                self._migrate_up(connection, revision)
 
     def test_db_version_alembic(self):
         migration.db_sync(database='api')
 
-        head = alembic_script.ScriptDirectory.from_config(
-            self.config).get_current_head()
+        script = alembic_script.ScriptDirectory.from_config(self.config)
+        head = script.get_current_head()
         self.assertEqual(head, migration.db_version(database='api'))
 
 
