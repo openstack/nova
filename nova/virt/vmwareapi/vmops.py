@@ -3203,6 +3203,20 @@ class VMwareVMOps(object):
         self._compute_host = compute_host
 
     def sync_server_group(self, context, sg_uuid):
+        # we have to ignore instances currently in a volatitle state, where
+        # either VMware cannot support them being in a DRS rule or we expect
+        # them to go away during the syncing process, which could lead to
+        # errors. Therefore, we explicitly remove those members from the list
+        # of expected members of a rule, which also removes them in the
+        # cluster.
+        STATES_EXCLUDING_MEMBERS_FROM_DRS_RULES = [
+            task_states.MIGRATING,
+            task_states.DELETING,
+            task_states.SHELVING,
+            task_states.REBUILDING,
+            task_states.REBUILD_BLOCK_DEVICE_MAPPING,
+        ]
+
         LOG.debug('Starting sync for server-group %s', sg_uuid)
 
         @utils.synchronized('vmware-server-group-{}'.format(sg_uuid))
@@ -3237,6 +3251,13 @@ class VMwareVMOps(object):
 
             expected_members = {}
             for instance in instances:
+                task_state = instance.task_state
+                if task_state in STATES_EXCLUDING_MEMBERS_FROM_DRS_RULES:
+                    LOG.debug("Excluding member %s of server-group %s, "
+                              "because it's in task_state %s.",
+                              instance.uuid, sg.uuid, task_state)
+                    continue
+
                 try:
                     moref = vm_util.get_vm_ref(self._session, instance)
                 except exception.InstanceNotFound:
