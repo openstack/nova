@@ -856,41 +856,46 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         while CONF.vmware.server_group_sync_loop_spacing >= 0:
             LOG.debug('Starting server-group sync-loop')
+            try:
 
-            InstanceList = objects.instance.InstanceList
-            instance_uuids = set(i.uuid for i in InstanceList.get_by_host(
-                context, compute_host, expected_attrs=[]))
+                InstanceList = objects.instance.InstanceList
+                instance_uuids = set(i.uuid for i in InstanceList.get_by_host(
+                    context, compute_host, expected_attrs=[]))
 
-            InstanceGroupList = objects.instance_group.InstanceGroupList
-            ig_list = InstanceGroupList.get_by_instance_uuids(
-                context, instance_uuids)
+                InstanceGroupList = objects.instance_group.InstanceGroupList
+                ig_list = InstanceGroupList.get_by_instance_uuids(
+                    context, instance_uuids)
 
-            sg_uuids = set(ig.uuid for ig in ig_list)
+                sg_uuids = set(ig.uuid for ig in ig_list)
 
-            cluster_rules = cluster_util.fetch_cluster_rules(
-                self._session, cluster_ref=self._cluster_ref)
-            for rule_name in cluster_rules:
-                if not rule_name.startswith(constants.DRS_PREFIX):
-                    # not managed by us
-                    continue
+                cluster_rules = cluster_util.fetch_cluster_rules(
+                    self._session, cluster_ref=self._cluster_ref)
+                for rule_name in cluster_rules:
+                    if not rule_name.startswith(constants.DRS_PREFIX):
+                        # not managed by us
+                        continue
 
-                # should look like
-                # NOVA_d7134f26-f2e2-42ed-b5f1-4092962e84d5-affinity
-                # NOVA_d7134f26-f2e2-42ed-b5f1-4092962e84d5-soft-anti-affinity
-                # NOVA_d7134f26-f2e2-42ed-b5f1-4092962e84d5-soft-affinity
-                m = UUID_RE.search(rule_name)
-                if not m:
-                    continue
+                    # should look like
+                    # NOVA_d7134f26-f2e2-42ed-b5f1-4092962e84d5-affinity
+                    # NOVA_d7134f26-f2e2-42ed-b5f1-4092962e84d5-soft-anti-affinity
+                    # NOVA_d7134f26-f2e2-42ed-b5f1-4092962e84d5-soft-affinity
+                    m = UUID_RE.search(rule_name)
+                    if not m:
+                        continue
 
-                sg_uuids.add(m.group(0))
+                    sg_uuids.add(m.group(0))
 
-            for sg_uuid in sg_uuids:
-                spacing = CONF.vmware.server_group_sync_loop_max_group_spacing
-                sleep_time = random.uniform(0.5, spacing)
-                time.sleep(sleep_time)
-                self._vmops.sync_server_group(context, sg_uuid)
-
-            LOG.debug('Finished server-group sync-loop')
+                for sg_uuid in sg_uuids:
+                    spacing = \
+                        CONF.vmware.server_group_sync_loop_max_group_spacing
+                    sleep_time = random.uniform(0.5, spacing)
+                    time.sleep(sleep_time)
+                    self._vmops.sync_server_group(context, sg_uuid)
+            except Exception as e:
+                LOG.exception("Finished server-group sync-loop with error: %s",
+                              e)
+            else:
+                LOG.debug('Finished server-group sync-loop')
 
             time.sleep(CONF.vmware.server_group_sync_loop_spacing)
 
