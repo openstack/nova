@@ -711,6 +711,127 @@ class NUMAServersTest(NUMAServersTestBase):
 
         server = self._wait_for_state_change(server, 'ACTIVE')
 
+    def _assert_pinned_cpus(self, hostname, expected_number_of_pinned):
+        numa_topology = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, hostname,
+            ).numa_topology,
+        )
+        self.assertEqual(
+            expected_number_of_pinned, len(numa_topology.cells[0].pinned_cpus))
+
+    def _create_server_and_resize_bug_1944759(self):
+        self.flags(
+            cpu_dedicated_set='0-3', cpu_shared_set='4-7', group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        # start services
+        self.start_compute(hostname='test_compute0')
+        self.start_compute(hostname='test_compute1')
+
+        flavor_a_id = self._create_flavor(
+            vcpu=2, extra_spec={'hw:cpu_policy': 'dedicated'})
+        server = self._create_server(flavor_id=flavor_a_id)
+
+        src_host = server['OS-EXT-SRV-ATTR:host']
+        self._assert_pinned_cpus(src_host, 2)
+
+        # we don't really care what the new flavor is, so long as the old
+        # flavor is using pinning. We use a similar flavor for simplicity.
+        flavor_b_id = self._create_flavor(
+            vcpu=2, extra_spec={'hw:cpu_policy': 'dedicated'})
+
+        orig_rpc_finish_resize = nova.compute.rpcapi.ComputeAPI.finish_resize
+
+        # Simulate that the finish_resize call overlaps with an
+        # update_available_resource periodic job
+        def inject_periodic_to_finish_resize(*args, **kwargs):
+            self._run_periodics()
+            return orig_rpc_finish_resize(*args, **kwargs)
+
+        self.stub_out(
+            'nova.compute.rpcapi.ComputeAPI.finish_resize',
+            inject_periodic_to_finish_resize,
+        )
+
+        # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
+        # probably be less...dumb
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            post = {'resize': {'flavorRef': flavor_b_id}}
+            self.api.post_server_action(server['id'], post)
+            server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+
+        dst_host = server['OS-EXT-SRV-ATTR:host']
+
+        # This is a resource accounting bug, we should have 2 cpus pinned on
+        # both computes. The source should have it due to the outbound
+        # migration and the destination due to the instance running there
+        self._assert_pinned_cpus(src_host, 0)
+        self._assert_pinned_cpus(dst_host, 2)
+
+        return server, src_host, dst_host
+
+    def test_resize_confirm_bug_1944759(self):
+        server, src_host, dst_host = (
+            self._create_server_and_resize_bug_1944759())
+
+        # Now confirm the resize
+        post = {'confirmResize': None}
+
+        # FIXME(gibi): This is bug 1944759 where during resize, on the source
+        # node the resize_instance() call at the point of calling finish_resize
+        # overlaps with a update_available_resources() periodic job. This
+        # causes that the periodic job will not track the migration nor the
+        # instance and therefore freeing the resource allocation. Then when
+        # later the resize is confirmed the confirm_resize on the source
+        # compute also wants to free up the resources, the pinned CPUs, and it
+        # fails as they are already freed.
+        exc = self.assertRaises(
+            client.OpenStackApiException,
+            self.api.post_server_action, server['id'], post
+        )
+        self.assertEqual(500, exc.response.status_code)
+        self.assertIn('CPUUnpinningInvalid', str(exc))
+
+        # confirm failed above but the resource allocation reflects that the
+        # VM is running on the dest node
+        self._assert_pinned_cpus(src_host, 0)
+        self._assert_pinned_cpus(dst_host, 2)
+
+        self._run_periodics()
+
+        # and such allocation situation is stable so as a recovery the VM
+        # can be reset-state to ACTIVE without problem.
+        self._assert_pinned_cpus(src_host, 0)
+        self._assert_pinned_cpus(dst_host, 2)
+
+    def test_resize_revert_bug_1944759(self):
+        server, src_host, dst_host = (
+            self._create_server_and_resize_bug_1944759())
+
+        # Now revert the resize
+        post = {'revertResize': None}
+
+        # reverts actually succeeds (not like confirm) but the resource
+        # allocation is still flaky
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(server, 'ACTIVE')
+
+        # This is a resource accounting bug. After the revert the source host
+        # should have 2 cpus pinned due to the instance.
+        self._assert_pinned_cpus(src_host, 0)
+        self._assert_pinned_cpus(dst_host, 0)
+
+        # running the periodic job will fix the resource accounting
+        self._run_periodics()
+
+        # this is now correct
+        self._assert_pinned_cpus(src_host, 2)
+        self._assert_pinned_cpus(dst_host, 0)
+
 
 class NUMAServerTestWithCountingQuotaFromPlacement(NUMAServersTest):
 
