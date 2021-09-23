@@ -108,99 +108,61 @@ class CinderFixture(fixtures.Fixture):
                 self.MULTIATTACH_RO_MIGRATE_NEW_VOL]
 
         def fake_get(self_api, context, volume_id, microversion=None):
+            volume = {
+                'display_name': volume_id,
+                'id': volume_id,
+                'size': 1,
+                'multiattach': _is_multiattach(volume_id),
+                'availability_zone': self.az
+            }
 
-            # TODO(lyarwood): Refactor this block into something sensible and
-            # reusable by other tests.
-            # Check for the special swap volumes.
-            attachments = self.volume_to_attachment[volume_id]
-            if volume_id in (self.SWAP_OLD_VOL, self.SWAP_ERR_OLD_VOL):
-                volume = {
-                    'status': 'available',
-                    'display_name': 'TEST1',
-                    'attach_status': 'detached',
-                    'id': volume_id,
-                    'multiattach': False,
-                    'size': 1
-                }
-                if (
-                    (
-                        self.swap_volume_instance_uuid and
-                        volume_id == self.SWAP_OLD_VOL
-                    ) or (
-                        self.swap_volume_instance_error_uuid and
-                        volume_id == self.SWAP_ERR_OLD_VOL
-                    )
-                ):
-                    if volume_id == self.SWAP_OLD_VOL:
+            # Add any attachment details the fixture has
+            fixture_attachments = self.volume_to_attachment[volume_id]
+            if fixture_attachments:
+                attachments = {}
+                for attachment in list(fixture_attachments.values()):
+                    instance_uuid = attachment['instance_uuid']
+                    # legacy cruft left over from notification tests
+                    if (
+                        volume_id == self.SWAP_OLD_VOL and
+                        self.swap_volume_instance_uuid
+                    ):
                         instance_uuid = self.swap_volume_instance_uuid
-                    else:
+
+                    if (
+                        volume_id == self.SWAP_ERR_OLD_VOL and
+                        self.swap_volume_instance_error_uuid
+                    ):
                         instance_uuid = self.swap_volume_instance_error_uuid
+                    attachments[instance_uuid] = {
+                        'attachment_id': attachment['id'],
+                        'mountpoint': '/dev/vdb',
+                    }
 
-                    if attachments:
-                        attachment = list(attachments.values())[0]
-
-                        volume.update({
-                            'status': 'in-use',
-                            'attachments': {
-                                instance_uuid: {
-                                    'mountpoint': '/dev/vdb',
-                                    'attachment_id': attachment['id']
-                                }
-                            },
-                            'attach_status': 'attached',
-                        })
-                    return volume
-
-            # Check to see if the volume is attached.
-            if attachments:
-                # The volume is attached.
-                attachment = list(attachments.values())[0]
-                volume = {
+                volume.update({
                     'status': 'in-use',
-                    'display_name': volume_id,
                     'attach_status': 'attached',
-                    'id': volume_id,
-                    'multiattach': _is_multiattach(volume_id),
-                    'size': 1,
-                    'attachments': {
-                        attachment['instance_uuid']: {
-                            'attachment_id': attachment['id'],
-                            'mountpoint': '/dev/vdb'
-                        }
-                    }
-                }
+                    'attachments': attachments,
+                })
+            # Otherwise mark the volume as avilable and detached
             else:
-                # This is a test that does not care about the actual details.
-                volume = {
+                volume.update({
                     'status': 'available',
-                    'display_name': volume_id,
                     'attach_status': 'detached',
-                    'id': volume_id,
-                    'multiattach': _is_multiattach(volume_id),
-                    'size': 1
+                })
+
+            if volume_id == self.IMAGE_BACKED_VOL:
+                volume['bootable'] = True
+                volume['volume_image_metadata'] = {
+                    'image_id': '155d900f-4e14-4e4c-a73d-069cbf4541e6'
                 }
 
-            if 'availability_zone' not in volume:
-                volume['availability_zone'] = self.az
-
-            # Check for our special image-backed volume.
-            if volume_id in (
-                self.IMAGE_BACKED_VOL, self.IMAGE_WITH_TRAITS_BACKED_VOL,
-            ):
-                # Make it a bootable volume.
+            if volume_id == self.IMAGE_WITH_TRAITS_BACKED_VOL:
                 volume['bootable'] = True
-                if volume_id == self.IMAGE_BACKED_VOL:
-                    # Add the image_id metadata.
-                    volume['volume_image_metadata'] = {
-                        # There would normally be more image metadata in here.
-                        'image_id': '155d900f-4e14-4e4c-a73d-069cbf4541e6'
-                    }
-                elif volume_id == self.IMAGE_WITH_TRAITS_BACKED_VOL:
-                    # Add the image_id metadata with traits.
-                    volume['volume_image_metadata'] = {
-                        'image_id': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
-                        "trait:HW_CPU_X86_SGX": "required",
-                    }
+                volume['volume_image_metadata'] = {
+                    'image_id': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                    "trait:HW_CPU_X86_SGX": "required",
+                }
 
             # If we haven't called migrate_volume_completion then return
             # a migration_status of migrating
