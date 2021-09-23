@@ -37,7 +37,12 @@ class CinderFixture(fixtures.Fixture):
     SWAP_ERR_OLD_VOL = '828419fa-3efb-4533-b458-4267ca5fe9b1'
     SWAP_ERR_NEW_VOL = '9c6d9c2d-7a8f-4c80-938d-3bf062b8d489'
     SWAP_ERR_ATTACH_ID = '4a3cd440-b9c2-11e1-afa6-0800200c9a66'
+
     MULTIATTACH_VOL = '4757d51f-54eb-4442-8684-3399a6431f67'
+    MULTIATTACH_RO_SWAP_OLD_VOL = uuids.multiattach_ro_swap_old_vol
+    MULTIATTACH_RO_SWAP_NEW_VOL = uuids.multiattach_ro_swap_new_vol
+    MULTIATTACH_RO_MIGRATE_OLD_VOL = uuids.multiattach_ro_migrate_old_vol
+    MULTIATTACH_RO_MIGRATE_NEW_VOL = uuids.multiattach_ro_migrate_new_vol
 
     # This represents a bootable image-backed volume to test
     # boot-from-volume scenarios.
@@ -78,6 +83,7 @@ class CinderFixture(fixtures.Fixture):
         self.swap_volume_instance_uuid = None
         self.swap_volume_instance_error_uuid = None
         self.attachment_error_id = None
+        self.multiattach_ro_migrated = False
         self.az = az
         # A dict, keyed by volume id, to a dict, keyed by attachment id,
         # with keys:
@@ -93,10 +99,20 @@ class CinderFixture(fixtures.Fixture):
     def setUp(self):
         super().setUp()
 
+        def _is_multiattach(volume_id):
+            return volume_id in [
+                self.MULTIATTACH_VOL,
+                self.MULTIATTACH_RO_SWAP_OLD_VOL,
+                self.MULTIATTACH_RO_SWAP_NEW_VOL,
+                self.MULTIATTACH_RO_MIGRATE_OLD_VOL,
+                self.MULTIATTACH_RO_MIGRATE_NEW_VOL]
+
         def fake_get(self_api, context, volume_id, microversion=None):
+
+            # TODO(lyarwood): Refactor this block into something sensible and
+            # reusable by other tests.
             # Check for the special swap volumes.
             attachments = self.volume_to_attachment[volume_id]
-
             if volume_id in (self.SWAP_OLD_VOL, self.SWAP_ERR_OLD_VOL):
                 volume = {
                     'status': 'available',
@@ -144,7 +160,7 @@ class CinderFixture(fixtures.Fixture):
                     'display_name': volume_id,
                     'attach_status': 'attached',
                     'id': volume_id,
-                    'multiattach': volume_id == self.MULTIATTACH_VOL,
+                    'multiattach': _is_multiattach(volume_id),
                     'size': 1,
                     'attachments': {
                         attachment['instance_uuid']: {
@@ -157,10 +173,10 @@ class CinderFixture(fixtures.Fixture):
                 # This is a test that does not care about the actual details.
                 volume = {
                     'status': 'available',
-                    'display_name': 'TEST2',
+                    'display_name': volume_id,
                     'attach_status': 'detached',
                     'id': volume_id,
-                    'multiattach': volume_id == self.MULTIATTACH_VOL,
+                    'multiattach': _is_multiattach(volume_id),
                     'size': 1
                 }
 
@@ -186,11 +202,35 @@ class CinderFixture(fixtures.Fixture):
                         "trait:HW_CPU_X86_SGX": "required",
                     }
 
+            # If we haven't called migrate_volume_completion then return
+            # a migration_status of migrating
+            if (
+                volume_id == self.MULTIATTACH_RO_MIGRATE_OLD_VOL and
+                not self.multiattach_ro_migrated
+            ):
+                volume['migration_status'] = 'migrating'
+
+            # If we have migrated and are still GET'ing the new volume
+            # return raise VolumeNotFound
+            if (
+                volume_id == self.MULTIATTACH_RO_MIGRATE_NEW_VOL and
+                self.multiattach_ro_migrated
+            ):
+                raise exception.VolumeNotFound(
+                    volume_id=self.MULTIATTACH_RO_MIGRATE_NEW_VOL)
+
             return volume
 
         def fake_migrate_volume_completion(
             _self, context, old_volume_id, new_volume_id, error,
         ):
+            if new_volume_id == self.MULTIATTACH_RO_MIGRATE_NEW_VOL:
+                # Mimic the behaviour of Cinder here that renames the new
+                # volume to the old UUID once the migration is complete.
+                # This boolean is used above to signal that the old volume
+                # has been deleted if callers try to GET it.
+                self.multiattach_ro_migrated = True
+                return {'save_volume_id': old_volume_id}
             return {'save_volume_id': new_volume_id}
 
         def _find_attachment(attachment_id):
@@ -212,14 +252,15 @@ class CinderFixture(fixtures.Fixture):
             """Find the connection_info associated with an attachment
 
             :returns: A connection_info dict based on a deepcopy associated
-                with the volume_id but containing the attachment_id, making it
-                unique for the attachment.
+                with the volume_id but containing both the attachment_id and
+                volume_id making it unique for the attachment.
             """
             connection_info = copy.deepcopy(
                 self.VOLUME_CONNECTION_INFO.get(
                     volume_id, self.VOLUME_CONNECTION_INFO.get('fake')
                 )
             )
+            connection_info['data']['volume_id'] = volume_id
             connection_info['data']['attachment_id'] = attachment_id
             return connection_info
 
@@ -241,6 +282,13 @@ class CinderFixture(fixtures.Fixture):
                 'instance_uuid': instance_uuid,
                 'connector': connector,
             }
+
+            if volume_id in [self.MULTIATTACH_RO_SWAP_OLD_VOL,
+                             self.MULTIATTACH_RO_SWAP_NEW_VOL,
+                             self.MULTIATTACH_RO_MIGRATE_OLD_VOL,
+                             self.MULTIATTACH_RO_MIGRATE_NEW_VOL]:
+                attachment['attach_mode'] = 'ro'
+
             LOG.info(
                 'Created attachment %s for volume %s. Total attachments '
                 'for volume: %d',
