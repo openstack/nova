@@ -66,7 +66,7 @@ def validate_name(
     neutron = neutronapi.get_client(context)
     try:
         return neutronv20.find_resourceid_by_name_or_id(
-            neutron, 'security_group', name, context.project_id)
+            neutron, 'security_group', name)
     except n_exc.NeutronClientNoUniqueMatch as e:
         raise exception.NoUniqueMatch(str(e))
     except n_exc.NeutronClientException as e:

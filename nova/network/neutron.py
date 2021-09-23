@@ -845,8 +845,7 @@ class API:
         :raises nova.exception.NoUniqueMatch: If multiple security groups
             are requested with the same name.
         :raises nova.exception.SecurityGroupNotFound: If a requested security
-            group is not in the tenant-filtered list of available security
-            groups in Neutron.
+            group is not in the list of available security groups in Neutron.
         """
         security_group_ids = []
         # TODO(arosen) Should optimize more to do direct query for security
@@ -858,9 +857,8 @@ class API:
             # speed processing of this request a lot in case when tenant has
             # got many security groups
             sg_fields = ['id', 'name']
-            search_opts = {'tenant_id': instance.project_id}
             user_security_groups = neutron.list_security_groups(
-                fields=sg_fields, **search_opts).get('security_groups')
+                fields=sg_fields).get('security_groups')
 
             for security_group in security_groups:
                 name_match = None
