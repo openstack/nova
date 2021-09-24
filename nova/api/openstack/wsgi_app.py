@@ -16,6 +16,8 @@ import sys
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_reports import guru_meditation_report as gmr
+from oslo_reports import opts as gmr_opts
 from oslo_service import _options as service_opts
 from paste import deploy
 
@@ -25,6 +27,7 @@ from nova import exception
 from nova import objects
 from nova import service
 from nova import utils
+from nova import version
 
 CONF = cfg.CONF
 
@@ -79,7 +82,7 @@ def error_application(exc, name):
 
 @utils.run_once('Global data already initialized, not re-initializing.',
                 LOG.info)
-def init_global_data(conf_files):
+def init_global_data(conf_files, service_name):
     # NOTE(melwitt): parse_args initializes logging and calls global rpc.init()
     # and db_api.configure(). The db_api.configure() call does not initiate any
     # connection to the database.
@@ -89,6 +92,9 @@ def init_global_data(conf_files):
     config.parse_args(sys.argv, default_config_files=conf_files)
 
     logging.setup(CONF, "nova")
+    gmr_opts.set_defaults(CONF)
+    gmr.TextGuruMeditation.setup_autorun(
+        version, conf=CONF, service_name=service_name)
 
     # dump conf at debug (log_options option comes from oslo.service)
     # FIXME(mriedem): This is gross but we don't have a public hook into
@@ -110,7 +116,7 @@ def init_application(name):
     # apache/mod_wsgi reloads the init_application script. So, we initialize
     # global data separately and decorate the method to run only once in a
     # python interpreter instance.
-    init_global_data(conf_files)
+    init_global_data(conf_files, name)
 
     try:
         _setup_service(CONF.host, name)

@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Guru Meditation Reports can now be generated for the Nova API service
+    when running under uWSGI. Note that uWSGI intercepts SIGUSR2 signals,
+    so a file trigger should be used instead.
