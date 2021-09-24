@@ -12,15 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import glob
+import os
 import urllib
 
-import fixtures
-import mock
-
 from alembic.runtime import migration as alembic_migration
+import fixtures
 from migrate import exceptions as migrate_exceptions
 from migrate.versioning import api as migrate_api
-
+import mock
 from oslo_db.sqlalchemy import enginefacade
 
 from nova.db.api import api as api_db_api
@@ -285,3 +285,35 @@ class TestDatabaseUnderVersionControl(test.NoDBTestCase):
         self.assertFalse(ret)
 
         context.get_current_revision.assert_called_once_with()
+
+
+class ProjectTestCase(test.NoDBTestCase):
+
+    def test_no_migrations_have_downgrade(self):
+        topdir = os.path.normpath(os.path.dirname(__file__) + '/../../../')
+        # Walk both the nova_api and nova (cell) database migrations.
+        includes_downgrade = []
+        for directory in (
+            os.path.join(topdir, 'db', 'main', 'legacy_migrations'),
+            os.path.join(topdir, 'db', 'api', 'legacy_migrations'),
+        ):
+            py_glob = os.path.join(directory, 'versions', '*.py')
+            for path in glob.iglob(py_glob):
+                has_upgrade = False
+                has_downgrade = False
+                with open(path, "r") as f:
+                    for line in f:
+                        if 'def upgrade(' in line:
+                            has_upgrade = True
+                        if 'def downgrade(' in line:
+                            has_downgrade = True
+
+                    if has_upgrade and has_downgrade:
+                        fname = os.path.basename(path)
+                        includes_downgrade.append(fname)
+
+        helpful_msg = (
+            "The following migrations have a downgrade "
+            "which is not supported:"
+            "\n\t%s" % '\n\t'.join(sorted(includes_downgrade)))
+        self.assertFalse(includes_downgrade, helpful_msg)

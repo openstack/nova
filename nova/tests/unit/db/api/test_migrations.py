@@ -10,22 +10,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Tests for database migrations.
+"""Tests for database migrations for the API database.
 
-There are "opportunistic" tests which allows testing against all 3 databases
+These are "opportunistic" tests which allow testing against all three databases
 (sqlite in memory, mysql, pg) in a properly configured unit test environment.
 
-For the opportunistic testing you need to set up db's named 'openstack_citest'
+For the opportunistic testing you need to set up DBs named 'openstack_citest'
 with user 'openstack_citest' and password 'openstack_citest' on localhost. The
-test will then use that db and u/p combo to run the tests.
-
-For postgres on Ubuntu this can be done with the following commands::
-
-| sudo -u postgres psql
-| postgres=# create user openstack_citest with createdb login password
-|       'openstack_citest';
-| postgres=# create database openstack_citest with owner openstack_citest;
-
+test will then use that DB and username/password combo to run the tests. Refer
+to the 'tools/test-setup.sh' for an example of how to configure this.
 """
 
 from alembic import command as alembic_api
