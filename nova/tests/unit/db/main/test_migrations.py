@@ -27,17 +27,20 @@ to the 'tools/test-setup.sh' for an example of how to configure this.
 
 from alembic import command as alembic_api
 from alembic import script as alembic_script
+import fixtures
 from migrate.versioning import api as migrate_api
 import mock
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
+from oslo_log.fixture import logging_error as log_fixture
 from oslo_log import log as logging
-import testtools
+from oslotest import base
 
 from nova.db.main import models
 from nova.db import migration
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 
 LOG = logging.getLogger(__name__)
 
@@ -46,7 +49,15 @@ class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
     """Test sqlalchemy-migrate migrations."""
 
     def setUp(self):
-        super().setUp()
+        # Ensure BaseTestCase's ConfigureLogging fixture is disabled since
+        # we're using our own (StandardLogging).
+        with fixtures.EnvironmentVariable('OS_LOG_CAPTURE', '0'):
+            super().setUp()
+
+        self.useFixture(log_fixture.get_logging_handle_error_fixture())
+        self.useFixture(nova_fixtures.WarningsFixture())
+        self.useFixture(nova_fixtures.StandardLogging())
+
         self.engine = enginefacade.writer.get_engine()
 
     def db_sync(self, engine):
@@ -99,7 +110,7 @@ class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
 class TestModelsSyncSQLite(
     NovaModelsMigrationsSync,
     test_fixtures.OpportunisticDBTestMixin,
-    testtools.TestCase,
+    base.BaseTestCase,
 ):
     pass
 
@@ -107,7 +118,7 @@ class TestModelsSyncSQLite(
 class TestModelsSyncMySQL(
     NovaModelsMigrationsSync,
     test_fixtures.OpportunisticDBTestMixin,
-    testtools.TestCase,
+    base.BaseTestCase,
 ):
     FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
@@ -135,7 +146,7 @@ class TestModelsSyncMySQL(
 class TestModelsSyncPostgreSQL(
     NovaModelsMigrationsSync,
     test_fixtures.OpportunisticDBTestMixin,
-    testtools.TestCase,
+    base.BaseTestCase,
 ):
     FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
@@ -160,7 +171,7 @@ class NovaModelsMigrationsLegacySync(NovaModelsMigrationsSync):
 class TestModelsLegacySyncSQLite(
     NovaModelsMigrationsLegacySync,
     test_fixtures.OpportunisticDBTestMixin,
-    testtools.TestCase,
+    base.BaseTestCase,
 ):
     pass
 
@@ -168,7 +179,7 @@ class TestModelsLegacySyncSQLite(
 class TestModelsLegacySyncMySQL(
     NovaModelsMigrationsLegacySync,
     test_fixtures.OpportunisticDBTestMixin,
-    testtools.TestCase,
+    base.BaseTestCase,
 ):
     FIXTURE = test_fixtures.MySQLOpportunisticFixture
 
@@ -176,7 +187,7 @@ class TestModelsLegacySyncMySQL(
 class TestModelsLegacySyncPostgreSQL(
     NovaModelsMigrationsLegacySync,
     test_fixtures.OpportunisticDBTestMixin,
-    testtools.TestCase,
+    base.BaseTestCase,
 ):
     FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
 
