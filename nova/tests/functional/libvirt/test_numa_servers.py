@@ -766,10 +766,10 @@ class NUMAServersTest(NUMAServersTestBase):
 
         dst_host = server['OS-EXT-SRV-ATTR:host']
 
-        # This is a resource accounting bug, we should have 2 cpus pinned on
-        # both computes. The source should have it due to the outbound
-        # migration and the destination due to the instance running there
-        self._assert_pinned_cpus(src_host, 0)
+        # we have 2 cpus pinned on both computes. The source should have it
+        # due to the outbound migration and the destination due to the
+        # instance running there
+        self._assert_pinned_cpus(src_host, 2)
         self._assert_pinned_cpus(dst_host, 2)
 
         return server, src_host, dst_host
@@ -781,30 +781,17 @@ class NUMAServersTest(NUMAServersTestBase):
         # Now confirm the resize
         post = {'confirmResize': None}
 
-        # FIXME(gibi): This is bug 1944759 where during resize, on the source
-        # node the resize_instance() call at the point of calling finish_resize
-        # overlaps with a update_available_resources() periodic job. This
-        # causes that the periodic job will not track the migration nor the
-        # instance and therefore freeing the resource allocation. Then when
-        # later the resize is confirmed the confirm_resize on the source
-        # compute also wants to free up the resources, the pinned CPUs, and it
-        # fails as they are already freed.
-        exc = self.assertRaises(
-            client.OpenStackApiException,
-            self.api.post_server_action, server['id'], post
-        )
-        self.assertEqual(500, exc.response.status_code)
-        self.assertIn('CPUUnpinningInvalid', str(exc))
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(server, 'ACTIVE')
 
-        # confirm failed above but the resource allocation reflects that the
-        # VM is running on the dest node
+        # the resource allocation reflects that the VM is running on the dest
+        # node
         self._assert_pinned_cpus(src_host, 0)
         self._assert_pinned_cpus(dst_host, 2)
 
+        # and running periodics does not break it either
         self._run_periodics()
 
-        # and such allocation situation is stable so as a recovery the VM
-        # can be reset-state to ACTIVE without problem.
         self._assert_pinned_cpus(src_host, 0)
         self._assert_pinned_cpus(dst_host, 2)
 
@@ -820,15 +807,14 @@ class NUMAServersTest(NUMAServersTestBase):
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(server, 'ACTIVE')
 
-        # This is a resource accounting bug. After the revert the source host
-        # should have 2 cpus pinned due to the instance.
-        self._assert_pinned_cpus(src_host, 0)
+        # After the revert the source host should have 2 cpus pinned due to
+        # the instance.
+        self._assert_pinned_cpus(src_host, 2)
         self._assert_pinned_cpus(dst_host, 0)
 
-        # running the periodic job will fix the resource accounting
+        # running the periodic job will not break it either
         self._run_periodics()
 
-        # this is now correct
         self._assert_pinned_cpus(src_host, 2)
         self._assert_pinned_cpus(dst_host, 0)
 
