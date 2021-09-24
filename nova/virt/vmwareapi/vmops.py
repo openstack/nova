@@ -3272,7 +3272,7 @@ class VMwareVMOps(object):
                 self._session, self._cluster, rule_name)
 
             if not rule:
-                if len(expected_members) < 2:
+                if len(expected_members) < 2 or sg.policy == 'soft-affinity':
                     LOG.debug('Sync for server-group %s done', sg_uuid)
                     return
                 # we have to create a new rule
@@ -3286,6 +3286,16 @@ class VMwareVMOps(object):
                     self._session, self._cluster, rule)
                 LOG.info('Created missing DRS rule %s with members %s',
                          rule_name, ', '.join(expected_members))
+                LOG.debug('Sync for server-group %s done', sg_uuid)
+                return
+
+            if sg.policy == 'soft-affinity':
+                LOG.debug('Deleting DRS rule %s with policy soft-affinity',
+                          rule_name)
+                cluster_util.delete_rule(
+                    self._session, self._cluster, rule)
+                LOG.info('Deleted DRS rule %s with policy soft-affinity.',
+                          rule_name)
                 LOG.debug('Sync for server-group %s done', sg_uuid)
                 return
 
