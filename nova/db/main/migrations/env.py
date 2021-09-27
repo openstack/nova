@@ -27,18 +27,28 @@ config = context.config
 if config.attributes.get('configure_logger', True):
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
+# this is the MetaData object for the various models in the main database
 target_metadata = models.BASE.metadata
 
 
 def include_name(name, type_, parent_names):
     if type_ == 'table':
+        # NOTE(stephenfin): We don't have models corresponding to the various
+        # shadow tables. Alembic doesn't like this. Tell Alembic to look the
+        # other way. Good Alembic.
         return not name.startswith('shadow_')
 
     if type_ == 'column':
+        # NOTE(stephenfin): This is a list of fields that have been removed
+        # from various SQLAlchemy models but which still exist in the
+        # underlying tables. Our upgrade policy dictates that we remove fields
+        # from models at least one cycle before we remove the column from the
+        # underlying table. Not doing so would prevent us from applying the
+        # new database schema before rolling out any of the new code since the
+        # old code could attempt to access data in the removed columns. Alembic
+        # identifies this temporary mismatch between the models and underlying
+        # tables and attempts to resolve it. Tell it instead to ignore these
+        # until we're ready to remove them ourselves.
         return (parent_names['table_name'], name) not in {
             ('instances', 'internal_id'),
             ('instance_extra', 'vpmems'),
@@ -60,6 +70,7 @@ def run_migrations_offline():
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        render_as_batch=True,
         include_name=include_name,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -98,6 +109,7 @@ def run_migrations_online():
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
+            render_as_batch=True,
             include_name=include_name,
         )
 
