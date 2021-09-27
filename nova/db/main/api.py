@@ -3384,6 +3384,22 @@ def migration_get_in_progress_by_instance(context, instance_uuid,
     return query.all()
 
 
+def _migration_filter_item(query, filters, name):
+    if name not in filters:
+        return query
+
+    column = getattr(models.Migration, name)
+
+    item = filters[name]
+    if isinstance(item, str) or item is None:
+        return query.filter(column == item)
+
+    try:
+        return query.filter(column.in_(item))
+    except TypeError:  # in_ expects an iterable, we fall back to comparison
+        return query.filter(column == item)
+
+
 @pick_context_manager_reader
 def migration_get_all_by_filters(context, filters,
                                  sort_keys=None, sort_dirs=None,
@@ -3393,50 +3409,43 @@ def migration_get_all_by_filters(context, filters,
         return []
 
     query = model_query(context, models.Migration)
-    if "uuid" in filters:
-        # The uuid filter is here for the MigrationLister and multi-cell
-        # paging support in the compute API.
-        uuid = filters["uuid"]
-        uuid = [uuid] if isinstance(uuid, str) else uuid
-        query = query.filter(models.Migration.uuid.in_(uuid))
 
     model_object = models.Migration
     query = _get_query_nova_resource_by_changes_time(query,
                                                      filters,
                                                      model_object)
 
-    if "status" in filters:
-        status = filters["status"]
-        status = [status] if isinstance(status, str) else status
-        query = query.filter(models.Migration.status.in_(status))
-    if "host" in filters:
-        host = filters["host"]
-        query = query.filter(sql.or_(
-            models.Migration.source_compute == host,
-            models.Migration.dest_compute == host))
-    elif "source_compute" in filters:
-        host = filters['source_compute']
-        query = query.filter(models.Migration.source_compute == host)
     if "node" in filters:
         node = filters['node']
         query = query.filter(sql.or_(
             models.Migration.source_node == node,
             models.Migration.dest_node == node))
-    if "migration_type" in filters:
-        migtype = filters["migration_type"]
-        query = query.filter(models.Migration.migration_type == migtype)
     if "hidden" in filters:
         hidden = filters["hidden"]
         query = query.filter(models.Migration.hidden == hidden)
-    if "instance_uuid" in filters:
-        instance_uuid = filters["instance_uuid"]
-        query = query.filter(models.Migration.instance_uuid == instance_uuid)
     if 'user_id' in filters:
         user_id = filters['user_id']
         query = query.filter(models.Migration.user_id == user_id)
     if 'project_id' in filters:
         project_id = filters['project_id']
         query = query.filter(models.Migration.project_id == project_id)
+
+    # The uuid filter is here for the MigrationLister and multi-cell
+    # paging support in the compute API.
+    for item in ("uuid", "status", "migration_type", "instance_uuid"):
+        query = _migration_filter_item(query, filters, item)
+
+    if "host" in filters:
+        host = filters["host"]
+        query = query.filter(sql.or_(
+            models.Migration.source_compute == host,
+            models.Migration.dest_compute == host))
+    else:
+        query = _migration_filter_item(query, filters, "source_compute")
+
+    if "hidden" in filters:
+        hidden = filters["hidden"]
+        query = query.filter(models.Migration.hidden == hidden)
 
     if marker:
         try:
