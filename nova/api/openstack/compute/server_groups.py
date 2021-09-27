@@ -27,6 +27,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import server_groups as schema
 from nova.api.openstack import wsgi
 from nova.api import validation
+from nova.compute import api as compute
 import nova.conf
 from nova import context as nova_context
 import nova.exception
@@ -95,6 +96,10 @@ def _should_enable_custom_max_server_rules(context, rules):
 
 class ServerGroupController(wsgi.Controller):
     """The Server group API controller for the OpenStack API."""
+
+    def __init__(self, **kwargs):
+        super(ServerGroupController, self).__init__(**kwargs)
+        self.compute_api = compute.API()
 
     def _format_server_group(self, context, group, req,
                              not_deleted_inst=None):
@@ -406,5 +411,10 @@ class ServerGroupController(wsgi.Controller):
             else:
                 request_spec.instance_group = None
             request_spec.save()
+
+        # tell the compute hosts about the update, so they can sync if
+        # necessary
+        hosts_to_update = set(h for h in found_instances_hosts.values() if h)
+        self.compute_api.sync_server_group(context, hosts_to_update, id)
 
         return {'server_group': self._format_server_group(context, sg, req)}
