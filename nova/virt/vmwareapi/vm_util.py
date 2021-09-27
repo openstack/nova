@@ -36,7 +36,6 @@ from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
 from nova.utils import is_big_vm
-from nova.virt.vmwareapi import cluster_util
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import session
 from nova.virt.vmwareapi import vim_util
@@ -1244,13 +1243,6 @@ def get_stats_from_cluster(session, cluster):
                      'free': total_mem_mb - used_mem_mb,
                      'max_mem_mb_per_host': max_mem_mb_per_host}}
     return stats
-
-
-def update_cluster_placement(session, instance, cluster, server_group_infos):
-    if not server_group_infos:
-        return
-    vm_ref = get_vm_ref(session, instance)
-    cluster_util.update_placement(session, cluster, vm_ref, server_group_infos)
 
 
 def get_host_ref(session, cluster=None):

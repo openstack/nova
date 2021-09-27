@@ -71,9 +71,6 @@ LOG = logging.getLogger(__name__)
 RESIZE_TOTAL_STEPS = 6
 
 
-GroupInfo = collections.namedtuple('GroupInfo', ['name', 'policies'])
-
-
 class VirtualMachineInstanceConfigInfo(object):
     """Parameters needed to create and configure a new instance."""
 
@@ -746,13 +743,31 @@ class VMwareVMOps(object):
                                                  reason=reason)
 
     def update_cluster_placement(self, context, instance):
-        server_group_infos = self._get_server_groups(context, instance)
-        for group_info in server_group_infos:
-            self.sync_server_group(context, group_info.name)
+        self.sync_instance_server_group(context, instance)
+        self.update_admin_vm_group_membership(instance)
 
-        provider_group_infos = self._get_provider_server_groups(instance)
-        vm_util.update_cluster_placement(self._session, instance,
-                                         self._cluster, provider_group_infos)
+    def sync_instance_server_group(self, context, instance):
+        try:
+            instance_group_object = objects.instance_group.InstanceGroup
+            server_group = instance_group_object.get_by_instance_uuid(
+                context, instance.uuid)
+            self.sync_server_group(context, server_group.uuid)
+        except nova.exception.InstanceGroupNotFound:
+            pass
+
+    def update_admin_vm_group_membership(self, instance):
+        vm_group_name = CONF.vmware.special_spawning_vm_group
+        if not vm_group_name:
+            return
+
+        needs_empty_host = utils.vm_needs_special_spawning(
+            int(instance.memory_mb), instance.flavor)
+        if needs_empty_host:
+            return
+
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        cluster_util.update_vm_group_membership(self._session, self._cluster,
+                                                vm_group_name, vm_ref)
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
@@ -782,6 +797,7 @@ class VMwareVMOps(object):
         # instance uuid.
         vm_util.vm_ref_cache_update(instance.uuid, vm_ref)
 
+        # Update all DRS related rules
         self.update_cluster_placement(context, instance)
 
         # Update the Neutron VNIC index
@@ -1099,32 +1115,6 @@ class VMwareVMOps(object):
                                                     "ResetVM_Task", vm_ref)
             self._session._wait_for_task(reset_task)
             LOG.debug("Did hard reboot of VM", instance=instance)
-
-    def _get_server_groups(self, context, instance):
-        server_group_infos = []
-        try:
-            instance_group_object = objects.instance_group.InstanceGroup
-            server_group = instance_group_object.get_by_instance_uuid(
-                context, instance.uuid)
-            if server_group:
-                name = server_group.uuid
-                server_group_infos.append(GroupInfo(name,
-                                                    server_group.policies))
-        except nova.exception.InstanceGroupNotFound:
-            pass
-
-        return server_group_infos
-
-    def _get_provider_server_groups(self, instance):
-        server_group_infos = []
-
-        needs_empty_host = utils.vm_needs_special_spawning(
-            int(instance.memory_mb), instance.flavor)
-        if CONF.vmware.special_spawning_vm_group and not needs_empty_host:
-            name = CONF.vmware.special_spawning_vm_group
-            server_group_infos.append(GroupInfo(name, None))
-
-        return server_group_infos
 
     def _destroy_instance(self, instance, destroy_disks=True):
         # Destroy a VM instance

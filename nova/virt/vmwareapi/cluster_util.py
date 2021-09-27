@@ -20,7 +20,6 @@ from oslo_vmware import vim_util as vutil
 from nova import exception
 from nova.i18n import _
 from nova import utils
-from nova.virt.vmwareapi import constants
 
 LOG = logging.getLogger(__name__)
 
@@ -33,13 +32,10 @@ def reconfigure_cluster(session, cluster, config_spec):
     session.wait_for_task(reconfig_task)
 
 
-def create_vm_group(client_factory, name, vm_refs, group=None):
+def create_vm_group(client_factory, name, vm_refs):
     """Create a ClusterVmGroup object
-
-    :param:group: if given, update this ClusterVmGroup object instead of
-                  creating a new one
     """
-    group = group or client_factory.create('ns0:ClusterVmGroup')
+    group = client_factory.create('ns0:ClusterVmGroup')
     group.name = name
     group.vm = vm_refs
 
@@ -78,27 +74,13 @@ def create_group_spec(client_factory, group, operation):
     return group_spec
 
 
-def _create_vm_group_spec(client_factory, group_info, vm_refs,
-                          operation="add", group=None):
-    if group:
-        # On vCenter UI, it is not possible to create VM group without
-        # VMs attached to it. But, using APIs, it is possible to create
-        # VM group without VMs attached. Therefore, check for existence
-        # of vm attribute in the group to avoid exceptions
-        if hasattr(group, 'vm'):
-            vm_refs = vm_refs + group.vm
-
-    group = create_vm_group(client_factory, group_info.name, vm_refs, group)
-
-    return create_group_spec(client_factory, group, operation)
-
-
-def _get_vm_group(cluster_config, group_info):
+def _get_vm_group(cluster_config, group_name):
     if not hasattr(cluster_config, 'group'):
-        return
+        return None
     for group in cluster_config.group:
-        if group.name == group_info.name:
+        if group.name == group_name:
             return group
+    return None
 
 
 def fetch_cluster_groups(session, cluster_ref=None, cluster_config=None,
@@ -159,63 +141,44 @@ def delete_vm_group(session, cluster, vm_group):
        last vm in a vm group
     """
     client_factory = session.vim.client.factory
-    groups = []
 
     group_spec = create_group_spec(client_factory, vm_group, "remove")
-    groups.append(group_spec)
 
     config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
-    config_spec.groupSpec = groups
+    config_spec.groupSpec = [group_spec]
+
     reconfigure_cluster(session, cluster, config_spec)
 
 
 @utils.synchronized('vmware-vm-group-policy')
-def update_placement(session, cluster, vm_ref, group_infos):
-    """Updates cluster for vm placement using DRS"""
+def update_vm_group_membership(session, cluster, vm_group_name, vm_ref):
+    """Updates cluster for vm placement using DRS
+
+    Add a VM to a Vm-group, create it if missing
+    It is up for an administrator to define rules for this group with other
+    means in the VCenter
+    """
     cluster_config = session._call_method(
         vutil, "get_object_property", cluster, "configurationEx")
 
     client_factory = session.vim.client.factory
     config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
-    config_spec.groupSpec = []
-    config_spec.rulesSpec = []
-    for group_info in group_infos:
-        if not group_info.name.startswith(constants.DRS_PREFIX):
-            # We only do this, if this is an admin-defined group, because
-            # VmGroups are not used by the rules created by Nova.
-            group = _get_vm_group(cluster_config, group_info)
 
-            if not group:
-                # Creating group
-                operation = "add"
-            else:
-                # VM group exists on the cluster which is assumed to be
-                # created by VC admin. Add instance to this vm group and let
-                # the placement policy defined by the VC admin take over
-                operation = "edit"
-            group_spec = _create_vm_group_spec(
-                client_factory, group_info, [vm_ref], operation=operation,
-                group=group)
-            config_spec.groupSpec.append(group_spec)
+    operation = None
+    group = _get_vm_group(cluster_config, vm_group_name)
 
-        # If server group policies are defined (by tenants), then
-        # create/edit affinity/anti-affinity rules on cluster.
-        # Note that this might be add-on to the existing vm group
-        # (mentioned above) policy defined by VC admin i.e if VC admin has
-        # restricted placement of VMs to a specific group of hosts, then
-        # the server group policy from nova might further restrict to
-        # individual hosts on a cluster
-        if group_info.policies:
-            # VM group does not exist on cluster
-            policy = group_info.policies[0]
-            if policy != 'soft-affinity':
-                rule_name = "%s-%s" % (group_info.name, policy)
-                rule = _get_rule(cluster_config, rule_name)
-                operation = "edit" if rule else "add"
-                rules_spec = _create_cluster_rules_spec(
-                    client_factory, rule_name, [vm_ref], policy=policy,
-                    operation=operation, rule=rule)
-                config_spec.rulesSpec.append(rules_spec)
+    if not group:
+        operation = "add"
+        group = create_vm_group(client_factory, vm_group_name, [vm_ref])
+    else:
+        operation = "edit"
+        if not hasattr(group, "vm"):
+            group.vm = [vm_ref]
+        else:
+            group.vm.append(vm_ref)
+
+    group_spec = create_group_spec(client_factory, group, operation)
+    config_spec.groupSpec = [group_spec]
 
     reconfigure_cluster(session, cluster, config_spec)
 
