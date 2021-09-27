@@ -124,7 +124,7 @@ def fetch_cluster_groups(session, cluster_ref=None, cluster_config=None,
             vutil, "get_object_property", cluster_ref, "configurationEx")
 
     groups = {}
-    for group in cluster_config.group:
+    for group in getattr(cluster_config, 'group', []):
         if group_type == 'vm':
             if not vim_util.is_vim_instance(group, 'ClusterVmGroup'):
                 continue
@@ -151,7 +151,7 @@ def fetch_cluster_rules(session, cluster_ref=None, cluster_config=None):
         cluster_config = session._call_method(
             vutil, "get_object_property", cluster_ref, "configurationEx")
 
-    return {r.name: r for r in cluster_config.rule}
+    return {r.name: r for r in getattr(cluster_config, 'rule', [])}
 
 
 def delete_vm_group(session, cluster, vm_group):
