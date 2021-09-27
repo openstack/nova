@@ -784,7 +784,8 @@ class ServerGroupTestV264(ServerGroupTestV213):
         self.assertRaises(webob.exc.HTTPNotFound,
             self.controller.update, req, uuidsentinel.group1, body={})
 
-    def test_update_server_group_empty(self):
+    @mock.patch('nova.compute.api.API.sync_server_group')
+    def test_update_server_group_empty(self, mock_sync):
         """We do not fail if the user doesn't request any changes"""
         req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
         ctx = context.RequestContext('fake_user', 'fake')
@@ -794,6 +795,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
         self.assertEqual(3, len(result_members))
         for member in members:
             self.assertIn(member, result_members)
+        mock_sync.assert_not_called()
 
     def test_update_server_group_add_remove_overlap(self):
         """We do not accept changes, if there's a server to be both added and
@@ -813,7 +815,8 @@ class ServerGroupTestV264(ServerGroupTestV213):
                       'overlapping in {}'.format(uuidsentinel.uuid2),
                       str(result))
 
-    def test_update_server_group_remove_nonexisting(self):
+    @mock.patch('nova.compute.api.API.sync_server_group')
+    def test_update_server_group_remove_nonexisting(self, mock_sync):
         """Don't fail if the user tries to remove a server not being member of
         the server group.
         """
@@ -828,8 +831,10 @@ class ServerGroupTestV264(ServerGroupTestV213):
         self.assertEqual(3, len(result_members))
         for member in members:
             self.assertIn(member, result_members)
+        mock_sync.assert_not_called()
 
-    def test_update_server_group_add_already_added(self):
+    @mock.patch('nova.compute.api.API.sync_server_group')
+    def test_update_server_group_add_already_added(self, mock_sync):
         """Don't fail if the user adds a server that's already a member of the
         server group.
         """
@@ -844,6 +849,7 @@ class ServerGroupTestV264(ServerGroupTestV213):
         self.assertEqual(3, len(result_members))
         for member in members:
             self.assertIn(member, result_members)
+        mock_sync.assert_not_called()
 
     def test_update_server_group_add_against_policy_affinity(self):
         """Fail if adding the server would break the policy."""
@@ -891,13 +897,14 @@ class ServerGroupTestV264(ServerGroupTestV213):
                       "'anti-affinity'.".format(new_instance.uuid),
                       str(result))
 
+    @mock.patch('nova.compute.api.API.sync_server_group')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     def test_update_server_group_add_with_remove_fixes_policy(self,
-                                                              mock_req_spec):
+                                                              mock_req_spec,
+                                                              mock_sync):
         """Don't fail if adding a server would break the policy, but the remove
         in the same request fixes that.
         """
-        """Fail if adding the server would break the policy."""
         req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
         ctx = context.RequestContext('fake_user', 'fake')
 
@@ -920,6 +927,9 @@ class ServerGroupTestV264(ServerGroupTestV213):
         self.assertEqual(2, len(result_members))
         for member in [instances[0].uuid, new_instance.uuid]:
             self.assertIn(member, result_members)
+        req_context = req.environ['nova.context']
+        mock_sync.assert_called_with(req_context, set(['host2']),
+                                     ig_uuid)
 
     def test_update_server_group_add_nonexisting_instance(self):
         """Fail if the instances the user tries to add does not exist."""
@@ -935,9 +945,11 @@ class ServerGroupTestV264(ServerGroupTestV213):
                       '{}'.format(uuidsentinel.uuid1),
                       str(result))
 
+    @mock.patch('nova.compute.api.API.sync_server_group')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     def test_update_server_group_add_instance_multiple_cells(self,
-                                                             mock_req_spec):
+                                                             mock_req_spec,
+                                                             mock_sync):
         """Don't fail if the instance the user tries to add is in another cell.
         """
         req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
@@ -957,9 +969,15 @@ class ServerGroupTestV264(ServerGroupTestV213):
             self.assertIn(member, result_members)
         for instance in new_instances:
             self.assertIn(instance.uuid, result_members)
+        expected_hosts = \
+            set([i.host for i in instances] + [i.host for i in new_instances])
+        req_context = req.environ['nova.context']
+        mock_sync.assert_called_with(req_context, expected_hosts, ig_uuid)
 
+    @mock.patch('nova.compute.api.API.sync_server_group')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
-    def test_update_server_group_add_against_soft_policy(self, mock_req_spec):
+    def test_update_server_group_add_against_soft_policy(self, mock_req_spec,
+                                                         mock_sync):
         """Don't fail if the policy would fail, but it's a soft-* policy - they
         are best-effort by design.
         """
@@ -983,6 +1001,8 @@ class ServerGroupTestV264(ServerGroupTestV213):
         self.assertEqual(2, len(result_members))
         for member in [instances[0].uuid, new_instance.uuid]:
             self.assertIn(member, result_members)
+        req_context = req.environ['nova.context']
+        mock_sync.assert_called_with(req_context, set(['host1']), ig_uuid)
 
     @mock.patch('nova.objects.InstanceGroupList.get_by_instance_uuids')
     def test_update_server_group_add_already_in_other(self, mock_gbiu):
