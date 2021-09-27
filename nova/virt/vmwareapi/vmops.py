@@ -1237,21 +1237,25 @@ class VMwareVMOps(object):
         vm_util.rename_vm(self._session, vm_ref, instance)
 
         # Make sure we don't automatically move around "big" VMs
-        if utils.is_big_vm(int(instance.memory_mb), instance.flavor) or \
-                utils.is_large_vm(int(instance.memory_mb), instance.flavor):
-            behavior = constants.DRS_BEHAVIOR_PARTIALLY_AUTOMATED
-            LOG.debug("Adding DRS override '%s' for big VM.", behavior,
-                      instance=instance)
-            cluster_util.update_cluster_drs_vm_override(self._session,
-                                                        self._cluster,
-                                                        vm_ref,
-                                                        operation='add',
-                                                        behavior=behavior)
+        self.disable_drs_if_needed(instance)
 
         vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
         self._clean_up_after_special_spawning(context, instance.memory_mb,
                                               instance.flavor)
+
+    def disable_drs_if_needed(self, instance):
+        if utils.is_big_vm(int(instance.memory_mb), instance.flavor) or \
+                utils.is_large_vm(int(instance.memory_mb), instance.flavor):
+            behavior = constants.DRS_BEHAVIOR_PARTIALLY_AUTOMATED
+            LOG.debug("Adding DRS override '%s' for big VM.", behavior,
+                      instance=instance)
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
+            cluster_util.update_cluster_drs_vm_override(self._session,
+                                                        self._cluster,
+                                                        vm_ref,
+                                                        operation='add',
+                                                        behavior=behavior)
 
     def _clean_up_after_special_spawning(self, context, instance_memory_mb,
                                          instance_flavor):
@@ -2185,6 +2189,7 @@ class VMwareVMOps(object):
                                          adapter_type)
 
             self.update_cluster_placement(context, instance)
+            self.disable_drs_if_needed(instance)
 
         self._update_instance_progress(context, instance,
                                        step=2,
