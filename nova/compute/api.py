@@ -5141,7 +5141,11 @@ class API:
             context, instance, instance_actions.ATTACH_INTERFACE)
 
         if port_id:
-            port = self.network_api.show_port(context, port_id)['port']
+            # We need to query the port with admin context as
+            # ensure_compute_version_for_resource_request depends on the
+            # port.resource_request field which only returned for admins
+            port = self.network_api.show_port(
+                context.elevated(), port_id)['port']
             if port.get('binding:vnic_type', "normal") == "vdpa":
                 # FIXME(sean-k-mooney): Attach works but detach results in a
                 # QEMU error; blocked until this is resolved
