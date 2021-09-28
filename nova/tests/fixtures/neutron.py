@@ -51,6 +51,11 @@ class _FakeNeutronClient:
             self.is_admin, retrieve_all=retrieve_all, **_params,
         )
 
+    def show_port(self, port_id, **_params):
+        return self.fixture.show_port(
+            port_id, is_admin=self.is_admin, **_params,
+        )
+
 
 # TODO(stephenfin): We should split out the stubs of neutronclient from the
 # stubs of 'nova.network.neutron' to simplify matters
@@ -805,6 +810,14 @@ class NeutronFixture(fixtures.Fixture):
 
         port = copy.deepcopy(self._ports[port_id])
         self._merge_in_active_binding(port)
+
+        # port.resource_request is admin only, if the client is not an admin
+        # client then remove the content of the field from the response to
+        # properly simulate neutron's behavior
+        if not _params.get('is_admin', True):
+            if 'resource_request' in port:
+                port['resource_request'] = None
+
         return {'port': port}
 
     def delete_port(self, port_id, **_params):
