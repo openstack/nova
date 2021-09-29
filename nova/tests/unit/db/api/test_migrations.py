@@ -29,6 +29,7 @@ from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
 from oslo_log import log as logging
+import sqlalchemy
 import testtools
 
 from nova.db.api import models
@@ -193,6 +194,40 @@ class NovaMigrationsWalk(
         post_upgrade = getattr(self, '_check_%s' % revision, None)
         if post_upgrade:
             post_upgrade(connection)
+
+    _b30f573d3377_removed_columns = {
+        'access_ip_v4',
+        'access_ip_v6',
+        'config_drive',
+        'display_name',
+        'image_ref',
+        'info_cache',
+        'instance_metadata',
+        'key_name',
+        'locked_by',
+        'progress',
+        'request_spec_id',
+        'security_groups',
+        'task_state',
+        'user_id',
+        'vm_state',
+    }
+
+    def _pre_upgrade_b30f573d3377(self, connection):
+        # we use the inspector here rather than oslo_db.utils.column_exists,
+        # since the latter will create a new connection
+        inspector = sqlalchemy.inspect(connection)
+        columns = [x['name'] for x in inspector.get_columns('build_requests')]
+        for removed_column in self._b30f573d3377_removed_columns:
+            self.assertIn(removed_column, columns)
+
+    def _check_b30f573d3377(self, connection):
+        # we use the inspector here rather than oslo_db.utils.column_exists,
+        # since the latter will create a new connection
+        inspector = sqlalchemy.inspect(connection)
+        columns = [x['name'] for x in inspector.get_columns('build_requests')]
+        for removed_column in self._b30f573d3377_removed_columns:
+            self.assertNotIn(removed_column, columns)
 
     def test_single_base_revision(self):
         """Ensure we only have a single base revision.

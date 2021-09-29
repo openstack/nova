@@ -34,36 +34,12 @@ LOG = logging.getLogger(__name__)
 # underlying tables and attempts to resolve it. Tell it instead to ignore these
 # until we're ready to remove them ourselves.
 REMOVED_COLUMNS = {
-    ('build_requests', 'request_spec_id'),
-    ('build_requests', 'user_id'),
-    ('build_requests', 'display_name'),
-    ('build_requests', 'instance_metadata'),
-    ('build_requests', 'progress'),
-    ('build_requests', 'vm_state'),
-    ('build_requests', 'task_state'),
-    ('build_requests', 'image_ref'),
-    ('build_requests', 'access_ip_v4'),
-    ('build_requests', 'access_ip_v6'),
-    ('build_requests', 'info_cache'),
-    ('build_requests', 'security_groups'),
-    ('build_requests', 'config_drive'),
-    ('build_requests', 'key_name'),
-    ('build_requests', 'locked_by'),
-    ('build_requests', 'reservation_id'),
-    ('build_requests', 'launch_index'),
-    ('build_requests', 'hostname'),
-    ('build_requests', 'kernel_id'),
-    ('build_requests', 'ramdisk_id'),
-    ('build_requests', 'root_device_name'),
-    ('build_requests', 'user_data'),
     ('resource_providers', 'can_host'),
 }
 
 # NOTE(stephenfin): A list of foreign key constraints that were removed when
 # the column they were covering was removed.
-REMOVED_FKEYS = [
-    ('build_requests', ['request_spec_id']),
-]
+REMOVED_FKEYS = []
 
 # NOTE(stephenfin): A list of entire models that have been removed.
 REMOVED_TABLES = []
@@ -302,13 +278,6 @@ class BuildRequest(BASE):
     instance = sa.Column(types.MediumText())
     block_device_mappings = sa.Column(types.MediumText())
     tags = sa.Column(sa.Text())
-    # TODO(alaski): Drop these from the db in Ocata
-    # columns_to_drop = ['request_spec_id', 'user_id', 'display_name',
-    #         'instance_metadata', 'progress', 'vm_state', 'task_state',
-    #         'image_ref', 'access_ip_v4', 'access_ip_v6', 'info_cache',
-    #         'security_groups', 'config_drive', 'key_name', 'locked_by',
-    #         'reservation_id', 'launch_index', 'hostname', 'kernel_id',
-    #         'ramdisk_id', 'root_device_name', 'user_data']
 
 
 class KeyPair(BASE):
