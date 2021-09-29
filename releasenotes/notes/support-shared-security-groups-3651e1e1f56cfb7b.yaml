@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Support creating servers with RBAC shared security groups by using the new
+    ``shared`` filter for security groups. See `blueprint
+    shared-security-groups`_ for more details.
+
+    .. _blueprint shared-security-groups:
+      https://blueprints.launchpad.net/nova/+spec/shared-security-groups
