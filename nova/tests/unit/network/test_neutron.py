@@ -9272,7 +9272,7 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
 
 class TestNeutronPortSecurity(test.NoDBTestCase):
 
-    def test__process_security_groups(self):
+    def test__process_security_groups_without_shared(self):
         instance = objects.Instance(project_id=uuids.project_id)
         mock_neutron = mock.Mock(spec=client.Client)
         mock_neutron.list_security_groups.return_value = {
@@ -9291,6 +9291,8 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
                 }
             ]
         }
+        mock_neutron.list_extensions.return_value = {
+            'extensions': []}
         api = neutronapi.API()
         api._process_security_groups(
             instance, mock_neutron, ["sg1", uuids.sg2])
@@ -9298,21 +9300,63 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
         mock_neutron.list_security_groups.assert_called_once_with(
             fields=['id', 'name'], tenant_id=uuids.project_id)
 
+    def test__process_security_groups(self):
+        instance = objects.Instance(project_id=uuids.project_id)
+        mock_neutron = mock.Mock(spec=client.Client)
+        mock_neutron.list_security_groups.side_effect = [
+            {
+                'security_groups': [
+                    {
+                        'id': uuids.sg1,
+                        'name': 'sg1',
+                    },
+                    {
+                        'id': uuids.sg2,
+                        'name': 'sg2',
+                    }
+                ]
+            },
+            {
+                'security_groups': [
+                    {
+                        'id': uuids.sg3,
+                        'name': 'sg3',
+                    },
+                ]
+            }
+        ]
+        mock_neutron.list_extensions.return_value = {
+            'extensions': [{'alias': constants.SG_SHARED_FILTER}]}
+        api = neutronapi.API()
+        api._process_security_groups(
+            instance, mock_neutron, ["sg1", uuids.sg2])
+
+        mock_neutron.list_security_groups.assert_has_calls(
+            [mock.call(fields=['id', 'name'], tenant_id=uuids.project_id)])
+
     def test__process_security_groups_not_found(self):
         instance = objects.Instance(project_id=uuids.project_id)
         mock_neutron = mock.Mock(spec=client.Client)
-        mock_neutron.list_security_groups.return_value = {
-            'security_groups': [
-                {
-                    'id': uuids.sg1,
-                    'name': 'sg1',
-                },
-                {
-                    'id': uuids.sg3,
-                    'name': 'sg3',
-                }
-            ]
-        }
+        mock_neutron.list_security_groups.side_effect = [
+            {
+                'security_groups': [
+                    {
+                        'id': uuids.sg1,
+                        'name': 'sg1',
+                    }
+                ]
+            },
+            {
+                'security_groups': [
+                    {
+                        'id': uuids.sg3,
+                        'name': 'sg3',
+                    }
+                ]
+            }
+        ]
+        mock_neutron.list_extensions.return_value = {
+            'extensions': [{'alias': constants.SG_SHARED_FILTER}]}
         api = neutronapi.API()
 
         ex = self.assertRaises(
@@ -9320,24 +9364,33 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
             instance, mock_neutron, ["sg1", uuids.sg2])
 
         self.assertIn(uuids.sg2, str(ex))
-        mock_neutron.list_security_groups.assert_called_once_with(
-            fields=['id', 'name'], tenant_id=uuids.project_id)
+        mock_neutron.list_security_groups.assert_has_calls(
+            [mock.call(fields=['id', 'name'], tenant_id=uuids.project_id),
+             mock.call(fields=['id', 'name'], shared=True)])
 
     def test__process_security_groups_non_unique_match(self):
         instance = objects.Instance(project_id=uuids.project_id)
         mock_neutron = mock.Mock(spec=client.Client)
-        mock_neutron.list_security_groups.return_value = {
-            'security_groups': [
-                {
-                    'id': uuids.sg1,
-                    'name': 'nonunique-name',
-                },
-                {
-                    'id': uuids.sg2,
-                    'name': 'nonunique-name',
-                }
-            ]
-        }
+        mock_neutron.list_security_groups.side_effect = [
+            {
+                'security_groups': [
+                    {
+                        'id': uuids.sg1,
+                        'name': 'nonunique-name',
+                    }
+                ]
+            },
+            {
+                'security_groups': [
+                    {
+                        'id': uuids.sg2,
+                        'name': 'nonunique-name',
+                    }
+                ]
+            }
+        ]
+        mock_neutron.list_extensions.return_value = {
+            'extensions': [{'alias': constants.SG_SHARED_FILTER}]}
         api = neutronapi.API()
 
         ex = self.assertRaises(
@@ -9345,8 +9398,9 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
             instance, mock_neutron, ["nonunique-name", uuids.sg2])
 
         self.assertIn("nonunique-name", str(ex))
-        mock_neutron.list_security_groups.assert_called_once_with(
-            fields=['id', 'name'], tenant_id=uuids.project_id)
+        mock_neutron.list_security_groups.assert_has_calls(
+            [mock.call(fields=['id', 'name'], tenant_id=uuids.project_id),
+             mock.call(fields=['id', 'name'], shared=True)])
 
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_port_dns_name')
