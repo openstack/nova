@@ -231,7 +231,7 @@
       # tempest_test_exclude_list.
       # FIXME(lyarwood): The tempest.api.compute.admin.test_volume_swap tests
       # are skipped until bug #1929710 is resolved.
-      tempest_exclude_regex: ^tempest\.(scenario\.test_network|api\.compute\.admin\.test_volume_swap)
+      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)
       devstack_local_conf:
         post-config:
           $NOVA_CPU_CONF:
@@ -257,6 +257,7 @@
             ovs:
               bridge_mappings: public:br-ex
               resource_provider_bandwidths: br-ex:1000000:1000000
+              resource_provider_packet_processing_without_direction: :100
             AGENT:
               tunnel_types: gre,vxlan
             ml2:
@@ -265,6 +266,7 @@
           $TEMPEST_CONFIG:
             network-feature-enabled:
               qos_placement_physnet: public
+              qos_min_bw_and_pps: True
             compute-feature-enabled:
               # The q35 machine type doesn't support an IDE bus
               ide_bus: False
