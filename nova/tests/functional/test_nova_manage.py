@@ -297,6 +297,7 @@ class TestNovaManageVolumeAttachmentRefresh(
 
         bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
             self.ctxt, volume_id, server['id'])
+        original_device_name = bdm.device_name
         self.assertEqual(original_attachment_id, bdm.attachment_id)
 
         # The CinderFixture also stashes the attachment id in the
@@ -331,6 +332,12 @@ class TestNovaManageVolumeAttachmentRefresh(
         self.assertIn('attachment_id', connection_info['data'])
         self.assertEqual(
             new_attachment_id, connection_info['data']['attachment_id'])
+
+        # Assert that the original device_name is stashed in the connector of
+        # the attachment within the fixture.
+        attachment_ref = attachments[new_attachment_id]
+        connector = attachment_ref.get('connector')
+        self.assertEqual(original_device_name, connector.get('device'))
 
         # Assert that we have actions we expect against the instance
         self._assert_instance_actions(server)
