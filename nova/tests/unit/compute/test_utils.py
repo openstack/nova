@@ -399,7 +399,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
-                     'bandwidth', 'audit_period_beginning',
+                     'audit_period_beginning',
                      'audit_period_ending', 'image_meta'):
             self.assertIn(attr, payload,
                           "Key %s not in payload" % attr)
@@ -430,7 +430,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(str(flavor['flavorid']), str(flavorid))
 
         for attr in ('display_name', 'created_at', 'launched_at',
-                     'state', 'bandwidth', 'audit_period'):
+                     'state', 'audit_period'):
             self.assertIn(attr, payload,
                           "Key %s not in payload" % attr)
 
@@ -463,7 +463,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
-                     'bandwidth', 'audit_period_beginning',
+                     'audit_period_beginning',
                      'audit_period_ending', 'image_meta'):
             self.assertIn(attr, payload, "Key %s not in payload" % attr)
         self.assertEqual(payload['image_meta'],
@@ -732,7 +732,7 @@ class UsageInfoTestCase(test.TestCase):
                          exception_payload['exception_message'])
         self.assertEqual('test_notify_about_volume_swap_with_error',
                          exception_payload['function_name'])
-        self.assertEqual('nova.tests.unit.compute.test_compute_utils',
+        self.assertEqual('nova.tests.unit.compute.test_utils',
                          exception_payload['module_name'])
         self.assertIn('test_notify_about_volume_swap_with_error',
                       exception_payload['traceback'])
@@ -827,7 +827,7 @@ class UsageInfoTestCase(test.TestCase):
                          str(payload['instance_flavor_id']))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
-                     'bandwidth', 'audit_period_beginning',
+                     'audit_period_beginning',
                      'audit_period_ending', 'image_meta'):
             self.assertIn(attr, payload, "Key %s not in payload" % attr)
         self.assertEqual(payload['image_meta'], {})

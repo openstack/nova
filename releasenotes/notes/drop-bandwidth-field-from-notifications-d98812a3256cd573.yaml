@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The ``bandwidth`` field has been removed from the ``instance.exists`` and
+    ``instance.update`` versioned notifications and the version for both
+    notifications has been bumped to 2.0. The ``bandwidth`` field was only
+    relevant when the XenAPI virt driver was in use, but this driver was
+    removed in the Victoria (22.0.0) release and the field has been a no-op
+    since.

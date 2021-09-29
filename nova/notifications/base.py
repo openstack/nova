@@ -189,10 +189,6 @@ def send_instance_update_notification(context, instance, old_vm_state=None,
     payload["audit_period_beginning"] = null_safe_isotime(audit_start)
     payload["audit_period_ending"] = null_safe_isotime(audit_end)
 
-    # add bw usage info:
-    # TODO(stephenfin): Remove this, the feature is dead
-    payload["bandwidth"] = {}
-
     # add old display name if it is changed
     if old_display_name:
         payload["old_display_name"] = old_display_name
@@ -222,15 +218,11 @@ def _send_versioned_instance_update(context, instance, payload, host, service):
         audit_period_beginning=payload.get('audit_period_beginning'),
         audit_period_ending=payload.get('audit_period_ending'))
 
-    # TODO(stephenfin): Remove this, the feature is dead
-    bandwidth = []
-
     versioned_payload = instance_notification.InstanceUpdatePayload(
         context=context,
         instance=instance,
         state_update=state_update,
         audit_period=audit_period,
-        bandwidth=bandwidth,
         old_display_name=payload.get('old_display_name'))
 
     notification = instance_notification.InstanceUpdateNotification(
