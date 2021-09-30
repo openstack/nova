@@ -667,7 +667,8 @@ class API:
             # for the physical device but don't want to overwrite the other
             # information in the binding profile.
             for profile_key in ('pci_vendor_info', 'pci_slot',
-                                constants.ALLOCATION, 'arq_uuid'):
+                                constants.ALLOCATION, 'arq_uuid',
+                                'physical_network', 'card_serial_number'):
                 if profile_key in port_profile:
                     del port_profile[profile_key]
             port_req_body['port'][constants.BINDING_PROFILE] = port_profile
@@ -1506,11 +1507,22 @@ class API:
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
         if dev_spec:
-            return {'pci_vendor_info': "%s:%s" %
-                        (pci_dev.vendor_id, pci_dev.product_id),
-                    'pci_slot': pci_dev.address,
-                    'physical_network':
-                        dev_spec.get_tags().get('physical_network')}
+            dev_profile = {
+                'pci_vendor_info': "%s:%s"
+                % (pci_dev.vendor_id, pci_dev.product_id),
+                'pci_slot': pci_dev.address,
+                'physical_network': dev_spec.get_tags().get(
+                    'physical_network'
+                ),
+            }
+            if pci_dev.dev_type == obj_fields.PciDeviceType.SRIOV_VF:
+                card_serial_number = pci_dev.card_serial_number
+                if card_serial_number:
+                    dev_profile.update({
+                        'card_serial_number': card_serial_number
+                    })
+            return dev_profile
+
         raise exception.PciDeviceNotFound(node_id=pci_dev.compute_node_id,
                                           address=pci_dev.address)
 

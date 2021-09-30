@@ -1,0 +1,20 @@
+---
+features:
+  - |
+    Add VPD capability parsing support when a PCI VPD capability is exposed
+    via node device XML in Libvirt. The XML data from Libvirt is parsed and
+    formatted into PCI device JSON dict that is sent to Nova API and is stored
+    in the extra_info column of a PciDevice.
+
+    The code gracefully handles the lack of the capability since it is optional
+    or Libvirt may not support it in a particular release.
+
+    A serial number is extracted from PCI VPD of network devices (if present)
+    and is sent to Neutron in port updates.
+
+    Libvirt supports parsing the VPD capability from PCI/PCIe devices and
+    exposing it via nodedev XML as of 7.9.0.
+
+    - https://libvirt.org/news.html#v7-9-0-2021-11-01
+    - https://libvirt.org/drvnodedev.html#VPDCap
+
