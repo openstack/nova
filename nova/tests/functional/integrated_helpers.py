@@ -202,6 +202,7 @@ class InstanceHelperMixin:
             'actions: %s. Events in the last matching action: %s'
             % (event_name, actions, events))
 
+    # TODO(lyarwood): Rewrite this waiter to use os-volume_attachments
     def _wait_for_volume_attach(self, server_id, volume_id):
         timeout = 0.0
         server = self.api.get_server(server_id)
@@ -217,6 +218,25 @@ class InstanceHelperMixin:
 
         if volume_id not in attached_vols:
             self.fail('Timed out waiting for volume %s to be attached to '
+                      'server %s. Currently attached volumes: %s' %
+                      (volume_id, server_id, attached_vols))
+
+    # TODO(lyarwood): Rewrite this waiter to use os-volume_attachments
+    def _wait_for_volume_detach(self, server_id, volume_id):
+        timeout = 0.0
+        server = self.api.get_server(server_id)
+        attached_vols = [vol['id'] for vol in
+                         server['os-extended-volumes:volumes_attached']]
+
+        while volume_id in attached_vols and timeout < 10.0:
+            time.sleep(.1)
+            timeout += .1
+            server = self.api.get_server(server_id)
+            attached_vols = [vol['id'] for vol in
+                             server['os-extended-volumes:volumes_attached']]
+
+        if volume_id in attached_vols:
+            self.fail('Timed out waiting for volume %s to be detached from '
                       'server %s. Currently attached volumes: %s' %
                       (volume_id, server_id, attached_vols))
 
