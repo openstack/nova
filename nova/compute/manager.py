@@ -5635,6 +5635,14 @@ class ComputeManager(manager.Manager):
 
             instance.host = migration.dest_compute
             instance.node = migration.dest_node
+            # NOTE(gibi): as the instance now tracked on the destination we
+            # have to make sure that the source compute resource track can
+            # track this instance as a migration. For that the resource tracker
+            # needs to see the old_flavor set on the instance. The old_flavor
+            # setting used to be done on the destination host in finish_resize
+            # but that is racy with a source host update_available_resource
+            # periodic run
+            instance.old_flavor = instance.flavor
             instance.task_state = task_states.RESIZE_MIGRATED
             instance.save(expected_task_state=task_states.RESIZE_MIGRATING)
 
@@ -5748,6 +5756,10 @@ class ComputeManager(manager.Manager):
         # to ACTIVE for backwards compatibility
         old_vm_state = instance.system_metadata.get('old_vm_state',
                                                     vm_states.ACTIVE)
+        # NOTE(gibi): this is already set by the resize_instance on the source
+        # node before calling finish_resize on destination but during upgrade
+        # it can be that the source node is not having the fix for bug 1944759
+        # yet. This assignment can be removed in Z release.
         instance.old_flavor = old_flavor
 
         if old_instance_type_id != new_instance_type_id:
