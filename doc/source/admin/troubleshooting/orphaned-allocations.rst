@@ -199,3 +199,38 @@ to get allocations for a consumer before deleting them, e.g.:
   $ openstack --os-placement-api-version 1.12 resource provider allocation show $vm1
 
 .. _Migration-based allocations: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/migration-allocations.html
+
+Using placement audit
+~~~~~~~~~~~~~~~~~~~~~
+
+If you have a situation where orphaned allocations exist for an instance that
+was deleted in the past, example log message:
+
+.. code-block:: console
+
+  Instance <uuid> has allocations against this compute host but is not found in the database.
+
+you can use the :ref:`nova-manage placement audit <placement_audit_cli>` tool
+to have it find and optionally delete orphaned placement allocations. This tool
+will call the placement API to modify allocations.
+
+To list all allocations that are unrelated to an existing instance or migration
+UUID:
+
+.. code-block:: console
+
+  $ nova-manage placement audit --verbose
+
+To delete all allocations on all resource providers that are unrelated to an
+existing instance or migration UUID:
+
+.. code-block:: console
+
+  $ nova-manage placement audit --verbose --delete
+
+To delete all allocations on a specific resource provider that are unrelated to
+an existing instance or migration UUID:
+
+.. code-block:: console
+
+  $ nova-manage placement audit --verbose --delete --resource-provider <uuid>
