@@ -949,7 +949,48 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         doc = etree.fromstring(original_xml)
         ex = self.assertRaises(KeyError, migration._update_vif_xml,
                                doc, data, get_vif_config)
-        self.assertIn("CA:FE:DE:AD:BE:EF", str(ex))
+        self.assertIn("ca:fe:de:ad:be:ef", str(ex))
+
+    def test_update_vif_xml_lower_case_mac(self):
+        """Tests that the vif in the migrate data is not found in the existing
+        guest interfaces.
+        """
+        conf = vconfig.LibvirtConfigGuestInterface()
+        conf.net_type = "bridge"
+        conf.source_dev = "qbra188171c-ea"
+        conf.target_dev = "tapa188171c-ea"
+        conf.mac_addr = "DE:AD:BE:EF:CA:FE"
+        conf.model = "virtio"
+        original_xml = """<domain>
+        <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
+        <devices>
+            <interface type="bridge">
+                <mac address="de:ad:be:ef:ca:fe"/>
+                <model type="virtio"/>
+                <source bridge="qbra188171c-ea"/>
+                <target dev="tapa188171c-ea"/>
+                <virtualport type="openvswitch">
+                    <parameters interfaceid="%s"/>
+                </virtualport>
+                <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
+                        function='0x0'/>
+            </interface>
+        </devices>
+        </domain>""" % uuids.ovs
+        expected_xml = """<domain>
+         <uuid>3de6550a-8596-4937-8046-9d862036bca5</uuid>
+         <devices>
+            <interface type="bridge">
+                <mac address="DE:AD:BE:EF:CA:FE"/>
+                <model type="virtio"/>
+                <source bridge="qbra188171c-ea"/>
+                <target dev="tapa188171c-ea"/>
+                <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
+                 function='0x0'/>
+            </interface>
+         </devices>
+        </domain>"""
+        self._test_update_vif_xml(conf, original_xml, expected_xml)
 
 
 class MigrationMonitorTestCase(test.NoDBTestCase):
