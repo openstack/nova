@@ -450,7 +450,18 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             volume_api.detach(context.elevated(), volume_id, instance.uuid,
                               attachment_id)
         else:
-            volume_api.attachment_delete(context, self['attachment_id'])
+            try:
+                volume_api.attachment_delete(context, self['attachment_id'])
+            except exception.VolumeAttachmentNotFound:
+                LOG.info(
+                    "Ignoring a volume attachment deletion failure as the "
+                    "volume %(volume_id)s or the volume attachment "
+                    "%(attachment_id)s disappeared during the request.",
+                    {
+                        'volume_id': volume_id,
+                        'attachment_id': self['attachment_id']
+                    }
+                )
 
     def detach(self, context, instance, volume_api, virt_driver,
                attachment_id=None, destroy_bdm=False):
