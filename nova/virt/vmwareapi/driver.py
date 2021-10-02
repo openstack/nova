@@ -18,7 +18,8 @@
 """
 A connection to the VMware vCenter platform.
 """
-
+import contextlib
+from operator import attrgetter
 import os
 import random
 import re
@@ -27,6 +28,7 @@ import urllib.request
 
 import os_resource_classes as orc
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import units
 from oslo_utils import versionutils as v_utils
@@ -45,6 +47,7 @@ from nova.i18n import _
 from nova import objects
 import nova.privsep.path
 from nova import utils
+from nova.virt import block_device
 from nova.virt import driver
 from nova.virt.vmwareapi import cluster_util
 from nova.virt.vmwareapi import constants
@@ -52,6 +55,7 @@ from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
 from nova.virt.vmwareapi import session
+from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util as nova_vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
@@ -213,7 +217,6 @@ class VMwareVCDriver(driver.ComputeDriver):
             self._session._create_session()
 
         self._vmops.set_compute_host(host)
-
         LOG.debug("Starting green server-group sync-loop thread")
         utils.spawn(self._server_group_sync_loop, host)
 
@@ -298,65 +301,6 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._vmops.finish_migration(context, migration, instance, disk_info,
                                      network_info, image_meta, resize_instance,
                                      block_device_info, power_on)
-
-    def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, disk_info, migrate_data):
-        return migrate_data
-
-    def post_live_migration_at_source(self, context, instance, network_info):
-        pass
-
-    def post_live_migration_at_destination(self, context, instance,
-                                           network_info,
-                                           block_migration=False,
-                                           block_device_info=None):
-        pass
-
-    def cleanup_live_migration_destination_check(self, context,
-                                                 dest_check_data):
-        pass
-
-    def live_migration(self, context, instance, dest,
-                       post_method, recover_method, block_migration=False,
-                       migrate_data=None):
-        """Live migration of an instance to another host."""
-        self._vmops.live_migration(context, instance, dest, post_method,
-                                   recover_method, block_migration,
-                                   migrate_data)
-
-    def check_can_live_migrate_source(self, context, instance,
-                                      dest_check_data, block_device_info=None):
-        cluster_name = dest_check_data.cluster_name
-        cluster_ref = vm_util.get_cluster_ref_by_name(self._session,
-                                                      cluster_name)
-        if cluster_ref is None:
-            msg = (_("Cannot find destination cluster %s for live migration") %
-                   cluster_name)
-            raise exception.MigrationPreCheckError(reason=msg)
-        res_pool_ref = vm_util.get_res_pool_ref(self._session, cluster_ref)
-        if res_pool_ref is None:
-            msg = _("Cannot find destination resource pool for live migration")
-            raise exception.MigrationPreCheckError(reason=msg)
-        return dest_check_data
-
-    def check_can_live_migrate_destination(self, context, instance,
-                                           src_compute_info, dst_compute_info,
-                                           block_migration=False,
-                                           disk_over_commit=False):
-        # the information that we need for the destination compute node
-        # is the name of its cluster and datastore regex
-        data = objects.VMwareLiveMigrateData()
-        data.cluster_name = CONF.vmware.cluster_name
-        data.datastore_regex = CONF.vmware.datastore_regex
-        return data
-
-    def rollback_live_migration_at_destination(self, context, instance,
-                                               network_info,
-                                               block_device_info,
-                                               destroy_disks=True,
-                                               migrate_data=None):
-        """Clean up destination node after a failed live migration."""
-        self.destroy(context, instance, network_info, block_device_info)
 
     def get_instance_disk_info(self, instance, block_device_info=None):
         pass
@@ -582,6 +526,11 @@ class VMwareVCDriver(driver.ComputeDriver):
     def detach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):
         """Detach volume storage to VM instance."""
+        if not self._vmops.is_instance_in_resource_pool(instance):
+            volume_id = block_device.get_volume_id(connection_info)
+            LOG.debug("Not detaching %s, vm is in different cluster",
+                volume_id, instance=instance)
+            return True
         # NOTE(claudiub): if context parameter is to be used in the future,
         # the _detach_instance_volumes method will have to be updated as well.
         return self._volumeops.detach_volume(connection_info, instance)
@@ -816,3 +765,313 @@ class VMwareVCDriver(driver.ComputeDriver):
                 LOG.debug('Finished server-group sync-loop')
 
             time.sleep(CONF.vmware.server_group_sync_loop_spacing)
+
+    def check_can_live_migrate_destination(self, context, instance,
+                                           src_compute_info, dst_compute_info,
+                                           block_migration=False,
+                                           disk_over_commit=False):
+        """Check if it is possible to execute live migration."""
+        data = objects.migrate_data.VMwareLiveMigrateData()
+
+        data.instance_already_migrated = (
+                self.instance_exists(instance) and  # In this vcenter
+                self._vmops.is_instance_in_resource_pool(instance))
+
+        url = "https://{}:{}".format(CONF.vmware.host_ip,
+                                     CONF.vmware.host_port)
+
+        data.cluster_name = self._cluster_name
+        data.dest_cluster_ref = vim_util.get_moref_value(self._cluster_ref)
+        data.datastore_regex = CONF.vmware.datastore_regex
+
+        data.relocate_defaults = {
+            "service": {
+                "url": url,
+                "instance_uuid": self._vcenter_uuid,
+                "ssl_thumbprint": vm_util.get_sha1_ssl_thumbprint(url),
+                "credentials": {
+                    "_type": "ServiceLocatorNamePassword",
+                    "username": CONF.vmware.host_username,
+                    "password": CONF.vmware.host_password,
+                }
+            }
+        }
+
+        return data
+
+    def cleanup_live_migration_destination_check(self, context,
+                                                 dest_check_data):
+        """Do required cleanup on dest host after check_can_live_migrate calls
+        """
+
+    def check_can_live_migrate_source(self, context, instance,
+                                      dest_check_data, block_device_info=None):
+        """Check if it is possible to execute live migration."""
+
+        defaults = dest_check_data.relocate_defaults
+        dest_vcenter_uuid = defaults["service"]["instance_uuid"]
+
+        dest_check_data.is_same_vcenter = (
+            dest_vcenter_uuid == self._vcenter_uuid)
+
+        if dest_check_data.instance_already_migrated:
+            return dest_check_data
+
+        if dest_check_data.is_same_vcenter:
+            # Drop the service-credentials, no need to check the volumes,
+            # as we do not need to mess around with them
+            defaults = dest_check_data.relocate_defaults
+            defaults.pop("service")
+            dest_check_data.relocate_defaults = defaults
+
+            # Remove the DRS constraints so we can actually move it.
+            # We have to do it in the check, because the next step
+            # is the pre_live_migration and that is on the destination
+            # host
+            self._vmops.update_cluster_placement(context, instance,
+                                                 remove=True)
+        else:
+            # Validate that we have all necessary information for the
+            # _old_ volume attachments
+            self._get_checked_volumes(context, instance, [
+                'volume',  # For deleting the old shadow-vms
+                ])
+
+        return dest_check_data
+
+    def pre_live_migration(self, context, instance, block_device_info,
+                           network_info, disk_info, migrate_data):
+        """Prepare an instance for live migration (on the destination host)"""
+        if migrate_data.instance_already_migrated:
+            return migrate_data
+
+        return self._pre_live_migration(context, instance,
+            block_device_info, network_info, disk_info, migrate_data)
+
+    def _pre_live_migration(self, context, instance, block_device_info,
+                            network_info, disk_info, migrate_data):
+        result = self._vmops.place_vm(context, instance)
+
+        if hasattr(result, 'drsFault'):
+            LOG.error("Placement Error: %s", vim_util.serialize_object(
+                result.drsFault), instance=instance)
+
+        if (not hasattr(result, 'recommendations') or
+                not result.recommendations):
+            raise exception.MigrationError(
+                reason="PlaceVM did not give any recommendations")
+
+        rs = sorted([r for r in result.recommendations
+                        if r.reason == "xvmotionPlacement" and
+                        r.action],
+                    key=attrgetter("rating"))
+        if not rs:
+            raise exception.MigrationError(
+                reason="Did not get any xvmotionPlacement")
+
+        relocate_spec = rs[0].action[0].relocateSpec
+
+        # Should never happen, but if it does we rather want an error
+        # here, than sometime down the line
+        if not relocate_spec.host:
+            raise exception.MigrationError(
+                reason="No host with enough resources")
+
+        # Samere here: Should never happen
+        if not relocate_spec.datastore:
+            raise exception.MigrationError(
+                reason="No datastore with enough resources")
+
+        # relocate_defaults are serialized/deserialized on put/get
+        defaults = migrate_data.relocate_defaults
+        spec = vim_util.serialize_object(relocate_spec)
+        defaults["relocate_spec"] = spec
+        # Writing the values back
+        migrate_data.relocate_defaults = defaults
+
+        return migrate_data
+
+    def _get_checked_volumes(self, context, instance, required_values,
+                             exc=exception.MigrationError):
+        volumes = self._get_volume_mappings(context, instance)
+        for key, volume in volumes.items():
+            for v in required_values:
+                if v not in volume:
+                    message = "Missing {} for volume {} (Device {})".format(
+                        v, volume.get("volume_id"), key
+                    )
+                    raise exc(message)
+        return volumes
+
+    def live_migration(self, context, instance, dest,
+                       post_method, recover_method, block_migration=False,
+                       migrate_data=None):
+        """Live migration of an instance to another host."""
+        if not migrate_data:
+            LOG.error("live_migration() called without migration_data"
+                      " - cannot continue operations", instance=instance)
+            recover_method(context, instance, dest, migrate_data)
+            raise ValueError("Missing migrate_data")
+
+        if migrate_data.instance_already_migrated:
+            LOG.info("Recovering migration", instance=instance)
+            post_method(context, instance, dest, block_migration, migrate_data)
+            return
+
+        # We require the target-datastore for all volume-attachment
+        required_volume_attributes = ["datastore_ref"]
+        if migrate_data.is_same_vcenter:
+            dest_session = self._session
+        else:
+            # For the shadow vm fixup after migration
+            dest_session = self._create_dest_session(migrate_data)
+            required_volume_attributes.append('volume')
+
+        try:
+            # Validate that we have all necessary information for the
+            # new volume attachments
+            # This cannot be done in pre-check, as the new volume attachments
+            # are created prior the live-migration
+            volumes = self._get_checked_volumes(context, instance,
+                required_volume_attributes)
+            self._set_vif_infos(migrate_data, dest_session)
+            self._vmops.live_migration(instance, migrate_data, volumes)
+            LOG.info("Migration operation completed", instance=instance)
+            post_method(context, instance, dest, block_migration, migrate_data)
+        except Exception:
+            LOG.exception("Failed due to an exception", instance=instance)
+            with excutils.save_and_reraise_exception():
+                # We are still in the task-state migrating, so cannot
+                # recover the DRS settings. We rely on the sync to do that
+                LOG.debug("Calling live migration recover_method "
+                          "for instance: %s", instance["name"],
+                          instance=instance)
+                recover_method(context, instance, dest, migrate_data)
+
+    def _get_volume_mappings(self, context, instance):
+        """Returns a mapping for all the devices with volumes to
+        their connection_info.data, where possible.
+        It is up to the caller to verify that the required information
+        is available.
+        It uses the _current_ block-device mapping.
+        """
+        volume_infos = []
+        for bdm in objects.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid):
+            if not bdm.is_volume:
+                continue
+            # If we have volume_id, `map_volumes_to_devices` will map it to
+            # a device.
+            data = {"volume_id": bdm.volume_id}
+            try:
+                connection_info = jsonutils.loads(bdm.connection_info)
+                data.update(connection_info.get("data", {}))
+            except ValueError as e:
+                message = ("Could not parse connection_info for volume {}."
+                    " Reason: {}"
+                ).format(bdm.volume_id, e)
+                LOG.warning(message, instance=instance)
+
+            # Normalize the datastore reference
+            # As it depends on the caller, if actually need the
+            # value, we do not raise an error here
+            datastore = data.get("datastore") or \
+                            data.get("ds_ref_val")
+            if datastore:
+                data["datastore_ref"] = vim_util.get_moref(datastore,
+                                                        "Datastore")
+            volume_infos.append(data)
+        return self._volumeops.map_volumes_to_devices(instance, volume_infos)
+
+    def _set_vif_infos(self, migrate_data, session):
+        if 'vifs' not in migrate_data or not migrate_data.vifs:
+            migrate_data.vif_infos = []
+            return
+
+        cluster_ref = vim_util.get_moref(migrate_data.dest_cluster_ref,
+            "ClusterComputeResource")
+        dest_network_info = [
+            vif.get_dest_vif()
+            for vif in migrate_data.vifs
+        ]
+
+        vif_model = None  # We are not reading that value
+        migrate_data.vif_infos = vmwarevif.get_vif_info(session,
+            cluster_ref, utils.is_neutron(), vif_model, dest_network_info)
+
+    def _create_dest_session(self, migrate_data):
+        defaults = migrate_data.relocate_defaults
+        service = defaults["service"]
+        credentials = service["credentials"]
+        dest_url = urllib.parse.urlparse(service["url"])
+
+        dest_session = session.VMwareAPISession(
+            host_ip=dest_url.hostname,
+            host_port=dest_url.port,
+            username=credentials["username"],
+            password=credentials["password"],
+            # TODO(fwiesel): SSL Settings
+        )
+
+        return dest_session
+
+    def rollback_live_migration_at_destination(self, context, instance,
+                                               network_info,
+                                               block_device_info,
+                                               destroy_disks=True,
+                                               migrate_data=None):
+        """Clean up destination node after a failed live migration."""
+        LOG.info("rollback_live_migration_at_destination %s",
+            block_device_info, instance=instance)
+        if not migrate_data.is_same_vcenter:
+            self._volumeops.delete_shadow_vms(block_device_info, instance)
+
+    @contextlib.contextmanager
+    def _error_out_instance_on_exception(self, instance, message):
+        try:
+            yield
+        except Exception as error:
+            LOG.exception("Failed to %s, setting to ERROR state",
+                          message,
+                          instance=instance, error=error)
+            instance.vm_state = vm_states.ERROR
+            instance.save()
+
+    def post_live_migration(self, context, instance, block_device_info,
+                            migrate_data=None):
+        """Post operation of live migration at source host."""
+        if not migrate_data.is_same_vcenter:
+            with self._error_out_instance_on_exception(instance,
+                    "delete shadow vms"):
+                self._volumeops.delete_shadow_vms(block_device_info, instance)
+
+        with self._error_out_instance_on_exception(instance,
+                "sync server groups"):
+            self._vmops.sync_instance_server_group(context, instance)
+
+    def post_live_migration_at_source(self, context, instance, network_info):
+        # This is mostly for network related cleanup tasks at the source
+        # There is nothing to do for us
+        pass
+
+    def post_live_migration_at_destination(self, context, instance,
+                                           network_info,
+                                           block_migration=False,
+                                           block_device_info=None):
+        """Post operation of live migration at destination host."""
+        with self._error_out_instance_on_exception(instance,
+                "disable drs"):
+            self._vmops.disable_drs_if_needed(instance)
+
+        with self._error_out_instance_on_exception(instance,
+                "update cluster placement"):
+            self._vmops.update_cluster_placement(context, instance)
+
+        with self._error_out_instance_on_exception(instance,
+                "fixup shadow vms"):
+            volumes = self._get_volume_mappings(context, instance)
+            LOG.debug("Fixing shadow vms %s", volumes, instance=instance)
+            self._volumeops.fixup_shadow_vms(instance, volumes)
+
+        self._vmops._clean_up_after_special_spawning(
+            context, instance.memory_mb, instance.flavor)

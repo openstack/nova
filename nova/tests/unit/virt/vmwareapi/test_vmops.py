@@ -1018,38 +1018,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_get_ds.assert_called_once_with(self._session, 'cluster_ref',
                                                 None)
 
-    @mock.patch.object(vm_util, 'relocate_vm')
-    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_vm')
-    @mock.patch.object(vm_util, 'get_cluster_ref_by_name',
-                       return_value='fake_cluster')
-    @mock.patch.object(vm_util, 'get_res_pool_ref', return_value='fake_pool')
-    @mock.patch.object(vmops.VMwareVMOps, '_find_datastore_for_migration')
-    @mock.patch.object(vmops.VMwareVMOps, '_find_esx_host',
-                       return_value='fake_host')
-    def test_live_migration(self, mock_find_host, mock_find_datastore,
-                            mock_get_respool, mock_get_cluster, mock_get_vm,
-                            mock_relocate):
-        post_method = mock.MagicMock()
-        migrate_data = objects.VMwareLiveMigrateData()
-        migrate_data.cluster_name = 'fake-cluster'
-        migrate_data.datastore_regex = 'ds1|ds2'
-        mock_find_datastore.return_value = ds_obj.Datastore('ds_ref', 'ds')
-        with mock.patch.object(self._session, '_call_method',
-                               return_value='hardware-devices'):
-            self._vmops.live_migration(
-                self._context, self._instance, 'fake-host',
-                post_method, None, False, migrate_data)
-        mock_get_vm.assert_called_once_with(self._session, self._instance)
-        mock_get_cluster.assert_called_once_with(self._session, 'fake-cluster')
-        mock_find_datastore.assert_called_once_with(self._instance, 'fake_vm',
-                                                    'fake_cluster', mock.ANY)
-        mock_find_host.assert_called_once_with('fake_cluster', 'ds_ref')
-        mock_relocate.assert_called_once_with(self._session, 'fake_vm',
-                                    'fake_pool', 'ds_ref', 'fake_host',
-                                    devices=[])
-        post_method.assert_called_once_with(self._context, self._instance,
-                                            'fake-host', False, migrate_data)
-
     def test_finish_revert_migration_another_cluster(self,
                                                      relocate_fails=False):
         instances_list = ["fake_uuid_foo_bar"]

@@ -25,6 +25,7 @@ from nova.compute import power_state
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import session
 from nova.virt.vmwareapi import vm_util
@@ -671,3 +672,120 @@ class VMwareVolumeOps(object):
         # we don't do that. This comment should help us detect upstream changes
         # to the function as merging should fail.
         self.attach_volume(connection_info, instance, adapter_type)
+
+    def fixup_shadow_vms(self, instance, shadow_vms):
+        """The function ensures that all volumes attached to a VM are also
+        attached at the corresponding shadow vms.
+
+        As the vcenter controls both VMs and volumes, and you can only move
+        them together in a single migration operation between vcenters,
+        Cinder cannot move the volumes indepenedently.
+        It only can create the shadow-vms in the target vcenter.
+        The backing then gets moved through the live-migration and needs to
+        be reassociated with (attached to) the corresponding shadow-vms
+
+        It handles the case that the shadow-vm is without backing (normal-case)
+        But also that there is a pre-existing backing (e.g. we retry a failed
+        migration)
+        In the latter case, we discard the existing attachement of the
+        shadow-vm, as the attached volume is the one with the more current data
+
+        :param instance: The instance moved via a live-migration and to which
+        the volumes are attached to
+        :param shadow_vms: A mapping of devices with volumes to the
+        connection_info.data information, most importantly holding the "volume"
+        field, which is a managed-object reference to a shadow-vm
+        """
+        # This should sensibly moved out to cinder:
+        # Cinder can delete the old shadow-vm, as soon as the attachment
+        # for the vm prior the vmotion gets deleted
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        for device in vm_util.get_hardware_devices(self._session, vm_ref):
+            class_name = device.__class__.__name__
+
+            if class_name != "VirtualDisk":
+                continue
+
+            data = shadow_vms.get(device.key)
+            if not data:
+                continue
+
+            try:
+                current_device_path = device.backing.fileName
+                volume = data["volume"]
+                volume_ref = vutil.get_moref(volume, "VirtualMachine")
+                original_device = self._get_vmdk_base_volume_device(volume_ref)
+                if original_device:
+                    original_device_path = original_device.backing.fileName
+                    if original_device_path == current_device_path:
+                        # Already attached
+                        continue
+
+                    # That should not happen
+                    LOG.warning("Shadow-vm %s already has a disk"
+                        " attached at %s replacing it with %s",
+                        volume, original_device_path, current_device_path,
+                        instance=instance
+                        )
+                    self.detach_disk_from_vm(volume_ref, instance,
+                        original_device, destroy_disk=True)
+
+                disk_type = vm_util._get_device_disk_type(device)
+                self.attach_disk_to_vm(volume_ref,
+                    instance,
+                    constants.DEFAULT_ADAPTER_TYPE,
+                    disk_type,
+                    current_device_path
+                    )
+            except Exception:
+                LOG.exception("Failed to attach volume {}. Device {}".format(
+                    data["volume_id"],
+                    device.key), instance=instance)
+
+    def delete_shadow_vms(self, block_device_info, instance=None):
+        # We need to delete the migrated shadow vms
+        # (until we implement it in cinder)
+        block_device_mapping = driver.block_device_info_get_mapping(
+            block_device_info)
+
+        if not block_device_mapping:
+            return
+
+        session = self._session
+        deleted = []
+        for disk in block_device_mapping:
+            connection_info = disk["connection_info"]
+            try:
+                data = connection_info["data"]
+                volume_ref = self._get_volume_ref(data["volume"])
+                destroy_task = session._call_method(session.vim,
+                                            "Destroy_Task",
+                                            volume_ref)
+                session._wait_for_task(destroy_task)
+                deleted.append("{volume_id} ({volume})".format(**data))
+            except oslo_vmw_exceptions.ManagedObjectNotFoundException:
+                LOG.debug("Volume %s already deleted",
+                        data.get("volume_id"), instance=instance)
+            except Exception:
+                LOG.exception("Failed to delete volume %s",
+                        data.get("volume_id"), instance=instance)
+
+        LOG.info("Deleted %s", deleted, instance=instance)
+
+    def map_volumes_to_devices(self, instance, disk_infos):
+        """Maps a connection_info.data to a device of the instance by its key
+        :param instance: The instance the volumes are attached to
+        :param disk_infos: An iterable over a dict containing at least
+                           'volume_id'
+        :returns: A dict {device_key: disk_info} mapping the passed disk_info
+        dicts to a a device by the stored volume_id
+        """
+        remapped = {}
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        # TODO(fwiesel) Create a function
+        #  _get_vmdk_backed_disk_devices (plural)
+        # so we do not have two calls for each device
+        for disk_info in disk_infos:
+            device = self._get_vmdk_backed_disk_device(vm_ref, disk_info)
+            remapped[device.key] = disk_info
+        return remapped

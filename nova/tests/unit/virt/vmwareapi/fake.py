@@ -438,6 +438,7 @@ class VirtualMachine(ManagedObject):
         self.set("summary.config.memorySizeMB", kwargs.get("mem", 1))
         self.set("summary.config.instanceUuid", kwargs.get("instanceUuid"))
         self.set("version", kwargs.get("version"))
+        self.set("resourcePool", kwargs.get("resourcePool"))
 
         devices = _create_array_of_type('VirtualDevice')
         devices.VirtualDevice = kwargs.get("virtual_device", [])
@@ -1064,6 +1065,7 @@ def create_vm(uuid=None, name=None,
               "extra_config": extraConfig,
               "virtual_device": devices,
               "instanceUuid": uuid,
+              "resourcePool": res_pool_ref,
               "version": version}
     vm = VirtualMachine(**vm_dict)
     _create_object(vm)
