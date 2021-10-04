@@ -342,9 +342,56 @@ class HyperVLiveMigrateData(LiveMigrateData):
 
 @obj_base.NovaObjectRegistry.register
 class VMwareLiveMigrateData(LiveMigrateData):
-    VERSION = '1.0'
+    # Version 1.0: Initial version
+    # Version 1.1: Added dest_cluster_ref, is_same_vcenter,
+    #              instance_already_migrated, relocate_defaults_json,
+    #              vif_infos_json for cross-vcenter migration
+    VERSION = '1.1'
 
     fields = {
         'cluster_name': fields.StringField(nullable=False),
         'datastore_regex': fields.StringField(nullable=False),
+        'dest_cluster_ref': fields.StringField(nullable=False),
+        'is_same_vcenter': fields.BooleanField(default=True),
+        'instance_already_migrated': fields.BooleanField(default=False),
+        'relocate_defaults_json': fields.SensitiveStringField(default="[]"),
+        'vif_infos_json': fields.StringField(default="[]"),
     }
+
+    @property
+    def relocate_defaults(self):
+        return jsonutils.loads(self.relocate_defaults_json)
+
+    @relocate_defaults.setter
+    def relocate_defaults(self, relocate_defaults_dict):
+        self.relocate_defaults_json = jsonutils.dumps(relocate_defaults_dict)
+
+    @property
+    def vif_infos(self):
+        return jsonutils.loads(self.vif_infos_json)
+
+    @vif_infos.setter
+    def vif_infos(self, vif_infos):
+        self.vif_infos_json = jsonutils.dumps(vif_infos)
+
+    def to_legacy_dict(self, pre_migration_result=False):
+        legacy = super(VMwareLiveMigrateData, self).to_legacy_dict()
+        for field in self.fields:
+            if self.obj_attr_is_set(field):
+                legacy[field] = getattr(self, field)
+        return legacy
+
+    def from_legacy_dict(self, legacy):
+        super(VMwareLiveMigrateData, self).from_legacy_dict(legacy)
+        for field in self.fields:
+            if field in legacy:
+                setattr(self, field, legacy[field])
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(VMwareLiveMigrateData, self).obj_make_compatible(
+            primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            for k in ('is_same_vcenter', 'instance_already_migrated',
+                      'relocate_defaults_json', 'vif_infos_json'):
+                primitive.pop(k, None)

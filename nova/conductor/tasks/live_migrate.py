@@ -172,7 +172,10 @@ class LiveMigrationTask(base.TaskBase):
                                                     self.migration)
 
     def _check_instance_is_active(self):
-        if self.instance.power_state not in (power_state.RUNNING,
+        # NOSTATE, as the VM might be already migrated,
+        # but we missed to update the db and we want to retry
+        if self.instance.power_state not in (power_state.NOSTATE,
+                                             power_state.RUNNING,
                                              power_state.PAUSED):
             raise exception.InstanceInvalidState(
                     instance_uuid=self.instance.uuid,
