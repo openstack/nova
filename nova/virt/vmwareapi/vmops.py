@@ -2161,6 +2161,9 @@ class VMwareVMOps(object):
         with vutil.WithRetrieval(self._session.vim, retrieve_result) as \
                 objects:
             for vm in objects:
+                prop_set = getattr(vm, 'propSet', None)
+                if not prop_set:
+                    continue
                 vm_uuid = None
                 conn_state = None
                 for prop in vm.propSet:
