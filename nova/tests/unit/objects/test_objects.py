@@ -1144,7 +1144,7 @@ object_data = {
     'TrustedCerts': '1.0-dcf528851e0f868c77ee47e90563cda7',
     'USBDeviceBus': '1.0-e4c7dd6032e46cd74b027df5eb2d4750',
     'VIFMigrateData': '1.0-cb15282b25a039ab35046ed705eb931d',
-    'VMwareLiveMigrateData': '1.0-a3cc858a2bf1d3806d6f57cfaa1fb98a',
+    'VMwareLiveMigrateData': '1.1-13e17ad269e942ef13a8af7f5e402da7',
     'VirtCPUFeature': '1.0-ea2464bdd09084bd388e5f61d5d4fc86',
     'VirtCPUModel': '1.0-5e1864af9227f698326203d7249796b5',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
