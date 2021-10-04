@@ -120,9 +120,6 @@
               # NOTE(lyarwood): Skip until bug #1931702 is resolved.
               block_migrate_cinder_iscsi: false
     post-run: playbooks/nova-live-migration/post-run.yaml
-    # NOTE(lyarwood): This job is now non-voting until bug #1912310 is resolved
-    # within libvirt/QEMU.
-    voting: false
 
 - job:
     name: nova-live-migration-ceph
@@ -142,9 +139,6 @@
               block_migration_for_live_migration: false
               block_migrate_cinder_iscsi: false
     post-run: playbooks/nova-live-migration/post-run.yaml
-    # NOTE(lyarwood): This job is now non-voting until bug #1912310 is resolved
-    # within libvirt/QEMU.
-    voting: false
 
 - job:
     name: nova-lvm
