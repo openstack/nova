@@ -151,12 +151,17 @@ def delete_vm_group(session, cluster, vm_group):
 
 
 @utils.synchronized('vmware-vm-group-policy')
-def update_vm_group_membership(session, cluster, vm_group_name, vm_ref):
+def update_vm_group_membership(session, cluster, vm_group_name, vm_ref,
+                               remove=False):
     """Updates cluster for vm placement using DRS
 
-    Add a VM to a Vm-group, create it if missing
-    It is up for an administrator to define rules for this group with other
-    means in the VCenter
+    If remove is set to false (default), add the VM to a Vm-group with
+    the given name and cluster. Create it if missing.
+    Otherwise, remove the vm from the group. The group itself won't get removed
+    even if there are no instances left.
+
+    The assumption is that an administrator defines rules with other means
+    on that group.
     """
     cluster_config = session._call_method(
         vutil, "get_object_property", cluster, "configurationEx")
@@ -164,18 +169,33 @@ def update_vm_group_membership(session, cluster, vm_group_name, vm_ref):
     client_factory = session.vim.client.factory
     config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
 
-    operation = None
     group = _get_vm_group(cluster_config, vm_group_name)
 
     if not group:
-        operation = "add"
+        if remove:
+            return
         group = create_vm_group(client_factory, vm_group_name, [vm_ref])
-    else:
-        operation = "edit"
+        operation = "add"
+    elif not remove:
         if not hasattr(group, "vm"):
             group.vm = [vm_ref]
         else:
             group.vm.append(vm_ref)
+        operation = "edit"
+    else:  # group and remove
+        if not hasattr(group, "vm"):
+            return
+        filtered_vms = []
+        found = False
+        for ref in group.vm:
+            if (vutil.get_moref_value(ref) == vutil.get_moref_value(vm_ref)):
+                found = True
+            else:
+                filtered_vms.append(ref)
+        if not found:
+            return
+        group.vm = filtered_vms
+        operation = "edit"
 
     group_spec = create_group_spec(client_factory, group, operation)
     config_spec.groupSpec = [group_spec]

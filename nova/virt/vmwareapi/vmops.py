@@ -742,9 +742,9 @@ class VMwareVMOps(object):
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
 
-    def update_cluster_placement(self, context, instance):
+    def update_cluster_placement(self, context, instance, remove=False):
         self.sync_instance_server_group(context, instance)
-        self.update_admin_vm_group_membership(instance)
+        self.update_admin_vm_group_membership(instance, remove=remove)
 
     def sync_instance_server_group(self, context, instance):
         try:
@@ -755,7 +755,7 @@ class VMwareVMOps(object):
         except nova.exception.InstanceGroupNotFound:
             pass
 
-    def update_admin_vm_group_membership(self, instance):
+    def update_admin_vm_group_membership(self, instance, remove=False):
         vm_group_name = CONF.vmware.special_spawning_vm_group
         if not vm_group_name:
             return
@@ -767,7 +767,8 @@ class VMwareVMOps(object):
 
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         cluster_util.update_vm_group_membership(self._session, self._cluster,
-                                                vm_group_name, vm_ref)
+                                                vm_group_name, vm_ref,
+                                                remove=remove)
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
