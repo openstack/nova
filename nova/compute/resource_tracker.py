@@ -1470,7 +1470,7 @@ class ResourceTracker(object):
                 continue
 
     def _update_usage_from_instance(self, context, instance, nodename,
-            is_removed=False):
+            is_removed=False, bdms=None):
         """Update usage for a single instance."""
 
         uuid = instance['uuid']
@@ -1501,7 +1501,8 @@ class ResourceTracker(object):
                                                          instance,
                                                          sign=sign)
             # new instance, update compute node resource usage:
-            self._update_usage(self._get_usage_dict(instance, instance),
+            self._update_usage(self._get_usage_dict(instance, instance,
+                                                    bdms=bdms),
                                nodename, sign=sign)
 
         # Stop tracking removed instances in the is_bfv cache. This needs to
@@ -1537,8 +1538,17 @@ class ResourceTracker(object):
 
         instance_by_uuid = {}
         for instance in instances:
+            instance_by_uuid[instance.uuid] = instance
+
+        bdms_by_instance_uuid = (
+            objects.BlockDeviceMappingList.bdms_by_instance_uuid(
+                context, instance_by_uuid.keys()))
+
+        for instance in instances:
             if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
-                self._update_usage_from_instance(context, instance, nodename)
+                bdms = bdms_by_instance_uuid.get(instance.uuid)
+                self._update_usage_from_instance(context, instance, nodename,
+                    bdms=bdms)
             instance_by_uuid[instance.uuid] = instance
         return instance_by_uuid
 
@@ -1711,7 +1721,7 @@ class ResourceTracker(object):
         # them. In that case - just get the instance flavor.
         return instance.flavor
 
-    def _get_usage_dict(self, object_or_dict, instance, **updates):
+    def _get_usage_dict(self, object_or_dict, instance, bdms=None, **updates):
         """Make a usage dict _update methods expect.
 
         Accepts a dict or an Instance or Flavor object, and a set of updates.
@@ -1721,6 +1731,7 @@ class ResourceTracker(object):
         :param instance: nova.objects.Instance for the related operation; this
                          is needed to determine if the instance is
                          volume-backed
+        :param bdms: Optional a BlockDeviceMappingList for the instance
         :param updates: key-value pairs to update the passed object.
                         Currently only considers 'numa_topology', all other
                         keys are ignored.
@@ -1735,7 +1746,7 @@ class ResourceTracker(object):
                 is_bfv = self.is_bfv[instance.uuid]
             else:
                 is_bfv = compute_utils.is_volume_backed_instance(
-                    instance._context, instance)
+                    instance._context, instance, bdms=bdms)
                 self.is_bfv[instance.uuid] = is_bfv
             return is_bfv
 
