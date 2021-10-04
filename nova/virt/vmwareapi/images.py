@@ -183,14 +183,20 @@ class VMwareImage(object):
 def get_vsphere_location(context, image_id):
     """Get image location in vsphere or None."""
     # image_id can be None if the instance is booted using a volume.
-    if image_id:
+    if not image_id:
+        return None
+
+    try:
         metadata = IMAGE_API.get(context, image_id, include_locations=True)
-        locations = metadata.get('locations')
-        if locations:
-            for loc in locations:
-                loc_url = loc.get('url')
-                if loc_url and loc_url.startswith('vsphere://'):
-                    return loc_url
+    except exception.ImageNotFound:
+        return None
+
+    locations = metadata.get('locations')
+    if locations:
+        for loc in locations:
+            loc_url = loc.get('url')
+            if loc_url and loc_url.startswith('vsphere://'):
+                return loc_url
     return None
 
 
