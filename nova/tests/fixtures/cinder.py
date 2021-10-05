@@ -324,7 +324,13 @@ class CinderFixture(fixtures.Fixture):
                                 volume_id, _attachment['id'],
                                 _attachment['connector'].get('host')))
 
+            # If the mountpoint was provided stash it in the connector as we do
+            # within nova.volume.cinder.API.attachment_update before calling
+            # c-api and then stash the connector in the attachment record.
+            if mountpoint:
+                connector['device'] = mountpoint
             attachment['connector'] = connector
+
             LOG.info('Updating volume attachment: %s', attachment_id)
             attachment_ref = {
                 'id': attachment_id,

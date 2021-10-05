@@ -3548,6 +3548,7 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         fake_compute_api = mock_compute_api.return_value
         fake_volume_api = mock_volume_api.return_value
         fake_compute_rpcapi = mock_compute_rpcapi.return_value
+        device_name = '/dev/vda'
 
         mock_get_instance.return_value = objects.Instance(
             uuid=uuidsentinel.instance,
@@ -3555,7 +3556,8 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
             host='foo', locked=False)
         mock_get_bdm.return_value = objects.BlockDeviceMapping(
             uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
-            attachment_id=uuidsentinel.instance)
+            attachment_id=uuidsentinel.instance,
+            device_name=device_name)
         mock_action = mock.Mock(spec=objects.InstanceAction)
         mock_action_start.return_value = mock_action
 
@@ -3579,7 +3581,7 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         fake_volume_api.attachment_delete.assert_called_once_with(
             mock.ANY, uuidsentinel.instance)
         fake_volume_api.attachment_update.assert_called_once_with(
-            mock.ANY, uuidsentinel.new_attachment, mock.ANY)
+            mock.ANY, uuidsentinel.new_attachment, mock.ANY, device_name)
         fake_volume_api.attachment_complete.assert_called_once_with(
             mock.ANY, uuidsentinel.new_attachment)
         fake_compute_api.unlock.assert_called_once_with(
