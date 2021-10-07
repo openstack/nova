@@ -193,7 +193,7 @@ class _SpecialVmSpawningServer(object):
 
             # retrieve all hosts of the cluster
             host_objs = {vutil.get_moref_value(h): h
-                    for h in self._get_hosts_in_cluster(self._cluster_ref)}
+                    for h in self._get_hosts_in_cluster(self._cluster)}
             vms_per_host = {h: [] for h in host_objs}
 
             # get all the vms in a cluster, because we need to find a host
