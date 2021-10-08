@@ -14,26 +14,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""
-Tests for database migrations.
-There are "opportunistic" tests which allows testing against all 3 databases
+"""Tests for database migrations for the main database.
+
+These are "opportunistic" tests which allow testing against all three databases
 (sqlite in memory, mysql, pg) in a properly configured unit test environment.
 
-For the opportunistic testing you need to set up db's named 'openstack_citest'
+For the opportunistic testing you need to set up DBs named 'openstack_citest'
 with user 'openstack_citest' and password 'openstack_citest' on localhost. The
-test will then use that db and u/p combo to run the tests.
-
-For postgres on Ubuntu this can be done with the following commands::
-
-| sudo -u postgres psql
-| postgres=# create user openstack_citest with createdb login password
-|       'openstack_citest';
-| postgres=# create database openstack_citest with owner openstack_citest;
-
+test will then use that DB and username/password combo to run the tests. Refer
+to the 'tools/test-setup.sh' for an example of how to configure this.
 """
-
-import glob
-import os
 
 from alembic import command as alembic_api
 from alembic import script as alembic_script
@@ -290,35 +280,3 @@ class TestMigrationsWalkPostgreSQL(
     test.NoDBTestCase,
 ):
     FIXTURE = test_fixtures.PostgresqlOpportunisticFixture
-
-
-class ProjectTestCase(test.NoDBTestCase):
-
-    def test_no_migrations_have_downgrade(self):
-        topdir = os.path.normpath(os.path.dirname(__file__) + '/../../../')
-        # Walk both the nova_api and nova (cell) database migrations.
-        includes_downgrade = []
-        for directory in (
-            os.path.join(topdir, 'db', 'main', 'legacy_migrations'),
-            os.path.join(topdir, 'db', 'api', 'legacy_migrations'),
-        ):
-            py_glob = os.path.join(directory, 'versions', '*.py')
-            for path in glob.iglob(py_glob):
-                has_upgrade = False
-                has_downgrade = False
-                with open(path, "r") as f:
-                    for line in f:
-                        if 'def upgrade(' in line:
-                            has_upgrade = True
-                        if 'def downgrade(' in line:
-                            has_downgrade = True
-
-                    if has_upgrade and has_downgrade:
-                        fname = os.path.basename(path)
-                        includes_downgrade.append(fname)
-
-        helpful_msg = (
-            "The following migrations have a downgrade "
-            "which is not supported:"
-            "\n\t%s" % '\n\t'.join(sorted(includes_downgrade)))
-        self.assertFalse(includes_downgrade, helpful_msg)
