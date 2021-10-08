@@ -169,6 +169,9 @@ class StandardLogging(fixtures.Fixture):
                 'migrate.versioning.api').setLevel(std_logging.WARNING)
             # Or alembic for model comparisons.
             std_logging.getLogger('alembic').setLevel(std_logging.WARNING)
+            # Or oslo_db provisioning steps
+            std_logging.getLogger('oslo_db.sqlalchemy').setLevel(
+                std_logging.WARNING)
 
         # At times we end up calling back into main() functions in
         # testing. This has the possibility of calling logging.setup
