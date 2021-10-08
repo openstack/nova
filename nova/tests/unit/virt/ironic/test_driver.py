@@ -2016,17 +2016,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     def test_plug_vifs(self, mock__plug_vifs):
         node_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
-        node = _get_cached_node(id=node_id)
-
-        self.mock_conn.get_node.return_value = node
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node_id)
         network_info = utils.get_test_network_info()
         self.driver.plug_vifs(instance, network_info)
 
-        self.mock_conn.get_node.assert_called_once_with(
-            node_id, fields=ironic_driver._NODE_FIELDS)
-        mock__plug_vifs.assert_called_once_with(node, instance, network_info)
+        mock__plug_vifs.assert_not_called()
 
     @mock.patch.object(FAKE_CLIENT.node, 'vif_attach')
     def test_plug_vifs_multiple_ports(self, mock_vatt):
@@ -2160,11 +2155,17 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver.unplug_vifs(instance, network_info)
         self.assertFalse(mock_vdet.called)
 
-    @mock.patch.object(ironic_driver.IronicDriver, 'plug_vifs')
+    @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     def test_attach_interface(self, mock_pv):
-        self.driver.attach_interface('fake_context', 'fake_instance',
+        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        node = _get_cached_node(uuid=node_uuid)
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node_uuid)
+        self.mock_conn.get_node.return_value = node
+
+        self.driver.attach_interface('fake_context', instance,
                                      'fake_image_meta', 'fake_vif')
-        mock_pv.assert_called_once_with('fake_instance', ['fake_vif'])
+        mock_pv.assert_called_once_with(node, instance, ['fake_vif'])
 
     @mock.patch.object(ironic_driver.IronicDriver, 'unplug_vifs')
     def test_detach_interface(self, mock_uv):
@@ -2440,17 +2441,23 @@ class IronicDriverTestCase(test.NoDBTestCase):
     def test_get_volume_connector_no_ip_no_fixed_ip(self):
         self._test_get_volume_connector_no_ip(False, no_fixed_ip=True)
 
-    @mock.patch.object(ironic_driver.IronicDriver, 'plug_vifs')
+    @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     def test_prepare_networks_before_block_device_mapping(self, mock_pvifs):
+        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        node = _get_cached_node(uuid=node_uuid)
+        self.mock_conn.get_node.return_value = node
         instance = fake_instance.fake_instance_obj(self.ctx)
         network_info = utils.get_test_network_info()
         self.driver.prepare_networks_before_block_device_mapping(instance,
                                                                  network_info)
-        mock_pvifs.assert_called_once_with(instance, network_info)
+        mock_pvifs.assert_called_once_with(node, instance, network_info)
 
-    @mock.patch.object(ironic_driver.IronicDriver, 'plug_vifs')
+    @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
     def test_prepare_networks_before_block_device_mapping_error(self,
                                                                 mock_pvifs):
+        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        node = _get_cached_node(uuid=node_uuid)
+        self.mock_conn.get_node.return_value = node
         instance = fake_instance.fake_instance_obj(self.ctx)
         network_info = utils.get_test_network_info()
         mock_pvifs.side_effect = ironic_exception.BadRequest('fake error')
@@ -2458,7 +2465,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             ironic_exception.BadRequest,
             self.driver.prepare_networks_before_block_device_mapping,
             instance, network_info)
-        mock_pvifs.assert_called_once_with(instance, network_info)
+        mock_pvifs.assert_called_once_with(node, instance, network_info)
 
     @mock.patch.object(ironic_driver.IronicDriver, 'unplug_vifs')
     def test_clean_networks_preparation(self, mock_upvifs):
