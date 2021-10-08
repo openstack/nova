@@ -42,10 +42,7 @@ import mock
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
-from oslo_db.sqlalchemy import utils as oslodbutils
 from oslo_log import log as logging
-import sqlalchemy
-import sqlalchemy.exc
 import testtools
 
 from nova.db.main import models
@@ -61,43 +58,6 @@ class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
     def setUp(self):
         super().setUp()
         self.engine = enginefacade.writer.get_engine()
-
-    def assertColumnExists(self, engine, table_name, column):
-        self.assertTrue(oslodbutils.column_exists(engine, table_name, column),
-                        'Column %s.%s does not exist' % (table_name, column))
-
-    def assertColumnNotExists(self, engine, table_name, column):
-        self.assertFalse(oslodbutils.column_exists(engine, table_name, column),
-                        'Column %s.%s should not exist' % (table_name, column))
-
-    def assertTableNotExists(self, engine, table):
-        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
-                          oslodbutils.get_table, engine, table)
-
-    def assertIndexExists(self, engine, table_name, index):
-        self.assertTrue(oslodbutils.index_exists(engine, table_name, index),
-                        'Index %s on table %s does not exist' %
-                        (index, table_name))
-
-    def assertIndexNotExists(self, engine, table_name, index):
-        self.assertFalse(oslodbutils.index_exists(engine, table_name, index),
-                         'Index %s on table %s should not exist' %
-                         (index, table_name))
-
-    def assertIndexMembers(self, engine, table, index, members):
-        # NOTE(johannes): Order of columns can matter. Most SQL databases
-        # can use the leading columns for optimizing queries that don't
-        # include all of the covered columns.
-        self.assertIndexExists(engine, table, index)
-
-        t = oslodbutils.get_table(engine, table)
-        index_columns = None
-        for idx in t.indexes:
-            if idx.name == index:
-                index_columns = [c.name for c in idx.columns]
-                break
-
-        self.assertEqual(members, index_columns)
 
     def db_sync(self, engine):
         with mock.patch.object(migration, '_get_engine', return_value=engine):
@@ -241,17 +201,27 @@ class NovaMigrationsWalk(
         self.config = migration._find_alembic_conf('main')
         self.init_version = migration.ALEMBIC_INIT_VERSION['main']
 
-    def _migrate_up(self, revision):
+    def _migrate_up(self, connection, revision):
         if revision == self.init_version:  # no tests for the initial revision
+            alembic_api.upgrade(self.config, revision)
             return
 
         self.assertIsNotNone(
             getattr(self, '_check_%s' % revision, None),
             (
-                'API DB Migration %s does not have a test; you must add one'
+                'Main DB Migration %s does not have a test; you must add one'
             ) % revision,
         )
+
+        pre_upgrade = getattr(self, '_pre_upgrade_%s' % revision, None)
+        if pre_upgrade:
+            pre_upgrade(connection)
+
         alembic_api.upgrade(self.config, revision)
+
+        post_upgrade = getattr(self, '_check_%s' % revision, None)
+        if post_upgrade:
+            post_upgrade(connection)
 
     def test_single_base_revision(self):
         """Ensure we only have a single base revision.
@@ -279,16 +249,22 @@ class NovaMigrationsWalk(
         with self.engine.begin() as connection:
             self.config.attributes['connection'] = connection
             script = alembic_script.ScriptDirectory.from_config(self.config)
-            for revision_script in script.walk_revisions():
-                revision = revision_script.revision
+            revisions = [x.revision for x in script.walk_revisions()]
+
+            # for some reason, 'walk_revisions' gives us the revisions in
+            # reverse chronological order so we have to invert this
+            revisions.reverse()
+            self.assertEqual(revisions[0], self.init_version)
+
+            for revision in revisions:
                 LOG.info('Testing revision %s', revision)
-                self._migrate_up(revision)
+                self._migrate_up(connection, revision)
 
     def test_db_version_alembic(self):
         migration.db_sync(database='main')
 
-        head = alembic_script.ScriptDirectory.from_config(
-            self.config).get_current_head()
+        script = alembic_script.ScriptDirectory.from_config(self.config)
+        head = script.get_current_head()
         self.assertEqual(head, migration.db_version(database='main'))
 
 
