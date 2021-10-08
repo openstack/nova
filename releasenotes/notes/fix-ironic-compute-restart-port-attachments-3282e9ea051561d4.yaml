@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Fixes slow compute restart when using the ``nova.virt.ironic`` compute
+    driver where the driver was previously attempting to attach VIFS on
+    start-up via the ``plug_vifs`` driver method. This method has grown
+    otherwise unused since the introduction of the ``attach_interface``
+    method of attaching VIFs. As Ironic manages the attachment of VIFs to
+    baremetal nodes in order to align with the security requirements of a
+    physical baremetal node's lifecycle. The ironic driver now ignores calls
+    to the ``plug_vifs`` method.
