@@ -1,0 +1,18 @@
+---
+issues:
+  - |
+    The libvirt virt driver in Nova implements power on and hard reboot by
+    destroying the domain first and unpluging the vifs then recreating the
+    domain and replugging the vifs. However nova does not wait for the
+    network-vif-plugged event before unpause the domain. This can cause
+    the domain to start running and requesting IP via DHCP before the
+    networking backend has finished plugging the vifs. The config option
+    [workarounds]wait_for_vif_plugged_event_during_hard_reboot has been added,
+    defaulting to an empty list, that can be used to ensure that the libvirt
+    driver waits for the network-vif-plugged event for vifs with specific
+    ``vnic_type`` before it unpauses the domain during hard reboot. This should
+    only be used if the deployment uses a networking backend that sends such
+    event for the given ``vif_type`` at vif plug time. The ml2/ovs and the
+    networking-odl Neutron backend is known to send plug time events for ports
+    with ``normal`` ``vnic_type``.  For more information see
+    https://bugs.launchpad.net/nova/+bug/1946729

@@ -251,6 +251,12 @@
               # reduce the number of placement calls in steady state. Added in
               # Stein.
               resource_provider_association_refresh: 0
+            workarounds:
+              # This wa is an improvement on hard reboot that cannot be turned
+              # on unconditionally. But we know that ml2/ovs sends plug time
+              # events so we can enable this in this ovs job for vnic_type
+              # normal
+              wait_for_vif_plugged_event_during_hard_reboot: normal
           $NOVA_CONF:
             quota:
               # Added in Train.
