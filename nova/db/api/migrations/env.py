@@ -32,42 +32,21 @@ target_metadata = models.BASE.metadata
 
 
 def include_name(name, type_, parent_names):
+    """Determine which tables or columns to skip.
+
+    This is used when we decide to "delete" a table or column. In this
+    instance, we will remove the SQLAlchemy model or field but leave the
+    underlying database table or column in place for a number of releases
+    after. Once we're sure that there is no code running that contains
+    references to the old models, we can then remove the underlying table. In
+    the interim, we must track the discrepancy between models and actual
+    database data here.
+    """
+    if type_ == 'table':
+        return name not in models.REMOVED_TABLES
+
     if type_ == 'column':
-        # NOTE(stephenfin): This is a list of fields that have been removed
-        # from various SQLAlchemy models but which still exist in the
-        # underlying tables. Our upgrade policy dictates that we remove fields
-        # from models at least one cycle before we remove the column from the
-        # underlying table. Not doing so would prevent us from applying the
-        # new database schema before rolling out any of the new code since the
-        # old code could attempt to access data in the removed columns. Alembic
-        # identifies this temporary mismatch between the models and underlying
-        # tables and attempts to resolve it. Tell it instead to ignore these
-        # until we're ready to remove them ourselves.
-        return (parent_names['table_name'], name) not in {
-            ('build_requests', 'request_spec_id'),
-            ('build_requests', 'user_id'),
-            ('build_requests', 'display_name'),
-            ('build_requests', 'instance_metadata'),
-            ('build_requests', 'progress'),
-            ('build_requests', 'vm_state'),
-            ('build_requests', 'task_state'),
-            ('build_requests', 'image_ref'),
-            ('build_requests', 'access_ip_v4'),
-            ('build_requests', 'access_ip_v6'),
-            ('build_requests', 'info_cache'),
-            ('build_requests', 'security_groups'),
-            ('build_requests', 'config_drive'),
-            ('build_requests', 'key_name'),
-            ('build_requests', 'locked_by'),
-            ('build_requests', 'reservation_id'),
-            ('build_requests', 'launch_index'),
-            ('build_requests', 'hostname'),
-            ('build_requests', 'kernel_id'),
-            ('build_requests', 'ramdisk_id'),
-            ('build_requests', 'root_device_name'),
-            ('build_requests', 'user_data'),
-            ('resource_providers', 'can_host'),
-        }
+        return (parent_names['table_name'], name) not in models.REMOVED_COLUMNS
 
     return True
 

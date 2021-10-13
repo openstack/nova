@@ -80,32 +80,39 @@ class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
             if name == 'migrate_version' or name.startswith('shadow_'):
                 return False
 
+            # Define a whitelist of tables that will be removed from the DB in
+            # a later release and don't have a corresponding model anymore.
+
+            return name not in models.REMOVED_TABLES
+
         return True
 
     def filter_metadata_diff(self, diff):
-        # Overriding the parent method to decide on certain attributes
-        # that maybe present in the DB but not in the models.py
+        # Filter out diffs that shouldn't cause a sync failure.
+        new_diff = []
 
-        def removed_column(element):
-            # Define a whitelist of columns that would be removed from the
-            # DB at a later release.
-            # NOTE(Luyao) The vpmems column was added to the schema in train,
-            # and removed from the model in train.
-            column_whitelist = {
-                'instances': ['internal_id'],
-                'instance_extra': ['vpmems'],
-            }
+        for element in diff:
+            if isinstance(element, list):
+                # modify_nullable is a list
+                new_diff.append(element)
+            else:
+                # tuple with action as first element. Different actions have
+                # different tuple structures.
+                if element[0] == 'add_fk':
+                    fkey = element[1]
+                    tablename = fkey.table.name
+                    column_keys = fkey.column_keys
+                    if (tablename, column_keys) in models.REMOVED_FKEYS:
+                        continue
+                if element[0] == 'remove_column':
+                    table = element[2]
+                    column = element[3].name
+                    if (table, column) in models.REMOVED_COLUMNS:
+                        continue
 
-            if element[0] != 'remove_column':
-                return False
+                new_diff.append(element)
 
-            table_name, column = element[2], element[3]
-            return (
-                table_name in column_whitelist and
-                column.name in column_whitelist[table_name]
-            )
-
-        return [element for element in diff if not removed_column(element)]
+        return new_diff
 
 
 class TestModelsSyncSQLite(

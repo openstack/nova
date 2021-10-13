@@ -62,29 +62,16 @@ class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
             if name == 'migrate_version':
                 return False
 
+            # Define a whitelist of tables that will be removed from the DB in
+            # a later release and don't have a corresponding model anymore.
+
+            return name not in models.REMOVED_TABLES
+
         return True
 
     def filter_metadata_diff(self, diff):
         # Filter out diffs that shouldn't cause a sync failure.
         new_diff = []
-
-        # Define a whitelist of ForeignKeys that exist on the model but not in
-        # the database. They will be removed from the model at a later time.
-        fkey_whitelist = {'build_requests': ['request_spec_id']}
-
-        # Define a whitelist of columns that will be removed from the
-        # DB at a later release and aren't on a model anymore.
-
-        column_whitelist = {
-            'build_requests': [
-                'vm_state', 'instance_metadata',
-                'display_name', 'access_ip_v6', 'access_ip_v4', 'key_name',
-                'locked_by', 'image_ref', 'progress', 'request_spec_id',
-                'info_cache', 'user_id', 'task_state', 'security_groups',
-                'config_drive',
-            ],
-            'resource_providers': ['can_host'],
-        }
 
         for element in diff:
             if isinstance(element, list):
@@ -97,18 +84,12 @@ class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
                     fkey = element[1]
                     tablename = fkey.table.name
                     column_keys = fkey.column_keys
-                    if (
-                        tablename in fkey_whitelist and
-                        column_keys == fkey_whitelist[tablename]
-                    ):
+                    if (tablename, column_keys) in models.REMOVED_FKEYS:
                         continue
                 elif element[0] == 'remove_column':
-                    tablename = element[2]
-                    column = element[3]
-                    if (
-                        tablename in column_whitelist and
-                        column.name in column_whitelist[tablename]
-                    ):
+                    table = element[2]
+                    column = element[3].name
+                    if (table, column) in models.REMOVED_COLUMNS:
                         continue
 
                 new_diff.append(element)
