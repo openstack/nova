@@ -18,10 +18,12 @@
 
 import collections
 from contextlib import contextmanager
+import functools
 import logging as std_logging
 import os
 import warnings
 
+import eventlet
 import fixtures
 import futurist
 import mock
@@ -56,6 +58,7 @@ from nova import rpc
 from nova.scheduler import weights
 from nova import service
 from nova.tests.functional.api import client
+from nova import utils
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -1516,3 +1519,84 @@ class GenericPoisonFixture(fixtures.Fixture):
             except ImportError:
                 self.useFixture(fixtures.MonkeyPatch(
                     meth, poison_configure(meth, why)))
+
+
+class PropagateTestCaseIdToChildEventlets(fixtures.Fixture):
+    """A fixture that adds the currently running test case id to each spawned
+    eventlet. This information then later used by the NotificationFixture to
+    detect if a notification was emitted by an eventlet that was spawned by a
+    previous test case so such late notification can be ignored. For more
+    background about what issues this can prevent see
+    https://bugs.launchpad.net/nova/+bug/1946339
+
+    """
+    def __init__(self, test_case_id):
+        self.test_case_id = test_case_id
+
+    def setUp(self):
+        super().setUp()
+
+        # set the id on the main eventlet
+        c = eventlet.getcurrent()
+        c.test_case_id = self.test_case_id
+
+        orig_spawn = utils.spawn
+
+        def wrapped_spawn(func, *args, **kwargs):
+            # This is still runs before the eventlet.spawn so read the id for
+            # propagation
+            caller = eventlet.getcurrent()
+            # If there is no id set on us that means we were spawned with other
+            # than nova.utils.spawn or spawn_n so the id propagation chain got
+            # broken. We fall back to self.test_case_id from the fixture which
+            # is good enough
+            caller_test_case_id = getattr(
+                caller, 'test_case_id', None) or self.test_case_id
+
+            @functools.wraps(func)
+            def test_case_id_wrapper(*args, **kwargs):
+                # This runs after the eventlet.spawn in the new child.
+                # Propagate the id from our caller eventlet
+                current = eventlet.getcurrent()
+                current.test_case_id = caller_test_case_id
+                return func(*args, **kwargs)
+
+            # call the original spawn to create the child but with our
+            # new wrapper around its target
+            return orig_spawn(test_case_id_wrapper, *args, **kwargs)
+
+        # let's replace nova.utils.spawn with the wrapped one that injects
+        # our initialization to the child eventlet
+        self.useFixture(
+            fixtures.MonkeyPatch('nova.utils.spawn', wrapped_spawn))
+
+        # now do the same with spawn_n
+        orig_spawn_n = utils.spawn_n
+
+        def wrapped_spawn_n(func, *args, **kwargs):
+            # This is still runs before the eventlet.spawn so read the id for
+            # propagation
+            caller = eventlet.getcurrent()
+            # If there is no id set on us that means we were spawned with other
+            # than nova.utils.spawn or spawn_n so the id propagation chain got
+            # broken. We fall back to self.test_case_id from the fixture which
+            # is good enough
+            caller_test_case_id = getattr(
+                caller, 'test_case_id', None) or self.test_case_id
+
+            @functools.wraps(func)
+            def test_case_id_wrapper(*args, **kwargs):
+                # This runs after the eventlet.spawn in the new child.
+                # Propagate the id from our caller eventlet
+                current = eventlet.getcurrent()
+                current.test_case_id = caller_test_case_id
+                return func(*args, **kwargs)
+
+            # call the original spawn_n to create the child but with our
+            # new wrapper around its target
+            return orig_spawn_n(test_case_id_wrapper, *args, **kwargs)
+
+        # let's replace nova.utils.spawn_n with the wrapped one that injects
+        # our initialization to the child eventlet
+        self.useFixture(
+            fixtures.MonkeyPatch('nova.utils.spawn_n', wrapped_spawn_n))
