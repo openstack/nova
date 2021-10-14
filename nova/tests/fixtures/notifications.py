@@ -14,6 +14,7 @@ import collections
 import functools
 import threading
 
+import eventlet
 import fixtures
 from oslo_log import log as logging
 import oslo_messaging
@@ -76,6 +77,7 @@ class FakeNotifier(object):
 
     def __init__(
         self, transport, publisher_id, serializer=None, parent=None,
+        test_case_id=None
     ):
         self.transport = transport
         self.publisher_id = publisher_id
@@ -92,6 +94,8 @@ class FakeNotifier(object):
                 functools.partial(self._notify, priority.upper()),
             )
 
+        self.test_case_id = test_case_id
+
     def prepare(self, publisher_id=None):
         if publisher_id is None:
             publisher_id = self.publisher_id
@@ -99,6 +103,7 @@ class FakeNotifier(object):
         return self.__class__(
             self.transport, publisher_id,
             serializer=self._serializer, parent=self,
+            test_case_id=self.test_case_id
         )
 
     def _notify(self, priority, ctxt, event_type, payload):
@@ -130,8 +135,10 @@ class FakeNotifier(object):
 class FakeVersionedNotifier(FakeNotifier):
     def __init__(
         self, transport, publisher_id, serializer=None, parent=None,
+        test_case_id=None
     ):
-        super().__init__(transport, publisher_id, serializer)
+        super().__init__(
+            transport, publisher_id, serializer, test_case_id=test_case_id)
         if parent:
             self.versioned_notifications = parent.versioned_notifications
         else:
@@ -142,7 +149,31 @@ class FakeVersionedNotifier(FakeNotifier):
         else:
             self.subscriptions = collections.defaultdict(_Sub)
 
+    @staticmethod
+    def _get_sender_test_case_id():
+        current = eventlet.getcurrent()
+        # NOTE(gibi) not all eventlet spawn is under our control, so there can
+        # be senders without test_case_id set, find the first ancestor that
+        # was spawned from nova.utils.spawn[_n] and therefore has the id set.
+        while not getattr(current, 'test_case_id', None):
+            current = current.parent
+        return current.test_case_id
+
     def _notify(self, priority, ctxt, event_type, payload):
+        sender_test_case_id = self._get_sender_test_case_id()
+        # NOTE(gibi): this is here to prevent late notifications from already
+        # finished test cases to break the currently running test case. See
+        # more in https://bugs.launchpad.net/nova/+bug/1946339
+        if sender_test_case_id != self.test_case_id:
+            raise RuntimeError(
+                'FakeVersionedNotifier received %s notification emitted by %s '
+                'test case which is different from the currently running test '
+                'case %s. This notification is ignored. The sender test case '
+                'probably leaked a running eventlet that emitted '
+                'notifications after the test case finished. Now this eventlet'
+                'is terminated by raising this exception.' %
+                (event_type, sender_test_case_id, self.test_case_id))
+
         payload = self._serializer.serialize_entity(ctxt, payload)
         notification = {
             'publisher_id': self.publisher_id,
@@ -180,7 +211,9 @@ class NotificationFixture(fixtures.Fixture):
         self.fake_versioned_notifier = FakeVersionedNotifier(
             rpc.NOTIFIER.transport,
             rpc.NOTIFIER.publisher_id,
-            serializer=getattr(rpc.NOTIFIER, '_serializer', None))
+            serializer=getattr(rpc.NOTIFIER, '_serializer', None),
+            test_case_id=self.test.id()
+        )
         if rpc.LEGACY_NOTIFIER and rpc.NOTIFIER:
             self.test.stub_out('nova.rpc.LEGACY_NOTIFIER', self.fake_notifier)
             self.test.stub_out(

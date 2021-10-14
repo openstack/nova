@@ -177,6 +177,9 @@ class TestCase(base.BaseTestCase):
         with fixtures.EnvironmentVariable('OS_LOG_CAPTURE', '0'):
             super(TestCase, self).setUp()
 
+        self.useFixture(
+            nova_fixtures.PropagateTestCaseIdToChildEventlets(self.id()))
+
         # How many of which service we've started. {$service-name: $count}
         self._service_fixture_count = collections.defaultdict(int)
 
