@@ -430,18 +430,18 @@ class BigVmManager(manager.Manager):
 
         # check for reserved resources which indicate that the free host was
         # consumed
-        reserved_providers = {rp_uuid: rp
-                              for rp_uuid, rp in bigvm_providers.items()
-                              if rp['inventory'].get(BIGVM_RESOURCE, {})
-                                                .get('reserved')}
+        providers_to_delete = {rp_uuid: rp
+                               for rp_uuid, rp in bigvm_providers.items()
+                               if rp['inventory'].get(BIGVM_RESOURCE, {})
+                                                 .get('reserved')}
 
         # check for resource-providers having more than
         # bigvm_cluster_max_usage_percent usage
-        overused_providers = {}
         for rp_uuid, rp in bigvm_providers.items():
-            if rp_uuid in reserved_providers:
+            if rp_uuid in providers_to_delete:
                 # no need to check if we already remove it anyways
                 continue
+
             host_rp = vmware_providers[rp['host_rp_uuid']]
             # Hosts exclusively used for hana_* flavors cannot be too full
             if BIGVM_EXCLUSIVE_TRAIT in host_rp['traits']:
@@ -449,15 +449,17 @@ class BigVmManager(manager.Manager):
 
             used_percent = host_rp['memory_mb_used_percent']
             if used_percent > CONF.bigvm_cluster_max_usage_percent:
-                overused_providers[rp_uuid] = rp
+                providers_to_delete[rp_uuid] = rp
                 LOG.info('Resource-provider %(host_rp_uuid)s with free host '
                          'is overused on regular memory usage. Marking '
                          '%(rp_uuid)s for deletion.',
                          {'host_rp_uuid': rp['host_rp_uuid'],
                           'rp_uuid': rp_uuid})
+                continue
+
             reserved_percent = host_rp['memory_reservable_mb_used_percent']
             if reserved_percent > CONF.bigvm_cluster_max_reservation_percent:
-                overused_providers[rp_uuid] = rp
+                providers_to_delete[rp_uuid] = rp
                 LOG.info('Resource-provider %(host_rp_uuid)s with free host '
                          'is overused on reserved memory usage. Marking '
                          '%(rp_uuid)s for deletion.',
@@ -465,14 +467,8 @@ class BigVmManager(manager.Manager):
                           'rp_uuid': rp_uuid})
 
         # check if a provider got used in the background without our knowledge
-        unexpectedly_used_providers = {}
         for rp_uuid, rp in bigvm_providers.items():
-            # no need to look if their host is free. they should be used
-            # anyways
-            if rp_uuid in reserved_providers:
-                continue
-
-            if rp_uuid in overused_providers:
+            if rp_uuid in providers_to_delete:
                 # no need to check if we already remove it anyways
                 continue
 
@@ -494,44 +490,28 @@ class BigVmManager(manager.Manager):
                              {'host': rp['host'],
                               'state': state,
                               'rp_uuid': rp_uuid})
-                    unexpectedly_used_providers[rp_uuid] = rp
+                    providers_to_delete[rp_uuid] = rp
 
         # check if a provider was disabled by now
-        disabled_providers = {}
         for rp_uuid, rp in bigvm_providers.items():
-            if rp_uuid in reserved_providers:
-                # no need to check if we already remove it anyways
-                continue
-
-            if rp_uuid in overused_providers:
-                # no need to check if we already remove it anyways
-                continue
-
-            if rp_uuid in unexpectedly_used_providers:
+            if rp_uuid in providers_to_delete:
                 # no need to check if we already remove it anyways
                 continue
 
             host_rp = vmware_providers[rp['host_rp_uuid']]
             if BIGVM_DISABLED_TRAIT in host_rp['traits']:
-                disabled_providers[rp_uuid] = rp
+                providers_to_delete[rp_uuid] = rp
                 LOG.info('Resource-provider %(host_rp_uuid)s got disabled '
                          'bigVMs. Marking %(rp_uuid)s for deletion.',
                          {'host_rp_uuid': host_rp['uuid'],
                           'rp_uuid': rp_uuid})
 
-        _providers = itertools.chain(reserved_providers.items(),
-                                     overused_providers.items(),
-                                     unexpectedly_used_providers.items(),
-                                     disabled_providers.items())
-        for rp_uuid, rp in _providers:
+        for rp_uuid, rp in providers_to_delete.items():
             self._clean_up_consumed_provider(context, rp_uuid, rp)
 
         # clean up our list of resource-providers from consumed or overused
         # hosts
-        for rp_uuid in itertools.chain(reserved_providers,
-                                       overused_providers,
-                                       unexpectedly_used_providers,
-                                       disabled_providers):
+        for rp_uuid in providers_to_delete:
             del bigvm_providers[rp_uuid]
 
     def _get_allocations_for_consumer(self, context, consumer_uuid):
