@@ -44,6 +44,7 @@ CONF = nova.conf.CONF
 MEMORY_MB = rc_fields.ResourceClass.MEMORY_MB
 BIGVM_RESOURCE = special_spawning.BIGVM_RESOURCE
 BIGVM_DISABLED_TRAIT = 'CUSTOM_BIGVM_DISABLED'
+BIGVM_EXCLUSIVE_TRAIT = 'CUSTOM_HANA_EXCLUSIVE_HOST'
 MEMORY_RESERVABLE_MB_RESOURCE = utils.MEMORY_RESERVABLE_MB_RESOURCE
 VMWARE_HV_TYPE = 'VMware vCenter Server'
 SHARD_PREFIX = 'vc-'
@@ -90,14 +91,15 @@ class BigVmManager(manager.Manager):
         via bigvm_cluster_max_usage_percent and
         bigvm_cluster_max_reservation_percent. Resource-providers having more
         RAM usage or -reservation than those two respectively, will not be used
-        for an hv_size. Additionally, we check in every iteration, if we have
-        to give up a freed-up host, because the cluster reached one of the
-        limits.
+        for an hv_size - if they are not exclusively used for HANA flavors.
+        Additionally, we check in every iteration, if we have to give up a
+        freed-up host, because the cluster reached one of the limits.
         """
         client = self.placement_client
 
         # make sure our custom trait exists
-        client._ensure_traits(context, [BIGVM_DISABLED_TRAIT])
+        client._ensure_traits(context, [BIGVM_DISABLED_TRAIT,
+                                        BIGVM_EXCLUSIVE_TRAIT])
 
         vcenters, bigvm_providers, vmware_providers = \
             self._get_providers(context)
@@ -141,6 +143,11 @@ class BigVmManager(manager.Manager):
             # filter out providers that are too full already
             filtered_provider_summaries = {}
             for p, d in provider_summaries.items():
+                # Hosts exclusively used for hana_* flavors cannot be too full
+                if BIGVM_EXCLUSIVE_TRAIT in d['traits']:
+                    filtered_provider_summaries[p] = d
+                    continue
+
                 used = vmware_providers.get(p, {})\
                         .get('memory_mb_used_percent', 100)
                 reserved = vmware_providers.get(p, {})\
@@ -370,12 +377,17 @@ class BigVmManager(manager.Manager):
                               'AZ or VC.',
                               {'host': host})
                     continue
+
+                # retrieve traits so we can find disabled and hana exclusive
+                # hosts
+                traits = client._get_provider_traits(context, rp['uuid'])
                 vmware_providers[rp['uuid']] = {
                     'hv_size': hv_size,
                     'host': host,
                     'az': host_azs[host],
                     'vc': host_vcs[host],
                     'cell_mapping': cell_mapping,
+                    'traits': traits,
                     'memory_mb_used_percent': memory_mb_used_percent,
                     'memory_reservable_mb_used_percent':
                         memory_reservable_mb_used_percent}
@@ -431,6 +443,10 @@ class BigVmManager(manager.Manager):
                 # no need to check if we already remove it anyways
                 continue
             host_rp = vmware_providers[rp['host_rp_uuid']]
+            # Hosts exclusively used for hana_* flavors cannot be too full
+            if BIGVM_EXCLUSIVE_TRAIT in host_rp['traits']:
+                continue
+
             used_percent = host_rp['memory_mb_used_percent']
             if used_percent > CONF.bigvm_cluster_max_usage_percent:
                 overused_providers[rp_uuid] = rp
@@ -495,13 +511,12 @@ class BigVmManager(manager.Manager):
                 # no need to check if we already remove it anyways
                 continue
 
-            host_rp_uuid = rp['host_rp_uuid']
-            traits = client._get_provider_traits(context, host_rp_uuid)
-            if BIGVM_DISABLED_TRAIT in traits:
+            host_rp = vmware_providers[rp['host_rp_uuid']]
+            if BIGVM_DISABLED_TRAIT in host_rp['traits']:
                 disabled_providers[rp_uuid] = rp
                 LOG.info('Resource-provider %(host_rp_uuid)s got disabled '
                          'bigVMs. Marking %(rp_uuid)s for deletion.',
-                         {'host_rp_uuid': host_rp_uuid,
+                         {'host_rp_uuid': host_rp['uuid'],
                           'rp_uuid': rp_uuid})
 
         _providers = itertools.chain(reserved_providers.items(),
