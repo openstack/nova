@@ -435,6 +435,13 @@ class BigVmManager(manager.Manager):
                                if rp['inventory'].get(BIGVM_RESOURCE, {})
                                                  .get('reserved')}
 
+        # check if we don't have a valid vmware provider for it (anymore) and
+        # thus cannot be a valid provider ourselves
+        providers_to_delete.update({
+            rp_uuid: rp for rp_uuid, rp in bigvm_providers.items()
+            if rp_uuid not in providers_to_delete and
+               rp['host_rp_uuid'] not in vmware_providers})
+
         # check for resource-providers having more than
         # bigvm_cluster_max_usage_percent usage
         for rp_uuid, rp in bigvm_providers.items():
