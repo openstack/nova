@@ -2395,7 +2395,7 @@ class VMwareVMOps(object):
         properties = ['runtime.connectionState',
                       'config.extraConfig["nvp.vm-uuid"]']
         LOG.debug("Getting list of instances from cluster %s",
-                  self._cluster)
+                  vutil.get_moref_value(self._cluster))
         vms = []
         if self._root_resource_pool:
             vms = self._session._call_method(
