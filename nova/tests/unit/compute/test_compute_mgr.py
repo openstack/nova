@@ -2961,7 +2961,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             # We updated the new attachment with the host connector.
             attachment_update.assert_called_once_with(
                 self.context, uuids.new_attachment_id, mock.sentinel.connector,
-                bdm.device_name)
+                new_volume['id'], bdm.device_name)
             # We tell Cinder that the new volume is connected
             attachment_complete.assert_called_once_with(
                 self.context, uuids.new_attachment_id)
@@ -3034,7 +3034,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             # We updated the new attachment with the host connector.
             attachment_update.assert_called_once_with(
                 self.context, uuids.new_attachment_id, mock.sentinel.connector,
-                bdm.device_name)
+                new_volume['id'], bdm.device_name)
             # We tell Cinder that the new volume is connected
             attachment_complete.assert_called_once_with(
                 self.context, uuids.new_attachment_id)
@@ -3107,7 +3107,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             # We tried to update the new attachment with the host connector.
             attachment_update.assert_called_once_with(
                 self.context, uuids.new_attachment_id, mock.sentinel.connector,
-                bdm.device_name)
+                new_volume['id'], bdm.device_name)
             # After a failure, we rollback the detaching status of the old
             # volume.
             roll_detaching.assert_called_once_with(
@@ -3179,7 +3179,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             # We updated the new attachment with the host connector.
             attachment_update.assert_called_once_with(
                 self.context, uuids.new_attachment_id, mock.sentinel.connector,
-                bdm.device_name)
+                new_volume['id'], bdm.device_name)
             # After a failure, we rollback the detaching status of the old
             # volume.
             roll_detaching.assert_called_once_with(
@@ -3218,7 +3218,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.assertTrue(new_cinfo['multiattach'])
             attachment_update.assert_called_once_with(
                 self.context, uuids.new_attachment_id, connector,
-                bdm.device_name)
+                new_volume['id'], bdm.device_name)
 
     def test_swap_volume_with_multiattach_no_driver_support(self):
         """Tests a swap volume scenario where the new volume being swapped-to
@@ -8736,6 +8736,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         fake_bdms = objects.BlockDeviceMappingList(objects=[
             objects.BlockDeviceMapping(destination_type='volume',
                                        attachment_id=uuids.attachment_id,
+                                       volume_id=uuids.volume_id,
                                        device_name='/dev/vdb'),
             objects.BlockDeviceMapping(destination_type='volume',
                                        attachment_id=None),
@@ -8790,7 +8791,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             # volume BDM that had an attachment.
             mock_attachment_update.assert_called_once_with(
                 self.context, uuids.attachment_id,
-                mock_get_vol_connector.return_value, '/dev/vdb')
+                mock_get_vol_connector.return_value, uuids.volume_id,
+                '/dev/vdb')
             mock_attachment_complete.assert_called_once_with(
                 self.context, uuids.attachment_id)
 

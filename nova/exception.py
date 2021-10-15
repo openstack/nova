@@ -2424,3 +2424,7 @@ class ProviderConfigException(NovaException):
     """
     msg_fmt = _("An error occurred while processing "
                 "a provider config file: %(error)s")
+
+
+class VolumeMigrationError(NovaException):
+    msg_fmt = 'Migration of volume %(volume_id)s failed: %(reason)s'

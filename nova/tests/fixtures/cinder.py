@@ -260,8 +260,8 @@ class CinderFixture(fixtures.Fixture):
                 attachment_id, volume_id, len(attachments))
 
         def fake_attachment_update(
-            _self, context, attachment_id, connector, mountpoint=None,
-        ):
+            _self, context, attachment_id, connector, volume_id,
+            mountpoint=None):
             # Ensure the attachment exists
             volume_id, attachment, attachments = _find_attachment(
                 attachment_id)
