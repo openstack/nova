@@ -31,6 +31,7 @@ from keystoneauth1 import exceptions as keystone_exception
 from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import strutils
@@ -38,6 +39,7 @@ import retrying
 
 from nova import availability_zones as az
 import nova.conf
+import nova.context
 from nova import exception
 from nova.i18n import _
 from nova import service_auth
@@ -883,7 +885,7 @@ class API(object):
             each.to_dict()) for each in attachments]
 
     @translate_attachment_exception
-    def attachment_update(self, context, attachment_id, connector,
+    def attachment_update(self, context, attachment_id, connector, volume_id,
                           mountpoint=None):
         """Updates the connector on the volume attachment. An attachment
         without a connector is considered reserved but not fully attached.
@@ -893,6 +895,9 @@ class API(object):
         :param connector: host connector dict. This is required when updating
             a volume attachment. To terminate a connection, the volume
             attachment for that connection must be deleted.
+        :param volume_id: UUID of the volume, so we can migrate it
+            transparently, if the volume does not support the current
+            connector.
         :param mountpoint: Optional mount device name for the attachment,
             e.g. "/dev/vdb". Theoretically this is optional per volume backend,
             but in practice it's normally required so it's best to always
@@ -914,20 +919,189 @@ class API(object):
             _connector = copy.deepcopy(connector)
             _connector['mountpoint'] = mountpoint
 
-        try:
+        def _do_update():
             attachment_ref = cinderclient(
                 context, '3.44', skip_version_check=True).attachments.update(
                     attachment_id, _connector)
             translated_attach_ref = _translate_attachment_ref(
                 attachment_ref.to_dict())
             return translated_attach_ref
+
+        try:
+            return _do_update()
         except cinder_exception.ClientException as ex:
+            with excutils.save_and_reraise_exception() as ctxt:
+                code = getattr(ex, 'code', None)
+                if code != 400:
+                    LOG.error(('Update attachment failed for attachment '
+                               '%(id)s. Error: %(msg)s Code: %(code)s'),
+                              {'id': attachment_id,
+                               'msg': str(ex),
+                               'code': getattr(ex, 'code', None)})
+                # NOTE(jkulik): We can handle a volume being in a different
+                # shard (i.e. Connector not supported, code 416), but all other
+                # exceptions need to go further up.
+                if code != 406:
+                    return
+
+                # try to migrate. if this fails, we raise the original
+                # exception further up
+                if not self.migrate_by_connector(context, volume_id,
+                                                 connector):
+                    return
+
+                # if we migrated, we're basically in a new situation and thus
+                # don't need the old error to show anymore.
+                ctxt.reraise = False
+
+                LOG.info('Retrying attachment_update call for volume %s and '
+                         'attachment %s after migration to %s',
+                         volume_id, attachment_id, connector)
+                # NOTE(jkulik): This probably needs send_service_user_token
+                # enabled, because the migration can take a long time and the
+                # user-supplied token might have run out.
+                try:
+                    return _do_update()
+                except cinder_exception.ClientException as ex:
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(('Update attachment failed for attachment '
+                                   '%(id)s. Error: %(msg)s Code: %(code)s'),
+                                  {'id': attachment_id,
+                                   'msg': str(ex),
+                                   'code': getattr(ex, 'code', None)})
+
+    def _wait_for_migration_end(self, context, volume_id, state_dict):
+        """Retrieve the volume state and check if the migration finished.
+
+        This method should be used in a LoopingCall.
+
+        `context` needs to be an admin context as returned by
+        nova.context.get_admin_context(), because the migration-status is not
+        necessarily visible to the normal user - it depends on the policy.
+
+        From the api-ref documenation:
+        On success, the volume status will return to its original status of
+        available or in-use and the migration_status will be success. On
+        failure, the migration_status will be error. In the case of failure, if
+        lock_volume was true and the volume was originally available when it
+        was migrated, the status will go back to available.
+
+        `state_dict` should be a dictionary so we can keep some state between
+        runs. This is necessary to e.g. see if we ran into errors before.
+        """
+        client = cinderclient(context, '3.44',
+                              skip_version_check=True)
+
+        try:
+            volume = client.volumes.get(volume_id)
+        except cinder_exception.ClientException:
+            with excutils.save_and_reraise_exception() as ctxt:
+                # This should make it resistent against temporary failures in
+                # talking to Cinder: we only raise if we encountered enough
+                # failures in a row.
+                state_dict['failures'] = state_dict.get('failures', 0) + 1
+                if state_dict['failures'] < 5:
+                    ctxt.reraise = False
+                    return
+
+        state_dict['failures'] = 0
+
+        # from Cinder's source code:
+        # The migration status 'none' means no migration has ever been done
+        # before. The migration status 'error' means the previous migration
+        # failed. The migration status 'success' means the previous migration
+        # succeeded. The migration status 'deleting' means the source volume
+        # fails to delete after a migration.
+        # All of the statuses above means the volume is not in the process
+        # of a migration.
+
+        # "starting" is set during the synchronous part of the migration action
+        # call.
+        # "migrating" is set by the volume manager in the asynchronous part
+        # right before calling the driver to migrate the volume.
+        # "completing" is only used for os-migrate_volume_completion call, not
+        # for os-migrate_volume
+
+        migration_status = getattr(volume, 'os-vol-mig-status-attr:migstat',
+                                   None)
+        if not migration_status:
+            # The status should have changed to "starting" during the
+            # synchronous part of the call, so we error out here.
+            msg = 'migration_status is unset - migration did not start'
+            raise exception.VolumeMigrationError(volume_id=volume_id,
+                                                 reason=msg)
+        if migration_status in ('starting', 'migrating'):
+            # expected status while things are ongoing. we return to check
+            # again on next loop
+            return
+        if migration_status == 'success':
+            # the volume migrated successfully, so we can stop the looping
+            raise loopingcall.LoopingCallDone()
+        if migration_status == 'error':
+            # the migration failed for one reason or another
+            msg = 'migrations_status went to "error". ' \
+                  'Check Cinder logs for details.'
+            raise exception.VolumeMigrationError(volume_id=volume_id,
+                                                 reason=msg)
+        # unknown migration_status -> raise exception
+        msg = 'unhandled migration_status "{}"'.format(migration_status)
+        raise exception.VolumeMigrationError(volume_id=volume_id,
+                                             reason=msg)
+
+    def migrate_by_connector(self, context, volume_id, connector):
+        """Call os-migrate_volume_by_connector and wait for migration
+
+        We're using a generic, token-less admin token here, because this is an
+        admin-only call and the user-token doesn't have the necessary rights.
+        This also means, this function requires the [cinder] section of
+        nova.conf to contain valid admin authentication.
+        """
+        LOG.info('Trying to migrate volume %s to connector %s',
+                  volume_id, connector)
+        info = {'connector': connector, 'lock_volume': True}
+        admin_context = nova.context.get_admin_context()
+        admin_context.global_request_id = context.global_id
+        client = cinderclient(admin_context, '3.44',
+                             skip_version_check=True)
+        try:
+            client.volumes._action('os-migrate_volume_by_connector',
+                                   volume_id, info)
+        except cinder_exception.ClientException as ex:
+            LOG.error(('Migrate by connector failed for volume '
+                       '%(id)s. Error: %(msg)s Code: %(code)s'),
+                       {'id': volume_id,
+                        'msg': str(ex),
+                        'code': getattr(ex, 'code', None)})
+            return False
+
+        assumed_speed_mib = CONF.cinder.min_migration_speed_mib_per_second
+        try:
+            volume = client.volumes.get(volume_id)
+            # volume.size is GiB
+            migration_timeout = int(volume.size * 1024 // assumed_speed_mib)
+        except cinder_exception.ClientException:
+            # assume a big volume for computing the default timeout
+            migration_timeout = int(2 * 1024 * 1024 // assumed_speed_mib)
+        # we add some overhead of processing the request in Cinder, too
+        migration_timeout += CONF.cinder.migration_overhead
+
+        # an external dictionary so the looping function can keep state between
+        # runs
+        loop_state = {}
+        timer = loopingcall.BackOffLoopingCall(
+            self._wait_for_migration_end,
+            context=admin_context, volume_id=volume_id, state_dict=loop_state)
+        try:
+            timer.start(initial_delay=5, starting_interval=2,
+                        timeout=migration_timeout, max_interval=60).wait()
+        except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error('Update attachment failed for attachment '
-                          '%(id)s. Error: %(msg)s Code: %(code)s',
-                          {'id': attachment_id,
-                           'msg': str(ex),
-                           'code': getattr(ex, 'code', None)})
+                LOG.error("Error migrating volume %s to connector %s",
+                          volume_id, connector)
+
+        LOG.info('Migrated volume %s to connector %s',
+                  volume_id, connector)
+        return True
 
     @translate_attachment_exception
     @retrying.retry(stop_max_attempt_number=5,

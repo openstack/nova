@@ -2530,3 +2530,7 @@ class NotSupportedComputeForEvacuateV295(NotSupported):
                 "instance on destination. To evacuate before upgrades are "
                 "complete please use an older microversion. Required version "
                 "for compute %(expected), current version %(currently)s")
+
+
+class VolumeMigrationError(NovaException):
+    msg_fmt = 'Migration of volume %(volume_id)s failed: %(reason)s'

@@ -6221,7 +6221,8 @@ class ComputeManager(manager.Manager):
                     if connector is None:
                         connector = self.driver.get_volume_connector(instance)
                     self.volume_api.attachment_update(
-                        context, bdm.attachment_id, connector, bdm.device_name)
+                        context, bdm.attachment_id, connector, bdm.volume_id,
+                        bdm.device_name)
 
     def _complete_volume_attachments(self, context, bdms):
         """Completes volume attachments for the instance
@@ -7774,7 +7775,7 @@ class ComputeManager(manager.Manager):
             # the host connector, which will give us back the new attachment
             # connection_info.
             new_cinfo = self.volume_api.attachment_update(
-                context, new_attachment_id, connector,
+                context, new_attachment_id, connector, new_volume_id,
                 mountpoint)['connection_info']
 
             if vol_multiattach:

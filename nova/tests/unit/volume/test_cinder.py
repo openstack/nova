@@ -430,7 +430,8 @@ class CinderApiTestCase(test.NoDBTestCase):
         mock_cinderclient.return_value.attachments.update.return_value = (
             fake_attachment)
         result = self.api.attachment_update(
-            self.ctx, uuids.attachment_id, connector=connector)
+            self.ctx, uuids.attachment_id, connector=connector,
+            volume_id=uuids.volume_id)
         self.assertEqual(expected_attachment_ref, result)
         # Make sure the connector wasn't modified.
         self.assertNotIn('mountpoint', connector)
@@ -461,7 +462,7 @@ class CinderApiTestCase(test.NoDBTestCase):
             fake_attachment)
         result = self.api.attachment_update(
             self.ctx, uuids.attachment_id, connector=original_connector,
-            mountpoint='/dev/vdb')
+            volume_id=uuids.volume_id, mountpoint='/dev/vdb')
         self.assertEqual(expected_attachment_ref, result)
         # Make sure the original connector wasn't modified.
         self.assertNotIn('mountpoint', original_connector)
@@ -478,7 +479,8 @@ class CinderApiTestCase(test.NoDBTestCase):
         self.assertRaises(exception.VolumeAttachmentNotFound,
                           self.api.attachment_update,
                           self.ctx, uuids.attachment_id,
-                          connector={'host': 'fake-host'})
+                          connector={'host': 'fake-host'},
+                          volume_id=uuids.volume_id)
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_update_attachment_no_connector(self,
@@ -489,7 +491,8 @@ class CinderApiTestCase(test.NoDBTestCase):
             cinder_exception.BadRequest(400))
         self.assertRaises(exception.InvalidInput,
                           self.api.attachment_update,
-                          self.ctx, uuids.attachment_id, connector=None)
+                          self.ctx, uuids.attachment_id, connector=None,
+                          volume_id=uuids.volume_id)
 
     @mock.patch('nova.volume.cinder.cinderclient',
                 side_effect=exception.CinderAPIVersionNotAvailable(
@@ -501,7 +504,8 @@ class CinderApiTestCase(test.NoDBTestCase):
         """
         self.assertRaises(exception.CinderAPIVersionNotAvailable,
                           self.api.attachment_update,
-                          self.ctx, uuids.attachment_id, connector={})
+                          self.ctx, uuids.attachment_id, connector={},
+                          volume_id=uuids.volume_id)
         mock_cinderclient.assert_called_once_with(self.ctx, '3.44',
                                                   skip_version_check=True)
 

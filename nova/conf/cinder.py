@@ -110,6 +110,36 @@ Related options:
 Enable DEBUG logging with cinderclient and os_brick independently of the rest
 of Nova.
 """),
+    cfg.FloatOpt('min_migration_speed_mib_per_second',
+               default=24,
+               help="""
+Assumed mininum speed for a volume migration
+
+We compute a timeout how long Nova will wait for a volume to migrate based on
+this speed in MiB/s and the size of the volume.
+
+Possible values:
+
+  * Positive floating point value
+"""),
+    cfg.IntOpt('migration_overhead',
+               default=600,
+               min=0,
+               help="""
+Additional time to give Cinder to migrate a volume in seconds
+
+When Nova is waiting for a volume-migration to finish, the time is expected to
+rise with the size of the volume. Therefore, we employ a simple computation
+using min_migration_speed_mib_per_second to get an upper bound for the waiting
+time. With really small volumes, the overhead of migration is longer than the
+overhead of copying the data and thus the computed migration time is too low.
+To handle these cases, we add migration_overhead to increase the lower bound
+for the time Nova waits.
+
+Possible values:
+
+  * Positive Integer value
+"""),
 ]
 
 

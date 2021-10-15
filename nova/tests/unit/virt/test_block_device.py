@@ -721,7 +721,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             else:
                 self.volume_api.attachment_update.assert_called_once_with(
                     elevated_context, self.attachment_id, connector,
-                    bdm_dict['device_name'])
+                    fake_volume['id'], bdm_dict['device_name'])
 
             if driver_attach:
                 mock_get_encry.assert_called_once_with(

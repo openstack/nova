@@ -366,7 +366,7 @@ class CinderFixture(fixtures.Fixture):
         return attachment
 
     def fake_attachment_update(
-        self, context, attachment_id, connector, mountpoint=None,
+        self, context, attachment_id, connector, volume_id, mountpoint=None,
     ):
         # Ensure the attachment exists
         volume_id, attachment, attachments = self._find_attachment(
