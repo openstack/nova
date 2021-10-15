@@ -322,8 +322,11 @@ def vm_ref_cache_heal_from_instance(func):
             with excutils.save_and_reraise_exception() as ctx:
                 id_ = instance.uuid
                 vm_ref = vm_ref_cache_get(id_)
-                obj = e.details.get("obj")
+                # if there was nothing in the cache, there's nothing to heal
+                if vm_ref is None:
+                    return  # noqa
 
+                obj = e.details.get("obj")
                 # A different moref may be invalid, nothing we can do about it
                 if obj != vm_ref.value:
                     return  # noqa
