@@ -89,17 +89,20 @@ def _create_shadow_tables(connection):
                 )
                 column_copy = sa.Column(column.name, enum)
 
-            # TODO(stephenfin): Fix these various bugs in a follow-up
+            # NOTE(stephenfin): There were some bugs in the squashed
+            # sqlalchemy-migrate migrations which we need to account for here
 
             # 244_increase_user_id_length_volume_usage_cache; this
             # alteration should apply to shadow tables also
+            # (fixed in migration 16f1fbcab42b)
 
             if table_name == 'volume_usage_cache' and column.name == 'user_id':
-                # nullable should be True
+                # column type should be String(64)
                 column_copy = sa.Column('user_id', sa.String(36))
 
-            # 247_nullable_mismatch; these alterations should apply to shadow
-            # tables also
+            # 247_nullable_mismatch; these alterations were not applied to
+            # shadow tables
+            # (wontfix since there could be null entries in the database still)
 
             if table_name == 'quota_usages' and column.name == 'resources':
                 # nullable should be False
@@ -124,8 +127,9 @@ def _create_shadow_tables(connection):
                     # nullable should be False
                     column_copy = sa.Column('dev_type', sa.String(8))
 
-            # 280_add_nullable_false_to_keypairs_name; this should apply to the
-            # shadow table also
+            # 280_add_nullable_false_to_keypairs_name; these alterations were
+            # not applied to the shadow tables
+            # (wontfix since there could be null entries in the database still)
 
             if table_name == 'key_pairs' and column.name == 'name':
                 # nullable should be False
@@ -163,10 +167,9 @@ def _create_shadow_tables(connection):
             'shadow_' + table_name, meta, *columns, mysql_engine='InnoDB',
         )
 
-    # TODO(stephenfin): Fix these various bugs in a follow-up
-
     # 252_add_instance_extra_table; we don't create indexes for shadow tables
     # in general and these should be removed
+    # (fixed in migration 16f1fbcab42b)
 
     op.create_index(
         'shadow_instance_extra_idx',
@@ -174,6 +177,7 @@ def _create_shadow_tables(connection):
         ['instance_uuid'])
 
     # 373_migration_uuid; we should't create indexes for shadow tables
+    # (fixed in migration 16f1fbcab42b)
 
     op.create_index(
         'shadow_migrations_uuid', 'shadow_migrations', ['uuid'], unique=True)
@@ -1603,10 +1607,12 @@ def upgrade():
 
     _create_shadow_tables(bind)
 
-    # TODO(stephenfin): Fix these various bugs in a follow-up
+    # NOTE(stephenfin): There were some bugs in the squashed sqlalchemy-migrate
+    # migrations which we need to account for here
 
     # 298_mysql_extra_specs_binary_collation; we should update the shadow table
     # also
+    # (fixed in migration 16f1fbcab42b)
 
     if bind.engine.name == 'mysql':
         # Use binary collation for extra specs table

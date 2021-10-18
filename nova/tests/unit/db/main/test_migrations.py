@@ -33,6 +33,7 @@ import mock
 from oslo_db.sqlalchemy import enginefacade
 from oslo_db.sqlalchemy import test_fixtures
 from oslo_db.sqlalchemy import test_migrations
+from oslo_db.sqlalchemy import utils as oslodbutils
 from oslo_log.fixture import logging_error as log_fixture
 from oslo_log import log as logging
 from oslotest import base
@@ -202,6 +203,18 @@ class NovaMigrationsWalk(
         self.config = migration._find_alembic_conf('main')
         self.init_version = migration.ALEMBIC_INIT_VERSION['main']
 
+    def assertIndexExists(self, connection, table_name, index):
+        self.assertTrue(
+            oslodbutils.index_exists(connection, table_name, index),
+            'Index %s on table %s should not exist' % (index, table_name),
+        )
+
+    def assertIndexNotExists(self, connection, table_name, index):
+        self.assertFalse(
+            oslodbutils.index_exists(connection, table_name, index),
+            'Index %s on table %s should not exist' % (index, table_name),
+        )
+
     def _migrate_up(self, connection, revision):
         if revision == self.init_version:  # no tests for the initial revision
             alembic_api.upgrade(self.config, revision)
@@ -223,6 +236,24 @@ class NovaMigrationsWalk(
         post_upgrade = getattr(self, '_check_%s' % revision, None)
         if post_upgrade:
             post_upgrade(connection)
+
+    def _pre_upgrade_16f1fbcab42b(self, connection):
+        self.assertIndexExists(
+            connection, 'shadow_instance_extra', 'shadow_instance_extra_idx',
+        )
+        self.assertIndexExists(
+            connection, 'shadow_migrations', 'shadow_migrations_uuid',
+        )
+
+    def _check_16f1fbcab42b(self, connection):
+        self.assertIndexNotExists(
+            connection, 'shadow_instance_extra', 'shadow_instance_extra_idx',
+        )
+        self.assertIndexNotExists(
+            connection, 'shadow_migrations', 'shadow_migrations_uuid',
+        )
+
+        # no check for the MySQL-specific change
 
     def test_single_base_revision(self):
         """Ensure we only have a single base revision.
