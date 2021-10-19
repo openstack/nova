@@ -41,6 +41,10 @@ LOG = logging.getLogger(__name__)
 class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
     """Test that the models match the database after migrations are run."""
 
+    # Migrations can take a long time, particularly on underpowered CI nodes.
+    # Give them some breathing room.
+    TIMEOUT_SCALING_FACTOR = 4
+
     def setUp(self):
         super().setUp()
         self.engine = enginefacade.writer.get_engine()
@@ -184,6 +188,10 @@ class TestModelsLegacySyncPostgreSQL(
 class NovaMigrationsWalk(
     test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase,
 ):
+
+    # Migrations can take a long time, particularly on underpowered CI nodes.
+    # Give them some breathing room.
+    TIMEOUT_SCALING_FACTOR = 4
 
     def setUp(self):
         super().setUp()

@@ -49,6 +49,10 @@ LOG = logging.getLogger(__name__)
 class NovaModelsMigrationsSync(test_migrations.ModelsMigrationsSync):
     """Test sqlalchemy-migrate migrations."""
 
+    # Migrations can take a long time, particularly on underpowered CI nodes.
+    # Give them some breathing room.
+    TIMEOUT_SCALING_FACTOR = 4
+
     def setUp(self):
         # Ensure BaseTestCase's ConfigureLogging fixture is disabled since
         # we're using our own (StandardLogging).
@@ -196,6 +200,10 @@ class TestModelsLegacySyncPostgreSQL(
 class NovaMigrationsWalk(
     test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase,
 ):
+
+    # Migrations can take a long time, particularly on underpowered CI nodes.
+    # Give them some breathing room.
+    TIMEOUT_SCALING_FACTOR = 4
 
     def setUp(self):
         super().setUp()
