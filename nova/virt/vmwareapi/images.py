@@ -417,21 +417,20 @@ def _import_image(session, read_handle, vm_import_spec, vm_name, vm_folder_ref,
         except vexc.DuplicateName:
             LOG.debug("Handling name duplication during import of VM %s",
                       vm_name)
-            vm_ref = vm_util.get_vm_ref_from_name(session, vm_name)
+            vm_ref = vm_util.get_vm_ref_from_name(session, vm_name,
+                            base_obj=vm_folder_ref, path="childEntity")
             waited_for_ongoing_import = _wait_for_import_task(session, vm_ref)
             if waited_for_ongoing_import:
                 imported_vm_ref = vm_ref
                 break
-            else:
-                try:
-                    destroy_task = session._call_method(session.vim,
-                                                        "Destroy_Task",
-                                                        vm_ref)
-                    session._wait_for_task(destroy_task)
-                    vm_util.vm_ref_cache_delete(vm_name)
-                except vexc.ManagedObjectNotFoundException:
-                    # another agent destroyed the VM in the meantime
-                    pass
+            try:
+                destroy_task = session._call_method(session.vim,
+                                                    "Destroy_Task",
+                                                    vm_ref)
+                session._wait_for_task(destroy_task)
+            except vexc.ManagedObjectNotFoundException:
+                # another agent destroyed the VM in the meantime
+                pass
 
     if not imported_vm_ref:
         raise vexc.VMwareDriverException("Could not import image"

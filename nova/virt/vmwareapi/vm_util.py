@@ -1226,15 +1226,25 @@ def _get_object_from_results(session, results, value, func):
         return func(objects, value)
 
 
-def _get_vm_ref_from_name(session, vm_name):
+def get_vm_ref_from_name(session, vm_name, base_obj=None, path=None):
     """Get reference to the VM with the name specified.
 
     This method reads all of the names of the VM's that are running
     on the backend, then it filters locally the matching vm_name.
     It is far more optimal to use _get_vm_ref_from_vm_uuid.
     """
-    vms = session._call_method(vim_util, "get_objects",
-                "VirtualMachine", ["name"])
+    property_list = ["name"]
+    if not base_obj:  # Legacy: It doesn't scale
+        vms = session._call_method(
+            vim_util, "get_objects",
+            "VirtualMachine", property_list)
+    else:
+        if not path:
+            raise ValueError("Method needs base_obj and path")
+        vms = session._call_method(
+            vim_util, "get_inner_objects", base_obj, path,
+            "VirtualMachine", property_list)
+
     return _get_object_from_results(session, vms, vm_name,
                                     _get_object_for_value)
 
