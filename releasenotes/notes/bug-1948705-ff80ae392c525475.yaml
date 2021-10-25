@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    Amended the guest resume operation to support mediated devices, as
+    libvirt's minimum required version (v6.0.0) supports the hot-plug/unplug of
+    mediated devices, which was addressed in v4.3.0.

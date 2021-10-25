@@ -3960,6 +3960,10 @@ class LibvirtDriver(driver.ComputeDriver):
         """resume the specified instance."""
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
+        # NOTE(gsantos): The mediated devices that were removed on suspension
+        # are still present in the xml. Let's take their references from it
+        # and re-attach them.
+        mdevs = self._get_mdevs_from_guest_config(xml)
         # NOTE(efried): The instance should already have a vtpm_secret_uuid
         # registered if appropriate.
         guest = self._create_guest_with_network(
@@ -3969,6 +3973,7 @@ class LibvirtDriver(driver.ComputeDriver):
             pci_manager.get_instance_pci_devs(instance))
         self._attach_direct_passthrough_ports(
             context, instance, guest, network_info)
+        self._attach_mediated_devices(guest, mdevs)
         timer = loopingcall.FixedIntervalLoopingCall(self._wait_for_running,
                                                      instance)
         timer.start(interval=0.5).wait()
@@ -7953,12 +7958,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.detach_device(mdev_cfg, live=True)
             except libvirt.libvirtError as ex:
                 error_code = ex.get_error_code()
-                # NOTE(sbauza): There is a pending issue with libvirt that
-                # doesn't allow to hot-unplug mediated devices. Let's
-                # short-circuit the suspend action and set the instance back
-                # to ACTIVE.
-                # TODO(sbauza): Once libvirt supports this, amend the resume()
-                # operation to support reallocating mediated devices.
                 if error_code == libvirt.VIR_ERR_CONFIG_UNSUPPORTED:
                     reason = _("Suspend is not supported for instances having "
                                "attached vGPUs.")
@@ -7966,6 +7965,38 @@ class LibvirtDriver(driver.ComputeDriver):
                         exception.InstanceSuspendFailure(reason=reason))
                 else:
                     raise
+
+    def _attach_mediated_devices(self, guest, devs):
+        for mdev_cfg in devs:
+            try:
+                guest.attach_device(mdev_cfg, live=True)
+            except libvirt.libvirtError as ex:
+                error_code = ex.get_error_code()
+                if error_code == libvirt.VIR_ERR_DEVICE_MISSING:
+                    LOG.warning("The mediated device %s was not found and "
+                                "won't be reattached to %s.", mdev_cfg, guest)
+                else:
+                    raise
+
+    def _get_mdevs_from_guest_config(self, xml):
+        """Get all libvirt's mediated devices from a guest's config (XML) file.
+        We don't have to worry about those devices being used by another guest,
+        since they remain allocated for the current guest as long as they are
+        present in the XML.
+
+        :param xml: The XML from the guest we want to get a list of mdevs from.
+
+        :returns: A list containing the objects that represent the mediated
+                  devices attached to the guest's config passed as argument.
+        """
+        config = vconfig.LibvirtConfigGuest()
+        config.parse_str(xml)
+
+        devs = []
+        for dev in config.devices:
+            if isinstance(dev, vconfig.LibvirtConfigGuestHostdevMDEV):
+                devs.append(dev)
+        return devs
 
     def _has_numa_support(self):
         # This means that the host can support LibvirtConfigGuestNUMATune
