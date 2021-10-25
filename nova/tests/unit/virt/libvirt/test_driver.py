@@ -16604,9 +16604,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch.object(guest, 'sync_guest_time'),
             mock.patch.object(drvr, '_wait_for_running',
                               side_effect=loopingcall.LoopingCallDone()),
+            mock.patch.object(drvr,
+                              '_get_mdevs_from_guest_config',
+                              return_value='fake_mdevs'),
+            mock.patch.object(drvr, '_attach_mediated_devices'),
         ) as (_get_existing_domain_xml, _create_guest_with_network,
               _attach_pci_devices, get_instance_pci_devs, get_image_metadata,
-              mock_sync_time, mock_wait):
+              mock_sync_time, mock_wait,
+              _get_mdevs_from_guest_config,
+              _attach_mediated_devices):
             get_image_metadata.return_value = {'bar': 234}
 
             drvr.resume(self.context, instance, network_info,
@@ -16621,6 +16627,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertTrue(mock_sync_time.called)
             _attach_pci_devices.assert_has_calls([mock.call(guest,
                                                  'fake_pci_devs')])
+            _attach_mediated_devices.assert_has_calls(
+                [mock.call(guest, 'fake_mdevs')]
+            )
 
     @mock.patch.object(host.Host, '_get_domain')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info')
@@ -26113,6 +26122,55 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
 
         self.assertRaises(test.TestingException,
                           self._test_detach_mediated_devices, exc)
+
+    @mock.patch.object(libvirt_guest.Guest, 'attach_device')
+    def _test_attach_mediated_devices(self, side_effect, attach_device):
+        dom_without_vgpu = (
+            """<domain> <devices>
+            <disk type='file' device='disk'>
+            <driver name='qemu' type='qcow2' cache='none'/>
+            <source file='xxx'/>
+            <target dev='vda' bus='virtio'/>
+            <alias name='virtio-disk0'/>
+            <address type='pci' domain='0x0000' bus='0x00'
+            slot='0x04' function='0x0'/>
+            </disk>
+            </devices></domain>""")
+
+        vgpu_xml = (
+            """<domain> <devices>
+            <hostdev mode='subsystem' type='mdev' managed='no'
+            model='vfio-pci'>
+             <source>
+              <address uuid='81db53c6-6659-42a0-a34c-1507fdc72983'/>
+             </source>
+             <alias name='hostdev0'/>
+             <address type='pci' domain='0x0000' bus='0x00' slot='0x05'
+             function='0x0'/>
+            </hostdev>
+            </devices></domain>""")
+
+        attach_device.side_effect = side_effect
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest = libvirt_guest.Guest(FakeVirtDomain(fake_xml=dom_without_vgpu))
+        mdevs = drvr._get_mdevs_from_guest_config(vgpu_xml)
+        drvr._attach_mediated_devices(guest, mdevs)
+        return attach_device
+
+    def test_attach_mediated_devices(self):
+        def fake_attach_device(cfg_obj, **kwargs):
+            self.assertIsInstance(cfg_obj,
+                                  vconfig.LibvirtConfigGuestHostdevMDEV)
+
+        attach_mock = self._test_attach_mediated_devices(fake_attach_device)
+        attach_mock.assert_called_once_with(mock.ANY, live=True)
+
+    def test_attach_mediated_devices_raises_exc(self):
+        exc = test.TestingException()
+
+        self.assertRaises(test.TestingException,
+                          self._test_attach_mediated_devices, exc)
 
     def test_storage_bus_traits__qemu_kvm(self):
         """Test getting storage bus traits per virt type.
