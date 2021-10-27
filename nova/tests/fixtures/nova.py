@@ -612,64 +612,65 @@ class Database(fixtures.Fixture):
         super().__init__()
 
         assert database in {'main', 'api'}, f'Unrecognized database {database}'
+        if database == 'api':
+            assert connection is None, 'Not supported for the API database'
 
         self.database = database
         self.version = version
+        self.connection = connection
 
-        if database == 'main':
-            # NOTE(gibi): this inject a new factory for each test and
-            # self.factory_reset is used to clean up the factory at the end
-            # of the test case. This way we can let each test configure the
-            # factory so we can avoid having a global flag guarding against
-            # factory re-configuration
-            self.factory_reset = main_db_api.context_manager.patch_factory(
-                enginefacade._TransactionFactory())
-            main_db_api.configure(CONF)
+    def setUp(self):
+        super().setUp()
 
-            if connection is not None:
+        if self.database == 'main':
+
+            if self.connection is not None:
                 ctxt_mgr = main_db_api.create_context_manager(
-                    connection=connection)
+                    connection=self.connection)
                 self.get_engine = ctxt_mgr.writer.get_engine
             else:
-                self.get_engine = main_db_api.get_engine
-        elif database == 'api':
-            assert connection is None, 'Not supported for the API database'
+                # NOTE(gibi): this inject a new factory for each test and
+                # registers a cleanup that cleans the factory at the end
+                # of the test case. This way we can let each test configure the
+                # factory so we can avoid having a global flag guarding against
+                # factory re-configuration
+                self.addCleanup(main_db_api.context_manager.patch_factory(
+                    enginefacade._TransactionFactory()))
+                main_db_api.configure(CONF)
 
+                self.get_engine = main_db_api.get_engine
+        elif self.database == 'api':
             # NOTE(gibi): similar note applies here as for the main_db_api
             # above
-            self.factory_reset = api_db_api.context_manager.patch_factory(
-                enginefacade._TransactionFactory())
+            self.addCleanup(api_db_api.context_manager.patch_factory(
+                enginefacade._TransactionFactory()))
             api_db_api.configure(CONF)
 
             self.get_engine = api_db_api.get_engine
 
-    def setUp(self):
-        super(Database, self).setUp()
-        self.reset()
+        self._apply_schema()
+
         self.addCleanup(self.cleanup)
 
-    def _cache_schema(self):
+    def _apply_schema(self):
         global DB_SCHEMA
         if not DB_SCHEMA[(self.database, self.version)]:
+            # apply and cache schema
             engine = self.get_engine()
             conn = engine.connect()
             migration.db_sync(database=self.database, version=self.version)
             DB_SCHEMA[(self.database, self.version)] = "".join(
                 line for line in conn.connection.iterdump())
-            engine.dispose()
+        else:
+            # apply the cached schema
+            engine = self.get_engine()
+            conn = engine.connect()
+            conn.connection.executescript(
+                DB_SCHEMA[(self.database, self.version)])
 
     def cleanup(self):
         engine = self.get_engine()
         engine.dispose()
-
-    def reset(self):
-        self.factory_reset()
-        engine = self.get_engine()
-        engine.dispose()
-        self._cache_schema()
-        conn = engine.connect()
-        conn.connection.executescript(
-            DB_SCHEMA[(self.database, self.version)])
 
 
 class DefaultFlavorsFixture(fixtures.Fixture):
