@@ -70,6 +70,7 @@ class MetadataRequestHandler(wsgi.Application):
         try:
             data = base.get_metadata_by_address(address)
         except exception.NotFound:
+            LOG.exception('Failed to get metadata for IP %s', address)
             return None
 
         if CONF.api.metadata_cache_expiration > 0:
