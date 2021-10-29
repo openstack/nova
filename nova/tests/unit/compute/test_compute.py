@@ -10223,7 +10223,9 @@ class ComputeAPITestCase(BaseTestCase):
         with test.nested(
             mock.patch.dict(self.compute.driver.capabilities,
                              supports_attach_interface=True),
-            mock.patch('oslo_concurrency.lockutils.lock'),
+            mock.patch(
+                'nova.utils.synchronized',
+                side_effect=lambda lockname: lambda f: f),
             mock.patch("nova.network.neutron.API.create_resource_requests"),
             mock.patch.object(
                 self.compute,
@@ -10253,9 +10255,7 @@ class ComputeAPITestCase(BaseTestCase):
                       action='interface_attach', phase='start'),
             mock.call(self.context, instance, self.compute.host,
                       action='interface_attach', phase='end')])
-        mock_lock.assert_called_once_with(lock_name, mock.ANY, mock.ANY,
-                mock.ANY, delay=mock.ANY, do_log=mock.ANY, fair=mock.ANY,
-                semaphores=mock.ANY)
+        mock_lock.assert_called_once_with(lock_name)
         mock_claim_pci.assert_called_once_with(
             self.context, instance,
             test.MatchType(objects.InstancePCIRequests))
@@ -10279,7 +10279,9 @@ class ComputeAPITestCase(BaseTestCase):
         with test.nested(
             mock.patch.dict(self.compute.driver.capabilities,
                              supports_attach_interface=True),
-            mock.patch('oslo_concurrency.lockutils.lock'),
+            mock.patch(
+                'nova.utils.synchronized',
+                side_effect=lambda lockname: lambda f: f),
             mock.patch("nova.network.neutron.API.create_resource_requests"),
             mock.patch.object(
                 self.compute,
@@ -10321,9 +10323,7 @@ class ComputeAPITestCase(BaseTestCase):
             mock.call(self.context, instance, self.compute.host,
                       action='interface_attach', phase='end')])
 
-        mock_lock.assert_called_once_with(lock_name, mock.ANY, mock.ANY,
-                mock.ANY, delay=mock.ANY, do_log=mock.ANY, fair=mock.ANY,
-                semaphores=mock.ANY)
+        mock_lock.assert_called_once_with(lock_name)
 
         # as this is an OVS port we don't call the pci claim but with an empty
         # request
@@ -11077,7 +11077,9 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch.object(self.compute.network_api,
                 'deallocate_port_for_instance',
                 return_value=([], port_allocation)),
-            mock.patch('oslo_concurrency.lockutils.lock'),
+            mock.patch(
+                'nova.utils.synchronized',
+                side_effect=lambda lockname: lambda f: f),
             mock.patch('nova.pci.request.get_instance_pci_request_from_vif',
                        return_value=pci_req),
             mock.patch.object(self.compute.rt, 'unclaim_pci_devices'),
@@ -11098,9 +11100,7 @@ class ComputeAPITestCase(BaseTestCase):
                       action='interface_detach', phase='start'),
             mock.call(self.context, instance, self.compute.host,
                       action='interface_detach', phase='end')])
-        mock_lock.assert_called_once_with(lock_name, mock.ANY, mock.ANY,
-                mock.ANY, delay=mock.ANY, do_log=mock.ANY, fair=mock.ANY,
-                semaphores=mock.ANY)
+        mock_lock.assert_called_once_with(lock_name)
         mock_unclaim_pci.assert_called_once_with(
             self.context, pci_dev, instance)
         self.assertNotIn(pci_req, instance.pci_requests.requests)
