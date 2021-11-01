@@ -306,7 +306,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.non_admin_context = context.RequestContext('fake', 'fake',
                                                         roles=['member'])
         self.admin_context = context.RequestContext('fake', 'fake', True,
-                                                     roles=['member'])
+                                                     roles=['admin', 'member'])
         self.target = {}
         self.fake_policy = jsonutils.loads(fake_policy.policy_data)
 

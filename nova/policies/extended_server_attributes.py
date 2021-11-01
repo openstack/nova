@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-extended-server-attributes'
 extended_server_attributes_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="""Return extended attributes for server.
 
 This rule will control the visibility for a set of servers attributes:
@@ -66,7 +66,7 @@ is therefore deprecated and will be removed in a future release.
                 'path': '/servers/{server_id}/action (rebuild)'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
 ]
 

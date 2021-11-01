@@ -95,14 +95,28 @@ class BasePolicyTest(test.TestCase):
                 project_id=self.project_id_other,
                 roles=['reader'])
 
-        self.all_contexts = [
+        self.all_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.other_project_member_context,
             self.project_foo_context, self.other_project_reader_context
-        ]
+        ])
+
+        # All the project contexts for easy access.
+        self.all_project_contexts = set([
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_member_context,
+            self.other_project_reader_context,
+        ])
+        # All the system contexts for easy access.
+        self.all_system_contexts = set([
+            self.system_admin_context, self.system_foo_context,
+            self.system_member_context, self.system_reader_context,
+        ])
 
         if self.without_deprecated_rules:
             # To simulate the new world, remove deprecations by overriding
@@ -118,9 +132,57 @@ class BasePolicyTest(test.TestCase):
                     "role:reader and system_scope:all",
                 "project_member_api":
                     "role:member and project_id:%(project_id)s",
+                "project_reader_api":
+                    "role:reader and project_id:%(project_id)s",
             })
             self.policy.set_rules(self.rules_without_deprecation,
                                   overwrite=False)
+
+    def reduce_set(self, name, new_set):
+        """Reduce a named set of contexts in a subclass.
+
+        This removes things from a set in a child test class by taking
+        a new set, but asserts that no *new* contexts are added over
+        what is defined in the parent.
+
+        :param name: The name of a set of contexts on self
+                     (i.e. 'project' for self.project_contexts
+        :param new_set: The new set of contexts that should be used in
+                        the above set. The new_set is asserted to be a
+                        perfect subset of the existing set
+        """
+        current = getattr(self, '%s_contexts' % name)
+
+        errors = ','.join(x.user_id for x in new_set - current)
+        self.assertEqual('', errors,
+                         'Attempt to reduce set would add %s' % errors)
+
+        LOG.info('%s.%s_contexts: removing %s',
+                 self.__class__.__name__,
+                 name,
+                 ','.join(x.user_id for x in current - new_set))
+        setattr(self, '%s_contexts' % name, new_set)
+
+    def common_policy_auth(self, authorized_contexts,
+                           rule_name,
+                           func, req, *arg, **kwarg):
+        """Check a policy rule against a set of authorized contexts.
+
+        This is exactly like common_policy_check, except that it
+        assumes any contexts not in the authorized set are in the
+        unauthorized set.
+        """
+        # The unauthorized users are any not in the authorized set.
+        unauth = list(set(self.all_contexts) - set(authorized_contexts))
+        # In case a set was passed in, convert to list for stable ordering.
+        authorized_contexts = list(authorized_contexts)
+        # Log both sets in the order we will test them to aid debugging of
+        # fatal=False responses.
+        LOG.info('Authorized users: %s', list(
+            x.user_id for x in authorized_contexts))
+        LOG.info('Unauthorized users: %s', list(x.user_id for x in unauth))
+        return self.common_policy_check(authorized_contexts, unauth,
+                                        rule_name, func, req, *arg, **kwarg)
 
     def common_policy_check(self, authorized_contexts,
                             unauthorized_contexts, rule_name,
