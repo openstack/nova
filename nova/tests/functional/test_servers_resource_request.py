@@ -14,7 +14,6 @@
 
 import copy
 import logging
-import unittest
 
 from keystoneauth1 import adapter
 import mock
@@ -821,11 +820,6 @@ class NonAdminUnsupportedPortResourceRequestBasedSchedulingTest(
             'os_compute_api:os-evacuate': '@',
         })
 
-    # this is bug 1945310
-    @unittest.expectedFailure
-    def test_interface_attach_with_resource_request_old_compute(self):
-        super().test_interface_attach_with_resource_request_old_compute()
-
 
 class PortResourceRequestBasedSchedulingTest(
         PortResourceRequestBasedSchedulingTestBase):
@@ -1529,11 +1523,6 @@ class NonAdminPortResourceRequestTests(
             'os_compute_api:os-services:list': '@',
         })
 
-    # this is bug 1945310
-    @unittest.expectedFailure
-    def test_interface_detach_with_port_with_bandwidth_request(self):
-        super().test_interface_detach_with_port_with_bandwidth_request()
-
 
 class ExtendedPortResourceRequestBasedSchedulingTestBase(
         PortResourceRequestBasedSchedulingTestBase):
@@ -1679,11 +1668,6 @@ class NonAdminMultiGroupResReqTests(
             'os_compute_api:os-migrations:index': '@',
             'os_compute_api:os-services:list': '@',
         })
-
-    # this is bug 1945310
-    @unittest.expectedFailure
-    def test_interface_detach_with_port_with_bandwidth_request(self):
-        super().test_interface_detach_with_port_with_bandwidth_request()
 
 
 class ServerMoveWithPortResourceRequestTest(
@@ -2650,23 +2634,6 @@ class NonAdminServerMoveWithPortResourceRequestTests(
             'os_compute_api:os-instance-actions:list': '@',
         })
 
-    # this is bug 1945310
-    @unittest.expectedFailure
-    def test_live_migrate_with_qos_port(self, host=None):
-        super().test_live_migrate_with_qos_port()
-
-    # this is bug 1945310
-    @unittest.expectedFailure
-    def test_live_migrate_with_qos_port_with_target_host(self):
-        super(
-        ).test_live_migrate_with_qos_port_with_target_host()
-
-    # this is bug 1945310
-    @unittest.expectedFailure
-    def test_live_migrate_with_qos_port_reschedule_success(self):
-        super(
-        ).test_live_migrate_with_qos_port_reschedule_success()
-
 
 class ServerMoveWithMultiGroupResourceRequestBasedSchedulingTest(
     ExtendedPortResourceRequestBasedSchedulingTestBase,
@@ -2716,23 +2683,6 @@ class NonAdminServerMoveWithMultiGroupResReqTests(
             'os_compute_api:os-instance-actions:show': '@',
             'os_compute_api:os-instance-actions:list': '@',
         })
-
-    # this is bug 1945310
-    @unittest.expectedFailure
-    def test_live_migrate_with_qos_port(self, host=None):
-        super().test_live_migrate_with_qos_port()
-
-    # this is bug 1945310
-    @unittest.expectedFailure
-    def test_live_migrate_with_qos_port_with_target_host(self):
-        super(
-        ).test_live_migrate_with_qos_port_with_target_host()
-
-    # this is bug 1945310
-    @unittest.expectedFailure
-    def test_live_migrate_with_qos_port_reschedule_success(self):
-        super(
-        ).test_live_migrate_with_qos_port_reschedule_success()
 
 
 class LiveMigrateAbortWithPortResourceRequestTest(
@@ -3153,8 +3103,3 @@ class NonAdminExtendedResourceRequestOldCompute(
             'os_compute_api:servers:resize': '@',
             'os_compute_api:os-evacuate': '@',
         })
-
-    # this is bug 1945310
-    @unittest.expectedFailure
-    def test_interface_attach(self, mock_get_service):
-        super().test_interface_attach()

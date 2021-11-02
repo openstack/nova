@@ -1046,8 +1046,11 @@ class API:
             of request group id: resource provider UUID mapping if the port has
             an extended resource request.
         """
+        # We need to use an admin client as the port.resource_request is admin
+        # only
+        neutron_admin = get_client(context, admin=True)
         neutron = get_client(context)
-        port = self._show_port(context, port_id, neutron_client=neutron)
+        port = self._show_port(context, port_id, neutron_client=neutron_admin)
         if self._has_resource_request(context, port, neutron):
             return self._get_binding_profile_allocation(
                 context, port, neutron, resource_provider_mapping)
@@ -1724,12 +1727,15 @@ class API:
                  Note that right now this dict only contains a single key as a
                  neutron port only allocates from a single resource provider.
         """
+        # We need to use an admin client as the port.resource_request is admin
+        # only
+        neutron_admin = get_client(context, admin=True)
         neutron = get_client(context)
         port_allocation: ty.Dict = {}
         try:
             # NOTE(gibi): we need to read the port resource information from
             # neutron here as we might delete the port below
-            port = neutron.show_port(port_id)['port']
+            port = neutron_admin.show_port(port_id)['port']
         except exception.PortNotFound:
             LOG.debug('Unable to determine port %s resource allocation '
                       'information as the port no longer exists.', port_id)
