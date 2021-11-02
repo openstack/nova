@@ -101,29 +101,6 @@ fi
 echo "Resource provider allocations were cleaned up properly."
 
 
-echo "Verifying online_data_migrations idempotence"
-# We will re-use the server created earlier for this test. (A server needs to
-# be present during the run of online_data_migrations and archiving).
-
-# Run the online data migrations before archiving.
-$MANAGE db online_data_migrations
-
-# We need to archive the deleted marker instance used by the
-# fill_virtual_interface_list online data migration in order to trigger
-# creation of a new deleted marker instance.
-set +e
-archive_deleted_rows
-set -e
-
-# Verify whether online data migrations run after archiving will succeed.
-# See for more details: https://bugs.launchpad.net/nova/+bug/1824435
-$MANAGE db online_data_migrations
-
-
-# temporary disable nova-manage placement heal_allocations testing until
-# https://review.opendev.org/c/openstack/nova/+/802060 lands
-exit 0
-
 # Test "nova-manage placement heal_allocations" by creating a server, deleting
 # its allocations in placement, and then running heal_allocations and assert
 # the allocations were healed as expected.
@@ -277,3 +254,20 @@ if [[ "$my_key" == "" ]]; then
     exit 2
 fi
 
+echo "Verifying online_data_migrations idempotence"
+# We will re-use the server created earlier for this test. (A server needs to
+# be present during the run of online_data_migrations and archiving).
+
+# Run the online data migrations before archiving.
+$MANAGE db online_data_migrations
+
+# We need to archive the deleted marker instance used by the
+# fill_virtual_interface_list online data migration in order to trigger
+# creation of a new deleted marker instance.
+set +e
+archive_deleted_rows
+set -e
+
+# Verify whether online data migrations run after archiving will succeed.
+# See for more details: https://bugs.launchpad.net/nova/+bug/1824435
+$MANAGE db online_data_migrations
