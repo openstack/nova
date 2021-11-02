@@ -22,8 +22,8 @@ from oslo_vmware import vim_util
 from nova import test
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.tests.unit.virt.vmwareapi import stubs
-from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import network_util
+from nova.virt.vmwareapi.session import VMwareAPISession
 
 
 ResultSet = collections.namedtuple('ResultSet', ['objects'])
@@ -36,12 +36,12 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
     def setUp(self):
         super(GetNetworkWithTheNameTestCase, self).setUp()
         fake.reset()
-        self.stub_out('nova.virt.vmwareapi.driver.VMwareAPISession.vim',
+        self.stub_out('nova.virt.vmwareapi.session.VMwareAPISession.vim',
                       stubs.fake_vim_prop)
-        self.stub_out('nova.virt.vmwareapi.driver.'
+        self.stub_out('nova.virt.vmwareapi.session.'
                       'VMwareAPISession.is_vim_object',
                        stubs.fake_is_vim_object)
-        self._session = driver.VMwareAPISession()
+        self._session = VMwareAPISession()
 
     def _build_cluster_networks(self, networks):
         """Returns a set of results for a cluster network lookup.

@@ -26,7 +26,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import constants
-from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi.session import VMwareAPISession
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import volumeops
 
@@ -38,7 +38,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         super(VMwareVolumeOpsTestCase, self).setUp()
         vmwareapi_fake.reset()
         stubs.set_stubs(self)
-        self._session = driver.VMwareAPISession()
+        self._session = VMwareAPISession()
         self._context = context.RequestContext('fake_user', 'fake_project')
 
         self._volumeops = volumeops.VMwareVolumeOps(self._session)

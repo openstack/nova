@@ -33,7 +33,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import constants
-from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi.session import VMwareAPISession
 from nova.virt.vmwareapi import vm_util
 
 CONF = nova.conf.CONF
@@ -1276,7 +1276,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 found[0] = True
         mock_log_warn.side_effect = fake_log_warn
 
-        session = driver.VMwareAPISession()
+        session = VMwareAPISession()
 
         config_spec = vm_util.get_vm_create_spec(
             session.vim.client.factory,
@@ -2230,19 +2230,19 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                               self._instance.uuid)
 
 
-@mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
+@mock.patch.object(VMwareAPISession, 'vim', stubs.fake_vim_prop)
 class VMwareVMUtilGetHostRefTestCase(test.NoDBTestCase):
     # N.B. Mocking on the class only mocks test_*(), but we need
     # VMwareAPISession.vim to be mocked in both setUp and tests. Not mocking in
     # setUp causes object initialisation to fail. Not mocking in tests results
     # in vim calls not using FakeVim.
-    @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
+    @mock.patch.object(VMwareAPISession, 'vim', stubs.fake_vim_prop)
     def setUp(self):
         super(VMwareVMUtilGetHostRefTestCase, self).setUp()
         fake.reset()
         vm_util.vm_refs_cache_reset()
 
-        self.session = driver.VMwareAPISession()
+        self.session = VMwareAPISession()
 
         # Create a fake VirtualMachine running on a known host
         self.host_ref = list(fake._db_content['HostSystem'].keys())[0]

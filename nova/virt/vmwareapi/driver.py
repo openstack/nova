@@ -33,10 +33,8 @@ from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import units
 from oslo_utils import versionutils as v_utils
-from oslo_vmware import api
 from oslo_vmware import exceptions as vexc
 from oslo_vmware import pbm
-from oslo_vmware import vim
 from oslo_vmware import vim_util
 
 from nova.compute import power_state
@@ -56,6 +54,7 @@ from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
+from nova.virt.vmwareapi.session import VMwareAPISession
 from nova.virt.vmwareapi import special_spawning
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util as nova_vim_util
@@ -1157,49 +1156,3 @@ class VMwareVCDriver(driver.ComputeDriver):
             volumes = self._get_volume_mappings(context, instance)
             LOG.debug("Fixing shadow vms %s", volumes, instance=instance)
             self._volumeops.fixup_shadow_vms(instance, volumes)
-
-
-class VMwareAPISession(api.VMwareAPISession):
-    """Sets up a session with the VC/ESX host and handles all
-    the calls made to the host.
-    """
-    def __init__(self, host_ip=CONF.vmware.host_ip,
-                 host_port=CONF.vmware.host_port,
-                 username=CONF.vmware.host_username,
-                 password=CONF.vmware.host_password,
-                 retry_count=CONF.vmware.api_retry_count,
-                 scheme="https",
-                 cacert=CONF.vmware.ca_file,
-                 insecure=CONF.vmware.insecure,
-                 pool_size=CONF.vmware.connection_pool_size):
-        super(VMwareAPISession, self).__init__(
-                host=host_ip,
-                port=host_port,
-                server_username=username,
-                server_password=password,
-                api_retry_count=retry_count,
-                task_poll_interval=CONF.vmware.task_poll_interval,
-                scheme=scheme,
-                create_session=True,
-                cacert=cacert,
-                insecure=insecure,
-                pool_size=pool_size)
-
-    def _is_vim_object(self, module):
-        """Check if the module is a VIM Object instance."""
-        return isinstance(module, vim.Vim)
-
-    def _call_method(self, module, method, *args, **kwargs):
-        """Calls a method within the module specified with
-        args provided.
-        """
-        if not self._is_vim_object(module):
-            return self.invoke_api(module, method, self.vim, *args, **kwargs)
-
-        return self.invoke_api(module, method, *args, **kwargs)
-
-    def _wait_for_task(self, task_ref):
-        """Return a Deferred that will give the result of the given task.
-        The task is polled until it completes.
-        """
-        return self.wait_for_task(task_ref)
