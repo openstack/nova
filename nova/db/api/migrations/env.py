@@ -12,10 +12,11 @@
 
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
-from alembic import context
+from nova.db.api import models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -26,11 +27,49 @@ config = context.config
 if config.attributes.get('configure_logger', True):
     fileConfig(config.config_file_name)
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
-target_metadata = None
+# this is the MetaData object for the various models in the API database
+target_metadata = models.BASE.metadata
+
+
+def include_name(name, type_, parent_names):
+    if type_ == 'column':
+        # NOTE(stephenfin): This is a list of fields that have been removed
+        # from various SQLAlchemy models but which still exist in the
+        # underlying tables. Our upgrade policy dictates that we remove fields
+        # from models at least one cycle before we remove the column from the
+        # underlying table. Not doing so would prevent us from applying the
+        # new database schema before rolling out any of the new code since the
+        # old code could attempt to access data in the removed columns. Alembic
+        # identifies this temporary mismatch between the models and underlying
+        # tables and attempts to resolve it. Tell it instead to ignore these
+        # until we're ready to remove them ourselves.
+        return (parent_names['table_name'], name) not in {
+            ('build_requests', 'request_spec_id'),
+            ('build_requests', 'user_id'),
+            ('build_requests', 'display_name'),
+            ('build_requests', 'instance_metadata'),
+            ('build_requests', 'progress'),
+            ('build_requests', 'vm_state'),
+            ('build_requests', 'task_state'),
+            ('build_requests', 'image_ref'),
+            ('build_requests', 'access_ip_v4'),
+            ('build_requests', 'access_ip_v6'),
+            ('build_requests', 'info_cache'),
+            ('build_requests', 'security_groups'),
+            ('build_requests', 'config_drive'),
+            ('build_requests', 'key_name'),
+            ('build_requests', 'locked_by'),
+            ('build_requests', 'reservation_id'),
+            ('build_requests', 'launch_index'),
+            ('build_requests', 'hostname'),
+            ('build_requests', 'kernel_id'),
+            ('build_requests', 'ramdisk_id'),
+            ('build_requests', 'root_device_name'),
+            ('build_requests', 'user_data'),
+            ('resource_providers', 'can_host'),
+        }
+
+    return True
 
 
 def run_migrations_offline():
@@ -46,6 +85,8 @@ def run_migrations_offline():
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        render_as_batch=True,
+        include_name=include_name,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -81,7 +122,10 @@ def run_migrations_online():
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection, target_metadata=target_metadata
+            connection=connection,
+            target_metadata=target_metadata,
+            render_as_batch=True,
+            include_name=include_name,
         )
 
         with context.begin_transaction():
