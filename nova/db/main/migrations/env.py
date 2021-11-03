@@ -32,27 +32,27 @@ target_metadata = models.BASE.metadata
 
 
 def include_name(name, type_, parent_names):
+    """Determine which tables or columns to skip.
+
+    This is used when we decide to "delete" a table or column. In this
+    instance, we will remove the SQLAlchemy model or field but leave the
+    underlying database table or column in place for a number of releases
+    after. Once we're sure that there is no code running that contains
+    references to the old models, we can then remove the underlying table. In
+    the interim, we must track the discrepancy between models and actual
+    database data here.
+    """
     if type_ == 'table':
         # NOTE(stephenfin): We don't have models corresponding to the various
         # shadow tables. Alembic doesn't like this. Tell Alembic to look the
         # other way. Good Alembic.
-        return not name.startswith('shadow_')
+        if name.startswith('shadow_'):
+            return False
+
+        return name not in models.REMOVED_TABLES
 
     if type_ == 'column':
-        # NOTE(stephenfin): This is a list of fields that have been removed
-        # from various SQLAlchemy models but which still exist in the
-        # underlying tables. Our upgrade policy dictates that we remove fields
-        # from models at least one cycle before we remove the column from the
-        # underlying table. Not doing so would prevent us from applying the
-        # new database schema before rolling out any of the new code since the
-        # old code could attempt to access data in the removed columns. Alembic
-        # identifies this temporary mismatch between the models and underlying
-        # tables and attempts to resolve it. Tell it instead to ignore these
-        # until we're ready to remove them ourselves.
-        return (parent_names['table_name'], name) not in {
-            ('instances', 'internal_id'),
-            ('instance_extra', 'vpmems'),
-        }
+        return (parent_names['table_name'], name) not in models.REMOVED_COLUMNS
 
     return True
 

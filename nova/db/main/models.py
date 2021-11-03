@@ -32,6 +32,27 @@ from nova.db import types
 
 CONF = cfg.CONF
 
+# NOTE(stephenfin): This is a list of fields that have been removed from
+# various SQLAlchemy models but which still exist in the underlying tables. Our
+# upgrade policy dictates that we remove fields from models at least one cycle
+# before we remove the column from the underlying table. Not doing so would
+# prevent us from applying the new database schema before rolling out any of
+# the new code since the old code could attempt to access data in the removed
+# columns. Alembic identifies this temporary mismatch between the models and
+# underlying tables and attempts to resolve it. Tell it instead to ignore these
+# until we're ready to remove them ourselves.
+REMOVED_COLUMNS = {
+    ('instances', 'internal_id'),
+    ('instance_extra', 'vpmems'),
+}
+
+# NOTE(stephenfin): A list of foreign key constraints that were removed when
+# the column they were covering was removed.
+REMOVED_FKEYS = []
+
+# NOTE(stephenfin): A list of entire models that have been removed.
+REMOVED_TABLES = []
+
 # we don't configure 'cls' since we have models that don't use the
 # TimestampMixin
 BASE = declarative.declarative_base()
