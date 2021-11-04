@@ -36,6 +36,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import fields
 from nova import utils
 
 
@@ -2248,6 +2249,22 @@ class SchedulerReportClient(object):
         return {consumer: self.get_allocs_for_consumer(context, consumer)
                 for consumer in consumers}
 
+    def _remove_allocations_for_evacuated_instances(self, context,
+            compute_node):
+        filters = {
+            'source_compute': compute_node.host,
+            'status': ['done'],
+            'migration_type': fields.MigrationType.EVACUATION,
+        }
+        evacuations = objects.MigrationList.get_by_filters(context, filters)
+
+        for evacuation in evacuations:
+            if not self.remove_provider_tree_from_instance_allocation(
+                    context, evacuation.instance_uuid, compute_node.uuid):
+                LOG.error("Failed to clean allocation of evacuated "
+                          "instance on the source node %s",
+                          compute_node.uuid, instance=evacuation.instance)
+
     def delete_resource_provider(self, context, compute_node, cascade=False):
         """Deletes the ResourceProvider record for the compute_node.
 
@@ -2266,17 +2283,20 @@ class SchedulerReportClient(object):
             # Delete any allocations for this resource provider.
             # Since allocations are by consumer, we get the consumers on this
             # host, which are its instances.
-            # NOTE(mriedem): This assumes the only allocations on this node
-            # are instances, but there could be migration consumers if the
-            # node is deleted during a migration or allocations from an
-            # evacuated host (bug 1829479). Obviously an admin shouldn't
-            # do that but...you know. I guess the provider deletion should fail
-            # in that case which is what we'd want to happen.
             instance_uuids = objects.InstanceList.get_uuids_by_host_and_node(
                 context, host, nodename)
             for instance_uuid in instance_uuids:
                 self.delete_allocation_for_instance(
                     context, instance_uuid, force=True)
+
+            # When an instance is evacuated, its allocation remains in
+            # the source compute node until the node recovers again.
+            # If the broken compute never recovered but instead it is
+            # decommissioned, then we should delete the allocations of
+            # successfully evacuated instances during service delete.
+            self._remove_allocations_for_evacuated_instances(context,
+                                                             compute_node)
+
         # Ensure to delete resource provider in tree by top-down
         # traversable order.
         rps_to_refresh = self.get_providers_in_tree(context, rp_uuid)
