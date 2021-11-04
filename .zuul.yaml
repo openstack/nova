@@ -294,7 +294,6 @@
           Q_ML2_TENANT_NETWORK_TYPE: vxlan
           Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch,linuxbridge
           ML2_L3_PLUGIN: router
-          NOVA_USE_SERVICE_TOKEN: True
           NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
           FORCE_CONFIG_DRIVE: True
         devstack_services:
