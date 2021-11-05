@@ -32,6 +32,7 @@ from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import enginefacade
+from oslo_db.sqlalchemy import test_fixtures as db_fixtures
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
@@ -629,21 +630,24 @@ class Database(fixtures.Fixture):
                     connection=self.connection)
                 self.get_engine = ctxt_mgr.writer.get_engine
             else:
-                # NOTE(gibi): this inject a new factory for each test and
-                # registers a cleanup that cleans the factory at the end
-                # of the test case. This way we can let each test configure the
-                # factory so we can avoid having a global flag guarding against
-                # factory re-configuration
-                self.addCleanup(main_db_api.context_manager.patch_factory(
-                    enginefacade._TransactionFactory()))
+                # NOTE(gibi): this injects a new factory for each test and
+                # cleans it up at then end of the test case. This way we can
+                # let each test configure the factory so we can avoid having a
+                # global flag guarding against factory re-configuration
+                new_engine = enginefacade.transaction_context()
+                self.useFixture(
+                    db_fixtures.ReplaceEngineFacadeFixture(
+                        main_db_api.context_manager, new_engine))
                 main_db_api.configure(CONF)
 
                 self.get_engine = main_db_api.get_engine
         elif self.database == 'api':
             # NOTE(gibi): similar note applies here as for the main_db_api
             # above
-            self.addCleanup(api_db_api.context_manager.patch_factory(
-                enginefacade._TransactionFactory()))
+            new_engine = enginefacade.transaction_context()
+            self.useFixture(
+                db_fixtures.ReplaceEngineFacadeFixture(
+                    api_db_api.context_manager, new_engine))
             api_db_api.configure(CONF)
 
             self.get_engine = api_db_api.get_engine
