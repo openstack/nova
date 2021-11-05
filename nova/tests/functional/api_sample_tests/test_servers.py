@@ -662,7 +662,7 @@ class ServersUpdateSampleJson275Test(ServersUpdateSampleJsonTest):
         self._verify_response('server-action-rebuild-resp', subs, resp, 202)
 
 
-class ServersUpdateSampleJson289Test(ServersUpdateSampleJsonTest):
+class ServersUpdateSampleJson290Test(ServersUpdateSampleJsonTest):
     microversion = '2.90'
     scenarios = [('v2_90', {'api_major_version': 'v2.1'})]
 
