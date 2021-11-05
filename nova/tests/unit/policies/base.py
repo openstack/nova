@@ -146,15 +146,25 @@ class BasePolicyTest(test.TestCase):
         def ensure_raises(req, *args, **kwargs):
             exc = self.assertRaises(
                 exception.PolicyNotAuthorized, func, req, *arg, **kwarg)
+            # NOTE(danms): We may need to check a different rule_name
+            # as the enforced policy, based on the context we are
+            # using. Examples are multi-policy APIs for similar
+            # reasons as below. If we are passed a function for
+            # rule_name, call it with the context being used to
+            # determine the rule_name we should verify.
+            if callable(rule_name):
+                actual_rule_name = rule_name(req.environ['nova.context'])
+            else:
+                actual_rule_name = rule_name
             # NOTE(gmann): In case of multi-policy APIs, PolicyNotAuthorized
             # exception can be raised from either of the policy so checking
             # the error message, which includes the rule name, can mismatch.
             # Tests verifying the multi policy can pass rule_name as None
             # to skip the error message assert.
-            if rule_name is not None:
+            if actual_rule_name is not None:
                 self.assertEqual(
                     "Policy doesn't allow %s to be performed." %
-                    rule_name, exc.format_message())
+                    actual_rule_name, exc.format_message())
         # Verify all the context having allowed scope and roles pass
         # the policy check.
         for context in authorized_contexts:
