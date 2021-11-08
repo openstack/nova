@@ -139,7 +139,7 @@ rating for each feature group.
 .. note::
 
    Although having some similarities, this list is not directly related
-   to the DefCore effort.
+   to the Interop effort.
 
 **Feature Group ratings:**
 

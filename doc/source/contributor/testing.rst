@@ -121,6 +121,7 @@ services and a database, with minimal stubbing of nova internals.
 Interoperability tests
 -----------------------
 
-The DefCore committee maintains a list that contains a subset of Tempest tests.
-These are used to verify if a particular Nova deployment's API responds as
-expected. For more details, see: https://opendev.org/osf/interop
+The Interop Working Group maintains a list that contains a subset of Tempest
+tests. These are used to verify if a particular Nova deployment's API responds
+as expected. For more details, see:
+https://docs.opendev.org/openinfra/interop/latest/
