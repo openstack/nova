@@ -440,8 +440,8 @@ class VMwareAPIVMTestCase(test.TestCase,
 
     def _get_vm_record(self):
         # Get record for VM
-        vms = vmwareapi_fake._get_objects("VirtualMachine")
-        for vm in vms.objects:
+        vms = vmwareapi_fake.get_objects("VirtualMachine")
+        for vm in vms:
             if vm.get('name') == vm_util._get_vm_name(self._display_name,
                                                       self.uuid):
                 return vm
@@ -1449,7 +1449,7 @@ class VMwareAPIVMTestCase(test.TestCase,
 
     def _snapshot_delete_vm_snapshot_exception(self, exception, call_count=1):
         self._create_vm()
-        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0].obj
+        fake_vm = vmwareapi_fake.get_first_object_ref("VirtualMachine")
         snapshot_ref = vmwareapi_fake.ManagedObjectReference(
                                value="Snapshot-123",
                                name="VirtualMachineSnapshot")
@@ -1895,7 +1895,7 @@ class VMwareAPIVMTestCase(test.TestCase,
         opt_val = OptionValue(key='', value=5906)
         fake_vm.set(vm_util.VNC_CONFIG_KEY, opt_val)
         vnc_console = self.conn.get_vnc_console(self.context, self.instance)
-        host = vmwareapi_fake._get_objects('HostSystem').objects[0]
+        host = vmwareapi_fake.get_first_object('HostSystem')
         self.assertEqual(host.name, vnc_console.host)
         self.assertEqual(5906, vnc_console.port)
 
@@ -2087,8 +2087,8 @@ class VMwareAPIVMTestCase(test.TestCase,
 
     def test_iscsi_rescan_hba(self):
         fake_target_portal = 'fake_target_host:port'
-        host_storage_sys = vmwareapi_fake._get_objects(
-            "HostStorageSystem").objects[0]
+        host_storage_sys = vmwareapi_fake.get_first_object(
+            "HostStorageSystem")
         iscsi_hba_array = host_storage_sys.get('storageDeviceInfo'
                                                '.hostBusAdapter')
         iscsi_hba = iscsi_hba_array.HostHostBusAdapter[0]
@@ -2108,7 +2108,7 @@ class VMwareAPIVMTestCase(test.TestCase,
     def test_iscsi_get_target(self):
         data = {'target_portal': 'fake_target_host:port',
                 'target_iqn': 'fake_target_iqn'}
-        host = vmwareapi_fake._get_objects('HostSystem').objects[0]
+        host = vmwareapi_fake.get_first_object('HostSystem')
         host._add_iscsi_target(data)
         vops = volumeops.VMwareVolumeOps(self.conn._session)
         result = vops._iscsi_get_target(data)

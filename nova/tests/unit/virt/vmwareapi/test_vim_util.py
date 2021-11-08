@@ -28,12 +28,12 @@ class VMwareVIMUtilTestCase(test.NoDBTestCase):
     def test_get_inner_objects(self):
         property = ['summary.name']
         # Get the fake datastores directly from the cluster
-        cluster_refs = fake._get_object_refs('ClusterComputeResource')
-        cluster = fake._get_object(cluster_refs[0])
+        cluster = fake.get_first_object('ClusterComputeResource')
+        cluster_ref = cluster.obj
         expected_ds = cluster.datastore.ManagedObjectReference
         # Get the fake datastores using inner objects utility method
         result = vim_util.get_inner_objects(
-            self.vim, cluster_refs[0], 'datastore', 'Datastore', property)
+            self.vim, cluster_ref, 'datastore', 'Datastore', property)
         datastores = [oc.obj for oc in result.objects]
         self.assertEqual(expected_ds, datastores)
 
