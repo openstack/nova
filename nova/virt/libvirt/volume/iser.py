@@ -23,6 +23,7 @@ CONF = nova.conf.CONF
 
 class LibvirtISERVolumeDriver(iscsi.LibvirtISCSIVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
+
     def __init__(self, connection):
         super(LibvirtISERVolumeDriver, self).__init__(connection)
 

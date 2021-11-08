@@ -21,6 +21,7 @@ class LibvirtEvent(event.InstanceEvent):
 
 class DeviceEvent(LibvirtEvent):
     """Base class for device related libvirt events"""
+
     def __init__(self, uuid: str, dev: str, timestamp: float = None):
         super().__init__(uuid, timestamp)
         self.dev = dev

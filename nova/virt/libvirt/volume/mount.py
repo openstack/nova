@@ -174,6 +174,7 @@ class _HostMountState(object):
 
     class _MountPoint(object):
         """A single mountpoint, and the set of attachments in use on it."""
+
         def __init__(self):
             # A guard for operations on this mountpoint
             # N.B. Care is required using this lock, as it will be deleted

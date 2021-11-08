@@ -32,6 +32,7 @@ class RescheduleBuildAvailabilityZoneUpCall(
     trying to connect to the API DB to get availability zone (aggregate) info
     about the alternate host selection.
     """
+
     def setUp(self):
         super(RescheduleBuildAvailabilityZoneUpCall, self).setUp()
         # Use the standard fixtures.
@@ -96,6 +97,7 @@ class RescheduleMigrateAvailabilityZoneUpCall(
     """This is a regression test for the resize/cold migrate aspect of
     bug 1781286 where the cell conductor does not have access to the API DB.
     """
+
     def setUp(self):
         super(RescheduleMigrateAvailabilityZoneUpCall, self).setUp()
         # Use the standard fixtures.

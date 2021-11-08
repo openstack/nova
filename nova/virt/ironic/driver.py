@@ -963,6 +963,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                           If false, pull fresh data from ironic.
         :returns: an InstanceInfo object
         """
+
         def _fetch_from_ironic(self, instance):
             try:
                 node = self._validate_instance_and_node(instance)

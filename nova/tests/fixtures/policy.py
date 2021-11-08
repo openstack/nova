@@ -39,6 +39,7 @@ class RealPolicyFixture(fixtures.Fixture):
     ``policy_file`` accordingly.
 
     """
+
     def _prepare_policy(self):
         """Allow changing of the policy before we get started"""
         pass
@@ -92,6 +93,7 @@ class PolicyFixture(RealPolicyFixture):
     be better in those cases.
 
     """
+
     def _prepare_policy(self):
         self.policy_dir = self.useFixture(fixtures.TempDir())
         self.policy_file = os.path.join(self.policy_dir.path,

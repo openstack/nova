@@ -2190,6 +2190,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     coming from the image is bigger than the maximum allowed video ram from
     the flavor.
     """
+
     def test_video_ram(self):
         meta_dict = {'id': self._image_id, 'properties': {'hw_video_ram': 120}}
         image_meta, flavor = self._get_image_and_flavor_for_test_video(
@@ -2205,6 +2206,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     coming from the image is not specified. This is a success scenario,
     in the case where `hw_video_ram` property is not set.
     """
+
     def test_video_ram_if_none(self):
         meta_dict = {'id': self._image_id, 'properties': {}}
         image_meta, flavor = self._get_image_and_flavor_for_test_video(
@@ -2218,6 +2220,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     coming from the flavor is not specified. This is a success scenario,
     in the case where `hw_video_ram` property is not set.
     """
+
     def test_max_video_ram_none(self):
         meta_dict = {'id': self._image_id, 'properties': {'hw_video_ram': 120}}
         image_meta = objects.ImageMeta.from_dict(meta_dict)
@@ -2242,6 +2245,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     the flavor. This is a success scenario, in the case where `hw_video_ram`
     property is set in the extra spec.
     """
+
     def test_success_video_ram(self):
         expected_video_ram = 90
         meta_dict = {'id': self._image_id, 'properties': {
@@ -2258,6 +2262,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     coming from the image is equal to 0. This is a success scenario, in the
     case where `hw_video_ram` property is not set in the extra spec.
     """
+
     def test_zero_video_ram(self):
         meta_dict = {'id': self._image_id, 'properties': {'hw_video_ram': 0}}
         image_meta, flavor = self._get_image_and_flavor_for_test_video(

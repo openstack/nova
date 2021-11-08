@@ -35,6 +35,7 @@ threading = patcher.original('threading')
 
 class SerialConsoleHandler(object):
     """Handles serial console ops related to a given instance."""
+
     def __init__(self, instance_name):
         self._vmutils = utilsfactory.get_vmutils()
         self._pathutils = pathutils.PathUtils()

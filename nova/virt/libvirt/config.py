@@ -1550,6 +1550,7 @@ class LibvirtConfigGuestDiskEncryptionSecret(LibvirtConfigObject):
 class LibvirtConfigGuestDiskEncryption(LibvirtConfigObject):
     """https://libvirt.org/formatstorageencryption.html
     """
+
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestDiskEncryption, self).__init__(**kwargs)
         self.format = None

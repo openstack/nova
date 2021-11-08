@@ -24,6 +24,7 @@ class TestInstanceActionBuryInCell0(test.TestCase,
     event was not being created for instances buried in cell0 starting in
     Ocata.
     """
+
     def setUp(self):
         super(TestInstanceActionBuryInCell0, self).setUp()
         # Setup common fixtures.

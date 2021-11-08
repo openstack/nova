@@ -77,6 +77,7 @@ class TargetDBSetupTask(base.TaskBase):
     This is needed before any work can be done with the instance in the target
     cell, like validating the selected target compute host.
     """
+
     def __init__(self, context, instance, source_migration,
                  target_cell_context):
         """Initialize this task.

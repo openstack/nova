@@ -933,6 +933,7 @@ class VolumeAttachTestsV249(test.NoDBTestCase):
 
 class VolumeAttachTestsV260(test.NoDBTestCase):
     """Negative tests for attaching a multiattach volume with version 2.60."""
+
     def setUp(self):
         super(VolumeAttachTestsV260, self).setUp()
         self.controller = volumes_v21.VolumeAttachmentController()

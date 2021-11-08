@@ -42,6 +42,7 @@ def _get_context(req):
 
 class AggregateController(wsgi.Controller):
     """The Host Aggregates API controller for the OpenStack API."""
+
     def __init__(self):
         super(AggregateController, self).__init__()
         self.api = compute.AggregateAPI()

@@ -23,6 +23,7 @@ class FakeDiskAdapter(disk_dvr.DiskAdapter):
     This is done so that the abstract methods/properties can be stubbed and the
     class can be instantiated for testing.
     """
+
     def _vios_uuids(self):
         pass
 

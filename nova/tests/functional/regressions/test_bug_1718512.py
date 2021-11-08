@@ -31,6 +31,7 @@ class TestRequestSpecRetryReschedule(test.TestCase,
     resize, it is rejected by the RetryFilter because it's already in the
     RequestSpec.retry field.
     """
+
     def setUp(self):
         super(TestRequestSpecRetryReschedule, self).setUp()
         self.useFixture(nova_fixtures.RealPolicyFixture())

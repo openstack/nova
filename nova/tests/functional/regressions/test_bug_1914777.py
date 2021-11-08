@@ -40,6 +40,7 @@ class TestDeleteWhileBooting(test.TestCase,
     delete request. We aim to mock only the bare minimum necessary to recreate
     the bug scenarios.
     """
+
     def setUp(self):
         super(TestDeleteWhileBooting, self).setUp()
         self.useFixture(nova_fixtures.RealPolicyFixture())

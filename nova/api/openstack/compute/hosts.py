@@ -33,6 +33,7 @@ LOG = logging.getLogger(__name__)
 
 class HostController(wsgi.Controller):
     """The Hosts API controller for the OpenStack API."""
+
     def __init__(self):
         super(HostController, self).__init__()
         self.api = compute.HostAPI()

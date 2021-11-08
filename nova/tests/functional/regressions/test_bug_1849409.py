@@ -24,6 +24,7 @@ class ListDeletedServersWithMarker(test.TestCase,
     MarkerNotFound, but that does not mean the marker was found in the build
     request list.
     """
+
     def setUp(self):
         super(ListDeletedServersWithMarker, self).setUp()
         # Start standard fixtures.

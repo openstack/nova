@@ -165,6 +165,7 @@ class ClientWrapper(clientv20.Client):
     Wraps the callable methods, catches Unauthorized,Forbidden from Neutron and
     convert it to a 401,403 for Nova clients.
     """
+
     def __init__(self, base_client, admin):
         # Expose all attributes from the base_client instance
         self.__dict__ = base_client.__dict__

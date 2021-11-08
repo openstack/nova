@@ -52,7 +52,7 @@ class MicroversionsController2(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.5", "3.1")  # noqa
     @wsgi.response(202)
-    def index(self, req): # noqa
+    def index(self, req):  # noqa
         data = {'param': 'controller2_val2'}
         return data
 

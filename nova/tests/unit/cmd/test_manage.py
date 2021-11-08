@@ -2376,6 +2376,7 @@ class TestNovaManagePlacement(test.NoDBTestCase):
     For more involved functional scenarios, use
     nova.tests.functional.test_nova_manage.
     """
+
     def setUp(self):
         super(TestNovaManagePlacement, self).setUp()
         self.output = StringIO()

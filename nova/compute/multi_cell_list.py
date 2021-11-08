@@ -58,6 +58,7 @@ class RecordWrapper(object):
 
     Implementing __lt__ is enough for heapq.merge() to do its work.
     """
+
     def __init__(self, ctx, sort_ctx, db_record):
         self.cell_uuid = ctx.cell_uuid
         self._sort_ctx = sort_ctx
@@ -122,6 +123,7 @@ class CrossCellLister(metaclass=abc.ABCMeta):
     your data type from cell databases.
 
     """
+
     def __init__(self, sort_ctx, cells=None, batch_size=None):
         self.sort_ctx = sort_ctx
         self.cells = cells

@@ -779,6 +779,7 @@ class MatchType(object):
             "world",
             MatchType(objects.KeyPair))
     """
+
     def __init__(self, wanttype):
         self.wanttype = wanttype
 
@@ -794,6 +795,7 @@ class MatchType(object):
 
 class MatchObjPrims(object):
     """Matches objects with equal primitives."""
+
     def __init__(self, want_obj):
         self.want_obj = want_obj
 
@@ -823,6 +825,7 @@ class ContainKeyValue(object):
             "world",
             ContainKeyValue('hello', world))
     """
+
     def __init__(self, wantkey, wantvalue):
         self.wantkey = wantkey
         self.wantvalue = wantvalue

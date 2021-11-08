@@ -102,6 +102,7 @@ class NullHandler(std_logging.Handler):
     log_fixture.get_logging_handle_error_fixture to detect formatting errors in
     debug level logs without saving the logs.
     """
+
     def handle(self, record):
         self.format(record)
 
@@ -352,6 +353,7 @@ class CheatingSerializer(rpc.RequestContextSerializer):
     Unless we had per-service config and database layer state for
     the fake services we start, this is a reasonable cheat.
     """
+
     def serialize_context(self, context):
         """Serialize context with the db_connection inside."""
         values = super(CheatingSerializer, self).serialize_context(context)
@@ -380,6 +382,7 @@ class CellDatabases(fixtures.Fixture):
     Passing default=True tells the fixture which database should
     be given to code that doesn't target a specific cell.
     """
+
     def __init__(self):
         self._ctxt_mgrs = {}
         self._last_ctxt_mgr = None
@@ -963,6 +966,7 @@ class OSMetadataServer(fixtures.Fixture):
     interactions needed.
 
     """
+
     def setUp(self):
         super(OSMetadataServer, self).setUp()
         # in order to run these in tests we need to bind only to local
@@ -1092,6 +1096,7 @@ class SynchronousThreadPoolExecutorFixture(fixtures.Fixture):
 
     Replace the GreenThreadPoolExecutor with the SynchronousExecutor.
     """
+
     def setUp(self):
         super(SynchronousThreadPoolExecutorFixture, self).setUp()
         self.useFixture(fixtures.MonkeyPatch(
@@ -1100,6 +1105,7 @@ class SynchronousThreadPoolExecutorFixture(fixtures.Fixture):
 
 class BannedDBSchemaOperations(fixtures.Fixture):
     """Ban some operations for migrations"""
+
     def __init__(self, banned_resources=None):
         super(BannedDBSchemaOperations, self).__init__()
         self._banned_resources = banned_resources or []
@@ -1123,6 +1129,7 @@ class BannedDBSchemaOperations(fixtures.Fixture):
 
 class ForbidNewLegacyNotificationFixture(fixtures.Fixture):
     """Make sure the test fails if new legacy notification is added"""
+
     def __init__(self):
         super(ForbidNewLegacyNotificationFixture, self).__init__()
         self.notifier = rpc.LegacyValidatingNotifier
@@ -1216,6 +1223,7 @@ class PrivsepFixture(fixtures.Fixture):
     """Disable real privsep checking so we can test the guts of methods
     decorated with sys_admin_pctxt.
     """
+
     def setUp(self):
         super(PrivsepFixture, self).setUp()
         self.useFixture(fixtures.MockPatchObject(
@@ -1268,6 +1276,7 @@ class DownCellFixture(fixtures.Fixture):
             # List services with down cells.
             self.admin_api.api_get('/os-services')
     """
+
     def __init__(self, down_cell_mappings=None):
         self.down_cell_mappings = down_cell_mappings
 
@@ -1369,6 +1378,7 @@ class AvailabilityZoneFixture(fixtures.Fixture):
     requested when creating a server otherwise the instance.availabilty_zone
     or default_availability_zone is returned.
     """
+
     def __init__(self, zones):
         self.zones = zones
 
@@ -1405,6 +1415,7 @@ class KSAFixture(fixtures.Fixture):
     """Lets us initialize an openstack.connection.Connection by stubbing the
     auth plugin.
     """
+
     def setUp(self):
         super(KSAFixture, self).setUp()
         self.mock_load_auth = self.useFixture(fixtures.MockPatch(
@@ -1533,6 +1544,7 @@ class PropagateTestCaseIdToChildEventlets(fixtures.Fixture):
     https://bugs.launchpad.net/nova/+bug/1946339
 
     """
+
     def __init__(self, test_case_id):
         self.test_case_id = test_case_id
 

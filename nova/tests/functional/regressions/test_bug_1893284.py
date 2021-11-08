@@ -38,6 +38,7 @@ class TestServersPerUserQuota(test.TestCase,
     error because the 'instances' resource count isn't being correctly scoped
     per-user.
     """
+
     def setUp(self):
         super(TestServersPerUserQuota, self).setUp()
         self.useFixture(nova_fixtures.RealPolicyFixture())

@@ -19,5 +19,6 @@ class SyncPool(eventlet.GreenPool):
     """Synchronous pool for testing threaded code without adding sleep
     waits.
     """
+
     def spawn_n(self, func, *args, **kwargs):
         func(*args, **kwargs)

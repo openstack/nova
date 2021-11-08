@@ -25,6 +25,7 @@ class TestNeutronExternalNetworks(test.TestCase,
     """Tests for creating a server on a neutron network with
     router:external=True.
     """
+
     def setUp(self):
         super(TestNeutronExternalNetworks, self).setUp()
         # Use the standard fixtures.

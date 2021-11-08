@@ -43,6 +43,7 @@ class PeriodicNodeRecreateTestCase(test.TestCase,
     there is a (soft) deleted version of the ComputeNode with the same uuid
     in the database.
     """
+
     def setUp(self):
         super(PeriodicNodeRecreateTestCase, self).setUp()
         # We need the PlacementFixture for the compute nodes to report in but

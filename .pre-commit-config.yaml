@@ -33,3 +33,9 @@ repos:
         entry: flake8
         files: '^.*\.py$'
         exclude: '^(doc|releasenotes|tools)/.*$'
+
+  - repo: https://github.com/pre-commit/mirrors-autopep8
+    rev: 'v1.5.7'
+    hooks:
+      - id: autopep8
+        files: '^.*\.py$'

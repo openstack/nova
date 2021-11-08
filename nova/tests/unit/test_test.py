@@ -42,6 +42,7 @@ class IsolationTestCase(test.TestCase):
     of other tests should fail.
 
     """
+
     def test_service_isolation(self):
         self.useFixture(fixtures.ServiceFixture('compute'))
 
@@ -301,6 +302,7 @@ class ContainKeyValueTestCase(test.NoDBTestCase):
 
 class NovaExceptionReraiseFormatErrorTestCase(test.NoDBTestCase):
     """Test that format errors are reraised in tests."""
+
     def test_format_error_in_nova_exception(self):
         class FakeImageException(exception.NovaException):
             msg_fmt = 'Image %(image_id)s has wrong type %(type)s.'

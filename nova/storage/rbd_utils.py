@@ -67,6 +67,7 @@ class RBDVolumeProxy(object):
     The underlying librados client and ioctx can be accessed as the attributes
     'client' and 'ioctx'.
     """
+
     def __init__(self, driver, name, pool=None, snapshot=None,
                  read_only=False):
         client, ioctx = driver._connect_to_rados(pool)
@@ -102,6 +103,7 @@ class RBDVolumeProxy(object):
 
 class RADOSClient(object):
     """Context manager to simplify error handling for connecting to ceph."""
+
     def __init__(self, driver, pool=None):
         self.driver = driver
         self.cluster, self.ioctx = driver._connect_to_rados(pool)

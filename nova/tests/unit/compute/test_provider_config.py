@@ -37,6 +37,7 @@ class SchemaValidationMixin(base.BaseTestCase):
     the subclass that call the run_test_ methods in this class. This should
     keep things simple as more schema versions are added.
     """
+
     def setUp(self):
         super(SchemaValidationMixin, self).setUp()
         self.mock_load_yaml = self.useFixture(

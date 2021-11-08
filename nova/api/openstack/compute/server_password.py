@@ -24,6 +24,7 @@ from nova.policies import server_password as sp_policies
 
 class ServerPasswordController(wsgi.Controller):
     """The Server Password API controller for the OpenStack API."""
+
     def __init__(self):
         super(ServerPasswordController, self).__init__()
         self.compute_api = compute.API()

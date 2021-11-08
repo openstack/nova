@@ -32,6 +32,7 @@ class TestBootFromVolumeIsolatedHostsFilter(
     The regression is that the RequestSpec.image.id field is not set and the
     IsolatedHostsFilter blows up trying to load the image id.
     """
+
     def setUp(self):
         super(TestBootFromVolumeIsolatedHostsFilter, self).setUp()
 

@@ -26,6 +26,7 @@ LOG = logging.getLogger(__name__)
 
 class BaseFilter(object):
     """Base class for all filter classes."""
+
     def _filter_one(self, obj, spec_obj):
         """Return True if it passes the filter, False otherwise.
         Override this in a subclass.

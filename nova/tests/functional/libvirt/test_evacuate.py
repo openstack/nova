@@ -107,6 +107,7 @@ SERVER_DISKS = {
 
 class _FileTest(object):
     """A base class for the _FlatTest and _Qcow2Test mixin test classes"""
+
     def setUp(self):
         super(_FileTest, self).setUp()
 
@@ -148,6 +149,7 @@ class _FlatTest(_FileTest):
     mock create_image to touch a file so we can assert its existence/removal in
     tests.
     """
+
     def setUp(self):
         super(_FlatTest, self).setUp()
 
@@ -172,6 +174,7 @@ class _Qcow2Test(_FileTest):
     mock create_image to touch a file so we can assert its existence/removal in
     tests.
     """
+
     def setUp(self):
         super(_Qcow2Test, self).setUp()
 
@@ -193,6 +196,7 @@ class _RbdTest(object):
     create_image to store which rbd volumes would have been created, and exists
     to reference that store.
     """
+
     def setUp(self):
         super(_RbdTest, self).setUp()
 
@@ -287,6 +291,7 @@ class _LVMTest(object):
     the nova.virt.libvirt.storage.lvm module immediately before starting a new
     compute.
     """
+
     def setUp(self):
         super(_LVMTest, self).setUp()
 
@@ -395,6 +400,7 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
     with these mixins we get test coverage of all combinations of
     shared/nonshared instanace directories and block storage.
     """
+
     def _start_compute(self, name):
         # NOTE(mdbooth): fakelibvirt's getHostname currently returns a
         # hardcoded 'compute1', which is undesirable if we want multiple fake

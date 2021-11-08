@@ -13180,6 +13180,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
     migrations against it, but we *don't* want customers building new
     instances with the phased-out instance-type.
     """
+
     def setUp(self):
         super(DisabledInstanceTypesTestCase, self).setUp()
         self.compute_api = compute.API()
@@ -13249,6 +13250,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
     """Test logic and exception handling around rescheduling prep resize
     requests
     """
+
     def setUp(self):
         super(ComputeRescheduleResizeOrReraiseTestCase, self).setUp()
         self.instance = self._create_fake_instance_obj()

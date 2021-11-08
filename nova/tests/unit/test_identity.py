@@ -44,6 +44,7 @@ class IdentityValidationTest(test.NoDBTestCase):
     not exist.
 
     """
+
     def setUp(self):
         super(IdentityValidationTest, self).setUp()
         get_adap_p = mock.patch('nova.utils.get_ksa_adapter')

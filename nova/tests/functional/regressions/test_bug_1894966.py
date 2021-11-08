@@ -24,6 +24,7 @@ class TestCreateServerGroupWithEmptyPolicies(
     Attempt to create a server group with an invalid 'policies' field. It
     should fail cleanly.
     """
+
     def setUp(self):
         super().setUp()
 

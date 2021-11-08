@@ -39,6 +39,7 @@ class _FakeNeutronClient:
     For all other methods, this wrapper class simply calls through to the
     corresponding NeutronFixture class method without any modifications.
     """
+
     def __init__(self, fixture, is_admin):
         self.fixture = fixture
         self.is_admin = is_admin

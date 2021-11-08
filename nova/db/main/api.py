@@ -1951,7 +1951,6 @@ def _get_regexp_ops(connection):
 
 
 def _regex_instance_filter(query, filters):
-
     """Applies regular expression filtering to an Instance query.
 
     Returns the updated query.
