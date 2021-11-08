@@ -43,17 +43,28 @@ def fake_keypair(name):
                 name=name, **keypair_data)
 
 
-def db_key_pair_get_all_by_user(self, user_id, limit, marker):
+def _fake_get_from_db(context, user_id, name=None, limit=None, marker=None):
+    if name:
+        if name != 'FAKE':
+            raise exception.KeypairNotFound(user_id=user_id, name=name)
+        return fake_keypair('FAKE')
     return [fake_keypair('FAKE')]
 
 
-def db_key_pair_create(self, keypair):
-    return fake_keypair(name=keypair['name'])
+def _fake_get_count_from_db(context, user_id):
+    return 1
 
 
-def db_key_pair_destroy(context, user_id, name):
+def _fake_create_in_db(context, values):
+    return fake_keypair(name=values['name'])
+
+
+def _fake_destroy_in_db(context, user_id, name):
     if not (user_id and name):
         raise Exception()
+
+    if name != 'FAKE':
+        raise exception.KeypairNotFound(user_id=user_id, name=name)
 
 
 def db_key_pair_create_duplicate(context):
@@ -74,12 +85,15 @@ class KeypairsTestV21(test.TestCase):
         fakes.stub_out_networking(self)
         fakes.stub_out_secgroup_api(self)
 
-        self.stub_out("nova.db.main.api.key_pair_get_all_by_user",
-                      db_key_pair_get_all_by_user)
-        self.stub_out("nova.db.main.api.key_pair_create",
-                      db_key_pair_create)
-        self.stub_out("nova.db.main.api.key_pair_destroy",
-                      db_key_pair_destroy)
+        self.stub_out(
+            'nova.objects.keypair._create_in_db', _fake_create_in_db)
+        self.stub_out(
+            'nova.objects.keypair._destroy_in_db', _fake_destroy_in_db)
+        self.stub_out(
+            'nova.objects.keypair._get_from_db', _fake_get_from_db)
+        self.stub_out(
+            'nova.objects.keypair._get_count_from_db', _fake_get_count_from_db)
+
         self._setup_app_and_controller()
 
         self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
@@ -222,7 +236,7 @@ class KeypairsTestV21(test.TestCase):
         mock_check.side_effect = [None, exc]
         body = {
             'keypair': {
-                'name': 'create_test',
+                'name': 'FAKE',
             },
         }
 
@@ -278,39 +292,20 @@ class KeypairsTestV21(test.TestCase):
                           self.controller.show, self.req, 'DOESNOTEXIST')
 
     def test_keypair_delete_not_found(self):
-
-        def db_key_pair_get_not_found(context, user_id, name):
-            raise exception.KeypairNotFound(user_id=user_id, name=name)
-
-        self.stub_out("nova.db.main.api.key_pair_destroy",
-                      db_key_pair_get_not_found)
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.delete, self.req, 'FAKE')
+                          self.controller.delete, self.req, 'DOESNOTEXIST')
 
     def test_keypair_show(self):
-
-        def _db_key_pair_get(context, user_id, name):
-            return dict(test_keypair.fake_keypair,
-                        name='foo', public_key='XXX', fingerprint='YYY',
-                        type='ssh')
-
-        self.stub_out("nova.db.main.api.key_pair_get", _db_key_pair_get)
-
         res_dict = self.controller.show(self.req, 'FAKE')
-        self.assertEqual('foo', res_dict['keypair']['name'])
-        self.assertEqual('XXX', res_dict['keypair']['public_key'])
-        self.assertEqual('YYY', res_dict['keypair']['fingerprint'])
+        self.assertEqual('FAKE', res_dict['keypair']['name'])
+        self.assertEqual('FAKE_KEY', res_dict['keypair']['public_key'])
+        self.assertEqual(
+            'FAKE_FINGERPRINT', res_dict['keypair']['fingerprint'])
         self._assert_keypair_type(res_dict)
 
     def test_keypair_show_not_found(self):
-
-        def _db_key_pair_get(context, user_id, name):
-            raise exception.KeypairNotFound(user_id=user_id, name=name)
-
-        self.stub_out("nova.db.main.api.key_pair_get", _db_key_pair_get)
-
         self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller.show, self.req, 'FAKE')
+                          self.controller.show, self.req, 'DOESNOTEXIST')
 
     def _assert_keypair_type(self, res_dict):
         self.assertNotIn('type', res_dict['keypair'])
@@ -432,9 +427,9 @@ class KeypairsTestV235(test.TestCase):
         super(KeypairsTestV235, self).setUp()
         self._setup_app_and_controller()
 
-    @mock.patch("nova.db.main.api.key_pair_get_all_by_user")
+    @mock.patch('nova.objects.keypair._get_from_db')
     def test_keypair_list_limit_and_marker(self, mock_kp_get):
-        mock_kp_get.side_effect = db_key_pair_get_all_by_user
+        mock_kp_get.side_effect = _fake_get_from_db
 
         req = fakes.HTTPRequest.blank(
             self.base_url + '/os-keypairs?limit=3&marker=fake_marker',
@@ -467,10 +462,11 @@ class KeypairsTestV235(test.TestCase):
         self.assertRaises(exception.ValidationError, self.controller.index,
                           req)
 
-    @mock.patch("nova.db.main.api.key_pair_get_all_by_user")
+    @mock.patch('nova.objects.keypair._get_from_db')
     def test_keypair_list_limit_and_marker_invalid_in_old_microversion(
-            self, mock_kp_get):
-        mock_kp_get.side_effect = db_key_pair_get_all_by_user
+        self, mock_kp_get,
+    ):
+        mock_kp_get.side_effect = _fake_get_from_db
 
         req = fakes.HTTPRequest.blank(
             self.base_url + '/os-keypairs?limit=3&marker=fake_marker',
@@ -488,17 +484,14 @@ class KeypairsTestV275(test.TestCase):
         super(KeypairsTestV275, self).setUp()
         self.controller = keypairs_v21.KeypairController()
 
-    @mock.patch("nova.db.main.api.key_pair_get_all_by_user")
     @mock.patch('nova.objects.KeyPair.get_by_name')
-    def test_keypair_list_additional_param_old_version(self, mock_get_by_name,
-                                                       mock_kp_get):
+    def test_keypair_list_additional_param_old_version(self, mock_get_by_name):
         req = fakes.HTTPRequest.blank(
             '/os-keypairs?unknown=3',
             version='2.74', use_admin_context=True)
         self.controller.index(req)
         self.controller.show(req, 1)
-        with mock.patch.object(self.controller.api,
-                               'delete_key_pair'):
+        with mock.patch.object(self.controller.api, 'delete_key_pair'):
             self.controller.delete(req, 1)
 
     def test_keypair_list_additional_param(self):

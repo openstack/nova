@@ -19,7 +19,6 @@ from oslo_utils import versionutils
 
 from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
-from nova.db.main import api as main_db_api
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -134,40 +133,27 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
     def _create_in_db(context, values):
         return _create_in_db(context, values)
 
+    # TODO(stephenfin): Remove the 'localonly' parameter in v2.0
     @base.remotable_classmethod
-    def get_by_name(cls, context, user_id, name,
-                    localonly=False):
-        db_keypair = None
-        if not localonly:
-            try:
-                db_keypair = cls._get_from_db(context, user_id, name)
-            except exception.KeypairNotFound:
-                pass
-        if db_keypair is None:
-            db_keypair = main_db_api.key_pair_get(context, user_id, name)
+    def get_by_name(cls, context, user_id, name, localonly=False):
+        if localonly:
+            # There is no longer a "local" (main) table for keypairs, so this
+            # will always return nothing now
+            raise exception.KeypairNotFound(user_id=user_id, name=name)
+
+        db_keypair = cls._get_from_db(context, user_id, name)
         return cls._from_db_object(context, cls(), db_keypair)
 
     @base.remotable_classmethod
     def destroy_by_name(cls, context, user_id, name):
-        try:
-            cls._destroy_in_db(context, user_id, name)
-        except exception.KeypairNotFound:
-            main_db_api.key_pair_destroy(context, user_id, name)
+        cls._destroy_in_db(context, user_id, name)
 
     @base.remotable
     def create(self):
         if self.obj_attr_is_set('id'):
-            raise exception.ObjectActionError(action='create',
-                                              reason='already created')
-
-        # NOTE(danms): Check to see if it exists in the old DB before
-        # letting them create in the API DB, since we won't get protection
-        # from the UC.
-        try:
-            main_db_api.key_pair_get(self._context, self.user_id, self.name)
-            raise exception.KeyPairExists(key_name=self.name)
-        except exception.KeypairNotFound:
-            pass
+            raise exception.ObjectActionError(
+                action='create', reason='already created',
+            )
 
         self._create()
 
@@ -178,11 +164,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject,
 
     @base.remotable
     def destroy(self):
-        try:
-            self._destroy_in_db(self._context, self.user_id, self.name)
-        except exception.KeypairNotFound:
-            main_db_api.key_pair_destroy(
-                self._context, self.user_id, self.name)
+        self._destroy_in_db(self._context, self.user_id, self.name)
 
 
 @base.NovaObjectRegistry.register
@@ -208,31 +190,13 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
 
     @base.remotable_classmethod
     def get_by_user(cls, context, user_id, limit=None, marker=None):
-        try:
-            api_db_keypairs = cls._get_from_db(
-                context, user_id, limit=limit, marker=marker)
-            # NOTE(pkholkin): If we were asked for a marker and found it in
-            # results from the API DB, we must continue our pagination with
-            # just the limit (if any) to the main DB.
-            marker = None
-        except exception.MarkerNotFound:
-            api_db_keypairs = []
+        api_db_keypairs = cls._get_from_db(
+            context, user_id, limit=limit, marker=marker)
 
-        if limit is not None:
-            limit_more = limit - len(api_db_keypairs)
-        else:
-            limit_more = None
-
-        if limit_more is None or limit_more > 0:
-            main_db_keypairs = main_db_api.key_pair_get_all_by_user(
-                context, user_id, limit=limit_more, marker=marker)
-        else:
-            main_db_keypairs = []
-
-        return base.obj_make_list(context, cls(context), objects.KeyPair,
-                                  api_db_keypairs + main_db_keypairs)
+        return base.obj_make_list(
+            context, cls(context), objects.KeyPair, api_db_keypairs,
+        )
 
     @base.remotable_classmethod
     def get_count_by_user(cls, context, user_id):
-        return (cls._get_count_from_db(context, user_id) +
-                main_db_api.key_pair_count_by_user(context, user_id))
+        return cls._get_count_from_db(context, user_id)

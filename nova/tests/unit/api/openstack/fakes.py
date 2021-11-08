@@ -105,12 +105,10 @@ def stub_out_key_pair_funcs(testcase, have_key_pair=True, **kwargs):
         return []
 
     if have_key_pair:
-        testcase.stub_out(
-            'nova.db.main.api.key_pair_get_all_by_user', key_pair)
-        testcase.stub_out('nova.db.main.api.key_pair_get', one_key_pair)
+        testcase.stub_out('nova.objects.KeyPairList._get_from_db', key_pair)
+        testcase.stub_out('nova.objects.KeyPair._get_from_db', one_key_pair)
     else:
-        testcase.stub_out(
-            'nova.db.main.api.key_pair_get_all_by_user', no_key_pair)
+        testcase.stub_out('nova.objects.KeyPairList._get_from_db', key_pair)
 
 
 def stub_out_instance_quota(test, allowed, quota, resource='instances'):
