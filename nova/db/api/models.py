@@ -33,16 +33,29 @@ LOG = logging.getLogger(__name__)
 # columns. Alembic identifies this temporary mismatch between the models and
 # underlying tables and attempts to resolve it. Tell it instead to ignore these
 # until we're ready to remove them ourselves.
-REMOVED_COLUMNS = {
-    ('resource_providers', 'can_host'),
-}
+REMOVED_COLUMNS = []
 
 # NOTE(stephenfin): A list of foreign key constraints that were removed when
 # the column they were covering was removed.
 REMOVED_FKEYS = []
 
 # NOTE(stephenfin): A list of entire models that have been removed.
-REMOVED_TABLES = []
+REMOVED_TABLES = {
+    # Tables that were moved the placement database in Train. The
+    # models were removed in Y and the tables can be dropped in Z or
+    # later
+    'allocations',
+    'consumers',
+    'inventories',
+    'placement_aggregates',
+    'projects',
+    'resource_classes',
+    'resource_provider_aggregates',
+    'resource_provider_traits',
+    'resource_providers',
+    'traits',
+    'users',
+}
 
 
 class _NovaAPIBase(models.ModelBase, models.TimestampMixin):
@@ -298,141 +311,6 @@ class KeyPair(BASE):
         nullable=False, server_default='ssh')
 
 
-# TODO(stephenfin): Remove this as it's now unused post-placement split
-class ResourceClass(BASE):
-    """Represents the type of resource for an inventory or allocation."""
-    __tablename__ = 'resource_classes'
-    __table_args__ = (
-        schema.UniqueConstraint("name", name="uniq_resource_classes0name"),
-    )
-
-    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    name = sa.Column(sa.String(255), nullable=False)
-
-
-# TODO(stephenfin): Remove this as it's now unused post-placement split
-class ResourceProvider(BASE):
-    """Represents a mapping to a providers of resources."""
-
-    __tablename__ = "resource_providers"
-    __table_args__ = (
-        sa.Index('resource_providers_uuid_idx', 'uuid'),
-        schema.UniqueConstraint('uuid', name='uniq_resource_providers0uuid'),
-        sa.Index('resource_providers_name_idx', 'name'),
-        sa.Index(
-            'resource_providers_root_provider_id_idx', 'root_provider_id'),
-        sa.Index(
-            'resource_providers_parent_provider_id_idx', 'parent_provider_id'),
-        schema.UniqueConstraint(
-            'name', name='uniq_resource_providers0name')
-    )
-
-    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    uuid = sa.Column(sa.String(36), nullable=False)
-    name = sa.Column(sa.Unicode(200), nullable=True)
-    generation = sa.Column(sa.Integer, default=0)
-    # Represents the root of the "tree" that the provider belongs to
-    root_provider_id = sa.Column(
-        sa.Integer, sa.ForeignKey('resource_providers.id'), nullable=True)
-    # The immediate parent provider of this provider, or NULL if there is no
-    # parent. If parent_provider_id == NULL then root_provider_id == id
-    parent_provider_id = sa.Column(
-        sa.Integer, sa.ForeignKey('resource_providers.id'), nullable=True)
-    # TODO(stephenfin): Drop these from the db at some point
-    # columns_to_drop = ['can_host']
-
-
-# TODO(stephenfin): Remove this as it's now unused post-placement split
-class Inventory(BASE):
-    """Represents a quantity of available resource."""
-
-    __tablename__ = "inventories"
-    __table_args__ = (
-        sa.Index(
-            'inventories_resource_provider_id_idx', 'resource_provider_id'),
-        sa.Index(
-            'inventories_resource_class_id_idx', 'resource_class_id'),
-        sa.Index(
-            'inventories_resource_provider_resource_class_idx',
-            'resource_provider_id',
-            'resource_class_id',
-        ),
-        schema.UniqueConstraint(
-            'resource_provider_id',
-            'resource_class_id',
-            name='uniq_inventories0resource_provider_resource_class'
-        ),
-    )
-
-    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    resource_provider_id = sa.Column(sa.Integer, nullable=False)
-    resource_class_id = sa.Column(sa.Integer, nullable=False)
-    total = sa.Column(sa.Integer, nullable=False)
-    reserved = sa.Column(sa.Integer, nullable=False)
-    min_unit = sa.Column(sa.Integer, nullable=False)
-    max_unit = sa.Column(sa.Integer, nullable=False)
-    step_size = sa.Column(sa.Integer, nullable=False)
-    allocation_ratio = sa.Column(sa.Float, nullable=False)
-    resource_provider = orm.relationship(
-        "ResourceProvider",
-        primaryjoin='Inventory.resource_provider_id == ResourceProvider.id',
-        foreign_keys=resource_provider_id)
-
-
-# TODO(stephenfin): Remove this as it's now unused post-placement split
-class Allocation(BASE):
-    """A use of inventory."""
-
-    __tablename__ = "allocations"
-    __table_args__ = (
-        sa.Index(
-            'allocations_resource_provider_class_used_idx',
-            'resource_provider_id',
-            'resource_class_id',
-            'used',
-        ),
-        sa.Index('allocations_resource_class_id_idx', 'resource_class_id'),
-        sa.Index('allocations_consumer_id_idx', 'consumer_id')
-    )
-
-    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    resource_provider_id = sa.Column(sa.Integer, nullable=False)
-    consumer_id = sa.Column(sa.String(36), nullable=False)
-    resource_class_id = sa.Column(sa.Integer, nullable=False)
-    used = sa.Column(sa.Integer, nullable=False)
-    resource_provider = orm.relationship(
-        "ResourceProvider",
-        primaryjoin='Allocation.resource_provider_id == ResourceProvider.id',
-        foreign_keys=resource_provider_id)
-
-
-# TODO(stephenfin): Remove this as it's now unused post-placement split
-class ResourceProviderAggregate(BASE):
-    """Associate a resource provider with an aggregate."""
-
-    __tablename__ = 'resource_provider_aggregates'
-    __table_args__ = (
-        sa.Index(
-            'resource_provider_aggregates_aggregate_id_idx', 'aggregate_id'),
-    )
-
-    resource_provider_id = sa.Column(
-        sa.Integer, primary_key=True, nullable=False)
-    aggregate_id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-
-
-# TODO(stephenfin): Remove this as it's now unused post-placement split
-class PlacementAggregate(BASE):
-    """A grouping of resource providers."""
-    __tablename__ = 'placement_aggregates'
-    __table_args__ = (
-        schema.UniqueConstraint("uuid", name="uniq_placement_aggregates0uuid"),
-    )
-
-    id = sa.Column(sa.Integer, primary_key=True, autoincrement=True)
-    uuid = sa.Column(sa.String(36), index=True)
-
-
 class InstanceGroupMember(BASE):
     """Represents the members for an instance group."""
     __tablename__ = 'instance_group_member'
@@ -613,94 +491,3 @@ class Reservation(BASE):
         "QuotaUsage",
         foreign_keys=usage_id,
         primaryjoin='Reservation.usage_id == QuotaUsage.id')
-
-
-class Trait(BASE):
-    """Represents a trait."""
-
-    __tablename__ = "traits"
-    __table_args__ = (
-        schema.UniqueConstraint('name', name='uniq_traits0name'),
-    )
-
-    id = sa.Column(
-        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
-    name = sa.Column(sa.Unicode(255), nullable=False)
-
-
-# TODO(stephenfin): Remove this as it's now unused post-placement split
-class ResourceProviderTrait(BASE):
-    """Represents the relationship between traits and resource provider"""
-
-    __tablename__ = "resource_provider_traits"
-    __table_args__ = (
-        sa.Index('resource_provider_traits_resource_provider_trait_idx',
-              'resource_provider_id', 'trait_id'),
-    )
-
-    trait_id = sa.Column(
-        sa.Integer, sa.ForeignKey('traits.id'), primary_key=True,
-        nullable=False)
-    resource_provider_id = sa.Column(
-        sa.Integer,
-        sa.ForeignKey('resource_providers.id'),
-        primary_key=True,
-        nullable=False)
-
-
-# TODO(stephenfin): Remove this as it's unused
-class Project(BASE):
-    """The project is the Keystone project."""
-
-    __tablename__ = 'projects'
-    __table_args__ = (
-        schema.UniqueConstraint(
-            'external_id',
-            name='uniq_projects0external_id',
-        ),
-    )
-
-    id = sa.Column(
-        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
-    external_id = sa.Column(sa.String(255), nullable=False)
-
-
-# TODO(stephenfin): Remove this as it's unused
-class User(BASE):
-    """The user is the Keystone user."""
-
-    __tablename__ = 'users'
-    __table_args__ = (
-        schema.UniqueConstraint('external_id', name='uniq_users0external_id'),
-    )
-
-    id = sa.Column(
-        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
-    external_id = sa.Column(sa.String(255), nullable=False)
-
-
-# TODO(stephenfin): Remove this as it's unused
-class Consumer(BASE):
-    """Represents a resource consumer."""
-
-    __tablename__ = 'consumers'
-    __table_args__ = (
-        sa.Index('consumers_project_id_uuid_idx', 'project_id', 'uuid'),
-        sa.Index(
-            'consumers_project_id_user_id_uuid_idx',
-            'project_id',
-            'user_id',
-            'uuid',
-        ),
-        schema.UniqueConstraint('uuid', name='uniq_consumers0uuid'),
-    )
-
-    id = sa.Column(
-        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
-    uuid = sa.Column(sa.String(36), nullable=False)
-    project_id = sa.Column(sa.Integer, nullable=False)
-    user_id = sa.Column(sa.Integer, nullable=False)
-    # FIXME(mriedem): Change this to server_default=text("0") to match the
-    # 059_add_consumer_generation script once bug 1776527 is fixed.
-    generation = sa.Column(
-        sa.Integer, nullable=False, server_default="0", default=0)
