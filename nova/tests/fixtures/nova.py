@@ -751,8 +751,11 @@ class DefaultFlavorsFixture(fixtures.Fixture):
                            root_gb=1, flavorid='6', name='m1.tiny.specs',
                            extra_specs=extra_specs, **defaults),
             ]
-        for flavor in default_flavors:
-            flavor.create()
+        # Sending out notifications results in loading all projects
+        # which is relatively expensive for the setup of each unit test
+        with mock.patch.object(objects.Flavor, '_send_notification'):
+            for flavor in default_flavors:
+                flavor.create()
 
 
 class RPCFixture(fixtures.Fixture):
