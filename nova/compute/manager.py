@@ -471,6 +471,8 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         else:
             early_events = set([])
 
+        sw = timeutils.StopWatch()
+        sw.start()
         with eventlet.timeout.Timeout(deadline):
             for event_name, event in events.items():
                 if event_name in early_events:
@@ -485,6 +487,10 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                 decision = error_callback(event_name, instance)
                 if decision is False:
                     break
+        LOG.debug('Instance event wait completed in %i seconds for %s',
+                  sw.elapsed(),
+                  ','.join(x[0] for x in event_names),
+                  instance=instance)
 
     def update_compute_provider_status(self, context, rp_uuid, enabled):
         """Used to add/remove the COMPUTE_STATUS_DISABLED trait on the provider

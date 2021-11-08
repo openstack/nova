@@ -131,7 +131,8 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
                           [('foo', 'bar'),
                            ('foo', 'baz')])
 
-    def test_wait_for_instance_event(self):
+    @mock.patch.object(compute_manager, 'LOG')
+    def test_wait_for_instance_event(self, mock_log):
         and_i_ran = ''
         event_1_tag = objects.InstanceExternalEvent.make_key(
             'event1')
@@ -150,6 +151,9 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
             self.assertEqual('instance', event.instance)
             self.assertIn((event.name, event.tag), events.keys())
             event.wait.assert_called_once_with()
+        mock_log.debug.assert_called_once_with(
+            'Instance event wait completed in %i seconds for %s',
+            mock.ANY, 'event1,event2', instance=event.instance)
 
     def test_wait_for_instance_event_failed(self):
         def _failer():
