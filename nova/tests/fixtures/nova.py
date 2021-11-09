@@ -204,6 +204,18 @@ class DatabasePoisonFixture(fixtures.Fixture):
             '_create_session',
             self._poison_configure))
 
+        # NOTE(gibi): not just _create_session indicates a manipulation on the
+        # DB but actually any operation that actually initializes (starts) a
+        # transaction factory. If a test does this without using the Database
+        # fixture then that test i) actually a database test and should declare
+        # it so ii) actually manipulates a global state without proper cleanup
+        # and test isolation. This could lead that later tests are failing with
+        # the error: oslo_db.sqlalchemy.enginefacade.AlreadyStartedError: this
+        # TransactionFactory is already started
+        self.useFixture(fixtures.MonkeyPatch(
+           'oslo_db.sqlalchemy.enginefacade._TransactionFactory._start',
+           self._poison_configure))
+
     def _poison_configure(self, *a, **k):
         # If you encounter this error, you might be tempted to just not
         # inherit from NoDBTestCase. Bug #1568414 fixed a few hundred of these

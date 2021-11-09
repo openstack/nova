@@ -17,33 +17,27 @@ import os
 import urllib
 
 from alembic.runtime import migration as alembic_migration
-import fixtures
 from migrate import exceptions as migrate_exceptions
 from migrate.versioning import api as migrate_api
 import mock
-from oslo_db.sqlalchemy import enginefacade
 
 from nova.db.api import api as api_db_api
 from nova.db.main import api as main_db_api
 from nova.db import migration
 from nova import exception
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 
 
 class TestDBURL(test.NoDBTestCase):
+    USES_DB_SELF = True
 
     def test_db_sync_with_special_symbols_in_connection_string(self):
         qargs = 'read_default_group=data with/a+percent_%-and%20symbols!'
         url = f"sqlite:///:memory:?{qargs}"
         self.flags(connection=url, group='database')
-        # since the engine.url is immutable it will never get updated
-        # once its created so reusing the engine instance would break
-        # this test.
-        engine = enginefacade.writer.get_engine()
-        self.useFixture(
-            fixtures.MonkeyPatch(
-                'nova.db.migration._get_engine',
-                mock.Mock(return_value=engine)))
+        self.useFixture(nova_fixtures.Database())
+
         alembic_config = migration._find_alembic_conf()
         with mock.patch.object(
                 migration, '_find_alembic_conf', return_value=alembic_config):

@@ -275,11 +275,14 @@ class NovaMigrationsWalk(
                 self._migrate_up(connection, revision)
 
     def test_db_version_alembic(self):
-        migration.db_sync(database='api')
+        engine = enginefacade.writer.get_engine()
 
-        script = alembic_script.ScriptDirectory.from_config(self.config)
-        head = script.get_current_head()
-        self.assertEqual(head, migration.db_version(database='api'))
+        with mock.patch.object(migration, '_get_engine', return_value=engine):
+            migration.db_sync(database='api')
+
+            script = alembic_script.ScriptDirectory.from_config(self.config)
+            head = script.get_current_head()
+            self.assertEqual(head, migration.db_version(database='api'))
 
 
 class TestMigrationsWalkSQLite(
