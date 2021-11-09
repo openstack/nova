@@ -149,6 +149,11 @@ changes done to the API, as the impact can be very wide.
 * :doc:`/contributor/api-ref-guideline`: The guideline to write the API
   reference.
 
+Nova also provides notifications over the RPC API, which you may wish to
+extend.
+
+* :doc:`/contributor/notifications`: How to add your own notifications
+
 .. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
    # keep the document structure in the PDF doc.
 .. toctree::
@@ -158,6 +163,7 @@ changes done to the API, as the impact can be very wide.
    api-2
    microversions
    api-ref-guideline
+   notifications
 
 Nova Major Subsystems
 =====================

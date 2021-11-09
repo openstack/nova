@@ -96,8 +96,8 @@ resources will help you get started with consuming the API directly.
 
 Nova can be configured to emit notifications over RPC.
 
-* :ref:`Versioned Notifications <versioned_notification_samples>`: This
-  provides the list of existing versioned notifications with sample payloads.
+* :doc:`Versioned Notifications </admin/notifications>`: This
+  provides information on the notifications emitted by nova.
 
 Other end-user guides can be found under :doc:`/user/index`.
 
