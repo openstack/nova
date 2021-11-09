@@ -122,6 +122,66 @@
     post-run: playbooks/nova-live-migration/post-run.yaml
 
 - job:
+    name: nova-ovs-hybrid-plug
+    parent: tempest-multinode-full-py3
+    description: |
+      Run move operations, reboot, and evacuation (via the same post-run hook
+      as the nova-live-migration job) tests with the OVS network backend and
+      the "iptables_hybrid" securitygroup firewall driver, aka "hybrid plug".
+      The external events interactions between Nova and Neutron in these
+      situations has historically been fragile. This job exercises them.
+    irrelevant-files: *nova-base-irrelevant-files
+    vars:
+      tox_envlist: all
+      tempest_test_regex: (^tempest\..*compute\..*(migration|resize|reboot).*)
+      devstack_localrc:
+        Q_AGENT: openvswitch
+        Q_ML2_TENANT_NETWORK_TYPE: vxlan
+        Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch,linuxbridge
+        ML2_L3_PLUGIN: router
+      devstack_services:
+        # Disable OVN services
+        br-ex-tcpdump: false
+        br-int-flows: false
+        ovn-controller: false
+        ovn-northd: false
+        q-ovn-metadata-agent: false
+        # Neutron services
+        q-agt: true
+        q-dhcp: true
+        q-l3: true
+        q-meta: true
+      devstack_local_conf:
+        post-config:
+          "/$NEUTRON_CORE_PLUGIN_CONF":
+            securitygroup:
+              firewall_driver: iptables_hybrid
+    group-vars:
+      subnode:
+        devstack_localrc:
+          Q_AGENT: openvswitch
+          Q_ML2_TENANT_NETWORK_TYPE: vxlan
+          Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch,linuxbridge
+          ML2_L3_PLUGIN: router
+        devstack_services:
+          # Disable OVN services
+          br-ex-tcpdump: false
+          br-int-flows: false
+          ovn-controller: false
+          ovn-northd: false
+          ovs-vswitchd: false
+          ovsdb-server: false
+          q-ovn-metadata-agent: false
+          # Neutron services
+          q-agt: true
+        devstack_local_conf:
+          post-config:
+            "/$NEUTRON_CORE_PLUGIN_CONF":
+              securitygroup:
+                firewall_driver: iptables_hybrid
+    post-run: playbooks/nova-live-migration/post-run.yaml
+
+- job:
     name: nova-live-migration-ceph
     parent: devstack-plugin-ceph-multinode-tempest-py3
     description: |
@@ -545,6 +605,8 @@
         - nova-lvm
         - nova-multi-cell
         - nova-next
+        - nova-ovs-hybrid-plug:
+            voting: false
         - nova-tox-validate-backport:
             voting: false
         - nova-tox-functional-centos8-py36
