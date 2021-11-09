@@ -31,6 +31,7 @@ from openstack import service_description
 from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_db import exception as db_exc
+from oslo_db.sqlalchemy import enginefacade
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
@@ -64,7 +65,6 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 DB_SCHEMA = collections.defaultdict(str)
-SESSION_CONFIGURED = False
 PROJECT_ID = '6f70656e737461636b20342065766572'
 
 
@@ -614,20 +614,21 @@ class Database(fixtures.Fixture):
         """
         super().__init__()
 
-        # NOTE(pkholkin): oslo_db.enginefacade is configured in tests the
-        # same way as it is done for any other service that uses DB
-        global SESSION_CONFIGURED
-        if not SESSION_CONFIGURED:
-            main_db_api.configure(CONF)
-            api_db_api.configure(CONF)
-            SESSION_CONFIGURED = True
-
         assert database in {'main', 'api'}, f'Unrecognized database {database}'
 
         self.database = database
         self.version = version
 
         if database == 'main':
+            # NOTE(gibi): this inject a new factory for each test and
+            # self.factory_reset is used to clean up the factory at the end
+            # of the test case. This way we can let each test configure the
+            # factory so we can avoid having a global flag guarding against
+            # factory re-configuration
+            self.factory_reset = main_db_api.context_manager.patch_factory(
+                enginefacade._TransactionFactory())
+            main_db_api.configure(CONF)
+
             if connection is not None:
                 ctxt_mgr = main_db_api.create_context_manager(
                     connection=connection)
@@ -636,6 +637,12 @@ class Database(fixtures.Fixture):
                 self.get_engine = main_db_api.get_engine
         elif database == 'api':
             assert connection is None, 'Not supported for the API database'
+
+            # NOTE(gibi): similar note applies here as for the main_db_api
+            # above
+            self.factory_reset = api_db_api.context_manager.patch_factory(
+                enginefacade._TransactionFactory())
+            api_db_api.configure(CONF)
 
             self.get_engine = api_db_api.get_engine
 
@@ -659,6 +666,7 @@ class Database(fixtures.Fixture):
         engine.dispose()
 
     def reset(self):
+        self.factory_reset()
         engine = self.get_engine()
         engine.dispose()
         self._cache_schema()
