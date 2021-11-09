@@ -121,7 +121,8 @@ class TestDatabaseFixture(testtools.TestCase):
     def test_fixture_reset(self):
         # because this sets up reasonable db connection strings
         self.useFixture(fixtures.ConfFixture())
-        self.useFixture(fixtures.Database())
+        db_fixture = fixtures.Database()
+        self.useFixture(db_fixture)
         engine = main_db_api.get_engine()
         conn = engine.connect()
         result = conn.execute("select * from instance_types")
@@ -138,12 +139,11 @@ class TestDatabaseFixture(testtools.TestCase):
         rows = result.fetchall()
         self.assertEqual(1, len(rows), "Rows %s" % rows)
 
-        # reset by invoking the fixture again
-        #
         # NOTE(sdague): it's important to reestablish the db
         # connection because otherwise we have a reference to the old
         # in mem db.
-        self.useFixture(fixtures.Database())
+        db_fixture.reset()
+        engine = main_db_api.get_engine()
         conn = engine.connect()
         result = conn.execute("select * from instance_types")
         rows = result.fetchall()
@@ -152,7 +152,8 @@ class TestDatabaseFixture(testtools.TestCase):
     def test_api_fixture_reset(self):
         # This sets up reasonable db connection strings
         self.useFixture(fixtures.ConfFixture())
-        self.useFixture(fixtures.Database(database='api'))
+        db_fixture = fixtures.Database(database='api')
+        self.useFixture(db_fixture)
         engine = api_db_api.get_engine()
         conn = engine.connect()
         result = conn.execute("select * from cell_mappings")
@@ -166,12 +167,11 @@ class TestDatabaseFixture(testtools.TestCase):
         rows = result.fetchall()
         self.assertEqual(1, len(rows), "Rows %s" % rows)
 
-        # reset by invoking the fixture again
-        #
         # NOTE(sdague): it's important to reestablish the db
         # connection because otherwise we have a reference to the old
         # in mem db.
-        self.useFixture(fixtures.Database(database='api'))
+        db_fixture.reset()
+        engine = api_db_api.get_engine()
         conn = engine.connect()
         result = conn.execute("select * from cell_mappings")
         rows = result.fetchall()
