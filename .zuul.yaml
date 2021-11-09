@@ -567,6 +567,8 @@
         - barbican-tempest-plugin-simple-crypto:
             irrelevant-files: *nova-base-irrelevant-files
             voting: false
+        - tempest-integrated-compute-centos-8-stream:
+            irrelevant-files: *nova-base-irrelevant-files
     gate:
       jobs:
         - nova-live-migration
@@ -591,6 +593,8 @@
         - tempest-ipv6-only:
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
+            irrelevant-files: *nova-base-irrelevant-files
+        - tempest-integrated-compute-centos-8-stream:
             irrelevant-files: *nova-base-irrelevant-files
     experimental:
       jobs:
