@@ -88,6 +88,15 @@ REMOVED_TABLES = {
     # in Y and the table can be dropped in Z or later
     'snapshot_id_mappings',
     'volume_id_mappings',
+
+    # Tables for the removed nova-network feature. The models were
+    # removed in Y and the tables can be dropped in Z or later
+    'dns_domains',
+    'fixed_ips',
+    'floating_ips',
+    'networks',
+    'provider_fw_rules',
+    'security_group_default_rules',
 }
 
 # we don't configure 'cls' since we have models that don't use the
@@ -646,6 +655,8 @@ class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
     attachment_id = sa.Column(sa.String(36))
 
 
+# TODO(stephenfin): Remove once we drop the security_groups field from the
+# Instance table. Until then, this is tied to the SecurityGroup table
 class SecurityGroupInstanceAssociation(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'security_group_instance_association'
     __table_args__ = (
@@ -658,6 +669,8 @@ class SecurityGroupInstanceAssociation(BASE, NovaBase, models.SoftDeleteMixin):
     instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
 
 
+# TODO(stephenfin): Remove once we drop the security_groups field from the
+# Instance table
 class SecurityGroup(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a security group."""
     __tablename__ = 'security_groups'
@@ -689,8 +702,8 @@ class SecurityGroup(BASE, NovaBase, models.SoftDeleteMixin):
                              backref='security_groups')
 
 
-# TODO(stephenfin): Remove this in the V release or later, once we're sure we
-# won't want it back (it's for nova-network, so we won't)
+# TODO(stephenfin): Remove once we drop the security_groups field from the
+# Instance table. Until then, this is tied to the SecurityGroup table
 class SecurityGroupIngressRule(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a rule in a security group."""
     __tablename__ = 'security_group_rules'
@@ -718,32 +731,6 @@ class SecurityGroupIngressRule(BASE, NovaBase, models.SoftDeleteMixin):
                                  primaryjoin='and_('
         'SecurityGroupIngressRule.group_id == SecurityGroup.id,'
         'SecurityGroupIngressRule.deleted == 0)')
-
-
-# TODO(stephenfin): Remove this in the V release or later, once we're sure we
-# won't want it back (it's for nova-network, so we won't)
-class SecurityGroupIngressDefaultRule(BASE, NovaBase, models.SoftDeleteMixin):
-    __tablename__ = 'security_group_default_rules'
-    __table_args__ = ()
-    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    protocol = sa.Column(sa.String(5))  # "tcp", "udp" or "icmp"
-    from_port = sa.Column(sa.Integer)
-    to_port = sa.Column(sa.Integer)
-    cidr = sa.Column(types.CIDR())
-
-
-# TODO(stephenfin): Remove this in the V release or later, once we're sure we
-# won't want it back (it's for nova-network, so we won't)
-class ProviderFirewallRule(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents a rule in a security group."""
-    __tablename__ = 'provider_fw_rules'
-    __table_args__ = ()
-    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-
-    protocol = sa.Column(sa.String(5))  # "tcp", "udp", or "icmp"
-    from_port = sa.Column(sa.Integer)
-    to_port = sa.Column(sa.Integer)
-    cidr = sa.Column(types.CIDR())
 
 
 class Migration(BASE, NovaBase, models.SoftDeleteMixin):
@@ -794,60 +781,6 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
                                         '0)')
 
 
-# TODO(stephenfin): Remove this in the V release or later, once we're sure we
-# won't want it back (it's for nova-network, so we won't)
-class Network(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents a network."""
-    __tablename__ = 'networks'
-    __table_args__ = (
-        schema.UniqueConstraint("vlan", "deleted",
-                                name="uniq_networks0vlan0deleted"),
-       sa.Index('networks_bridge_deleted_idx', 'bridge', 'deleted'),
-       sa.Index('networks_host_idx', 'host'),
-       sa.Index('networks_project_id_deleted_idx', 'project_id', 'deleted'),
-       sa.Index('networks_uuid_project_id_deleted_idx', 'uuid',
-             'project_id', 'deleted'),
-       sa.Index('networks_vlan_deleted_idx', 'vlan', 'deleted'),
-       sa.Index('networks_cidr_v6_idx', 'cidr_v6')
-    )
-
-    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    label = sa.Column(sa.String(255))
-
-    injected = sa.Column(sa.Boolean, default=False)
-    cidr = sa.Column(types.CIDR())
-    cidr_v6 = sa.Column(types.CIDR())
-    multi_host = sa.Column(sa.Boolean, default=False)
-
-    gateway_v6 = sa.Column(types.IPAddress())
-    netmask_v6 = sa.Column(types.IPAddress())
-    netmask = sa.Column(types.IPAddress())
-    bridge = sa.Column(sa.String(255))
-    bridge_interface = sa.Column(sa.String(255))
-    gateway = sa.Column(types.IPAddress())
-    broadcast = sa.Column(types.IPAddress())
-    dns1 = sa.Column(types.IPAddress())
-    dns2 = sa.Column(types.IPAddress())
-
-    vlan = sa.Column(sa.Integer)
-    vpn_public_address = sa.Column(types.IPAddress())
-    vpn_public_port = sa.Column(sa.Integer)
-    vpn_private_address = sa.Column(types.IPAddress())
-    dhcp_start = sa.Column(types.IPAddress())
-
-    rxtx_base = sa.Column(sa.Integer)
-
-    project_id = sa.Column(sa.String(255))
-    priority = sa.Column(sa.Integer)
-    host = sa.Column(sa.String(255))
-    uuid = sa.Column(sa.String(36))
-
-    mtu = sa.Column(sa.Integer)
-    dhcp_server = sa.Column(types.IPAddress())
-    enable_dhcp = sa.Column(sa.Boolean, default=True)
-    share_address = sa.Column(sa.Boolean, default=False)
-
-
 class VirtualInterface(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a virtual interface on an instance."""
     __tablename__ = 'virtual_interfaces'
@@ -864,114 +797,6 @@ class VirtualInterface(BASE, NovaBase, models.SoftDeleteMixin):
     instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
     uuid = sa.Column(sa.String(36))
     tag = sa.Column(sa.String(255))
-
-
-# TODO(stephenfin): Remove this in the V release or later, once we're sure we
-# won't want it back (it's for nova-network, so we won't)
-class FixedIp(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents a fixed IP for an instance."""
-    __tablename__ = 'fixed_ips'
-    __table_args__ = (
-        schema.UniqueConstraint(
-            "address", "deleted", name="uniq_fixed_ips0address0deleted"),
-        sa.Index(
-            'fixed_ips_virtual_interface_id_fkey', 'virtual_interface_id'),
-        sa.Index('network_id', 'network_id'),
-        sa.Index('address', 'address'),
-        sa.Index('fixed_ips_instance_uuid_fkey', 'instance_uuid'),
-        sa.Index('fixed_ips_host_idx', 'host'),
-        sa.Index('fixed_ips_network_id_host_deleted_idx', 'network_id', 'host',
-              'deleted'),
-        sa.Index('fixed_ips_address_reserved_network_id_deleted_idx',
-              'address', 'reserved', 'network_id', 'deleted'),
-        sa.Index('fixed_ips_deleted_allocated_idx', 'address', 'deleted',
-              'allocated'),
-        sa.Index('fixed_ips_deleted_allocated_updated_at_idx', 'deleted',
-              'allocated', 'updated_at')
-    )
-    id = sa.Column(sa.Integer, primary_key=True)
-    address = sa.Column(types.IPAddress())
-    network_id = sa.Column(sa.Integer)
-    virtual_interface_id = sa.Column(sa.Integer)
-    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
-    # associated means that a fixed_ip has its instance_id column set
-    # allocated means that a fixed_ip has its virtual_interface_id column set
-    # TODO(sshturm) add default in db
-    allocated = sa.Column(sa.Boolean, default=False)
-    # leased means dhcp bridge has leased the ip
-    # TODO(sshturm) add default in db
-    leased = sa.Column(sa.Boolean, default=False)
-    # TODO(sshturm) add default in db
-    reserved = sa.Column(sa.Boolean, default=False)
-    host = sa.Column(sa.String(255))
-    network = orm.relationship(Network,
-                           backref=orm.backref('fixed_ips'),
-                           foreign_keys=network_id,
-                           primaryjoin='and_('
-                                'FixedIp.network_id == Network.id,'
-                                'FixedIp.deleted == 0,'
-                                'Network.deleted == 0)')
-    instance = orm.relationship(Instance,
-                            foreign_keys=instance_uuid,
-                            primaryjoin='and_('
-                                'FixedIp.instance_uuid == Instance.uuid,'
-                                'FixedIp.deleted == 0,'
-                                'Instance.deleted == 0)')
-    virtual_interface = orm.relationship(VirtualInterface,
-                           backref=orm.backref('fixed_ips'),
-                           foreign_keys=virtual_interface_id,
-                           primaryjoin='and_('
-                                'FixedIp.virtual_interface_id == '
-                                'VirtualInterface.id,'
-                                'FixedIp.deleted == 0,'
-                                'VirtualInterface.deleted == 0)')
-
-
-# TODO(stephenfin): Remove this in the V release or later, once we're sure we
-# won't want it back (it's for nova-network, so we won't)
-class FloatingIp(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents a floating IP that dynamically forwards to a fixed IP."""
-    __tablename__ = 'floating_ips'
-    __table_args__ = (
-        schema.UniqueConstraint("address", "deleted",
-                                name="uniq_floating_ips0address0deleted"),
-        sa.Index('fixed_ip_id', 'fixed_ip_id'),
-        sa.Index('floating_ips_host_idx', 'host'),
-        sa.Index('floating_ips_project_id_idx', 'project_id'),
-        sa.Index('floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
-              'pool', 'deleted', 'fixed_ip_id', 'project_id')
-    )
-    id = sa.Column(sa.Integer, primary_key=True)
-    address = sa.Column(types.IPAddress())
-    fixed_ip_id = sa.Column(sa.Integer)
-    project_id = sa.Column(sa.String(255))
-    host = sa.Column(sa.String(255))
-    auto_assigned = sa.Column(sa.Boolean, default=False)
-    # TODO(sshturm) add default in db
-    pool = sa.Column(sa.String(255))
-    interface = sa.Column(sa.String(255))
-    fixed_ip = orm.relationship(FixedIp,
-                            backref=orm.backref('floating_ips'),
-                            foreign_keys=fixed_ip_id,
-                            primaryjoin='and_('
-                                'FloatingIp.fixed_ip_id == FixedIp.id,'
-                                'FloatingIp.deleted == 0,'
-                                'FixedIp.deleted == 0)')
-
-
-# TODO(stephenfin): Remove in V or later
-class DNSDomain(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents a DNS domain with availability zone or project info."""
-    __tablename__ = 'dns_domains'
-    __table_args__ = (
-        sa.Index('dns_domains_project_id_idx', 'project_id'),
-        sa.Index('dns_domains_domain_deleted_idx', 'domain', 'deleted'),
-    )
-    deleted = sa.Column(sa.Boolean, default=False)
-    domain = sa.Column(sa.String(255), primary_key=True)
-    scope = sa.Column(sa.String(255))
-    availability_zone = sa.Column(sa.String(255))
-    project_id = sa.Column(sa.String(255))
 
 
 class InstanceMetadata(BASE, NovaBase, models.SoftDeleteMixin):

@@ -186,7 +186,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'shutdown_terminate': fields.BooleanField(default=False),
         'disable_terminate': fields.BooleanField(default=False),
 
-        # TODO(stephenfin): Remove this in version 3.0 of the object
+        # TODO(stephenfin): Remove this in version 3.0 of the object as it's
+        # related to cells v1
         'cell_name': fields.StringField(nullable=True),
 
         'metadata': fields.DictOfStringsField(),
