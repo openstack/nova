@@ -22,14 +22,9 @@ class TestSoftDeletesDeprecated(test.NoDBTestCase):
 
     def test_no_new_soft_deletes(self):
         whitelist = [
-            'agent_builds',
             'block_device_mapping',
-            'bw_usage_cache',
-            'cells',
             'certificates',
             'compute_nodes',
-            'console_pools',
-            'consoles',
             'dns_domains',
             'fixed_ips',
             'floating_ips',
@@ -57,11 +52,8 @@ class TestSoftDeletesDeprecated(test.NoDBTestCase):
             'security_group_rules',
             'security_groups',
             'services',
-            'snapshot_id_mappings',
-            'snapshots',
             'task_log',
             'virtual_interfaces',
-            'volume_id_mappings',
             'volume_usage_cache'
          ]
 

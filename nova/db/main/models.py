@@ -68,6 +68,26 @@ REMOVED_TABLES = {
     'key_pairs',
     'resource_provider_aggregates',
     'resource_providers',
+
+    # Tables for the removed XenAPI virt driver. The models were
+    # removed in Y and the tables can be dropped in Z or later
+    'agent_builds',
+    'bw_usage_cache',
+    'console_pools',
+    'consoles',
+
+    # Tables for the removed cells v1 feature. The model was removed in
+    # Y and the table can be dropped in Z or later
+    'cells',
+
+    # Tables for the removed volume snapshot feature. The model was
+    # removed in Y and the table can be dropped in Z or later
+    'snapshots',
+
+    # Tables for the removed in-tree EC2 API. The models were removed
+    # in Y and the table can be dropped in Z or later
+    'snapshot_id_mappings',
+    'volume_id_mappings',
 }
 
 # we don't configure 'cls' since we have models that don't use the
@@ -558,32 +578,6 @@ class Reservation(BASE, NovaBase, models.SoftDeleteMixin):
                          'QuotaUsage.deleted == 0)')
 
 
-# TODO(macsz) This class can be removed. It might need a DB migration to drop
-# this.
-class Snapshot(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents a block storage device that can be attached to a VM."""
-    __tablename__ = 'snapshots'
-    __table_args__ = ()
-    id = sa.Column(sa.String(36), primary_key=True, nullable=False)
-    deleted = sa.Column(sa.String(36), default="")
-
-    @property
-    def volume_name(self):
-        return CONF.volume_name_template % self.volume_id
-
-    user_id = sa.Column(sa.String(255))
-    project_id = sa.Column(sa.String(255))
-
-    volume_id = sa.Column(sa.String(36), nullable=False)
-    status = sa.Column(sa.String(255))
-    progress = sa.Column(sa.String(255))
-    volume_size = sa.Column(sa.Integer)
-    scheduled_at = sa.Column(sa.DateTime)
-
-    display_name = sa.Column(sa.String(255))
-    display_description = sa.Column(sa.String(255))
-
-
 class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents block device mapping that is defined by EC2."""
     __tablename__ = "block_device_mapping"
@@ -980,41 +974,6 @@ class DNSDomain(BASE, NovaBase, models.SoftDeleteMixin):
     project_id = sa.Column(sa.String(255))
 
 
-# TODO(stephenfin): Remove in V or later
-class ConsolePool(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents pool of consoles on the same physical node."""
-    __tablename__ = 'console_pools'
-    __table_args__ = (
-        schema.UniqueConstraint(
-            "host", "console_type", "compute_host", "deleted",
-            name="uniq_console_pools0host0console_type0compute_host0deleted"),
-    )
-    id = sa.Column(sa.Integer, primary_key=True)
-    address = sa.Column(types.IPAddress())
-    username = sa.Column(sa.String(255))
-    password = sa.Column(sa.String(255))
-    console_type = sa.Column(sa.String(255))
-    public_hostname = sa.Column(sa.String(255))
-    host = sa.Column(sa.String(255))
-    compute_host = sa.Column(sa.String(255))
-
-
-# TODO(stephenfin): Remove in V or later
-class Console(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents a console session for an instance."""
-    __tablename__ = 'consoles'
-    __table_args__ = (
-        sa.Index('consoles_instance_uuid_idx', 'instance_uuid'),
-    )
-    id = sa.Column(sa.Integer, primary_key=True)
-    instance_name = sa.Column(sa.String(255))
-    instance_uuid = sa.Column(sa.String(36), sa.ForeignKey('instances.uuid'))
-    password = sa.Column(sa.String(255))
-    port = sa.Column(sa.Integer)
-    pool_id = sa.Column(sa.Integer, sa.ForeignKey('console_pools.id'))
-    pool = orm.relationship(ConsolePool, backref=orm.backref('consoles'))
-
-
 class InstanceMetadata(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a user-provided metadata key/value pair for an instance."""
     __tablename__ = 'instance_metadata'
@@ -1050,70 +1009,6 @@ class InstanceSystemMetadata(BASE, NovaBase, models.SoftDeleteMixin):
                             foreign_keys=instance_uuid)
 
 
-# TODO(stephenfin): Remove this in the U release or later, once we're sure we
-# won't want it back (it's for cells v1, so we won't)
-class Cell(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents parent and child cells of this cell.  Cells can
-    have multiple parents and children, so there could be any number
-    of entries with is_parent=True or False
-    """
-    __tablename__ = 'cells'
-    __table_args__ = (schema.UniqueConstraint(
-        "name", "deleted", name="uniq_cells0name0deleted"
-        ),
-    )
-    id = sa.Column(sa.Integer, primary_key=True)
-    # Name here is the 'short name' of a cell.  For instance: 'child1'
-    name = sa.Column(sa.String(255))
-    api_url = sa.Column(sa.String(255))
-
-    transport_url = sa.Column(sa.String(255), nullable=False)
-
-    weight_offset = sa.Column(sa.Float(), default=0.0)
-    weight_scale = sa.Column(sa.Float(), default=1.0)
-    is_parent = sa.Column(sa.Boolean())
-
-
-# TODO(stephenfin): Remove this in the W release or later, once we're sure we
-# won't want it back (it's for a XenAPI-only feature)
-class AgentBuild(BASE, NovaBase, models.SoftDeleteMixin):
-    """Represents an agent build."""
-    __tablename__ = 'agent_builds'
-    __table_args__ = (
-        sa.Index('agent_builds_hypervisor_os_arch_idx', 'hypervisor', 'os',
-              'architecture'),
-        schema.UniqueConstraint("hypervisor", "os", "architecture", "deleted",
-                name="uniq_agent_builds0hypervisor0os0architecture0deleted"),
-    )
-    id = sa.Column(sa.Integer, primary_key=True)
-    hypervisor = sa.Column(sa.String(255))
-    os = sa.Column(sa.String(255))
-    architecture = sa.Column(sa.String(255))
-    version = sa.Column(sa.String(255))
-    url = sa.Column(sa.String(255))
-    md5hash = sa.Column(sa.String(255))
-
-
-# TODO(stephenfin): Remove this in the W release or later, once we're sure we
-# won't want it back (it's for a XenAPI-only feature)
-class BandwidthUsage(BASE, NovaBase, models.SoftDeleteMixin):
-    """Cache for instance bandwidth usage data pulled from the hypervisor."""
-    __tablename__ = 'bw_usage_cache'
-    __table_args__ = (
-        sa.Index('bw_usage_cache_uuid_start_period_idx', 'uuid',
-              'start_period'),
-    )
-    id = sa.Column(sa.Integer, primary_key=True, nullable=False)
-    uuid = sa.Column(sa.String(36))
-    mac = sa.Column(sa.String(255))
-    start_period = sa.Column(sa.DateTime, nullable=False)
-    last_refreshed = sa.Column(sa.DateTime)
-    bw_in = sa.Column(sa.BigInteger)
-    bw_out = sa.Column(sa.BigInteger)
-    last_ctr_in = sa.Column(sa.BigInteger)
-    last_ctr_out = sa.Column(sa.BigInteger)
-
-
 class VolumeUsage(BASE, NovaBase, models.SoftDeleteMixin):
     """Cache for volume usage data pulled from the hypervisor."""
     __tablename__ = 'volume_usage_cache'
@@ -1139,24 +1034,6 @@ class VolumeUsage(BASE, NovaBase, models.SoftDeleteMixin):
 class S3Image(BASE, NovaBase, models.SoftDeleteMixin):
     """Compatibility layer for the S3 image service talking to Glance."""
     __tablename__ = 's3_images'
-    __table_args__ = ()
-    id = sa.Column(
-        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
-    uuid = sa.Column(sa.String(36), nullable=False)
-
-
-class VolumeIdMapping(BASE, NovaBase, models.SoftDeleteMixin):
-    """Compatibility layer for the EC2 volume service."""
-    __tablename__ = 'volume_id_mappings'
-    __table_args__ = ()
-    id = sa.Column(
-        sa.Integer, primary_key=True, nullable=False, autoincrement=True)
-    uuid = sa.Column(sa.String(36), nullable=False)
-
-
-class SnapshotIdMapping(BASE, NovaBase, models.SoftDeleteMixin):
-    """Compatibility layer for the EC2 snapshot service."""
-    __tablename__ = 'snapshot_id_mappings'
     __table_args__ = ()
     id = sa.Column(
         sa.Integer, primary_key=True, nullable=False, autoincrement=True)
