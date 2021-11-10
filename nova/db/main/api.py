@@ -4478,6 +4478,10 @@ def archive_deleted_rows(context=None, max_rows=None, before=None,
         ):
             continue
 
+        # skip the tables that we've since removed the models for
+        if tablename in models.REMOVED_TABLES:
+            continue
+
         rows_archived, _deleted_instance_uuids, extras = (
             _archive_deleted_rows_for_table(
                 meta, tablename,
