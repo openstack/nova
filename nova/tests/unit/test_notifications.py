@@ -263,9 +263,6 @@ class NotificationsTestCase(test.TestCase):
             self.assertEqual(actual_ip['version'], expected_ip['version'])
             self.assertEqual(actual_ip['address'], expected_ip['address'])
 
-        bandwidth = payload['bandwidth']
-        self.assertEqual(0, len(bandwidth))
-
     def test_task_update_with_states(self):
         self.flags(notify_on_state_change="vm_and_task_state",
                    group='notifications')

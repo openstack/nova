@@ -10,7 +10,6 @@
             "nova_object.namespace": "nova",
             "nova_object.version": "1.0"
         },
-        "bandwidth": [],
         "block_devices": [],
         "old_display_name": null,
         "state_update": {
@@ -29,5 +28,5 @@
     },
     "nova_object.name": "InstanceUpdatePayload",
     "nova_object.namespace": "nova",
-    "nova_object.version": "1.9"
+    "nova_object.version": "2.0"
 }

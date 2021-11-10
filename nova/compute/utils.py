@@ -370,7 +370,7 @@ def notify_usage_exists(notifier, context, instance_ref, host,
 
     extra_info = dict(audit_period_beginning=str(audit_start),
                       audit_period_ending=str(audit_end),
-                      bandwidth={}, image_meta=image_meta)
+                      image_meta=image_meta)
 
     if extra_usage_info:
         extra_info.update(extra_usage_info)
@@ -379,24 +379,28 @@ def notify_usage_exists(notifier, context, instance_ref, host,
                                 extra_usage_info=extra_info)
 
     audit_period = instance_notification.AuditPeriodPayload(
-            audit_period_beginning=audit_start,
-            audit_period_ending=audit_end)
+        audit_period_beginning=audit_start,
+        audit_period_ending=audit_end,
+    )
 
     payload = instance_notification.InstanceExistsPayload(
         context=context,
         instance=instance_ref,
         audit_period=audit_period,
-        bandwidth=[])
+    )
 
     notification = instance_notification.InstanceExistsNotification(
         context=context,
         priority=fields.NotificationPriority.INFO,
         publisher=notification_base.NotificationPublisher(
-            host=host, source=fields.NotificationSource.COMPUTE),
+            host=host, source=fields.NotificationSource.COMPUTE,
+        ),
         event_type=notification_base.EventType(
             object='instance',
-            action=fields.NotificationAction.EXISTS),
-        payload=payload)
+            action=fields.NotificationAction.EXISTS,
+        ),
+        payload=payload,
+    )
     notification.emit(context)
 
 

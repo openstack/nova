@@ -296,23 +296,21 @@ class InstanceUpdatePayload(InstancePayload):
     # Version 1.8: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     # Version 1.9: Added locked_reason field to InstancePayload
-    VERSION = '1.9'
+    # Version 2.0: Remove bandwidth field
+    VERSION = '2.0'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
-        # TODO(stephenfin): Remove this field in 2.0
-        'bandwidth': fields.ListOfObjectsField('BandwidthPayload'),
         'old_display_name': fields.StringField(nullable=True),
         'tags': fields.ListOfStringsField(),
     }
 
-    def __init__(self, context, instance, state_update, audit_period,
-                 bandwidth, old_display_name):
-        super(InstanceUpdatePayload, self).__init__(
-            context=context, instance=instance)
+    def __init__(
+        self, context, instance, state_update, audit_period, old_display_name,
+    ):
+        super().__init__(context=context, instance=instance)
         self.state_update = state_update
         self.audit_period = audit_period
-        self.bandwidth = bandwidth
         self.old_display_name = old_display_name
         self.tags = [instance_tag.tag
                      for instance_tag in instance.tags.objects]
@@ -410,24 +408,6 @@ class IpPayload(base.NotificationPayloadBase):
                         address=ip["address"],
                         device_name=vif["devname"]))
         return ips
-
-
-# TODO(stephenfin): Drop this object
-@nova_base.NovaObjectRegistry.register_notification
-class BandwidthPayload(base.NotificationPayloadBase):
-    # Version 1.0: Initial version
-    VERSION = '1.0'
-    fields = {
-        'network_name': fields.StringField(),
-        'in_bytes': fields.IntegerField(),
-        'out_bytes': fields.IntegerField(),
-    }
-
-    def __init__(self, network_name, in_bytes, out_bytes):
-        super(BandwidthPayload, self).__init__()
-        self.network_name = network_name
-        self.in_bytes = in_bytes
-        self.out_bytes = out_bytes
 
 
 @nova_base.NovaObjectRegistry.register_notification
@@ -721,18 +701,15 @@ class InstanceExistsPayload(InstancePayload):
     # Version 1.1: Added action_initiator_user and action_initiator_project to
     #              InstancePayload
     # Version 1.2: Added locked_reason field to InstancePayload
-    VERSION = '1.2'
+    # Version 2.0: Remove bandwidth field
+    VERSION = '2.0'
     fields = {
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
-        # TODO(stephenfin): Remove this field in version 2.0
-        'bandwidth': fields.ListOfObjectsField('BandwidthPayload'),
     }
 
-    def __init__(self, context, instance, audit_period, bandwidth):
-        super(InstanceExistsPayload, self).__init__(context=context,
-                                                    instance=instance)
+    def __init__(self, context, instance, audit_period):
+        super().__init__(context=context, instance=instance)
         self.audit_period = audit_period
-        self.bandwidth = bandwidth
 
 
 @base.notification_sample('instance-exists.json')
