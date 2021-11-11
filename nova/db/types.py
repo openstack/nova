@@ -38,6 +38,7 @@ class IPAddress(types.TypeDecorator):
     """An SQLAlchemy type representing an IP-address."""
 
     impl = types.String
+    cache_ok = True
 
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
@@ -61,6 +62,7 @@ class CIDR(types.TypeDecorator):
     """An SQLAlchemy type representing a CIDR definition."""
 
     impl = types.String
+    cache_ok = True
 
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
