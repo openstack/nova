@@ -19,7 +19,12 @@ Pluggable Weighing support
 
 import abc
 
+from oslo_log import log as logging
+
 from nova import loadables
+
+
+LOG = logging.getLogger(__name__)
 
 
 def normalize(weight_list, minval=None, maxval=None):
@@ -127,13 +132,40 @@ class BaseWeightHandler(loadables.BaseLoader):
         for weigher in weighers:
             weights = weigher.weigh_objects(weighed_objs, weighing_properties)
 
+            LOG.debug(
+                "%s: raw weights %s",
+                weigher.__class__.__name__,
+                {(obj.obj.host, obj.obj.nodename): weight
+                 for obj, weight in zip(weighed_objs, weights)}
+            )
+
             # Normalize the weights
-            weights = normalize(weights,
-                                minval=weigher.minval,
-                                maxval=weigher.maxval)
+            weights = list(
+                normalize(
+                    weights, minval=weigher.minval, maxval=weigher.maxval))
+
+            LOG.debug(
+                "%s: normalized weights %s",
+                weigher.__class__.__name__,
+                {(obj.obj.host, obj.obj.nodename): weight
+                 for obj, weight in zip(weighed_objs, weights)}
+            )
+
+            log_data = {}
 
             for i, weight in enumerate(weights):
                 obj = weighed_objs[i]
-                obj.weight += weigher.weight_multiplier(obj.obj) * weight
+                multiplier = weigher.weight_multiplier(obj.obj)
+                weigher_score = multiplier * weight
+                obj.weight += weigher_score
+
+                log_data[(obj.obj.host, obj.obj.nodename)] = (
+                    f"{multiplier} * {weight}")
+
+            LOG.debug(
+                "%s: score (multiplier * weight) %s",
+                weigher.__class__.__name__,
+                {name: log for name, log in log_data.items()}
+            )
 
         return sorted(weighed_objs, key=lambda x: x.weight, reverse=True)
