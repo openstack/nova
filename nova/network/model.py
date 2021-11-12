@@ -638,3 +638,30 @@ class NetworkInfoAsyncWrapper(NetworkInfo):
                     raise
             finally:
                 self._gt = None
+
+
+# This code makes sure we don't run into deadlocks when using Sentry's raven
+# module to log errors/exceptions. We would otherwise try to serialize the
+# NetworkInfoAsyncWrapper as a list, which would access __iter__(), which would
+# wait for the async process to finish, which can't finish, because it needs to
+# use logging and we hold the lock for logging in raven.
+try:
+    from raven.utils.serializer.base import Serializer
+    from raven.utils.serializer.manager import manager as serialization_manager
+
+    class NetworkInfoAsyncWrapperSerializer(Serializer):
+        types = (NetworkInfoAsyncWrapper, )
+
+        def serialize(self, value, **kwargs):
+            return 'NetworkInfoAsyncWrapper with {}'.format(value._gt)
+
+    # NOTE(jkulik): We cannot just use
+    # serialization_manager.register(NetworkInfoAsyncWrapperSerializer)
+    # because that would append to the list of serializers which already has
+    # the more generic IteratorSerializer in it, which would react on
+    # NetworkInfo inheriting from list. Therefore, we go through the very, very
+    # private attribute.
+    serialization_manager._SerializationManager__registry.insert(
+        0, NetworkInfoAsyncWrapperSerializer)
+except ImportError:
+    pass
