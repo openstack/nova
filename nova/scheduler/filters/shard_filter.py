@@ -133,9 +133,13 @@ class ShardFilter(filters.BaseHostFilter):
 
         # forbid changing the shard of an instance
         instance_host = spec_obj.get_scheduler_hint('source_host')
-        host_shard_hosts = set()
-        host_shard_hosts.update(*(aggr.hosts for aggr in host_shard_aggrs))
-        if instance_host and instance_host not in host_shard_hosts:
+        resize_or_rebuild = (spec_obj.get_scheduler_hint('_nova_check_type')
+                             in ('resize', 'rebuild'))
+        host_shard_hosts = set(host
+                               for aggr in host_shard_aggrs
+                               for host in aggr.hosts)
+        if (resize_or_rebuild and instance_host and
+                instance_host not in host_shard_hosts):
             LOG.debug('%(host_state)s is in another shard than the '
                       'instance\'s %(instance_host)s',
                       {'host_state': host_state,

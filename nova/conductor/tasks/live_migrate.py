@@ -471,7 +471,8 @@ class LiveMigrationTask(base.TaskBase):
             This is generally at least seeded with the source host.
         :returns: nova.objects.RequestSpec object
         """
-        scheduler_hints = {'source_host': [self.source]}
+        scheduler_hints = {'source_host': [self.source],
+                           'source_node': [self.instance.node]}
         request_spec = self.request_spec
         # NOTE(sbauza): Force_hosts/nodes needs to be reset
         # if we want to make sure that the next destination

@@ -158,7 +158,8 @@ class TestShardFilter(test.NoDBTestCase):
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx, project_id='foo',
             flavor=objects.Flavor(extra_specs={}),
-            scheduler_hints=dict(source_host=['host2']))
+            scheduler_hints=dict(_nova_check_type=['resize'],
+                                 source_host=['host2']))
 
         self.filt_cls._PROJECT_SHARD_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
                                                      'vc-b-0']
@@ -172,7 +173,8 @@ class TestShardFilter(test.NoDBTestCase):
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx, project_id='foo',
             flavor=objects.Flavor(extra_specs={}),
-            scheduler_hints=dict(source_host=['host2']))
+            scheduler_hints=dict(_nova_check_type=['resize'],
+                                 source_host=['host2']))
 
         self.filt_cls._PROJECT_SHARD_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
                                                      'vc-b-0']
