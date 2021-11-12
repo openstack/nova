@@ -53,8 +53,8 @@ def process(element, compiler, **kw):
 
 
 def _create_shadow_tables(connection):
-    meta = sa.MetaData(connection)
-    meta.reflect(connection)
+    meta = sa.MetaData()
+    meta.reflect(bind=connection)
     table_names = list(meta.tables.keys())
 
     for table_name in table_names:

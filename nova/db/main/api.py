@@ -4233,8 +4233,9 @@ def _get_fk_stmts(metadata, conn, table, column, records):
     return inserts, deletes
 
 
-def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before,
-                                    task_log):
+def _archive_deleted_rows_for_table(
+    metadata, engine, tablename, max_rows, before, task_log,
+):
     """Move up to max_rows rows from one tables to the corresponding
     shadow table.
 
@@ -4249,7 +4250,7 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before,
         - number of extra rows archived (due to FK constraints)
           dict of {tablename: rows_archived}
     """
-    conn = metadata.bind.connect()
+    conn = engine.connect()
     # NOTE(tdurakov): table metadata should be received
     # from models, not db tables. Default value specified by SoftDeleteMixin
     # is known only by models, not DB layer.
@@ -4382,8 +4383,9 @@ def archive_deleted_rows(context=None, max_rows=None, before=None,
     table_to_rows_archived = collections.defaultdict(int)
     deleted_instance_uuids = []
     total_rows_archived = 0
-    meta = sa.MetaData(get_engine(use_slave=True, context=context))
-    meta.reflect()
+    meta = sa.MetaData()
+    engine = get_engine(use_slave=True, context=context)
+    meta.reflect(bind=engine)
     # Get the sorted list of tables in order of foreign key dependency.
     # Process the parent tables and find their dependent records in order to
     # archive the related records in a single database transactions. The goal
@@ -4409,7 +4411,7 @@ def archive_deleted_rows(context=None, max_rows=None, before=None,
 
         rows_archived, _deleted_instance_uuids, extras = (
             _archive_deleted_rows_for_table(
-                meta, tablename,
+                meta, engine, tablename,
                 max_rows=max_rows - total_rows_archived,
                 before=before,
                 task_log=task_log))
@@ -4437,8 +4439,7 @@ def purge_shadow_tables(context, before_date, status_fn=None):
     engine = get_engine(context=context)
     conn = engine.connect()
     metadata = sa.MetaData()
-    metadata.bind = engine
-    metadata.reflect()
+    metadata.reflect(bind=engine)
     total_deleted = 0
 
     if status_fn is None:
