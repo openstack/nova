@@ -71,6 +71,12 @@ Possible values:
     cfg.StrOpt(
         'secure_proxy_ssl_header',
         deprecated_group='DEFAULT',
+        deprecated_for_removal=True,
+        deprecated_since='31.0.0',
+        deprecated_reason="""
+The functionality of this parameter is duplicate of the http_proxy_to_wsgi
+middleware of oslo.middleware and will be completely replaced.
+""",
         help="""
 This option specifies the HTTP header used to determine the protocol scheme
 for the original request, even if it was removed by a SSL terminating proxy.
