@@ -16221,7 +16221,48 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             accel_info=accel_info)
         mock_create_guest_with_network.assert_called_once_with(self.context,
             dummyxml, instance, network_info, block_device_info,
-            vifs_already_plugged=True)
+            vifs_already_plugged=True, external_events=[])
+
+    @mock.patch('oslo_utils.fileutils.ensure_tree', new=mock.Mock())
+    @mock.patch('nova.virt.libvirt.LibvirtDriver.get_info')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_guest_with_network')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_xml')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver.destroy', new=mock.Mock())
+    @mock.patch(
+        'nova.virt.libvirt.LibvirtDriver._get_all_assigned_mediated_devices',
+        new=mock.Mock(return_value={}))
+    def test_hard_reboot_wait_for_plug(
+        self, mock_get_guest_xml, mock_create_guest_with_network, mock_get_info
+    ):
+        self.flags(
+            group="workarounds",
+            wait_for_vif_plugged_event_during_hard_reboot=["normal"])
+        self.context.auth_token = None
+        instance = objects.Instance(**self.test_instance)
+        network_info = _fake_network_info(self, num_networks=4)
+        network_info[0]["vnic_type"] = "normal"
+        network_info[1]["vnic_type"] = "direct"
+        network_info[2]["vnic_type"] = "normal"
+        network_info[3]["vnic_type"] = "direct-physical"
+        block_device_info = None
+        return_values = [hardware.InstanceInfo(state=power_state.SHUTDOWN),
+                         hardware.InstanceInfo(state=power_state.RUNNING)]
+        mock_get_info.side_effect = return_values
+        mock_get_guest_xml.return_value = mock.sentinel.xml
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._hard_reboot(
+                self.context, instance, network_info, block_device_info)
+
+        mock_create_guest_with_network.assert_called_once_with(
+            self.context, mock.sentinel.xml, instance, network_info,
+            block_device_info,
+            vifs_already_plugged=False,
+            external_events=[
+                ('network-vif-plugged', uuids.vif1),
+                ('network-vif-plugged', uuids.vif3),
+            ]
+        )
 
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
