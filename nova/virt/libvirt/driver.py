@@ -5940,6 +5940,15 @@ class LibvirtDriver(driver.ComputeDriver):
         guestarch = libvirt_utils.get_arch(image_meta)
         if CONF.libvirt.virt_type == 'parallels':
             video.type = 'vga'
+        # NOTE(kchamart): 'virtio' is a sensible default whether or not
+        # the guest has the native kernel driver (called "virtio-gpu" in
+        # Linux) -- i.e. if the guest has the VirtIO GPU driver, it'll
+        # be used; otherwise, the 'virtio' model will gracefully
+        # fallback to VGA compatibiliy mode.
+        elif (guestarch in (fields.Architecture.I686,
+                            fields.Architecture.X86_64) and not
+                            CONF.spice.enabled):
+            video.type = 'virtio'
         elif guestarch in (fields.Architecture.PPC,
                            fields.Architecture.PPC64,
                            fields.Architecture.PPC64LE):

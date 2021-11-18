@@ -2056,7 +2056,7 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
         super(LibvirtConfigGuestVideo, self).__init__(root_name="video",
                                                       **kwargs)
 
-        self.type = 'cirrus'
+        self.type = 'virtio'
         self.vram = None
         self.heads = None
         self.driver_iommu = False
