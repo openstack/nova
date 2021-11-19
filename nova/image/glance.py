@@ -178,7 +178,8 @@ class GlanceClientWrapper(object):
         kwargs = kwargs or {}
         retry_excs = (glanceclient.exc.ServiceUnavailable,
                 glanceclient.exc.InvalidEndpoint,
-                glanceclient.exc.CommunicationError)
+                glanceclient.exc.CommunicationError,
+                IOError)
         num_attempts = 1 + CONF.glance.num_retries
         controller_name = controller or 'images'
 

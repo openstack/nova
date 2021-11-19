@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    `Bug 1950657 <https://bugs.launchpad.net/nova/+bug/1950657>`_, fixing
+    behavior when nova-compute wouldn't retry image download when gets
+    "Corrupt image download" error from glanceclient and has num_retries
+    config option set.
