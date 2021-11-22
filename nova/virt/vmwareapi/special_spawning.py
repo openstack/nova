@@ -136,7 +136,8 @@ class _SpecialVmSpawningServer(object):
                     vm_props['config.instanceUuid'],
                     vm_props['config.hardware.memoryMB'],
                     vm_props['runtime.powerState'],
-                    vm_props.get('config.managedBy')))
+                    vm_props.get('config.managedBy'),
+                    vutil.get_moref_value(obj.obj)))
         return vm_data
 
     def remove_host_from_hostgroup(self, context):
@@ -218,8 +219,6 @@ class _SpecialVmSpawningServer(object):
                         append(props)
 
             # filter for hosts without big VMs
-            # TODO(jkulik) Filter for hosts having no VM with DRS
-            # partiallyAutomated
             vms_per_host = {h: vms for h, vms in vms_per_host.items()
                             if all(mem < CONF.largevm_mb
                                    for mem, state, used_mem in vms)}
@@ -319,14 +318,26 @@ class _SpecialVmSpawningServer(object):
         # DRS-created and -owned VMs
         vcls_identifier = (constants.VCLS_EXTENSION_KEY,
                            constants.VCLS_EXTENSION_TYPE_AGENT)
-        non_vcls_vms = [
-            (u, state) for u, h, state, m in self._get_vms_on_host(host_ref)
+        vms_on_host = [
+            (u, state, ref)
+            for u, h, state, m, ref in self._get_vms_on_host(host_ref)
             if not m or (m.extensionKey, m.type) != vcls_identifier]
 
+        # ignore partiallyAutomated VMs. They should not be big VMs as we chose
+        # a host appropriately, so they should be large VMs, which we tolerate
+        # next to a big VM as they get moved by the nanny
+        drs_overrides = cluster_util.fetch_cluster_drs_vm_overrides(
+            self._session, cluster_config=cluster_config)
+        wanted_drs_override_behaviors = (
+            constants.DRS_BEHAVIOR_PARTIALLY_AUTOMATED,)
+        vms_on_host = [
+            (u, state) for u, state, ref in vms_on_host
+            if drs_overrides.get(ref) not in wanted_drs_override_behaviors]
+
         # check if there are running VMs on that host
-        running_vms = [u for u, state in non_vcls_vms
+        vms_on_host = [u for u, state in vms_on_host
                        if state != 'poweredOff']
-        if running_vms:
+        if vms_on_host:
             LOG.debug('Freeing up %(host)s for spawning in progress.',
                       {'host': vutil.get_moref_value(host_ref)})
             return FREE_HOST_STATE_STARTED
