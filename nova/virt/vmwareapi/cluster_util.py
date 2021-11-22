@@ -389,3 +389,26 @@ def update_cluster_drs_vm_override(session, cluster, vm_ref, operation='add',
     config_spec.drsVmConfigSpec = [drs_vm_spec]
 
     reconfigure_cluster(session, cluster, config_spec)
+
+
+def fetch_cluster_drs_vm_overrides(session, cluster_ref=None,
+                                   cluster_config=None):
+    """Fetch all enabled DRS overrides of the cluster
+
+    The cluster can be identified by a cluster_ref or by an explicit
+    cluster_config. If identified by cluster_ref, we fetch the cluster_config.
+
+    Returns a dict (key, behavior) where key is the VM moref value and behavior
+    a `DrsBehaviour` as string.
+    """
+    if (cluster_config, cluster_ref) == (None, None):
+        msg = 'Either cluster_config or cluster_ref must be given.'
+        raise exception.ValidationError(msg)
+
+    if cluster_config is None:
+        cluster_config = session._call_method(
+            vim_util, "get_object_property", cluster_ref, "configurationEx")
+
+    overrides = getattr(cluster_config, 'drsVmConfig', [])
+    return {vim_util.get_moref_value(o.key): o.behavior for o in overrides
+            if o.enabled}
