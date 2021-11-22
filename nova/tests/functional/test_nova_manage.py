@@ -261,11 +261,16 @@ class TestNovaManageVolumeAttachmentRefresh(
 ):
     """Functional tests for 'nova-manage volume_attachment refresh'."""
 
+    # Required for any multiattach volume tests
+    microversion = '2.60'
+
     def setUp(self):
         super().setUp()
         self.tmpdir = self.useFixture(fixtures.TempDir()).path
         self.ctxt = context.get_admin_context()
         self.cli = manage.VolumeAttachmentCommands()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.flags(my_ip='192.168.1.100')
         self.fake_connector = {
             'ip': '192.168.1.128',
@@ -286,7 +291,7 @@ class TestNovaManageVolumeAttachmentRefresh(
         self.assertEqual('create', actions[5]['action'])
 
     def test_refresh(self):
-        server = self._create_server()
+        server = self._create_server(networks='none')
         volume_id = self.cinder.IMAGE_BACKED_VOL
         self.api.post_server_volume(
             server['id'], {'volumeAttachment': {'volumeId': volume_id}})
@@ -344,7 +349,7 @@ class TestNovaManageVolumeAttachmentRefresh(
         self._assert_instance_actions(server)
 
     def test_refresh_rpcapi_remove_volume_connection_rollback(self):
-        server = self._create_server()
+        server = self._create_server(networks='none')
         volume_id = self.cinder.IMAGE_BACKED_VOL
         self.api.post_server_volume(
             server['id'], {'volumeAttachment': {'volumeId': volume_id}})
@@ -390,7 +395,7 @@ class TestNovaManageVolumeAttachmentRefresh(
         self._assert_instance_actions(server)
 
     def test_refresh_cinder_attachment_update_rollback(self):
-        server = self._create_server()
+        server = self._create_server(networks='none')
         volume_id = self.cinder.IMAGE_BACKED_VOL
         self.api.post_server_volume(
             server['id'], {'volumeAttachment': {'volumeId': volume_id}})
@@ -447,7 +452,7 @@ class TestNovaManageVolumeAttachmentRefresh(
     def test_refresh_pre_cinderv3_without_attachment_id(self):
         """Test the refresh command when the bdm has no attachment_id.
         """
-        server = self._create_server()
+        server = self._create_server(networks='none')
         volume_id = self.cinder.IMAGE_BACKED_VOL
         self.api.post_server_volume(
             server['id'], {'volumeAttachment': {'volumeId': volume_id}})
@@ -488,6 +493,29 @@ class TestNovaManageVolumeAttachmentRefresh(
 
         # Assert that we have actions we expect against the instance
         self._assert_instance_actions(server)
+
+    def test_show_multiattach_volume(self):
+        """Test that the show command doesn't fail for multiattach volumes
+        """
+        volume_id = self.cinder.MULTIATTACH_VOL
+
+        # Launch two instances and attach the same multiattach volume to both
+        server_1 = self._create_server(networks='none')
+        self.api.post_server_volume(
+            server_1['id'], {'volumeAttachment': {'volumeId': volume_id}})
+        self._wait_for_volume_attach(server_1['id'], volume_id)
+
+        server_2 = self._create_server(networks='none')
+        self.api.post_server_volume(
+            server_2['id'], {'volumeAttachment': {'volumeId': volume_id}})
+        self._wait_for_volume_attach(server_2['id'], volume_id)
+
+        result = self.cli.show(
+            volume_id=volume_id, instance_uuid=server_1['id'])
+
+        # Assert that the command completes successfully, this was previously
+        # broken and documented under bug #1945452
+        self.assertEqual(0, result)
 
 
 class TestNovaManagePlacementHealAllocations(

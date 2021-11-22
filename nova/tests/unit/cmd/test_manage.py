@@ -3112,7 +3112,7 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         }
 
     @mock.patch.object(manage, 'format_dict')
-    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume')
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     def test_show(self, mock_get_im, mock_get_bdm, mock_format_dict):
         """Test the 'show' command."""
@@ -3147,7 +3147,7 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         mock_format_dict.assert_called_once_with(bdm)
 
     @mock.patch('oslo_serialization.jsonutils.dumps')
-    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume')
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     def test_show_json(self, mock_get_im, mock_get_bdm, mock_dump):
         """Test the 'show' command with --json."""
@@ -3182,7 +3182,7 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         mock_dump.assert_called_once_with(bdm)
 
     @mock.patch.object(manage, 'format_dict')
-    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume')
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     def test_show_connection_info(
         self, mock_get_im, mock_get_bdm, mock_format_dict
@@ -3226,7 +3226,7 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
         mock_format_dict.assert_called_once_with(
             fake_connection_info)
 
-    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume')
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     def test_show_connection_info_json(self, mock_get_im, mock_get_bdm):
         """Test the 'show' command with --json and --connection_info."""
@@ -3301,7 +3301,7 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
             mock.sentinel.context, uuidsentinel.instance)
         self.assertEqual(2, ret)
 
-    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume')
+    @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
     def test_show_bdm_not_found(self, mock_get_im, mock_get_bdm):
         """Test the 'show' command with a missing bdm."""

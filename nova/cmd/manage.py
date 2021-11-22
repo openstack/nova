@@ -2929,7 +2929,7 @@ class VolumeAttachmentCommands(object):
             im = objects.InstanceMapping.get_by_instance_uuid(
                 ctxt, instance_uuid)
             with context.target_cell(ctxt, im.cell_mapping) as cctxt:
-                bdm = objects.BlockDeviceMapping.get_by_volume(
+                bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
                     cctxt, volume_id, instance_uuid)
                 if connection_info and json:
                     print(bdm.connection_info)
