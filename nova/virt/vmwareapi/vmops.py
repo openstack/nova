@@ -1472,9 +1472,12 @@ class VMwareVMOps(object):
         return task_info.result
 
     def _create_vm_clone(self, instance, vm_ref, snapshot_ref, dc_info,
-                         disk_move_type=None, image_id=None, disks=None):
+                         disk_move_type=None, image_id=None, disks=None,
+                         volume_mapping=None):
         """Clone VM to be deployed to same ds as source VM
         """
+        volume_mapping = volume_mapping or {}
+
         image_id = image_id or uuidutils.generate_uuid()
 
         if disks:
@@ -1506,17 +1509,36 @@ class VMwareVMOps(object):
         if disks:
             disk_devices = [vmdk_info.device.key for vmdk_info in disks]
             device_change = []
+            disk_locators = []
             for device in vm_util.get_hardware_devices(self._session, vm_ref):
+                device_is_disk = device.__class__.__name__ == "VirtualDisk"
                 if getattr(device, 'macAddress', None) or \
-                    device.__class__.__name__ == "VirtualDisk" and \
-                    device.key not in disk_devices:
+                        device_is_disk and device.key not in disk_devices:
                     removal = client_factory.create(
                         'ns0:VirtualDeviceConfigSpec')
                     removal.device = device
                     removal.operation = 'remove'
+                    if device_is_disk:
+                        # specify a profile on the disk as one of the disks
+                        # could be associated with a storage IO control enabled
+                        # profile and clone then fails without profile even if
+                        # we remove the disk
+                        data = volume_mapping.get(device.key)
+                        if data and data.get('profile_id'):
+                            profile_spec = client_factory.create(
+                                "ns0:VirtualMachineDefinedProfileSpec")
+                            profile_spec.profileId = data.get('profile_id')
+
+                            locator = client_factory.create(
+                                "ns0:VirtualMachineRelocateSpecDiskLocator")
+                            locator.diskId = device.key
+                            locator.datastore = device.backing.datastore
+                            locator.profile = [profile_spec]
+                            disk_locators.append(locator)
                     device_change.append(removal)
 
             config_spec.deviceChange = device_change
+            rel_spec.disk = disk_locators
 
         clone_spec = vm_util.clone_vm_spec(client_factory, rel_spec,
                                            power_on=False,
@@ -1540,7 +1562,8 @@ class VMwareVMOps(object):
                                                "info")
         return task_info.result
 
-    def snapshot(self, context, instance, image_id, update_task_state):
+    def snapshot(self, context, instance, image_id, update_task_state,
+                 volume_mapping):
         """Create snapshot from a running VM instance.
 
         Steps followed are:
@@ -1599,10 +1622,14 @@ class VMwareVMOps(object):
             else:
                 disk_move_type = None
 
-            snapshot_vm_ref = self._create_vm_clone(
-                instance, vm_ref, snapshot_ref, dc_info,
-                disk_move_type=disk_move_type, image_id=image_id,
-                disks=[vmdk])
+            snapshot_vm_ref = self._create_vm_clone(instance,
+                                                vm_ref,
+                                                snapshot_ref,
+                                                dc_info,
+                                                disk_move_type=disk_move_type,
+                                                image_id=image_id,
+                                                disks=[vmdk],
+                                                volume_mapping=volume_mapping)
 
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
                               expected_state=task_states.IMAGE_PENDING_UPLOAD)

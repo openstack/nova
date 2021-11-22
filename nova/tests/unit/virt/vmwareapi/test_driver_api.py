@@ -1270,7 +1270,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                                                      self.instance["uuid"])
         self.assertIsNotNone(vm_ref, 'VM Reference cannot be none')
 
-    def _test_snapshot(self):
+    @mock.patch.object(driver.VMwareVCDriver, '_get_volume_mappings',
+                       return_value={})
+    def _test_snapshot(self, mock_get_volume_mappings):
         expected_calls = [
             {'args': (),
              'kwargs':
@@ -1296,13 +1298,17 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self._create_vm()
         self._test_snapshot()
 
-    def test_snapshot_no_root_disk(self):
+    @mock.patch.object(driver.VMwareVCDriver, '_get_volume_mappings',
+                       return_value={})
+    def test_snapshot_no_root_disk(self, mock_get_volume_mappings):
         self._iso_disk_type_created(flavor='m1.micro')
         self.assertRaises(error_util.NoRootDiskDefined, self.conn.snapshot,
                           self.context, self.instance, "Test-Snapshot",
                           lambda *args, **kwargs: None)
 
-    def test_snapshot_non_existent(self):
+    @mock.patch.object(driver.VMwareVCDriver, '_get_volume_mappings',
+                       return_value={})
+    def test_snapshot_non_existent(self, mock_get_volume_mappings):
         self._create_instance()
         self.assertRaises(exception.InstanceNotFound, self.conn.snapshot,
                           self.context, self.instance, "Test-Snapshot",

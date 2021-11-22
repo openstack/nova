@@ -588,7 +588,9 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance."""
-        self._vmops.snapshot(context, instance, image_id, update_task_state)
+        volumes = self._get_volume_mappings(context, instance)
+        self._vmops.snapshot(context, instance, image_id, update_task_state,
+                             volume_mapping=volumes)
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None,
