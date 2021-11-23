@@ -856,12 +856,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'ignore',
             module='nova',
-            message=r'The legacy calling style of select\(\) .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
             message=r'The ``bind`` argument for schema methods .*',
             category=sqla_exc.SADeprecationWarning)
 

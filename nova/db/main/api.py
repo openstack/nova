@@ -563,7 +563,7 @@ def _compute_node_select(context, filters=None, limit=None, marker=None):
         filters = {}
 
     cn_tbl = sa.alias(models.ComputeNode.__table__, name='cn')
-    select = sa.select([cn_tbl])
+    select = sa.select(cn_tbl)
 
     if context.read_deleted == "no":
         select = select.where(cn_tbl.c.deleted == 0)
@@ -965,7 +965,7 @@ def compute_node_statistics(context):
             inner_sel.c.disk_available_least
         ).label('disk_available_least'),
     ]
-    select = sql.select(agg_cols).select_from(j)
+    select = sql.select(*agg_cols).select_from(j)
     conn = engine.connect()
 
     results = conn.execute(select).fetchone()
@@ -2113,7 +2113,7 @@ def instance_get_all_by_host(context, host, columns_to_join=None):
 def _instance_get_all_uuids_by_hosts(context, hosts):
     itbl = models.Instance.__table__
     default_deleted_value = itbl.c.deleted.default.arg
-    sel = sql.select([itbl.c.host, itbl.c.uuid])
+    sel = sql.select(itbl.c.host, itbl.c.uuid)
     sel = sel.where(sql.and_(
             itbl.c.deleted == default_deleted_value,
             itbl.c.host.in_(sa.bindparam('hosts', expanding=True))))
@@ -4191,8 +4191,9 @@ def _get_fk_stmts(metadata, conn, table, column, records):
             #              AND instance.id IN (<ids>)
             #          We need the instance uuids for the <ids> in order to
             #          look up the matching instance_extra records.
-            select = sql.select([fk.column]).where(
-                sql.and_(fk.parent == fk.column, column.in_(records)))
+            select = sql.select(fk.column).where(
+                sql.and_(fk.parent == fk.column, column.in_(records))
+            )
             rows = conn.execute(select).fetchall()
             p_records = [r[0] for r in rows]
             # Then, select rows in the child table that correspond to the
@@ -4205,8 +4206,9 @@ def _get_fk_stmts(metadata, conn, table, column, records):
             #              AND instances.uuid IN (<uuids>)
             #          We will get the instance_extra ids we need to archive
             #          them.
-            fk_select = sql.select([fk_column]).where(
-                sql.and_(fk.parent == fk.column, fk.column.in_(p_records)))
+            fk_select = sql.select(fk_column).where(
+                sql.and_(fk.parent == fk.column, fk.column.in_(p_records))
+            )
             fk_rows = conn.execute(fk_select).fetchall()
             fk_records = [r[0] for r in fk_rows]
             if fk_records:
@@ -4214,9 +4216,10 @@ def _get_fk_stmts(metadata, conn, table, column, records):
                 # table insert statements for them and prepend them to the
                 # deque.
                 fk_columns = [c.name for c in fk_table.c]
-                fk_insert = fk_shadow_table.insert(inline=True).\
-                    from_select(fk_columns, sql.select([fk_table],
-                        fk_column.in_(fk_records)))
+                fk_insert = fk_shadow_table.insert(inline=True).from_select(
+                    fk_columns,
+                    sql.select(fk_table).where(fk_column.in_(fk_records))
+                )
                 inserts.appendleft(fk_insert)
                 # Create main table delete statements and prepend them to the
                 # deque.
@@ -4274,13 +4277,14 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before,
     deleted_column = table.c.deleted
     columns = [c.name for c in table.c]
 
-    select = sql.select([column],
-                        deleted_column != deleted_column.default.arg)
+    select = sql.select(column).where(
+        deleted_column != deleted_column.default.arg
+    )
 
     if tablename == "task_log" and task_log:
         # task_log table records are never deleted by anything, so we won't
         # base our select statement on the 'deleted' column status.
-        select = sql.select([column])
+        select = sql.select(column)
 
     if before:
         if tablename != "task_log":
@@ -4307,8 +4311,9 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before,
     # {tablename: extra_rows_archived}
     extras = collections.defaultdict(int)
     if records:
-        insert = shadow_table.insert(inline=True).\
-                from_select(columns, sql.select([table], column.in_(records)))
+        insert = shadow_table.insert(inline=True).from_select(
+            columns, sql.select(table).where(column.in_(records))
+        )
         delete = table.delete().where(column.in_(records))
         # Walk FK relationships and add insert/delete statements for rows that
         # refer to this table via FK constraints. fk_inserts and fk_deletes
@@ -4323,7 +4328,9 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before,
         # table are stored prior to their deletion. Basically the uuids of the
         # archived instances are queried and returned.
         if tablename == "instances":
-            query_select = sql.select([table.c.uuid], table.c.id.in_(records))
+            query_select = sql.select(table.c.uuid).where(
+                table.c.id.in_(records)
+            )
             rows = conn.execute(query_select).fetchall()
             deleted_instance_uuids = [r[0] for r in rows]
 
