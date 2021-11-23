@@ -898,12 +898,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'ignore',
             module='nova',
-            message=r'The insert.inline parameter will be removed .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
             message=r'Using strings to indicate column or relationship .*',
             category=sqla_exc.SADeprecationWarning)
 

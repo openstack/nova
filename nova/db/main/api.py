@@ -4216,10 +4216,10 @@ def _get_fk_stmts(metadata, conn, table, column, records):
                 # table insert statements for them and prepend them to the
                 # deque.
                 fk_columns = [c.name for c in fk_table.c]
-                fk_insert = fk_shadow_table.insert(inline=True).from_select(
+                fk_insert = fk_shadow_table.insert().from_select(
                     fk_columns,
                     sql.select(fk_table).where(fk_column.in_(fk_records))
-                )
+                ).inline()
                 inserts.appendleft(fk_insert)
                 # Create main table delete statements and prepend them to the
                 # deque.
@@ -4311,9 +4311,9 @@ def _archive_deleted_rows_for_table(metadata, tablename, max_rows, before,
     # {tablename: extra_rows_archived}
     extras = collections.defaultdict(int)
     if records:
-        insert = shadow_table.insert(inline=True).from_select(
+        insert = shadow_table.insert().from_select(
             columns, sql.select(table).where(column.in_(records))
-        )
+        ).inline()
         delete = table.delete().where(column.in_(records))
         # Walk FK relationships and add insert/delete statements for rows that
         # refer to this table via FK constraints. fk_inserts and fk_deletes
