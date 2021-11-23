@@ -1574,19 +1574,25 @@ def upgrade(migrate_engine):
 
     if migrate_engine.name == 'mysql':
         # In Folsom we explicitly converted migrate_version to UTF8.
-        migrate_engine.execute(
-            'ALTER TABLE migrate_version CONVERT TO CHARACTER SET utf8')
-        # Set default DB charset to UTF8.
-        migrate_engine.execute(
-            'ALTER DATABASE `%s` DEFAULT CHARACTER SET utf8' %
-            migrate_engine.url.database)
+        with migrate_engine.connect() as conn:
+            conn.exec_driver_sql(
+                'ALTER TABLE migrate_version CONVERT TO CHARACTER SET utf8'
+            )
+            # Set default DB charset to UTF8.
+            conn.exec_driver_sql(
+                'ALTER DATABASE `%s` DEFAULT CHARACTER SET utf8' % (
+                    migrate_engine.url.database,
+                )
+            )
 
-        # NOTE(cdent): The resource_providers table is defined as latin1 to be
-        # more efficient. Now we need the name column to be UTF8. We modify it
-        # here otherwise the declarative handling in sqlalchemy gets confused.
-        migrate_engine.execute(
-            'ALTER TABLE resource_providers MODIFY name '
-            'VARCHAR(200) CHARACTER SET utf8')
+            # NOTE(cdent): The resource_providers table is defined as latin1 to
+            # be more efficient. Now we need the name column to be UTF8. We
+            # modify it here otherwise the declarative handling in sqlalchemy
+            # gets confused.
+            conn.exec_driver_sql(
+                'ALTER TABLE resource_providers MODIFY name '
+                'VARCHAR(200) CHARACTER SET utf8'
+            )
 
     _create_shadow_tables(migrate_engine)
 
@@ -1596,9 +1602,10 @@ def upgrade(migrate_engine):
     # also
 
     if migrate_engine.name == 'mysql':
-        # Use binary collation for extra specs table
-        migrate_engine.execute(
-            'ALTER TABLE instance_type_extra_specs '
-            'CONVERT TO CHARACTER SET utf8 '
-            'COLLATE utf8_bin'
-        )
+        with migrate_engine.connect() as conn:
+            # Use binary collation for extra specs table
+            conn.exec_driver_sql(
+                'ALTER TABLE instance_type_extra_specs '
+                'CONVERT TO CHARACTER SET utf8 '
+                'COLLATE utf8_bin'
+            )

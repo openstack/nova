@@ -5688,7 +5688,9 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         metadata.reflect()
         for table in metadata.tables:
             if table.startswith("shadow_") and table not in exceptions:
-                rows = self.conn.execute("select * from %s" % table).fetchall()
+                rows = self.conn.exec_driver_sql(
+                    "SELECT * FROM %s" % table
+                ).fetchall()
                 self.assertEqual(rows, [], "Table %s not empty" % table)
 
     def test_shadow_tables(self):
