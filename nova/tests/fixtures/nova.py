@@ -928,18 +928,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'ignore',
             module='nova',
-            message=r'The Executable.execute\(\) method is considered .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
-            message=r'The Executable.scalar\(\) method is considered .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
             message=r'Invoking and_\(\) without arguments is deprecated, .*',
             category=sqla_exc.SADeprecationWarning)
 
