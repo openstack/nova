@@ -282,16 +282,15 @@ class _SpecialVmSpawningServer(object):
             config_spec.groupSpec = [group_spec]
 
             # create the appropriate rule for VMs to leave the host
-            if group is None:
-                rule_name = '{}_anti-affinity'.format(
-                    CONF.vmware.bigvm_deployment_free_host_hostgroup_name)
-                rule = cluster_util._get_rule(cluster_config, rule_name)
-                rule_spec = cluster_util._create_cluster_group_rules_spec(
-                    client_factory, rule_name,
-                    CONF.vmware.special_spawning_vm_group,
-                    CONF.vmware.bigvm_deployment_free_host_hostgroup_name,
-                    'anti-affinity', rule)
-                config_spec.rulesSpec = [rule_spec]
+            rule_name = '{}_anti-affinity'.format(
+                CONF.vmware.bigvm_deployment_free_host_hostgroup_name)
+            rule = cluster_util._get_rule(cluster_config, rule_name)
+            rule_spec = cluster_util._create_cluster_group_rules_spec(
+                client_factory, rule_name,
+                CONF.vmware.special_spawning_vm_group,
+                CONF.vmware.bigvm_deployment_free_host_hostgroup_name,
+                'anti-affinity', rule)
+            config_spec.rulesSpec = [rule_spec]
 
             cluster_util.reconfigure_cluster(self._session, self._cluster,
                                              config_spec)
