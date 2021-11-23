@@ -157,8 +157,22 @@ class _SpecialVmSpawningServer(object):
 
         group_spec = cluster_util.create_group_spec(client_factory, group,
                                                     'remove')
+        # if there are rules using this hostgroup, we also have to remove that
+        # one, because that rule will not update inside of DRS as it's invalid
+        # if we remove the group
+        rule_specs = []
+        rules = cluster_util.fetch_cluster_rules(self._session, self._cluster)
+        for rule in rules:
+            attrs = ('antiAffineHostGroupName', 'affineHostGroupName')
+            if all(getattr(rule, attr, None) != group.name for attr in attrs):
+                continue
+            rule_spec = \
+                cluster_util.create_rule_spec(client_factory, rule, 'remove')
+            rule_specs.append(rule_spec)
+
         config_spec = client_factory.create('ns0:ClusterConfigSpecEx')
         config_spec.groupSpec = [group_spec]
+        config_spec.rulesSpec = rule_specs
         cluster_util.reconfigure_cluster(self._session, self._cluster,
                                          config_spec)
 
