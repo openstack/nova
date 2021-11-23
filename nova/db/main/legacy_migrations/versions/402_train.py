@@ -63,7 +63,7 @@ def _create_shadow_tables(migrate_engine):
         ):
             continue
 
-        table = sa.Table(table_name, meta, autoload=True)
+        table = sa.Table(table_name, meta, autoload_with=migrate_engine)
 
         columns = []
         for column in table.columns:
@@ -169,13 +169,15 @@ def _create_shadow_tables(migrate_engine):
     # 252_add_instance_extra_table; we don't create indexes for shadow tables
     # in general and these should be removed
 
-    table = sa.Table('shadow_instance_extra', meta, autoload=True)
+    table = sa.Table(
+        'shadow_instance_extra', meta, autoload_with=migrate_engine,
+    )
     idx = sa.Index('shadow_instance_extra_idx', table.c.instance_uuid)
     idx.create(migrate_engine)
 
     # 373_migration_uuid; we should't create indexes for shadow tables
 
-    table = sa.Table('shadow_migrations', meta, autoload=True)
+    table = sa.Table('shadow_migrations', meta, autoload_with=migrate_engine)
     idx = sa.Index('shadow_migrations_uuid', table.c.uuid, unique=True)
     idx.create(migrate_engine)
 
