@@ -600,7 +600,7 @@ def _compute_node_fetchall(context, filters=None, limit=None, marker=None):
     results = conn.execute(select).fetchall()
 
     # Callers expect dict-like objects, not SQLAlchemy RowProxy objects...
-    results = [dict(r) for r in results]
+    results = [dict(r._mapping) for r in results]
     conn.close()
     return results
 

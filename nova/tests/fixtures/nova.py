@@ -868,18 +868,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'ignore',
             module='nova',
-            message=r'The Row.keys\(\) method is considered legacy .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
-            message=r'Using non-integer/slice indices on Row is deprecated .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
             message=r'The .close\(\) method on a so-called .*',
             category=sqla_exc.SADeprecationWarning)
 
