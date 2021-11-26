@@ -6012,86 +6012,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                     self.context, fake_instance, fake_bdm)
         block_stats.assert_called_once_with(fake_instance, 'vda')
 
-    def _test_finish_revert_resize_network_migrate_finish(
-            self, vifs, events, migration=None):
-        instance = fake_instance.fake_instance_obj(self.context)
-        instance.info_cache = objects.InstanceInfoCache(
-            network_info=network_model.NetworkInfo(vifs))
-        if migration is None:
-            migration = objects.Migration(
-                source_compute='fake-source',
-                dest_compute='fake-dest')
-
-        def fake_migrate_instance_finish(
-                context, instance, migration, mapping):
-            # NOTE(artom) This looks weird, but it's checking that the
-            # temporaty_mutation() context manager did its job.
-            self.assertEqual(migration.dest_compute, migration.source_compute)
-
-        with test.nested(
-            mock.patch.object(self.compute.virtapi,
-                              'wait_for_instance_event'),
-            mock.patch.object(self.compute.network_api,
-                              'migrate_instance_finish',
-                              side_effect=fake_migrate_instance_finish)
-        ) as (mock_wait, mock_migrate_instance_finish):
-            self.compute._finish_revert_resize_network_migrate_finish(
-                self.context, instance, migration, mock.sentinel.mapping)
-            mock_wait.assert_called_once_with(
-                instance, events, deadline=CONF.vif_plugging_timeout,
-                error_callback=self.compute._neutron_failed_migration_callback)
-            mock_migrate_instance_finish.assert_called_once_with(
-                self.context, instance, migration, mock.sentinel.mapping)
-
-    def test_finish_revert_resize_network_migrate_finish_wait(self):
-        """Test that we wait for bind-time events if we have a hybrid-plugged
-        VIF.
-        """
-        self._test_finish_revert_resize_network_migrate_finish(
-            [network_model.VIF(id=uuids.hybrid_vif,
-                               details={'ovs_hybrid_plug': True}),
-             network_model.VIF(id=uuids.normal_vif,
-                               details={'ovs_hybrid_plug': False})],
-            [('network-vif-plugged', uuids.hybrid_vif)])
-
-    def test_finish_revert_resize_network_migrate_finish_same_host(self):
-        """Test that we're not waiting for any events if its a same host
-        resize revert.
-        """
-        migration = objects.Migration(
-            source_compute='fake-source', dest_compute='fake-source')
-
-        self._test_finish_revert_resize_network_migrate_finish(
-            [network_model.VIF(id=uuids.hybrid_vif,
-                               details={'ovs_hybrid_plug': True}),
-             network_model.VIF(id=uuids.normal_vif,
-                               details={'ovs_hybrid_plug': False})],
-            [], migration=migration
-        )
-
-    def test_finish_revert_resize_network_migrate_finish_dont_wait(self):
-        """Test that we're not waiting for any events if we don't have any
-        hybrid-plugged VIFs.
-        """
-        self._test_finish_revert_resize_network_migrate_finish(
-            [network_model.VIF(id=uuids.hybrid_vif,
-                               details={'ovs_hybrid_plug': False}),
-             network_model.VIF(id=uuids.normal_vif,
-                               details={'ovs_hybrid_plug': False})],
-            [])
-
-    def test_finish_revert_resize_network_migrate_finish_no_vif_timeout(self):
-        """Test that we're not waiting for any events if vif_plugging_timeout
-        is 0.
-        """
-        self.flags(vif_plugging_timeout=0)
-        self._test_finish_revert_resize_network_migrate_finish(
-            [network_model.VIF(id=uuids.hybrid_vif,
-                               details={'ovs_hybrid_plug': True}),
-             network_model.VIF(id=uuids.normal_vif,
-                               details={'ovs_hybrid_plug': True})],
-            [])
-
     @mock.patch('nova.compute.manager.LOG')
     def test_cache_images_unsupported(self, mock_log):
         r = self.compute.cache_images(self.context, ['an-image'])
@@ -8763,8 +8683,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         do_finish_revert_resize()
 
     @mock.patch.object(objects.Instance, 'drop_migration_context')
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_finish_revert_resize_network_migrate_finish')
+    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
     @mock.patch('nova.scheduler.utils.'
                 'fill_provider_mapping_based_on_allocation')
     @mock.patch('nova.compute.manager.ComputeManager._revert_allocation')
@@ -8778,7 +8697,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     def test_finish_revert_resize_recalc_group_rp_mapping(
             self, mock_get_bdms, mock_notify_action, mock_notify_usage,
             mock_set_instance_info, mock_instance_save, mock_revert_allocation,
-            mock_fill_provider_mapping, mock_network_migrate_finish,
+            mock_fill_provider_mapping, mock_migrate_instance_finish,
             mock_drop_migration_context):
 
         mock_get_bdms.return_value = objects.BlockDeviceMappingList()
@@ -8795,8 +8714,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             mock.sentinel.allocation)
 
     @mock.patch.object(objects.Instance, 'drop_migration_context')
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_finish_revert_resize_network_migrate_finish')
+    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
     @mock.patch('nova.scheduler.utils.'
                 'fill_provider_mapping_based_on_allocation')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -8813,7 +8731,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self, mock_get_bdms, mock_notify_action, mock_notify_usage,
             mock_set_instance_info, mock_instance_save, mock_revert_allocation,
             mock_get_allocations, mock_fill_provider_mapping,
-            mock_network_migrate_finish, mock_drop_migration_context):
+            mock_migrate_instance_finish, mock_drop_migration_context):
 
         mock_get_bdms.return_value = objects.BlockDeviceMappingList()
         mock_get_allocations.return_value = mock.sentinel.allocation
@@ -8827,7 +8745,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
 
         mock_get_allocations.assert_not_called()
         mock_fill_provider_mapping.assert_not_called()
-        mock_network_migrate_finish.assert_called_once_with(
+        mock_migrate_instance_finish.assert_called_once_with(
             self.context, self.instance, self.migration, None)
 
     def test_confirm_resize_deletes_allocations_and_update_scheduler(self):
@@ -11998,8 +11916,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_update_volume_attachments')
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_finish_revert_resize_network_migrate_finish')
+    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_get_instance_block_device_info')
     @mock.patch('nova.objects.Instance.drop_migration_context')
@@ -12009,7 +11926,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 '_complete_volume_attachments')
     def test_finish_revert_snapshot_based_resize_at_source(
             self, mock_complete_attachments, mock_update_after_spawn,
-            mock_drop_mig_context, mock_get_bdi, mock_net_migrate_finish,
+            mock_drop_mig_context, mock_get_bdi, mock_migrate_instance_finish,
             mock_update_attachments, mock_get_bdms, mock_revert_allocs,
             mock_inst_save):
         """Happy path test for finish_revert_snapshot_based_resize_at_source.
@@ -12049,7 +11966,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         mock_update_attachments.assert_called_once_with(
             self.context, self.instance, mock_get_bdms.return_value)
         # Assert that port bindings were updated to point at the source host.
-        mock_net_migrate_finish.assert_called_once_with(
+        mock_migrate_instance_finish.assert_called_once_with(
             self.context, self.instance, self.migration,
             provider_mappings=None)
         # Assert the driver finished reverting the migration.
@@ -12074,8 +11991,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_update_volume_attachments')
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_finish_revert_resize_network_migrate_finish')
+    @mock.patch('nova.network.neutron.API.migrate_instance_finish')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_get_instance_block_device_info')
     @mock.patch('nova.objects.Instance.drop_migration_context')
@@ -12086,7 +12002,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                 side_effect=test.TestingException('vol complete failed'))
     def test_finish_revert_snapshot_based_resize_at_source_driver_fails(
             self, mock_complete_attachments, mock_update_after_spawn,
-            mock_drop_mig_context, mock_get_bdi, mock_net_migrate_finish,
+            mock_drop_mig_context, mock_get_bdi, mock_migrate_instance_finish,
             mock_update_attachments, mock_get_bdms, mock_revert_allocs,
             mock_inst_save):
         """Test for _finish_revert_snapshot_based_resize_at_source where the
@@ -12140,7 +12056,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         mock_update_attachments.assert_called_once_with(
             self.context, self.instance, mock_get_bdms.return_value)
         # Assert that port bindings were updated to point at the source host.
-        mock_net_migrate_finish.assert_called_once_with(
+        mock_migrate_instance_finish.assert_called_once_with(
             self.context, self.instance, self.migration,
             provider_mappings=None)
         # Assert final DB cleanup for the instance did not happen.
