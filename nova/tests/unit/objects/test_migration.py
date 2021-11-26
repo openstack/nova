@@ -359,14 +359,6 @@ class _TestMigrationObject(object):
         mig = objects.Migration.get_by_uuid(self.context, uuidsentinel.mig)
         self.assertEqual(uuidsentinel.mig, mig.uuid)
 
-    def test_is_same_host(self):
-        same_host = objects.Migration(source_compute='fake-host',
-                                      dest_compute='fake-host')
-        diff_host = objects.Migration(source_compute='fake-host1',
-                                      dest_compute='fake-host2')
-        self.assertTrue(same_host.is_same_host())
-        self.assertFalse(diff_host.is_same_host())
-
 
 class TestMigrationObject(test_objects._LocalTest,
                           _TestMigrationObject):

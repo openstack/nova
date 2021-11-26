@@ -11217,18 +11217,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                   instance.image_meta,
                                   block_device_info=block_device_info,
                                   mdevs=mdevs)
-        # NOTE(artom) In some Neutron or port configurations we've already
-        # waited for vif-plugged events in the compute manager's
-        # _finish_revert_resize_network_migrate_finish(), right after updating
-        # the port binding. For any ports not covered by those "bind-time"
-        # events, we wait for "plug-time" events here.
-        events = network_info.get_plug_time_events(migration)
-        if events:
-            LOG.debug('Instance is using plug-time events: %s', events,
-                      instance=instance)
         self._create_guest_with_network(
             context, xml, instance, network_info, block_device_info,
-            power_on=power_on, external_events=events)
+            power_on=power_on)
 
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(
