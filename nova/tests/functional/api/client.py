@@ -123,9 +123,12 @@ class TestOpenStackClient(object):
     This is a really basic OpenStack API client that is under our control,
     so we can make changes / insert hooks for testing
 
+    By default, no roles are implied and must be passed like
+    roles=['reader', 'member'] in order for the user to have
+    privileges on the project, just like in a real deployment.
     """
 
-    def __init__(self, auth_user, base_url, project_id=None):
+    def __init__(self, auth_user, base_url, project_id=None, roles=None):
         super(TestOpenStackClient, self).__init__()
         self.auth_user = auth_user
         self.base_url = base_url
@@ -134,6 +137,7 @@ class TestOpenStackClient(object):
         else:
             self.project_id = project_id
         self.microversion = None
+        self.roles = roles or []
 
     def request(self, url, method='GET', body=None, headers=None):
         _headers = {'Content-Type': 'application/json'}
@@ -169,6 +173,7 @@ class TestOpenStackClient(object):
         headers.setdefault('X-Auth-User', self.auth_user)
         headers.setdefault('X-User-Id', self.auth_user)
         headers.setdefault('X-Auth-Project-Id', self.project_id)
+        headers.setdefault('X-Roles', ','.join(self.roles))
 
         response = self.request(full_uri, **kwargs)
 
