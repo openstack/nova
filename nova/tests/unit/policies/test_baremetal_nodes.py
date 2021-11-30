@@ -40,25 +40,17 @@ class BaremetalNodesPolicyTest(base.BasePolicyTest):
         self.stub_out('nova.api.openstack.compute.'
                       'baremetal_nodes._get_ironic_client',
                       lambda *_: FAKE_IRONIC_CLIENT)
-        # Check that system reader is able to get baremetal nodes.
-        self.system_reader_authorized_contexts = [
+        # With legacy rule and scope check disabled by default, system admin,
+        # legacy admin, and project admin will be able to get baremetal nodes.
+        self.system_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.system_member_context,
-            self.system_reader_context]
-        # Check that non-system-reader is not able to get baremetal nodes.
-        self.system_reader_unauthorized_contexts = [
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context,
-            self.other_project_reader_context
-        ]
+            self.project_admin_context]
 
     def test_index_nodes_policy(self):
         rule_name = "os_compute_api:os-baremetal-nodes:list"
-        self.common_policy_check(self.system_reader_authorized_contexts,
-                                 self.system_reader_unauthorized_contexts,
-                                 rule_name, self.controller.index,
-                                 self.req)
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name, self.controller.index,
+                                self.req)
 
     @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'list_ports')
     @mock.patch.object(FAKE_IRONIC_CLIENT.node, 'get')
@@ -69,11 +61,22 @@ class BaremetalNodesPolicyTest(base.BasePolicyTest):
         mock_get.return_value = node
         mock_port.return_value = []
 
-        self.common_policy_check(self.system_reader_authorized_contexts,
-                                 self.system_reader_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.show,
-                                 self.req, uuids.fake_id)
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name,
+                                self.controller.show,
+                                self.req, uuids.fake_id)
+
+
+class BaremetalNodesNoLegacyNoScopePolicyTest(BaremetalNodesPolicyTest):
+    """Test Baremetal Nodes APIs policies with no legacy deprecated rules
+    and no scope checks which means new defaults only. In that case
+    system admin, legacy admin, and project admin will be able to get
+    Baremetal nodes Legacy admin will be allowed as policy is just admin if
+    no scope checks.
+
+    """
+
+    without_deprecated_rules = True
 
 
 class BaremetalNodesScopeTypePolicyTest(BaremetalNodesPolicyTest):
@@ -91,28 +94,20 @@ class BaremetalNodesScopeTypePolicyTest(BaremetalNodesPolicyTest):
         super(BaremetalNodesScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system reader is able to get baremetal nodes.
-        self.system_reader_authorized_contexts = [
-            self.system_admin_context, self.system_member_context,
-            self.system_reader_context]
-        # Check that non-system or non-reader is not able to get
+        # With scope checks enable, only system admin is able to get
         # baremetal nodes.
-        self.system_reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_foo_context,
-            self.project_admin_context, self.project_member_context,
-            self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context,
-            self.other_project_reader_context
-        ]
+        self.system_admin_authorized_contexts = [self.system_admin_context]
 
 
-class BaremetalNodesNoLegacyPolicyTest(BaremetalNodesScopeTypePolicyTest):
-    """Test Baremetal Nodes APIs policies with system scope enabled,
-    and no more deprecated rules.
+class BNScopeTypeNoLegacyPolicyTest(BaremetalNodesScopeTypePolicyTest):
+    """Test Baremetal Nodes APIs policies with no legacy deprecated rules
+    and scope checks enabled which means scope + new defaults so
+    only system admin is able to get baremetal nodes.
     """
+
     without_deprecated_rules = True
     rules_without_deprecation = {
         policies.BASE_POLICY_NAME % 'list':
-            base_policy.SYSTEM_READER,
+            base_policy.ADMIN,
         policies.BASE_POLICY_NAME % 'show':
-            base_policy.SYSTEM_READER}
+            base_policy.ADMIN}

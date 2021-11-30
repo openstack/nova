@@ -139,6 +139,8 @@ class BasePolicyTest(test.TestCase):
             # To simulate the new world, remove deprecations by overriding
             # rules which has the deprecated rules.
             self.rules_without_deprecation.update({
+                "context_is_admin":
+                    "role:admin",
                 "system_admin_or_owner":
                     "rule:system_admin_api or rule:project_member_api",
                 "system_or_project_reader":

@@ -37,7 +37,7 @@ DEPRECATED_SERVICE_POLICY = policy.DeprecatedRule(
 services_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'list',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="List all running Compute services in a region.",
         operations=[
             {
@@ -49,7 +49,7 @@ services_policies = [
         deprecated_rule=DEPRECATED_SERVICE_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'update',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN,
         description="Update a Compute service.",
         operations=[
             {
@@ -62,7 +62,7 @@ services_policies = [
         deprecated_rule=DEPRECATED_SERVICE_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'delete',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN,
         description="Delete a Compute service.",
         operations=[
             {

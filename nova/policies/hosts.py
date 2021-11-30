@@ -38,7 +38,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 hosts_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'list',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="""List physical hosts.
 
 This API is deprecated in favor of os-hypervisors and os-services.""",
@@ -52,7 +52,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'show',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="""Show physical host.
 
 This API is deprecated in favor of os-hypervisors and os-services.""",
@@ -66,7 +66,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'update',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN,
         description="""Update physical host.
 
 This API is deprecated in favor of os-hypervisors and os-services.""",
@@ -80,7 +80,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'reboot',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN,
         description="""Reboot physical host.
 
 This API is deprecated in favor of os-hypervisors and os-services.""",
@@ -94,7 +94,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'shutdown',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN,
         description="""Shutdown physical host.
 
 This API is deprecated in favor of os-hypervisors and os-services.""",
@@ -108,7 +108,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'start',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN,
         description="""Start physical host.
 
 This API is deprecated in favor of os-hypervisors and os-services.""",

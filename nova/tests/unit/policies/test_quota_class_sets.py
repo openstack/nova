@@ -31,30 +31,12 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
         self.controller = quota_classes.QuotaClassSetsController()
         self.req = fakes.HTTPRequest.blank('')
 
-        # Check that admin is able to update quota class
-        self.admin_authorized_contexts = [
+        # With legacy rule and scope check disabled by default, system admin,
+        # legacy admin, and project admin will be able to get, update quota
+        # class.
+        self.system_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
-        # Check that non-admin is not able to update quota class
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
-        # Check that system reader is able to get quota class
-        self.system_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.system_member_context,
-            self.system_reader_context]
-        # Check that non-system reader is not able to get quota class
-        self.system_reader_unauthorized_contexts = [
-            self.system_foo_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
 
     @mock.patch('nova.objects.Quotas.update_class')
     def test_update_quota_class_sets_policy(self, mock_update):
@@ -64,21 +46,30 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
                         'ram': 51200, 'floating_ips': -1,
                         'fixed_ips': -1, 'instances': 10,
                         'injected_files': 5, 'cores': 20}}
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.update,
-                                 self.req, 'test_class',
-                                 body=body)
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name,
+                                self.controller.update,
+                                self.req, 'test_class',
+                                body=body)
 
     @mock.patch('nova.quota.QUOTAS.get_class_quotas')
     def test_show_quota_class_sets_policy(self, mock_get):
         rule_name = policies.POLICY_ROOT % 'show'
-        self.common_policy_check(self.system_reader_authorized_contexts,
-                                 self.system_reader_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.show,
-                                 self.req, 'test_class')
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name,
+                                self.controller.show,
+                                self.req, 'test_class')
+
+
+class QuotaClassSetsNoLegacyNoScopePolicyTest(QuotaClassSetsPolicyTest):
+    """Test QuotaClassSets APIs policies with no legacy deprecated rules
+    and no scope checks which means new defaults only. In this case
+    system admin, legacy admin, and project admin will be able to get
+    update quota class. Legacy admin will be allowed as policy
+    is just admin if no scope checks.
+
+    """
+    without_deprecated_rules = True
 
 
 class QuotaClassSetsScopeTypePolicyTest(QuotaClassSetsPolicyTest):
@@ -94,38 +85,16 @@ class QuotaClassSetsScopeTypePolicyTest(QuotaClassSetsPolicyTest):
     def setUp(self):
         super(QuotaClassSetsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
-        # Check that system admin is able to update and get quota class
-        self.admin_authorized_contexts = [
-            self.system_admin_context]
-        # Check that non-system/admin is not able to update and get quota class
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.project_admin_context,
-            self.system_foo_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
-        # Check that system reader is able to get quota class
-        self.system_reader_authorized_contexts = [
-            self.system_admin_context, self.system_member_context,
-            self.system_reader_context]
-        # Check that non-system reader is not able to get quota class
-        self.system_reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.system_foo_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+
+        # With scope checks enable, only system admin is able to update
+        # and get quota class.
+        self.system_admin_authorized_contexts = [self.system_admin_context]
 
 
-class QuotaClassSetsNoLegacyPolicyTest(QuotaClassSetsScopeTypePolicyTest):
-    """Test Quota Class Sets APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system APIs.
+class QuotaClassScopeTypeNoLegacyPolicyTest(QuotaClassSetsScopeTypePolicyTest):
+    """Test QuotaClassSets APIs policies with no legacy deprecated rules
+    and scope checks enabled which means scope + new defaults so
+    only system admin is able to update and get quota class.
+
     """
     without_deprecated_rules = True
-
-    def setUp(self):
-        super(QuotaClassSetsNoLegacyPolicyTest, self).setUp()
