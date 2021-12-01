@@ -586,8 +586,6 @@
         - devstack-plugin-nfs-tempest-full:
             irrelevant-files: *nova-base-irrelevant-files
         - nova-osprofiler-redis
-        - tempest-full-py3-opensuse15:
-            irrelevant-files: *nova-base-irrelevant-files
         - tempest-pg-full:
             irrelevant-files: *nova-base-irrelevant-files
         - nova-tempest-full-oslo.versionedobjects:
