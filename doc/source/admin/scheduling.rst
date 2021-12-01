@@ -853,7 +853,6 @@ Hosts are weighted based on the following config options:
 - :oslo.config:option:`filter_scheduler.host_subset_size`
 - :oslo.config:option:`filter_scheduler.weight_classes`
 
-
 ``RAMWeigher``
 ~~~~~~~~~~~~~~
 
@@ -869,7 +868,6 @@ value would be chosen as the ram weight multiplier. Otherwise, it will fall
 back to the :oslo.config:option:`filter_scheduler.ram_weight_multiplier`.
 If more than one value is found for a host in aggregate metadata, the minimum
 value will be used.
-
 
 ``CPUWeigher``
 ~~~~~~~~~~~~~~
@@ -887,7 +885,6 @@ back to the :oslo.config:option:`filter_scheduler.cpu_weight_multiplier`. If
 more than one value is found for a host in aggregate metadata, the minimum
 value will be used.
 
-
 ``DiskWeigher``
 ~~~~~~~~~~~~~~~
 
@@ -901,7 +898,6 @@ value would be chosen as the disk weight multiplier. Otherwise, it will fall
 back to the :oslo.config:option:`filter_scheduler.disk_weight_multiplier`. If
 more than one value is found for a host in aggregate metadata, the minimum value
 will be used.
-
 
 ``MetricsWeigher``
 ~~~~~~~~~~~~~~~~~~
@@ -929,14 +925,17 @@ metrics weight multiplier. Otherwise, it will fall back to the
 one value is found for a host in aggregate metadata, the minimum value will
 be used.
 
-
 ``IoOpsWeigher``
 ~~~~~~~~~~~~~~~~
 
-The weigher can compute the weight based on the compute node
-host's workload. The default is to preferably choose light workload compute
-hosts. If the multiplier is positive, the weigher prefer choosing heavy
-workload compute hosts, the weighing has the opposite effect of the default.
+The weigher can compute the weight based on the compute node host's workload.
+This is calculated by examining the number of instances in the ``building``
+``vm_state`` or in one of the following ``task_state``\ 's:
+``resize_migrating``, ``rebuilding``, ``resize_prep``, ``image_snapshot``,
+``image_backup``, ``rescuing``, or ``unshelving``.
+The default is to preferably choose light workload compute hosts. If the
+multiplier is positive, the weigher prefers choosing heavy workload compute
+hosts, the weighing has the opposite effect of the default.
 
 Starting with the Stein release, if per-aggregate value with the key
 ``io_ops_weight_multiplier`` is found, this
@@ -1006,6 +1005,8 @@ the
 If more than one value is found for a host in aggregate metadata, the minimum
 value will be used.
 
+.. _build-failure-weigher:
+
 ``BuildFailureWeigher``
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1020,6 +1021,17 @@ build failure weight multiplier. Otherwise, it will fall back to the
 more than one value is found for a host in aggregate metadata, the minimum
 value will be used.
 
+.. important::
+
+    The :oslo.config:option:`filter_scheduler.build_failure_weight_multiplier`
+    option defaults to a very high value. This is intended to offset weight
+    given by other enabled weighers due to available resources, giving this
+    weigher priority. However, not all build failures imply a problem with the
+    host itself - it could be user error - but the failure will still be
+    counted. If you find hosts are frequently reporting build failures and
+    effectively being excluded during scheduling, you may wish to lower the
+    value of the multiplier.
+
 .. _cross-cell-weigher:
 
 ``CrossCellWeigher``
@@ -1028,11 +1040,11 @@ value will be used.
 .. versionadded:: 21.0.0 (Ussuri)
 
 Weighs hosts based on which cell they are in. "Local" cells are preferred when
-moving an instance. Use configuration option
-:oslo.config:option:`filter_scheduler.cross_cell_move_weight_multiplier` to
-control the weight. If per-aggregate value with the key
-`cross_cell_move_weight_multiplier` is found, this value would be chosen as the
-cross-cell move weight multiplier. Otherwise, it will fall back to the
+moving an instance.
+
+If per-aggregate value with the key `cross_cell_move_weight_multiplier` is
+found, this value would be chosen as the cross-cell move weight multiplier.
+Otherwise, it will fall back to the
 :oslo.config:option:`filter_scheduler.cross_cell_move_weight_multiplier`.  If
 more than one value is found for a host in aggregate metadata, the minimum
 value will be used.
