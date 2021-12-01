@@ -615,6 +615,69 @@ class _TestRequestSpecObject(object):
         self.assertIsInstance(req_obj.instance_group, objects.InstanceGroup)
         self.assertEqual('fresh', req_obj.instance_group.name)
 
+    # FIXME(gibi): This is bug 1952941. When the cpuset -> pcpuset data
+    # migration was added to InstanceNUMATopology it was missed that such
+    # object is not only hydrated via
+    # InstanceNUMATopology.get_by_instance_uuid() but also hydrated by
+    # RequestSpec.get_by_instance_uuid() indirectly. However the
+    # latter code patch does not call InstanceNUMATopology.obj_from_db_obj()
+    # that triggers the data migration via
+    # InstanceNUMATopology._migrate_legacy_dedicated_instance_cpuset.
+    # This causes that when the new nova code loads an old RequestSpec object
+    # from the DB (e.g. during migration of an instance) the
+    # InstanceNUMATopology in the RequestSpec will not be migrated to the new
+    # object version and it will lead to errors when the pcpuset field is read
+    # during scheduling.
+    @mock.patch(
+        'nova.objects.instance_numa.InstanceNUMATopology.'
+        '_migrate_legacy_dedicated_instance_cpuset',
+        new=mock.NonCallableMock()
+    )
+    @mock.patch.object(
+        request_spec.RequestSpec, '_get_by_instance_uuid_from_db')
+    @mock.patch('nova.objects.InstanceGroup.get_by_uuid')
+    def test_get_by_instance_uuid_numa_topology_migration(
+        self, mock_get_ig, get_by_uuid
+    ):
+        # Simulate a pre-Victoria RequestSpec where the pcpuset field is not
+        # defined for the embedded InstanceNUMACell objects but the cpu_policy
+        # is dedicated meaning that cores in cpuset defines pinned cpus. So
+        # in Victoria or later these InstanceNUMACell objects should be
+        # translated to hold the cores in the pcpuset field instead.
+        numa_topology = objects.InstanceNUMATopology(
+            instance_uuid=uuids.instance_uuid,
+            cells=[
+                objects.InstanceNUMACell(
+                    id=0, cpuset={1, 2}, memory=512, cpu_policy="dedicated"),
+                objects.InstanceNUMACell(
+                    id=1, cpuset={3, 4}, memory=512, cpu_policy="dedicated"),
+            ]
+        )
+        spec_obj = fake_request_spec.fake_spec_obj()
+        spec_obj.numa_topology = numa_topology
+        fake_spec = fake_request_spec.fake_db_spec(spec_obj)
+        fake_spec['instance_uuid'] = uuids.instance_uuid
+
+        get_by_uuid.return_value = fake_spec
+        mock_get_ig.return_value = objects.InstanceGroup(name='fresh')
+
+        req_obj = request_spec.RequestSpec.get_by_instance_uuid(
+            self.context, fake_spec['instance_uuid'])
+
+        self.assertEqual(2, len(req_obj.numa_topology.cells))
+
+        # This is bug 1952941 as the pcpuset is not defined in object as the
+        # object is not migrated
+        ex = self.assertRaises(
+            NotImplementedError,
+            lambda: req_obj.numa_topology.cells[0].pcpuset
+        )
+        self.assertIn("Cannot load 'pcpuset' in the base class", str(ex))
+
+        # This is the expected behavior
+        # self.assertEqual({1, 2}, req_obj.numa_topology.cells[0].pcpuset)
+        # self.assertEqual({3, 4}, req_obj.numa_topology.cells[1].pcpuset)
+
     def _check_update_primitive(self, req_obj, changes):
         self.assertEqual(req_obj.instance_uuid, changes['instance_uuid'])
         serialized_obj = objects.RequestSpec.obj_from_primitive(
