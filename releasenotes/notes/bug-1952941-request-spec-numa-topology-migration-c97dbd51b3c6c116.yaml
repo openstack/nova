@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    The `bug 1952941`_  is fixed where a pre-Victoria server with pinned
+    CPUs cannot be migrated or evacuated after the cloud is upgraded to
+    Victoria or newer as the scheduling fails with
+    ``NotImplementedError: Cannot load 'pcpuset'`` error.
+
+    .. _bug 1952941: https://bugs.launchpad.net/nova/+bug/1952941

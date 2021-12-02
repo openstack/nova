@@ -615,29 +615,12 @@ class _TestRequestSpecObject(object):
         self.assertIsInstance(req_obj.instance_group, objects.InstanceGroup)
         self.assertEqual('fresh', req_obj.instance_group.name)
 
-    # FIXME(gibi): This is bug 1952941. When the cpuset -> pcpuset data
-    # migration was added to InstanceNUMATopology it was missed that such
-    # object is not only hydrated via
-    # InstanceNUMATopology.get_by_instance_uuid() but also hydrated by
-    # RequestSpec.get_by_instance_uuid() indirectly. However the
-    # latter code patch does not call InstanceNUMATopology.obj_from_db_obj()
-    # that triggers the data migration via
-    # InstanceNUMATopology._migrate_legacy_dedicated_instance_cpuset.
-    # This causes that when the new nova code loads an old RequestSpec object
-    # from the DB (e.g. during migration of an instance) the
-    # InstanceNUMATopology in the RequestSpec will not be migrated to the new
-    # object version and it will lead to errors when the pcpuset field is read
-    # during scheduling.
-    @mock.patch(
-        'nova.objects.instance_numa.InstanceNUMATopology.'
-        '_migrate_legacy_dedicated_instance_cpuset',
-        new=mock.NonCallableMock()
-    )
+    @mock.patch('nova.objects.request_spec.RequestSpec.save')
     @mock.patch.object(
         request_spec.RequestSpec, '_get_by_instance_uuid_from_db')
     @mock.patch('nova.objects.InstanceGroup.get_by_uuid')
     def test_get_by_instance_uuid_numa_topology_migration(
-        self, mock_get_ig, get_by_uuid
+        self, mock_get_ig, get_by_uuid, mock_save
     ):
         # Simulate a pre-Victoria RequestSpec where the pcpuset field is not
         # defined for the embedded InstanceNUMACell objects but the cpu_policy
@@ -665,18 +648,10 @@ class _TestRequestSpecObject(object):
             self.context, fake_spec['instance_uuid'])
 
         self.assertEqual(2, len(req_obj.numa_topology.cells))
+        self.assertEqual({1, 2}, req_obj.numa_topology.cells[0].pcpuset)
+        self.assertEqual({3, 4}, req_obj.numa_topology.cells[1].pcpuset)
 
-        # This is bug 1952941 as the pcpuset is not defined in object as the
-        # object is not migrated
-        ex = self.assertRaises(
-            NotImplementedError,
-            lambda: req_obj.numa_topology.cells[0].pcpuset
-        )
-        self.assertIn("Cannot load 'pcpuset' in the base class", str(ex))
-
-        # This is the expected behavior
-        # self.assertEqual({1, 2}, req_obj.numa_topology.cells[0].pcpuset)
-        # self.assertEqual({3, 4}, req_obj.numa_topology.cells[1].pcpuset)
+        mock_save.assert_called_once()
 
     def _check_update_primitive(self, req_obj, changes):
         self.assertEqual(req_obj.instance_uuid, changes['instance_uuid'])
