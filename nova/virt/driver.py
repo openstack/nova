@@ -333,7 +333,8 @@ class ComputeDriver(object):
                 admin_password, allocations, bdms, detach_block_devices,
                 attach_block_devices, network_info=None,
                 evacuate=False, block_device_info=None,
-                preserve_ephemeral=False, accel_uuids=None):
+                preserve_ephemeral=False, accel_uuids=None,
+                reimage_boot_volume=False):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -371,6 +372,7 @@ class ComputeDriver(object):
         :param preserve_ephemeral: True if the default ephemeral storage
                                    partition must be preserved on rebuild
         :param accel_uuids: Accelerator UUIDs.
+        :param reimage_boot_volume: Re-image the volume backed instance.
         """
         raise NotImplementedError()
 

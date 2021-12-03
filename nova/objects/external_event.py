@@ -33,6 +33,9 @@ EVENT_NAMES = [
     # Accelerator Request got bound, tag is ARQ uuid.
     # Sent when an ARQ for an instance has been bound or failed to bind.
     'accelerator-request-bound',
+
+    # re-image operation has completed from cinder side
+    'volume-reimaged',
 ]
 
 EVENT_STATUSES = ['failed', 'completed', 'in-progress']
@@ -50,7 +53,8 @@ class InstanceExternalEvent(obj_base.NovaObject):
     # Version 1.2: adds volume-extended event
     # Version 1.3: adds power-update event
     # Version 1.4: adds accelerator-request-bound event
-    VERSION = '1.4'
+    # Version 1.5: adds volume-reimaged event
+    VERSION = '1.5'
 
     fields = {
         'instance_uuid': fields.UUIDField(),

@@ -388,7 +388,8 @@ class _BaseTaskTestCase(object):
                         'on_shared_storage': False,
                         'preserve_ephemeral': False,
                         'host': 'compute-host',
-                        'request_spec': None}
+                        'request_spec': None,
+                        'reimage_boot_volume': False}
         if update_args:
             rebuild_args.update(update_args)
         compute_rebuild_args = copy.deepcopy(rebuild_args)
@@ -1927,6 +1928,8 @@ class _BaseTaskTestCase(object):
                                       migration_type='evacuation')
         migration.create()
 
+        # TODO(whoami-rajat): Remove this compatibility code
+        del rebuild_args['reimage_boot_volume']
         self.assertRaises(exc.UnsupportedPolicyException,
                           self.conductor.rebuild_instance,
                           self.context,

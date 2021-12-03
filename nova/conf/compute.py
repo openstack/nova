@@ -305,6 +305,21 @@ Related options:
   agent disabled. When used with libvirt the instance mode should be
   configured as HVM.
  """),
+    cfg.IntOpt('reimage_timeout_per_gb',
+        default=20,
+        min=1,
+        help="""
+Timeout for reimaging a volume.
+
+Number of seconds to wait for volume-reimaged events to arrive before
+continuing or failing.
+
+This is a per gigabyte time which has a default value of 20 seconds and
+will be multiplied by the GB size of image. Eg: an image of 6 GB will have
+a timeout of 20 * 6 = 120 seconds.
+Try increasing the timeout if the image copy per GB takes more time and you
+are hitting timeout failures.
+"""),
 ]
 
 resource_tracker_opts = [

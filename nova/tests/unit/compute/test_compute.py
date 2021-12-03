@@ -2730,7 +2730,8 @@ class ComputeTestCase(BaseTestCase,
             new_pass="new_password", orig_sys_metadata=sys_metadata,
             bdms=[], recreate=False, on_shared_storage=False,
             preserve_ephemeral=False, migration=None, scheduled_node=None,
-            limits={}, request_spec=None, accel_uuids=[])
+            limits={}, request_spec=None, accel_uuids=[],
+            reimage_boot_volume=False)
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_rebuild_driver(self):
@@ -2760,7 +2761,8 @@ class ComputeTestCase(BaseTestCase,
             new_pass="new_password", orig_sys_metadata=sys_metadata,
             bdms=[], recreate=False, on_shared_storage=False,
             preserve_ephemeral=False, migration=None, scheduled_node=None,
-            limits={}, request_spec=None, accel_uuids=[])
+            limits={}, request_spec=None, accel_uuids=[],
+            reimage_boot_volume=False)
         self.assertTrue(called['rebuild'])
         self.compute.terminate_instance(self.context, instance, [])
 
@@ -2812,7 +2814,8 @@ class ComputeTestCase(BaseTestCase,
             new_pass="new_password", orig_sys_metadata=sys_metadata,
             bdms=bdms, recreate=False, preserve_ephemeral=False,
             migration=None, scheduled_node=None, limits={},
-            on_shared_storage=False, request_spec=None, accel_uuids=[])
+            on_shared_storage=False, request_spec=None, accel_uuids=[],
+            reimage_boot_volume=False)
         self.assertTrue(called['rebuild'])
         self.compute.terminate_instance(self.context, instance, [])
 
@@ -2831,7 +2834,7 @@ class ComputeTestCase(BaseTestCase,
             new_pass="new_password", orig_sys_metadata=sys_metadata, bdms=[],
             recreate=False, on_shared_storage=False, preserve_ephemeral=False,
             migration=None, scheduled_node=None, limits=None,
-            request_spec=None, accel_uuids=[])
+            request_spec=None, accel_uuids=[], reimage_boot_volume=False)
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_rebuild_launched_at_time(self):
@@ -2852,7 +2855,7 @@ class ComputeTestCase(BaseTestCase,
             new_pass="new_password", orig_sys_metadata={}, bdms=[],
             recreate=False, on_shared_storage=False, preserve_ephemeral=False,
             migration=None, scheduled_node=None, limits={}, request_spec=None,
-            accel_uuids=[])
+            accel_uuids=[], reimage_boot_volume=False)
         instance.refresh()
         self.assertEqual(cur_time,
                          instance['launched_at'].replace(tzinfo=None))
@@ -2885,7 +2888,8 @@ class ComputeTestCase(BaseTestCase,
             injected_files=injected_files, new_pass="new_password",
             orig_sys_metadata=sys_metadata, bdms=[], recreate=False,
             on_shared_storage=False, preserve_ephemeral=False, migration=None,
-            scheduled_node=None, limits={}, request_spec=None, accel_uuids=[])
+            scheduled_node=None, limits={}, request_spec=None, accel_uuids=[],
+            reimage_boot_volume=False)
         self.compute.terminate_instance(self.context, instance, [])
 
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -4612,7 +4616,8 @@ class ComputeTestCase(BaseTestCase,
                                   'limits': {},
                                   'request_spec': None,
                                   'on_shared_storage': False,
-                                  'accel_uuids': ()}),
+                                  'accel_uuids': (),
+                                  'reimage_boot_volume': False}),
             ("set_admin_password", task_states.UPDATING_PASSWORD,
                                    {'new_pass': None}),
             ("rescue_instance", task_states.RESCUING,
@@ -5130,7 +5135,8 @@ class ComputeTestCase(BaseTestCase,
             injected_files=[], new_pass=password,
             orig_sys_metadata=orig_sys_metadata, bdms=[], recreate=False,
             on_shared_storage=False, preserve_ephemeral=False, migration=None,
-            scheduled_node=None, limits={}, request_spec=None, accel_uuids=[])
+            scheduled_node=None, limits={}, request_spec=None, accel_uuids=[],
+            reimage_boot_volume=False)
 
         inst_ref.refresh()
 
@@ -13534,7 +13540,7 @@ class EvacuateHostTestCase(BaseTestCase):
                 image_ref, injected_files, 'newpass', {}, bdms, recreate=True,
                 on_shared_storage=on_shared_storage, migration=migration,
                 preserve_ephemeral=False, scheduled_node=node, limits=limits,
-                request_spec=None, accel_uuids=[])
+                request_spec=None, accel_uuids=[], reimage_boot_volume=False)
             if vm_states_is_stopped:
                 mock_notify_rebuild.assert_has_calls([
                     mock.call(ctxt, self.inst, self.inst.host, phase='start',
