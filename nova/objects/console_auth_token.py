@@ -65,7 +65,7 @@ class ConsoleAuthToken(base.NovaTimestampObject, base.NovaObject):
         specific to this authorization.
         """
         if self.obj_attr_is_set('id'):
-            if self.console_type == 'novnc':
+            if self.console_type == 'novnc' or self.console_type == 'webmks':
                 # NOTE(melwitt): As of noVNC v1.1.0, we must use the 'path'
                 # query parameter to pass the auth token within, as the
                 # top-level 'token' query parameter was removed. The 'path'
