@@ -20,6 +20,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 import nova
+from nova.compute import manager
 from nova.conf import neutron as neutron_conf
 from nova import context as nova_context
 from nova import objects
@@ -972,6 +973,7 @@ class NUMAServersTest(NUMAServersTestBase):
         # migrate the first instance from compute1 to compute2 but stop
         # migrating at the start of finish_resize. Then start a racing periodic
         # update_available_resources.
+        orig_finish_resize = manager.ComputeManager.finish_resize
 
         def fake_finish_resize(*args, **kwargs):
             # start a racing update_available_resource periodic
@@ -980,34 +982,60 @@ class NUMAServersTest(NUMAServersTestBase):
             # as the resource_tracker will use the source node numa_topology
             # and that does not fit to the dest node as pcpu 0 in the dest
             # is already occupied.
+            log = self.stdlog.logger.output
+            # The resize_claim correctly calculates that the instance should be
+            # pinned to pcpu id 1 instead of 0
+            self.assertIn(
+                'Computed NUMA topology CPU pinning: usable pCPUs: [[1]], '
+                'vCPUs mapping: [(0, 1)]',
+                log,
+            )
+            # But the periodic fails as it tries to apply the source topology
+            # on the dest. This is bug 1953359.
+            log = self.stdlog.logger.output
+            self.assertIn('Error updating resources for node compute2', log)
+            self.assertIn(
+                'nova.exception.CPUPinningInvalid: CPU set to pin [0] must be '
+                'a subset of free CPU set [1]',
+                log,
+            )
+
+            # now let the resize finishes
+            return orig_finish_resize(*args, **kwargs)
 
         # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
         # probably be less...dumb
         with mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                         '.migrate_disk_and_power_off', return_value='{}'):
             with mock.patch(
-                    'nova.compute.manager.ComputeManager.finish_resize'
-            ) as mock_finish_resize:
-                mock_finish_resize.side_effect = fake_finish_resize
+                'nova.compute.manager.ComputeManager.finish_resize',
+                new=fake_finish_resize,
+            ):
                 post = {'migrate': None}
+                # this is expected to succeed but logs are emitted
+                # from the racing periodic task. See fake_finish_resize
+                # for the asserts
                 self.admin_api.post_server_action(server['id'], post)
 
-        log = self.stdlog.logger.output
-        # The resize_claim correctly calculates that the inst1 should be pinned
-        # to pcpu id 1 instead of 0
-        self.assertIn(
-            'Computed NUMA topology CPU pinning: usable pCPUs: [[1]], '
-            'vCPUs mapping: [(0, 1)]',
-            log,
+        server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
+
+        # as the periodic job raced and failed during the resize if we revert
+        # the instance now then it tries to unpin its cpus from the dest host
+        # but those was never pinned as the periodic failed. So the unpinning
+        # will fail too.
+        post = {'revertResize': {}}
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self.admin_api.post_server_action, server['id'], post
         )
-        # But the periodic fails as it tries to apply the source topology on
-        # the dest. This is bug 1953359.
-        log = self.stdlog.logger.output
-        self.assertIn('Error updating resources for node compute2', log)
+        # This is still bug 1953359.
+        self.assertEqual(500, ex.response.status_code)
+        server = self.api.get_server(server['id'])
+        self.assertEqual('ERROR', server['status'])
         self.assertIn(
-            'nova.exception.CPUPinningInvalid: CPU set to pin [0] must be '
-            'a subset of free CPU set [1]',
-            log,
+            'nova.exception.CPUUnpinningInvalid: CPU set to unpin [1] must be '
+            'a subset of pinned CPU set [0]',
+            self.stdlog.logger.output,
         )
 
 
