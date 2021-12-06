@@ -825,11 +825,11 @@ class NUMAServersTest(NUMAServersTestBase):
                 'vCPUs mapping: [(0, 1)]',
                 log,
             )
-            # But the periodic fails as it tries to apply the source topology
-            # on the dest. This is bug 1953359.
+            # We expect that the periodic not fails as bug 1953359 is fixed.
             log = self.stdlog.logger.output
-            self.assertIn('Error updating resources for node compute2', log)
-            self.assertIn(
+            self.assertIn('Running periodic for compute (compute2)', log)
+            self.assertNotIn('Error updating resources for node compute2', log)
+            self.assertNotIn(
                 'nova.exception.CPUPinningInvalid: CPU set to pin [0] must be '
                 'a subset of free CPU set [1]',
                 log,
@@ -847,27 +847,16 @@ class NUMAServersTest(NUMAServersTestBase):
                 new=fake_finish_resize,
             ):
                 post = {'migrate': None}
-                # this is expected to succeed but logs are emitted
-                # from the racing periodic task. See fake_finish_resize
-                # for the asserts
+                # this is expected to succeed
                 self.admin_api.post_server_action(server['id'], post)
 
         server = self._wait_for_state_change(server, 'VERIFY_RESIZE')
 
-        # as the periodic job raced and failed during the resize if we revert
-        # the instance now then it tries to unpin its cpus from the dest host
-        # but those was never pinned as the periodic failed. So the unpinning
-        # will fail too.
+        # As bug 1953359 is fixed the revert should succeed too
         post = {'revertResize': {}}
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self.admin_api.post_server_action, server['id'], post
-        )
-        # This is still bug 1953359.
-        self.assertEqual(500, ex.response.status_code)
-        server = self.api.get_server(server['id'])
-        self.assertEqual('ERROR', server['status'])
-        self.assertIn(
+        self.admin_api.post_server_action(server['id'], post)
+        self._wait_for_state_change(server, 'ACTIVE')
+        self.assertNotIn(
             'nova.exception.CPUUnpinningInvalid: CPU set to unpin [1] must be '
             'a subset of pinned CPU set [0]',
             self.stdlog.logger.output,
