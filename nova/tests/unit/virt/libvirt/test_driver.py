@@ -13618,6 +13618,67 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_create_cow_image.assert_called_once_with(
             backfile_path, '/fake/instance/dir/disk_path')
 
+    @mock.patch('nova.virt.libvirt.imagebackend.Image.exists',
+        new=mock.Mock(return_value=True))
+    def test_create_images_backing_images_and_fallback_not_exist(self):
+        self.flags(images_type='raw', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        base_dir = os.path.join(CONF.instances_path,
+                                CONF.image_cache.subdirectory_name)
+        self.test_instance.update({
+            'user_id': 'fake-user',
+            'os_type': None,
+            'kernel_id': uuids.kernel_id,
+            'ramdisk_id': uuids.ramdisk_id,
+            'project_id': 'fake-project'
+        })
+        instance = objects.Instance(**self.test_instance)
+
+        backing_file = imagecache.get_cache_fname(instance.image_ref)
+        backfile_path = os.path.join(base_dir, backing_file)
+        disk_size = 10747904
+        virt_disk_size = 25165824
+        disk_info = [{
+            'backing_file': backing_file,
+            'disk_size': disk_size,
+            'path': 'disk_path',
+            'type': 'raw',
+            'virt_disk_size': virt_disk_size
+        }]
+
+        with test.nested(
+            mock.patch.object(libvirt_driver.libvirt_utils, 'copy_image'),
+            mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image',
+                side_effect=exception.ImageNotFound(
+                    image_id=uuids.fake_id)),
+            mock.patch.object(imagebackend.Flat, 'resize_image'),
+        ) as (copy_image_mock, fetch_image_mock, resize_image_mock):
+            conn._create_images_and_backing(
+                self.context, instance, "/fake/instance/dir", disk_info,
+                fallback_from_host="fake_host")
+            kernel_path = os.path.join(CONF.instances_path,
+                self.test_instance['uuid'], 'kernel')
+            ramdisk_path = os.path.join(CONF.instances_path,
+                self.test_instance['uuid'], 'ramdisk')
+            copy_image_mock.assert_has_calls([
+                mock.call(dest=kernel_path, src=kernel_path,
+                          host='fake_host', receive=True),
+                mock.call(dest=ramdisk_path, src=ramdisk_path,
+                          host='fake_host', receive=True)
+            ])
+            fetch_image_mock.assert_has_calls([
+                mock.call(context=self.context,
+                          target=backfile_path,
+                          image_id=self.test_instance['image_ref'],
+                          trusted_certs=None),
+                mock.call(self.context, kernel_path, instance.kernel_id,
+                          None),
+                mock.call(self.context, ramdisk_path, instance.ramdisk_id,
+                          None)
+            ])
+            resize_image_mock.assert_called_once_with(virt_disk_size)
+
     @mock.patch('nova.virt.libvirt.utils.create_image',
                 new=mock.NonCallableMock())
     @mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image')
