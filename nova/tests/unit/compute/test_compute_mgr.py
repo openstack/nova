@@ -9539,7 +9539,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertEqual('error', self.migration.status)
         mock_rollback_live_mig.assert_called_once_with(
             self.context, self.instance, 'dest-host',
-            migrate_data=migrate_data, source_bdms=source_bdms)
+            migrate_data=migrate_data, source_bdms=source_bdms,
+            pre_live_migration=True)
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
@@ -9574,7 +9575,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertEqual('error', self.migration.status)
         mock_rollback_live_mig.assert_called_once_with(
             self.context, self.instance, 'dest-host',
-            migrate_data=migrate_data, source_bdms=source_bdms)
+            migrate_data=migrate_data, source_bdms=source_bdms,
+            pre_live_migration=True)
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
