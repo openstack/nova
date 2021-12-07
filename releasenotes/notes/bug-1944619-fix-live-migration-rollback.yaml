@@ -1,0 +1,10 @@
+---
+fixes:
+  - |
+    Instances with hardware offloaded ovs ports no longer lose connectivity
+    after failed live migrations. The driver.rollback_live_migration_at_source
+    function is no longer called during during pre_live_migration rollback
+    which previously resulted in connectivity loss following a failed live
+    migration. See `Bug 1944619`_ for more details.
+
+    .. _Bug 1944619: https://bugs.launchpad.net/nova/+bug/1944619
