@@ -72,11 +72,5 @@ class TestRollbackWithHWOffloadedOVS(
                 self._live_migrate(self.server,
                                    migration_expected_state='failed',
                                    server_expected_state='MIGRATING')
-        # FIXME(erlon): In the current behavior,
-        # rollback_live_migration_at_source is called if an error happens
-        # during the  pre_live_migration phase on the destination and therefore
-        # triggers the observed bug. rollback_live_migration_at_source should
-        # *not* be called for when errors happen during pre_live_migration
-        # phase.
-        mlpr.assert_called_once()
+        mlpr.assert_not_called()
         mlpp.assert_called_once()
