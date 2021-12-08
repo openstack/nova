@@ -301,6 +301,10 @@ Caveats
   that will cause the instance to be set back to ACTIVE. The ``suspend`` action
   in the ``os-instance-actions`` API will have an *Error* state.
 
+  .. versionchanged:: 25.0.0
+
+   This has been resolved in the Yoga release. See `bug 1948705`_.
+
 * Resizing an instance with a new flavor that has vGPU resources doesn't
   allocate those vGPUs to the instance (the instance is created without
   vGPU resources). The proposed workaround is to rebuild the instance after
@@ -350,6 +354,7 @@ For nested vGPUs:
 
 .. _bug 1778563: https://bugs.launchpad.net/nova/+bug/1778563
 .. _bug 1762688: https://bugs.launchpad.net/nova/+bug/1762688
+.. _bug 1948705: https://bugs.launchpad.net/nova/+bug/1948705
 
 .. Links
 .. _Intel GVT-g: https://01.org/igvt-g
