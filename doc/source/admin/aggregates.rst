@@ -32,6 +32,14 @@ availability zone where instances will be scheduled when the user fails to
 specify one. For more information on how to do this, refer to
 :doc:`/admin/availability-zones`.
 
+.. note::
+
+    It is not allowed to move instances between Availability Zones.
+    If adding a host to an aggregate or removing a host from an aggregate would
+    cause an instance to move between Availability Zones, including moving
+    from or moving to the default AZ, then the operation will be rejected. The
+    administrator should drain the instances from the host first then the host
+    can be moved.
 
 .. _config-sch-for-aggs:
 

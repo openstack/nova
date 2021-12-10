@@ -13246,6 +13246,8 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
         mock_get_all_by_host,
     ):
         self.api.is_safe_to_update_az = mock.Mock()
+        self.api.ensure_no_instances_need_to_move_az_when_host_added = (
+            mock.Mock())
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={}, uuid=uuids.agg)
         agg.add_host = mock.Mock()
@@ -13274,6 +13276,8 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
         self, update_aggregates, mock_notify, mock_remove_host,
         mock_get_all_by_host,
     ):
+        self.api.ensure_no_instances_need_to_move_az_when_host_removed = (
+            mock.Mock())
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={}, uuid=uuids.agg)
         agg.delete_host = mock.Mock()

@@ -389,13 +389,23 @@ class AggregateHostMoveTestCase(AggregateRequestFiltersTest):
         # server will be in default AZ
         self._boot_server(host=self.host)
 
-        # FIXME(stephenfin): This is bug #1907775, where we should reject the
-        # request to add a host to an aggregate when and instance would need
-        # to move between AZs
-
         # The server would need to move from default AZ to custom AZ, that
         # is not OK
-        self._add_host_to_aggregate('ag3-custom-az', self.host)
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._add_host_to_aggregate, 'ag3-custom-az', self.host
+        )
+        self.assertEqual(409, ex.response.status_code)
+        self.assertIn(
+            "Reason: The host cannot be added to the aggregate as the "
+            "availability zone of the host would change from 'None' to "
+            "'custom-az' but the host already has 1 instance(s). "
+            "Changing the AZ of an existing instance is not supported by this "
+            "action. Move the instances away from this host then try again. "
+            "If you need to move the instances between AZs then you can use "
+            "shelve_offload and unshelve to achieve this.",
+            str(ex)
+        )
 
     def test_add_host_with_instances_custom_az_then_default(self):
         self._add_host_to_aggregate('ag3-custom-az', self.host)
@@ -432,12 +442,22 @@ class AggregateHostMoveTestCase(AggregateRequestFiltersTest):
         # server will be in custom AZ
         self._boot_server(host=self.host)
 
-        # FIXME(stephenfin): This is bug #1907775, where we should reject the
-        # request to remove a host from the aggregate when there are instances
-        # on said host
-
         # The server would need to move to the default AZ, that is not OK.
-        self._remove_host_from_aggregate('ag3-custom-az', self.host)
+        ex = self.assertRaises(
+            client.OpenStackApiException,
+            self._remove_host_from_aggregate, 'ag3-custom-az', self.host
+        )
+        self.assertEqual(409, ex.response.status_code)
+        self.assertIn(
+            "Reason: The host cannot be removed from the aggregate as the "
+            "availability zone of the host would change from 'custom-az' to "
+            "'None' but the host already has 1 instance(s). Changing the AZ "
+            "of an existing instance is not supported by this action. Move "
+            "the instances away from this host then try again. If you "
+            "need to move the instances between AZs then you can use "
+            "shelve_offload and unshelve to achieve this.",
+            str(ex)
+        )
 
     def test_moving_host_around_az_without_instances(self):
         # host moving from default to custom AZ
