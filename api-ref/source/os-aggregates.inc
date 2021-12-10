@@ -214,6 +214,9 @@ Adds a host to an aggregate.
 
 Specify the ``add_host`` action and host name in the request body.
 
+It is not allowed to move a host with servers between Availability Zones. Such
+request is rejected with 409 error.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
@@ -263,6 +266,9 @@ Remove Host
 Removes a host from an aggregate.
 
 Specify the ``remove_host`` action and host name in the request body.
+
+It is not allowed to move a host with servers between Availability Zones. Such
+request is rejected with 409 error.
 
 Normal response codes: 200
 
