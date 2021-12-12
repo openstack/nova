@@ -3006,6 +3006,65 @@ class PCIServersTest(_PCIServersTestBase):
         self.assert_no_pci_healing("test_compute0")
 
 
+class PCIResourceRequestReschedulingTest(_PCIServersTestBase):
+
+    # Needed for networks=none
+    microversion = '2.37'
+
+    PFS_ALIAS_NAME = 'pfs'
+    PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PF_PROD_ID,
+        },
+    )]
+    PCI_ALIAS = [jsonutils.dumps(x) for x in (
+        {
+            'vendor_id': fakelibvirt.PCI_VEND_ID,
+            'product_id': fakelibvirt.PF_PROD_ID,
+            'device_type': fields.PciDeviceType.SRIOV_PF,
+            'name': PFS_ALIAS_NAME,
+        },
+    )]
+
+    def test_boot_reschedule_with_proper_pci_device_count(self):
+        """Verify that in case of rescheduling instance with PCI device request
+        instance has proper count of pci devices.
+        """
+        pci_info = fakelibvirt.HostPCIDevicesInfo()
+        self.start_compute(hostname='host1', pci_info=pci_info)
+        self.start_compute(hostname='host2', pci_info=pci_info)
+
+        extra_spec = {"pci_passthrough:alias": "%s:1" % self.PFS_ALIAS_NAME}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        validate_group_policy_called = False
+
+        def validate_group_policy(manager, instance, *args, **kwargs):
+            nonlocal validate_group_policy_called
+            if validate_group_policy_called:
+                # FIXME(johngarbutt): This is bug 1860555, it should be 1.
+                self.assertEqual(2, len(instance.pci_devices))
+            else:
+                self.assertEqual(1, len(instance.pci_devices))
+                validate_group_policy_called = True
+                raise exception.RescheduledException(
+                    instance_uuid='fake-uuid',
+                    reason='Tests: affinity validation has to fail once')
+
+        with mock.patch(
+                ('nova.compute.manager.ComputeManager.'
+                 '_validate_instance_group_policy'),
+                side_effect=validate_group_policy):
+            server = self._create_server(flavor_id=flavor_id, networks='none')
+
+        ctxt = context.get_admin_context()
+        pci_devices = objects.PciDeviceList.get_by_instance_uuid(
+            ctxt, server['id'])
+        # an additional check we have proper PCI device count in DB
+        self.assertEqual(1, len(pci_devices))
+
+
 class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
 
     ALIAS_NAME = 'a1'
