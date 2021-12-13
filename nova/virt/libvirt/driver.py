@@ -188,6 +188,7 @@ VOLUME_DRIVERS = {
     'vzstorage': 'nova.virt.libvirt.volume.vzstorage.LibvirtVZStorageVolumeDriver',  # noqa:E501
     'storpool': 'nova.virt.libvirt.volume.storpool.LibvirtStorPoolVolumeDriver',  # noqa:E501
     'nvmeof': 'nova.virt.libvirt.volume.nvme.LibvirtNVMEVolumeDriver',
+    'lightos': 'nova.virt.libvirt.volume.lightos.LibvirtLightOSVolumeDriver',
 }
 
 
