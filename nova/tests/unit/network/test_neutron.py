@@ -1750,7 +1750,9 @@ class TestAPI(TestAPIBase):
         mocked_client.delete_port.assert_called_once_with(port_data[0]['id'])
         mocked_client.show_port.assert_called_once_with(port_data[0]['id'])
         expected_get_client_calls = [
-            mock.call(self.context), mock.call(self.context, admin=True)]
+            mock.call(self.context, admin=True),
+            mock.call(self.context, admin=True),
+        ]
         if number == 2:
             expected_get_client_calls.append(mock.call(self.context,
                                                        admin=True))
@@ -7146,25 +7148,33 @@ class TestAPI(TestAPIBase):
         "nova.network.neutron.API.has_extended_resource_request_extension",
         new=mock.Mock(return_value=False),
     )
-    @mock.patch("neutronclient.v2_0.client.Client.show_port")
-    def test_get_binding_profile_allocation_no_request(self, mock_show_port):
-        mock_show_port.return_value = {
+    @mock.patch("nova.network.neutron.get_client")
+    def test_get_binding_profile_allocation_no_request(
+        self, mock_get_client
+    ):
+        mock_get_client.return_value.show_port.return_value = {
             "port": {
             }
         }
         self.assertIsNone(
             self.api.get_binding_profile_allocation(
                 self.context, uuids.port_uuid, {}))
+        mock_get_client.assert_has_calls(
+            [
+                mock.call(self.context, admin=True),
+                mock.call(self.context),
+            ]
+        )
 
     @mock.patch(
         "nova.network.neutron.API.has_extended_resource_request_extension",
         new=mock.Mock(return_value=False),
     )
-    @mock.patch("neutronclient.v2_0.client.Client.show_port")
+    @mock.patch("nova.network.neutron.get_client")
     def test_get_binding_profile_allocation_legacy_request(
-        self, mock_show_port
+        self, mock_get_client
     ):
-        mock_show_port.return_value = {
+        mock_get_client.return_value.show_port.return_value = {
             "port": {
                 "id": uuids.port_uuid,
                 "resource_request": {
@@ -7188,11 +7198,11 @@ class TestAPI(TestAPIBase):
         "nova.network.neutron.API.has_extended_resource_request_extension",
         new=mock.Mock(return_value=True),
     )
-    @mock.patch("neutronclient.v2_0.client.Client.show_port")
+    @mock.patch("nova.network.neutron.get_client")
     def test_get_binding_profile_allocation_extended_request(
-        self, mock_show_port
+        self, mock_get_client
     ):
-        mock_show_port.return_value = {
+        mock_get_client.return_value.show_port.return_value = {
             "port": {
                 "id": uuids.port_uuid,
                 "resource_request": {
