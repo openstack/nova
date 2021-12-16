@@ -1563,20 +1563,26 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                 if missing_itypes:
                     # Not found in flavor db. might be deleted. get it from the
                     # saved info
-                    iquery = context.session.query(
+                    # We first get a list of instance UUIDs - one per flavor -
+                    # that use this flavor. Then we do a query against the
+                    # instance_extra table with those uuids. This is faster
+                    # than a subquery-JOIN, subquery with WHERE, a JOIN, a CTE
+                    # with WHERE or a CTE with JOIN.
+                    missing_itypes_instance_uuids = [
+                        x[0] for x in context.session.query(
                             models.Instance.uuid
                         ).filter(
                             models.Instance.instance_type_id.
                             in_(missing_itypes)
                         ).group_by(
                             models.Instance.instance_type_id
-                        ).subquery()
+                        ).all()]
 
                     db_flavors = context.session.query(
                             models.InstanceExtra.flavor
-                        ).join(
-                            iquery,
-                            models.InstanceExtra.instance_uuid == iquery.c.uuid
+                        ).filter(
+                            models.InstanceExtra.instance_uuid.
+                            in_(missing_itypes_instance_uuids)
                         )
 
                     for db_flavor in db_flavors:
