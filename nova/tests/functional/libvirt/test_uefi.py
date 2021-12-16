@@ -14,6 +14,7 @@
 # under the License.
 
 import datetime
+import re
 
 from lxml import etree
 from oslo_log import log as logging
@@ -47,6 +48,8 @@ class UEFIServersTest(base.ServersTestBase):
         orig_create = nova.virt.libvirt.guest.Guest.create
 
         def fake_create(cls, xml, host):
+            xml = re.sub('type arch.*machine',
+                'type machine', xml)
             tree = etree.fromstring(xml)
             self.assertXmlEqual(
                 """

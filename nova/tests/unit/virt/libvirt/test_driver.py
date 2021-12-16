@@ -5218,7 +5218,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertTrue(drvr._check_uefi_support(None))
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        self.assertTrue(drvr._check_uefi_support(image_meta))
 
     def test_get_guest_config_with_block_device(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -5769,6 +5770,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(enabled=True, group='serial_console')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         expected = {
           fields.Architecture.X86_64: vconfig.LibvirtConfigGuestSerial,
@@ -5781,7 +5783,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             guest = vconfig.LibvirtConfigGuest()
             drvr._create_consoles(
-                guest_cfg=guest, instance=instance, flavor={}, image_meta={})
+                guest_cfg=guest,
+                instance=instance,
+                flavor={},
+                image_meta=image_meta)
             self.assertEqual(1, len(guest.devices))
             console_device = guest.devices[0]
             self.assertIsInstance(console_device, device_type)
@@ -5993,9 +5998,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.flags(enabled=serial_enabled, group='serial_console')
             guest_cfg = vconfig.LibvirtConfigGuest()
             instance = objects.Instance(**self.test_instance)
+            image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
             drvr._create_consoles(
-                guest_cfg, instance=instance, flavor=None, image_meta=None)
+                guest_cfg,
+                instance=instance,
+                flavor=None,
+                image_meta=image_meta)
 
             self.assertEqual(1, len(guest_cfg.devices))
             device = guest_cfg.devices[0]
@@ -7974,6 +7983,33 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             instance_ref, _fake_network_info(self), image_meta, disk_info)
         self.assertIsInstance(conf.cpu, vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, 'custom')
+
+    def test_get_x86_64_hw_emulated_architecture_aarch64(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            'properties': {
+                    'hw_architecture': 'x86_64',
+                    'hw_emulation_architecture': 'aarch64',
+                    'hw_machine_type': 'virt',
+                    'hw_firmware_type': 'uefi',
+                    }})
+
+        self.assertEqual(drvr._check_emulation_arch(image_meta),
+                        'aarch64')
+
+    def test_get_x86_64_hw_emulated_architecture_ppc64(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            'properties': {
+                    'hw_architecture': 'x86_64',
+                    'hw_emulation_architecture': 'ppc64le',
+                    'hw_machine_type': 'pseries',
+                    }})
+
+        self.assertEqual(drvr._check_emulation_arch(image_meta),
+                        'ppc64le')
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_guest_cpu_config_custom_with_extra_flags(self,

@@ -526,6 +526,9 @@ def get_cpu_model_from_arch(arch: str) -> str:
         mode = 'qemu32'
     elif arch == obj_fields.Architecture.PPC64LE:
         mode = 'POWER8'
+    # TODO(chateaulav): Testing of emulated archs ongoing
+    # elif arch == obj_fields.Architecture.MIPSEL:
+    #     mode = '24Kf-mips-cpu'
     # NOTE(kevinz): In aarch64, cpu model 'max' will offer the capabilities
     # that all the stuff it can currently emulate, both for "TCG" and "KVM"
     elif arch == obj_fields.Architecture.AARCH64:
@@ -568,6 +571,7 @@ def get_default_machine_type(arch: str) -> ty.Optional[str]:
     default_mtypes = {
         obj_fields.Architecture.ARMV7: "virt",
         obj_fields.Architecture.AARCH64: "virt",
+        obj_fields.Architecture.PPC64LE: "pseries",
         obj_fields.Architecture.S390: "s390-ccw-virtio",
         obj_fields.Architecture.S390X: "s390-ccw-virtio",
         obj_fields.Architecture.I686: "pc",

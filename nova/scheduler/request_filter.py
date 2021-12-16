@@ -212,6 +212,8 @@ def transform_image_metadata(ctxt, request_spec):
         'hw_disk_bus': 'COMPUTE_STORAGE_BUS',
         'hw_video_model': 'COMPUTE_GRAPHICS_MODEL',
         'hw_vif_model': 'COMPUTE_NET_VIF_MODEL',
+        'hw_architecture': 'HW_ARCH',
+        'hw_emulation_architecture': 'COMPUTE_ARCH',
     }
 
     trait_names = []

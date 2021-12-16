@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    image meta now includes the ``hw_emulation_architecture`` property.
+    This allows an operator to define their emulated cpu architecture for
+    an image, and nova will deploy accordingly.
+
+    See the `spec`_ for more details and reasoning.
+
+    .. _spec: https://specs.openstack.org/openstack/nova-specs/specs/yoga/approved/pick-guest-arch-based-on-host-arch-in-libvirt-driver.html
