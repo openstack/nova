@@ -1115,7 +1115,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Post operation of live migration at source host."""
         if not migrate_data.is_same_vcenter:
             self._volumeops.delete_shadow_vms(block_device_info, instance)
-        self._vmops.update_cluster_placement(context, instance)
+        self._vmops.sync_instance_server_group(context, instance)
 
     def post_live_migration_at_source(self, context, instance, network_info):
         # This is mostly for network related cleanup tasks at the source

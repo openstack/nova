@@ -2768,14 +2768,15 @@ class VMwareAPIVMTestCase(test.TestCase,
         block_device_info = self._create_block_device_info()
         with test.nested(
                 mock.patch.object(self.conn._volumeops, 'delete_shadow_vms'),
-                mock.patch.object(self.conn._vmops, 'update_cluster_placement')
-            ) as (mock_delete_shadow_vms, mock_update_cluster_placement):
+                mock.patch.object(self.conn._vmops,
+                                  'sync_instance_server_group')
+            ) as (mock_delete_shadow_vms, mock_sync_instance_server_group):
 
             self.conn.post_live_migration(
                           self.context, self.instance, block_device_info,
                           migrate_data)
             mock_delete_shadow_vms.assert_called_once()
-            mock_update_cluster_placement.assert_called_once()
+            mock_sync_instance_server_group.assert_called_once()
 
     def test_get_instance_disk_info_is_implemented(self):
         # Ensure that the method has been implemented in the driver
