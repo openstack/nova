@@ -18,6 +18,7 @@
 """
 A connection to the VMware vCenter platform.
 """
+import contextlib
 from operator import attrgetter
 import os
 import random
@@ -1110,12 +1111,28 @@ class VMwareVCDriver(driver.ComputeDriver):
         if not migrate_data.is_same_vcenter:
             self._volumeops.delete_shadow_vms(block_device_info, instance)
 
+    @contextlib.contextmanager
+    def _error_out_instance_on_exception(self, instance, message):
+        try:
+            yield
+        except Exception as error:
+            LOG.exception("Failed to %s, setting to ERROR state",
+                          message,
+                          instance=instance, error=error)
+            instance.vm_state = vm_states.ERROR
+            instance.save()
+
     def post_live_migration(self, context, instance, block_device_info,
                             migrate_data=None):
         """Post operation of live migration at source host."""
         if not migrate_data.is_same_vcenter:
-            self._volumeops.delete_shadow_vms(block_device_info, instance)
-        self._vmops.sync_instance_server_group(context, instance)
+            with self._error_out_instance_on_exception(instance,
+                    "delete shadow vms"):
+                self._volumeops.delete_shadow_vms(block_device_info, instance)
+
+        with self._error_out_instance_on_exception(instance,
+                "sync server groups"):
+            self._vmops.sync_instance_server_group(context, instance)
 
     def post_live_migration_at_source(self, context, instance, network_info):
         # This is mostly for network related cleanup tasks at the source
@@ -1127,12 +1144,19 @@ class VMwareVCDriver(driver.ComputeDriver):
                                            block_migration=False,
                                            block_device_info=None):
         """Post operation of live migration at destination host."""
-        self._vmops.disable_drs_if_needed(instance)
-        self._vmops.update_cluster_placement(context, instance)
+        with self._error_out_instance_on_exception(instance,
+                "disable drs"):
+            self._vmops.disable_drs_if_needed(instance)
 
-        volumes = self._get_volume_mappings(context, instance)
-        LOG.debug("Fixing shadow vms %s", volumes, instance=instance)
-        self._volumeops.fixup_shadow_vms(instance, volumes)
+        with self._error_out_instance_on_exception(instance,
+                "update cluster placement"):
+            self._vmops.update_cluster_placement(context, instance)
+
+        with self._error_out_instance_on_exception(instance,
+                "fixup shadow vms"):
+            volumes = self._get_volume_mappings(context, instance)
+            LOG.debug("Fixing shadow vms %s", volumes, instance=instance)
+            self._volumeops.fixup_shadow_vms(instance, volumes)
 
 
 class VMwareAPISession(api.VMwareAPISession):
