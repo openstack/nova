@@ -1031,8 +1031,14 @@ class API(object):
                         'code': getattr(ex, 'code', None)})
             return False
 
-        # NOTE(jkulik): A day would be 24 MIB/s on average for a 2 TiB volume.
-        MIGRATION_TIMEOUT = 24 * 3600
+        assumed_speed_mib = CONF.cinder.min_migration_speed_mib_per_second
+        try:
+            volume = client.volumes.get(volume_id)
+            # volume.size is GiB
+            migration_timeout = int(volume.size * 1024 // assumed_speed_mib)
+        except cinder_exception.ClientException:
+            # assume a big volume for computing the default timeout
+            migration_timeout = int(2 * 1024 * 1024 // assumed_speed_mib)
         # an external dictionary so the looping function can keep state between
         # runs
         loop_state = {}
@@ -1041,7 +1047,7 @@ class API(object):
             context=admin_context, volume_id=volume_id, state_dict=loop_state)
         try:
             timer.start(initial_delay=5, starting_interval=2,
-                        timeout=MIGRATION_TIMEOUT, max_interval=300).wait()
+                        timeout=migration_timeout, max_interval=300).wait()
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.error("Error migrating volume %s to connector %s",
