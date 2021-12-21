@@ -326,6 +326,10 @@ def vm_ref_cache_heal_from_instance(func):
                 if vm_ref is None:
                     return  # noqa
 
+                # we are missing details about the issue, so raise it
+                if not e.details:
+                    return  # noqa
+
                 obj = e.details.get("obj")
                 # A different moref may be invalid, nothing we can do about it
                 if obj != vm_ref.value:
