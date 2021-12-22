@@ -20,12 +20,8 @@ import copy
 import hashlib
 import hmac
 import os
+import pickle
 import re
-
-try:  # python 2
-    import pickle
-except ImportError:  # python 3
-    import cPickle as pickle
 
 from keystoneauth1 import exceptions as ks_exceptions
 from keystoneauth1 import session

@@ -20,11 +20,6 @@ Manage hosts in the current zone.
 import collections
 import functools
 import time
-try:
-    from collections import UserDict as IterableUserDict   # Python 3
-except ImportError:
-    from UserDict import IterableUserDict                  # Python 2
-
 
 import iso8601
 from oslo_log import log as logging
@@ -47,7 +42,7 @@ LOG = logging.getLogger(__name__)
 HOST_INSTANCE_SEMAPHORE = "host_instance"
 
 
-class ReadOnlyDict(IterableUserDict):
+class ReadOnlyDict(collections.UserDict):
     """A read-only dict."""
 
     def __init__(self, source=None):
