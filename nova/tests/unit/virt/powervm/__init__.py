@@ -11,12 +11,21 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-#
+
+import unittest
+
 from oslo_utils.fixture import uuidsentinel
 
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import objects
+
+try:
+    import powervm  # noqa: F401
+except ImportError:
+    raise unittest.SkipTest(
+        "The 'pypowervm' dependency is not installed."
+    )
 
 
 TEST_FLAVOR = objects.flavor.Flavor(
