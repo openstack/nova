@@ -149,7 +149,7 @@ tenacity==6.3.1
 testrepository==0.0.20
 testresources==2.0.0
 testscenarios==0.4
-testtools==2.2.0
+testtools==2.5.0
 tooz==1.58.0
 traceback2==1.4.0
 types-paramiko==0.1.3
