@@ -2487,24 +2487,15 @@ class VMwareVMOps(object):
         if not vm_util._VM_VALUE_CACHE:
             self.update_cached_instances()
 
-        @vm_util.vm_ref_cache_heal_from_instance
-        def _get_vm_props(session, instance):
-            vm_ref = vm_util.get_vm_ref(self._session, instance)
-            vm_props = vm_util._VM_VALUE_CACHE.get(vm_ref.value, {})
-            if vm_props and powerstate_property in vm_props:
-                return vm_props
-
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        vm_props = vm_util._VM_VALUE_CACHE.get(vm_ref.value, {})
+        if not vm_props or powerstate_property not in vm_props:
             if CONF.vmware.use_property_collector:
                 LOG.debug("VM instance data was not found on the cache.")
 
-            return session._call_method(
+            vm_props = self._session._call_method(
                 vutil, "get_object_properties_dict",
                 vm_ref, [powerstate_property])
-
-        try:
-            vm_props = _get_vm_props(self._session, instance)
-        except vexc.ManagedObjectNotFoundException:
-            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
         return hardware.InstanceInfo(
             state=constants.POWER_STATES[vm_props[powerstate_property]])

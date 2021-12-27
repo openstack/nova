@@ -354,15 +354,14 @@ class VMwareVMOpsTestCase(test.TestCase):
             self.assertEqual(hardware.InstanceInfo(state=power_state.SHUTDOWN),
                              info)
 
-    @mock.patch.object(vm_util, 'get_vm_ref',
-        return_value=vmwareapi_fake.ManagedObjectReference(
-            value='fake_powered_off'))
+    @mock.patch.object(vm_util, 'vm_ref_cache_get')
+    @mock.patch.object(vm_util, 'search_vm_ref_by_identifier')
     @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
     @mock.patch.object(vm_util, '_VM_VALUE_CACHE')
     def test_get_info_instance_deleted(self, mock_value_cache,
                                        mock_update_cached_instances,
-                                       mock_get_vm_ref):
-        vm_util.vm_value_cache_reset()
+                                       mock_search_vm_ref_by_identifier,
+                                       mock_vm_ref_cache_get):
         props = ['summary.config.numCpu', 'summary.config.memorySizeMB',
                  'runtime.powerState']
         prop_cpu = vmwareapi_fake.Prop(props[0], 4)
@@ -372,17 +371,17 @@ class VMwareVMOpsTestCase(test.TestCase):
         obj_content = vmwareapi_fake.ObjectContent(None, prop_list=prop_list)
         result = vmwareapi_fake.FakeRetrieveResult()
         result.add_object(obj_content)
+        mock_vm_ref_cache_get.return_value = (
+            vmwareapi_fake.ManagedObjectReference(value=mock.sentinel.vm_ref))
+        mock_search_vm_ref_by_identifier.return_value = None
 
-        def mock_call_method(module, method, *args, **kwargs):
-            raise vexc.ManagedObjectNotFoundException()
-
-        with mock.patch.object(self._session, '_call_method',
-                               mock_call_method):
+        with mock.patch.object(self._session, 'invoke_api',
+                side_effect=vexc.ManagedObjectNotFoundException(
+                    details=dict(obj=mock.sentinel.vm_ref))):
             self.assertRaises(exception.InstanceNotFound,
                               self._vmops.get_info,
                               self._instance)
-            mock_get_vm_ref.assert_called_once_with(self._session,
-                self._instance)
+            mock_vm_ref_cache_get.assert_called_once_with(self._instance.uuid)
 
     def _test_get_datacenter_ref_and_name(self, ds_ref_exists=False):
         instance_ds_ref = vmwareapi_fake.ManagedObjectReference(value='ds-1')

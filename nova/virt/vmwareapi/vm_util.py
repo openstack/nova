@@ -20,7 +20,6 @@ The VMware API VM utility module to build SOAP object specs.
 
 import collections
 import copy
-from functools import wraps
 import hashlib
 import operator
 import socket
@@ -43,6 +42,7 @@ from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
 from nova.virt.vmwareapi import constants
+from nova.virt.vmwareapi.session import StableMoRefProxy
 from nova.virt.vmwareapi import vim_util
 
 LOG = logging.getLogger(__name__)
@@ -256,91 +256,16 @@ def vm_refs_cache_reset():
     _VM_REFS_CACHE = {}
 
 
-def vm_ref_cache_delete(id):
-    _VM_REFS_CACHE.pop(id, None)
+def vm_ref_cache_delete(id_):
+    _VM_REFS_CACHE.pop(id_, None)
 
 
-def vm_ref_cache_update(id, vm_ref):
-    _VM_REFS_CACHE[id] = vm_ref
+def vm_ref_cache_update(id_, vm_ref):
+    _VM_REFS_CACHE[id_] = vm_ref
 
 
-def vm_ref_cache_get(id):
-    return _VM_REFS_CACHE.get(id)
-
-
-def _vm_ref_cache(id, func, session, data):
-    vm_ref = vm_ref_cache_get(id)
-    if not vm_ref:
-        vm_ref = func(session, data)
-        vm_ref_cache_update(id, vm_ref)
-    return vm_ref
-
-
-def vm_ref_cache_from_instance(func):
-    @wraps(func)
-    def wrapper(session, instance):
-        id_ = instance.uuid
-        return _vm_ref_cache(id_, func, session, instance)
-    return wrapper
-
-
-def vm_ref_cache_heal_from_instance(func):
-    """Decorator for a function working with a cached ManagedObject reference
-    for an instance
-
-    Invalidates the cache in case of matching ManagedObjectNotFoundException
-    Most functions rely on the reference to be stable over the life-time of an
-    instance, and do not handle this exception, they expect InstanceNotFound
-
-    By invalidating the cache, we solve two issues:
-    1. We have a chance to recover from such a rare change
-    2. If not, we now raise InstanceNotFound, which is actually handled
-
-    The main motivator though is the live-vm migration across vcenters,
-    which can make the VM "disappear"
-
-    An operator also can de-register and re-register a vm, or need to recover
-    the vsphere service, resulting in changed mo-refs,
-    requiring a restart to clear the cache.
-
-    WARNING: Care needs to be taken in applying the decorator:
-    It requires, that the function in question is idempotent (up to the point
-    where the vm_ref is being used)
-    """
-    @wraps(func)
-    def wrapper(session, instance, *args, **kwargs):
-        try:
-            return func(session, instance, *args, **kwargs)
-        except vexc.ManagedObjectNotFoundException as e:
-            with excutils.save_and_reraise_exception() as ctx:
-                id_ = instance.uuid
-                vm_ref = vm_ref_cache_get(id_)
-                # if there was nothing in the cache, there's nothing to heal
-                if vm_ref is None:
-                    return  # noqa
-
-                # we are missing details about the issue, so raise it
-                if not e.details:
-                    return  # noqa
-
-                obj = e.details.get("obj")
-                # A different moref may be invalid, nothing we can do about it
-                if obj != vm_ref.value:
-                    return  # noqa
-
-                vm_ref_cache_delete(id_)
-                ctx.reraise = False
-
-                # In case the reference has been passed
-                kw_vm_ref = kwargs.get("vm_ref", None)
-                if kw_vm_ref and kw_vm_ref.value == vm_ref.value:
-                    kwargs.pop("vm_ref")
-
-                # Unlikely, but we might run into the same situation again.
-                LOG.info("Trying to recover possible vm-ref incoherence")
-                return wrapper(session, instance, *args, **kwargs)
-
-    return wrapper
+def vm_ref_cache_get(id_):
+    return _VM_REFS_CACHE.get(id_)
 
 
 # the config key which stores the VNC port
@@ -1396,15 +1321,26 @@ def _get_vm_ref_from_extraconfig(session, instance_uuid):
                                      _get_object_for_optionvalue)
 
 
-@vm_ref_cache_from_instance
+class VmMoRefProxy(StableMoRefProxy):
+    def __init__(self, ref, uuid):
+        super(VmMoRefProxy, self).__init__(ref)
+        self._uuid = uuid
+
+    def fetch_moref(self, session):
+        vm_value_cache_delete(self._uuid)
+        self.moref = search_vm_ref_by_identifier(session, self._uuid)
+        if not self.moref:
+            raise exception.InstanceNotFound(instance_id=self._uuid)
+        vm_ref_cache_update(self._uuid, self.moref)
+
+
 def get_vm_ref(session, instance):
-    """Get reference to the VM through uuid or vm name."""
-    uuid = instance.uuid
-    vm_ref = (search_vm_ref_by_identifier(session, uuid) or
-              get_vm_ref_from_name(session, instance.name))
-    if vm_ref is None:
-        raise exception.InstanceNotFound(instance_id=uuid)
-    return vm_ref
+    """Get reference to the VM through uuid."""
+    moref = vm_ref_cache_get(instance.uuid)
+    stable_ref = VmMoRefProxy(moref, instance.uuid)
+    if not moref:
+        stable_ref.fetch_moref(session)
+    return stable_ref
 
 
 def search_vm_ref_by_identifier(session, identifier):
@@ -1416,12 +1352,10 @@ def search_vm_ref_by_identifier(session, identifier):
     use get_vm_ref instead.
     """
     vm_ref = (_get_vm_ref_from_vm_uuid(session, identifier) or
-              _get_vm_ref_from_extraconfig(session, identifier) or
-              get_vm_ref_from_name(session, identifier))
+              _get_vm_ref_from_extraconfig(session, identifier))
     return vm_ref
 
 
-@vm_ref_cache_heal_from_instance
 def get_host_ref_for_vm(session, instance):
     """Get a MoRef to the ESXi host currently running an instance."""
 
@@ -1438,7 +1372,6 @@ def get_host_name_for_vm(session, instance):
                                 host_ref, "name")
 
 
-@vm_ref_cache_heal_from_instance
 def get_vm_state(session, instance):
     vm_ref = get_vm_ref(session, instance)
     vm_state = session._call_method(vutil, "get_object_property",
@@ -1856,7 +1789,6 @@ def create_vm(session, instance, vm_folder, config_spec, res_pool_ref):
     return task_info.result
 
 
-@vm_ref_cache_heal_from_instance
 def _destroy_vm(session, instance, vm_ref=None):
     if not vm_ref:
         vm_ref = get_vm_ref(session, instance)
@@ -1963,7 +1895,6 @@ def reconfigure_vm(session, vm_ref, config_spec):
     session._wait_for_task(reconfig_task)
 
 
-@vm_ref_cache_heal_from_instance
 def power_on_instance(session, instance, vm_ref=None):
     """Power on the specified instance."""
 
@@ -2024,7 +1955,6 @@ def get_vm_detach_port_index(session, vm_ref, iface_id):
                 return int(option.key.split('.')[2])
 
 
-@vm_ref_cache_heal_from_instance
 def power_off_instance(session, instance, vm_ref=None):
     """Power off the specified instance."""
 

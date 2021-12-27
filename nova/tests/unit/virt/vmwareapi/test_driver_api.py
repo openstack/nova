@@ -1367,6 +1367,7 @@ class VMwareAPIVMTestCase(test.TestCase,
 
     @mock.patch.object(vm_util, 'get_vmdk_info')
     @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
+    @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
     @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps._delete_vm_snapshot')
     @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps._create_vm_snapshot')
     @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps.'
@@ -1375,6 +1376,7 @@ class VMwareAPIVMTestCase(test.TestCase,
                                          mock_create_vm_snapshot,
                                          mock_delete_vm_snapshot,
                                          mock_update_cached_instances,
+                                         mock_fetch_image_if_missing,
                                          mock_get_vmdk):
         mock_get_vmdk.return_value = self.get_fake_vmdk()
         self._create_vm()
@@ -1966,8 +1968,7 @@ class VMwareAPIVMTestCase(test.TestCase,
 
             get_vm_ref.assert_called_once_with(self.conn._session,
                                                self.instance)
-            get_volume_ref.assert_called_once_with(
-                connection_info['data']['volume'])
+            get_volume_ref.assert_called_once_with(connection_info['data'])
             self.assertTrue(get_vmdk_info.called)
             attach_disk_to_vm.assert_called_once_with(mock.sentinel.vm_ref,
                 self.instance, adapter_type, disk_type, vmdk_path='fake-path',

@@ -29,6 +29,7 @@ from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
+from oslo_vmware import vim_util
 
 from nova import exception
 from nova.virt.vmwareapi import constants
@@ -189,6 +190,11 @@ class ManagedObjectReference(object):
 
     def __repr__(self):
         return "{}:{}".format(self._type, self.value)
+
+    def __eq__(self, other):
+        return (other is not None and
+                vim_util.get_moref_value(other) == self.value and
+                vim_util.get_moref_type(other) == self.type)
 
 
 class ObjectContent(object):

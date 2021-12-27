@@ -142,8 +142,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
             get_vm_ref.assert_called_once_with(self._volumeops._session,
                                                instance)
-            get_volume_ref.assert_called_once_with(
-                connection_info['data']['volume'])
+            get_volume_ref.assert_called_once_with(connection_info['data'])
             self.assertTrue(get_vmdk_info.called)
             get_vm_state.assert_called_once_with(self._volumeops._session,
                                                  instance)
@@ -263,8 +262,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
             get_vm_ref.assert_called_once_with(self._volumeops._session,
                                                instance)
-            get_volume_ref.assert_called_once_with(
-                connection_info['data']['volume'])
+            get_volume_ref.assert_called_once_with(connection_info['data'])
             get_vmdk_backed_disk_device.assert_called_once_with(
                 mock.sentinel.vm_ref, connection_info['data'])
             adapter_type = vm_util.CONTROLLER_TO_ADAPTER_TYPE.get(
@@ -311,8 +309,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
             get_vm_ref.assert_called_once_with(self._volumeops._session,
                                                instance)
-            get_volume_ref.assert_called_once_with(
-                connection_info['data']['volume'])
+            get_volume_ref.assert_called_once_with(connection_info['data'])
             get_vmdk_backed_disk_device.assert_called_once_with(
                 mock.sentinel.vm_ref, connection_info['data'])
             get_vm_state.assert_called_once_with(self._volumeops._session,
@@ -439,8 +436,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
             get_vm_ref.assert_called_once_with(self._volumeops._session,
                                                self._instance)
-            get_volume_ref.assert_called_once_with(
-                connection_info['data']['volume'])
+            get_volume_ref.assert_called_once_with(connection_info['data'])
             self.assertTrue(get_vmdk_info.called)
             attach_disk_to_vm.assert_called_once_with(
                 vm_ref, self._instance, adapter_type,
