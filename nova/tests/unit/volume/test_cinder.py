@@ -199,6 +199,7 @@ class CinderApiTestCase(test.NoDBTestCase):
                                                     description='',
                                                     imageRef=None,
                                                     metadata=None, name='',
+                                                    scheduler_hints=None,
                                                     snapshot_id=None,
                                                     volume_type=None)
 
@@ -228,7 +229,7 @@ class CinderApiTestCase(test.NoDBTestCase):
         mock_cinderclient.return_value.volumes.create.assert_called_once_with(
             1, imageRef=None, availability_zone=None,
             volume_type=None, description='', snapshot_id=None, name='',
-            metadata=None)
+            scheduler_hints=None, metadata=None)
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_get_all(self, mock_cinderclient):
