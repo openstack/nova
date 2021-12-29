@@ -25,6 +25,7 @@ from oslo_utils import excutils
 from nova import block_device
 import nova.conf
 from nova import exception
+from nova.objects.aggregate import AggregateList
 
 CONF = nova.conf.CONF
 
@@ -76,6 +77,17 @@ def _get_volume_create_az_value(instance):
     # fail to build the instance on the compute node which results in a
     # NoValidHost error.
     return instance.availability_zone
+
+
+def _get_volume_create_scheduler_hints(context, instance):
+    try:
+        shard = next(aggr.name
+                     for aggr in AggregateList.get_by_host(
+                         context, instance.host)
+                     if aggr.name.startswith('vc-'))
+        return {'vcenter-shard': shard}
+    except StopIteration:
+        return None
 
 
 class DriverBlockDevice(dict):
@@ -425,11 +437,13 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         :return: A two-item tuple of volume ID and attachment ID.
         """
         av_zone = _get_volume_create_az_value(instance)
+        scheduler_hints = _get_volume_create_scheduler_hints(context, instance)
         name = create_kwargs.pop('name', '')
         description = create_kwargs.pop('description', '')
         vol = volume_api.create(
             context, size, name, description, volume_type=self.volume_type,
-            availability_zone=av_zone, **create_kwargs)
+            availability_zone=av_zone, scheduler_hints=scheduler_hints,
+            **create_kwargs)
 
         if wait_func:
             self._call_wait_func(context, wait_func, volume_api, vol['id'])

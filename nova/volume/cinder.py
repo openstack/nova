@@ -658,7 +658,7 @@ class API(object):
     @translate_create_exception
     def create(self, context, size, name, description, snapshot=None,
                image_id=None, volume_type=None, metadata=None,
-               availability_zone=None):
+               availability_zone=None, scheduler_hints=None):
         client = cinderclient(context)
 
         if snapshot is not None:
@@ -669,6 +669,7 @@ class API(object):
         kwargs = dict(snapshot_id=snapshot_id,
                       volume_type=volume_type,
                       availability_zone=availability_zone,
+                      scheduler_hints=scheduler_hints,
                       metadata=metadata,
                       imageRef=image_id,
                       name=name,
