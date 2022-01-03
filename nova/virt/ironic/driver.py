@@ -187,12 +187,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         global ironic
         if ironic is None:
             ironic = importutils.import_module('ironicclient')
-            # NOTE(deva): work around a lack of symbols in the current version.
-            if not hasattr(ironic, 'exc'):
-                ironic.exc = importutils.import_module('ironicclient.exc')
-            if not hasattr(ironic, 'client'):
-                ironic.client = importutils.import_module(
-                                                    'ironicclient.client')
 
         self.node_cache = {}
         self.node_cache_time = 0
