@@ -14,7 +14,7 @@ from nova.api.openstack import common
 
 INSTANCE_DIAGNOSTICS_PRIMITIVE_FIELDS = (
     'state', 'driver', 'hypervisor', 'hypervisor_os', 'uptime', 'config_drive',
-    'num_cpus', 'num_nics', 'num_disks'
+    'num_cpus', 'num_nics', 'num_disks', 'cpu_usage'
 )
 
 INSTANCE_DIAGNOSTICS_LIST_FIELDS = {

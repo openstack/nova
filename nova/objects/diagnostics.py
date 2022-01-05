@@ -99,7 +99,8 @@ class Diagnostics(base.NovaObject):
                                                   default=[]),
         'num_cpus': fields.IntegerField(),
         'num_nics': fields.IntegerField(),
-        'num_disks': fields.IntegerField()
+        'num_disks': fields.IntegerField(),
+        'cpu_usage': fields.FloatField()
     }
 
     def __init__(self, *args, **kwargs):

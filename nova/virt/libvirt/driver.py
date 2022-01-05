@@ -8786,6 +8786,17 @@ class LibvirtDriver(driver.ComputeDriver):
         # needed.
         (state, max_mem, mem, num_cpu, cpu_time) = \
             guest._get_domain_info(self._host)
+        t1 = time.time()
+        c1 = int(guest._get_domain_info(self._host)[4])
+        time.sleep(1)
+        t2 = time.time()
+        c2 = int(guest._get_domain_info(self._host)[4])
+        c_nums = int(guest._get_domain_info(self._host)[3])
+        cpu_usage = float((c2-c1)*100/((t2-t1)*c_nums*1e9))
+        meminfo = guest._domain.memoryStats()
+        max_mem = float(meminfo['available'])
+        free_mem = float(meminfo['unused'])
+        mem = max_mem - free_mem
         config_drive = configdrive.required_by(instance)
         launched_at = timeutils.normalize_time(instance.launched_at)
         uptime = timeutils.delta_seconds(launched_at,
@@ -8795,10 +8806,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                         config_drive=config_drive,
                                         hypervisor=CONF.libvirt.virt_type,
                                         hypervisor_os='linux',
-                                        uptime=uptime)
+                                        uptime=uptime,
+                                        cpu_usage=cpu_usage)
         diags.memory_details = diagnostics_obj.MemoryDiagnostics(
-            maximum=max_mem / units.Mi,
-            used=mem / units.Mi)
+            maximum=max_mem / units.Ki,
+            used=mem / units.ki)
 
         # get cpu time, might launch an exception if the method
         # is not supported by the underlying hypervisor being
