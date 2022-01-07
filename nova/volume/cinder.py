@@ -1049,7 +1049,7 @@ class API(object):
             context=admin_context, volume_id=volume_id, state_dict=loop_state)
         try:
             timer.start(initial_delay=5, starting_interval=2,
-                        timeout=migration_timeout, max_interval=300).wait()
+                        timeout=migration_timeout, max_interval=60).wait()
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.error("Error migrating volume %s to connector %s",
