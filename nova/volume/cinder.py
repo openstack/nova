@@ -1019,6 +1019,7 @@ class API(object):
                   volume_id, connector)
         info = {'connector': connector, 'lock_volume': True}
         admin_context = nova.context.get_admin_context()
+        admin_context.global_request_id = context.global_id
         client = cinderclient(admin_context, '3.44',
                              skip_version_check=True)
         try:
