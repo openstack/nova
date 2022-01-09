@@ -33,6 +33,7 @@ class LibvirtNVMEVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
 
         self.connector = connector.InitiatorConnector.factory(
             initiator.NVME, utils.get_root_helper(),
+            use_multipath=CONF.libvirt.volume_use_multipath,
             device_scan_attempts=CONF.libvirt.num_nvme_discover_tries)
 
     def connect_volume(self, connection_info, instance):

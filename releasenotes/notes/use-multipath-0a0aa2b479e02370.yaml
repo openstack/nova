@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    The libvirt driver now allows using Native NVMeoF multipathing
+    for NVMeoF connector, via the configuration attribute in nova-cpu.conf
+    ``[libvirt]/volume_use_multipath``, defaulting to False (disabled).
+
