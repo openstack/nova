@@ -2991,7 +2991,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             cfg = drvr._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             self.assertIsNone(cfg.cpuset)
-            self.assertEqual(0, len(cfg.cputune.vcpupin))
+            self.assertIsNone(cfg.cputune)
             self.assertIsNone(cfg.cpu.numa)
 
     @mock.patch('nova.privsep.utils.supports_direct_io',
@@ -3028,7 +3028,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                          image_meta, disk_info)
             self.assertFalse(choice_mock.called)
             self.assertIsNone(cfg.cpuset)
-            self.assertEqual(0, len(cfg.cputune.vcpupin))
+            self.assertIsNone(cfg.cputune)
             self.assertIsNone(cfg.cpu.numa)
 
     def _test_get_guest_memory_backing_config(
@@ -3436,7 +3436,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             self.assertEqual(set([3]), cfg.cpuset)
-            self.assertEqual(0, len(cfg.cputune.vcpupin))
+            self.assertIsNone(cfg.cputune)
             self.assertIsNone(cfg.cpu.numa)
 
     @mock.patch('nova.privsep.utils.supports_direct_io',
@@ -3490,7 +3490,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                          image_meta, disk_info)
             self.assertFalse(choice_mock.called)
             self.assertEqual(set([3]), cfg.cpuset)
-            self.assertEqual(0, len(cfg.cputune.vcpupin))
+            self.assertIsNone(cfg.cputune)
             self.assertIsNone(cfg.cpu.numa)
 
     @mock.patch.object(fakelibvirt.Connection, 'getType')
@@ -3589,7 +3589,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # NOTE(ndipanov): we make sure that pin_set was taken into account
             # when choosing viable cells
             self.assertEqual(set([2, 3]), cfg.cpuset)
-            self.assertEqual(0, len(cfg.cputune.vcpupin))
+            self.assertIsNone(cfg.cputune)
             self.assertIsNone(cfg.cpu.numa)
 
     @mock.patch.object(
@@ -3631,7 +3631,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             cfg = drvr._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             self.assertIsNone(cfg.cpuset)
-            self.assertEqual(0, len(cfg.cputune.vcpupin))
+            self.assertIsNone(cfg.cputune)
             self.assertIsNone(cfg.numatune)
             self.assertIsNotNone(cfg.cpu.numa)
             for instance_cell, numa_cfg_cell in zip(
@@ -7037,26 +7037,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           instance_ref,
                           [],
                           image_meta, disk_info)
-
-    @mock.patch.object(
-        host.Host, "is_cpu_control_policy_capable", return_value=True)
-    def test_guest_cpu_shares_with_multi_vcpu(self, is_able):
-        self.flags(virt_type='kvm', group='libvirt')
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref.flavor.vcpus = 4
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-
-        cfg = drvr._get_guest_config(instance_ref, [],
-                                     image_meta, disk_info)
-
-        self.assertEqual(4096, cfg.cputune.shares)
 
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
@@ -11689,7 +11669,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                       mock_migrateToURI3,
                                                       mock_min_version):
         self.compute = manager.ComputeManager()
-        instance_ref = self.test_instance
+        instance_ref = objects.Instance(**self.test_instance)
         target_connection = '127.0.0.2'
 
         xml_tmpl = ("<domain type='kvm'>"
@@ -12369,7 +12349,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                       mock_get,
                                                       mock_min_version):
         self.compute = manager.ComputeManager()
-        instance_ref = self.test_instance
+        instance_ref = objects.Instance(**self.test_instance)
         target_connection = '127.0.0.2'
 
         xml_tmpl = ("<domain type='kvm'>"
@@ -12659,7 +12639,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                              mock_min_version):
         # Prepare data
         self.compute = manager.ComputeManager()
-        instance_ref = self.test_instance
+        instance_ref = objects.Instance(**self.test_instance)
         target_connection = '127.0.0.2'
 
         disk_paths = ['vda', 'vdb']

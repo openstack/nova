@@ -5692,15 +5692,11 @@ class LibvirtDriver(driver.ComputeDriver):
         if not is_able or CONF.libvirt.virt_type not in ('lxc', 'kvm', 'qemu'):
             return
 
-        if guest.cputune is None:
-            guest.cputune = vconfig.LibvirtConfigGuestCPUTune()
-            # Setting the default cpu.shares value to be a value
-            # dependent on the number of vcpus
-        guest.cputune.shares = 1024 * guest.vcpus
-
         for name in cputuning:
             key = "quota:cpu_" + name
             if key in flavor.extra_specs:
+                if guest.cputune is None:
+                    guest.cputune = vconfig.LibvirtConfigGuestCPUTune()
                 setattr(guest.cputune, name,
                         int(flavor.extra_specs[key]))
 
