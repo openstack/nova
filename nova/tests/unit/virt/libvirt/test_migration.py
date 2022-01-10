@@ -28,6 +28,7 @@ from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
+from nova.tests.unit.virt.libvirt import test_driver
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
@@ -80,15 +81,50 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         get_volume_config = mock.MagicMock()
         mock_guest.get_xml_desc.return_value = '<domain></domain>'
 
-        migration.get_updated_guest_xml(
-            mock.sentinel.instance, mock_guest, data, get_volume_config)
+        instance = objects.Instance(**test_driver._create_test_instance())
+        migration.get_updated_guest_xml(instance, mock_guest, data,
+                                        get_volume_config)
         mock_graphics.assert_called_once_with(mock.ANY, data)
         mock_serial.assert_called_once_with(mock.ANY, data)
         mock_volume.assert_called_once_with(
-            mock.ANY, data, mock.sentinel.instance, get_volume_config)
+            mock.ANY, data, instance, get_volume_config)
         mock_perf_events_xml.assert_called_once_with(mock.ANY, data)
         mock_memory_backing.assert_called_once_with(mock.ANY, data)
         self.assertEqual(1, mock_tostring.called)
+
+    def test_update_quota_xml(self):
+        old_xml = """<domain>
+                         <name>fake-instance</name>
+                         <cputune>
+                             <shares>42</shares>
+                             <period>1337</period>
+                         </cputune>
+                     </domain>"""
+        instance = objects.Instance(**test_driver._create_test_instance())
+        new_xml = migration._update_quota_xml(instance,
+                                              etree.fromstring(old_xml))
+        new_xml = etree.tostring(new_xml, encoding='unicode')
+        self.assertXmlEqual(
+            """<domain>
+                   <name>fake-instance</name>
+                   <cputune>
+                       <period>1337</period>
+                   </cputune>
+               </domain>""", new_xml)
+
+    def test_update_quota_xml_empty_cputune(self):
+        old_xml = """<domain>
+                         <name>fake-instance</name>
+                         <cputune>
+                             <shares>42</shares>
+                         </cputune>
+                     </domain>"""
+        instance = objects.Instance(**test_driver._create_test_instance())
+        new_xml = migration._update_quota_xml(instance,
+                                              etree.fromstring(old_xml))
+        new_xml = etree.tostring(new_xml, encoding='unicode')
+        self.assertXmlEqual('<domain><name>fake-instance</name></domain>',
+                            new_xml)
 
     def test_update_device_resources_xml_vpmem(self):
         # original xml for vpmems, /dev/dax0.1 and /dev/dax0.2 here
