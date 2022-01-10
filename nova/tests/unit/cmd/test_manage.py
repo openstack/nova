@@ -40,7 +40,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_requests
 
-
 CONF = conf.CONF
 
 
@@ -3952,3 +3951,262 @@ class LibvirtCommandsTestCase(test.NoDBTestCase):
         output = self.output.getvalue()
         self.assertEqual(3, ret)
         self.assertIn(uuidsentinel.instance, output)
+
+
+class ImagePropertyCommandsTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+        self.commands = manage.ImagePropertyCommands()
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock(cell_mapping=mock.sentinel.cm))
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_show_image_properties(
+        self, mock_target_cell, mock_get_instance
+    ):
+        mock_target_cell.return_value.__enter__.return_value = \
+            mock.sentinel.cctxt
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED,
+            system_metadata={
+                'image_hw_disk_bus': 'virtio',
+            }
+        )
+        ret = self.commands.show(
+            instance_uuid=uuidsentinel.instance,
+            image_property='hw_disk_bus')
+        self.assertEqual(0, ret, 'return code')
+        self.assertIn('virtio', self.output.getvalue(), 'command output')
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock())
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_show_image_properties_instance_not_found(
+        self,
+        mock_get_instance
+    ):
+        mock_get_instance.side_effect = exception.InstanceNotFound(
+            instance_id=uuidsentinel.instance)
+        ret = self.commands.show(
+            instance_uuid=uuidsentinel.instance,
+            image_property='hw_disk_bus')
+        self.assertEqual(2, ret, 'return code')
+
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_show_image_properties_instance_mapping_not_found(
+        self,
+        mock_get_instance_mapping
+    ):
+        mock_get_instance_mapping.side_effect = \
+            exception.InstanceMappingNotFound(
+                uuid=uuidsentinel.instance)
+        ret = self.commands.show(
+            instance_uuid=uuidsentinel.instance,
+            image_property='hw_disk_bus')
+        self.assertEqual(2, ret, 'return code')
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock(cell_mapping=mock.sentinel.cm))
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_show_image_properties_image_property_not_found(
+        self, mock_target_cell, mock_get_instance
+    ):
+        mock_target_cell.return_value.__enter__.return_value = \
+            mock.sentinel.cctxt
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED,
+            system_metadata={
+                'image_hw_disk_bus': 'virtio',
+            }
+        )
+        ret = self.commands.show(
+            instance_uuid=uuidsentinel.instance,
+            image_property='foo')
+        self.assertEqual(3, ret, 'return code')
+
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_show_image_properties_unknown_failure(
+        self,
+        mock_get_instance_mapping,
+    ):
+        mock_get_instance_mapping.side_effect = Exception()
+        ret = self.commands.show(
+            instance_uuid=uuidsentinel.instance,
+            image_property='hw_disk_bus')
+        self.assertEqual(1, ret, 'return code')
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock(cell_mapping=mock.sentinel.cm))
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_set_image_properties(
+        self, mock_instance_save, mock_target_cell, mock_get_instance
+    ):
+        mock_target_cell.return_value.__enter__.return_value = \
+            mock.sentinel.cctxt
+        instance = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED,
+            system_metadata={
+                'image_hw_disk_bus': 'virtio',
+            }
+        )
+        mock_get_instance.return_value = instance
+        ret = self.commands.set(
+            instance_uuid=uuidsentinel.instance,
+            image_properties=['hw_cdrom_bus=sata']
+        )
+        self.assertEqual(0, ret, 'return code')
+        self.assertIn('image_hw_cdrom_bus', instance.system_metadata)
+        self.assertEqual(
+            'sata',
+            instance.system_metadata.get('image_hw_cdrom_bus'),
+            'image_hw_cdrom_bus'
+        )
+        self.assertEqual(
+            'virtio',
+            instance.system_metadata.get('image_hw_disk_bus'),
+            'image_hw_disk_bus'
+        )
+        mock_instance_save.assert_called_once()
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock())
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_set_image_properties_instance_not_found(self, mock_get_instance):
+        mock_get_instance.side_effect = exception.InstanceNotFound(
+            instance_id=uuidsentinel.instance)
+        ret = self.commands.set(
+            instance_uuid=uuidsentinel.instance,
+            image_properties=['hw_disk_bus=virtio'])
+        self.assertEqual(2, ret, 'return code')
+
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_set_image_properties_instance_mapping_not_found(
+        self,
+        mock_get_instance_mapping
+    ):
+        mock_get_instance_mapping.side_effect = \
+            exception.InstanceMappingNotFound(
+                uuid=uuidsentinel.instance)
+        ret = self.commands.set(
+            instance_uuid=uuidsentinel.instance,
+            image_properties=['hw_disk_bus=virtio'])
+        self.assertEqual(2, ret, 'return code')
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock(cell_mapping=mock.sentinel.cm))
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_set_image_properties_instance_invalid_state(
+        self, mock_target_cell, mock_get_instance
+    ):
+        mock_target_cell.return_value.__enter__.return_value = \
+            mock.sentinel.cctxt
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.ACTIVE,
+            system_metadata={
+                'image_hw_disk_bus': 'virtio',
+            }
+        )
+        ret = self.commands.set(
+            instance_uuid=uuidsentinel.instance,
+            image_properties=['hw_cdrom_bus=sata']
+        )
+        self.assertEqual(3, ret, 'return code')
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock(cell_mapping=mock.sentinel.cm))
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_set_image_properties_invalid_input(
+        self, mock_target_cell, mock_get_instance
+    ):
+        mock_target_cell.return_value.__enter__.return_value = \
+            mock.sentinel.cctxt
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.SHELVED,
+            system_metadata={
+                'image_hw_disk_bus': 'virtio',
+            }
+        )
+        ret = self.commands.set(
+            instance_uuid=uuidsentinel.instance,
+            image_properties=['hw_cdrom_bus'])
+        self.assertEqual(4, ret, 'return code')
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock(cell_mapping=mock.sentinel.cm))
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_set_image_properties_invalid_property_name(
+        self, mock_target_cell, mock_get_instance
+    ):
+        mock_target_cell.return_value.__enter__.return_value = \
+            mock.sentinel.cctxt
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.SHELVED_OFFLOADED,
+            system_metadata={
+                'image_hw_disk_bus': 'virtio',
+            }
+        )
+        ret = self.commands.set(
+            instance_uuid=uuidsentinel.instance,
+            image_properties=['foo=bar'])
+        self.assertEqual(5, ret, 'return code')
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch('nova.context.target_cell')
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid',
+                new=mock.Mock(cell_mapping=mock.sentinel.cm))
+    @mock.patch('nova.context.get_admin_context',
+                new=mock.Mock(return_value=mock.sentinel.ctxt))
+    def test_set_image_properties_invalid_property_value(
+        self, mock_target_cell, mock_get_instance
+    ):
+        mock_target_cell.return_value.__enter__.return_value = \
+            mock.sentinel.cctxt
+        mock_get_instance.return_value = objects.Instance(
+            uuid=uuidsentinel.instance,
+            vm_state=obj_fields.InstanceState.STOPPED,
+            system_metadata={
+                'image_hw_disk_bus': 'virtio',
+            }
+        )
+        ret = self.commands.set(
+            instance_uuid=uuidsentinel.instance,
+            image_properties=['hw_disk_bus=bar'])
+        self.assertEqual(6, ret, 'return code')

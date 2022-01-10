@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    New ``nova-manage image_property`` commands have been added to help update
+    instance image properties that have become invalidated by a change of
+    instance machine type.
+
+    * The ``nova-manage image_property show`` command can be used to show the
+      current stored image property value for a given instance and property.
+
+    * The ``nova-manage image_property set`` command can be used to update the
+      stored image properties stored in the database for a given instance and
+      image properties.
+
+    For more detail on command usage, see the machine type documentation:
+
+    https://docs.openstack.org/nova/latest/admin/hw-machine-type.html#device-bus-and-model-image-properties

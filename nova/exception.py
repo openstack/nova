@@ -736,6 +736,10 @@ class InvalidImageRef(Invalid):
     msg_fmt = _("Invalid image href %(image_href)s.")
 
 
+class InvalidImagePropertyName(Invalid):
+    msg_fmt = _("Invalid image property name %(image_property_name)s.")
+
+
 class AutoDiskConfigDisabledByImage(Invalid):
     msg_fmt = _("Requested image %(image)s "
                 "has automatic disk resize disabled.")

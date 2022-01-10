@@ -25,6 +25,10 @@ hw_machine_type - Configuring and updating QEMU instance machine types
 
    Added ``nova-manage`` commands to control the machine_type of an instance.
 
+.. versionchanged:: 25.0.0 (Yoga)
+
+   Added ``nova-manage`` commands to set the image properties of an instance.
+
 .. note::
 
    The following only applies to environments using libvirt compute hosts.
@@ -135,3 +139,30 @@ Once it has been verified that all instances within the environment or specific
 cell have had a machine type recorded then the
 :oslo.config:option:`libvirt.hw_machine_type` can be updated without impacting
 existing instances.
+
+Device bus and model image properties
+-------------------------------------
+
+.. versionadded:: 25.0.0 (Yoga)
+
+Device bus and model types defined as image properties associated with an
+instance are always used when launching instances with the libvirt driver.
+Support for each device bus and model is dependent on the machine type used and
+version of QEMU available on the underlying compute host. As such, any changes
+to the machine type of an instance or version of QEMU on a host might suddenly
+invalidate the stored device bus or model image properties.
+
+It is now possible to change the stored image properties of an instance without
+having to rebuild the instance.
+
+To show the stored image properties of an instance:
+
+.. code-block:: shell
+
+    $ nova-manage image_property show $instance_uuid $property
+
+To update the stored image properties of an instance:
+
+.. code-block:: shell
+
+    $ nova-manage image_property set $instance_uuid --property $property

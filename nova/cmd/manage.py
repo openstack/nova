@@ -3192,6 +3192,168 @@ class VolumeAttachmentCommands(object):
             return 1
 
 
+class ImagePropertyCommands():
+
+    @action_description(_("Show the value of an instance image property."))
+    @args(
+        'instance_uuid', metavar='<instance_uuid>',
+        help='UUID of the instance')
+    @args(
+        'property', metavar='<image_property>',
+        help='Image property to show')
+    def show(self, instance_uuid=None, image_property=None):
+        """Show value of a given instance image property.
+
+        Return codes:
+        * 0: Command completed successfully.
+        * 1: An unexpected error happened.
+        * 2: Instance not found.
+        * 3: Image property not found.
+        """
+        try:
+            ctxt = context.get_admin_context()
+            im = objects.InstanceMapping.get_by_instance_uuid(
+                ctxt, instance_uuid)
+            with context.target_cell(ctxt, im.cell_mapping) as cctxt:
+                instance = objects.Instance.get_by_uuid(
+                    cctxt, instance_uuid, expected_attrs=['system_metadata'])
+                image_property = instance.system_metadata.get(
+                    f'image_{image_property}')
+                if image_property:
+                    print(image_property)
+                    return 0
+                else:
+                    print(f'Image property {image_property} not found '
+                          f'for instance {instance_uuid}.')
+                    return 3
+        except (
+            exception.InstanceNotFound,
+            exception.InstanceMappingNotFound,
+        ) as e:
+            print(str(e))
+            return 2
+        except Exception as e:
+            print(f'Unexpected error, see nova-manage.log for the full '
+                  f'trace: {str(e)}')
+            LOG.exception('Unexpected error')
+            return 1
+
+    def _validate_image_properties(self, image_properties):
+        """Validate the provided image property names and values
+
+        :param image_properties: List of image property names and values
+        """
+        # Sanity check the format of the provided properties, this should be
+        # in the format of name=value.
+        if any(x for x in image_properties if '=' not in x):
+            raise exception.InvalidInput(
+                "--property should use the format key=value")
+
+        # Transform the list of delimited properties to a dict
+        image_properties = dict(prop.split('=') for prop in image_properties)
+
+        # Validate the names of each property by checking against the o.vo
+        # fields currently listed by ImageProps. We can't use from_dict to
+        # do this as it silently ignores invalid property keys.
+        for image_property_name in image_properties.keys():
+            if image_property_name not in objects.ImageMetaProps.fields:
+                raise exception.InvalidImagePropertyName(
+                    image_property_name=image_property_name)
+
+        # Validate the values by creating an object from the provided dict.
+        objects.ImageMetaProps.from_dict(image_properties)
+
+        # Return the dict so we can update the instance system_metadata
+        return image_properties
+
+    def _update_image_properties(self, instance, image_properties):
+        """Update instance image properties
+
+        :param instance: The instance to update
+        :param image_properties: List of image properties and values to update
+        """
+        # Check the state of the instance
+        allowed_states = [
+            obj_fields.InstanceState.STOPPED,
+            obj_fields.InstanceState.SHELVED,
+            obj_fields.InstanceState.SHELVED_OFFLOADED,
+        ]
+        if instance.vm_state not in allowed_states:
+            raise exception.InstanceInvalidState(
+                instance_uuid=instance.uuid, attr='vm_state',
+                state=instance.vm_state,
+                method='image_property set (must be STOPPED, SHELVED, OR '
+                       'SHELVED_OFFLOADED).')
+
+        # Validate the property names and values
+        image_properties = self._validate_image_properties(image_properties)
+
+        # Update the image properties and save the instance record
+        for image_property, value in image_properties.items():
+            instance.system_metadata[f'image_{image_property}'] = value
+
+        # Save and return 0
+        instance.save()
+        return 0
+
+    @action_description(_(
+        "Set the values of instance image properties stored in the database. "
+        "This is only allowed for " "instances with a STOPPED, SHELVED or "
+        "SHELVED_OFFLOADED vm_state."))
+    @args(
+        'instance_uuid', metavar='<instance_uuid>',
+        help='UUID of the instance')
+    @args(
+        '--property', metavar='<image_property>', action='append',
+        dest='image_properties',
+        help='Image property to set using the format name=value. For example: '
+             '--property hw_disk_bus=virtio --property hw_cdrom_bus=sata')
+    def set(self, instance_uuid=None, image_properties=None):
+        """Set instance image property values
+
+        Return codes:
+        * 0: Command completed successfully.
+        * 1: An unexpected error happened.
+        * 2: Unable to find instance.
+        * 3: Instance is in an invalid state.
+        * 4: Invalid input format.
+        * 5: Invalid image property name.
+        * 6: Invalid image property value.
+        """
+        try:
+            ctxt = context.get_admin_context()
+            im = objects.InstanceMapping.get_by_instance_uuid(
+                ctxt, instance_uuid)
+            with context.target_cell(ctxt, im.cell_mapping) as cctxt:
+                instance = objects.Instance.get_by_uuid(
+                    cctxt, instance_uuid, expected_attrs=['system_metadata'])
+                return self._update_image_properties(
+                    instance, image_properties)
+        except ValueError as e:
+            print(str(e))
+            return 6
+        except exception.InvalidImagePropertyName as e:
+            print(str(e))
+            return 5
+        except exception.InvalidInput as e:
+            print(str(e))
+            return 4
+        except exception.InstanceInvalidState as e:
+            print(str(e))
+            return 3
+        except (
+            exception.InstanceNotFound,
+            exception.InstanceMappingNotFound,
+        ) as e:
+            print(str(e))
+            return 2
+        except Exception as e:
+            print('Unexpected error, see nova-manage.log for the full '
+                  'trace: %s ' % str(e))
+            LOG.exception('Unexpected error')
+            return 1
+
+
 CATEGORIES = {
     'api_db': ApiDbCommands,
     'cell_v2': CellV2Commands,
@@ -3199,6 +3361,7 @@ CATEGORIES = {
     'placement': PlacementCommands,
     'libvirt': LibvirtCommands,
     'volume_attachment': VolumeAttachmentCommands,
+    'image_property': ImagePropertyCommands,
 }
 
 
