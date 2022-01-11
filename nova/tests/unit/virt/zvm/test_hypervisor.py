@@ -59,7 +59,7 @@ class TestZVMHypervisor(test.NoDBTestCase):
     @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
     def test_get_available_resource_err_case(self, call):
         res = {'overallRC': 1, 'errmsg': 'err', 'rc': 0, 'rs': 0}
-        call.side_effect = exception.ZVMConnectorError(res)
+        call.side_effect = exception.ZVMConnectorError(results=res)
         results = self._hypervisor.get_available_resource()
         # Should return an empty dict
         self.assertFalse(results)

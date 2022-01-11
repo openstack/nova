@@ -130,7 +130,7 @@ class TestZVMDriver(test.NoDBTestCase):
     @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
     def test_get_available_resource_err_case(self, call):
         res = {'overallRC': 1, 'errmsg': 'err', 'rc': 0, 'rs': 0}
-        call.side_effect = exception.ZVMConnectorError(res)
+        call.side_effect = exception.ZVMConnectorError(results=res)
         results = self._driver.get_available_resource()
         self.assertEqual(0, results['vcpus'])
         self.assertEqual(0, results['memory_mb_used'])
@@ -151,10 +151,14 @@ class TestZVMDriver(test.NoDBTestCase):
     @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
     def test_private_get_image_info_err(self, call):
         res = {'overallRC': 500, 'errmsg': 'err', 'rc': 0, 'rs': 0}
-        call.side_effect = exception.ZVMConnectorError(res)
-        self.assertRaises(exception.ZVMConnectorError,
-                          self._driver._get_image_info,
-                          'context', 'image_meta_id', 'os_distro')
+        call.side_effect = exception.ZVMConnectorError(results=res)
+        ex = self.assertRaises(exception.ZVMConnectorError,
+                               self._driver._get_image_info,
+                               'context', 'image_meta_id', 'os_distro')
+        self.assertEqual(ex.overallRC, res['overallRC'])
+        self.assertEqual(ex.errmsg, res['errmsg'])
+        self.assertEqual(ex.rc, res['rc'])
+        self.assertEqual(ex.rs, res['rs'])
 
     @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
     @mock.patch('nova.virt.zvm.driver.ZVMDriver._import_spawn_image')
