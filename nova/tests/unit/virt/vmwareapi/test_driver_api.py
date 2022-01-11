@@ -114,15 +114,6 @@ DEFAULT_FLAVOR_OBJS = [
 ]
 
 
-def _fake_create_session(inst):
-    session = vmwareapi_fake.DataObject()
-    session.key = 'fake_key'
-    session.userName = 'fake_username'
-    session._pbm_wsdl_loc = None
-    session._pbm = None
-    inst._session = session
-
-
 class VMwareDriverStartupTestCase(test.NoDBTestCase):
     def _start_driver_with_flags(self, expected_exception_type, startup_flags):
         self.flags(**startup_flags)
@@ -157,36 +148,6 @@ class VMwareDriverStartupTestCase(test.NoDBTestCase):
                 dict(host_ip='ip', host_password='password',
                      host_username="user", datastore_regex="bad(regex",
                      group='vmware'))
-
-
-class VMwareSessionTestCase(test.NoDBTestCase):
-
-    @mock.patch.object(VMwareAPISession, '_is_vim_object',
-                       return_value=False)
-    def test_call_method(self, mock_is_vim):
-        with test.nested(
-                mock.patch.object(VMwareAPISession, '_create_session',
-                                  _fake_create_session),
-                mock.patch.object(VMwareAPISession, 'invoke_api'),
-        ) as (fake_create, fake_invoke):
-            session = VMwareAPISession()
-            session._vim = mock.Mock()
-            module = mock.Mock()
-            session._call_method(module, 'fira')
-            fake_invoke.assert_called_once_with(module, 'fira', session._vim)
-
-    @mock.patch.object(VMwareAPISession, '_is_vim_object',
-                       return_value=True)
-    def test_call_method_vim(self, mock_is_vim):
-        with test.nested(
-                mock.patch.object(VMwareAPISession, '_create_session',
-                                  _fake_create_session),
-                mock.patch.object(VMwareAPISession, 'invoke_api'),
-        ) as (fake_create, fake_invoke):
-            session = VMwareAPISession()
-            module = mock.Mock()
-            session._call_method(module, 'fira')
-            fake_invoke.assert_called_once_with(module, 'fira')
 
 
 class VMwareAPIVMTestCase(test.TestCase,
