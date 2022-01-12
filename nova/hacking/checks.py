@@ -136,6 +136,10 @@ mock_class_aliasing_re = re.compile(
 # Regex for catching aliasing mock.Mock class in test
 mock_class_as_new_value_in_patching_re = re.compile(
     r"mock\.patch(\.object)?.* new=mock\.(Magic|NonCallable)?Mock[^(]")
+# Regex for direct use of oslo.concurrency lockutils.ReaderWriterLock
+rwlock_re = re.compile(
+    r"(?P<module_part>(oslo_concurrency\.)?(lockutils|fasteners))"
+    r"\.ReaderWriterLock\(.*\)")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -1001,3 +1005,28 @@ def do_not_use_mock_class_as_new_mock_value(logical_line, filename):
                 "leak out from the test and can cause interference. "
                 "Use new=mock.Mock() or new_callable=mock.Mock instead."
             )
+
+
+@core.flake8ext
+def check_lockutils_rwlocks(logical_line):
+    """Check for direct use of oslo.concurrency lockutils.ReaderWriterLock()
+
+    oslo.concurrency lockutils uses fasteners.ReaderWriterLock to provide
+    read/write locks and fasteners calls threading.current_thread() to track
+    and identify lock holders and waiters. The eventlet implementation of
+    current_thread() only supports greenlets of type GreenThread, else it falls
+    back on the native threading.current_thread() method.
+
+    See https://github.com/eventlet/eventlet/issues/731 for details.
+
+    N369
+    """
+    msg = ("N369: %(module)s.ReaderWriterLock() does not "
+           "function correctly with eventlet patched code. "
+           "Use nova.utils.ReaderWriterLock() instead.")
+    match = re.match(rwlock_re, logical_line)
+    if match:
+        yield (
+            0,
+            msg % {'module': match.group('module_part')}
+        )

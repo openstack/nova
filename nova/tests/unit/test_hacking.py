@@ -1000,3 +1000,23 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_no_errors(
             code, checks.do_not_use_mock_class_as_new_mock_value,
             filename="nova/tests/unit/test_context.py")
+
+    def test_check_lockutils_rwlocks(self):
+        code = """
+                    lockutils.ReaderWriterLock()
+                    lockutils.ReaderWriterLock(condition_cls=MyClass)
+                    oslo_concurrency.lockutils.ReaderWriterLock()
+                    fasteners.ReaderWriterLock()
+                    fasteners.ReaderWriterLock(condition_cls=MyClass)
+               """
+        errors = [(x + 1, 0, 'N369') for x in range(5)]
+        self._assert_has_errors(
+            code, checks.check_lockutils_rwlocks, expected_errors=errors)
+
+        code = """
+                    nova.utils.ReaderWriterLock()
+                    utils.ReaderWriterLock()
+                    utils.ReaderWriterLock(condition_cls=MyClass)
+                    nova_utils.ReaderWriterLock()
+               """
+        self._assert_has_no_errors(code, checks.check_lockutils_rwlocks)
