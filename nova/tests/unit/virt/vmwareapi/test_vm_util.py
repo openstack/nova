@@ -68,6 +68,33 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             'vendor': 'Intel',
         }
 
+    @staticmethod
+    def _host_stats():
+        return {
+                'available': True,
+                'vcpus': 4,
+                'vcpus_used': 2,
+                'vcpus_reserved': 1,
+                'memory_mb': 4,
+                'memory_mb_used': 2,
+                'memory_mb_reserved': 1,
+                'cpu_info': VMwareVMUtilTestCase._expected_cpu_info()
+            }
+
+    def test_aggregate_stats_from_cluster(self):
+        a = self._host_stats()
+        b = self._host_stats()
+        b["cpu_info"]["model"] = "Different"
+        host_stats = {'a': a, 'b': b}
+        aggregated = vm_util.aggregate_stats_from_cluster(host_stats)
+        for k in a:
+            if k in ('available', 'cpu_info'):
+                continue
+            self.assertEqual(aggregated[k], sum(item[k]
+                for item in host_stats.values()
+            ))
+        self.assertEqual(aggregated["cpu_info"]["model"], "Mismatching values")
+
     def _test_get_stats_from_cluster(self, connection_state="connected",
                                      maintenance_mode=False,
                                      failover_policy=None,
