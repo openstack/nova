@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    vnc-related config options were deprecated in Pike release and now has been
+    removed:
+
+    - ``vncserver_listen`` opt removed, now we use only server_listen to bind
+      vnc address opt.
+    - ``vncserver_proxyclient_address`` opt removed, now we use only
+      server_proxyclient_address opt.
