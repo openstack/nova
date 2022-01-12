@@ -45,40 +45,53 @@ class MultinicPolicyTest(base.BasePolicyTest):
                 id=1, uuid=uuid, vm_state=vm_states.ACTIVE,
                 task_state=None, launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
-        # Check that admin or owner is able to add/remove fixed ip.
-        self.admin_or_owner_authorized_contexts = [
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow server
+        # owner- having same project id and no role check) is able to
+        # add/remove fixed ip.
+        self.project_action_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context
-        ]
-        # Check that non-admin and non-owner is not able to add/remove
-        # fixed ip.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+            self.project_reader_context, self.project_foo_context]
 
     @mock.patch('nova.compute.api.API.add_fixed_ip')
     def test_add_fixed_ip_policy(self, mock_add):
         rule_name = "os_compute_api:os-multinic:add"
         body = dict(addFixedIp=dict(networkId='test_net'))
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name, self.controller._add_fixed_ip,
-                                 self.req, self.instance.uuid,
-                                 body=body)
+        self.common_policy_auth(self.project_action_authorized_contexts,
+                                rule_name, self.controller._add_fixed_ip,
+                                self.req, self.instance.uuid,
+                                body=body)
 
     @mock.patch('nova.compute.api.API.remove_fixed_ip')
     def test_remove_fixed_ip_policy(self, mock_remove):
         rule_name = "os_compute_api:os-multinic:remove"
         body = dict(removeFixedIp=dict(address='1.2.3.4'))
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name, self.controller._remove_fixed_ip,
-                                 self.req, self.instance.uuid,
-                                 body=body)
+        self.common_policy_auth(self.project_action_authorized_contexts,
+                                rule_name, self.controller._remove_fixed_ip,
+                                self.req, self.instance.uuid,
+                                body=body)
+
+
+class MultinicNoLegacyNoScopePolicyTest(MultinicPolicyTest):
+    """Test Multinic APIs policies with no legacy deprecated rules
+    and no scope checks which means new defaults only.
+
+    """
+
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        policies.BASE_POLICY_NAME % 'add':
+            base_policy.PROJECT_MEMBER,
+        policies.BASE_POLICY_NAME % 'remove':
+            base_policy.PROJECT_MEMBER}
+
+    def setUp(self):
+        super(MultinicNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, only project admin or member will be
+        # able to add/remove the fixed ip.
+        self.project_action_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
 
 
 class MultinicScopeTypePolicyTest(MultinicPolicyTest):
@@ -95,33 +108,28 @@ class MultinicScopeTypePolicyTest(MultinicPolicyTest):
     def setUp(self):
         super(MultinicScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # Scope enable will not allow system admin to add/remove
+        # the fixed ip.
+        self.project_action_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
 
 
-class MultinicNoLegacyPolicyTest(MultinicScopeTypePolicyTest):
+class MultinicScopeTypeNoLegacyPolicyTest(MultinicScopeTypePolicyTest):
     """Test Multinic APIs policies with system scope enabled,
     and no more deprecated rules.
     """
     without_deprecated_rules = True
     rules_without_deprecation = {
         policies.BASE_POLICY_NAME % 'add':
-            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+            base_policy.PROJECT_MEMBER,
         policies.BASE_POLICY_NAME % 'remove':
-            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
+            base_policy.PROJECT_MEMBER}
 
     def setUp(self):
-        super(MultinicNoLegacyPolicyTest, self).setUp()
-        # Check that system admin or owner is able to
-        # add/delete Fixed IP to server.
-        self.admin_or_owner_authorized_contexts = [
-            self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-        ]
-        # Check that non-system and non-admin/owner is not able
-        # to add/delete Fixed IP to server.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.project_reader_context,
-            self.project_foo_context,
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context
-        ]
+        super(MultinicScopeTypeNoLegacyPolicyTest, self).setUp()
+        # With scope enable and no legacy rule, only project admin/member
+        # will be able to add/remove the fixed ip.
+        self.project_action_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]

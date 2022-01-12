@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-pause-server:%s'
 pause_server_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'pause',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Pause a server",
         operations=[
             {
@@ -32,11 +32,11 @@ pause_server_policies = [
                 'method': 'POST'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'unpause',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Unpause a paused server",
         operations=[
             {
@@ -44,7 +44,7 @@ pause_server_policies = [
                 'method': 'POST'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
 ]
 

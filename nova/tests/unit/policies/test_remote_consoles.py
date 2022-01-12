@@ -48,31 +48,38 @@ class RemoteConsolesPolicyTest(base.BasePolicyTest):
                 user_id=user_id, vm_state=vm_states.ACTIVE,
                 task_state=None, launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
-
-        # Check that admin or and server owner is able to get server
-        # remote consoles.
-        self.admin_or_owner_authorized_contexts = [
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow server
+        # owner- having same project id and no role check) is able to get
+        # server remote consoles.
+        self.project_action_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context]
-        # Check that non-admin/owner is not able to get server
-        # remote consoles.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
 
     def test_create_console_policy(self):
         rule_name = rc_policies.BASE_POLICY_NAME
         body = {'remote_console': {'protocol': 'vnc', 'type': 'novnc'}}
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.create,
-                                 self.req, self.instance.uuid,
-                                 body=body)
+        self.common_policy_auth(self.project_action_authorized_contexts,
+                                rule_name,
+                                self.controller.create,
+                                self.req, self.instance.uuid,
+                                body=body)
+
+
+class RemoteConsolesNoLegacyNoScopePolicyTest(RemoteConsolesPolicyTest):
+    """Test Remote Consoles APIs policies with no legacy deprecated rules
+    and no scope checks which means new defaults only.
+
+    """
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(RemoteConsolesNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, only project admin or member will be
+        # able get server remote consoles.
+        self.project_action_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
 
 
 class RemoteConsolesScopeTypePolicyTest(RemoteConsolesPolicyTest):
@@ -88,9 +95,16 @@ class RemoteConsolesScopeTypePolicyTest(RemoteConsolesPolicyTest):
     def setUp(self):
         super(RemoteConsolesScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # Scope enable will not allow system admin to get server
+        # remote console.
+        self.project_action_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
 
 
-class RemoteConsolesNoLegacyPolicyTest(RemoteConsolesScopeTypePolicyTest):
+class RemoteConsolesScopeTypeNoLegacyPolicyTest(
+        RemoteConsolesScopeTypePolicyTest):
     """Test Remote Consoles APIs policies with system scope enabled,
     and no more deprecated rules that allow the legacy admin API to
     access system APIs.
@@ -98,18 +112,8 @@ class RemoteConsolesNoLegacyPolicyTest(RemoteConsolesScopeTypePolicyTest):
     without_deprecated_rules = True
 
     def setUp(self):
-        super(RemoteConsolesNoLegacyPolicyTest, self).setUp()
-        # Check that system admin or and server owner is able to get server
-        # remote consoles.
-        self.admin_or_owner_authorized_contexts = [
-            self.system_admin_context,
+        super(RemoteConsolesScopeTypeNoLegacyPolicyTest, self).setUp()
+        # With scope enable and no legacy rule, only project admin/member
+        # will be able to get server remote console.
+        self.project_action_authorized_contexts = [
             self.project_admin_context, self.project_member_context]
-        # Check that non-system/admin/owner is not able to get server
-        # remote consoles.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
-            self.other_project_member_context, self.project_reader_context,
-            self.project_foo_context,
-            self.other_project_reader_context,
-        ]

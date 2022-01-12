@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-evacuate'
 evacuate_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="Evacuate a server from a failed host to a new host",
         operations=[
             {
@@ -32,7 +32,7 @@ evacuate_policies = [
                 'method': 'POST'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 

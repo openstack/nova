@@ -64,9 +64,11 @@ class ShelveController(wsgi.Controller):
     def _shelve_offload(self, req, id, body):
         """Force removal of a shelved instance from the compute node."""
         context = req.environ["nova.context"]
-        context.can(shelve_policies.POLICY_ROOT % 'shelve_offload')
-
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(shelve_policies.POLICY_ROOT % 'shelve_offload',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
+
         try:
             self.compute_api.shelve_offload(context, instance)
         except exception.InstanceIsLocked as e:

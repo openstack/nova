@@ -48,40 +48,32 @@ class RescueServerPolicyTest(base.BasePolicyTest):
                 task_state=None, launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
 
-        # Check that admin or and server owner is able to rescue/unrescue
-        # the sevrer
-        self.admin_or_owner_authorized_contexts = [
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow server
+        # owner- having same project id and no role check) is able to rescue,
+        # unrescue the server.
+        self.project_action_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context]
-        # Check that non-admin/owner is not able to rescue/unrescue
-        # the server
-        self.admin_or_owner_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
 
     @mock.patch('nova.compute.api.API.rescue')
     def test_rescue_server_policy(self, mock_rescue):
         rule_name = rs_policies.BASE_POLICY_NAME
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller._rescue,
-                                 self.req, self.instance.uuid,
-                                 body={'rescue': {}})
+        self.common_policy_auth(self.project_action_authorized_contexts,
+                                rule_name,
+                                self.controller._rescue,
+                                self.req, self.instance.uuid,
+                                body={'rescue': {}})
 
     @mock.patch('nova.compute.api.API.unrescue')
     def test_unrescue_server_policy(self, mock_unrescue):
         rule_name = rs_policies.UNRESCUE_POLICY_NAME
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller._unrescue,
-                                 self.req, self.instance.uuid,
-                                 body={'unrescue': {}})
+        self.common_policy_auth(self.project_action_authorized_contexts,
+                                rule_name,
+                                self.controller._unrescue,
+                                self.req, self.instance.uuid,
+                                body={'unrescue': {}})
 
     def test_rescue_server_policy_failed_with_other_user(self):
         # Change the user_id in request context.
@@ -106,6 +98,27 @@ class RescueServerPolicyTest(base.BasePolicyTest):
                               body={'rescue': {}})
 
 
+class RescueServerNoLegacyNoScopePolicyTest(RescueServerPolicyTest):
+    """Test rescue/unrescue server APIs policies with no legacy deprecated rules
+    and no scope checks which means new defaults only.
+
+    """
+
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        rs_policies.UNRESCUE_POLICY_NAME:
+            base_policy.PROJECT_MEMBER,
+        rs_policies.BASE_POLICY_NAME:
+            base_policy.PROJECT_MEMBER}
+
+    def setUp(self):
+        super(RescueServerNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, only project admin or member will be
+        # able to rescue/unrescue the server.
+        self.project_action_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
+
+
 class RescueServerScopeTypePolicyTest(RescueServerPolicyTest):
     """Test Rescue Server APIs policies with system scope enabled.
     This class set the nova.conf [oslo_policy] enforce_scope to True
@@ -119,9 +132,15 @@ class RescueServerScopeTypePolicyTest(RescueServerPolicyTest):
     def setUp(self):
         super(RescueServerScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # Scope enable will not allow system admin to rescue/unrescue the
+        # server.
+        self.project_action_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
 
 
-class RescueServerNoLegacyPolicyTest(RescueServerScopeTypePolicyTest):
+class RescueServerScopeTypeNoLegacyPolicyTest(RescueServerScopeTypePolicyTest):
     """Test Rescue Server APIs policies with system scope enabled,
     and no more deprecated rules that allow the legacy admin API to
     access system APIs.
@@ -129,23 +148,13 @@ class RescueServerNoLegacyPolicyTest(RescueServerScopeTypePolicyTest):
     without_deprecated_rules = True
     rules_without_deprecation = {
         rs_policies.UNRESCUE_POLICY_NAME:
-            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+            base_policy.PROJECT_MEMBER,
         rs_policies.BASE_POLICY_NAME:
-            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
+            base_policy.PROJECT_MEMBER}
 
     def setUp(self):
-        super(RescueServerNoLegacyPolicyTest, self).setUp()
-        # Check that system admin or and server owner is able to
-        # rescue/unrescue the sevrer
-        self.admin_or_owner_authorized_contexts = [
-            self.system_admin_context,
+        super(RescueServerScopeTypeNoLegacyPolicyTest, self).setUp()
+        # With scope enable and no legacy rule, only project admin/member
+        # will be able to rescue/unrescue the server.
+        self.project_action_authorized_contexts = [
             self.project_admin_context, self.project_member_context]
-        # Check that non-system/admin/owner is not able to rescue/unrescue
-        # the server
-        self.admin_or_owner_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
-            self.other_project_member_context, self.project_reader_context,
-            self.project_foo_context,
-            self.other_project_reader_context,
-        ]
