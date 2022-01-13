@@ -1669,7 +1669,7 @@ def _process_host_stats(obj, host_reservations_map):
         "vcpus": threads,
         "vcpus_used": 0,
         "memory_mb": mem_mb,
-        "memory_mb_used": stats_summary.overallMemoryUsage,
+        "memory_mb_used": getattr(stats_summary, "overallMemoryUsage", 0),
         "cpu_info": _host_props_to_cpu_info(host_props),
     }
 
