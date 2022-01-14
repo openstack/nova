@@ -958,6 +958,11 @@ class OSAPIFixture(fixtures.Fixture):
     - resp.content - the body of the response
     - resp.headers - dictionary of HTTP headers returned
 
+    This fixture also has the following clients with various differences:
+
+        self.admin_api - Project user with is_admin=True and the "admin" role
+        self.reader_api - Project user with only the "reader" role
+        self.other_api - Project user with only the "other" role
     """
 
     def __init__(
@@ -1021,9 +1026,17 @@ class OSAPIFixture(fixtures.Fixture):
             base_url += '/' + self.project_id
 
         self.api = client.TestOpenStackClient(
-            'fake', base_url, project_id=self.project_id)
+            'fake', base_url, project_id=self.project_id,
+            roles=['reader', 'member'])
         self.admin_api = client.TestOpenStackClient(
-            'admin', base_url, project_id=self.project_id)
+            'admin', base_url, project_id=self.project_id,
+            roles=['reader', 'member', 'admin'])
+        self.reader_api = client.TestOpenStackClient(
+            'reader', base_url, project_id=self.project_id,
+            roles=['reader'])
+        self.other_api = client.TestOpenStackClient(
+            'other', base_url, project_id=self.project_id,
+            roles=['other'])
         # Provide a way to access the wsgi application to tests using
         # the fixture.
         self.app = app
@@ -1040,8 +1053,9 @@ class OSAPIFixture(fixtures.Fixture):
             user_id = env['HTTP_X_AUTH_USER']
             project_id = env['HTTP_X_AUTH_PROJECT_ID']
             is_admin = user_id == 'admin'
+            roles = env['HTTP_X_ROLES'].split(',')
             return context.RequestContext(
-                user_id, project_id, is_admin=is_admin, **kwargs)
+                user_id, project_id, is_admin=is_admin, roles=roles, **kwargs)
 
         self.useFixture(fixtures.MonkeyPatch(
             'nova.api.auth.NovaKeystoneContext._create_context', fake_ctx))
