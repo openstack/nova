@@ -755,7 +755,8 @@ Rescue Server (rescue Action)
 
 Puts a server in rescue mode and changes its status to ``RESCUE``.
 
-.. note:: This API is not supported for volume-backed instances.
+.. note:: Until microversion 2.87, this API is not supported for volume-backed
+          instances.
 
 Specify the ``rescue`` action in the request body.
 
