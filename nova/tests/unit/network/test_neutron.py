@@ -4478,16 +4478,16 @@ class TestAPI(TestAPIBase):
                       'device_owner': 'compute:%s' %
                                       instance.availability_zone}})
 
+    @mock.patch.object(neutronapi.API, '_get_vf_pci_device_profile',
+                       new=mock.Mock(return_value={}))
     @mock.patch(
         'nova.network.neutron.API.has_extended_resource_request_extension',
         new=mock.Mock(return_value=False),
     )
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
-    def test_update_port_bindings_for_instance_with_pci(self,
-                                            get_client_mock,
-                                            get_pci_device_devspec_mock):
-
+    def test_update_port_bindings_for_instance_with_pci(
+            self, get_client_mock, get_pci_device_devspec_mock):
         devspec = mock.Mock()
         devspec.get_tags.return_value = {'physical_network': 'physnet1'}
         get_pci_device_devspec_mock.return_value = devspec
@@ -7395,11 +7395,16 @@ class TestAPIPortbinding(TestAPIBase):
         mock_get_client.assert_called_once_with(mock.ANY)
         mocked_client.list_extensions.assert_called_once_with()
 
+    @mock.patch.object(
+        neutronapi.API, '_get_vf_pci_device_profile',
+        new=mock.Mock(return_value={
+            'pf_mac_address': '52:54:00:1e:59:c6',
+            'vf_num': 1,
+        }))
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
-    def test_populate_neutron_extension_values_binding_sriov(self,
-                                         mock_get_instance_pci_devs,
-                                         mock_get_pci_device_devspec):
+    def test_populate_neutron_extension_values_binding_sriov(
+        self, mock_get_instance_pci_devs, mock_get_pci_device_devspec):
         host_id = 'my_host_id'
         instance = {'host': host_id}
         port_req_body = {'port': {}}
@@ -7408,7 +7413,7 @@ class TestAPIPortbinding(TestAPIBase):
                    'product_id': '0047',
                    'address': '0000:0a:00.1',
                    'card_serial_number': None,
-                   'dev_type': 'TEST_TYPE',
+                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
                   }
         PciDevice = collections.namedtuple('PciDevice',
                                ['vendor_id', 'product_id', 'address',
@@ -7417,12 +7422,15 @@ class TestAPIPortbinding(TestAPIBase):
         profile = {'pci_vendor_info': '1377:0047',
                    'pci_slot': '0000:0a:00.1',
                    'physical_network': 'physnet1',
+                   'pf_mac_address': '52:54:00:1e:59:c6',
+                   'vf_num': 1,
                   }
 
         mock_get_instance_pci_devs.return_value = [mydev]
         devspec = mock.Mock()
         devspec.get_tags.return_value = {'physical_network': 'physnet1'}
         mock_get_pci_device_devspec.return_value = devspec
+
         self.api._populate_neutron_binding_profile(
             instance, pci_req_id, port_req_body, None)
 
@@ -7430,6 +7438,14 @@ class TestAPIPortbinding(TestAPIBase):
                          port_req_body['port'][
                              constants.BINDING_PROFILE])
 
+    @mock.patch.object(
+        neutronapi.API, '_get_vf_pci_device_profile',
+        new=mock.Mock(return_value= {
+            'pf_mac_address': '52:54:00:1e:59:c6',
+            'vf_num': 1,
+            'card_serial_number': 'MT2113X00000',
+        })
+    )
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
     def test_populate_neutron_extension_values_binding_sriov_card_serial(
@@ -7440,7 +7456,7 @@ class TestAPIPortbinding(TestAPIBase):
         pci_req_id = 'my_req_id'
         pci_dev = {'vendor_id': 'a2d6',
                    'product_id': '15b3',
-                   'address': '0000:82:00.1',
+                   'address': '0000:0a:00.1',
                    'card_serial_number': 'MT2113X00000',
                    'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
                   }
@@ -7449,11 +7465,13 @@ class TestAPIPortbinding(TestAPIBase):
                                 'card_serial_number', 'dev_type'])
         mydev = PciDevice(**pci_dev)
         profile = {'pci_vendor_info': 'a2d6:15b3',
-                   'pci_slot': '0000:82:00.1',
+                   'pci_slot': '0000:0a:00.1',
                    'physical_network': 'physnet1',
                    # card_serial_number is a property of the object obtained
                    # from extra_info.
                    'card_serial_number': 'MT2113X00000',
+                   'pf_mac_address': '52:54:00:1e:59:c6',
+                   'vf_num': 1,
                   }
 
         mock_get_instance_pci_devs.return_value = [mydev]
@@ -7505,11 +7523,17 @@ class TestAPIPortbinding(TestAPIBase):
             profile,
             port_req_body['port'][constants.BINDING_PROFILE])
 
+    @mock.patch.object(
+        neutronapi.API, '_get_vf_pci_device_profile',
+        new=mock.Mock(return_value= {
+            'pf_mac_address': '52:54:00:1e:59:c6',
+            'vf_num': 1,
+        })
+    )
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
-    def test_populate_neutron_extension_values_binding_sriov_with_cap(self,
-                                         mock_get_instance_pci_devs,
-                                         mock_get_pci_device_devspec):
+    def test_populate_neutron_extension_values_binding_sriov_with_cap(
+        self, mock_get_instance_pci_devs, mock_get_pci_device_devspec):
         host_id = 'my_host_id'
         instance = {'host': host_id}
         port_req_body = {'port': {
@@ -7520,7 +7544,7 @@ class TestAPIPortbinding(TestAPIBase):
                    'product_id': '0047',
                    'address': '0000:0a:00.1',
                    'card_serial_number': None,
-                   'dev_type': 'TEST_TYPE',
+                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
                   }
         PciDevice = collections.namedtuple('PciDevice',
                                ['vendor_id', 'product_id', 'address',
@@ -7530,18 +7554,164 @@ class TestAPIPortbinding(TestAPIBase):
                    'pci_slot': '0000:0a:00.1',
                    'physical_network': 'physnet1',
                    'capabilities': ['switchdev'],
+                   'pf_mac_address': '52:54:00:1e:59:c6',
+                   'vf_num': 1,
                   }
 
         mock_get_instance_pci_devs.return_value = [mydev]
         devspec = mock.Mock()
         devspec.get_tags.return_value = {'physical_network': 'physnet1'}
         mock_get_pci_device_devspec.return_value = devspec
+
         self.api._populate_neutron_binding_profile(
             instance, pci_req_id, port_req_body, None)
 
         self.assertEqual(profile,
                          port_req_body['port'][
                              constants.BINDING_PROFILE])
+
+    @mock.patch.object(
+        pci_utils, 'get_vf_num_by_pci_address',
+        new=mock.MagicMock(side_effect=(lambda vf_a: 1
+                     if vf_a == '0000:0a:00.1' else None)))
+    @mock.patch.object(
+        pci_utils, 'get_mac_by_pci_address',
+        new=mock.MagicMock(side_effect=(lambda vf_a: {
+            '0000:0a:00.0': '52:54:00:1e:59:c6'}.get(vf_a)))
+    )
+    def test__get_vf_pci_device_profile(self):
+        pci_dev = {'vendor_id': 'a2d6',
+                   'product_id': '15b3',
+                   'address': '0000:0a:00.1',
+                   'parent_addr': '0000:0a:00.0',
+                   'card_serial_number': 'MT2113X00000',
+                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
+                  }
+        PciDevice = collections.namedtuple('PciDevice',
+                               ['vendor_id', 'product_id', 'address',
+                                'card_serial_number', 'dev_type',
+                                'parent_addr'])
+        mydev = PciDevice(**pci_dev)
+        self.assertEqual(self.api._get_vf_pci_device_profile(mydev),
+                         {'pf_mac_address': '52:54:00:1e:59:c6',
+                          'vf_num': 1,
+                          'card_serial_number': 'MT2113X00000'})
+
+    @mock.patch.object(
+        pci_utils, 'get_mac_by_pci_address',
+        new=mock.MagicMock(
+            side_effect=exception.PciDeviceNotFoundById(id='0000:0a:00.1'))
+    )
+    def test__get_vf_pci_device_profile_invalid_pf_address(self):
+        pci_dev = {'vendor_id': 'a2d6',
+                   'product_id': '15b3',
+                   'address': '0000:0a:00.1',
+                   'parent_addr': '0000:0a:00.0',
+                   'card_serial_number': 'MT2113X00000',
+                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
+                  }
+        PciDevice = collections.namedtuple('PciDevice',
+                               ['vendor_id', 'product_id', 'address',
+                                'card_serial_number', 'dev_type',
+                                'parent_addr'])
+        mydev = PciDevice(**pci_dev)
+        self.assertEqual(self.api._get_vf_pci_device_profile(mydev), {})
+
+    @mock.patch.object(
+        pci_utils, 'get_vf_num_by_pci_address',
+        new=mock.MagicMock(
+            side_effect=exception.PciDeviceNotFoundById(id='0000:0a:00.0'))
+    )
+    @mock.patch.object(
+        pci_utils, 'get_mac_by_pci_address',
+        new=mock.MagicMock(side_effect=(lambda vf_a: {
+            '0000:0a:00.0': '52:54:00:1e:59:c6'}.get(vf_a))))
+    def test__get_vf_pci_device_profile_invalid_vf_address(self):
+        pci_dev = {'vendor_id': 'a2d6',
+                   'product_id': '15b3',
+                   'address': '0000:0a:00.1',
+                   'parent_addr': '0000:0a:00.0',
+                   'card_serial_number': 'MT2113X00000',
+                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
+                  }
+        PciDevice = collections.namedtuple('PciDevice',
+                               ['vendor_id', 'product_id', 'address',
+                                'card_serial_number', 'dev_type',
+                                'parent_addr'])
+        mydev = PciDevice(**pci_dev)
+        vf_profile = self.api._get_vf_pci_device_profile(mydev)
+        self.assertEqual(vf_profile, {})
+
+    def test__get_vf_pci_device_profile_not_vf_address(self):
+        pci_dev = {'vendor_id': 'a2d6',
+                   'product_id': '15b3',
+                   'address': '0000:0a:00.1',
+                   'parent_addr': None,
+                   'card_serial_number': 'MT2113X00000',
+                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
+                  }
+        PciDevice = collections.namedtuple('PciDevice',
+                               ['vendor_id', 'product_id', 'address',
+                                'card_serial_number', 'dev_type',
+                                'parent_addr'])
+        mydev = PciDevice(**pci_dev)
+        self.assertEqual(self.api._get_vf_pci_device_profile(mydev), {})
+
+    @mock.patch.object(
+        neutronapi.API, '_get_vf_pci_device_profile',
+        new=mock.MagicMock(side_effect=(
+            lambda dev: {'0000:0a:00.1': {
+                'pf_mac_address': '52:54:00:1e:59:c6',
+                'vf_num': 1,
+                'card_serial_number': 'MT2113X00000',
+            }}.get(dev.address)
+    )))
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
+    def test__get_pci_device_profile_vf(self, mock_get_pci_device_devspec):
+        devspec = mock.Mock()
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
+        mock_get_pci_device_devspec.return_value = devspec
+
+        pci_dev = {'vendor_id': 'a2d6',
+                   'product_id': '15b3',
+                   'address': '0000:0a:00.1',
+                   'card_serial_number': 'MT2113X00000',
+                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
+                  }
+        PciDevice = collections.namedtuple('PciDevice',
+                               ['vendor_id', 'product_id', 'address',
+                                'card_serial_number', 'dev_type'])
+        mydev = PciDevice(**pci_dev)
+
+        self.assertEqual({'card_serial_number': 'MT2113X00000',
+                          'pci_slot': '0000:0a:00.1',
+                          'pci_vendor_info': 'a2d6:15b3',
+                          'pf_mac_address': '52:54:00:1e:59:c6',
+                          'physical_network': 'physnet1',
+                          'vf_num': 1},
+                         self.api._get_pci_device_profile(mydev))
+
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
+    def test__get_pci_device_profile_pf(self, mock_get_pci_device_devspec):
+        devspec = mock.Mock()
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
+        mock_get_pci_device_devspec.return_value = devspec
+
+        pci_dev = {'vendor_id': 'a2d6',
+                   'product_id': '15b3',
+                   'address': '0000:0a:00.0',
+                   'card_serial_number': 'MT2113X00000',
+                   'dev_type': obj_fields.PciDeviceType.SRIOV_PF,
+                  }
+        PciDevice = collections.namedtuple('PciDevice',
+                               ['vendor_id', 'product_id', 'address',
+                                'card_serial_number', 'dev_type'])
+        mydev = PciDevice(**pci_dev)
+
+        self.assertEqual({'pci_slot': '0000:0a:00.0',
+                          'pci_vendor_info': 'a2d6:15b3',
+                          'physical_network': 'physnet1'},
+                         self.api._get_pci_device_profile(mydev))
 
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
@@ -7578,9 +7748,19 @@ class TestAPIPortbinding(TestAPIBase):
         mock_get_instance_pci_devs.assert_called_once_with(
             instance, pci_req_id)
 
+    @mock.patch.object(
+        pci_utils, 'get_vf_num_by_pci_address',
+        new=mock.MagicMock(
+            side_effect=(lambda vf_a: {'0000:0a:00.1': 1}.get(vf_a)))
+    )
+    @mock.patch.object(
+        pci_utils, 'get_mac_by_pci_address',
+        new=mock.MagicMock(side_effect=(lambda vf_a: {
+            '0000:0a:00.0': '52:54:00:1e:59:c6'}.get(vf_a)))
+    )
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
-    def test_pci_parse_whitelist_called_once(self,
-                                             mock_get_instance_pci_devs):
+    def test_pci_parse_whitelist_called_once(
+        self, mock_get_instance_pci_devs):
         white_list = [
             '{"address":"0000:0a:00.1","physical_network":"default"}']
         cfg.CONF.set_override('passthrough_whitelist', white_list, 'pci')
@@ -7595,6 +7775,7 @@ class TestAPIPortbinding(TestAPIBase):
         pci_dev = {'vendor_id': '1377',
                    'product_id': '0047',
                    'address': '0000:0a:00.1',
+                   'parent_addr': '0000:0a:00.0',
                    'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
                   }
 

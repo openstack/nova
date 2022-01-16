@@ -668,7 +668,8 @@ class API:
             # information in the binding profile.
             for profile_key in ('pci_vendor_info', 'pci_slot',
                                 constants.ALLOCATION, 'arq_uuid',
-                                'physical_network', 'card_serial_number'):
+                                'physical_network', 'card_serial_number',
+                                'vf_num', 'pf_mac_address'):
                 if profile_key in port_profile:
                     del port_profile[profile_key]
             port_req_body['port'][constants.BINDING_PROFILE] = port_profile
@@ -1504,6 +1505,50 @@ class API:
                 raise exception.PortBindingDeletionFailed(
                     port_id=port_id, host=host)
 
+    def _get_vf_pci_device_profile(self, pci_dev):
+        """Get VF-specific fields to add to the PCI device profile.
+
+        This data can be useful, e.g. for off-path networking backends that
+        need to do the necessary plumbing in order to set a VF up for packet
+        forwarding.
+        """
+        vf_profile: ty.Dict[str, ty.Union[str, int]] = {}
+        try:
+            pf_mac = pci_utils.get_mac_by_pci_address(pci_dev.parent_addr)
+        except (exception.PciDeviceNotFoundById) as e:
+            LOG.debug(
+                "Could not determine PF MAC address for a VF with"
+                " addr %(addr)s, error: %(e)s",
+                {"addr": pci_dev.address, "e": e})
+            # NOTE(dmitriis): we do not raise here since not all PFs will
+            # have netdevs even when VFs are netdevs (see LP: #1915255). The
+            # rest of the fields (VF number and card serial) are not enough
+            # to fully identify the VF so they are not populated either.
+            return vf_profile
+        try:
+            vf_num = pci_utils.get_vf_num_by_pci_address(
+                pci_dev.address)
+        except exception.PciDeviceNotFoundById as e:
+            # This is unlikely to happen because the kernel has a common SR-IOV
+            # code that creates physfn symlinks, however, it would be better
+            # to avoid raising an exception here and simply warn an operator
+            # that things did not go as planned.
+            LOG.warning(
+                "Could not determine a VF logical number for a VF"
+                " with addr %(addr)s, error: %(e)s", {
+                    "addr": pci_dev.address, "e": e})
+            return vf_profile
+        card_serial_number = pci_dev.card_serial_number
+        if card_serial_number:
+            vf_profile.update({
+                'card_serial_number': card_serial_number
+            })
+        vf_profile.update({
+            'pf_mac_address': pf_mac,
+            'vf_num': vf_num,
+        })
+        return vf_profile
+
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
         if dev_spec:
@@ -1516,11 +1561,8 @@ class API:
                 ),
             }
             if pci_dev.dev_type == obj_fields.PciDeviceType.SRIOV_VF:
-                card_serial_number = pci_dev.card_serial_number
-                if card_serial_number:
-                    dev_profile.update({
-                        'card_serial_number': card_serial_number
-                    })
+                dev_profile.update(
+                    self._get_vf_pci_device_profile(pci_dev))
             return dev_profile
 
         raise exception.PciDeviceNotFound(node_id=pci_dev.compute_node_id,

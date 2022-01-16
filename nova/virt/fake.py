@@ -954,6 +954,14 @@ class FakeDriverWithPciResources(SmallFakeDriver):
             ],
                              group='pci')
 
+            self.useFixture(fixtures.MockPatch(
+                'nova.pci.utils.get_mac_by_pci_address',
+                return_value='52:54:00:1e:59:c6'))
+
+            self.useFixture(fixtures.MockPatch(
+                'nova.pci.utils.get_vf_num_by_pci_address',
+                return_value=1))
+
     def get_available_resource(self, nodename):
         host_status = super(
             FakeDriverWithPciResources, self).get_available_resource(nodename)

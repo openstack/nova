@@ -287,6 +287,8 @@ class SRIOVServersTest(_PCIServersTestBase):
                 'pci_vendor_info': '8086:1515',
                 'pci_slot': '0000:81:00.2',
                 'physical_network': 'physnet4',
+                'pf_mac_address': '52:54:00:1e:59:c6',
+                'vf_num': 1,
             },
             port['binding:profile'],
         )
@@ -529,6 +531,8 @@ class SRIOVServersTest(_PCIServersTestBase):
                 # matching one)
                 'pci_slot': '0000:81:01.4',
                 'physical_network': 'physnet4',
+                'pf_mac_address': '52:54:00:1e:59:c6',
+                'vf_num': 1,
             },
             port['binding:profile'],
         )
@@ -561,6 +565,8 @@ class SRIOVServersTest(_PCIServersTestBase):
                 'pci_vendor_info': '8086:1515',
                 'pci_slot': '0000:81:00.2',
                 'physical_network': 'physnet4',
+                'pf_mac_address': '52:54:00:1e:59:c6',
+                'vf_num': 1,
             },
             port['binding:profile'],
         )
