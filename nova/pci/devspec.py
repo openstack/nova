@@ -19,7 +19,10 @@ import typing as ty
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.pci.request import PCI_REMOTE_MANAGED_TAG
 from nova.pci import utils
+from oslo_log import log as logging
+from oslo_utils import strutils
 
 MAX_VENDOR_ID = 0xFFFF
 MAX_PRODUCT_ID = 0xFFFF
@@ -30,6 +33,7 @@ MAX_SLOT = 0x1F
 ANY = '*'
 REGEX_ANY = '.*'
 
+LOG = logging.getLogger(__name__)
 
 PCISpecAddressType = ty.Union[ty.Dict[str, str], str]
 
@@ -110,6 +114,9 @@ class PhysicalPciAddress(PciAddressSpec):
             self.func == phys_pci_addr.func,
             ]
         return all(conditions)
+
+    def __str__(self):
+        return f'{self.domain}:{self.bus}:{self.slot}.{self.func}'
 
 
 class PciAddressGlobSpec(PciAddressSpec):
@@ -263,6 +270,20 @@ class PciDeviceSpec(PciAddressSpec):
         self.tags = dev_spec
         self._init_dev_details()
 
+    def _address_obj(self) -> ty.Optional[WhitelistPciAddress]:
+        address_obj = None
+        if self.dev_name:
+            address_str, pf = utils.get_function_by_ifname(self.dev_name)
+            if not address_str:
+                return None
+            # Note(moshele): In this case we always passing a string
+            # of the PF pci address
+            address_obj = WhitelistPciAddress(address_str, pf)
+        else:  # use self.address
+            address_obj = self.address
+
+        return address_obj
+
     def _init_dev_details(self) -> None:
         self.vendor_id = self.tags.pop("vendor_id", ANY)
         self.product_id = self.tags.pop("product_id", ANY)
@@ -283,19 +304,72 @@ class PciDeviceSpec(PciAddressSpec):
         if not self.dev_name:
             self.address = WhitelistPciAddress(address or '*:*:*.*', False)
 
-    def match(self, dev_dict: ty.Dict[str, str]) -> bool:
-        address_obj: ty.Optional[WhitelistPciAddress]
+        # PFs with remote_managed tags are explicitly not supported. If they
+        # are tagged as such by mistake in the whitelist Nova will
+        # raise an exception. The reason for excluding PFs is the lack of a way
+        # for an instance to access the control plane at the remote side (e.g.
+        # on a DPU) for managing the PF representor corresponding to the PF.
+        address_obj = self._address_obj()
+        self._remote_managed = strutils.bool_from_string(
+            self.tags.get(PCI_REMOTE_MANAGED_TAG))
+        if self._remote_managed:
+            if address_obj is None:
+                # Note that this will happen if a netdev was specified in the
+                # whitelist but it is not actually present on a system - in
+                # this case Nova is not able to look up an address by
+                # a netdev name.
+                raise exception.PciDeviceRemoteManagedNotPresent()
+            elif address_obj.is_physical_function:
+                pf_addr = str(address_obj.pci_address_spec)
+                vf_product_id = utils.get_vf_product_id_by_pf_addr(pf_addr)
+                # VF vendor IDs have to match the corresponding PF vendor IDs
+                # per the SR-IOV spec so we use it for matching here.
+                pf_vendor_id, pf_product_id = utils.get_pci_ids_by_pci_addr(
+                    pf_addr)
+                # Check the actual vendor ID and VF product ID of an assumed
+                # VF (based on the actual PF). The VF product ID must match
+                # the actual one if this is a VF device spec.
+                if (self.product_id == vf_product_id and
+                        self.vendor_id in (pf_vendor_id, ANY)):
+                    pass
+                elif (self.product_id in (pf_product_id, ANY) and
+                      self.vendor_id in (pf_vendor_id, ANY)):
+                    raise exception.PciDeviceInvalidPFRemoteManaged(
+                        address_obj.pci_address_spec)
+                else:
+                    # The specified product and vendor IDs of what is supposed
+                    # to be a VF corresponding to the PF PCI address do not
+                    # match the actual ones for this PF. This means that the
+                    # whitelist is invalid.
+                    raise exception.PciConfigInvalidWhitelist(
+                        reason=_('the specified VF vendor ID %(vendor_id)s and'
+                                 ' product ID %(product_id)s do not match the'
+                                 ' expected VF IDs based on the corresponding'
+                                 ' PF identified by PCI address %(pf_addr)s') %
+                        {'vendor_id': self.vendor_id,
+                         'product_id': self.product_id,
+                         'pf_addr': pf_addr})
 
-        if self.dev_name:
-            address_str, pf = utils.get_function_by_ifname(self.dev_name)
-            if not address_str:
-                return False
-            # Note(moshele): In this case we always passing a string
-            # of the PF pci address
-            address_obj = WhitelistPciAddress(address_str, pf)
-        else:  # use self.address
-            address_obj = self.address
+    def _ensure_remote_managed_dev_vpd_serial(
+        self, dev_dict: ty.Dict[str, ty.Any]) -> bool:
+        """Ensure the presence of a serial number field in PCI VPD.
 
+        A card serial number extracted from PCI VPD is required to allow a
+        networking backend to identify which remote host needs to program a
+        given device. So if a device is tagged as remote_managed, it must
+        have the card serial number or be filtered out.
+        """
+        if not self._remote_managed:
+            return True
+        card_sn = dev_dict.get('capabilities', {}).get(
+            'vpd', {}).get('card_serial_number')
+        # None or empty card_serial_number should be filtered out. That would
+        # mean either no serial number in the VPD (if present at all) or SN is
+        # an empty string which is not useful for device identification.
+        return bool(card_sn)
+
+    def match(self, dev_dict: ty.Dict[str, ty.Any]) -> bool:
+        address_obj: ty.Optional[WhitelistPciAddress] = self._address_obj()
         if not address_obj:
             return False
 
@@ -303,13 +377,20 @@ class PciDeviceSpec(PciAddressSpec):
             self.vendor_id in (ANY, dev_dict['vendor_id']),
             self.product_id in (ANY, dev_dict['product_id']),
             address_obj.match(dev_dict['address'],
-                dev_dict.get('parent_addr'))])
+                dev_dict.get('parent_addr')),
+            self._ensure_remote_managed_dev_vpd_serial(dev_dict),
+        ])
 
     def match_pci_obj(self, pci_obj: 'objects.PciDevice') -> bool:
-        return self.match({'vendor_id': pci_obj.vendor_id,
-                           'product_id': pci_obj.product_id,
-                           'address': pci_obj.address,
-                           'parent_addr': pci_obj.parent_addr})
+        dev_dict = {
+            'vendor_id': pci_obj.vendor_id,
+            'product_id': pci_obj.product_id,
+            'address': pci_obj.address,
+            'parent_addr': pci_obj.parent_addr,
+            'capabilities': {
+                'vpd': {'card_serial_number': pci_obj.card_serial_number}}
+        }
+        return self.match(dev_dict)
 
     def get_tags(self) -> ty.Dict[str, str]:
         return self.tags

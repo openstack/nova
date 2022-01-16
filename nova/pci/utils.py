@@ -211,3 +211,63 @@ def get_vf_num_by_pci_address(pci_addr: str) -> int:
         raise exception.PciDeviceNotFoundById(id=pci_addr)
 
     return int(vf_num)
+
+
+def get_vf_product_id_by_pf_addr(pci_addr: str) -> str:
+    """Get the VF product ID for a given PF.
+
+    "Product ID" or Device ID in the PCIe spec terms for a PF is
+    possible to retrieve via the VF Device ID field present as of
+    SR-IOV 1.0 in the "3.3.11. VF Device ID (1Ah)" section. It is
+    described as a field that "contains the Device ID that should
+    be presented for every VF to the SI".
+
+    It is available as of Linux kernel 4.15, commit
+    7dfca15276fc3f18411a2b2182704fa1222bcb60
+
+    :param pci_addr: A string of the form "<domain>:<bus>:<slot>.<function>".
+    :return: A string containing a product ID of a VF corresponding to the PF.
+    """
+    sriov_vf_device_path = f"/sys/bus/pci/devices/{pci_addr}/sriov_vf_device"
+    try:
+        with open(sriov_vf_device_path) as f:
+            vf_product_id = f.readline().strip()
+    except IOError as e:
+        LOG.warning(
+            "Could not find the expected sysfs file for "
+            "determining the VF product ID of a PCI VF by PF"
+            "with addr %(addr)s. May not be a PF. Error: %(e)s",
+            {"addr": pci_addr, "e": e},
+        )
+        raise exception.PciDeviceNotFoundById(id=pci_addr)
+    if not vf_product_id:
+        raise ValueError("sriov_vf_device file does not contain"
+                         " a VF product ID")
+    return vf_product_id
+
+
+def get_pci_ids_by_pci_addr(pci_addr: str) -> ty.Tuple[str, ...]:
+    """Get the product ID and vendor ID for a given PCI device.
+
+    :param pci_addr: A string of the form "<domain>:<bus>:<slot>.<function>".
+    :return: A list containing a vendor and product ids.
+    """
+    id_prefix = f"/sys/bus/pci/devices/{pci_addr}"
+    ids: ty.List[str] = []
+    for id_name in ("vendor", "product"):
+        try:
+            with open(os.path.join(id_prefix, id_name)) as f:
+                id_value = f.readline()
+                if not id_value:
+                    raise ValueError(f"{id_name} file does not contain"
+                                     " a valid value")
+                ids.append(id_value.strip().replace("0x", ""))
+        except IOError as e:
+            LOG.warning(
+                "Could not find the expected sysfs file for "
+                f"determining the {id_name} ID of a PCI device "
+                "with addr %(addr)s. Error: %(e)s",
+                {"addr": pci_addr, "e": e},
+            )
+            raise exception.PciDeviceNotFoundById(id=pci_addr)
+    return tuple(ids)

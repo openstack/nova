@@ -82,7 +82,7 @@ class Whitelist(object):
 
         return specs
 
-    def device_assignable(self, dev: ty.Dict[str, str]) -> bool:
+    def device_assignable(self, dev: ty.Dict[str, ty.Any]) -> bool:
         """Check if a device can be assigned to a guest.
 
         :param dev: A dictionary describing the device properties

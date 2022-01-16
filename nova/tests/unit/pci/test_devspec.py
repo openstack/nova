@@ -17,6 +17,7 @@ import mock
 from nova import exception
 from nova import objects
 from nova.pci import devspec
+from nova.pci.request import PCI_REMOTE_MANAGED_TAG
 from nova import test
 
 dev = {"vendor_id": "8086",
@@ -449,3 +450,234 @@ class PciDevSpecTestCase(test.NoDBTestCase):
 
         pci_obj = objects.PciDevice.create(None, pci_dev)
         self.assertTrue(pci.match_pci_obj(pci_obj))
+
+
+class PciDevSpecRemoteManagedTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        self.test_dev = {
+            "vendor_id": "8086",
+            "product_id": "5057",
+            "address": "0000:0a:00.0",
+            "capabilities": {"vpd": {"card_serial_number": "MT2113X00000"}},
+        }
+        super().setUp()
+
+    @mock.patch('nova.pci.utils.get_function_by_ifname',
+                new=mock.Mock(return_value=(None, False)))
+    def test_remote_managed_unknown_raises(self):
+        pci_info = {"devname": "nonexdev0", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        self.assertRaises(exception.PciDeviceRemoteManagedNotPresent,
+                          devspec.PciDeviceSpec, pci_info)
+
+    @mock.patch('nova.pci.utils.get_vf_product_id_by_pf_addr',
+                new=mock.Mock(return_value="5058"))
+    @mock.patch('nova.pci.utils.get_pci_ids_by_pci_addr',
+                new=mock.Mock(return_value=("8086", "5057")))
+    @mock.patch('nova.pci.utils.is_physical_function',
+                new=mock.Mock(return_value=True))
+    def test_remote_managed_pf_raises(self):
+        """Remote-managed PF test case with PF-based VF matching
+
+        5058 is the expected VF product ID which differs from the
+        one specified in the whitelist. This is to simulate a mistake
+        in the whitelist where a user uses both the PF PCI address and
+        PF product and vendor ID instead of using the VF product ID.
+        """
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5057", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        self.assertRaises(exception.PciDeviceInvalidPFRemoteManaged,
+                          devspec.PciDeviceSpec, pci_info)
+
+    @mock.patch('nova.pci.utils.get_vf_product_id_by_pf_addr',
+                new=mock.Mock(return_value="5058"))
+    @mock.patch('nova.pci.utils.get_pci_ids_by_pci_addr',
+                new=mock.Mock(return_value=("8086", "5057")))
+    @mock.patch('nova.pci.utils.is_physical_function',
+                new=mock.Mock(return_value=True))
+    def test_remote_managed_vf_by_pf(self):
+        """Remote-managed PF test case with PF-based VF matching
+
+        This is to test the supported matching of a VF by using
+        its product and vendor ID and a specific PF PCI address.
+        """
+        # Full match: 5058 is the expected VF product ID which
+        # matches the one specified in the whitelist. This is to
+        # simulate the supported matching of a VF by using its
+        # product and vendor ID and a specific PF PCI address.
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5058", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        devspec.PciDeviceSpec(pci_info)
+
+        # This spec would match both PFs and VFs. Since we care that
+        # remote-managed PFs are not allowed, we have to prohibit the
+        # this altogether.
+        pci_info = {"vendor_id": "*", "address": "0000:0a:00.0",
+                    "product_id": "*", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        self.assertRaises(exception.PciDeviceInvalidPFRemoteManaged,
+                          devspec.PciDeviceSpec, pci_info)
+
+        # Don't care about a VF product ID. Like above, this would
+        # match both PFs and VFs (since VFs have the same vendor ID).
+        # Therefore, this case is prohibited to avoid remote-managed PFs.
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "*", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        self.assertRaises(exception.PciDeviceInvalidPFRemoteManaged,
+                          devspec.PciDeviceSpec, pci_info)
+
+        # Don't care about a VF vendor ID.
+        pci_info = {"vendor_id": "*", "address": "0000:0a:00.0",
+                    "product_id": "5058", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        devspec.PciDeviceSpec(pci_info)
+
+    @mock.patch('nova.pci.utils.get_vf_product_id_by_pf_addr',
+                new=mock.Mock(return_value="5058"))
+    @mock.patch('nova.pci.utils.get_pci_ids_by_pci_addr',
+                new=mock.Mock(return_value=("8086", "5057")))
+    @mock.patch('nova.pci.utils.is_physical_function',
+                new=mock.Mock(return_value=True))
+    def test_remote_managed_vf_by_pf_raises(self):
+        """Remote-managed PF test case with PF-based VF matching
+
+        5058 is the expected VF product ID which matches the one
+        specified in the whitelist. This is to simulate the supported
+        matching of a VF by using its product and vendor ID and a
+        specific PF PCI address.
+        """
+        # VF vendor ID and device ID mismatch.
+        pci_info = {"vendor_id": "8080", "address": "0000:0a:00.0",
+                    "product_id": "5050", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        self.assertRaises(exception.PciConfigInvalidWhitelist,
+                          devspec.PciDeviceSpec, pci_info)
+
+        # VF device ID mismatch.
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5050", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        self.assertRaises(exception.PciConfigInvalidWhitelist,
+                          devspec.PciDeviceSpec, pci_info)
+
+        # VF vendor ID mismatch.
+        pci_info = {"vendor_id": "8080", "address": "0000:0a:00.0",
+                    "product_id": "5058", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        self.assertRaises(exception.PciConfigInvalidWhitelist,
+                          devspec.PciDeviceSpec, pci_info)
+
+    @mock.patch('nova.pci.utils.is_physical_function',
+                new=mock.Mock(return_value=True))
+    def test_not_remote_managed_pf_match(self):
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5057", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "false"}
+        pci = devspec.PciDeviceSpec(pci_info)
+        self.assertTrue(pci.match(self.test_dev))
+
+    @mock.patch('nova.pci.utils.is_physical_function',
+                new=mock.Mock(return_value=True))
+    def test_no_remote_managed_specified_pf_match(self):
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5057", "physical_network": "hr_net"}
+        pci = devspec.PciDeviceSpec(pci_info)
+        self.assertTrue(pci.match(self.test_dev))
+
+    @mock.patch('nova.pci.utils.is_physical_function',
+                new=mock.Mock(return_value=False))
+    def test_remote_managed_specified_vf_match(self):
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5057", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        pci = devspec.PciDeviceSpec(pci_info)
+        self.assertTrue(pci.match(self.test_dev))
+
+    @mock.patch('nova.pci.utils.is_physical_function',
+                new=mock.Mock(return_value=False))
+    def test_remote_managed_specified_no_serial_vf_no_match(self):
+        # No card serial number available - must not get a match.
+        test_dev = {
+            "vendor_id": "8086",
+            "product_id": "5057",
+            "address": "0000:0a:00.0",
+        }
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5057", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        pci = devspec.PciDeviceSpec(pci_info)
+        self.assertFalse(pci.match(test_dev))
+
+    @mock.patch('nova.pci.utils.is_physical_function',
+                new=mock.Mock(return_value=False))
+    def test_remote_managed_specified_empty_serial_vf_no_match(self):
+        # Card serial is an empty string.
+        test_dev = {
+            "vendor_id": "8086",
+            "product_id": "5057",
+            "address": "0000:0a:00.0",
+            "capabilities": {"vpd": {"card_serial_number": ""}},
+        }
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5057", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+        pci = devspec.PciDeviceSpec(pci_info)
+        self.assertFalse(pci.match(test_dev))
+
+    @mock.patch('nova.pci.utils.is_physical_function',
+                new=mock.Mock(return_value=False))
+    def test_not_remote_managed_vf_match(self):
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5057", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "false"}
+        pci = devspec.PciDeviceSpec(pci_info)
+        self.assertTrue(pci.match(self.test_dev))
+
+    @mock.patch('nova.pci.utils.is_physical_function',
+                new=mock.Mock(return_value=False))
+    def test_no_remote_managed_specified_vf_match(self):
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5057", "physical_network": "hr_net"}
+        pci = devspec.PciDeviceSpec(pci_info)
+        self.assertTrue(pci.match(self.test_dev))
+
+    def test_remote_managed_vf_match_by_pci_obj(self):
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.2",
+                    "product_id": "5057", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+
+        pci = devspec.PciDeviceSpec(pci_info)
+        pci_dev = {
+            "compute_node_id": 1,
+            "address": "0000:0a:00.2",
+            "vendor_id": "8086",
+            "product_id": "5057",
+            "capabilities": {"vpd": {"card_serial_number": "MT2113X00000"}},
+            "status": "available",
+            "parent_addr": "0000:0a:00.1",
+        }
+
+        pci_obj = objects.PciDevice.create(None, pci_dev)
+        self.assertTrue(pci.match_pci_obj(pci_obj))
+
+    def test_remote_managed_vf_no_match_by_pci_obj(self):
+        pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
+                    "product_id": "5057", "physical_network": "hr_net",
+                    PCI_REMOTE_MANAGED_TAG: "true"}
+
+        pci = devspec.PciDeviceSpec(pci_info)
+        pci_dev = {
+            "compute_node_id": 1,
+            "address": "0000:0a:00.2",
+            "vendor_id": "8086",
+            "product_id": "5057",
+            "status": "available",
+            "parent_addr": "0000:0a:00.1",
+        }
+
+        pci_obj = objects.PciDevice.create(None, pci_dev)
+        self.assertFalse(pci.match_pci_obj(pci_obj))

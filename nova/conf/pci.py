@@ -134,6 +134,15 @@ Possible values:
 
     - ``physical_network``
     - ``trusted``
+    - ``remote_managed`` - a VF is managed remotely by an off-path networking
+      backend. May have boolean-like string values case-insensitive values:
+      "true" or "false". By default, "false" is assumed for all devices.
+      Using this option requires a networking service backend capable of
+      handling those devices. PCI devices are also required to have a PCI
+      VPD capability with a card serial number (either on a VF itself on
+      its corresponding PF), otherwise they will be ignored and not
+      available for allocation.
+
 
   Valid examples are::
 
@@ -158,12 +167,30 @@ Possible values:
                              "physical_network":"physnet1"}
     passthrough_whitelist = {"devname": "eth0", "physical_network":"physnet1",
                              "trusted": "true"}
+    passthrough_whitelist = {"vendor_id":"a2d6",
+                             "product_id":"15b3",
+                             "remote_managed": "true"}
+    passthrough_whitelist = {"vendor_id":"a2d6",
+                             "product_id":"15b3",
+                             "address": "0000:82:00.0",
+                             "physical_network":"physnet1",
+                             "remote_managed": "true"}
 
   The following are invalid, as they specify mutually exclusive options::
 
     passthrough_whitelist = {"devname":"eth0",
                              "physical_network":"physnet",
                              "address":"*:0a:00.*"}
+
+  The following example is invalid because it specifies the ``remote_managed``
+  tag for a PF - it will result in an error during config validation at the
+  Nova Compute service startup::
+
+    passthrough_whitelist = {"address": "0000:82:00.0",
+                             "product_id": "a2d6",
+                             "vendor_id": "15b3",
+                             "physical_network": null,
+                             "remote_managed": "true"}
 
 * A JSON list of JSON dictionaries corresponding to the above format. For
   example::
