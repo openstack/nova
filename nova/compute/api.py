@@ -115,6 +115,8 @@ MIN_COMPUTE_BOOT_WITH_EXTENDED_RESOURCE_REQUEST = 58
 MIN_COMPUTE_MOVE_WITH_EXTENDED_RESOURCE_REQUEST = 59
 MIN_COMPUTE_INT_ATTACH_WITH_EXTENDED_RES_REQ = 60
 
+SUPPORT_VNIC_TYPE_REMOTE_MANAGED = 61
+
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
 # trigger.
@@ -1017,6 +1019,22 @@ class API:
                             " until upgrade finished.")
                         raise exception.ForbiddenPortsWithAccelerator(msg)
 
+    def _check_vnic_remote_managed_min_version(self, context):
+        min_version = (objects.service.get_minimum_version_all_cells(
+            context, ['nova-compute']))
+        if min_version < SUPPORT_VNIC_TYPE_REMOTE_MANAGED:
+            msg = ("Remote-managed ports are not supported"
+                   " until an upgrade is fully finished.")
+            raise exception.ForbiddenWithRemoteManagedPorts(msg)
+
+    def _check_support_vnic_remote_managed(self, context, requested_networks):
+        if requested_networks:
+            for request_net in requested_networks:
+                if (request_net.port_id and
+                        self.network_api.is_remote_managed_port(
+                            context, request_net.port_id)):
+                    self._check_vnic_remote_managed_min_version(context)
+
     def _validate_and_build_base_options(
         self, context, flavor, boot_meta, image_href, image_id, kernel_id,
         ramdisk_id, display_name, display_description, hostname, key_name,
@@ -1087,6 +1105,7 @@ class API:
         network_metadata, port_resource_requests, req_lvl_params = result
 
         self._check_support_vnic_accelerator(context, requested_networks)
+        self._check_support_vnic_remote_managed(context, requested_networks)
 
         # Creating servers with ports that have resource requests, like QoS
         # minimum bandwidth rules, is only supported in a requested minimum
@@ -5160,6 +5179,10 @@ class API:
                 network_model.VNIC_TYPE_ACCELERATOR_DIRECT,
                 network_model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL):
                 raise exception.ForbiddenPortsWithAccelerator()
+
+            if port.get('binding:vnic_type',
+                        'normal') == network_model.VNIC_TYPE_REMOTE_MANAGED:
+                self._check_vnic_remote_managed_min_version(context)
 
             self.ensure_compute_version_for_resource_request(
                 context, instance, port)

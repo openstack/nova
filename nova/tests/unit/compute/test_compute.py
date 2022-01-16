@@ -8692,6 +8692,10 @@ class ComputeAPITestCase(BaseTestCase):
                          len(db.instance_get_all(self.context)))
         mock_secgroups.assert_called_once_with(mock.ANY, 'invalid_sec_group')
 
+    @mock.patch(
+        'nova.network.neutron.API.is_remote_managed_port',
+        new=mock.Mock(return_value=False),
+    )
     def test_create_instance_associates_requested_networks(self):
         # Make sure create adds the requested networks to the RequestSpec
 
@@ -9827,6 +9831,10 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(refs[i]['display_name'], name)
             self.assertEqual(refs[i]['hostname'], name)
 
+    @mock.patch(
+        'nova.network.neutron.API.is_remote_managed_port',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch("nova.objects.service.get_minimum_version_all_cells")
     @mock.patch(
         "nova.network.neutron.API.has_extended_resource_request_extension")

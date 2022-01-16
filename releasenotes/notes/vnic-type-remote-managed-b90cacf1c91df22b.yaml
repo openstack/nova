@@ -1,0 +1,27 @@
+---
+features:
+  - |
+    Added support for off-path networking backends where devices exposed to the
+    hypervisor host are managed remotely (which is the case, for example, with
+    various SmartNIC DPU devices). ``VNIC_TYPE_REMOTE_MANAGED`` ports can now
+    be added to Nova instances as soon as all compute nodes are upgraded to
+    the new compute service version. In order to use this feature, VF PCI/PCIe
+    devices need to be tagged as ``remote_managed: "true"` in the Nova config
+    in the ``passthrough_whitelist`` option.
+
+    This feature relies on Neutron being upgraded to the corresponding release
+    of OpenStack and having an appropriate backend capable of binding
+    ``VNIC_TYPE_REMOTE_MANAGED`` ports (at the time of writing, ML2 with the OVN
+    ML2 mechanism driver is the only supported backend, see the Neutron
+    documentation for more details).
+
+    Note that the PCI devices (VFs or, alternatively, their PF) must have a
+    valid PCI Vital Product Data (VPD) with a serial number present in it for
+    this feature to work properly. Also note that only VFs can be tagged as
+    ``remote_managed: "true"`` and they cannot be used for legacy SR-IOV
+    use-cases.
+
+    Nova operations on instances with ``VNIC_TYPE_REMOTE_MANAGED`` ports
+    follow the same logic as the operations on direct SR-IOV ports.
+
+    This feature is only supported with the Libvirt driver.

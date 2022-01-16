@@ -338,6 +338,15 @@ def _nova_to_osvif_vif_ovs(vif):
             port_profile=_get_ovs_representor_port_profile(vif),
             plugin="ovs")
         _set_representor_datapath_offload_settings(vif, obj)
+    elif vnic_type == model.VNIC_TYPE_REMOTE_MANAGED:
+        # A networking backend is responsible for setting up a
+        # representor in this case so the driver is noop.
+        obj = _get_vif_instance(
+            vif, objects.vif.VIFHostDevice,
+            plugin="noop",
+            vif_name=vif_name,
+            dev_address=vif["profile"]["pci_slot"],
+            dev_type=objects.fields.VIFHostDeviceDevType.ETHERNET)
     elif vif.is_hybrid_plug_enabled():
         obj = _get_vif_instance(
             vif,

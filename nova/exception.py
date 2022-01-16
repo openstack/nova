@@ -175,6 +175,11 @@ class ForbiddenPortsWithAccelerator(NotSupported):
     msg_fmt = _("Feature not supported with Ports that have accelerators.")
 
 
+class ForbiddenWithRemoteManagedPorts(NotSupported):
+    msg_fmt = _("This feature is not supported when remote-managed ports"
+                " are in use.")
+
+
 class AdminRequired(Forbidden):
     msg_fmt = _("User does not have admin privileges")
 
