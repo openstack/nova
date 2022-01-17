@@ -419,17 +419,17 @@ class GlanceImageServiceV2(object):
         if data is None:
             write_image = False
 
-        # Retrieve properties for verification of Glance image signature
-        verifier = self._get_verifier(context, image_id, trusted_certs)
-
-        # Exit early if we do not need write nor verify
-        if verifier is None and write_image is False:
-            if data is None:
-                return image_chunks
-            else:
-                return
-
         try:
+            # Retrieve properties for verification of Glance image signature
+            verifier = self._get_verifier(context, image_id, trusted_certs)
+
+            # Exit early if we do not need write nor verify
+            if verifier is None and write_image is False:
+                if data is None:
+                    return image_chunks
+                else:
+                    return
+
             for chunk in image_chunks:
                 if verifier:
                     verifier.update(chunk)
@@ -463,6 +463,8 @@ class GlanceImageServiceV2(object):
                 data.flush()
                 self._safe_fsync(data)
                 data.close()
+            if isinstance(image_chunks, glance_utils.IterableWithLength):
+                image_chunks.iterable.close()
 
         if data is None:
             return image_chunks

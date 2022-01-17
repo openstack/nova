@@ -16,12 +16,14 @@
 
 import copy
 import datetime
+import io
 from io import StringIO
 import urllib.parse as urlparse
 
 import cryptography
 from cursive import exception as cursive_exception
 import ddt
+import glanceclient.common.utils
 import glanceclient.exc
 from glanceclient.v1 import images
 from glanceclient.v2 import schemas
@@ -701,8 +703,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         with testtools.ExpectedException(exception.ImageUnacceptable):
             service.download(ctx, mock.sentinel.image_id)
 
-    @mock.patch('glanceclient.common.utils.IterableWithLength')
-    @mock.patch('os.path.getsize', return_value=1)
+    @mock.patch('os.path.getsize')
     @mock.patch('builtins.open')
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_verifier')
@@ -710,7 +711,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_direct_rbd_uri_v2(
             self, show_mock, get_tran_mock, get_verifier_mock, log_mock,
-            open_mock, getsize_mock, iterable_with_length_mock):
+            open_mock, getsize_mock):
         self.flags(enable_rbd_download=True, group='glance')
         show_mock.return_value = {
             'locations': [
@@ -724,9 +725,13 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         get_tran_mock.return_value = tran_mod
         client = mock.MagicMock()
         ctx = mock.sentinel.ctx
+        image_content = ["rbd1", "rbd2"]
+        getsize_mock.return_value = len(image_content)
+        file_object = mock.MagicMock(spec=io.BytesIO)
+        file_object.__iter__.return_value = image_content
         writer = mock.MagicMock()
+        writer.__enter__.return_value = file_object
         open_mock.return_value = writer
-        iterable_with_length_mock.return_value = ["rbd1", "rbd2"]
         service = glance.GlanceImageServiceV2(client)
 
         verifier = mock.MagicMock()
@@ -994,7 +999,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
                           service.download,
                           context=None, image_id=None,
                           data=None, dst_path=None)
-        mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
+        self.assertEqual(mock_log.error.call_count, 2)
 
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
@@ -1051,6 +1056,33 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
         mock_fsync.assert_called_once_with(mock_dest)
         mock_dest.truncate.assert_called_once_with(0)
         self.assertTrue(mock_dest.close.called)
+
+    @mock.patch('builtins.open')
+    @mock.patch('cursive.signature_utils.get_verifier')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
+    def test_download_dst_path_with_invalid_signature_v2(
+            self, mock_fsync, mock_show, mock_get_verifier, mock_open):
+        glance_iterable = mock.MagicMock(spec=io.BytesIO)
+        glance_iterable.__iter__.return_value = self.fake_img_data
+        self.client.call.return_value = fake_glance_response(
+            glanceclient.common.utils.IterableWithLength(
+                iterable=glance_iterable, length=len(self.fake_img_data)))
+        service = glance.GlanceImageServiceV2(self.client)
+        mock_get_verifier.side_effect = \
+            cursive_exception.SignatureVerificationError
+        mock_dest = mock.MagicMock()
+        mock_open.return_value = mock_dest
+        mock_show.return_value = self.fake_img_props
+        fake_path = 'FAKE_PATH'
+        self.assertRaises(cursive_exception.SignatureVerificationError,
+                          service.download,
+                          context=None, image_id=None,
+                          data=None, dst_path=fake_path)
+        mock_open.assert_called_once_with(fake_path, 'wb')
+        mock_fsync.assert_called_once_with(mock_dest)
+        mock_dest.close.assert_called()
+        glance_iterable.close.assert_called()
 
 
 class TestDownloadCertificateValidation(test.NoDBTestCase):
