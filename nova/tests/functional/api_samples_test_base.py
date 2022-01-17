@@ -135,8 +135,11 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             outf.write(data)
 
     def _write_sample(self, name, data):
-        with open(self._get_sample(
-            name, self.microversion), 'w') as outf:
+        sample_file = self._get_sample(name, self.microversion)
+
+        os.makedirs(os.path.dirname(sample_file), exist_ok = True)
+
+        with open(sample_file, 'w') as outf:
             outf.write(data)
 
     def _compare_result(self, expected, result, result_str):
