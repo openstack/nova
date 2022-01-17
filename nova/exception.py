@@ -2362,8 +2362,9 @@ class AcceleratorRequestOpFailed(NovaException):
 class AcceleratorRequestBindingFailed(NovaException):
     msg_fmt = _("Failed to bind accelerator requests: %(msg)s")
 
-    def __init__(self, arqs, **kwargs):
-        super().__init__(message=self.msg_fmt, **kwargs)
+    def __init__(self, message=None, arqs=None, **kwargs):
+        super(AcceleratorRequestBindingFailed, self).__init__(
+            message=message, **kwargs)
         self.arqs = arqs or []
 
 
