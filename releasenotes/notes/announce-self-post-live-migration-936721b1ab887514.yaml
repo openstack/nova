@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Added a new configuration option ``[workarounds]/enable_qemu_monitor_announce_self``
+    that when enabled causes the Libvirt driver to send a announce_self QEMU
+    monitor command post live-migration. Please see `bug 1815989 <https://bugs.launchpad.net/nova/+bug/1815989>`_
+    for more details. Please note that this causes the domain to be considered
+    tainted by libvirt.
