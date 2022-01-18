@@ -4797,9 +4797,6 @@ class LibvirtDriver(driver.ComputeDriver):
                        injection_info is not None and
                        CONF.libvirt.inject_partition != -2)
 
-        # NOTE(ndipanov): Even if disk_mapping was passed in, which
-        # currently happens only on rescue - we still don't want to
-        # create a base image.
         if not booted_from_volume:
             root_fname = imagecache.get_cache_fname(disk_images['image_id'])
             size = instance.flavor.root_gb * units.Gi
