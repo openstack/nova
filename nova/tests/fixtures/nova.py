@@ -17,6 +17,7 @@
 """Fixtures for Nova tests."""
 
 import collections
+import contextlib
 from contextlib import contextmanager
 import functools
 import logging as std_logging
@@ -28,6 +29,7 @@ import fixtures
 import futurist
 import mock
 from openstack import service_description
+from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import enginefacade
@@ -405,7 +407,7 @@ class CellDatabases(fixtures.Fixture):
         # to point to a cell, we need to take an exclusive lock to
         # prevent any other calls to get_context_manager() until we
         # reset to the default.
-        self._cell_lock = utils.ReaderWriterLock()
+        self._cell_lock = ReaderWriterLock()
 
     def _cache_schema(self, connection_str):
         # NOTE(melwitt): See the regular Database fixture for why
@@ -1721,3 +1723,37 @@ class PropagateTestCaseIdToChildEventlets(fixtures.Fixture):
         # our initialization to the child eventlet
         self.useFixture(
             fixtures.MonkeyPatch('nova.utils.spawn_n', wrapped_spawn_n))
+
+
+class ReaderWriterLock(lockutils.ReaderWriterLock):
+    """Wrap oslo.concurrency lockutils.ReaderWriterLock to support eventlet.
+
+    As of fasteners >= 0.15, the workaround code to use eventlet.getcurrent()
+    if eventlet patching is detected has been removed and
+    threading.current_thread is being used instead. Although we are running in
+    a greenlet in our test environment, we are not running in a greenlet of
+    type GreenThread. A GreenThread is created by calling eventlet.spawn() and
+    spawn() is not used to run our tests. At the time of this writing, the
+    eventlet patched threading.current_thread() method falls back to the
+    original unpatched current_thread() method if it is not called from a
+    GreenThead [1] and that breaks our tests involving this fixture.
+
+    We can work around this by patching threading.current_thread() with
+    eventlet.getcurrent() during creation of the lock object, if we detect we
+    are eventlet patched. If we are not eventlet patched, we use a no-op
+    context manager.
+
+    Note: this wrapper should be used for any ReaderWriterLock because any lock
+    may possibly be running inside a plain greenlet created by spawn_n().
+
+    See https://github.com/eventlet/eventlet/issues/731 for details.
+
+    [1] https://github.com/eventlet/eventlet/blob/v0.32.0/eventlet/green/threading.py#L128  # noqa
+    """
+
+    def __init__(self, *a, **kw):
+        eventlet_patched = eventlet.patcher.is_monkey_patched('thread')
+        mpatch = fixtures.MonkeyPatch(
+            'threading.current_thread', eventlet.getcurrent)
+        with mpatch if eventlet_patched else contextlib.ExitStack():
+            super().__init__(*a, **kw)
