@@ -52,18 +52,16 @@ def get_block_device_info(instance, block_device_mapping):
                             specialized subclasses.
     """
     from nova.virt import block_device as virt_block_device
-
-    block_device_info = {
+    return {
         'root_device_name': instance.root_device_name,
         'ephemerals': virt_block_device.convert_ephemerals(
             block_device_mapping),
         'block_device_mapping':
-            virt_block_device.convert_all_volumes(*block_device_mapping)
+            virt_block_device.convert_all_volumes(*block_device_mapping),
+        'swap':
+            virt_block_device.get_swap(
+                virt_block_device.convert_swap(block_device_mapping))
     }
-    swap_list = virt_block_device.convert_swap(block_device_mapping)
-    block_device_info['swap'] = virt_block_device.get_swap(swap_list)
-
-    return block_device_info
 
 
 def block_device_info_get_root_device(block_device_info):
