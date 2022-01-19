@@ -4804,8 +4804,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if size == 0 or suffix == '.rescue':
                 size = None
 
-            backend = self.image_backend.by_name(instance, 'disk' + suffix,
-                                                 CONF.libvirt.images_type)
+            backend = self.image_backend.by_name(instance, 'disk' + suffix)
             created_disks = not backend.exists()
 
             if instance.task_state == task_states.RESIZE_FINISH:
@@ -5357,6 +5356,11 @@ class LibvirtDriver(driver.ComputeDriver):
         self, instance, name, disk_mapping, flavor, image_type=None,
         boot_order=None,
     ):
+        # NOTE(artom) To pass unit tests, wherein the code here is loaded
+        # *before* any config with self.flags() is done, we need to have the
+        # default inline in the method, and not in the kwarg declaration.
+        if image_type is None:
+            image_type = CONF.libvirt.images_type
         disk_unit = None
         disk = self.image_backend.by_name(instance, name, image_type)
         if (name == 'disk.config' and image_type == 'rbd' and
@@ -5381,7 +5385,9 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_unit=disk_unit, boot_order=boot_order)
         return conf
 
-    def _get_guest_fs_config(self, instance, name, image_type=None):
+    def _get_guest_fs_config(
+        self, instance, name, image_type=CONF.libvirt.images_type
+    ):
         disk = self.image_backend.by_name(instance, name, image_type)
         return disk.libvirt_fs_info("/", "ploop")
 
@@ -10721,8 +10727,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Creating backing file follows same way as spawning instances.
                 cache_name = os.path.basename(info['backing_file'])
 
-                disk = self.image_backend.by_name(instance, instance_disk,
-                                                  CONF.libvirt.images_type)
+                disk = self.image_backend.by_name(instance, instance_disk)
                 if cache_name.startswith('ephemeral'):
                     # The argument 'size' is used by image.cache to
                     # validate disk size retrieved from cache against

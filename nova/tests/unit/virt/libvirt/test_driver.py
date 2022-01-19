@@ -24631,7 +24631,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self.assertEqual('raw', disk.image_type)
 
         # Assert that the root rescue disk was created as the default type
-        self.assertIsNone(disks['disk.rescue'].image_type)
+        self.assertEqual('default', disks['disk.rescue'].image_type)
 
         # We expect the generated domain to contain disk.rescue and
         # disk, in that order
@@ -24703,7 +24703,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self.assertEqual('raw', disk.image_type)
 
         # Assert that the root rescue disk was created as the default type
-        self.assertIsNone(disks['disk.rescue'].image_type)
+        self.assertEqual('default', disks['disk.rescue'].image_type)
 
         # We expect the generated domain to contain disk.rescue, disk, and
         # disk.config.rescue in that order
