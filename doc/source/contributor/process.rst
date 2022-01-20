@@ -697,34 +697,46 @@ Our experience was:
    review time on the patches in the slots. Such commitment is hard to get or
    follow up on without being aggressive.
 
+3) Non-cores were not able to tell they were happy with reviewing some change
+
 So the aim of the new review priority process is to be as decentralized amongst
 cores as possible. We trust cores that when they mark something as priority
 then they also themselves commit to review the patch. We also assume that if a
 core reviewed a patch then that core should easily find another core as a
-second reviewer when needed.
+second reviewer when needed. We also want contributors to be able to "ping"
+cores asynchronously by asking them to review some changes they saw.
 
-Note that this process does not want to change how a patch is discovered to be
-ready for review. The patch authors free to you any existing forums and ways to
-get review attention.
+That said, this process doesn't explain how a patch is discovered to be
+ready for review. While previously The patch authors were able to
+asynchronously beg for reviews by adding their changes to the etherpad, now
+they need to find ways to get review attention. For this, we need to understand
+first whether this is a problem for contributors or not, so let us know please
+if you have issues for asking to get reviews by going to the nova meeting.
 
 Therefore we use the Review-Priority label in Gerrit in the following way:
 
-* Review-Priority is a label with 0 or +1 values, that can be set by the
-  members of the core team
+* Review-Priority is a label with 0, +1 or +2 values.
 
-* A core sets the Review-Priority flag to +1 to indicate that they will help
+* A contributor can set the Review-Priority flag to +1 to indicate they will
+  want cores to review the patch.
+
+* A core sets the Review-Priority flag to +2 to indicate that they will help
   the author to get the patch merged.
 
-* We expect that the cores will limit the number of patches marked with +1
+* We expect the contributors setting +1 for a patch that they will continue
+  to look at the patch even if a core reviews it so they can then provide
+  their own comments or replies.
+
+* We expect that the cores will limit the number of patches marked with +2
   Review-Priority based on their actual review bandwidth
 
 * We expect that cores will check the list of reviews already having
-  Review-Priority +1 set by other cores before they mark a new one as such to
+  Review-Priority +2 set by other cores before they mark a new one as such to
   see where they can help first by being the second core.
 
 * There will be a regular agenda point on the weekly meeting where the team
-  look at the list of patches with +1 mark to keep an overall view what is
-  happening in nova.
+  look at the list of patches with +1 or +2 mark to keep an overall view what
+  is happening in nova.
 
 Pros:
 
@@ -741,9 +753,6 @@ Cons:
 
 * No externally enforced limit on how many things can be a priority at any
   given time.
-
-* Does not (want to) solve the problem of discovering reviews that are ready to
-  core review
 
 Process Evolution Ideas
 =======================
