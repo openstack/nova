@@ -3235,13 +3235,9 @@ class VolumeAttachmentCommandsTestCase(test.NoDBTestCase):
 
         cm = objects.CellMapping(name='foo', uuid=uuidsentinel.cell)
         im = objects.InstanceMapping(cell_mapping=cm)
-        mock_get_im.return_value = im
-
-        fake_connection_info = {
-            'data': {
-                'foo': 'bar'
-            }
-        }
+        mock_get_im.return_value , fake_connection_info  = im, 
+                                                            {'data': {'foo': 'bar'}}
+        
         bdm = objects.BlockDeviceMapping(
             cell_ctxt, uuid=uuidsentinel.bdm, volume_id=uuidsentinel.volume,
             attachment_id=uuidsentinel.attach,
