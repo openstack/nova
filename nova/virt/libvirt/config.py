@@ -2687,6 +2687,19 @@ class LibvirtConfigGuestFeatureKvmHidden(LibvirtConfigGuestFeature):
         return root
 
 
+class LibvirtConfigGuestFeatureSMM(LibvirtConfigGuestFeature):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestFeatureSMM, self).__init__("smm", **kwargs)
+
+    def format_dom(self):
+        root = super(LibvirtConfigGuestFeatureSMM, self).format_dom()
+
+        root.append(etree.Element("smm", state="on"))
+
+        return root
+
+
 class LibvirtConfigGuestFeaturePMU(LibvirtConfigGuestFeature):
 
     def __init__(self, state, **kwargs):

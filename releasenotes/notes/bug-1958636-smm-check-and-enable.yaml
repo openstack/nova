@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    [`bug 1958636 <https://bugs.launchpad.net/nova/+bug/1958636>`_]
+    Explicitly check for and enable SMM when firmware requires it.
+    Previously we assumed libvirt would do this for us but this is
+    not true in all cases.

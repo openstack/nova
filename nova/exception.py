@@ -1920,6 +1920,10 @@ class SecureBootNotSupported(Invalid):
     msg_fmt = _("Secure Boot is not supported by host")
 
 
+class FirmwareSMMNotSupported(Invalid):
+    msg_fmt = _("This firmware doesn't require (support) SMM")
+
+
 class TriggerCrashDumpNotSupported(Invalid):
     msg_fmt = _("Triggering crash dump is not supported")
 

@@ -6283,9 +6283,10 @@ class LibvirtDriver(driver.ComputeDriver):
                     guest.os_loader_secure = False
 
                 try:
-                    loader, nvram_template = self._host.get_loader(
+                    loader, nvram_template, requires_smm = (
+                    self._host.get_loader(
                         arch, mach_type,
-                        has_secure_boot=guest.os_loader_secure)
+                        has_secure_boot=guest.os_loader_secure))
                 except exception.UEFINotSupported as exc:
                     if guest.os_loader_secure:
                         # we raise a specific exception if we requested secure
@@ -6296,6 +6297,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.os_loader = loader
                 guest.os_loader_type = 'pflash'
                 guest.os_nvram_template = nvram_template
+
+                # if the feature set says we need SMM then enable it
+                if requires_smm:
+                    guest.features.append(
+                        vconfig.LibvirtConfigGuestFeatureSMM())
 
             # NOTE(lyarwood): If the machine type isn't recorded in the stashed
             # image metadata then record it through the system metadata table.
