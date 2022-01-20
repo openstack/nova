@@ -1246,6 +1246,28 @@ def is_large_vm(memory_mb, flavor):
     return True
 
 
+def get_reserved_memory(flavor):
+    # baremetals don't need reservation as they have their whole host
+    if is_baremetal_flavor(flavor):
+        return 0
+
+    # explicit definitions in the flavor take precedence over any heuristic
+    try:
+        key = MEMORY_RESERVABLE_MB_RESOURCE_SPEC_KEY
+        memory_mb = int(flavor.extra_specs[key])
+    except (ValueError, KeyError):
+        pass
+    else:
+        if memory_mb > 0:
+            return min(flavor.memory_mb, memory_mb)
+
+    if CONF.full_reservation_memory_mb >= 0 \
+            and flavor.memory_mb >= CONF.full_reservation_memory_mb:
+        return flavor.memory_mb
+
+    return 0
+
+
 def vm_needs_special_spawning(memory_mb, flavor):
     if is_big_vm(memory_mb, flavor):
         return True

@@ -120,7 +120,7 @@ having more or equal to this setting's amount of RAM is a big VM.
 """),
     cfg.IntOpt(
         'largevm_mb',
-        default=230 * 1024,      # 230 GB
+        default=512 * 1024 + 10,      # a little over 512 GB
         min=0,
         help="""
 Instance memory usage identifying it as large VM
@@ -131,6 +131,20 @@ differently than big VMs. Every VM having more or equal to this setting's
 amount of RAM and less than bigvm_mb is a large VM.
 
 See also: nova.utils.is_large_vm()
+"""),
+    cfg.IntOpt(
+        'full_reservation_memory_mb',
+        default=230 * 1024,      # 230 GiB
+        help="""
+Instance memory usage identifying a VM as needing memory reservations
+
+VMs starting from this amount of memory will get their memory reserved. This
+setting acts in addition to the flavor's CUSTOM_MEMORY_RESERVABLE_MB resource
+definition. The flavor's setting takes precedence if set.
+
+A negative value disables this feature.
+
+See also: nova.utils.get_reserved_memory()
 """),
     cfg.StrOpt(
         'bigvm_deployment_rp_name_prefix',
