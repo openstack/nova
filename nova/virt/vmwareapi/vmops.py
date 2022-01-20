@@ -359,7 +359,7 @@ class VMwareVMOps(object):
                     setattr(getattr(extra_specs, resource + '_limits'),
                             key, type(value))
         if CONF.vmware.reserve_all_memory \
-                or utils.is_big_vm(int(flavor.memory_mb), flavor):
+                or utils.is_large_vm(int(flavor.memory_mb), flavor):
             extra_specs.memory_limits.reservation = int(flavor.memory_mb)
         else:
             try:
