@@ -851,18 +851,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'ignore',
             module='nova',
-            message=r'The MetaData.bind argument is deprecated .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
-            message=r'The ``bind`` argument for schema methods .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
             message=r'The Column.copy\(\) method is deprecated .*',
             category=sqla_exc.SADeprecationWarning)
 

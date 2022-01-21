@@ -5652,7 +5652,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
         super(ArchiveTestCase, self).setUp()
         self.engine = db.get_engine()
-        self.metadata = sa.MetaData(self.engine)
+        self.metadata = sa.MetaData()
         self.conn = self.engine.connect()
         self.instance_id_mappings = models.InstanceIdMapping.__table__
         self.shadow_instance_id_mappings = sqlalchemyutils.get_table(
@@ -5684,8 +5684,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         except for specificially named exceptions, are empty. This
         makes sure that archiving isn't moving unexpected content.
         """
-        metadata = sa.MetaData(bind=self.engine)
-        metadata.reflect()
+        metadata = sa.MetaData()
+        metadata.reflect(bind=self.engine)
         for table in metadata.tables:
             if table.startswith("shadow_") and table not in exceptions:
                 rows = self.conn.exec_driver_sql(
@@ -5698,8 +5698,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         Shadow tables should have an identical schema to the main table.
         """
-        metadata = sa.MetaData(bind=self.engine)
-        metadata.reflect()
+        metadata = sa.MetaData()
+        metadata.reflect(bind=self.engine)
         for table_name in metadata.tables:
             # some tables don't have shadow tables so skip these
             if table_name in [
@@ -5942,7 +5942,9 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(len(rows), 0)
         # Archive 2 rows
         db._archive_deleted_rows_for_table(
-            self.metadata, tablename, max_rows=2, before=None, task_log=False)
+            self.metadata, self.engine, tablename, max_rows=2, before=None,
+            task_log=False,
+        )
         # Verify we have 4 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 4)
@@ -5951,7 +5953,9 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(len(rows), 2)
         # Archive 2 more rows
         db._archive_deleted_rows_for_table(
-            self.metadata, tablename, max_rows=2, before=None, task_log=False)
+            self.metadata, self.engine, tablename, max_rows=2, before=None,
+            task_log=False,
+        )
         # Verify we have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 2)
@@ -5960,7 +5964,9 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(len(rows), 4)
         # Try to archive more, but there are no deleted rows left.
         db._archive_deleted_rows_for_table(
-            self.metadata, tablename, max_rows=2, before=None, task_log=False)
+            self.metadata, self.engine, tablename, max_rows=2, before=None,
+            task_log=False,
+        )
         # Verify we still have 2 left in main
         rows = self.conn.execute(qmt).fetchall()
         self.assertEqual(len(rows), 2)
@@ -6019,8 +6025,8 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Archiving instances should result in migrations related to the
         # instances also being archived.
         num = db._archive_deleted_rows_for_table(
-            self.metadata, "instances", max_rows=None, before=None,
-            task_log=False)
+            self.metadata, self.engine, "instances", max_rows=None,
+            before=None, task_log=False)
         self.assertEqual(1, num[0])
         self._assert_shadow_tables_empty_except(
             'shadow_instances',
@@ -6386,7 +6392,8 @@ class RetryOnDeadlockTestCase(test.TestCase):
 
 
 class TestSqlalchemyTypesRepr(
-        test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase):
+    test_fixtures.OpportunisticDBTestMixin, test.NoDBTestCase,
+):
 
     def setUp(self):
         # NOTE(sdague): the oslo_db base test case completely
@@ -6397,15 +6404,15 @@ class TestSqlalchemyTypesRepr(
 
         super(TestSqlalchemyTypesRepr, self).setUp()
         self.engine = enginefacade.writer.get_engine()
-        meta = sa.MetaData(bind=self.engine)
+        meta = sa.MetaData()
         self.table = sa.Table(
             'cidr_tbl',
             meta,
             sa.Column('id', sa.Integer, primary_key=True),
             sa.Column('addr', col_types.CIDR())
         )
-        self.table.create()
-        self.addCleanup(meta.drop_all)
+        meta.create_all(self.engine)
+        self.addCleanup(meta.drop_all, self.engine)
 
     def test_cidr_repr(self):
         addrs = [('192.168.3.0/24', '192.168.3.0/24'),
