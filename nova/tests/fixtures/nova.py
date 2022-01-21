@@ -839,12 +839,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'ignore',
             module='nova',
-            message=r'The Engine.execute\(\) method is considered legacy',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
             message=r'The current statement is being autocommitted .*',
             category=sqla_exc.SADeprecationWarning)
 
@@ -852,12 +846,6 @@ class WarningsFixture(fixtures.Fixture):
             'ignore',
             module='nova',
             message=r'The Column.copy\(\) method is deprecated .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
-            message=r'The .close\(\) method on a so-called .*',
             category=sqla_exc.SADeprecationWarning)
 
         warnings.filterwarnings(
