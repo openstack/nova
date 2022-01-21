@@ -372,6 +372,16 @@ Related options:
 
 * :oslo.config:option:`DEFAULT.compute_driver` (libvirt)
 """),
+    cfg.BoolOpt('disable_compute_service_check_for_ffu',
+                default=False,
+                help="""
+If this is set, the normal safety check for old compute services will be
+treated as a warning instead of an error. This is only to be enabled to
+facilitate a Fast-Forward upgrade where new control services are being started
+before compute nodes have been able to update their service record. In an FFU,
+the service records in the database will be more than one version old until
+the compute nodes start up, but control services need to be online first.
+"""),
 ]
 
 
