@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    A new ``[cinder]/debug`` configurable has been introduced to enable DEBUG
+    logging for both the ``python-cinderclient`` and ``os-brick`` libraries
+    independently to the rest of Nova.

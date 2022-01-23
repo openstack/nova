@@ -70,6 +70,11 @@ def set_log_defaults():
         extra_default_log_levels = ['glanceclient=DEBUG']
     else:
         extra_default_log_levels = ['glanceclient=WARN']
+
+    # Allow cinderclient and os_brick to log at DEBUG without Nova
+    if CONF.cinder.debug:
+        extra_default_log_levels += ['cinderclient=DEBUG', 'os_brick=DEBUG']
+
     # NOTE(danms): DEBUG logging in privsep will result in some large
     # and potentially sensitive things being logged.
     extra_default_log_levels.append('oslo.privsep.daemon=INFO')

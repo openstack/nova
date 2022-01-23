@@ -104,6 +104,12 @@ Related options:
 
 * ``[DEFAULT]/default_schedule_zone``
 """),
+    cfg.BoolOpt('debug',
+        default=False,
+        help="""
+Enable DEBUG logging with cinderclient and os_brick independently of the rest
+of Nova.
+"""),
 ]
 
 
