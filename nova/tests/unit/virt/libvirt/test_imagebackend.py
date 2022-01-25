@@ -524,30 +524,12 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch('nova.virt.libvirt.utils.create_cow_image')
-    @mock.patch.object(imagebackend.disk, 'extend')
-    @mock.patch('nova.privsep.path.utime')
-    def test_create_image(self, mock_utime, mock_extend, mock_create,
-                          mock_sync):
-        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
-        fn = mock.MagicMock()
-        image = self.image_class(self.INSTANCE, self.NAME)
-
-        image.create_image(fn, self.TEMPLATE_PATH, None)
-
-        mock_create.assert_called_once_with(self.TEMPLATE_PATH, self.PATH)
-        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
-        self.assertTrue(mock_sync.called)
-        self.assertFalse(mock_extend.called)
-        mock_utime.assert_called()
-
-    @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
-    @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Image, 'verify_base_size')
     @mock.patch('nova.privsep.path.utime')
-    def test_create_image_with_size(self, mock_utime, mock_verify, mock_exist,
-                                    mock_extend, mock_create, mock_sync):
+    def test_create_image(
+        self, mock_utime, mock_verify, mock_exist, mock_create, mock_sync
+    ):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         fn = mock.MagicMock()
         mock_exist.side_effect = [False, True, False, False, False]
@@ -561,10 +543,8 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         image.create_image(fn, self.TEMPLATE_PATH, self.SIZE)
 
         mock_verify.assert_called_once_with(self.TEMPLATE_PATH, self.SIZE)
-        mock_create.assert_called_once_with(self.TEMPLATE_PATH, self.PATH)
-        mock_extend.assert_called_once_with(
-            imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_QCOW2),
-            self.SIZE)
+        mock_create.assert_called_once_with(
+            self.TEMPLATE_PATH, self.PATH, self.SIZE)
         fn.assert_called_once_with(target=self.TEMPLATE_PATH)
         mock_exist.assert_has_calls(exist_calls)
         self.assertTrue(mock_sync.called)
