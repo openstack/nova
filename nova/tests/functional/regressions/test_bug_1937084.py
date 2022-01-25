@@ -17,7 +17,6 @@ import mock
 from nova import context
 from nova import exception
 from nova import objects
-from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 
 
@@ -64,32 +63,15 @@ class TestDetachAttachmentNotFound(integrated_helpers._IntegratedTestBase):
         ):
             # DELETE /servers/{server_id}/os-volume_attachments/{volume_id} is
             # async but as we are using CastAsCall it's sync in our func tests
-            ex = self.assertRaises(
-                client.OpenStackApiException,
-                self.api.delete_server_volume,
+            self.api.delete_server_volume(
                 server_id,
                 self.cinder.IMAGE_BACKED_VOL)
-            self.assertEqual(500, ex.response.status_code)
             mock_attachment_delete.assert_called_once()
 
-        # FIXME(lyarwood): This is the Nova portion of bug #1937084 where
-        # the original caller hasn't polled os-volume_attachments and sent
-        # a seperate DELETE request to c-api for the volume as soon as it
-        # has become available but before n-cpu has finished the original
-        # call. This leads to the sync request to c-api to delete the
-        # attachment returning a 404 that Nova translates into
-        # VolumeAttachmentNotFound.
-        #
-        # Replace this with the following once the exception is ignored:
-        #
-        #  self.assertRaises(
-        #      exception.VolumeBDMNotFound,
-        #      objects.BlockDeviceMapping.get_by_volume_and_instance,
-        #      context.get_admin_context(),
-        #      self.cinder.IMAGE_BACKED_VOL,
-        #      server_id)
-        #
-        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+        # Assert that the volume attachment is still removed in Nova
+        self.assertRaises(
+            exception.VolumeBDMNotFound,
+            objects.BlockDeviceMapping.get_by_volume_and_instance,
             context.get_admin_context(),
             self.cinder.IMAGE_BACKED_VOL,
             server_id)

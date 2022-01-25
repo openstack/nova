@@ -461,7 +461,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
     def test_call_wait_no_delete_volume(self):
         self._test_call_wait_func(False)
 
-    def test_volume_delete_attachment(self, include_shared_targets=False):
+    def test_volume_delete_attachment(
+        self,
+        include_shared_targets=False,
+        delete_attachment_raises=None
+    ):
         attachment_id = uuids.attachment
         driver_bdm = self.driver_classes['volume'](self.volume_bdm)
         driver_bdm['attachment_id'] = attachment_id
@@ -488,6 +492,9 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         ) as (mock_get_volume, mock_get_connector, mock_guard,
               vapi_attach_del):
 
+            if delete_attachment_raises:
+                vapi_attach_del.side_effect = delete_attachment_raises
+
             driver_bdm.detach(elevated_context, instance,
                               self.volume_api, self.virt_driver,
                               attachment_id=attachment_id)
@@ -498,6 +505,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
     def test_volume_delete_attachment_with_shared_targets(self):
         self.test_volume_delete_attachment(include_shared_targets=True)
+
+    def test_volume_delete_attachment_raises_attachment_not_found(self):
+        self.test_volume_delete_attachment(
+            delete_attachment_raises=exception.VolumeAttachmentNotFound(
+                attachment_id=uuids.attachment_id))
 
     @mock.patch.object(encryptors, 'get_encryption_metadata')
     @mock.patch.object(objects.BlockDeviceMapping, 'save')
