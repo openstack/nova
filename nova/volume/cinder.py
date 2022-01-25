@@ -810,21 +810,58 @@ class API(object):
             _connector = copy.deepcopy(connector)
             _connector['mountpoint'] = mountpoint
 
-        try:
+        def _do_create():
             attachment_ref = cinderclient(context, '3.44').attachments.create(
                 volume_id, _connector, instance_id)
             return _translate_attachment_ref(attachment_ref)
+
+        try:
+            return _do_create()
         except cinder_exception.ClientException as ex:
-            with excutils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception() as ctxt:
                 # NOTE: It is unnecessary to output BadRequest(400) error log,
                 # because operators don't need to debug such cases.
-                if getattr(ex, 'code', None) != 400:
-                    LOG.error('Create attachment failed for volume '
-                              '%(volume_id)s. Error: %(msg)s Code: %(code)s',
+                code = getattr(ex, 'code', None)
+                if code != 400:
+                    LOG.error(('Create attachment failed for volume '
+                               '%(volume_id)s. Error: %(msg)s Code: %(code)s'),
                               {'volume_id': volume_id,
                                'msg': str(ex),
-                               'code': getattr(ex, 'code', None)},
-                              instance_uuid=instance_id)
+                               'code': code},
+                               instance_uuid=instance_id)
+                # NOTE(jkulik): We can handle a volume being in a different
+                # shard (i.e. Connector not supported, code 406), but all other
+                # exceptions need to go further up.
+                if code != 406:
+                    return
+
+                # try to migrate. if this fails, we raise the original
+                # exception further up
+                if not self.migrate_by_connector(context, volume_id,
+                                                 connector):
+                    return
+
+                # if we migrated, we're basically in a new situation and thus
+                # don't need the old error to show anymore.
+                ctxt.reraise = False
+
+                LOG.info('Retrying attachment_create call for volume %s '
+                         'after migration to %s',
+                         volume_id, connector,
+                         instance_uuid=instance_id)
+                # NOTE(jkulik): This probably needs send_service_user_token
+                # enabled, because the migration can take a long time and the
+                # user-supplied token might have run out.
+                try:
+                    return _do_create()
+                except cinder_exception.ClientException as ex:
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(('Create attachment failed for volume '
+                                   '%(id)s. Error: %(msg)s Code: %(code)s'),
+                                  {'id': volume_id,
+                                   'msg': str(ex),
+                                   'code': getattr(ex, 'code', None)},
+                                  instance_uuid=instance_id)
 
     @translate_attachment_exception
     def attachment_get(self, context, attachment_id):
@@ -939,7 +976,7 @@ class API(object):
                                'msg': str(ex),
                                'code': getattr(ex, 'code', None)})
                 # NOTE(jkulik): We can handle a volume being in a different
-                # shard (i.e. Connector not supported, code 416), but all other
+                # shard (i.e. Connector not supported, code 406), but all other
                 # exceptions need to go further up.
                 if code != 406:
                     return
@@ -1062,7 +1099,7 @@ class API(object):
         admin_context = nova.context.get_admin_context()
         admin_context.global_request_id = context.global_id
         client = cinderclient(admin_context, '3.44',
-                             skip_version_check=True)
+                              skip_version_check=True)
         try:
             client.volumes._action('os-migrate_volume_by_connector',
                                    volume_id, info)
