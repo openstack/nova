@@ -18,6 +18,7 @@ from oslo_config import fixture as config_fixture
 from oslotest import base
 
 from nova.api.openstack import wsgi_app
+from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 
@@ -87,3 +88,19 @@ document_root = /tmp
         wsgi_app.init_application('nova-api')
         self.assertIn('Global data already initialized, not re-initializing.',
                       self.stdlog.logger.output)
+
+    @mock.patch('nova.objects.Service.get_by_host_and_binary')
+    @mock.patch('nova.utils.raise_if_old_compute')
+    def test_setup_service_version_workaround(self, mock_check_old, mock_get):
+        mock_check_old.side_effect = exception.TooOldComputeService(
+            oldest_supported_version='2',
+            scope='scope',
+            min_service_level=2,
+            oldest_supported_service=1)
+
+        self.assertRaises(exception.TooOldComputeService,
+                          wsgi_app._setup_service, 'myhost', 'api')
+        wsgi_app.CONF.set_override(
+            'disable_compute_service_check_for_ffu', True,
+            group='workarounds')
+        wsgi_app._setup_service('myhost', 'api')
