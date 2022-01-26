@@ -102,6 +102,33 @@ class TestVirtDriver(test.NoDBTestCase):
         self.assertFalse(traits[os_traits.COMPUTE_IMAGE_TYPE_RAW])
         self.assertFalse(traits[os_traits.COMPUTE_IMAGE_TYPE_VHD])
 
+    def test_block_device_info_get_encrypted_disks(self):
+        block_device_info = {
+            'swap': {'device_name': '/dev/sdb', 'swap_size': 1},
+            'image': [
+                {'device_name': '/dev/vda', 'encrypted': True},
+            ],
+            'ephemerals': [
+                {'device_name': '/dev/vdb', 'encrypted': True},
+                {'device_name': '/dev/vdc', 'encrypted': False},
+            ],
+        }
+        disks = driver.block_device_info_get_encrypted_disks(block_device_info)
+        expected = [
+            {'device_name': '/dev/vda', 'encrypted': True},
+            {'device_name': '/dev/vdb', 'encrypted': True},
+        ]
+        self.assertEqual(expected, disks)
+        # Try removing 'image'
+        block_device_info.pop('image')
+        disks = driver.block_device_info_get_encrypted_disks(block_device_info)
+        expected = [{'device_name': '/dev/vdb', 'encrypted': True}]
+        self.assertEqual(expected, disks)
+        # Remove 'ephemerals'
+        block_device_info.pop('ephemerals')
+        disks = driver.block_device_info_get_encrypted_disks(block_device_info)
+        self.assertEqual([], disks)
+
 
 class FakeMount(object):
     def __init__(self, image, mount_dir, partition=None, device=None):
