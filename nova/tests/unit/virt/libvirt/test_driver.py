@@ -20410,7 +20410,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             **fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 0,
                  'source_type': 'volume', 'destination_type': 'volume',
-                 'device_name': '/dev/sda'}))
+                 'device_name': '/dev/sda', 'boot_index': 0}))
         info = {'block_device_mapping': driver_block_device.convert_volumes(
                 [bdm])}
         info['block_device_mapping'][0]['connection_info'] = conn_info
@@ -24941,7 +24941,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                    'id': 1,
                    'source_type': 'volume',
                    'destination_type': 'volume',
-                   'device_name': '/dev/vda'}))
+                   'device_name': '/dev/vda',
+                   'boot_index': 0}))
         bdms = driver_block_device.convert_volumes([bdm])
         block_device_info = {'root_device_name': '/dev/vda',
                              'ephemerals': [],

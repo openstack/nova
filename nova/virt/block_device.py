@@ -227,6 +227,36 @@ class DriverSwapBlockDevice(DriverBlockDevice):
         })
 
 
+class DriverImageBlockDevice(DriverBlockDevice):
+    _valid_source = 'image'
+    _proxy_as_attr_inherited = set(['image_id'])
+    _new_only_fields = set([
+        'disk_bus',
+        'device_type',
+        'guest_format',
+        'boot_index',
+    ])
+    _fields = set([
+        'device_name',
+        'size']) | _new_only_fields
+    _legacy_fields = (
+        _fields - _new_only_fields | set(['num', 'virtual_name']))
+
+    def _transform(self):
+        if (not self._bdm_obj.get('source_type') == 'image' or
+            not self._bdm_obj.get('destination_type') == 'local'):
+            raise _InvalidType
+        self.update({
+            'device_name': self._bdm_obj.device_name,
+            'size': self._bdm_obj.volume_size or 0,
+            'disk_bus': self._bdm_obj.disk_bus,
+            'device_type': self._bdm_obj.device_type,
+            'guest_format': self._bdm_obj.guest_format,
+            'image_id': self._bdm_obj.image_id,
+            'boot_index': 0,
+        })
+
+
 class DriverEphemeralBlockDevice(DriverBlockDevice):
     _new_only_fields = set(['disk_bus', 'device_type', 'guest_format'])
     _fields = set(['device_name', 'size']) | _new_only_fields
@@ -802,14 +832,14 @@ def _convert_block_devices(device_type, block_device_mapping):
 convert_swap = functools.partial(_convert_block_devices,
                                  DriverSwapBlockDevice)
 
+convert_local_images = functools.partial(_convert_block_devices,
+                                         DriverImageBlockDevice)
 
 convert_ephemerals = functools.partial(_convert_block_devices,
                                       DriverEphemeralBlockDevice)
 
-
 convert_volumes = functools.partial(_convert_block_devices,
                                    DriverVolumeBlockDevice)
-
 
 convert_snapshots = functools.partial(_convert_block_devices,
                                      DriverVolSnapshotBlockDevice)
@@ -897,9 +927,15 @@ def get_swap(transformed_list):
         return None
 
 
-_IMPLEMENTED_CLASSES = (DriverSwapBlockDevice, DriverEphemeralBlockDevice,
-                        DriverVolumeBlockDevice, DriverVolSnapshotBlockDevice,
-                        DriverVolImageBlockDevice, DriverVolBlankBlockDevice)
+_IMPLEMENTED_CLASSES = (
+    DriverSwapBlockDevice,
+    DriverEphemeralBlockDevice,
+    DriverVolumeBlockDevice,
+    DriverVolSnapshotBlockDevice,
+    DriverVolImageBlockDevice,
+    DriverVolBlankBlockDevice,
+    DriverImageBlockDevice
+)
 
 
 def is_implemented(bdm):
@@ -910,6 +946,10 @@ def is_implemented(bdm):
         except _NotTransformable:
             pass
     return False
+
+
+def is_local_image(bdm):
+    return bdm.source_type == 'image' and bdm.destination_type == 'local'
 
 
 def is_block_device_mapping(bdm):
