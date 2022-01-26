@@ -79,14 +79,22 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'volume_size': 4,
          'guest_format': 'ext4',
          'delete_on_termination': True,
-         'boot_index': -1})
+         'boot_index': -1,
+         'encrypted': False,
+         'encryption_secret_uuid': None,
+         'encryption_format': None,
+         'encryption_options': None})
 
     ephemeral_driver_bdm = {
         'device_name': '/dev/sdc1',
         'size': 4,
         'device_type': 'disk',
         'guest_format': 'ext4',
-        'disk_bus': 'scsi'}
+        'disk_bus': 'scsi',
+        'encrypted': False,
+        'encryption_secret_uuid': None,
+        'encryption_format': None,
+        'encryption_options': None}
 
     volume_bdm_dict = block_device.BlockDeviceDict(
         {'id': 3, 'instance_uuid': uuids.instance,
@@ -221,7 +229,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'guest_format': 'ext4',
          'boot_index': 0,
          'image_id': 'fake-image-id-1',
-         'volume_size': 5})
+         'volume_size': 5,
+         'encrypted': True,
+         'encryption_secret_uuid': uuids.secret,
+         'encryption_format': 'plain',
+         'encryption_options': None})
 
     image_driver_bdm = {
         'device_name': '/dev/vda',
@@ -230,7 +242,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'disk_bus': 'virtio',
         'boot_index': 0,
         'image_id': 'fake-image-id-1',
-        'size': 5}
+        'size': 5,
+        'encrypted': True,
+        'encryption_secret_uuid': uuids.secret,
+        'encryption_format': 'plain',
+        'encryption_options': None}
 
     def setUp(self):
         super(TestDriverBlockDevice, self).setUp()

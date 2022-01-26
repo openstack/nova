@@ -235,12 +235,24 @@ class DriverImageBlockDevice(DriverBlockDevice):
         'device_type',
         'guest_format',
         'boot_index',
+        'encrypted',
+        'encryption_secret_uuid',
+        'encryption_format',
+        'encryption_options'
     ])
     _fields = set([
         'device_name',
         'size']) | _new_only_fields
     _legacy_fields = (
         _fields - _new_only_fields | set(['num', 'virtual_name']))
+    _update_on_save = {
+        'disk_bus': None,
+        'device_name': None,
+        'device_type': None,
+        'encryption_secret_uuid': None,
+        'encryption_format': None,
+        'encryption_options': None,
+    }
 
     def _transform(self):
         if (not self._bdm_obj.get('source_type') == 'image' or
@@ -254,12 +266,31 @@ class DriverImageBlockDevice(DriverBlockDevice):
             'guest_format': self._bdm_obj.guest_format,
             'image_id': self._bdm_obj.image_id,
             'boot_index': 0,
+            'encrypted': self._bdm_obj.encrypted,
+            'encryption_secret_uuid': self._bdm_obj.encryption_secret_uuid,
+            'encryption_format': self._bdm_obj.encryption_format,
+            'encryption_options': self._bdm_obj.encryption_options
         })
 
 
 class DriverEphemeralBlockDevice(DriverBlockDevice):
-    _new_only_fields = set(['disk_bus', 'device_type', 'guest_format'])
+    _new_only_fields = set([
+        'disk_bus',
+        'device_type',
+        'guest_format',
+        'encrypted',
+        'encryption_secret_uuid',
+        'encryption_format',
+        'encryption_options'])
     _fields = set(['device_name', 'size']) | _new_only_fields
+    _update_on_save = {
+        'disk_bus': None,
+        'device_name': None,
+        'device_type': None,
+        'encryption_secret_uuid': None,
+        'encryption_format': None,
+        'encryption_options': None,
+    }
 
     def _transform(self):
         if not block_device.new_format_is_ephemeral(self._bdm_obj):
@@ -269,7 +300,11 @@ class DriverEphemeralBlockDevice(DriverBlockDevice):
             'size': self._bdm_obj.volume_size or 0,
             'disk_bus': self._bdm_obj.disk_bus,
             'device_type': self._bdm_obj.device_type,
-            'guest_format': self._bdm_obj.guest_format
+            'guest_format': self._bdm_obj.guest_format,
+            'encrypted': self._bdm_obj.encrypted,
+            'encryption_secret_uuid': self._bdm_obj.encryption_secret_uuid,
+            'encryption_format': self._bdm_obj.encryption_format,
+            'encryption_options': self._bdm_obj.encryption_options
         })
 
 
