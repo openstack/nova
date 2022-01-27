@@ -653,7 +653,8 @@ class Qcow2(Image):
 
         @utils.synchronized(filename, external=True, lock_path=self.lock_path)
         def create_qcow2_image(base, target, size):
-            libvirt_utils.create_cow_image(base, target, size)
+            libvirt_utils.create_image(
+                target, 'qcow2', size, backing_file=base)
 
         # Download the unmodified base image unless we already have a copy.
         if not os.path.exists(base):

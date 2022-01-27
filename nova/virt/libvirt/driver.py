@@ -3279,8 +3279,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                                         format=source_format,
                                                         basename=False)
         disk_delta = out_path + '.delta'
-        libvirt_utils.create_cow_image(src_back_path, disk_delta,
-                                       src_disk_size)
+        libvirt_utils.create_image(
+            disk_delta, 'qcow2', src_disk_size, backing_file=src_back_path)
 
         try:
             self._can_quiesce(instance, image_meta)
@@ -4506,7 +4506,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                  '%dG' % ephemeral_size,
                                                  specified_fs)
                 return
-            libvirt_utils.create_image('raw', target, '%dG' % ephemeral_size)
+            libvirt_utils.create_image(target, 'raw', f'{ephemeral_size}G')
 
         # Run as root only for block devices.
         disk_api.mkfs(os_type, fs_label, target, run_as_root=is_block_dev,
@@ -4515,7 +4515,7 @@ class LibvirtDriver(driver.ComputeDriver):
     @staticmethod
     def _create_swap(target, swap_mb, context=None):
         """Create a swap file of specified size."""
-        libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
+        libvirt_utils.create_image(target, 'raw', f'{swap_mb}M')
         nova.privsep.fs.unprivileged_mkfs('swap', target)
 
     @staticmethod
@@ -10740,8 +10740,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # create backing file in case of qcow2.
             instance_disk = os.path.join(instance_dir, base)
             if not info['backing_file'] and not os.path.exists(instance_disk):
-                libvirt_utils.create_image(info['type'], instance_disk,
-                                           info['virt_disk_size'])
+                libvirt_utils.create_image(
+                    instance_disk, info['type'], info['virt_disk_size'])
             elif info['backing_file']:
                 # Creating backing file follows same way as spawning instances.
                 cache_name = os.path.basename(info['backing_file'])

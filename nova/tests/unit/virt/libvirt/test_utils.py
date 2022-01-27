@@ -104,32 +104,60 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         self.assertFalse(libvirt_utils.is_valid_hostname("foo/?com=/bin/sh"))
 
     @mock.patch('oslo_concurrency.processutils.execute')
-    def test_create_image(self, mock_execute):
-        libvirt_utils.create_image('raw', '/some/path', '10G')
-        libvirt_utils.create_image('qcow2', '/some/stuff', '1234567891234')
-        expected_args = [(('qemu-img', 'create', '-f', 'raw',
-                           '/some/path', '10G'),),
-                         (('qemu-img', 'create', '-f', 'qcow2',
-                           '/some/stuff', '1234567891234'),)]
-        self.assertEqual(expected_args, mock_execute.call_args_list)
-
-    @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.virt.images.qemu_img_info')
-    def test_create_cow_image(self, mock_info, mock_execute, mock_exists):
-        mock_execute.return_value = ('stdout', None)
+    def _test_create_image(
+        self, path, disk_format, disk_size, mock_info, mock_execute,
+        backing_file=None
+    ):
         mock_info.return_value = mock.Mock(
             file_format=mock.sentinel.backing_fmt,
-            cluster_size=mock.sentinel.cluster_size)
-        libvirt_utils.create_cow_image(mock.sentinel.backing_path,
-                                       mock.sentinel.new_path)
-        mock_info.assert_called_once_with(mock.sentinel.backing_path)
-        mock_execute.assert_has_calls([mock.call(
-            'qemu-img', 'create', '-f', 'qcow2', '-o',
-            'backing_file=%s,backing_fmt=%s,cluster_size=%s' % (
-                mock.sentinel.backing_path, mock.sentinel.backing_fmt,
-                mock.sentinel.cluster_size),
-             mock.sentinel.new_path)])
+            cluster_size=mock.sentinel.cluster_size,
+        )
+
+        libvirt_utils.create_image(
+            path, disk_format, disk_size, backing_file=backing_file)
+
+        cow_opts = []
+
+        if backing_file is None:
+            mock_info.assert_not_called()
+        else:
+            mock_info.assert_called_once_with(backing_file)
+            cow_opts = [
+                '-o',
+                f'backing_file={mock.sentinel.backing_file},'
+                f'backing_fmt={mock.sentinel.backing_fmt},'
+                f'cluster_size={mock.sentinel.cluster_size}',
+            ]
+
+        expected_args = (
+            'env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'create', '-f',
+            disk_format, *cow_opts, path,
+        )
+        if disk_size is not None:
+            expected_args += (disk_size,)
+
+        self.assertEqual([(expected_args,)], mock_execute.call_args_list)
+
+    def test_create_image_raw(self):
+        self._test_create_image('/some/path', 'raw', '10G')
+
+    def test_create_image_qcow2(self):
+        self._test_create_image(
+            '/some/stuff', 'qcow2', '1234567891234',
+        )
+
+    def test_create_image_backing_file(self):
+        self._test_create_image(
+            '/some/stuff', 'qcow2', '1234567891234',
+            backing_file=mock.sentinel.backing_file,
+        )
+
+    def test_create_image_size_none(self):
+        self._test_create_image(
+            '/some/stuff', 'qcow2', None,
+            backing_file=mock.sentinel.backing_file,
+        )
 
     @ddt.unpack
     @ddt.data({'fs_type': 'some_fs_type',

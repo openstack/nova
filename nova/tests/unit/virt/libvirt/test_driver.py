@@ -13697,7 +13697,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_fetch.assert_called_once_with(self.context, instance,
                                            fallback_from_host=None)
         mock_create.assert_called_once_with(
-             disk_info['type'], mock.ANY, disk_info['virt_disk_size'])
+             '/fake/instance/dir/foo',
+             disk_info['type'],
+             disk_info['virt_disk_size'],
+        )
         mock_exists.assert_called_once_with('/fake/instance/dir/foo')
 
     def test_create_images_and_backing_qcow2(self):
@@ -13729,7 +13732,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               self.context, instance,
                               "/fake/instance/dir", disk_info)
 
-    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.privsep.path.utime')
     def test_create_images_and_backing_images_not_exist_fallback(
             self, mock_utime, mock_create_cow_image):
@@ -13809,7 +13812,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_utime.assert_called()
         mock_create_cow_image.assert_called_once_with(
-            backfile_path, '/fake/instance/dir/disk_path', virt_disk_size)
+            '/fake/instance/dir/disk_path',
+            'qcow2',
+            virt_disk_size,
+            backing_file=backfile_path,
+        )
 
     @mock.patch('nova.virt.libvirt.imagebackend.Image.exists',
         new=mock.Mock(return_value=True))
@@ -13902,7 +13909,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertFalse(mock_fetch_image.called)
 
     @mock.patch('nova.privsep.path.utime')
-    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.create_image')
     def test_create_images_and_backing_ephemeral_gets_created(
             self, mock_create_cow_image, mock_utime):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -13955,14 +13962,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # TODO(efried): Should these be disk_info[path]??
             mock_create_cow_image.assert_has_calls([
                 mock.call(
-                    root_backing,
                     CONF.instances_path + '/disk',
-                    disk_info_byname['disk']['virt_disk_size']
+                    'qcow2',
+                    disk_info_byname['disk']['virt_disk_size'],
+                    backing_file=root_backing,
                 ),
                 mock.call(
-                    ephemeral_backing,
                     CONF.instances_path + '/disk.local',
-                    disk_info_byname['disk.local']['virt_disk_size']
+                    'qcow2',
+                    disk_info_byname['disk.local']['virt_disk_size'],
+                    backing_file=ephemeral_backing,
                 ),
             ])
 
@@ -15644,7 +15653,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.privsep.path.utime')
     @mock.patch('nova.virt.libvirt.utils.fetch_image')
-    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.create_image')
     def test_create_ephemeral_specified_fs_not_valid(
             self, mock_create_cow_image, mock_fetch_image, mock_utime):
         CONF.set_override('default_ephemeral_format', 'ext4')
@@ -20132,7 +20141,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.patch.object(drvr._conn, 'defineXML', create=True),
                 mock.patch('nova.virt.libvirt.utils.get_disk_size'),
                 mock.patch('nova.virt.libvirt.utils.get_disk_backing_file'),
-                mock.patch('nova.virt.libvirt.utils.create_cow_image'),
+                mock.patch('nova.virt.libvirt.utils.create_image'),
                 mock.patch('nova.virt.libvirt.utils.extract_snapshot'),
                 mock.patch.object(drvr, '_set_quiesced'),
                 mock.patch.object(drvr, '_can_quiesce')
@@ -20175,7 +20184,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_size.assert_called_once_with(srcfile, format="qcow2")
             mock_backing.assert_called_once_with(srcfile, basename=False,
                                                  format="qcow2")
-            mock_create_cow.assert_called_once_with(bckfile, dltfile, 1004009)
+            mock_create_cow.assert_called_once_with(
+                dltfile, 'qcow2', 1004009, backing_file=bckfile)
             mock_chown.assert_called_once_with(dltfile, uid=os.getuid())
             mock_snapshot.assert_called_once_with(dltfile, "qcow2",
                                                   dstfile, "qcow2")
@@ -28262,7 +28272,7 @@ class _BaseSnapshotTests(test.NoDBTestCase):
     @mock.patch.object(host.Host, '_get_domain')
     @mock.patch('nova.virt.libvirt.utils.get_disk_size',
                 new=mock.Mock(return_value=0))
-    @mock.patch('nova.virt.libvirt.utils.create_cow_image',
+    @mock.patch('nova.virt.libvirt.utils.create_image',
                 new=mock.Mock())
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file',
                 new=mock.Mock(return_value=None))
