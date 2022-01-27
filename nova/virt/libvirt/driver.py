@@ -412,6 +412,8 @@ class LibvirtDriver(driver.ComputeDriver):
                               not CONF.force_raw_images)
         requires_ploop_image = CONF.libvirt.virt_type == 'parallels'
 
+        self.image_backend = imagebackend.Backend(CONF.use_cow_images)
+
         self.capabilities = {
             "has_imagecache": True,
             "supports_evacuate": True,
@@ -439,6 +441,10 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_bfv_rescue": True,
             "supports_vtpm": CONF.libvirt.swtpm_enabled,
             "supports_socket_pci_numa_affinity": True,
+            "supports_ephemeral_encryption":
+                self.image_backend.backend().SUPPORTS_LUKS,
+            "supports_ephemeral_encryption_luks":
+                self.image_backend.backend().SUPPORTS_LUKS,
         }
         super(LibvirtDriver, self).__init__(virtapi)
 
@@ -463,7 +469,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._disk_cachemode = None
         self.image_cache_manager = imagecache.ImageCacheManager()
-        self.image_backend = imagebackend.Backend(CONF.use_cow_images)
 
         self.disk_cachemodes = {}
 

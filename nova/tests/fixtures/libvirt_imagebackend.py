@@ -190,6 +190,9 @@ class LibvirtImageBackendFixture(fixtures.Fixture):
         # Set the SUPPORTS_CLONE member variable to mimic the Image base
         # class.
         image_init.SUPPORTS_CLONE = False
+        # Set the SUPPORTS_LUKS member variable to mimic the Image base
+        # class.
+        image_init.SUPPORTS_LUKS = False
 
         # Ditto for the 'is_shared_block_storage' and
         # 'is_file_in_instance_path' functions

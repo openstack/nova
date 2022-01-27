@@ -81,6 +81,7 @@ def _update_utime_ignore_eacces(path):
 class Image(metaclass=abc.ABCMeta):
 
     SUPPORTS_CLONE = False
+    SUPPORTS_LUKS = False
 
     def __init__(
         self,
