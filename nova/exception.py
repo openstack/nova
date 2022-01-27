@@ -2546,3 +2546,13 @@ class NotSupportedComputeForEvacuateV295(NotSupported):
                 "instance on destination. To evacuate before upgrades are "
                 "complete please use an older microversion. Required version "
                 "for compute %(expected), current version %(currently)s")
+
+
+class EphemeralEncryptionSecretNotFound(Invalid):
+    msg_fmt = _(
+        'Encryption secret %(secret_uuid)s was not found in the key manager')
+
+
+class EphemeralEncryptionCleanupFailed(NovaException):
+    msg_fmt = _("Failed to clean up ephemeral encryption secrets: "
+                "%(error)s")

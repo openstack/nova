@@ -35,6 +35,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography import x509
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+from oslo_serialization import base64 as oslo_base64
 from oslo_utils.secretutils import md5
 import paramiko
 
@@ -44,6 +45,7 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova import utils
+from nova.virt import block_device as driver_block_device
 
 
 LOG = logging.getLogger(__name__)
@@ -53,6 +55,8 @@ CONF = nova.conf.CONF
 _KEYMGR = None
 
 _VTPM_SECRET_BYTE_LENGTH = 384
+
+_EPHEMERAL_ENCRYPTION_SECRET_BYTE_LENGTH = 64
 
 
 def _get_key_manager():
@@ -252,3 +256,54 @@ def delete_vtpm_secret(
 
     del instance.system_metadata['vtpm_secret_uuid']
     instance.save()
+
+
+def create_encryption_secret(
+    context: nova_context.RequestContext,
+    instance: 'objects.Instance',
+    driver_bdm: 'driver_block_device.DriverBlockDevice',
+    for_detail: ty.Optional[str] = None,
+):
+    # Use oslo.serialization to encode some random data as passphrase
+    secret = oslo_base64.encode_as_text(
+        os.urandom(_EPHEMERAL_ENCRYPTION_SECRET_BYTE_LENGTH))
+    if for_detail is None:
+        for_detail = f"instance {instance.uuid} BDM {driver_bdm['uuid']}"
+    secret_name = f'Ephemeral encryption secret for {for_detail}'
+    cmo = passphrase.Passphrase(secret, name=secret_name)
+    key_mgr = _get_key_manager()
+    secret_uuid = key_mgr.store(context, cmo)
+    LOG.debug(
+        f'Created "{secret_name}" with UUID {secret_uuid}',
+        instance=instance
+    )
+    return secret_uuid, secret
+
+
+def get_encryption_secret(
+    context: nova_context.RequestContext,
+    secret_uuid: str,
+) -> ty.Optional[str]:
+    key_mgr = _get_key_manager()
+    try:
+        key = key_mgr.get(context, secret_uuid)
+        LOG.debug(f"Retrieved secret with UUID {secret_uuid}")
+        return key.get_encoded()
+    except castellan_exception.ManagedObjectNotFoundError:
+        LOG.debug(f"Encryption secret with UUID {secret_uuid} was not found.")
+    return None
+
+
+def delete_encryption_secret(
+    context: nova_context.RequestContext,
+    instance_uuid: str,
+    secret_uuid: str,
+):
+    key_mgr = _get_key_manager()
+    try:
+        key_mgr.delete(context, secret_uuid)
+        LOG.debug(f"Deleted secret with UUID {secret_uuid}",
+            instance_uuid=instance_uuid)
+    except castellan_exception.ManagedObjectNotFoundError:
+        LOG.debug(f"Encryption secret with UUID {secret_uuid} already deleted "
+                  "or never existed.", instance_uuid=instance_uuid)
