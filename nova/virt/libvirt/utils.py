@@ -22,6 +22,7 @@ import grp
 import os
 import pwd
 import re
+import tempfile
 import typing as ty
 import uuid
 
@@ -114,6 +115,7 @@ def create_image(
     disk_format: str,
     disk_size: ty.Optional[ty.Union[str, int]],
     backing_file: ty.Optional[str] = None,
+    encryption: ty.Optional[ty.Dict[str, ty.Any]] = None
 ) -> None:
     """Disk image creation with qemu-img
     :param path: Desired location of the disk image
@@ -125,15 +127,16 @@ def create_image(
         If no suffix is given, it will be interpreted as bytes.
         Can be None in the case of a COW image.
     :param backing_file: (Optional) Backing file to use.
+    :param encryption: (Optional) Dict detailing various encryption attributes
+                       such as the format and passphrase.
     """
-    base_cmd = [
+    cmd = [
         'env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'create', '-f', disk_format
     ]
-    cow_opts = []
 
     if backing_file:
         base_details = images.qemu_img_info(backing_file)
-        cow_opts += [
+        cow_opts = [
             f'backing_file={backing_file}',
             f'backing_fmt={base_details.file_format}'
         ]
@@ -147,12 +150,60 @@ def create_image(
 
         # Format as a comma separated list
         csv_opts = ",".join(cow_opts)
-        cow_opts = ['-o', csv_opts]
+        cmd += ['-o', csv_opts]
 
-    cmd = base_cmd + cow_opts + [path]
-    if disk_size is not None:
-        cmd += [str(disk_size)]
-    processutils.execute(*cmd)
+    # Disk size can be None in the case of a COW image
+    disk_size_arg = [str(disk_size)] if disk_size is not None else []
+
+    if encryption:
+        with tempfile.NamedTemporaryFile(mode='tr+', encoding='utf-8') as f:
+            # Write out the passphrase secret to a temp file
+            f.write(encryption.get('secret'))
+
+            # Ensure the secret is written to disk, we can't .close() here as
+            # that removes the file when using NamedTemporaryFile
+            f.flush()
+
+            # The basic options include the secret and encryption format
+            encryption_opts = [
+                '--object', f"secret,id=sec,file={f.name}",
+                '-o', 'encrypt.key-secret=sec',
+                '-o', f"encrypt.format={encryption.get('format')}",
+            ]
+            # Supported luks options:
+            #  cipher-alg=<str>       - Name of cipher algorithm and key length
+            #  cipher-mode=<str>      - Name of encryption cipher mode
+            #  hash-alg=<str>         - Name of hash algorithm to use for PBKDF
+            #  iter-time=<num>        - Time to spend in PBKDF in milliseconds
+            #  ivgen-alg=<str>        - Name of IV generator algorithm
+            #  ivgen-hash-alg=<str>   - Name of IV generator hash algorithm
+            #
+            # NOTE(melwitt): Sensible defaults (that match the qemu defaults)
+            # are hardcoded at this time for simplicity and consistency when
+            # instances are migrated. Configuration of luks options could be
+            # added in a future release.
+            encryption_options = {
+                'cipher-alg': 'aes-256',
+                'cipher-mode': 'xts',
+                'hash-alg': 'sha256',
+                'iter-time': 2000,
+                'ivgen-alg': 'plain64',
+                'ivgen-hash-alg': 'sha256',
+            }
+
+            for option, value in encryption_options.items():
+                encryption_opts += [
+                    '-o',
+                    f'encrypt.{option}={value}',
+                ]
+
+            # We need to execute the command while the NamedTemporaryFile still
+            # exists
+            cmd += encryption_opts + [path] + disk_size_arg
+            processutils.execute(*cmd)
+    else:
+        cmd += [path] + disk_size_arg
+        processutils.execute(*cmd)
 
 
 def create_ploop_image(

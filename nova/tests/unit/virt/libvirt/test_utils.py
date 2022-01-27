@@ -103,19 +103,23 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
     def test_valid_hostname_bad(self):
         self.assertFalse(libvirt_utils.is_valid_hostname("foo/?com=/bin/sh"))
 
+    @mock.patch('tempfile.NamedTemporaryFile')
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.virt.images.qemu_img_info')
     def _test_create_image(
         self, path, disk_format, disk_size, mock_info, mock_execute,
-        backing_file=None
+        mock_ntf, backing_file=None, encryption=None
     ):
         mock_info.return_value = mock.Mock(
             file_format=mock.sentinel.backing_fmt,
             cluster_size=mock.sentinel.cluster_size,
         )
+        fh = mock_ntf.return_value.__enter__.return_value
 
         libvirt_utils.create_image(
-            path, disk_format, disk_size, backing_file=backing_file)
+            path, disk_format, disk_size, backing_file=backing_file,
+            encryption=encryption,
+        )
 
         cow_opts = []
 
@@ -130,9 +134,32 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
                 f'cluster_size={mock.sentinel.cluster_size}',
             ]
 
+        encryption_opts = []
+
+        if encryption:
+            encryption_opts = [
+                '--object', f"secret,id=sec,file={fh.name}",
+                '-o', 'encrypt.key-secret=sec',
+                '-o', f"encrypt.format={encryption.get('format')}",
+            ]
+
+            encryption_options = {
+                'cipher-alg': 'aes-256',
+                'cipher-mode': 'xts',
+                'hash-alg': 'sha256',
+                'iter-time': 2000,
+                'ivgen-alg': 'plain64',
+                'ivgen-hash-alg': 'sha256',
+            }
+            for option, value in encryption_options.items():
+                encryption_opts += [
+                    '-o',
+                    f'encrypt.{option}={value}',
+                ]
+
         expected_args = (
             'env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'create', '-f',
-            disk_format, *cow_opts, path,
+            disk_format, *cow_opts, *encryption_opts, path,
         )
         if disk_size is not None:
             expected_args += (disk_size,)
@@ -157,6 +184,16 @@ class LibvirtUtilsTestCase(test.NoDBTestCase):
         self._test_create_image(
             '/some/stuff', 'qcow2', None,
             backing_file=mock.sentinel.backing_file,
+        )
+
+    def test_create_image_encryption(self):
+        encryption = {
+            'secret': 'a_secret',
+            'format': 'luks',
+        }
+        self._test_create_image(
+            '/some/stuff', 'qcow2', '1234567891234',
+            encryption=encryption,
         )
 
     @ddt.unpack
