@@ -15,6 +15,7 @@
 import datetime
 
 import mock
+from oslo_db import exception as db_exc
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
@@ -81,6 +82,30 @@ class _TestInstanceInfoCacheObject(object):
                                             {'network_info': nwinfo_json})
         self.assertEqual(timeutils.normalize_time(fake_updated_at),
                          timeutils.normalize_time(obj.updated_at))
+
+    @mock.patch.object(db, 'instance_info_cache_update')
+    def test_save_fkey_constraint_fail(self, mock_update):
+        fake_updated_at = datetime.datetime(2015, 1, 1)
+        nwinfo = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
+        nwinfo_json = nwinfo.json()
+        new_info_cache = fake_info_cache.copy()
+        new_info_cache['id'] = 1
+        new_info_cache['updated_at'] = fake_updated_at
+        new_info_cache['network_info'] = nwinfo_json
+
+        # We should see InstanceNotFound raised for fkey=instance_uuid
+        mock_update.side_effect = db_exc.DBReferenceError(
+            'table', 'constraint', 'instance_uuid', 'key_table')
+
+        obj = instance_info_cache.InstanceInfoCache(context=self.context)
+        obj.instance_uuid = uuids.info_instance
+        obj.network_info = nwinfo_json
+        self.assertRaises(exception.InstanceNotFound, obj.save)
+
+        # We should see the original exception raised for any other fkey
+        mock_update.side_effect = db_exc.DBReferenceError(
+            'table', 'constraint', 'otherkey', 'key_table')
+        self.assertRaises(db_exc.DBReferenceError, obj.save)
 
     @mock.patch.object(db, 'instance_info_cache_get',
                        return_value=fake_info_cache)

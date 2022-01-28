@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 
 from nova.db.main import api as db
@@ -75,9 +76,25 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
         if 'network_info' in self.obj_what_changed():
             nw_info_json = self.fields['network_info'].to_primitive(
                 self, 'network_info', self.network_info)
-            rv = db.instance_info_cache_update(self._context,
-                                               self.instance_uuid,
-                                               {'network_info': nw_info_json})
+
+            inst_uuid = self.instance_uuid
+
+            try:
+                rv = db.instance_info_cache_update(
+                    self._context, inst_uuid, {'network_info': nw_info_json})
+            except db_exc.DBReferenceError as exp:
+                if exp.key != 'instance_uuid':
+                    raise
+                # NOTE(melwitt): It is possible for us to fail here with a
+                # foreign key constraint violation on instance_uuid when we
+                # attempt to save the instance network info cache after
+                # receiving a network-changed external event from neutron
+                # during a cross-cell migration. This means the instance record
+                # is not found in this cell database and we can raise
+                # InstanceNotFound to signal that in a way that callers know
+                # how to handle.
+                raise exception.InstanceNotFound(instance_id=inst_uuid)
+
             self._from_db_object(self._context, self, rv)
         self.obj_reset_changes()
 
