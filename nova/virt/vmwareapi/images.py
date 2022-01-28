@@ -480,9 +480,6 @@ def fetch_image_ova(context, instance, session, vm_name, ds_name,
               {'image_ref': image_ref, 'vm_name': vm_name},
               instance=instance)
 
-    metadata = IMAGE_API.get(context, image_ref)
-    file_size = int(metadata['size'])
-
     vm_import_spec = _build_import_spec_for_import_vapp(
         session, vm_name, ds_name)
 
@@ -498,6 +495,7 @@ def fetch_image_ova(context, instance, session, vm_name, ds_name,
                 vmdk_name = get_vmdk_name_from_ovf(xmlstr)
             elif vmdk_name and tar_info.name.startswith(vmdk_name):
                 # Actual file name is <vmdk_name>.XXXXXXX
+                file_size = tar_info.size
                 extracted = tar.extractfile(tar_info)
                 imported_vm_ref = _import_image(session, extracted,
                                                 vm_import_spec, vm_name,
