@@ -366,6 +366,8 @@ If it is set to True the libvirt driver will  try as a best effort to send
 the announce-self command to the QEMU monitor so that it generates RARP frames
 to update network switches in the post live migration phase on the destination.
 
+Please note that this causes the domain to be considered tainted by libvirt.
+
 Related options:
 
 * :oslo.config:option:`DEFAULT.compute_driver` (libvirt)
