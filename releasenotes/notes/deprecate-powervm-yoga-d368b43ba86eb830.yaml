@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The powervm virt driver is deprecated and may be removed in a future
+    release. The driver is not tested by the OpenStack project nor does it have
+    clear maintainers and thus its quality can not be ensured.

@@ -103,6 +103,14 @@ class PowerVMDriver(driver.ComputeDriver):
 
         Includes catching up with currently running VMs on the given host.
         """
+        LOG.warning(
+            'The powervm virt driver is deprecated and may be removed in a '
+            'future release. The driver is not tested by the OpenStack '
+            'project nor does it have clear maintainers and thus its quality'
+            'can not be ensured. If you are using the driver in production '
+            'please let us know the openstack-discuss mailing list or on IRC'
+        )
+
         # Build the adapter. May need to attempt the connection multiple times
         # in case the PowerVM management API service is starting.
         # TODO(efried): Implement async compute service enable/disable like
