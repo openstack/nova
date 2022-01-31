@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    The ``POST /servers`` (create server) API will now reject attempts to
+    create a server with the same port specified multiple times. This was
+    previously accepted by the API but the instance would fail to spawn and
+    would instead transition to the error state.
