@@ -26,9 +26,13 @@ Laski gave at the Austin (Newton) summit which may be worth watching.
 Overview
 --------
 
-The purpose of the cells functionality in nova is specifically to
-allow larger deployments to shard their many compute nodes into cells.
-A basic Nova system consists of the following components:
+The purpose of the cells functionality in nova is to allow larger deployments
+to shard their many compute nodes into cells. All nova deployments are by
+definition cells deployments, even if most will only ever have a single cell.
+This means a multi-cell deployment will not b radically different from a
+"standard" nova deployment.
+
+Consider such a deployment. It will consists of the following components:
 
 - The :program:`nova-api` service which provides the external REST API to
   users.
@@ -43,7 +47,7 @@ A basic Nova system consists of the following components:
   instances being built but not yet scheduled.
 
 - The :program:`nova-conductor` service which offloads long-running tasks for
-  the API-level service and insulates compute nodes from direct database access
+  the API-level services and insulates compute nodes from direct database access
 
 - The :program:`nova-compute` service which manages the virt driver and
   hypervisor host.
@@ -60,15 +64,19 @@ A basic Nova system consists of the following components:
 - A message queue which allows the services to communicate with each
   other via RPC.
 
-All deployments have at least the above components. Smaller deployments
-likely have a single message queue that all services share and a
-single database server which hosts the API database, a single cell
-database, as well as the required cell0 database. This is considered a
-"single-cell deployment" because it only has one "real" cell.
-However, while there will only ever be one global API database, a larger
-deployments can have many cell databases (where the bulk of the instance
-information lives), each with a portion of the instances for the entire
-deployment within, as well as per-cell message queues.
+In smaller deployments, there will typically be a single message queue that all
+services share and a single database server which hosts the API database, a
+single cell database, as well as the required cell0 database. Because we only
+have one "real" cell, we consider this a "single-cell deployment".
+
+In larger deployments, we can opt to shard the deployment using multiple cells.
+In this configuration there will still only be one global API database but
+there will be a cell database (where the bulk of the instance information
+lives) for each cell, each containing a portion of the instances for the entire
+deployment within, as well as per-cell message queues and per-cell
+:program:`nova-conductor` instances. There will also be an additional
+:program:`nova-conductor` instance, known as a *super conductor*, to handle
+API-level operations.
 
 In these larger deployments, each of the nova services will use a cell-specific
 configuration file, all of which will at a minimum specify a message queue
@@ -97,6 +105,9 @@ other cells in the API database, with records called *cell mappings*.
    :oslo.config:option:`database.connection` configuration options of the
    lower-level services. See the ``nova-manage`` :ref:`man-page-cells-v2`
    commands for more information about how to create and examine these records.
+
+The following section goes into more detail about the difference between
+single-cell and multi-cell deployments.
 
 
 Service layout
@@ -242,70 +253,42 @@ any other API-layer services via RPC, nor do they have access to the
 API database for global visibility of resources across the cloud.
 This is intentional and provides security and failure domain
 isolation benefits, but also has impacts on some things that would
-otherwise require this any-to-any communication style. Check the
-release notes for the version of Nova you are using for the most
-up-to-date information about any caveats that may be present due to
-this limitation.
+otherwise require this any-to-any communication style. Check :ref:`upcall`
+below for the most up-to-date information about any caveats that may be present
+due to this limitation.
 
 
 Database layout
 ---------------
 
 As mentioned previously, there is a split between global data and data that is
-local to a cell.
+local to a cell. These databases schema are referred to as the *API* and *main*
+database schemas, respectively.
 
-The following is a breakdown of what data can uncontroversially considered
-global versus local to a cell.  Missing data will be filled in as consensus is
-reached on the data that is more difficult to cleanly place.  The missing data
-is mostly concerned with scheduling and networking.
+API database
+~~~~~~~~~~~~
 
-.. note::
+The API database is the database used for API-level services, such as
+:program:`nova-api` and, in a multi-cell deployment, the superconductor.
+The models and migrations related to this database can be found in
+``nova.db.api``, and the database can be managed using the
+:program:`nova-manage api_db` commands.
 
-   This list of tables is accurate as of the 15.0.0 (Pike) release. It's
-   possible that schema changes may have added additional tables since.
+Main (cell-level) database
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Global (API-level) tables
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-- ``instance_types``
-- ``instance_type_projects``
-- ``instance_type_extra_specs``
-- ``quotas``
-- ``project_user_quotas``
-- ``quota_classes``
-- ``quota_usages``
-- ``security_groups``
-- ``security_group_rules``
-- ``security_group_default_rules``
-- ``provider_fw_rules``
-- ``key_pairs``
-- ``migrations``
-- ``networks``
-- ``tags``
-
-Cell-level tables
-~~~~~~~~~~~~~~~~~
-
-- ``instances``
-- ``instance_info_caches``
-- ``instance_extra``
-- ``instance_metadata``
-- ``instance_system_metadata``
-- ``instance_faults``
-- ``instance_actions``
-- ``instance_actions_events``
-- ``instance_id_mappings``
-- ``pci_devices``
-- ``block_device_mapping``
-- ``virtual_interfaces``
+The main database is the database used for cell-level :program:`nova-conductor`
+instances. The models and migrations related to this database can be found in
+``nova.db.main``, and the database can be managed using the
+:program:`nova-manage db` commands.
 
 
 Usage
 -----
 
 As noted previously, all deployments are in effect now cells v2 deployments. As
-a result, setup of a any nova deployment - even those that intend to only have
-once cell - will involve some level of cells configuration. These changes are
+a result, setup of any nova deployment - even those that intend to only have
+one cell - will involve some level of cells configuration. These changes are
 configuration-related, both in the main nova configuration file as well as some
 extra records in the databases.
 
@@ -345,11 +328,11 @@ Configuring a new deployment
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you are installing Nova for the first time and have no compute hosts in the
-database yet then it will be necessary to configure cell0 and at least once
-additional "real" cell. To begin, ensure your API database has been created
-using the :program:`nova-manage api_db sync` command. Ensure the connection
-information for this database is stored in the ``nova.conf`` file using the
-:oslo.config:option:`api_database.connection` config option:
+database yet then it will be necessary to configure cell0 and at least one
+additional "real" cell. To begin, ensure your API database schema has been
+populated using the :program:`nova-manage api_db sync` command. Ensure the
+connection information for this database is stored in the ``nova.conf`` file
+using the :oslo.config:option:`api_database.connection` config option:
 
 .. code-block:: ini
 
@@ -556,7 +539,6 @@ existing instances to the new cell(s). For example:
    ``--max-count`` to finish. An exit code of 0 indicates that all instances
    have been mapped. An exit code of 1 indicates that there are remaining
    instances that need to be mapped.
-
 
 Template URLs in Cell Mappings
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1152,7 +1134,7 @@ real-world users of the feature.
 - `Rocky Summit Video - Moving from CellsV1 to CellsV2 at CERN`__
 - `Stein Summit Video - Scaling Nova with CellsV2: The Nova Developer and the
   CERN Operator perspective`__
-- `Ussuri Summit Video - What's new in Nova Cellsv2?`__
+- `Train Summit Video - What's new in Nova Cellsv2?`__
 
 .. __: https://www.openstack.org/videos/austin-2016/nova-cells-v2-whats-going-on
 .. __: https://www.openstack.org/videos/boston-2017/scaling-nova-how-cellsv2-affects-your-deployment

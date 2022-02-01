@@ -23,6 +23,14 @@ Glossary
         has an empty ("") ``image`` parameter in ``GET /servers/{server_id}``
         responses.
 
+    Cell
+        A cell is a shard or horizontal partition in a nova deployment.
+        A cell mostly consists of a database, queue, and set of compute nodes.
+        All deployments willl have at least one cell (and one "fake" cell).
+        Larger deployments can have many.
+
+        For more information, refer to :doc:`/admin/cells`.
+
     Cross-Cell Resize
         A resize (or cold migrate) operation where the source and destination
         compute hosts are mapped to different cells. By default, resize and

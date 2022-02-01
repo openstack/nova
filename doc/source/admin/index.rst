@@ -101,9 +101,7 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
 
 * :doc:`Availablity Zones </admin/availability-zones>`: Availability Zones are
   an end-user visible logical abstraction for partitioning a cloud without
-  knowing the physical infrastructure. They can be used to partition a cloud on
-  arbitrary factors, such as location (country, datacenter, rack), network
-  layout and/or power source.
+  knowing the physical infrastructure.
 
 * :placement-doc:`Placement service <>`: Overview of the placement
   service, including how it fits in with the rest of nova.

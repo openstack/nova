@@ -11,23 +11,26 @@ reads/writes, optionally sending RPC messages to other Nova services,
 and generating responses to the REST calls.
 RPC messaging is done via the **oslo.messaging** library,
 an abstraction on top of message queues.
-Nova uses a messaging-based, ``shared nothing`` architecture and most of the
+Nova uses a messaging-based, "shared nothing" architecture and most of the
 major nova components can be run on multiple servers, and have a manager that
 is listening for RPC messages.
-The one major exception is ``nova-compute``, where a single process runs on the
+The one major exception is the compute service, where a single process runs on the
 hypervisor it is managing (except when using the VMware or Ironic drivers).
 The manager also, optionally, has periodic tasks.
-For more details on our RPC system, please see: :doc:`/reference/rpc`
+For more details on our RPC system, refer to :doc:`/reference/rpc`.
 
-Nova also uses a central database that is (logically) shared between all
-components. However, to aid upgrade, the DB is accessed through an object
-layer that ensures an upgraded control plane can still communicate with
-a ``nova-compute`` running the previous release.
-To make this possible ``nova-compute`` proxies DB requests over RPC to a
-central manager called ``nova-conductor``.
+Nova uses traditional SQL databases to store information.
+These are (logically) shared between multiple components.
+To aid upgrade, the database is accessed through an object layer that ensures
+an upgraded control plane can still communicate with a compute nodes running
+the previous release.
+To make this possible, services running on the compute node proxy database
+requests over RPC to a central manager called the conductor.
 
 To horizontally expand Nova deployments, we have a deployment sharding
-concept called cells. For more information please see: :doc:`/admin/cells`
+concept called :term:`cells <cell>`.
+All deployments contain at least one cell.
+For more information, refer to :doc:`/admin/cells`.
 
 
 Components
@@ -109,11 +112,9 @@ projects on a shared system, and role-based access assignments. Roles control
 the actions that a user is allowed to perform.
 
 Projects are isolated resource containers that form the principal
-organizational structure within the Nova service. They typically consist of an
-individual VLAN, and volumes, instances, images, keys, and users. A user can
-specify the project by appending ``project_id`` to their access key.  If no
-project is specified in the API request, Nova attempts to use a project with
-the same ID as the user.
+organizational structure within the Nova service. They typically consist of
+networks, volumes, instances, images, keys, and users. A user can
+specify the project by appending ``project_id`` to their access key.
 
 For projects, you can use quota controls to limit the number of processor cores
 and the amount of RAM that can be allocated. Other projects also allow quotas
@@ -142,13 +143,14 @@ consumption across available hardware resources.
 Block storage
 -------------
 
-OpenStack provides two classes of block storage: ephemeral storage and
-persistent volume.
+OpenStack provides two classes of block storage: storage that is provisioned by
+Nova itself, and storage that is managed by the block storage service, Cinder.
 
-.. rubric:: Ephemeral storage
+.. rubric:: Nova-provisioned block storage
 
-Ephemeral storage includes a root ephemeral volume and an additional ephemeral
-volume. These are provided by nova itself.
+Nova provides the ability to create a root disk and an optional "ephemeral"
+volume. The root disk will always be present unless the instance is a
+:term:`Boot From Volume` instance.
 
 The root disk is associated with an instance, and exists only for the life of
 this very instance. Generally, it is used to store an instance's root file
@@ -156,7 +158,7 @@ system, persists across the guest operating system reboots, and is removed on
 an instance deletion. The amount of the root ephemeral volume is defined by the
 flavor of an instance.
 
-In addition to the ephemeral root volume, flavors can provide an additional
+In addition to the root volume, flavors can provide an additional
 ephemeral block device. It is represented as a raw block device with no
 partition table or file system. A cloud-aware operating system can discover,
 format, and mount such a storage device. Nova defines the default file system
@@ -171,17 +173,17 @@ is possible to configure other filesystem types.
    mounts it on ``/mnt``. This is a cloud-init feature, and is not an OpenStack
    mechanism. OpenStack only provisions the raw storage.
 
-.. rubric:: Persistent volume
+.. rubric:: Cinder-provisioned block storage
 
-A persistent volume is represented by a persistent virtualized block device
-independent of any particular instance. These are provided by the OpenStack
-Block Storage service, cinder.
+The OpenStack Block Storage service, Cinder, provides persistent volumes hat
+are represented by a persistent virtualized block device independent of any
+particular instance.
 
 Persistent volumes can be accessed by a single instance or attached to multiple
 instances. This type of configuration requires a traditional network file
 system to allow multiple instances accessing the persistent volume. It also
 requires a traditional network file system like NFS, CIFS, or a cluster file
-system such as GlusterFS. These systems can be built within an OpenStack
+system such as Ceph. These systems can be built within an OpenStack
 cluster, or provisioned outside of it, but OpenStack software does not provide
 these features.
 
@@ -193,14 +195,6 @@ file system can be on the persistent volume, and its state is maintained, even
 if the instance is shut down. For more information about this type of
 configuration, see :cinder-doc:`Introduction to the Block Storage service
 <configuration/block-storage/block-storage-overview.html>`.
-
-.. note::
-
-   A persistent volume does not provide concurrent access from multiple
-   instances. That type of configuration requires a traditional network file
-   system like NFS, or CIFS, or a cluster file system such as GlusterFS. These
-   systems can be built within an OpenStack cluster, or provisioned outside of
-   it, but OpenStack software does not provide these features.
 
 
 Building blocks
@@ -245,7 +239,7 @@ The displayed image attributes are:
 
 Virtual hardware templates are called ``flavors``. By default, these are
 configurable by admin users, however, that behavior can be changed by redefining
-the access controls ``policy.yaml`` on the ``nova-compute`` server. For more
+the access controls ``policy.yaml`` on the ``nova-api`` server. For more
 information, refer to :doc:`/configuration/policy`.
 
 For a list of flavors that are available on your system:
