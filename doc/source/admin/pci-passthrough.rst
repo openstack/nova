@@ -156,6 +156,70 @@ Refer to :oslo.config:option:`pci.alias` for syntax information.
 
 Once configured, restart the :program:`nova-compute` service.
 
+Special Tags
+^^^^^^^^^^^^
+
+When specified in :oslo.config:option:`pci.passthrough_whitelist` some tags
+have special meaning:
+
+``physical_network``
+  Associates a device with a physical network label which corresponds to the
+  ``physical_network`` attribute of a network segment object in Neutron. For
+  virtual networks such as overlays a value of ``null`` should be specified
+  as follows: ``"physical_network": null``. In the case of physical networks,
+  this tag is used to supply the metadata necessary for identifying a switched
+  fabric to which a PCI device belongs and associate the port with the correct
+  network segment in the networking backend. Besides typical SR-IOV scenarios,
+  this tag can be used for remote-managed devices in conjunction with the
+  ``remote_managed`` tag.
+
+``remote_managed``
+  Used to specify whether a PCI device is managed remotely or not. By default,
+  devices are implicitly tagged as ``"remote_managed": "false"`` but and they
+  must be tagged as ``"remote_managed": "true"`` if ports with
+  ``VNIC_TYPE_REMOTE_MANAGED`` are intended to be used. Once that is done,
+  those PCI devices will not be available for allocation for regular
+  PCI passthrough use. Specifying ``"remote_managed": "true"`` is only valid
+  for SR-IOV VFs and specifying it for PFs is prohibited.
+
+  .. important::
+     It is recommended that PCI VFs that are meant to be remote-managed
+     (e.g. the ones provided by SmartNIC DPUs) are tagged as remote-managed in
+     order to prevent them from being allocated for regular PCI passthrough since
+     they have to be programmed accordingly at the host that has access to the
+     NIC switch control plane. If this is not done, instances requesting regular
+     SR-IOV ports may get a device that will not be configured correctly and
+     will not be usable for sending network traffic.
+
+  .. important::
+     For the Libvirt virt driver, clearing a VLAN by programming VLAN 0 must not
+     result in errors in the VF kernel driver at the compute host. Before v8.1.0
+     Libvirt clears a VLAN before passing a VF through to the guest which may
+     result in an error depending on your driver and kernel version (see, for
+     example, `this bug <https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1957753>`_
+     which discusses a case relevant to one driver). As of Libvirt v8.1.0, EPERM
+     errors encountered while programming a VLAN are ignored if VLAN clearning is
+     not explicitly requested in the device XML.
+
+``trusted``
+  If a port is requested to be trusted by specifying an extra option during
+  port creation via ``--binding-profile trusted=true``, only devices tagged as
+  ``trusted: "true"`` will be allocated to instances. Nova will then configure
+  those devices as trusted by the network controller through its PF device driver.
+  The specific set of features allowed by the trusted mode of a VF will differ
+  depending on the network controller itself, its firmware version and what a PF
+  device driver version allows to pass to the NIC. Common features to be affected
+  by this tag are changing the VF MAC address, enabling promiscuous mode or
+  multicast promiscuous mode.
+
+  .. important::
+     While the ``trusted tag`` does not directly conflict with the
+     ``remote_managed`` tag, network controllers in SmartNIC DPUs may prohibit
+     setting the ``trusted`` mode on a VF via a PF device driver in the first
+     place. It is recommended to test specific devices, drivers and firmware
+     versions before assuming this feature can be used.
+
+
 Configure ``nova-scheduler``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
