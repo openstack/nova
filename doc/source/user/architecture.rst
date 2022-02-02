@@ -42,7 +42,7 @@ To make this possible nova-compute proxies DB requests over RPC to a
 central manager called ``nova-conductor``.
 
 To horizontally expand Nova deployments, we have a deployment sharding
-concept called cells. For more information please see: :doc:`cells`
+concept called cells. For more information please see: :doc:`/admin/cells`
 
 Components
 ----------

@@ -92,10 +92,9 @@ these documents will move into the "Internals" section.
 If you want to get involved in shaping the future of nova's architecture,
 these are a great place to start reading up on the current plans.
 
-* :doc:`/user/cells`: How cells v2 is evolving
 * :doc:`/reference/policy-enforcement`: How we want policy checks on API actions
   to work in the future
-* :doc:`/reference/stable-api`: What stable api means to nova
+* :doc:`/reference/stable-api`: What stable API means to nova
 * :doc:`/reference/scheduler-evolution`: Motivation behind the scheduler /
   placement evolution
 
@@ -104,7 +103,6 @@ these are a great place to start reading up on the current plans.
 .. toctree::
    :hidden:
 
-   /user/cells
    policy-enforcement
    stable-api
    scheduler-evolution

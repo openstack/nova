@@ -43,9 +43,9 @@ reschedule of the server create request.  Note that this means the deployment
 must have :oslo.config:option:`scheduler.max_attempts` set greater than ``1``
 (default is ``3``) to handle races.
 
-An ideal configuration for multiple cells will minimize `upcalls`_ from the
-cells to the API database. This is how devstack, for example, is configured in
-the CI gate. The cell conductors do not set
+An ideal configuration for multiple cells will minimize :ref:`upcalls <upcall>`
+from the cells to the API database. This is how devstack, for example, is
+configured in the CI gate. The cell conductors do not set
 :oslo.config:option:`api_database.connection` and ``nova-compute`` sets
 :oslo.config:option:`workarounds.disable_group_policy_check_upcall` to
 ``True``.
@@ -73,6 +73,3 @@ parallel server create requests are racing.
 
 Future work is needed to add anti-/affinity support to the placement service in
 order to eliminate the need for the late affinity check in ``nova-compute``.
-
-.. _upcalls: https://docs.openstack.org/nova/latest/user/cellsv2-layout.html#operations-requiring-upcalls
-

@@ -63,7 +63,8 @@ The migration types are:
 .. note::
 
    In a multi-cell cloud, instances can be live migrated to a
-   different host in the same cell, but not across cells.
+   different host in the same cell, but not across cells. Refer to the
+   :ref:`cells v2 documentation <cells-v2-caveats>`. for more information.
 
 The following sections describe how to configure your hosts for live migrations
 using the libvirt virt driver and KVM hypervisor.
