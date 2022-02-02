@@ -9139,9 +9139,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         self.assertEqual(driver_console.get_connection_info.return_value,
                          console)
 
+    @mock.patch('nova.utils.pass_context')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_do_live_migration')
-    def _test_max_concurrent_live(self, mock_lm):
+    def _test_max_concurrent_live(self, mock_lm, mock_pass_context):
+        # pass_context wraps the function, which doesn't work with a mock
+        # So we simply mock it too
+        def _mock_pass_context(runner, func, *args, **kwargs):
+            return runner(func, *args, **kwargs)
+        mock_pass_context.side_effect = _mock_pass_context
 
         @mock.patch('nova.objects.Migration.save')
         def _do_it(mock_mig_save):

@@ -2181,12 +2181,12 @@ class ComputeManager(manager.Manager):
         # the pool. Since what follows could take a really long time, we don't
         # want to tie up RPC workers.
 
-        self.instance_running_pool.spawn_n(_locked_do_build_and_run_instance,
-              context, instance, image, request_spec,
-              filter_properties, admin_password, injected_files,
-              requested_networks, security_groups,
-              block_device_mapping, node, limits, host_list,
-              accel_uuids)
+        nova.utils.pass_context(self.instance_running_pool.spawn_n,
+            _locked_do_build_and_run_instance,
+            context, instance, image, request_spec,
+            filter_properties, admin_password, injected_files,
+            requested_networks, security_groups,
+            block_device_mapping, node, limits, host_list, accel_uuids)
 
     def _check_device_tagging(self, requested_networks, block_device_mapping):
         tagging_requested = False
@@ -8567,7 +8567,8 @@ class ComputeManager(manager.Manager):
         # in order to be able to track and abort it in the future.
         self._waiting_live_migrations[instance.uuid] = (None, None)
         try:
-            future = self._live_migration_executor.submit(
+            future = nova.utils.pass_context(
+                self._live_migration_executor.submit,
                 self._do_live_migration, context, dest, instance,
                 block_migration, migration, migrate_data)
             self._waiting_live_migrations[instance.uuid] = (migration, future)
@@ -9813,7 +9814,9 @@ class ComputeManager(manager.Manager):
             else:
                 LOG.debug('Triggering sync for uuid %s', uuid)
                 self._syncs_in_progress[uuid] = True
-                self._sync_power_pool.spawn_n(_sync, db_instance)
+                nova.utils.pass_context(self._sync_power_pool.spawn_n,
+                                        _sync,
+                                        db_instance)
 
     def _query_driver_power_state_and_sync(self, context, db_instance):
         if db_instance.task_state is not None:

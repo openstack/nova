@@ -638,15 +638,13 @@ def _serialize_profile_info():
     return trace_info
 
 
-def spawn(func, *args, **kwargs):
-    """Passthrough method for eventlet.spawn.
+def pass_context(runner, func, *args, **kwargs):
+    """Generalised passthrough method
 
-    This utility exists so that it can be stubbed for testing without
-    interfering with the service spawns.
-
-    It will also grab the context from the threadlocal store and add it to
-    the store on the new thread.  This allows for continuity in logging the
-    context when using this method to spawn a new thread.
+    It will grab the context from the threadlocal store and add it to
+    the store on the runner.  This allows for continuity in logging the
+    context when using this method to spawn a new thread through the
+    runner function
     """
     _context = common_context.get_current()
     profiler_info = _serialize_profile_info()
@@ -661,7 +659,21 @@ def spawn(func, *args, **kwargs):
             profiler.init(**profiler_info)
         return func(*args, **kwargs)
 
-    return eventlet.spawn(context_wrapper, *args, **kwargs)
+    return runner(context_wrapper, *args, **kwargs)
+
+
+def spawn(func, *args, **kwargs):
+    """Passthrough method for eventlet.spawn.
+
+    This utility exists so that it can be stubbed for testing without
+    interfering with the service spawns.
+
+    It will also grab the context from the threadlocal store and add it to
+    the store on the new thread.  This allows for continuity in logging the
+    context when using this method to spawn a new thread.
+    """
+
+    return pass_context(eventlet.spawn, func, *args, **kwargs)
 
 
 def spawn_n(func, *args, **kwargs):
@@ -674,20 +686,7 @@ def spawn_n(func, *args, **kwargs):
     the store on the new thread.  This allows for continuity in logging the
     context when using this method to spawn a new thread.
     """
-    _context = common_context.get_current()
-    profiler_info = _serialize_profile_info()
-
-    @functools.wraps(func)
-    def context_wrapper(*args, **kwargs):
-        # NOTE: If update_store is not called after spawn_n it won't be
-        # available for the logger to pull from threadlocal storage.
-        if _context is not None:
-            _context.update_store()
-        if profiler_info and profiler:
-            profiler.init(**profiler_info)
-        func(*args, **kwargs)
-
-    eventlet.spawn_n(context_wrapper, *args, **kwargs)
+    pass_context(eventlet.spawn_n, func, *args, **kwargs)
 
 
 def tpool_execute(func, *args, **kwargs):
