@@ -505,6 +505,45 @@ class DbCommands(object):
         else:
             return 3
 
+    @args('--dry-run', action='store_true', dest='dry_run',
+          default=False, help='Print SQL statements instead of executing')
+    @args('--older-than', dest='older_than',
+          default=90, help='Days from today to begin purging')
+    @args('--max-number', metavar='<number>', dest='max_number',
+          help='Maximum number of instances to consider')
+    @args('--all-cells', action='store_true', dest='all_cells',
+          default=False, help='Run against all cell databases')
+    def purge_deleted_instances(self, dry_run=False, older_than=90,
+                                max_number=None, all_cells=False):
+        """Removes soft deleted instances data"""
+        older_than = int(older_than)
+        if max_number:
+            max_number = int(max_number)
+
+        admin_context = context.get_admin_context(read_deleted='yes')
+        instance_count = 0
+        if all_cells:
+            try:
+                cells = objects.CellMappingList.get_all(admin_context)
+            except db_exc.DBError:
+                print(_('Unable to get cell list from API DB. '
+                        'Is it configured?'))
+            for cell in cells:
+                with context.target_cell(admin_context, cell) as cctxt:
+                    instance_count += db.instances_purge_deleted(
+                            cctxt, dry_run,
+                            older_than, max_number - instance_count)
+        else:
+            instance_count = db.instances_purge_deleted(
+                    admin_context, dry_run, older_than, max_number)
+        if not dry_run:
+            print(_("Purged %d instances from the DB") % instance_count)
+        else:
+            print(_("There are at least %d records in the DB for deleted "
+                     "instances.  Run this command again without the dry-run "
+                     "option to purge these records.")
+                     % instance_count)
+
     def _run_migration(self, ctxt, max_count):
         ran = 0
         exceptions = False
