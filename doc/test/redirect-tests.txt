@@ -1,4 +1,5 @@
 /nova/latest/addmethod.openstackapi.html 301 /nova/latest/contributor/api-2.html
+/nova/latest/admin/arch.html 301 /nova/latest/admin/architecture.html
 /nova/latest/admin/flavors2.html 301 /nova/latest/admin/flavors.html
 /nova/latest/admin/quotas2.html 301 /nova/latest/admin/quotas.html
 /nova/latest/admin/numa.html 301 /nova/latest/admin/cpu-topologies.html
@@ -6,7 +7,7 @@
 /nova/latest/api_microversion_dev.html 301 /nova/latest/contributor/microversions.html
 /nova/latest/api_microversion_history.html 301 /nova/latest/reference/api-microversion-history.html
 /nova/latest/api_plugins.html 301 /nova/latest/contributor/api.html
-/nova/latest/architecture.html 301 /nova/latest/user/architecture.html
+/nova/latest/architecture.html 301 /nova/latest/admin/architecture.html
 /nova/latest/block_device_mapping.html 301 /nova/latest/user/block-device-mapping.html
 /nova/latest/blueprints.html 301 /nova/latest/contributor/blueprints.html
 /nova/latest/cells.html 301 /nova/latest/admin/cells.html
@@ -64,6 +65,7 @@
 /nova/latest/threading.html 301 /nova/latest/reference/threading.html
 /nova/latest/upgrade.html 301 /nova/latest/admin/upgrades.html
 /nova/latest/user/aggregates.html 301 /nova/latest/admin/aggregates.html
+/nova/latest/user/architecture.html 301 /nova/latest/admin/architecture.html
 /nova/latest/user/cells.html 301 /nova/latest/admin/cells.html
 /nova/latest/user/cellsv2_layout.html 301 /nova/latest/admin/cells.html
 /nova/latest/user/cellsv2-layout.html 301 /nova/latest/admin/cells.html
@@ -77,9 +79,10 @@
 /nova/latest/vendordata.html 301 /nova/latest/user/metadata.html
 /nova/latest/vmstates.html 301 /nova/latest/reference/vm-states.html
 /nova/latest/wsgi.html 301 /nova/latest/user/wsgi.html
+/nova/latest/admin/arch.html 301 /nova/latest/admin/architecture.html
 /nova/latest/admin/adv-config.html 301 /nova/latest/admin/index.html
 /nova/latest/admin/configuration/schedulers.html 301 /nova/latest/admin/scheduling.html
 /nova/latest/admin/system-admin.html 301 /nova/latest/admin/index.html
 /nova/latest/admin/port_with_resource_request.html 301 /nova/latest/admin/ports-with-resource-requests.html
-/nova/latest/admin/manage-users.html 301 /nova/latest/admin/arch.html
+/nova/latest/admin/manage-users.html 301 /nova/latest/admin/architecture.html
 /nova/latest/admin/mitigation-for-Intel-MDS-security-flaws.html 301 /nova/latest/admin/cpu-models.html
