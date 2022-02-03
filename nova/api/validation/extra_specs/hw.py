@@ -369,6 +369,20 @@ feature_flag_validators = [
         },
     ),
     base.ExtraSpecValidator(
+        name='hw:vif_multiqueue_enabled',
+        description=(
+            'Whether to enable the virtio-net multiqueue feature. '
+            'When set, the driver sets the number of queues equal to the '
+            'number of guest vCPUs. This makes the network performance scale '
+            'across a number of vCPUs. This requires guest support and is '
+            'only supported by the libvirt driver.'
+        ),
+        value={
+            'type': bool,
+            'description': 'Whether to enable multiqueue',
+        },
+    ),
+    base.ExtraSpecValidator(
         name='hw:mem_encryption',
         description=(
             'Whether to enable memory encryption for the guest. '

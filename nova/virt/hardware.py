@@ -1784,6 +1784,55 @@ def get_pci_numa_policy_constraint(
     return policy
 
 
+def get_vif_multiqueue_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> bool:
+    """Validate and return the requested VIF multiqueue configuration.
+
+    :param flavor: ``nova.objects.Flavor`` instance
+    :param image_meta: ``nova.objects.ImageMeta`` instance
+    :raises: nova.exception.FlavorImageConflict if a value is specified in both
+        the flavor and the image, but the values do not match
+    :raises: nova.exception.Invalid if a value or combination of values is
+        invalid
+    :returns: True if the multiqueue must be enabled, else False.
+    """
+    if flavor.vcpus < 2:
+        return False
+
+    flavor_value_str, image_value = _get_flavor_image_meta(
+        'vif_multiqueue_enabled', flavor, image_meta)
+
+    flavor_value = None
+    if flavor_value_str is not None:
+        flavor_value = strutils.bool_from_string(flavor_value_str)
+
+    if (
+        image_value is not None and
+        flavor_value is not None and
+        image_value != flavor_value
+    ):
+        msg = _(
+            "Flavor %(flavor_name)s has %(prefix)s:%(key)s extra spec "
+            "explicitly set to %(flavor_val)s, conflicting with image "
+            "%(image_name)s which has %(prefix)s_%(key)s explicitly set to "
+            "%(image_val)s."
+        )
+        raise exception.FlavorImageConflict(
+            msg % {
+                'prefix': 'hw',
+                'key': 'vif_multiqueue_enabled',
+                'flavor_name': flavor.name,
+                'flavor_val': flavor_value,
+                'image_name': image_meta.name,
+                'image_val': image_value,
+            }
+        )
+
+    return flavor_value or image_value or False
+
+
 def get_vtpm_constraint(
     flavor: 'objects.Flavor',
     image_meta: 'objects.ImageMeta',
