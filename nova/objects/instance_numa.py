@@ -166,8 +166,10 @@ class InstanceNUMATopology(base.NovaObject,
 
         if 'nova_object.name' in primitive:
             obj = cls.obj_from_primitive(primitive)
-            cls._migrate_legacy_dedicated_instance_cpuset(
-                context, instance_uuid, obj)
+            updated = cls._migrate_legacy_dedicated_instance_cpuset(obj)
+            if updated:
+                cls._save_migrated_cpuset_to_instance_extra(
+                    context, obj, instance_uuid)
         else:
             obj = cls._migrate_legacy_object(context, instance_uuid, primitive)
 
@@ -176,13 +178,14 @@ class InstanceNUMATopology(base.NovaObject,
     # TODO(huaqiang): Remove after Wallaby once we are sure these objects have
     # been loaded at least once.
     @classmethod
-    def _migrate_legacy_dedicated_instance_cpuset(cls, context, instance_uuid,
-                                                  obj):
+    def _migrate_legacy_dedicated_instance_cpuset(cls, obj):
         # NOTE(huaqiang): We may meet some topology object with the old version
         # 'InstanceNUMACell' cells, in that case, the 'dedicated' CPU is kept
         # in 'InstanceNUMACell.cpuset' field, but it should be kept in
         # 'InstanceNUMACell.pcpuset' field since Victoria. Making an upgrade
-        # and persisting to database.
+        # here but letting the caller persist the result if needed as we
+        # don't know which table the InstanceNUMACell is coming from. It can
+        # come from instance_extra or request_spec too.
         update_db = False
         for cell in obj.cells:
             if len(cell.cpuset) == 0:
@@ -194,14 +197,20 @@ class InstanceNUMATopology(base.NovaObject,
             cell.pcpuset = cell.cpuset
             cell.cpuset = set()
             update_db = True
+        return update_db
 
-        if update_db:
-            db_obj = jsonutils.dumps(obj.obj_to_primitive())
-            values = {
-                'numa_topology': db_obj,
-            }
-            db.instance_extra_update_by_uuid(context, instance_uuid,
-                                             values)
+    # TODO(huaqiang): Remove after Yoga once we are sure these objects have
+    # been loaded at least once.
+    @classmethod
+    def _save_migrated_cpuset_to_instance_extra(
+        cls, context, obj, instance_uuid
+    ):
+        db_obj = jsonutils.dumps(obj.obj_to_primitive())
+        values = {
+            'numa_topology': db_obj,
+        }
+        db.instance_extra_update_by_uuid(
+            context, instance_uuid, values)
 
     # TODO(stephenfin): Remove in X or later, once this has bedded in
     @classmethod

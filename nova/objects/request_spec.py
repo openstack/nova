@@ -596,6 +596,8 @@ class RequestSpec(base.NovaObject):
     @staticmethod
     def _from_db_object(context, spec, db_spec):
         spec_obj = spec.obj_from_primitive(jsonutils.loads(db_spec['spec']))
+        data_migrated = False
+
         for key in spec.fields:
             # Load these from the db model not the serialized object within,
             # though they should match.
@@ -616,6 +618,13 @@ class RequestSpec(base.NovaObject):
                 # fields. If they are not set, set None.
                 if not spec.obj_attr_is_set(key):
                     setattr(spec, key, None)
+            elif key == "numa_topology":
+                if key in spec_obj:
+                    spec.numa_topology = spec_obj.numa_topology
+                    if spec.numa_topology:
+                        data_migrated = objects.InstanceNUMATopology.\
+                            _migrate_legacy_dedicated_instance_cpuset(
+                                spec.numa_topology)
             elif key in spec_obj:
                 setattr(spec, key, getattr(spec_obj, key))
         spec._context = context
@@ -636,6 +645,9 @@ class RequestSpec(base.NovaObject):
             except exception.InstanceGroupNotFound:
                 # NOTE(danms): Instance group may have been deleted
                 spec.instance_group = None
+
+        if data_migrated:
+            spec.save()
 
         spec.obj_reset_changes()
         return spec
