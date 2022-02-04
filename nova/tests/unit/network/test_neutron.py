@@ -3566,6 +3566,23 @@ class TestAPI(TestAPIBase):
         self.assertFalse(tunneled)
         self.assertIsNone(physnet_name)
 
+    def test_is_remote_managed(self):
+        cases = {
+            (model.VNIC_TYPE_NORMAL, False),
+            (model.VNIC_TYPE_DIRECT, False),
+            (model.VNIC_TYPE_MACVTAP, False),
+            (model.VNIC_TYPE_DIRECT_PHYSICAL, False),
+            (model.VNIC_TYPE_BAREMETAL, False),
+            (model.VNIC_TYPE_VIRTIO_FORWARDER, False),
+            (model.VNIC_TYPE_VDPA, False),
+            (model.VNIC_TYPE_ACCELERATOR_DIRECT, False),
+            (model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL, False),
+            (model.VNIC_TYPE_REMOTE_MANAGED, True),
+        }
+
+        for vnic_type, expected in cases:
+            self.assertEqual(self.api._is_remote_managed(vnic_type), expected)
+
     def _test_get_port_vnic_info(
         self, mock_get_client, binding_vnic_type, expected_vnic_type,
         port_resource_request=None, numa_policy=None

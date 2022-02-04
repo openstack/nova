@@ -365,6 +365,33 @@ def routed_networks_filter(
     return True
 
 
+@trace_request_filter
+def remote_managed_ports_filter(
+    context: nova_context.RequestContext,
+    request_spec: 'objects.RequestSpec',
+) -> bool:
+    """Filter out hosts without remote managed port support (driver or hw).
+
+    If a request spec contains VNIC_TYPE_REMOTE_MANAGED ports then a
+    remote-managed port trait (COMPUTE_REMOTE_MANAGED_PORTS) is added to
+    the request in order to pre-filter hosts that do not use compute
+    drivers supporting remote managed ports and the ones that do not have
+    the device pools providing remote-managed ports (actual device
+    availability besides a pool presence check is done at the time of
+    PciPassthroughFilter execution).
+    """
+    if request_spec.requested_networks:
+        network_api = neutron.API()
+        for request_net in request_spec.requested_networks:
+            if request_net.port_id and network_api.is_remote_managed_port(
+                context, request_net.port_id):
+                request_spec.root_required.add(
+                    os_traits.COMPUTE_REMOTE_MANAGED_PORTS)
+                LOG.debug('remote_managed_ports_filter request filter added '
+                          f'trait {os_traits.COMPUTE_REMOTE_MANAGED_PORTS}')
+    return True
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
     map_az_to_placement_aggregate,
@@ -374,6 +401,7 @@ ALL_REQUEST_FILTERS = [
     transform_image_metadata,
     accelerators_filter,
     routed_networks_filter,
+    remote_managed_ports_filter,
 ]
 
 

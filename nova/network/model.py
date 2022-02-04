@@ -106,6 +106,7 @@ VNIC_TYPE_VIRTIO_FORWARDER = 'virtio-forwarder'
 VNIC_TYPE_VDPA = 'vdpa'
 VNIC_TYPE_ACCELERATOR_DIRECT = 'accelerator-direct'
 VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL = 'accelerator-direct-physical'
+VNIC_TYPE_REMOTE_MANAGED = "remote-managed"
 
 # Define list of ports which needs pci request.
 # Note: The macvtap port needs a PCI request as it is a tap interface
@@ -121,14 +122,15 @@ VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL = 'accelerator-direct-physical'
 # selected compute node.
 VNIC_TYPES_SRIOV = (
     VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP, VNIC_TYPE_DIRECT_PHYSICAL,
-    VNIC_TYPE_VIRTIO_FORWARDER, VNIC_TYPE_VDPA)
+    VNIC_TYPE_VIRTIO_FORWARDER, VNIC_TYPE_VDPA, VNIC_TYPE_REMOTE_MANAGED)
 
 # Define list of ports which are passthrough to the guest
 # and need a special treatment on snapshot and suspend/resume
 VNIC_TYPES_DIRECT_PASSTHROUGH = (VNIC_TYPE_DIRECT,
                                  VNIC_TYPE_DIRECT_PHYSICAL,
                                  VNIC_TYPE_ACCELERATOR_DIRECT,
-                                 VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL)
+                                 VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL,
+                                 VNIC_TYPE_REMOTE_MANAGED)
 
 # Define list of ports which contains devices managed by cyborg.
 VNIC_TYPES_ACCELERATOR = (

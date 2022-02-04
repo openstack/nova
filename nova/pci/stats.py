@@ -729,3 +729,16 @@ class PciDeviceStats(object):
         """Return the contents of the pools as a PciDevicePoolList object."""
         stats = [x for x in self]
         return pci_device_pool.from_pci_stats(stats)
+
+    def has_remote_managed_device_pools(self) -> bool:
+        """Determine whether remote managed device pools are present on a host.
+
+        The check is pool-based, not free device-based and is NUMA cell
+        agnostic.
+        """
+        dummy_req = objects.InstancePCIRequest(
+            count=0,
+            spec=[{'remote_managed': True}]
+        )
+        pools = self._filter_pools_for_spec(self.pools, dummy_req)
+        return bool(pools)
