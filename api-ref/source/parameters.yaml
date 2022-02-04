@@ -1556,6 +1556,8 @@ addresses:
   description: |
     The addresses for the server.  Servers with status ``BUILD`` hide their
     addresses information.
+    This view is not updated immediately.
+    Please consult with OpenStack Networking API for up-to-date information.
   in: body
   required: true
   type: object
