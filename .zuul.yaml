@@ -294,7 +294,7 @@
       # tempest_test_exclude_list.
       # FIXME(lyarwood): The tempest.api.compute.admin.test_volume_swap tests
       # are skipped until bug #1929710 is resolved.
-      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)
+      tempest_exclude_regex: ^tempest\.(scenario\.test_network_(?!qos)|api\.compute\.admin\.test_volume_swap)|tempest.api.compute.servers.test_device_tagging.TaggedAttachmentsTest.test_tagged_attachment
       devstack_local_conf:
         post-config:
           $NOVA_CPU_CONF:
