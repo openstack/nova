@@ -10851,6 +10851,9 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = self._get_instance_disk_info(instance, block_device_info)
 
         try:
+            # If cleanup failed in previous resize attempts we try to remedy
+            # that before a resize is tried again
+            self._cleanup_failed_instance_base(inst_base_resize)
             os.rename(inst_base, inst_base_resize)
             # if we are migrating the instance with shared instance path then
             # create the directory.  If it is a remote node the directory
@@ -11074,9 +11077,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         LOG.debug("finish_migration finished successfully.", instance=instance)
 
-    def _cleanup_failed_migration(self, inst_base):
-        """Make sure that a failed migrate doesn't prevent us from rolling
-        back in a revert.
+    def _cleanup_failed_instance_base(self, inst_base):
+        """Make sure that a failed migrate or resize doesn't prevent us from
+        rolling back in a revert or retrying a resize.
         """
         try:
             shutil.rmtree(inst_base)
@@ -11132,7 +11135,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # that would conflict. Also, don't fail on the rename if the
         # failure happened early.
         if os.path.exists(inst_base_resize):
-            self._cleanup_failed_migration(inst_base)
+            self._cleanup_failed_instance_base(inst_base)
             os.rename(inst_base_resize, inst_base)
 
         root_disk = self.image_backend.by_name(instance, 'disk')
