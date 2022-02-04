@@ -21,6 +21,16 @@ from nova import exception
 from nova.i18n import _
 
 
+class DatastoreRegexUnspecified(exception.Invalid):
+    msg_fmt = "vmware.datastore_hagroup_regex is set without " \
+              "vmware.datastore_regex being set."
+
+
+class DatastoreRegexNoHagroup(exception.Invalid):
+    msg_fmt = "vmware.datastore_hagroup_regex is set but does not contain " \
+              "a named group 'hagroup'"
+
+
 class NoRootDiskDefined(exception.NovaException):
     msg_fmt = _("No root disk defined.")
 

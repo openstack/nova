@@ -436,7 +436,7 @@ notification_object_data = {
     'VirtCPUTopologyPayload': '1.0-1b1600fe55465209682d96bbe3209f27',
     'VolumeUsageNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'VolumeUsagePayload': '1.0-5f99d8b978a32040eecac0975e5a53e9',
-    'VMwareLiveMigrateData': '1.1-ecaa7a47c0742ccb302711896a1c3eba',
+    'VMwareLiveMigrateData': '1.2-3072c2eb508ae0259825200239b9051f',
 }
 
 

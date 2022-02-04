@@ -1178,7 +1178,7 @@ object_data = {
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
     'VirtualInterface': '1.3-efd3ca8ebcc5ce65fff5a25f31754c54',
     'VirtualInterfaceList': '1.0-9750e2074437b3077e46359102779fc6',
-    'VMwareLiveMigrateData': '1.1-ecaa7a47c0742ccb302711896a1c3eba',
+    'VMwareLiveMigrateData': '1.2-3072c2eb508ae0259825200239b9051f',
     'VolumeUsage': '1.0-6c8190c46ce1469bb3286a1f21c2e475',
     'XenDeviceBus': '1.0-272a4f899b24e31e42b2b9a7ed7e9194',
 }

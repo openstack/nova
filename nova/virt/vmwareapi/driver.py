@@ -128,6 +128,25 @@ class VMwareVCDriver(driver.ComputeDriver):
                     _("Invalid Regular Expression %s")
                     % CONF.vmware.datastore_regex)
 
+        self._datastore_hagroup_regex = None
+        if CONF.vmware.datastore_hagroup_regex:
+            # NOTE(jkulik): In theory, this is not necessary if pbm_enabled is
+            # set, but to keep the amount of code necessary for supporting
+            # datastore hagroups small, we just focus on one way of doing
+            # things right now.
+            if not self._datastore_regex:
+                raise error_util.DatastoreRegexUnspecified()
+            try:
+                self._datastore_hagroup_regex = \
+                    re.compile(CONF.vmware.datastore_hagroup_regex, re.I)
+            except re.error:
+                raise exception.InvalidInput(reason=
+                    "Invalid Regular Expression {}"
+                    .format(CONF.vmware.datastore_hagroup_regex))
+
+            if 'hagroup' not in self._datastore_hagroup_regex.groupindex:
+                raise error_util.DatastoreRegexNoHagroup()
+
         self._session = session.VMwareAPISession(scheme=scheme)
 
         self._check_min_version()
@@ -158,7 +177,9 @@ class VMwareVCDriver(driver.ComputeDriver):
                                         self._volumeops,
                                         self._vc_state,
                                         self._cluster_ref,
-                                        datastore_regex=self._datastore_regex)
+                                        datastore_regex=self._datastore_regex,
+                                        datastore_hagroup_regex=
+                                            self._datastore_hagroup_regex)
         self.capabilities['resource_scheduling'] = \
             cluster_util.is_drs_enabled(self._session, self._cluster_ref)
         # Register the OpenStack extension
@@ -732,6 +753,8 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def sync_server_group(self, context, sg_uuid):
         self._vmops.sync_server_group(context, sg_uuid)
+        self._vmops.update_server_group_hagroup_disk_placement(context,
+                                                               sg_uuid)
 
     def _server_group_sync_loop(self, compute_host):
         """Retrieve all groups from the cluster and from the DB and call
@@ -778,6 +801,8 @@ class VMwareVCDriver(driver.ComputeDriver):
                     sleep_time = random.uniform(0.5, spacing)
                     time.sleep(sleep_time)
                     self._vmops.sync_server_group(context, sg_uuid)
+                    self._vmops.update_server_group_hagroup_disk_placement(
+                        context, sg_uuid)
             except Exception as e:
                 LOG.exception("Finished server-group sync-loop with error: %s",
                               e)
@@ -802,7 +827,6 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         data.cluster_name = self._cluster_name
         data.dest_cluster_ref = vim_util.get_moref_value(self._cluster_ref)
-        data.datastore_regex = CONF.vmware.datastore_regex
         client_factory = self._session.vim.client.factory
 
         service = vm_util.create_service_locator(client_factory,

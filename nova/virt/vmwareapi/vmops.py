@@ -22,6 +22,7 @@ Class for VM tasks like spawn, snapshot, suspend, resume etc.
 import collections
 import copy
 import decorator
+import itertools
 import os
 import re
 import time
@@ -137,7 +138,7 @@ class VMwareVMOps(object):
     """Management class for VM-related tasks."""
 
     def __init__(self, session, virtapi, volumeops, vc_state, cluster=None,
-                 datastore_regex=None):
+                 datastore_regex=None, datastore_hagroup_regex=None):
         """Initializer."""
         self.compute_api = compute.API()
         self._session = session
@@ -148,6 +149,7 @@ class VMwareVMOps(object):
         self._root_resource_pool = vm_util.get_res_pool_ref(self._session,
                                                             self._cluster)
         self._datastore_regex = datastore_regex
+        self._datastore_hagroup_regex = datastore_hagroup_regex
         self._base_folder = self._get_base_folder()
         self._tmp_folder = 'vmware_temp'
         self._datastore_browser_mapping = {}
@@ -686,7 +688,106 @@ class VMwareVMOps(object):
                             tmp_image_ds_loc.parent,
                             vi.cache_image_folder)
 
-    def _get_vm_config_info(self, instance, image_info, extra_specs):
+    def _get_server_group_members_for_hagroup(self, context, server_group):
+        """Return not-deleted, non-bfv members of InstanceGroup"""
+        # query all instances not deleted in server_group.members. this
+        # will only filter in the current cell, but that should be a big
+        # enough radius as cells are AZs in our env - except in qa-de-1
+        # TODO(jkulik): Do we need this to work across cells?
+        InstanceList = objects.instance.InstanceList
+        filters = {'uuid': server_group.members, 'deleted': False}
+        instances = InstanceList.get_by_filters(context, filters,
+                                                expected_attrs=[])
+        existing_instances_by_uuid = {i.uuid: i for i in instances}
+
+        # exclude boot-from-volume (BfV) instances, because Cinder manages
+        # affinity between volumes. If their config-files lie on the same
+        # datastore as another VM, they would "just" become inaccessible, but
+        # not crash. A swap-file going away could crash the VM, but we have
+        # swap on different DSs in the newer BBs anyways and thus we ignore
+        # that here.
+        # TODO(jkulik): We could introduce a setting that would define whether
+        # we have node-local swap-datastores and thus can ignore
+        # boot-from-volume here and in self._get_hagroup_info()
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuids(
+            context, list(existing_instances_by_uuid))
+
+        def bdm_sort_key(bdm):
+            if not bdm.obj_attr_is_set('instance_uuid'):
+                return None
+            return bdm.instance_uuid
+
+        bfv_instance_uuids = set()
+        sorted_bdms = sorted(bdms, key=bdm_sort_key)
+        for instance_uuid, bdms in itertools.groupby(sorted_bdms,
+                                                     key=bdm_sort_key):
+            if instance_uuid is None:
+                continue
+            instance = existing_instances_by_uuid[instance_uuid]
+            bdm_list = objects.BlockDeviceMappingList(objects=list(bdms))
+            is_bfv = compute_utils.is_volume_backed_instance(context, instance,
+                                                             bdms=bdm_list)
+            if not is_bfv:
+                continue
+            bfv_instance_uuids.add(instance_uuid)
+
+        # we need to keep the order of the members here and thus filter the
+        # members by the found instances
+        relevant_members = [m for m in server_group.members
+                            if m in existing_instances_by_uuid and
+                            m not in bfv_instance_uuids]
+        return relevant_members
+
+    def _get_hagroup_info(self, context, instance, is_bfv=None):
+        """Return hagroup regex and hagroup for the given instance
+
+        The hagroup computes from the server-group the instance is in and thus
+        this function may return (None, None) if the server isn't in a
+        server-group.
+
+        If it's already known by the calling code, if this is a
+        boot-from-volume instance, we don't want to refetch that information
+        and thus allow passing "is_bfv".
+        """
+        if is_bfv is None:
+            is_bfv = compute_utils.is_volume_backed_instance(instance._context,
+                                                             instance)
+        # boot-from-volume instances have their disk affinity managed by Cinder
+        # and their config-files going missing will not take them down. The
+        # only problem they have, is a missing swap-file, but swap-files are on
+        # node-local swap datastores in our environment.
+        if is_bfv:
+            return None, None
+
+        # this currently means the hagroup feature is disabled
+        if not self._datastore_hagroup_regex:
+            return None, None
+
+        instance_group_object = objects.instance_group.InstanceGroup
+        try:
+            server_group = instance_group_object.get_by_instance_uuid(
+                context, instance.uuid)
+        except nova.exception.InstanceGroupNotFound:
+            return None, None
+
+        # we don't handle affinity here, just anti-affinity
+        if 'anti-affinity' not in server_group.policy:
+            return None, None
+
+        not_deleted_members = self._get_server_group_members_for_hagroup(
+            context, server_group)
+        member_index = not_deleted_members.index(instance.uuid)
+        # the first two  instances are hard-mapped to A and B respectively, so
+        # we can make sure we have at least one instance on either hagroup. the
+        # other instances we map basically randomly.
+        if member_index < 2:
+            hagroup = ['A', 'B'][member_index % 2]
+        else:
+            hagroup = ['A', 'B'][int(instance.uuid[0], 16) % 2]
+
+        return self._datastore_hagroup_regex, hagroup
+
+    def _get_vm_config_info(self, context, instance, image_info, extra_specs):
         """Captures all relevant information from the spawn parameters."""
 
         boot_from_volume = compute_utils.is_volume_backed_instance(
@@ -699,11 +800,15 @@ class VMwareVMOps(object):
                                                  reason=reason)
         allowed_ds_types = ds_util.get_allowed_datastore_types(
             image_info.disk_type)
+        hagroup_re, hagroup = self._get_hagroup_info(context, instance,
+                                                     is_bfv=boot_from_volume)
         datastore = ds_util.get_datastore(self._session,
                                           self._cluster,
                                           self._datastore_regex,
                                           extra_specs.storage_policy,
-                                          allowed_ds_types)
+                                          allowed_ds_types,
+                                          datastore_hagroup_regex=hagroup_re,
+                                          datastore_hagroup=hagroup)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
         return VirtualMachineInstanceConfigInfo(instance,
@@ -1033,7 +1138,7 @@ class VMwareVMOps(object):
                                                    image_meta)
         extra_specs = self._get_extra_specs(instance.flavor, image_meta)
 
-        vi = self._get_vm_config_info(instance, image_info,
+        vi = self._get_vm_config_info(context, instance, image_info,
                                       extra_specs)
 
         boot_from_volume = compute_utils.is_volume_backed_instance(
@@ -2124,10 +2229,13 @@ class VMwareVMOps(object):
         storage_policy = self._get_storage_policy(instance.flavor)
         allowed_ds_types = ds_util.get_allowed_datastore_types(
             image_meta.properties.hw_disk_type)
+        hagroup_re, hagroup = self._get_hagroup_info(context, instance)
         datastore = ds_util.get_datastore(self._session, self._cluster,
                                           self._datastore_regex,
                                           storage_policy,
-                                          allowed_ds_types)
+                                          allowed_ds_types,
+                                          datastore_hagroup_regex=hagroup_re,
+                                          datastore_hagroup=hagroup)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
         folder = self._get_project_folder(dc_info, instance.project_id,
                                           'Instances')
@@ -3266,7 +3374,8 @@ class VMwareVMOps(object):
 
         extra_specs = self._get_extra_specs(flavor, image_meta)
 
-        vi = self._get_vm_config_info(instance, image_info, extra_specs)
+        vi = self._get_vm_config_info(context, instance, image_info,
+                                      extra_specs)
 
         vm_folder = self._get_project_folder(vi.dc_info,
             project_id=instance.project_id, type_='Instances')
@@ -3310,3 +3419,202 @@ class VMwareVMOps(object):
         result = self._session._call_method(self._session.vim, "PlaceVm",
             self._cluster, placementSpec=placement_spec)
         return result
+
+    def _relocate_vm_config_and_ephemeral_disk(self, context, instance,
+                                               target_ds_ref):
+        """svMotion the instance to another datastore
+
+        Volumes attached to the instance are kept in their place, only the
+        config files and - if existing - the ephemeral disks are moved to the
+        target datastore given as moref.
+        """
+        # TODO(jkulik) maybe find out if there's currently a relocation running
+        # and don't add onto that
+
+        # get appropriate attributes for the instances from VMware
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        properties = ["summary.runtime.host",
+                      "resourcePool",
+                      "parent",
+                      "config.hardware.device"]
+        vm_props = self._session._call_method(vutil,
+                                              "get_object_properties_dict",
+                                              vm_ref,
+                                              properties)
+
+        target_host_ref = vm_props['summary.runtime.host']
+        target_folder_ref = vm_props['parent']
+        target_resource_pool_ref = vm_props['resourcePool']
+
+        # build a general relocate-spec
+        client_factory = self._session.vim.client.factory
+        relocate_spec = vm_util.relocate_vm_spec(
+            client_factory,
+            datastore=target_ds_ref,  # this moves the config files and acts
+                                      # as default
+            host=target_host_ref,
+            folder=target_folder_ref,
+            res_pool=target_resource_pool_ref)
+
+        # update relocate-spec for disk placement
+        disk_locators = []
+        devices = vim_util.get_array_items(vm_props['config.hardware.device'])
+        for device in devices:
+            if device.__class__.__name__ != "VirtualDisk":
+                continue
+
+            disk_locator = client_factory.create(
+                "ns0:VirtualMachineRelocateSpecDiskLocator")
+            disk_locator.diskId = device.key
+
+            # get the datastore from the fileName e.g.
+            # [vVOL_BB092] naa.600a0980383043367a5d4a72746b3437/516b77fd-4C...
+            m = re.match(r'\[(?P<ds>[^\]]+)\] ', device.backing.fileName)
+            device_ds = m.group('ds') if m else ''
+            is_ephemeral = self._datastore_regex.match(device_ds)
+            if is_ephemeral:
+                disk_locator.datastore = target_ds_ref
+            else:
+                # we don't have to specify profiles for the non-moving disk
+                disk_locator.datastore = device.backing.datastore
+
+            disk_locators.append(disk_locator)
+
+        relocate_spec.disk = disk_locators
+
+        # start instance relocation
+        LOG.debug('Relocating ephemeral disks and config of %s to DS %s',
+                  vutil.get_moref_value(vm_ref),
+                  vutil.get_moref_value(target_ds_ref),
+                  instance=instance)
+        vm_util.relocate_vm(self._session, vm_ref, spec=relocate_spec)
+        LOG.debug('Relocated ephemeral disks and config of %s to DS %s',
+                  vutil.get_moref_value(vm_ref),
+                  vutil.get_moref_value(target_ds_ref),
+                  instance=instance)
+
+    def relocate_vm_config_and_ephemeral_disk(self, context, instance,
+                                              target_ds_ref):
+
+        @utils.synchronized(instance.uuid)
+        def _locked_relocate_vm_config_and_ephemeral_disk(context,
+                                                          instance,
+                                                          target_ds_ref):
+            return self._relocate_vm_config_and_ephemeral_disk(context,
+                                                               instance,
+                                                               target_ds_ref)
+
+        return _locked_relocate_vm_config_and_ephemeral_disk(context, instance,
+                                                             target_ds_ref)
+
+    def update_server_group_hagroup_disk_placement(self, context, sg_uuid):
+        """Checks and remedies a server-group's VMs' root disk placement
+
+        Should be called when a server-group gets updated through the API to
+        make sure we still adhere to at least 2 VMs having their root-disk on
+        different hagroup datastores.
+
+        To make sure there are 2 VMs on different hagroup datastores, we take
+        the first and second member of the server group and put them on hagroup
+        A and B respectively. This action is done by the host/cluster
+        responsible for these VMs.
+        """
+        # this feature is disabled as we have no way to find hagroups
+        if not self._datastore_hagroup_regex:
+            return
+
+        # try to find the server-group
+        try:
+            sg = objects.instance_group.InstanceGroup.get_by_uuid(context,
+                                                                  sg_uuid)
+        except nova.exception.InstanceGroupNotFound:
+            LOG.warning("Cannot update hagroup placement for server-group %s: "
+                        "InstanceGroup not found.", sg_uuid)
+            return
+
+        # we explicitly only handle anti-affinity
+        if 'anti-affinity' not in sg.policy:
+            return
+
+        # get the relevant instances for this server-group
+        sg_members = self._get_server_group_members_for_hagroup(context, sg)
+
+        # nothing we can do if there aren't even 2 members to take care of
+        if len(sg_members) < 2:
+            return
+
+        # check if member #1 or #2 belong to us
+        InstanceList = objects.instance.InstanceList
+        filters = {'host': self._compute_host,
+                   'uuid': [sg_members[0], sg_members[1]],
+                   'deleted': False}
+        instances = InstanceList.get_by_filters(context, filters,
+                                                expected_attrs=[])
+        if not instances:
+            return
+
+        for instance in instances:
+            hagroup = 'a' if sg_members[0] == instance.uuid else 'b'
+            LOG.debug("Checking hagroup %s disk placement of instance %s in "
+                      "server-group %s",
+                      hagroup, instance.uuid, sg_uuid)
+
+            # retrieve the currently used ephemeral datastores
+            # TODO(jkulik) implement something that checks against the
+            # swap-file, too
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
+            properties = ["datastore"]
+            vm_props = self._session._call_method(vutil,
+                                                  "get_object_properties_dict",
+                                                  vm_ref,
+                                                  properties)
+            ephemeral_datastores = {
+                vutil.get_moref_value(ds.ref): ds for ds in
+                ds_util.get_available_datastores(self._session,
+                                                 self._cluster,
+                                                 self._datastore_regex)}
+
+            datastores = vim_util.get_array_items(vm_props['datastore'])
+            used_datastores = [vutil.get_moref_value(ds_ref)
+                               for ds_ref in datastores]
+
+            used_ephemeral_datastores = [
+                ephemeral_datastores[ds_ref_value]
+                for ds_ref_value in used_datastores
+                if ds_ref_value in ephemeral_datastores]
+
+            # get hagroup for the datastores and check if it matches
+            # expectations
+            for ds in used_ephemeral_datastores:
+                m = self._datastore_hagroup_regex.match(ds.name)
+                current_hagroup = '<unknown>'
+                if not m:
+                    break
+                current_hagroup = m.group('hagroup').lower()
+                if current_hagroup != hagroup:
+                    break
+            else:
+                LOG.debug("Checking hagroup %s disk placement of instance %s "
+                          "in server-group %s finished: no action necessary.",
+                          hagroup, instance.uuid, sg_uuid)
+                continue
+
+            # parts of the VM are on the wrong hagroup. we have to move it to a
+            # new datastore
+            LOG.debug("Instance %s in server-group %s resides on hagroup %s "
+                      "but should be on %s. Trying to remedy.",
+                      instance.uuid, sg_uuid, current_hagroup, hagroup)
+            storage_policy = self._get_storage_policy(instance.flavor)
+            allowed_ds_types = ds_util.get_allowed_datastore_types(
+                instance.image_meta.properties.hw_disk_type)
+            datastore = ds_util.get_datastore(self._session, self._cluster,
+                                              self._datastore_regex,
+                                              storage_policy,
+                                              allowed_ds_types,
+                                              datastore_hagroup_regex=
+                                                self._datastore_hagroup_regex,
+                                              datastore_hagroup=hagroup)
+            self.relocate_vm_config_and_ephemeral_disk(context, instance,
+                                                       datastore.ref)
+            LOG.debug("Moved instance %s in server-group %s to hagroup %s.",
+                      instance.uuid, sg_uuid, hagroup)

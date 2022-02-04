@@ -1756,8 +1756,8 @@ class VMwareVMOpsTestCase(test.TestCase):
             from_image.assert_called_once_with(self._context,
                                                self._instance.image_ref,
                                                self._image_meta)
-            get_vm_config_info.assert_called_once_with(self._instance,
-                image_info, extra_specs)
+            get_vm_config_info.assert_called_once_with(self._context,
+                self._instance, image_info, extra_specs)
             build_virtual_machine.assert_called_once_with(
                 self._instance, self._context, image_info, vi.datastore, [],
                 extra_specs, self._get_metadata(), 'fake_vm_folder')
@@ -1824,8 +1824,8 @@ class VMwareVMOpsTestCase(test.TestCase):
             from_image.assert_called_once_with(self._context,
                                                self._instance.image_ref,
                                                self._image_meta)
-            get_vm_config_info.assert_called_once_with(self._instance,
-                image_info, extra_specs)
+            get_vm_config_info.assert_called_once_with(self._context,
+                self._instance, image_info, extra_specs)
             build_virtual_machine.assert_called_once_with(
                 self._instance, self._context, image_info, vi.datastore, [],
                 extra_specs, self._get_metadata(is_image_used=False),
@@ -1884,7 +1884,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                            self._instance.image_ref,
                                            self._image_meta)
         get_vm_config_info.assert_called_once_with(
-            self._instance, image_info, extra_specs)
+            self._context, self._instance, image_info, extra_specs)
         build_virtual_machine.assert_called_once_with(
             self._instance, self._context, image_info, vi.datastore, [],
             extra_specs, self._get_metadata(is_image_used=False),
@@ -2147,7 +2147,7 @@ class VMwareVMOpsTestCase(test.TestCase):
             image_id=self._image_id,
             file_size=image_size)
         vi = self._vmops._get_vm_config_info(
-            self._instance, image_info, extra_specs)
+            self._context, self._instance, image_info, extra_specs)
 
         self._vmops._volumeops = mock.Mock()
         network_info = mock.Mock()
@@ -2300,8 +2300,8 @@ class VMwareVMOpsTestCase(test.TestCase):
         mock_get_datacenter_ref_and_name.return_value = self._dc_info
         extra_specs = vm_util.ExtraSpecs()
 
-        vi = self._vmops._get_vm_config_info(self._instance, image_info,
-                                             extra_specs)
+        vi = self._vmops._get_vm_config_info(self._context, self._instance,
+                                             image_info, extra_specs)
         self.assertEqual(image_info, vi.ii)
         self.assertEqual(self._ds, vi.datastore)
         self.assertEqual(self._instance.flavor.root_gb, vi.root_gb)
@@ -2440,8 +2440,8 @@ class VMwareVMOpsTestCase(test.TestCase):
 
         from_image.assert_called_once_with(
             self._context, self._instance.image_ref, {})
-        get_vm_config_info.assert_called_once_with(self._instance,
-            image_info, extra_specs)
+        get_vm_config_info.assert_called_once_with(self._context,
+            self._instance, image_info, extra_specs)
         build_virtual_machine.assert_called_once_with(self._instance,
                                                       self._context,
             image_info, vi.datastore, [], extra_specs, metadata, 'fake-folder')

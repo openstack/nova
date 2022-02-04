@@ -47,7 +47,9 @@ _DS_DC_MAPPING = {}
 
 def _select_datastore(session, datastores, best_match, datastore_regex=None,
                       storage_policy=None,
-                      allowed_ds_types=ALL_SUPPORTED_DS_TYPES):
+                      allowed_ds_types=ALL_SUPPORTED_DS_TYPES,
+                      datastore_hagroup_regex=None,
+                      datastore_hagroup=None):
     """Find the most preferable datastore in a given RetrieveResult object.
 
     :param session: vmwareapi session
@@ -56,6 +58,9 @@ def _select_datastore(session, datastores, best_match, datastore_regex=None,
     :param datastore_regex: an optional regular expression to match names
     :param storage_policy: storage policy for the datastore
     :param allowed_ds_types: a list of acceptable datastore type names
+    :param datastore_hagroup_regex: an optional regular expression to retrieve
+                                    the hagroup from the name
+    :param datastore_hagroup: an optional hagroup name to filter datastores by
     :return: datastore_ref, datastore_name, capacity, freespace
     """
 
@@ -72,7 +77,8 @@ def _select_datastore(session, datastores, best_match, datastore_regex=None,
             continue
 
         propdict = vm_util.propset_dict(obj_content.propSet)
-        if _is_datastore_valid(propdict, datastore_regex, allowed_ds_types):
+        if _is_datastore_valid(propdict, datastore_regex, allowed_ds_types,
+                               datastore_hagroup_regex, datastore_hagroup):
             capacity = propdict['summary.capacity']
             freespace = propdict['summary.freeSpace']
             new_ds = ds_obj.Datastore(
@@ -88,7 +94,8 @@ def _select_datastore(session, datastores, best_match, datastore_regex=None,
     return best_match
 
 
-def _is_datastore_valid(propdict, datastore_regex, ds_types):
+def _is_datastore_valid(propdict, datastore_regex, ds_types,
+                        datastore_hagroup_regex=None, datastore_hagroup=None):
     """Checks if a datastore is valid based on the following criteria.
 
        Criteria:
@@ -96,6 +103,8 @@ def _is_datastore_valid(propdict, datastore_regex, ds_types):
        - Datastore is not in maintenance mode (optional)
        - Datastore's type is one of the given ds_types
        - Datastore matches the supplied regex (optional)
+       - Datastore matches the supplied hagroup regex (optional)
+       - Datastore's hagroup matches the supplied hagroup (optional)
 
        :param propdict: datastore summary dict
        :param datastore_regex : Regex to match the name of a datastore.
@@ -103,17 +112,37 @@ def _is_datastore_valid(propdict, datastore_regex, ds_types):
 
     # Local storage identifier vSphere doesn't support CIFS or
     # vfat for datastores, therefore filtered
-    return (propdict.get('summary.accessible') and
-            (propdict.get('summary.maintenanceMode') is None or
-             propdict.get('summary.maintenanceMode') == 'normal') and
-            propdict['summary.type'] in ds_types and
-            (datastore_regex is None or
-             datastore_regex.match(propdict['summary.name'])))
+    valid = (propdict.get('summary.accessible') and
+             (propdict.get('summary.maintenanceMode') is None or
+              propdict.get('summary.maintenanceMode') == 'normal') and
+             propdict['summary.type'] in ds_types and
+             (datastore_regex is None or
+              datastore_regex.match(propdict['summary.name'])))
+
+    if not valid:
+        return False
+
+    if datastore_hagroup_regex:
+        m = datastore_hagroup_regex.search(propdict['summary.name'])
+        if not m:
+            return False
+        hagroup = m.group('hagroup').lower()
+    else:
+        # here could be different ways to get the hagroup e.g. by customValue
+        # attribute of the datastore
+        hagroup = None
+
+    if datastore_hagroup and datastore_hagroup.lower() != hagroup:
+        return False
+
+    return True
 
 
 def get_datastore(session, cluster, datastore_regex=None,
                   storage_policy=None,
-                  allowed_ds_types=ALL_SUPPORTED_DS_TYPES):
+                  allowed_ds_types=ALL_SUPPORTED_DS_TYPES,
+                  datastore_hagroup_regex=None,
+                  datastore_hagroup=None):
     """Get the datastore list and choose the most preferable one."""
     datastore_ret = session._call_method(vutil,
                                          "get_object_property",
@@ -140,7 +169,9 @@ def get_datastore(session, cluster, datastore_regex=None,
                                        best_match,
                                        datastore_regex,
                                        storage_policy,
-                                       allowed_ds_types)
+                                       allowed_ds_types,
+                                       datastore_hagroup_regex,
+                                       datastore_hagroup)
     if best_match:
         return best_match
 
@@ -148,10 +179,15 @@ def get_datastore(session, cluster, datastore_regex=None,
         raise exception.DatastoreNotFound(
             _("Storage policy %s did not match any datastores")
             % storage_policy)
+    # here could be different ways to get the hagroup e.g. by customValue
+    # attribute of the datastore
     if datastore_regex:
-        raise exception.DatastoreNotFound(
-            _("Datastore regex %s did not match any datastores")
-            % datastore_regex.pattern)
+        msg = "Datastore regex {} did not match any datastores" \
+              .format(datastore_regex.pattern)
+        if datastore_hagroup_regex:
+            msg += " or no datastore matched hagroup {} found via regex {}" \
+                   .format(datastore_hagroup, datastore_hagroup_regex.pattern)
+        raise exception.DatastoreNotFound(msg)
     raise exception.DatastoreNotFound()
 
 

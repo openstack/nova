@@ -224,6 +224,16 @@ Possible values:
 
 * Any matching regular expression to a datastore must be given
 """),
+    cfg.StrOpt('datastore_hagroup_regex',
+                help="""
+Regular expression pattern to retrieve ha-group from datastore name
+
+If this setting is set, datastores are split into 2 ha-groups to distribute
+anti-affin servers between them. The datastores found with the datastore_regex
+setting belong to either HA-group A or B by applying this regex onto the
+datastore name. This setting must include a matched group of the name
+"hagroup". The regex defined here is used ignoring case.
+"""),
     cfg.FloatOpt('task_poll_interval',
                  default=0.5,
                  help="""
