@@ -1816,6 +1816,16 @@ cg /cgroup/memory cg opt1,opt2 0 0
         """
         self.assertTrue(self.host.supports_secure_boot)
 
+    @mock.patch.object(fakelibvirt.virConnect, "getLibVersion")
+    def test_supports_remote_managed_ports__true(self, mock_libversion):
+        mock_libversion.return_value = 7009000
+        self.assertTrue(self.host.supports_remote_managed_ports)
+
+    @mock.patch.object(fakelibvirt.virConnect, "getLibVersion")
+    def test_supports_remote_managed_ports__false(self, mock_libversion):
+        mock_libversion.return_value = 7008000
+        self.assertFalse(self.host.supports_remote_managed_ports)
+
     @mock.patch.object(host.Host, 'loaders', new_callable=mock.PropertyMock)
     @mock.patch.object(host.Host, 'get_canonical_machine_type')
     def test_get_loader(self, mock_get_mtype, mock_loaders):

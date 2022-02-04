@@ -812,6 +812,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # or UEFI bootloader support in this manner
         self.capabilities.update({
             'supports_secure_boot': self._host.supports_secure_boot,
+            'supports_remote_managed_ports':
+            self._host.supports_remote_managed_ports
         })
 
     def _register_instance_machine_type(self):
