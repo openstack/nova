@@ -511,6 +511,12 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     def is_available(self):
         return self.status == fields.PciDeviceStatus.AVAILABLE
 
+    @property
+    def card_serial_number(self):
+        caps_json = self.extra_info.get('capabilities', "{}")
+        caps = jsonutils.loads(caps_json)
+        return caps.get('vpd', {}).get('card_serial_number')
+
 
 @base.NovaObjectRegistry.register
 class PciDeviceList(base.ObjectListBase, base.NovaObject):

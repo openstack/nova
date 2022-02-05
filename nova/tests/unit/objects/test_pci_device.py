@@ -161,6 +161,16 @@ class _TestPciDeviceObject(object):
                               'vendor_id', 'numa_node', 'status', 'uuid',
                               'extra_info', 'dev_type', 'parent_addr']))
 
+    def test_pci_device_extra_info_card_serial_number(self):
+        self.dev_dict = copy.copy(dev_dict)
+        self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
+        self.assertIsNone(self.pci_device.card_serial_number)
+
+        self.dev_dict = copy.copy(dev_dict)
+        self.dev_dict['capabilities'] = {'vpd': {'card_serial_number': '42'}}
+        self.pci_device = pci_device.PciDevice.create(None, self.dev_dict)
+        self.assertEqual(self.pci_device.card_serial_number, '42')
+
     def test_update_device(self):
         self.pci_device = pci_device.PciDevice.create(None, dev_dict)
         self.pci_device.obj_reset_changes()

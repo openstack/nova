@@ -7742,9 +7742,15 @@ class LibvirtDriver(driver.ComputeDriver):
         vdpa_devs = [
             dev for dev in devices.values() if "vdpa" in dev.listCaps()
         ]
+        pci_devs = {
+            name: dev for name, dev in devices.items()
+                    if "pci" in dev.listCaps()}
         pci_info = [
-            self._host._get_pcidev_info(name, dev, net_devs, vdpa_devs)
-            for name, dev in devices.items() if "pci" in dev.listCaps()
+            self._host._get_pcidev_info(
+                name, dev, net_devs,
+                vdpa_devs, list(pci_devs.values())
+            )
+            for name, dev in pci_devs.items()
         ]
         return jsonutils.dumps(pci_info)
 

@@ -3273,6 +3273,86 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
             'name': 'GRID M60-0B',
             'type': 'nvidia-11'}], obj.mdev_capability[0].mdev_types)
 
+    def test_config_device_pci_vpd(self):
+        xmlin = """
+    <capability type='pci'>
+      <class>0x020000</class>
+      <domain>0</domain>
+      <bus>130</bus>
+      <slot>0</slot>
+      <function>1</function>
+      <product id='0xa2d6'>MT42822 BlueField-2</product>
+      <vendor id='0x15b3'>Mellanox Technologies</vendor>
+      <capability type='virt_functions' maxCount='16'/>
+      <capability type='vpd'>
+        <name>BlueField-2 DPU 25GbE</name>
+        <fields access='readonly'>
+          <change_level>B1</change_level>
+          <manufacture_id>foobar</manufacture_id>
+          <part_number>MBF2H332A-AEEOT</part_number>
+          <serial_number>MT2113X00000</serial_number>
+          <vendor_field index='0'>PCIeGen4 x8</vendor_field>
+          <vendor_field index='2'>MBF2H332A-AEEOT</vendor_field>
+          <vendor_field index='3'>3c53d07eec484d8aab34dabd24fe575aa</vendor_field>
+          <vendor_field index='A'>MLX:MN=MLNX:CSKU=V2:UUID=V3:PCI=V0:MODL=BF2H332A</vendor_field>
+        </fields>
+        <fields access='readwrite'>
+          <asset_tag>fooasset</asset_tag>
+          <vendor_field index='0'>vendorfield0</vendor_field>
+          <vendor_field index='2'>vendorfield2</vendor_field>
+          <vendor_field index='A'>vendorfieldA</vendor_field>
+          <system_field index='B'>systemfieldB</system_field>
+          <system_field index='0'>systemfield0</system_field>
+        </fields>
+      </capability>
+      <iommuGroup number='66'>
+        <address domain='0x0000' bus='0x82' slot='0x00' function='0x1'/>
+      </iommuGroup>
+      <numa node='1'/>
+      <pci-express>
+        <link validity='cap' port='0' speed='16' width='8'/>
+        <link validity='sta' speed='8' width='8'/>
+      </pci-express>
+    </capability>"""  # noqa: E501
+        obj = config.LibvirtConfigNodeDevicePciCap()
+        obj.parse_str(xmlin)
+
+        # Asserting common PCI attribute parsing.
+        self.assertEqual(0, obj.domain)
+        self.assertEqual(130, obj.bus)
+        self.assertEqual(0, obj.slot)
+        self.assertEqual(1, obj.function)
+        # Asserting vpd capability parsing.
+        self.assertEqual("MT42822 BlueField-2", obj.product)
+        self.assertEqual(0xA2D6, obj.product_id)
+        self.assertEqual("Mellanox Technologies", obj.vendor)
+        self.assertEqual(0x15B3, obj.vendor_id)
+        self.assertEqual(obj.numa_node, 1)
+        self.assertIsInstance(obj.vpd_capability,
+                              config.LibvirtConfigNodeDeviceVpdCap)
+        self.assertEqual(obj.vpd_capability.card_name, 'BlueField-2 DPU 25GbE')
+
+        self.assertEqual(obj.vpd_capability.change_level, 'B1')
+        self.assertEqual(obj.vpd_capability.manufacture_id, 'foobar')
+        self.assertEqual(obj.vpd_capability.part_number, 'MBF2H332A-AEEOT')
+        self.assertEqual(obj.vpd_capability.card_serial_number, 'MT2113X00000')
+        self.assertEqual(obj.vpd_capability.asset_tag, 'fooasset')
+        self.assertEqual(obj.vpd_capability.ro_vendor_fields, {
+            '0': 'PCIeGen4 x8',
+            '2': 'MBF2H332A-AEEOT',
+            '3': '3c53d07eec484d8aab34dabd24fe575aa',
+            'A': 'MLX:MN=MLNX:CSKU=V2:UUID=V3:PCI=V0:MODL=BF2H332A',
+        })
+        self.assertEqual(obj.vpd_capability.rw_vendor_fields, {
+            '0': 'vendorfield0',
+            '2': 'vendorfield2',
+            'A': 'vendorfieldA',
+        })
+        self.assertEqual(obj.vpd_capability.rw_system_fields, {
+            '0': 'systemfield0',
+            'B': 'systemfieldB',
+        })
+
 
 class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigBaseTest):
 

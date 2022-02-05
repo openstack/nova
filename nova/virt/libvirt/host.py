@@ -1229,12 +1229,51 @@ class Host(object):
         cfgdev.parse_str(xmlstr)
         return cfgdev.pci_capability.features
 
+    def _get_vf_parent_pci_vpd_info(
+        self,
+        vf_device: 'libvirt.virNodeDevice',
+        parent_pf_name: str,
+        candidate_devs: ty.List['libvirt.virNodeDevice']
+    ) -> ty.Optional[vconfig.LibvirtConfigNodeDeviceVpdCap]:
+        """Returns PCI VPD info of a parent device of a PCI VF.
+
+        :param vf_device: a VF device object to use for lookup.
+        :param str parent_pf_name: parent PF name formatted as pci_dddd_bb_ss_f
+        :param candidate_devs: devices that could be parent devs for the VF.
+        :returns: A VPD capability object of a parent device.
+        """
+        parent_dev = next(
+            (dev for dev in candidate_devs if dev.name() == parent_pf_name),
+            None
+        )
+        if parent_dev is None:
+            return None
+
+        xmlstr = parent_dev.XMLDesc(0)
+        cfgdev = vconfig.LibvirtConfigNodeDevice()
+        cfgdev.parse_str(xmlstr)
+        return cfgdev.pci_capability.vpd_capability
+
+    @staticmethod
+    def _get_vpd_card_serial_number(
+        dev: 'libvirt.virNodeDevice',
+    ) -> ty.Optional[ty.List[str]]:
+        """Returns a card serial number stored in PCI VPD (if present)."""
+        xmlstr = dev.XMLDesc(0)
+        cfgdev = vconfig.LibvirtConfigNodeDevice()
+        cfgdev.parse_str(xmlstr)
+        vpd_cap = cfgdev.pci_capability.vpd_capability
+        if not vpd_cap:
+            return None
+        return vpd_cap.card_serial_number
+
     def _get_pcidev_info(
         self,
         devname: str,
         dev: 'libvirt.virNodeDevice',
         net_devs: ty.List['libvirt.virNodeDevice'],
         vdpa_devs: ty.List['libvirt.virNodeDevice'],
+        pci_devs: ty.List['libvirt.virNodeDevice'],
     ) -> ty.Dict[str, ty.Union[str, dict]]:
         """Returns a dict of PCI device."""
 
@@ -1314,6 +1353,52 @@ class Host(object):
                 pcinet_info = self._get_pcinet_info(device, net_devs)
                 if pcinet_info:
                     return {'capabilities': {'network': pcinet_info}}
+
+            return caps
+
+        def _get_vpd_details(
+            device_dict: dict,
+            device: 'libvirt.virNodeDevice',
+            pci_devs: ty.List['libvirt.virNodeDevice']
+        ) -> ty.Dict[str, ty.Dict[str, ty.Any]]:
+            """Get information from PCI VPD (if present).
+
+            PCI/PCIe devices may include the optional VPD capability. It may
+            contain useful information such as the unique serial number
+            uniquely assigned at a factory.
+
+            If a device is a VF and it does not contain the VPD capability,
+            a parent device's VPD is used (if present) as a fallback to
+            retrieve the unique add-in card number. Whether a VF exposes
+            the VPD capability or not may be controlled via a vendor-specific
+            firmware setting.
+            """
+            caps: ty.Dict[str, ty.Dict[str, ty.Any]] = {}
+            # At the time of writing only the serial number had a clear
+            # use-case. However, the set of fields may be extended.
+            card_serial_number = self._get_vpd_card_serial_number(device)
+
+            if (not card_serial_number and
+               device_dict.get('dev_type') == fields.PciDeviceType.SRIOV_VF
+            ):
+                # Format the address of a physical function to use underscores
+                # since that's how Libvirt formats the <name> element content.
+                pf_addr = device_dict.get('parent_addr')
+                if not pf_addr:
+                    LOG.warning("A VF device dict does not have a parent PF "
+                                "address in it which is unexpected. Skipping "
+                                "serial number retrieval")
+                    return caps
+
+                formatted_addr = pf_addr.replace('.', '_').replace(':', '_')
+                vpd_cap = self._get_vf_parent_pci_vpd_info(
+                    device, f'pci_{formatted_addr}', pci_devs)
+                if vpd_cap is not None:
+                    card_serial_number = vpd_cap.card_serial_number
+
+            if card_serial_number:
+                caps = {'capabilities': {
+                    'vpd': {"card_serial_number": card_serial_number}}}
             return caps
 
         xmlstr = dev.XMLDesc(0)
@@ -1340,6 +1425,7 @@ class Host(object):
         device.update(
             _get_device_type(cfgdev, address, dev, net_devs, vdpa_devs))
         device.update(_get_device_capabilities(device, dev, net_devs))
+        device.update(_get_vpd_details(device, dev, pci_devs))
         return device
 
     def get_vdpa_nodedev_by_address(
@@ -1361,7 +1447,7 @@ class Host(object):
         vdpa_devs = [
             dev for dev in devices.values() if "vdpa" in dev.listCaps()]
         pci_info = [
-            self._get_pcidev_info(name, dev, [], vdpa_devs) for name, dev
+            self._get_pcidev_info(name, dev, [], vdpa_devs, []) for name, dev
             in devices.items() if "pci" in dev.listCaps()]
         parent_dev = next(
             dev for dev in pci_info if dev['address'] == pci_address)

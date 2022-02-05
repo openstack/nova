@@ -3130,6 +3130,7 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
         self.pci_capability = None
         self.mdev_information = None
         self.vdpa_capability = None
+        self.vpd_capability = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigNodeDevice, self).parse_dom(xmldoc)
@@ -3183,6 +3184,7 @@ class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
         self.numa_node = None
         self.fun_capability = []
         self.mdev_capability = []
+        self.vpd_capability = None
         self.interface = None
         self.address = None
         self.link_state = None
@@ -3225,6 +3227,10 @@ class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
                 mdevcap = LibvirtConfigNodeDeviceMdevCapableSubFunctionCap()
                 mdevcap.parse_dom(c)
                 self.mdev_capability.append(mdevcap)
+            elif c.tag == "capability" and c.get('type') in ('vpd',):
+                vpdcap = LibvirtConfigNodeDeviceVpdCap()
+                vpdcap.parse_dom(c)
+                self.vpd_capability = vpdcap
 
     def pci_address(self):
         return "%04x:%02x:%02x.%01x" % (
@@ -3286,6 +3292,101 @@ class LibvirtConfigNodeDeviceMdevInformation(LibvirtConfigObject):
                 self.type = c.get('id')
             if c.tag == "iommuGroup":
                 self.iommu_group = int(c.get('number'))
+
+
+class LibvirtConfigNodeDeviceVpdCap(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            root_name="capability", **kwargs)
+        self._card_name = None
+        self._change_level = None
+        self._manufacture_id = None
+        self._part_number = None
+        self._serial_number = None
+        self._asset_tag = None
+        self._ro_vendor_fields = {}
+        self._rw_vendor_fields = {}
+        self._rw_system_fields = {}
+
+    @staticmethod
+    def _process_custom_field(fields_dict, field_element):
+        index = field_element.get('index')
+        if index:
+            fields_dict[index] = field_element.text
+
+    def _parse_ro_fields(self, fields_element):
+        for e in fields_element:
+            if e.tag == 'change_level':
+                self._change_level = e.text
+            elif e.tag == 'manufacture_id':
+                self._manufacture_id = e.text
+            elif e.tag == 'part_number':
+                self._part_number = e.text
+            elif e.tag == 'serial_number':
+                self._serial_number = e.text
+            elif e.tag == 'vendor_field':
+                self._process_custom_field(self._ro_vendor_fields, e)
+
+    def _parse_rw_fields(self, fields_element):
+        for e in fields_element:
+            if e.tag == 'asset_tag':
+                self._asset_tag = e.text
+            elif e.tag == 'vendor_field':
+                self._process_custom_field(self._rw_vendor_fields, e)
+            elif e.tag == 'system_field':
+                self._process_custom_field(self._rw_system_fields, e)
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigNodeDeviceVpdCap, self).parse_dom(xmldoc)
+        for c in xmldoc:
+            if c.tag == "name":
+                self._card_name = c.text
+            if c.tag == "fields":
+                access = c.get('access')
+                if access:
+                    if access == 'readonly':
+                        self._parse_ro_fields(c)
+                    elif access == 'readwrite':
+                        self._parse_rw_fields(c)
+                    else:
+                        continue
+
+    @property
+    def card_name(self):
+        return self._card_name
+
+    @property
+    def change_level(self):
+        return self._change_level
+
+    @property
+    def manufacture_id(self):
+        return self._manufacture_id
+
+    @property
+    def part_number(self):
+        return self._part_number
+
+    @property
+    def card_serial_number(self):
+        return self._serial_number
+
+    @property
+    def asset_tag(self):
+        return self._asset_tag
+
+    @property
+    def ro_vendor_fields(self):
+        return self._ro_vendor_fields
+
+    @property
+    def rw_vendor_fields(self):
+        return self._rw_vendor_fields
+
+    @property
+    def rw_system_fields(self):
+        return self._rw_system_fields
 
 
 class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):

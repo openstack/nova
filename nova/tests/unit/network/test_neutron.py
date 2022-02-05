@@ -39,6 +39,7 @@ from nova.network import constants
 from nova.network import model
 from nova.network import neutron as neutronapi
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova.objects import network_request as net_req_obj
 from nova.objects import virtual_interface as obj_vif
 from nova.pci import manager as pci_manager
@@ -4494,17 +4495,21 @@ class TestAPI(TestAPIBase):
         instance = fake_instance.fake_instance_obj(self.context)
         instance.migration_context = objects.MigrationContext()
         instance.migration_context.old_pci_devices = objects.PciDeviceList(
-            objects=[objects.PciDevice(vendor_id='1377',
-                                       product_id='0047',
-                                       address='0000:0a:00.1',
-                                       compute_node_id=1,
-                                       request_id='1234567890')])
+            objects=[objects.PciDevice(
+                vendor_id='1377',
+                product_id='0047',
+                address='0000:0a:00.1',
+                compute_node_id=1,
+                request_id='1234567890',
+                dev_type=obj_fields.PciDeviceType.SRIOV_VF)])
         instance.migration_context.new_pci_devices = objects.PciDeviceList(
-            objects=[objects.PciDevice(vendor_id='1377',
-                                       product_id='0047',
-                                       address='0000:0b:00.1',
-                                       compute_node_id=2,
-                                       request_id='1234567890')])
+            objects=[objects.PciDevice(
+                vendor_id='1377',
+                product_id='0047',
+                address='0000:0b:00.1',
+                compute_node_id=2,
+                request_id='1234567890',
+                dev_type=obj_fields.PciDeviceType.SRIOV_VF)])
         instance.pci_devices = instance.migration_context.old_pci_devices
 
         # Validate that non-direct port aren't updated (fake-port-2).
@@ -5928,14 +5933,14 @@ class TestAPI(TestAPIBase):
             'id': uuids.port,
             'binding:profile': {'pci_vendor_info': '1377:0047',
                                 'pci_slot': '0000:0a:00.1',
+                                'card_serial_number': 'MT2113X00000',
                                 'physical_network': 'physnet1',
                                 'capabilities': ['switchdev']}
             }
         self.api._unbind_ports(self.context, ports, neutron, port_client)
         port_req_body = {'port': {'binding:host_id': None,
                                   'binding:profile':
-                                    {'physical_network': 'physnet1',
-                                     'capabilities': ['switchdev']},
+                                    {'capabilities': ['switchdev']},
                                   'device_id': '',
                                   'device_owner': ''}
                         }
@@ -7402,13 +7407,53 @@ class TestAPIPortbinding(TestAPIBase):
         pci_dev = {'vendor_id': '1377',
                    'product_id': '0047',
                    'address': '0000:0a:00.1',
+                   'card_serial_number': None,
+                   'dev_type': 'TEST_TYPE',
                   }
         PciDevice = collections.namedtuple('PciDevice',
-                               ['vendor_id', 'product_id', 'address'])
+                               ['vendor_id', 'product_id', 'address',
+                                'card_serial_number', 'dev_type'])
         mydev = PciDevice(**pci_dev)
         profile = {'pci_vendor_info': '1377:0047',
                    'pci_slot': '0000:0a:00.1',
                    'physical_network': 'physnet1',
+                  }
+
+        mock_get_instance_pci_devs.return_value = [mydev]
+        devspec = mock.Mock()
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
+        mock_get_pci_device_devspec.return_value = devspec
+        self.api._populate_neutron_binding_profile(
+            instance, pci_req_id, port_req_body, None)
+
+        self.assertEqual(profile,
+                         port_req_body['port'][
+                             constants.BINDING_PROFILE])
+
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
+    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    def test_populate_neutron_extension_values_binding_sriov_card_serial(
+        self, mock_get_instance_pci_devs, mock_get_pci_device_devspec):
+        host_id = 'my_host_id'
+        instance = {'host': host_id}
+        port_req_body = {'port': {}}
+        pci_req_id = 'my_req_id'
+        pci_dev = {'vendor_id': 'a2d6',
+                   'product_id': '15b3',
+                   'address': '0000:82:00.1',
+                   'card_serial_number': 'MT2113X00000',
+                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
+                  }
+        PciDevice = collections.namedtuple('PciDevice',
+                               ['vendor_id', 'product_id', 'address',
+                                'card_serial_number', 'dev_type'])
+        mydev = PciDevice(**pci_dev)
+        profile = {'pci_vendor_info': 'a2d6:15b3',
+                   'pci_slot': '0000:82:00.1',
+                   'physical_network': 'physnet1',
+                   # card_serial_number is a property of the object obtained
+                   # from extra_info.
+                   'card_serial_number': 'MT2113X00000',
                   }
 
         mock_get_instance_pci_devs.return_value = [mydev]
@@ -7474,9 +7519,12 @@ class TestAPIPortbinding(TestAPIBase):
         pci_dev = {'vendor_id': '1377',
                    'product_id': '0047',
                    'address': '0000:0a:00.1',
+                   'card_serial_number': None,
+                   'dev_type': 'TEST_TYPE',
                   }
         PciDevice = collections.namedtuple('PciDevice',
-                               ['vendor_id', 'product_id', 'address'])
+                               ['vendor_id', 'product_id', 'address',
+                                'card_serial_number', 'dev_type'])
         mydev = PciDevice(**pci_dev)
         profile = {'pci_vendor_info': '1377:0047',
                    'pci_slot': '0000:0a:00.1',
@@ -7547,6 +7595,7 @@ class TestAPIPortbinding(TestAPIBase):
         pci_dev = {'vendor_id': '1377',
                    'product_id': '0047',
                    'address': '0000:0a:00.1',
+                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
                   }
 
         whitelist = pci_whitelist.Whitelist(CONF.pci.passthrough_whitelist)

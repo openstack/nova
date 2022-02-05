@@ -2002,6 +2002,168 @@ _fake_NodeDevXml = {
       </capability>
     </device>
     """,
+    # A PF with the VPD capability.
+    "pci_0000_82_00_0": """
+    <device>
+      <name>pci_0000_82_00_0</name>
+      <path>/sys/devices/pci0000:80/0000:80:03.0/0000:82:00.0</path>
+      <parent>pci_0000_80_03_0</parent>
+      <driver>
+        <name>mlx5_core</name>
+      </driver>
+      <capability type='pci'>
+        <class>0x020000</class>
+        <domain>0</domain>
+        <bus>130</bus>
+        <slot>0</slot>
+        <function>0</function>
+        <product id='0xa2d6'>MT42822 BlueField-2 integrated ConnectX-6 Dx network controller</product>
+        <vendor id='0x15b3'>Mellanox Technologies</vendor>
+        <capability type='virt_functions' maxCount='8'>
+          <address domain='0x0000' bus='0x82' slot='0x00' function='0x3'/>
+          <address domain='0x0000' bus='0x82' slot='0x00' function='0x4'/>
+          <address domain='0x0000' bus='0x82' slot='0x00' function='0x5'/>
+          <address domain='0x0000' bus='0x82' slot='0x00' function='0x6'/>
+          <address domain='0x0000' bus='0x82' slot='0x00' function='0x7'/>
+          <address domain='0x0000' bus='0x82' slot='0x01' function='0x0'/>
+          <address domain='0x0000' bus='0x82' slot='0x01' function='0x1'/>
+          <address domain='0x0000' bus='0x82' slot='0x01' function='0x2'/>
+        </capability>
+        <capability type='vpd'>
+          <name>BlueField-2 DPU 25GbE Dual-Port SFP56, Crypto Enabled, 16GB on-board DDR, 1GbE OOB management, Tall Bracket</name>
+          <fields access='readonly'>
+            <change_level>B1</change_level>
+            <manufacture_id>foobar</manufacture_id>
+            <part_number>MBF2H332A-AEEOT</part_number>
+            <serial_number>MT2113X00000</serial_number>
+            <vendor_field index='0'>PCIeGen4 x8</vendor_field>
+            <vendor_field index='2'>MBF2H332A-AEEOT</vendor_field>
+            <vendor_field index='3'>3c53d07eec484d8aab34dabd24fe575aa</vendor_field>
+            <vendor_field index='A'>MLX:MN=MLNX:CSKU=V2:UUID=V3:PCI=V0:MODL=BF2H332A</vendor_field>
+          </fields>
+          <fields access='readwrite'>
+            <asset_tag>fooasset</asset_tag>
+            <vendor_field index='0'>vendorfield0</vendor_field>
+            <vendor_field index='2'>vendorfield2</vendor_field>
+            <vendor_field index='A'>vendorfieldA</vendor_field>
+            <system_field index='B'>systemfieldB</system_field>
+            <system_field index='0'>systemfield0</system_field>
+          </fields>
+        </capability>
+        <iommuGroup number='65'>
+          <address domain='0x0000' bus='0x82' slot='0x00' function='0x0'/>
+        </iommuGroup>
+        <numa node='1'/>
+        <pci-express>
+          <link validity='cap' port='0' speed='16' width='8'/>
+          <link validity='sta' speed='8' width='8'/>
+        </pci-express>
+      </capability>
+    </device>""",  # noqa:E501
+    # A VF without the VPD capability with a PF that has a VPD capability.
+    "pci_0000_82_00_3": """
+    <device>
+      <name>pci_0000_82_00_3</name>
+      <path>/sys/devices/pci0000:80/0000:80:03.0/0000:82:00.3</path>
+      <parent>pci_0000_80_03_0</parent>
+      <driver>
+        <name>mlx5_core</name>
+      </driver>
+      <capability type='pci'>
+        <class>0x020000</class>
+        <domain>0</domain>
+        <bus>130</bus>
+        <slot>0</slot>
+        <function>3</function>
+        <product id='0x101e'>ConnectX Family mlx5Gen Virtual Function</product>
+        <vendor id='0x15b3'>Mellanox Technologies</vendor>
+        <capability type='phys_function'>
+          <address domain='0x0000' bus='0x82' slot='0x00' function='0x0'/>
+        </capability>
+        <iommuGroup number='99'>
+          <address domain='0x0000' bus='0x82' slot='0x00' function='0x3'/>
+        </iommuGroup>
+        <numa node='1'/>
+        <pci-express>
+          <link validity='cap' port='0' speed='16' width='8'/>
+          <link validity='sta' width='0'/>
+        </pci-express>
+      </capability>
+    </device>""",
+    # A VF with the VPD capability but without a parent defined in test data
+    # so that the VPD cap is extracted from the VF directly.
+    "pci_0001_82_00_3": """
+    <device>
+      <name>pci_0001_82_00_3</name>
+      <path>/sys/devices/pci0001:80/0001:80:03.0/0001:82:00.3</path>
+      <parent>pci_0001_80_03_0</parent>
+      <driver>
+        <name>mlx5_core</name>
+      </driver>
+      <capability type='pci'>
+        <class>0x020000</class>
+        <domain>1</domain>
+        <bus>130</bus>
+        <slot>0</slot>
+        <function>3</function>
+        <product id='0x101e'>ConnectX Family mlx5Gen Virtual Function</product>
+        <vendor id='0x15b3'>Mellanox Technologies</vendor>
+        <capability type='phys_function'>
+          <address domain='0x0001' bus='0x82' slot='0x00' function='0x0'/>
+        </capability>
+        <capability type='vpd'>
+          <name>BlueField-2 DPU 25GbE Dual-Port SFP56, Crypto Enabled, 16GB on-board DDR, 1GbE OOB management, Tall Bracket</name>
+          <fields access='readonly'>
+            <change_level>B1</change_level>
+            <part_number>MBF2H332A-AEEOT</part_number>
+            <serial_number>MT2113XBEEF0</serial_number>
+            <vendor_field index='2'>MBF2H332A-AEEOT</vendor_field>
+            <vendor_field index='3'>9644e3586190eb118000b8cef671bf3e</vendor_field>
+            <vendor_field index='A'>MLX:MN=MLNX:CSKU=V2:UUID=V3:PCI=V0:MODL=BF2H332A</vendor_field>
+            <vendor_field index='0'>PCIeGen4 x8</vendor_field>
+          </fields>
+        </capability>
+        <iommuGroup number='99'>
+          <address domain='0x0001' bus='0x82' slot='0x00' function='0x3'/>
+        </iommuGroup>
+        <numa node='1'/>
+        <pci-express>
+          <link validity='cap' port='0' speed='16' width='8'/>
+          <link validity='sta' width='0'/>
+        </pci-express>
+      </capability>
+    </device>""",  # noqa:E501
+    # A VF without the VPD capability and without a parent PF defined
+    # in the test data.
+    "pci_0002_82_00_3": """
+    <device>
+      <name>pci_0002_82_00_3</name>
+      <path>/sys/devices/pci0002:80/0002:80:03.0/0002:82:00.3</path>
+      <parent>pci_0002_80_03_0</parent>
+      <driver>
+        <name>mlx5_core</name>
+      </driver>
+      <capability type='pci'>
+        <class>0x020000</class>
+        <domain>2</domain>
+        <bus>130</bus>
+        <slot>0</slot>
+        <function>3</function>
+        <product id='0x101e'>ConnectX Family mlx5Gen Virtual Function</product>
+        <vendor id='0x15b3'>Mellanox Technologies</vendor>
+        <capability type='phys_function'>
+          <address domain='0x0002' bus='0x82' slot='0x00' function='0x0'/>
+        </capability>
+        <iommuGroup number='99'>
+          <address domain='0x0002' bus='0x82' slot='0x00' function='0x3'/>
+        </iommuGroup>
+        <numa node='1'/>
+        <pci-express>
+          <link validity='cap' port='0' speed='16' width='8'/>
+          <link validity='sta' width='0'/>
+        </pci-express>
+      </capability>
+    </device>""",  # noqa:E501
 }
 
 _fake_NodeDevXml_parents = {
