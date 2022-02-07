@@ -143,7 +143,7 @@ class APITest(test.NoDBTestCase):
                 self.assertEqual(resp.headers[key], str(value))
 
     def test_quota_error_mapping(self):
-        self._do_test_exception_mapping(exception.QuotaError, 'too many used')
+        self._do_test_exception_mapping(exception.OverQuota, 'too many used')
 
     def test_non_nova_notfound_exception_mapping(self):
         class ExceptionWithCode(Exception):

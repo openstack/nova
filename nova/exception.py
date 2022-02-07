@@ -993,10 +993,6 @@ class QuotaClassExists(NovaException):
     msg_fmt = _("Quota class %(class_name)s exists for resource %(resource)s")
 
 
-class OverQuota(NovaException):
-    msg_fmt = _("Quota exceeded for resources: %(overs)s")
-
-
 class SecurityGroupNotFound(NotFound):
     msg_fmt = _("Security group %(security_group_id)s not found.")
 
@@ -1233,29 +1229,26 @@ class MaxRetriesExceeded(NoValidHost):
     msg_fmt = _("Exceeded maximum number of retries. %(reason)s")
 
 
-class QuotaError(NovaException):
-    msg_fmt = _("Quota exceeded: code=%(code)s")
-    # NOTE(cyeoh): 413 should only be used for the ec2 API
-    # The error status code for out of quota for the nova api should be
-    # 403 Forbidden.
+class OverQuota(NovaException):
+    msg_fmt = _("Quota exceeded for resources: %(overs)s")
     code = 413
     safe = True
 
 
-class TooManyInstances(QuotaError):
+class TooManyInstances(OverQuota):
     msg_fmt = _("Quota exceeded for %(overs)s: Requested %(req)s,"
                 " but already used %(used)s of %(allowed)s %(overs)s")
 
 
-class FloatingIpLimitExceeded(QuotaError):
+class FloatingIpLimitExceeded(OverQuota):
     msg_fmt = _("Maximum number of floating IPs exceeded")
 
 
-class MetadataLimitExceeded(QuotaError):
+class MetadataLimitExceeded(OverQuota):
     msg_fmt = _("Maximum number of metadata items exceeds %(allowed)d")
 
 
-class OnsetFileLimitExceeded(QuotaError):
+class OnsetFileLimitExceeded(OverQuota):
     msg_fmt = _("Personality file limit exceeded")
 
 
@@ -1267,15 +1260,15 @@ class OnsetFileContentLimitExceeded(OnsetFileLimitExceeded):
     msg_fmt = _("Personality file content exceeds maximum %(allowed)s")
 
 
-class KeypairLimitExceeded(QuotaError):
+class KeypairLimitExceeded(OverQuota):
     msg_fmt = _("Maximum number of key pairs exceeded")
 
 
-class SecurityGroupLimitExceeded(QuotaError):
+class SecurityGroupLimitExceeded(OverQuota):
     msg_fmt = _("Maximum number of security groups or rules exceeded")
 
 
-class PortLimitExceeded(QuotaError):
+class PortLimitExceeded(OverQuota):
     msg_fmt = _("Maximum number of ports exceeded")
 
 

@@ -40,7 +40,7 @@ class DeferredDeleteController(wsgi.Controller):
                     target={'project_id': instance.project_id})
         try:
             self.compute_api.restore(context, instance)
-        except exception.QuotaError as error:
+        except exception.OverQuota as error:
             raise webob.exc.HTTPForbidden(explanation=error.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,

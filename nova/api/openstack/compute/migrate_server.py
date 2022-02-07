@@ -57,7 +57,7 @@ class MigrateServerController(wsgi.Controller):
         try:
             self.compute_api.resize(req.environ['nova.context'], instance,
                                     host_name=host_name)
-        except (exception.TooManyInstances, exception.QuotaError) as e:
+        except exception.OverQuota as e:
             raise exc.HTTPForbidden(explanation=e.format_message())
         except (
             exception.InstanceIsLocked,

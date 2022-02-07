@@ -109,7 +109,7 @@ class QuotaIntegrationTestCase(test.TestCase):
             self.compute_api.create(
                 self.context, min_count=1, max_count=1,
                 flavor=self.flavor, image_href=image_uuid)
-        except exception.QuotaError as e:
+        except exception.OverQuota as e:
             expected_kwargs = {'code': 413,
                                'req': '1, 1',
                                'used': '8, 2',
@@ -117,7 +117,7 @@ class QuotaIntegrationTestCase(test.TestCase):
                                'overs': 'cores, instances'}
             self.assertEqual(expected_kwargs, e.kwargs)
         else:
-            self.fail('Expected QuotaError exception')
+            self.fail('Expected OverQuota exception')
 
     def test_too_many_cores(self):
         self._create_instance()
@@ -126,7 +126,7 @@ class QuotaIntegrationTestCase(test.TestCase):
             self.compute_api.create(
                 self.context, min_count=1, max_count=1, flavor=self.flavor,
                 image_href=image_uuid)
-        except exception.QuotaError as e:
+        except exception.OverQuota as e:
             expected_kwargs = {'code': 413,
                                'req': '1',
                                'used': '4',
@@ -134,7 +134,7 @@ class QuotaIntegrationTestCase(test.TestCase):
                                'overs': 'cores'}
             self.assertEqual(expected_kwargs, e.kwargs)
         else:
-            self.fail('Expected QuotaError exception')
+            self.fail('Expected OverQuota exception')
 
     def test_many_cores_with_unlimited_quota(self):
         # Setting cores quota to unlimited:
@@ -150,7 +150,7 @@ class QuotaIntegrationTestCase(test.TestCase):
             metadata['key%s' % i] = 'value%s' % i
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         self.assertRaises(
-            exception.QuotaError, self.compute_api.create,
+            exception.OverQuota, self.compute_api.create,
             self.context, min_count=1, max_count=1, flavor=self.flavor,
             image_href=image_uuid, metadata=metadata)
 
@@ -170,39 +170,39 @@ class QuotaIntegrationTestCase(test.TestCase):
         files = []
         for i in range(CONF.quota.injected_files):
             files.append(('/my/path%d' % i, 'config = test\n'))
-        self._create_with_injected_files(files)  # no QuotaError
+        self._create_with_injected_files(files)  # no OverQuota
 
     def test_too_many_injected_files(self):
         files = []
         for i in range(CONF.quota.injected_files + 1):
             files.append(('/my/path%d' % i, 'my\ncontent%d\n' % i))
-        self.assertRaises(exception.QuotaError,
+        self.assertRaises(exception.OverQuota,
                           self._create_with_injected_files, files)
 
     def test_max_injected_file_content_bytes(self):
         max = CONF.quota.injected_file_content_bytes
         content = ''.join(['a' for i in range(max)])
         files = [('/test/path', content)]
-        self._create_with_injected_files(files)  # no QuotaError
+        self._create_with_injected_files(files)  # no OverQuota
 
     def test_too_many_injected_file_content_bytes(self):
         max = CONF.quota.injected_file_content_bytes
         content = ''.join(['a' for i in range(max + 1)])
         files = [('/test/path', content)]
-        self.assertRaises(exception.QuotaError,
+        self.assertRaises(exception.OverQuota,
                           self._create_with_injected_files, files)
 
     def test_max_injected_file_path_bytes(self):
         max = CONF.quota.injected_file_path_length
         path = ''.join(['a' for i in range(max)])
         files = [(path, 'config = quotatest')]
-        self._create_with_injected_files(files)  # no QuotaError
+        self._create_with_injected_files(files)  # no OverQuota
 
     def test_too_many_injected_file_path_bytes(self):
         max = CONF.quota.injected_file_path_length
         path = ''.join(['a' for i in range(max + 1)])
         files = [(path, 'config = quotatest')]
-        self.assertRaises(exception.QuotaError,
+        self.assertRaises(exception.OverQuota,
                           self._create_with_injected_files, files)
 
 
