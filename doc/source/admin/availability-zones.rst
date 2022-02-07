@@ -9,15 +9,22 @@ Availability Zones
     zones, refer to the :doc:`user guide </user/availability-zones>`.
 
 Availability Zones are an end-user visible logical abstraction for partitioning
-a cloud without knowing the physical infrastructure. Availability zones are not
-modeled in the database; rather, they are defined by attaching specific
-metadata information to an :doc:`aggregate </admin/aggregates>` The addition of
-this specific metadata to an aggregate makes the aggregate visible from an
-end-user perspective and consequently allows users to schedule instances to a
-specific set of hosts, the ones belonging to the aggregate.
+a cloud without knowing the physical infrastructure. They can be used to
+partition a cloud on arbitrary factors, such as location (country, datacenter,
+rack), network layout and/or power source.
 
-However, despite their similarities, there are a few additional differences to
-note when comparing availability zones and host aggregates:
+.. note::
+
+   Availability Zones should not be assumed to map to fault domains and provide
+   no intrinsic HA benefit by themselves.
+
+Availability zones are not modeled in the database; rather, they are defined by
+attaching specific metadata information to an
+:doc:`aggregate </admin/aggregates>` The addition of this specific metadata to
+an aggregate makes the aggregate visible from an end-user perspective and
+consequently allows users to schedule instances to a specific set of hosts, the
+ones belonging to the aggregate. There are a few additional differences to note
+when comparing availability zones and host aggregates:
 
 - A host can be part of multiple aggregates but it can only be in one
   availability zone.
