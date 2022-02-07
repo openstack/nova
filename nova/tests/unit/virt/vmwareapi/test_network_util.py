@@ -47,45 +47,21 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
         """Returns a set of results for a cluster network lookup.
 
         This is an example:
-        (ObjectContent){
-           obj =
-              (obj){
-                 value = "domain-c7"
-                 _type = "ClusterComputeResource"
-              }
-           propSet[] =
-              (DynamicProperty){
-                 name = "network"
-                 val =
-                    (ArrayOfManagedObjectReference){
-                       ManagedObjectReference[] =
-                          (ManagedObjectReference){
-                             value = "network-54"
-                             _type = "Network"
-                          },
-                          (ManagedObjectReference){
-                             value = "dvportgroup-14"
-                             _type = "DistributedVirtualPortgroup"
-                          },
-                    }
-              },
+        (ArrayOfManagedObjectReference){
+        ManagedObjectReference[] = [
+            (ManagedObjectReference){
+                value = "network-54"
+                _type = "Network"
+            },
+            (ManagedObjectReference){
+                value = "dvportgroup-14"
+                _type = "DistributedVirtualPortgroup"
+            },
         }]
         """
-
-        objects = []
-        obj = ObjectContent(obj=vim_util.get_moref("domain-c7",
-                                                   "ClusterComputeResource"),
-                            propSet=[])
-        value = fake.DataObject()
-        value.ManagedObjectReference = []
-        for network in networks:
-            value.ManagedObjectReference.append(network)
-
-        obj.propSet.append(
-                    DynamicProperty(name='network',
-                                    val=value))
-        objects.append(obj)
-        return ResultSet(objects=objects)
+        array = fake._create_array_of_type("ManagedObjectReference")
+        array.ManagedObjectReference = networks
+        return array
 
     def test_get_network_no_match(self):
         net_morefs = [vim_util.get_moref("dvportgroup-135",
@@ -94,13 +70,14 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
                                          "DistributedVirtualPortgroup")]
         networks = self._build_cluster_networks(net_morefs)
 
-        def mock_call_method(module, method, *args, **kwargs):
-            if method == 'get_object_properties':
+        def mock_call_method(module, method, mo_ref, property):
+            if method != 'get_object_property':
+                raise RuntimeError('Unexpected method')
+            if mo_ref == 'fake_cluster':
                 return networks
-            if method == 'get_object_property':
-                result = fake.DataObject()
-                result.name = 'no-match'
-                return result
+            result = fake.DataObject()
+            result.name = 'no-match'
+            return result
 
         with mock.patch.object(self._session, '_call_method',
                                mock_call_method):
@@ -114,15 +91,16 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
                                          "DistributedVirtualPortgroup")]
         networks = self._build_cluster_networks(net_morefs)
 
-        def mock_call_method(module, method, *args, **kwargs):
-            if method == 'get_object_properties':
+        def mock_call_method(module, method, mo_ref, property):
+            if method != 'get_object_property':
+                raise RuntimeError('Unexpected method')
+            if mo_ref == 'fake_cluster':
                 return networks
-            if method == 'get_object_property':
-                result = fake.DataObject()
-                result.name = name
-                result.key = 'fake_key'
-                result.distributedVirtualSwitch = 'fake_dvs'
-                return result
+            result = fake.DataObject()
+            result.name = name
+            result.key = 'fake_key'
+            result.distributedVirtualSwitch = 'fake_dvs'
+            return result
 
         with mock.patch.object(self._session, '_call_method',
                                mock_call_method):
@@ -141,11 +119,12 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
         net_morefs = [vim_util.get_moref("network-54", "Network")]
         networks = self._build_cluster_networks(net_morefs)
 
-        def mock_call_method(module, method, *args, **kwargs):
-            if method == 'get_object_properties':
+        def mock_call_method(module, method, mo_ref, property):
+            if method != 'get_object_property':
+                raise RuntimeError('Unexpected method')
+            if mo_ref == 'fake_cluster':
                 return networks
-            if method == 'get_object_property':
-                return 'fake_net'
+            return 'fake_net'
 
         with mock.patch.object(self._session, '_call_method',
                                mock_call_method):

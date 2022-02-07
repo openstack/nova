@@ -56,30 +56,6 @@ def object_to_dict(obj, list_depth=1):
     return d
 
 
-def get_object_properties(vim, collector, mobj, type, properties):
-    """Gets the properties of the Managed object specified."""
-    client_factory = vim.client.factory
-    if mobj is None:
-        return None
-    usecoll = collector
-    if usecoll is None:
-        usecoll = vim.service_content.propertyCollector
-    property_filter_spec = client_factory.create('ns0:PropertyFilterSpec')
-    property_spec = client_factory.create('ns0:PropertySpec')
-    property_spec.all = (properties is None or len(properties) == 0)
-    property_spec.pathSet = properties
-    property_spec.type = type
-    object_spec = client_factory.create('ns0:ObjectSpec')
-    object_spec.obj = mobj
-    object_spec.skip = False
-    property_filter_spec.propSet = [property_spec]
-    property_filter_spec.objectSet = [object_spec]
-    options = client_factory.create('ns0:RetrieveOptions')
-    options.maxObjects = CONF.vmware.maximum_objects
-    return vim.RetrievePropertiesEx(usecoll, specSet=[property_filter_spec],
-                                    options=options)
-
-
 def get_objects(vim, type, properties_to_collect=None, all=False):
     """Gets the list of objects of the type specified."""
     return vutil.get_objects(vim, type, CONF.vmware.maximum_objects,
