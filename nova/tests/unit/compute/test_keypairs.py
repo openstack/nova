@@ -155,7 +155,7 @@ class CreateImportSharedTestMixIn(object):
                        return_value={'user': {
                                          'key_pairs': CONF.quota.key_pairs}})
     def test_quota_limit(self, mock_count_as_dict):
-        msg = "Maximum number of key pairs exceeded"
+        msg = "Quota exceeded, too many key pairs."
         self.assertKeypairRaises(exception.KeypairLimitExceeded, msg, 'foo')
 
 
