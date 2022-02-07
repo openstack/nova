@@ -366,6 +366,16 @@ Replace ``IP_ADDRESS`` with the IP address from which the proxy is accessible
 by the outside world. For example, this may be the management interface IP
 address of the controller or the VIP.
 
+Optionally, the :program:`nova-compute` service supports the following
+additional options to configure compression settings (algorithms and modes)
+for SPICE consoles.
+
+- :oslo.config:option:`spice.image_compression`
+- :oslo.config:option:`spice.jpeg_compression`
+- :oslo.config:option:`spice.zlib_compression`
+- :oslo.config:option:`spice.playback_compression`
+- :oslo.config:option:`spice.streaming_mode`
+
 
 Serial
 ------

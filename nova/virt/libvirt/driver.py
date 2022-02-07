@@ -7302,6 +7302,11 @@ class LibvirtDriver(driver.ComputeDriver):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "spice"
             graphics.listen = CONF.spice.server_listen
+            graphics.image_compression = CONF.spice.image_compression
+            graphics.jpeg_compression = CONF.spice.jpeg_compression
+            graphics.zlib_compression = CONF.spice.zlib_compression
+            graphics.playback_compression = CONF.spice.playback_compression
+            graphics.streaming_mode = CONF.spice.streaming_mode
             guest.add_device(graphics)
             add_video_driver = True
 
