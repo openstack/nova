@@ -1810,39 +1810,24 @@ class VMwareVMOps(object):
 
     def live_migration(self, instance, migrate_data, volume_mapping):
         defaults = migrate_data.relocate_defaults
-        relocate_spec_defaults = defaults["relocate_spec"]
-        disk_move_type = relocate_spec_defaults.get("diskMoveType",
-            "moveAllDiskBackingsAndDisallowSharing")
-
-        def moref(item):
-            v = relocate_spec_defaults[item]
-            return vutil.get_moref(v["value"], v["_type"])
 
         client_factory = self._session.vim.client.factory
-        datastore = moref("datastore")
-        relocate_spec = vm_util.relocate_vm_spec(client_factory,
-            res_pool=moref("pool"),
-            datastore=datastore,
-            host=moref("host"),
-            disk_move_type=disk_move_type,
-            folder=moref("folder"))
+        relocate_spec = vim_util.deserialize_object(client_factory,
+            defaults["relocate_spec"], "VirtualMachineRelocateSpec")
+
+        if not migrate_data.is_same_vcenter:
+            disk_move_type = "moveAllDiskBackingsAndDisallowSharing"
+        else:
+            disk_move_type = "moveAllDiskBackingsAndAllowSharing"
+
+        relocate_spec.diskMoveType = disk_move_type
+
+        datastore = relocate_spec.datastore
 
         service = defaults.get("service")
         if service:
-            credentials_dict = service.pop("credentials")
-            credentials = client_factory.create(
-                "ns0:" + credentials_dict.pop("_type"))
-
-            for k, v in credentials_dict.items():
-                setattr(credentials, k, v)
-
-            relocate_spec.service = vm_util.create_service_locator(
-                client_factory,
-                service["url"],
-                service["instance_uuid"],
-                credentials,
-                service["ssl_thumbprint"],
-            )
+            relocate_spec.service = vim_util.deserialize_object(
+                client_factory, service, "ServiceLocator")
 
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 

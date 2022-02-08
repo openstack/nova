@@ -783,18 +783,16 @@ class VMwareVCDriver(driver.ComputeDriver):
         data.cluster_name = self._cluster_name
         data.dest_cluster_ref = vim_util.get_moref_value(self._cluster_ref)
         data.datastore_regex = CONF.vmware.datastore_regex
+        client_factory = self._session.client.factory
+
+        service = vm_util.create_service_locator(client_factory, url,
+            self._vcenter_uuid,
+            vm_util.create_service_locator_name_password(
+                username=CONF.vmware.host_username,
+                password=CONF.vmware.host_password))
 
         data.relocate_defaults = {
-            "service": {
-                "url": url,
-                "instance_uuid": self._vcenter_uuid,
-                "ssl_thumbprint": vm_util.get_sha1_ssl_thumbprint(url),
-                "credentials": {
-                    "_type": "ServiceLocatorNamePassword",
-                    "username": CONF.vmware.host_username,
-                    "password": CONF.vmware.host_password,
-                }
-            }
+            "service": nova_vim_util.serialize_object(service, typed=True)
         }
 
         return data
@@ -808,11 +806,14 @@ class VMwareVCDriver(driver.ComputeDriver):
                                       dest_check_data, block_device_info=None):
         """Check if it is possible to execute live migration."""
 
+        client_factory = self._session.client.factory
         defaults = dest_check_data.relocate_defaults
-        dest_vcenter_uuid = defaults["service"]["instance_uuid"]
+        service_locator = nova_vim_util.deserialize_object(client_factory,
+                                                           defaults["service"],
+                                                           "ServiceLocator")
 
         dest_check_data.is_same_vcenter = (
-            dest_vcenter_uuid == self._vcenter_uuid)
+            service_locator.instanceUuid == self._vcenter_uuid)
 
         if dest_check_data.instance_already_migrated:
             return dest_check_data
@@ -820,7 +821,6 @@ class VMwareVCDriver(driver.ComputeDriver):
         if dest_check_data.is_same_vcenter:
             # Drop the service-credentials, no need to check the volumes,
             # as we do not need to mess around with them
-            defaults = dest_check_data.relocate_defaults
             defaults.pop("service")
             dest_check_data.relocate_defaults = defaults
 
@@ -853,8 +853,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         result = self._vmops.place_vm(context, instance)
 
         if hasattr(result, 'drsFault'):
-            LOG.error("Placement Error: %s", vim_util.serialize_object(
-                result.drsFault), instance=instance)
+            LOG.error("Placement Error: %s", nova_vim_util.serialize_object(
+                result.drsFault, typed=True), instance=instance)
 
         if (not hasattr(result, 'recommendations') or
                 not result.recommendations):
@@ -884,7 +884,7 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         # relocate_defaults are serialized/deserialized on put/get
         defaults = migrate_data.relocate_defaults
-        spec = vim_util.serialize_object(relocate_spec)
+        spec = nova_vim_util.serialize_object(relocate_spec, typed=True)
         defaults["relocate_spec"] = spec
         # Writing the values back
         migrate_data.relocate_defaults = defaults
@@ -920,14 +920,14 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         # We require the target-datastore for all volume-attachment
         required_volume_attributes = ["datastore_ref"]
-        if migrate_data.is_same_vcenter:
-            dest_session = self._session
-        else:
-            # For the shadow vm fixup after migration
-            dest_session = self._create_dest_session(migrate_data)
-            required_volume_attributes.append('volume')
-
         try:
+            if migrate_data.is_same_vcenter:
+                dest_session = self._session
+            else:
+                # For the shadow vm fixup after migration
+                dest_session = self._create_dest_session(migrate_data)
+                required_volume_attributes.append('volume')
+
             # Validate that we have all necessary information for the
             # new volume attachments
             # This cannot be done in pre-check, as the new volume attachments
@@ -1001,15 +1001,17 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def _create_dest_session(self, migrate_data):
         defaults = migrate_data.relocate_defaults
-        service = defaults["service"]
-        credentials = service["credentials"]
-        dest_url = urllib.parse.urlparse(service["url"])
+        client_factory = self._session.client.factory
+        service_locator = nova_vim_util.deserialize_object(client_factory,
+                                                           defaults["service"],
+                                                           "ServiceLocator")
+        dest_url = urllib.parse.urlparse(service_locator.url)
 
         dest_session = session.VMwareAPISession(
             host_ip=dest_url.hostname,
             host_port=dest_url.port,
-            username=credentials["username"],
-            password=credentials["password"],
+            username=service_locator.credential.username,
+            password=service_locator.credential.password,
             # TODO(fwiesel): SSL Settings
         )
 

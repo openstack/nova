@@ -354,7 +354,7 @@ class VMwareLiveMigrateData(LiveMigrateData):
         'dest_cluster_ref': fields.StringField(nullable=False),
         'is_same_vcenter': fields.BooleanField(default=True),
         'instance_already_migrated': fields.BooleanField(default=False),
-        'relocate_defaults_json': fields.SensitiveStringField(default="[]"),
+        'relocate_defaults_json': fields.SensitiveStringField(default="{}"),
         'vif_infos_json': fields.StringField(default="[]"),
     }
 

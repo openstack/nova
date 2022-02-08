@@ -2425,8 +2425,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             recommendations=[recommendation]
         )
 
+    @mock.patch.object(vim_util, 'serialize_object')
     @mock.patch.object(vmops.VMwareVMOps, 'place_vm')
-    def test_pre_live_migration(self, mock_place_vm):
+    def test_pre_live_migration(self, mock_place_vm, mock_serialize_object):
         mock_place_vm.side_effect = self._create_placement_result
         self._create_instance()
         migrate_data = self._create_live_migrate_data()
@@ -2437,12 +2438,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.assertEqual(result, migrate_data)
 
     @mock.patch.object(vm_util, 'relocate_vm')
-    @mock.patch.object(vm_util, 'create_service_locator')
     @mock.patch.object(vm_util, 'get_hardware_devices')
+    @mock.patch.object(vim_util, 'deserialize_object')
     @mock.patch.object(driver.VMwareVCDriver, '_get_volume_mappings',
                        returns=[])
-    def test_live_migration(self, get_volume_mappings, get_hardware_devices,
-                            service_locator, relocate_vm):
+    @mock.patch.object(driver.VMwareVCDriver, '_create_dest_session')
+    def test_live_migration(self, create_dest_session, get_volume_mappings,
+                            deserialize_object,
+                            get_hardware_devices, relocate_vm):
         self._create_instance()
         migrate_data = self._create_live_migrate_data()
 
@@ -2457,26 +2460,26 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 'fake_dest', post_method, recover_method,
                 migrate_data=migrate_data)
 
-        service_locator.assert_called()
+        deserialize_object.assert_called()
         get_hardware_devices.assert_called()
         relocate_vm.assert_called()
         post_method.assert_called()
         recover_method.assert_not_called()
 
-    @mock.patch.object(vm_util, 'create_service_locator')
-    @mock.patch.object(volumeops.VMwareVolumeOps,
-        'map_volumes_to_devices', returns=[])
+    @mock.patch.object(driver.VMwareVCDriver, '_create_dest_session')
+    @mock.patch.object(driver.VMwareVCDriver, '_get_volume_mappings',
+                       returns=[])
     @mock.patch.object(vmops.VMwareVMOps,
-        'live_migration', side_effect=Exception)
+        'live_migration', side_effect=test.TestingException)
     def test_live_migration_failure_rollback(self, mock_live_migration,
-                    volumes_to_devices, mock_service_locator):
+                    get_volume_mappings, create_dest_session):
         self._create_instance()
         migrate_data = self._create_live_migrate_data()
 
         post_method = mock.Mock()
         recover_method = mock.Mock()
 
-        exception = Exception
+        exception = test.TestingException
 
         with test.nested(
                 mock.patch.object(vm_util, 'get_vm_ref',
