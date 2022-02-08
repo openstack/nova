@@ -255,6 +255,47 @@
         # Disable non-essential services that we don't need for this job.
         c-bak: false
 
+- job:
+    name: nova-emulation
+    parent: devstack-tempest
+    description: |
+      Run compute tests using emulated AARCH64 architecture.
+    # NOTE(chateaulav): due to constraints with no IDE support for aarch64,
+    # tests have been limited to eliminate any items that are incompatible.
+    # This is to be re-evaluated as greater support is added and defined.
+    irrelevant-files:
+      - ^(?!.zuul.yaml)(?!nova/virt/libvirt/)(?!nova/objects/)(?!nova/scheduler/).*$
+      - ^api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/policies/.*$
+      - ^nova/tests/.*$
+      - ^nova/test.py$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tools/.*$
+      - ^tox.ini$
+    vars:
+      tox_envlist: all
+      tempest_test_regex: ^tempest\.(api\.compute\.servers|scenario\.test_network_basic_ops)
+      tempest_exclude_regex: (^tempest\.(api\.compute\.servers\.(test_attach_interfaces.AttachInterfacesTestJSON.test_create_list_show_delete_interfaces_by_network_port|test_delete_server.DeleteServersTestJSON.test_delete_server_while_in_attached_volume.*|test_list_.*|test_disk_config|test_server_rescue.*|test_server_actions\.ServerActionsTestJSON\.test_resize.*|test_device_tag.*))|.*\[.*\bslow\b.*\])
+      devstack_localrc:
+        FORCE_CONFIG_DRIVE=False
+        ADMIN_PASSWORD=emulation
+        DATABASE_PASSWORD=$ADMIN_PASSWORD
+        RABBIT_PASSWORD=$ADMIN_PASSWORD
+        SERVICE_PASSWORD=$ADMIN_PASSWORD
+        SWIFT_HASH=1234abcd
+        DOWNLOAD_DEFAULT_IMAGES=False
+        IMAGE_URLS="http://download.cirros-cloud.net/0.5.2/cirros-0.5.2-aarch64-disk.img"
+        DEFAULT_INSTANCE_TYPE=m1.micro
+    pre-run:
+      - playbooks/nova-emulation/pre.yaml
+
 # TODO(lucasagomes): Move this job to ML2/OVN when QoS Minimum Bandwidth
 # support is implemented.
 # See: https://docs.openstack.org/neutron/latest/ovn/gaps.html
@@ -605,30 +646,31 @@
         - nova-multi-cell
         - nova-next
         - nova-ovs-hybrid-plug
+        - nova-emulation
         - nova-tox-validate-backport:
             voting: false
         - nova-tox-functional-centos8-py36
         - nova-tox-functional-py38
         - nova-tox-functional-py39
         - tempest-integrated-compute:
-            # NOTE(gmann): Policies changes do not need to run all the
-            # integration test jobs. Running only tempest and grenade
-            # common jobs will be enough along with nova functional
-            # and unit tests.
-            irrelevant-files: &policies-irrelevant-files
-              - ^api-.*$
-              - ^(test-|)requirements.txt$
-              - ^.*\.rst$
-              - ^.git.*$
-              - ^doc/.*$
-              - ^nova/hacking/.*$
-              - ^nova/locale/.*$
-              - ^nova/tests/.*$
-              - ^nova/test.py$
-              - ^releasenotes/.*$
-              - ^setup.cfg$
-              - ^tools/.*$
-              - ^tox.ini$
+           # NOTE(gmann): Policies changes do not need to run all the
+           # integration test jobs. Running only tempest and grenade
+           # common jobs will be enough along with nova functional
+           # and unit tests.
+           irrelevant-files: &policies-irrelevant-files
+             - ^api-.*$
+             - ^(test-|)requirements.txt$
+             - ^.*\.rst$
+             - ^.git.*$
+             - ^doc/.*$
+             - ^nova/hacking/.*$
+             - ^nova/locale/.*$
+             - ^nova/tests/.*$
+             - ^nova/test.py$
+             - ^releasenotes/.*$
+             - ^setup.cfg$
+             - ^tools/.*$
+             - ^tox.ini$
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
@@ -665,9 +707,9 @@
               # code; we don't need to run this on all changes.
               - ^(?!nova/network/.*)(?!nova/virt/libvirt/vif.py).*$
         - tempest-integrated-compute:
-            irrelevant-files: *policies-irrelevant-files
+           irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
-            irrelevant-files: *policies-irrelevant-files
+           irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
