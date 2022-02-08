@@ -1104,7 +1104,7 @@ class VMwareVMOps(object):
             reconfig_spec.deviceChange = []
 
         for device in vm_util.get_hardware_devices(self._session, vm_ref):
-            if vim_util.is_vim_instance(device, "VirtualSerialPort"):
+            if vutil.is_vim_instance(device, "VirtualSerialPort"):
                 removal = client_factory.create('ns0:VirtualDeviceConfigSpec')
                 removal.device = device
                 removal.operation = 'remove'

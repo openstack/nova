@@ -19,7 +19,6 @@ from oslo_vmware import vim_util as vutil
 from nova import exception
 from nova.i18n import _
 from nova import utils
-from nova.virt.vmwareapi import vim_util
 
 LOG = logging.getLogger(__name__)
 
@@ -108,10 +107,10 @@ def fetch_cluster_groups(session, cluster_ref=None, cluster_config=None,
     groups = {}
     for group in getattr(cluster_config, 'group', []):
         if group_type == 'vm':
-            if not vim_util.is_vim_instance(group, 'ClusterVmGroup'):
+            if not vutil.is_vim_instance(group, 'ClusterVmGroup'):
                 continue
         elif group_type == 'host':
-            if not vim_util.is_vim_instance(group, 'ClusterHostGroup'):
+            if not vutil.is_vim_instance(group, 'ClusterHostGroup'):
                 continue
 
         groups[group.name] = group

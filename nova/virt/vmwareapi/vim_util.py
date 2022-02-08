@@ -16,8 +16,6 @@
 """
 The VMware API utility module.
 """
-from suds import sudsobject
-
 from oslo_vmware import vim_util as vutil
 
 
@@ -174,8 +172,3 @@ def get_array_items(array_obj):
         if hasattr(array_obj, attr_name):
             return getattr(array_obj, attr_name)
     return array_obj
-
-
-def is_vim_instance(o, vim_type_name):
-    return isinstance(o, sudsobject.Factory.subclass(vim_type_name,
-                                                     sudsobject.Object))
