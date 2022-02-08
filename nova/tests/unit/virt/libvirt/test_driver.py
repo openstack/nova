@@ -10606,7 +10606,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(drvr._uri(), testuri)
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
@@ -10645,7 +10645,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          return_value.obj_to_primitive()['nova_object.data'])
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
@@ -10685,7 +10685,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          return_value.obj_to_primitive()['nova_object.data'])
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
@@ -10722,7 +10722,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          return_value.obj_to_primitive()['nova_object.data'])
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
@@ -10754,7 +10754,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          str(result.serial_listen_addr))
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
@@ -10775,7 +10775,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(result.serial_listen_addr)
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
@@ -10808,7 +10808,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          result.obj_to_primitive()['nova_object.data'])
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
@@ -10827,7 +10827,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(result.dst_supports_numa_live_migration)
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
@@ -10844,7 +10844,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertNotIn('dst_supports_numa_live_migration', result)
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
@@ -10885,7 +10885,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          return_value.obj_to_primitive()['nova_object.data'])
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=False))
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
@@ -10930,7 +10930,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           compute_info, compute_info, False)
 
     @mock.patch(
-        'nova.network.neutron.API.supports_port_binding_extension',
+        'nova.network.neutron.API.has_port_binding_extension',
         new=mock.Mock(return_value=True))
     @mock.patch.object(
         libvirt_driver.LibvirtDriver,

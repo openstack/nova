@@ -108,7 +108,7 @@ class TestLiveMigrationWithoutMultiplePortBindings(
             networks=[{'port': self.neutron.port_1['id']}])
 
         self.assertFalse(
-            self.neutron_api.supports_port_binding_extension(self.ctxt))
+            self.neutron_api.has_port_binding_extension(self.ctxt))
         # TODO(sean-k-mooney): extend _live_migrate to support passing a host
         self.api.post_server_action(
             server['id'],

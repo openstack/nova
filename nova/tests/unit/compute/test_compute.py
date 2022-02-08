@@ -6066,10 +6066,9 @@ class ComputeTestCase(BaseTestCase,
             return fake_network.fake_get_instance_nw_info(self)
 
         self.stub_out('nova.network.neutron.API.get_instance_nw_info', stupid)
-        self.useFixture(
-            std_fixtures.MonkeyPatch(
-                'nova.network.neutron.API.supports_port_binding_extension',
-                lambda *args: True))
+        self.useFixture(std_fixtures.MonkeyPatch(
+            'nova.network.neutron.API.has_port_binding_extension',
+            lambda *args: True))
         # creating instance testdata
         instance = self._create_fake_instance_obj({'host': 'dummy'})
         c = context.get_admin_context()

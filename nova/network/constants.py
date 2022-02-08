@@ -13,23 +13,40 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-QOS_QUEUE = 'QoS Queue'
-NET_EXTERNAL = 'router:external'
-VNIC_INDEX_EXT = 'VNIC Index'
-DNS_INTEGRATION = 'DNS Integration'
-MULTI_NET_EXT = 'Multi Provider Network'
-FIP_PORT_DETAILS = 'Floating IP Port Details Extension'
-SUBSTR_PORT_FILTERING = 'IP address substring filtering'
-PORT_BINDING = 'Port Binding'
-PORT_BINDING_EXTENDED = 'Port Bindings Extended'
-DEFAULT_SECGROUP = 'default'
+# Port fields
+
 BINDING_PROFILE = 'binding:profile'
 BINDING_HOST_ID = 'binding:host_id'
-MIGRATING_ATTR = 'migrating_to'
-L3_NETWORK_TYPES = ['vxlan', 'gre', 'geneve']
-ALLOCATION = 'allocation'
 RESOURCE_REQUEST = 'resource_request'
 REQUEST_GROUPS = 'request_groups'
-SEGMENT = 'Segment'
 NUMA_POLICY = 'numa_affinity_policy'
-RESOURCE_REQUEST_GROUPS_EXTENSION = "Port Resource Request Groups"
+
+# Binding profile fields
+
+MIGRATING_ATTR = 'migrating_to'
+ALLOCATION = 'allocation'
+
+# Core extensions
+
+DNS_INTEGRATION = 'dns-integration'
+MULTI_PROVIDER = 'multi-provider'
+FIP_PORT_DETAILS = 'fip-port-details'
+PORT_BINDING = 'binding'
+PORT_BINDING_EXTENDED = 'binding-extended'
+SUBSTR_PORT_FILTERING = 'ip-substring-filtering'
+SEGMENT = 'segment'
+RESOURCE_REQUEST_GROUPS = 'port-resource-request-groups'
+
+# Third-party extensions
+
+VNIC_INDEX = 'vnic-index'  # this is provided by the vmware_nsx project
+QOS_QUEUE = 'qos-queue'  # TODO(stephenfin): what defines this? Xen?
+
+# Search fields
+
+NET_EXTERNAL = 'router:external'
+
+# Misc
+
+DEFAULT_SECGROUP = 'default'
+L3_NETWORK_TYPES = ['vxlan', 'gre', 'geneve']

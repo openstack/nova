@@ -245,8 +245,7 @@ class LiveMigrationTask(base.TaskBase):
                             "are not allowed for live migration.")
         # All PCI requests are VIF related, now check neutron,
         # source and destination compute nodes.
-        if not self.network_api.supports_port_binding_extension(
-                self.context):
+        if not self.network_api.has_port_binding_extension(self.context):
             raise exception.MigrationPreCheckError(
                 reason="Cannot live migrate VIF with related PCI, Neutron "
                        "does not support required port binding extension.")
@@ -366,7 +365,7 @@ class LiveMigrationTask(base.TaskBase):
             raise exception.MigrationPreCheckError(msg)
 
         # Check to see that neutron supports the binding-extended API.
-        if self.network_api.supports_port_binding_extension(self.context):
+        if self.network_api.has_port_binding_extension(self.context):
             bindings = self._bind_ports_on_destination(
                 destination, provider_mapping)
             self._update_migrate_vifs_from_bindings(self.migrate_data.vifs,

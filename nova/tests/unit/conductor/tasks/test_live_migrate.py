@@ -353,7 +353,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         with test.nested(
             mock.patch.object(self.task.network_api,
-                              'supports_port_binding_extension',
+                              'has_port_binding_extension',
                               return_value=False),
             mock.patch.object(self.task, '_check_can_migrate_pci')):
             self.assertIsNone(self.task._check_requested_destination())
@@ -387,7 +387,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         with test.nested(
             mock.patch.object(self.task.network_api,
-                              'supports_port_binding_extension',
+                              'has_port_binding_extension',
                               return_value=False),
             mock.patch.object(self.task, '_check_can_migrate_pci')):
             ex = self.assertRaises(exception.MigrationPreCheckError,
@@ -813,7 +813,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         """
 
         @mock.patch.object(self.task.network_api,
-                           'supports_port_binding_extension')
+                           'has_port_binding_extension')
         @mock.patch.object(live_migrate,
                            'supports_vif_related_pci_allocations')
         def _test(instance_pci_reqs,

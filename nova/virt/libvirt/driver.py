@@ -9161,7 +9161,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # populate it if we are using multiple port bindings.
         # TODO(stephenfin): Remove once we can do this unconditionally in X or
         # later
-        if self._network_api.supports_port_binding_extension(context):
+        if self._network_api.has_port_binding_extension(context):
             data.vifs = (
                 migrate_data_obj.VIFMigrateData.create_skeleton_migrate_vifs(
                     instance.get_network_info()))

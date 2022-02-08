@@ -8046,7 +8046,7 @@ class ComputeManager(manager.Manager):
                 LOG.info('Destination was ready for NUMA live migration, '
                          'but source is either too old, or is set to an '
                          'older upgrade level.', instance=instance)
-            if self.network_api.supports_port_binding_extension(ctxt):
+            if self.network_api.has_port_binding_extension(ctxt):
                 # Create migrate_data vifs if not provided by driver.
                 if 'vifs' not in migrate_data:
                     migrate_data.vifs = (
