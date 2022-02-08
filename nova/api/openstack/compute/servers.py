@@ -1031,7 +1031,8 @@ class ServersController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
         context.can(server_policies.SERVERS % 'reboot',
-                    target={'project_id': instance.project_id})
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
 
         try:
             self.compute_api.reboot(context, instance, reboot_type)
