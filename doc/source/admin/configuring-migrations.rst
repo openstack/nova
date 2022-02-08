@@ -263,8 +263,10 @@ memory-intensive instances succeed.
       live_migration_downtime_steps = 10
       live_migration_downtime_delay = 75
 
-   ``live_migration_downtime`` sets the maximum permitted downtime for a live
-   migration, in *milliseconds*.  The default is 500.
+   ``live_migration_downtime`` sets the target maximum period of time Nova will
+   try to keep the instance paused during the last part of the memory copy, in
+   *milliseconds*. This value may be exceeded if there is any reduction on the
+   transfer rate after the VM is paused. The default is 500.
 
    ``live_migration_downtime_steps`` sets the total number of adjustment steps
    until ``live_migration_downtime`` is reached.  The default is 10 steps.
