@@ -251,3 +251,180 @@ class GetVfNumByPciAddressTestCase(test.NoDBTestCase):
             utils.get_vf_num_by_pci_address,
             self.pci_address
         )
+
+
+class GetProductIDByPfPciAddressTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super().setUp()
+        self.pci_address = "0000:0a:00.0"
+
+    @mock.patch(
+        "builtins.open",
+        new=mock.MagicMock(
+            side_effect=(
+                lambda f: {
+                    "/sys/bus/pci/devices/0000:0a:00.0/sriov_vf_device":
+                    mock.mock_open(
+                        read_data="101e\n"
+                    )()
+                }.get(f)
+            )
+        ),
+    )
+    def test_sriov_vf_device_read(self):
+        product_id = utils.get_vf_product_id_by_pf_addr(self.pci_address)
+        self.assertEqual(product_id, "101e")
+
+    @mock.patch(
+        "builtins.open",
+        new=mock.MagicMock(
+            side_effect=(
+                lambda f: {
+                    "/sys/bus/pci/devices/0000:0a:00.0/sriov_vf_device":
+                    mock.mock_open(
+                        read_data=""
+                    )()
+                }.get(f)
+            )
+        ),
+    )
+    def test_sriov_vf_device_read_value_error(self):
+        self.assertRaises(
+            ValueError,
+            utils.get_vf_product_id_by_pf_addr,
+            self.pci_address,
+        )
+
+    @mock.patch(
+        "builtins.open",
+        new=mock.MagicMock(
+            side_effect=(
+                lambda f: {
+                    "/sys/bus/pci/devices/0000:0a:00.0/sriov_vf_device":
+                    mock.mock_open(
+                        mock=mock.MagicMock(side_effect=IOError())
+                    )()
+                }.get(f)
+            )
+        ),
+    )
+    def test_sriov_vf_device_read_io_error(self):
+        self.assertRaises(
+            ValueError,
+            utils.get_vf_product_id_by_pf_addr,
+            self.pci_address,
+        )
+
+
+class GetPciIdsByPciAddressTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super().setUp()
+        self.pci_address = "0000:0a:00.0"
+
+    @mock.patch(
+        "builtins.open",
+        new=mock.MagicMock(
+            side_effect=(
+                lambda f: {
+                    "/sys/bus/pci/devices/0000:0a:00.0/vendor":
+                    mock.mock_open(
+                        read_data="0x15b3\n"
+                    )(),
+                    "/sys/bus/pci/devices/0000:0a:00.0/product":
+                    mock.mock_open(
+                        read_data="0x101e\n"
+                    )(),
+                }.get(f)
+            )
+        ),
+    )
+    def test_get_pci_ids(self):
+        self.assertEqual(
+            utils.get_pci_ids_by_pci_addr(self.pci_address), ("15b3", "101e")
+        )
+
+    @mock.patch(
+        "builtins.open",
+        new=mock.MagicMock(
+            side_effect=(
+                lambda f: {
+                    "/sys/bus/pci/devices/0000:0a:00.0/vendor": mock.mock_open(
+                        read_data=""
+                    )(),
+                }.get(f)
+            )
+        ),
+    )
+    def test_get_pci_ids_value_error_vendor(self):
+        self.assertRaises(
+            ValueError,
+            utils.get_pci_ids_by_pci_addr,
+            self.pci_address,
+        )
+
+    @mock.patch(
+        "builtins.open",
+        new=mock.MagicMock(
+            side_effect=(
+                lambda f: {
+                    "/sys/bus/pci/devices/0000:0a:00.0/vendor":
+                    mock.mock_open(
+                        read_data="0x15b3\n"
+                    )(),
+                    "/sys/bus/pci/devices/0000:0a:00.0/product":
+                    mock.mock_open(
+                        read_data=""
+                    )(),
+                }.get(f)
+            )
+        ),
+    )
+    def test_get_pci_ids_value_error_product(self):
+        self.assertRaises(
+            ValueError,
+            utils.get_pci_ids_by_pci_addr,
+            self.pci_address,
+        )
+
+    @mock.patch(
+        "builtins.open",
+        new=mock.MagicMock(
+            side_effect=(
+                lambda f: {
+                    "/sys/bus/pci/devices/0000:0a:00.0/vendor": mock.mock_open(
+                        mock=mock.MagicMock(side_effect=IOError())
+                    )()
+                }.get(f)
+            )
+        ),
+    )
+    def test_get_pci_ids_io_error_vendor(self):
+        self.assertRaises(
+            ValueError,
+            utils.get_pci_ids_by_pci_addr,
+            self.pci_address,
+        )
+
+    @mock.patch(
+        "builtins.open",
+        new=mock.MagicMock(
+            side_effect=(
+                lambda f: {
+                    "/sys/bus/pci/devices/0000:0a:00.0/vendor":
+                    mock.mock_open(
+                        read_data="0x15b3\n"
+                    )(),
+                    "/sys/bus/pci/devices/0000:0a:00.0/product":
+                    mock.mock_open(
+                        mock=mock.MagicMock(side_effect=IOError())
+                    )(),
+                }.get(f)
+            )
+        ),
+    )
+    def test_get_pci_ids_io_error_product(self):
+        self.assertRaises(
+            ValueError,
+            utils.get_pci_ids_by_pci_addr,
+            self.pci_address,
+        )

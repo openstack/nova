@@ -58,6 +58,7 @@ Alias = ty.Dict[str, ty.Tuple[str, ty.List[ty.Dict[str, str]]]]
 PCI_NET_TAG = 'physical_network'
 PCI_TRUSTED_TAG = 'trusted'
 PCI_DEVICE_TYPE_TAG = 'dev_type'
+PCI_REMOTE_MANAGED_TAG = 'remote_managed'
 
 DEVICE_TYPE_FOR_VNIC_TYPE = {
     network_model.VNIC_TYPE_DIRECT_PHYSICAL: obj_fields.PciDeviceType.SRIOV_PF,

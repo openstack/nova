@@ -19,11 +19,13 @@ import typing as ty
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import strutils
 
 from nova import exception
 from nova import objects
 from nova.objects import fields
 from nova.objects import pci_device_pool
+from nova.pci.request import PCI_REMOTE_MANAGED_TAG
 from nova.pci import utils
 from nova.pci import whitelist
 
@@ -95,6 +97,24 @@ class PciDeviceStats(object):
 
         return None
 
+    @staticmethod
+    def _ensure_remote_managed_tag(
+            dev: 'objects.PciDevice', pool: Pool):
+        """Add a remote_managed tag depending on a device type if needed.
+
+        Network devices may be managed remotely, e.g. by a SmartNIC DPU. If
+        a tag has not been explicitly provided, populate it by assuming that
+        a device is not remote managed by default.
+        """
+        if dev.dev_type not in (fields.PciDeviceType.SRIOV_VF,
+                                fields.PciDeviceType.SRIOV_PF,
+                                fields.PciDeviceType.VDPA):
+            return
+        if pool.get(PCI_REMOTE_MANAGED_TAG) is None:
+            # NOTE: tags are compared as strings case-insensitively, see
+            # pci_device_prop_match in nova/pci/utils.py.
+            pool[PCI_REMOTE_MANAGED_TAG] = 'false'
+
     def _create_pool_keys_from_dev(
         self, dev: 'objects.PciDevice',
     ) -> ty.Optional[Pool]:
@@ -120,6 +140,9 @@ class PciDeviceStats(object):
         # already in placement.
         if dev.extra_info.get('parent_ifname'):
             pool['parent_ifname'] = dev.extra_info['parent_ifname']
+
+        self._ensure_remote_managed_tag(dev, pool)
+
         return pool
 
     def _get_pool_with_device_type_mismatch(
@@ -458,6 +481,27 @@ class PciDeviceStats(object):
             ]
         return pools
 
+    def _filter_pools_for_unrequested_remote_managed_devices(
+        self, pools: ty.List[Pool], request: 'objects.InstancePCIRequest',
+    ) -> ty.List[Pool]:
+        """Filter out pools with remote_managed devices, unless requested.
+
+        Remote-managed devices are not usable for legacy SR-IOV or hardware
+        offload scenarios and must be excluded from allocation.
+
+        :param pools: A list of PCI device pool dicts
+        :param request: An InstancePCIRequest object describing the type,
+            quantity and required NUMA affinity of device(s) we want.
+        :returns: A list of pools that can be used to support the request if
+            this is possible.
+        """
+        if all(not strutils.bool_from_string(spec.get(PCI_REMOTE_MANAGED_TAG))
+               for spec in request.spec):
+            pools = [pool for pool in pools
+                     if not strutils.bool_from_string(
+                         pool.get(PCI_REMOTE_MANAGED_TAG))]
+        return pools
+
     def _filter_pools(
         self,
         pools: ty.List[Pool],
@@ -544,6 +588,20 @@ class PciDeviceStats(object):
             LOG.debug(
                 'Dropped %d device(s) as they are VDPA devices which we have '
                 'not requested',
+                before_count - after_count
+            )
+
+        # If we're not requesting remote_managed devices then we should not
+        # use these either. Exclude them.
+        before_count = after_count
+        pools = self._filter_pools_for_unrequested_remote_managed_devices(
+            pools, request)
+        after_count = sum([pool['count'] for pool in pools])
+
+        if after_count < before_count:
+            LOG.debug(
+                'Dropped %d device(s) as they are remote-managed devices which'
+                'we have not requested',
                 before_count - after_count
             )
 

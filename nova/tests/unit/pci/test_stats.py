@@ -19,6 +19,7 @@ from oslo_config import cfg
 from nova import exception
 from nova import objects
 from nova.objects import fields
+from nova.pci.request import PCI_REMOTE_MANAGED_TAG
 from nova.pci import stats
 from nova.pci import whitelist
 from nova import test
@@ -466,7 +467,12 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         super(PciDeviceStatsWithTagsTestCase, self).setUp()
         white_list = ['{"vendor_id":"1137","product_id":"0071",'
                         '"address":"*:0a:00.*","physical_network":"physnet1"}',
-                       '{"vendor_id":"1137","product_id":"0072"}']
+                      '{"vendor_id":"1137","product_id":"0072"}',
+                      '{"vendor_id":"15b3","product_id":"101e", '
+                      '"remote_managed": "true"}',
+                      '{"vendor_id":"15b3","product_id":"101c"}',
+                      '{"vendor_id":"15b3","product_id":"1018", '
+                      '"remote_managed": "false"}']
         self.flags(passthrough_whitelist=white_list, group='pci')
         dev_filter = whitelist.Whitelist(white_list)
         self.pci_stats = stats.PciDeviceStats(
@@ -502,10 +508,62 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
             self.pci_untagged_devices.append(objects.PciDevice.create(None,
                                                                       pci_dev))
 
+        self.locally_managed_netdevs = []
+        self.remote_managed_netdevs = []
+        self.remote_managed_netdevs.append(
+            objects.PciDevice.create(
+                None, {
+                    'compute_node_id': 1,
+                    'address': '0000:0c:00.1',
+                    'vendor_id': '15b3',
+                    'product_id': '101e',
+                    'status': 'available',
+                    'request_id': None,
+                    'dev_type': fields.PciDeviceType.SRIOV_VF,
+                    'parent_addr': '0000:0c:00.0',
+                    'numa_node': 0,
+                    "capabilities": {"vpd": {
+                        "card_serial_number": "MT2113X00000"}}
+                }))
+
+        # For testing implicit remote_managed == False tagging.
+        self.locally_managed_netdevs.append(
+            objects.PciDevice.create(
+                None, {
+                    'compute_node_id': 1,
+                    'address': '0000:0d:00.1',
+                    'vendor_id': '15b3',
+                    'product_id': '101c',
+                    'status': 'available',
+                    'request_id': None,
+                    'dev_type': fields.PciDeviceType.SRIOV_VF,
+                    'parent_addr': '0000:0d:00.0',
+                    'numa_node': 0}))
+
+        # For testing explicit remote_managed == False tagging.
+        self.locally_managed_netdevs.append(
+            objects.PciDevice.create(
+                None, {
+                    'compute_node_id': 1,
+                    'address': '0000:0e:00.1',
+                    'vendor_id': '15b3',
+                    'product_id': '1018',
+                    'status': 'available',
+                    'request_id': None,
+                    'dev_type': fields.PciDeviceType.SRIOV_VF,
+                    'parent_addr': '0000:0e:00.0',
+                    'numa_node': 0}))
+
         for dev in self.pci_tagged_devices:
             self.pci_stats.add_device(dev)
 
         for dev in self.pci_untagged_devices:
+            self.pci_stats.add_device(dev)
+
+        for dev in self.remote_managed_netdevs:
+            self.pci_stats.add_device(dev)
+
+        for dev in self.locally_managed_netdevs:
             self.pci_stats.add_device(dev)
 
     def _assertPoolContent(self, pool, vendor_id, product_id, count, **tags):
@@ -520,9 +578,10 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         # Pools are ordered based on the number of keys. 'product_id',
         # 'vendor_id' are always part of the keys. When tags are present,
         # they are also part of the keys. In this test class, we have
-        # two pools with the second one having the tag 'physical_network'
-        # and the value 'physnet1'
-        self.assertEqual(2, len(self.pci_stats.pools))
+        # 5 pools with the second one having the tag 'physical_network'
+        # and the value 'physnet1' and multiple pools for testing
+        # variations of explicit/implicit remote_managed tagging.
+        self.assertEqual(5, len(self.pci_stats.pools))
         self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072',
                                 len(self.pci_untagged_devices))
         self.assertEqual(self.pci_untagged_devices,
@@ -532,6 +591,19 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                                 physical_network='physnet1')
         self.assertEqual(self.pci_tagged_devices,
                          self.pci_stats.pools[1]['devices'])
+        self._assertPoolContent(self.pci_stats.pools[2], '15b3', '101e',
+                                len(self.remote_managed_netdevs),
+                                remote_managed='true')
+        self.assertEqual(self.remote_managed_netdevs,
+                         self.pci_stats.pools[2]['devices'])
+        self._assertPoolContent(self.pci_stats.pools[3], '15b3', '101c', 1,
+                                remote_managed='false')
+        self.assertEqual([self.locally_managed_netdevs[0]],
+                         self.pci_stats.pools[3]['devices'])
+        self._assertPoolContent(self.pci_stats.pools[4], '15b3', '1018', 1,
+                                remote_managed='false')
+        self.assertEqual([self.locally_managed_netdevs[1]],
+                         self.pci_stats.pools[4]['devices'])
 
     def test_add_devices(self):
         self._create_pci_devices()
@@ -543,14 +615,32 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                             spec=[{'physical_network': 'physnet1'}]),
                         objects.InstancePCIRequest(count=1,
                             spec=[{'vendor_id': '1137',
-                                   'product_id': '0072'}])]
+                                   'product_id': '0072'}]),
+                        objects.InstancePCIRequest(count=1,
+                            spec=[{'vendor_id': '15b3',
+                                   'product_id': '101e',
+                                   PCI_REMOTE_MANAGED_TAG: 'True'}]),
+                        objects.InstancePCIRequest(count=1,
+                            spec=[{'vendor_id': '15b3',
+                                   'product_id': '101c',
+                                   PCI_REMOTE_MANAGED_TAG: 'False'}]),
+                        objects.InstancePCIRequest(count=1,
+                            spec=[{'vendor_id': '15b3',
+                                   'product_id': '1018',
+                                   PCI_REMOTE_MANAGED_TAG: 'False'}])]
         devs = self.pci_stats.consume_requests(pci_requests)
-        self.assertEqual(2, len(devs))
-        self.assertEqual(set(['0071', '0072']),
+        self.assertEqual(5, len(devs))
+        self.assertEqual(set(['0071', '0072', '1018', '101e', '101c']),
                          set([dev.product_id for dev in devs]))
         self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072', 2)
         self._assertPoolContent(self.pci_stats.pools[1], '1137', '0071', 3,
                                 physical_network='physnet1')
+        self._assertPoolContent(self.pci_stats.pools[2], '15b3', '101e', 0,
+                                remote_managed='true')
+        self._assertPoolContent(self.pci_stats.pools[3], '15b3', '101c', 0,
+                                remote_managed='false')
+        self._assertPoolContent(self.pci_stats.pools[4], '15b3', '1018', 0,
+                                remote_managed='false')
 
     def test_add_device_no_devspec(self):
         self._create_pci_devices()
@@ -600,7 +690,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         dev1 = self.pci_tagged_devices.pop()
         dev1.dev_type = 'type-PF'
         self.pci_stats.update_device(dev1)
-        self.assertEqual(3, len(self.pci_stats.pools))
+        self.assertEqual(6, len(self.pci_stats.pools))
         self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072',
                                 len(self.pci_untagged_devices))
         self.assertEqual(self.pci_untagged_devices,
@@ -610,11 +700,12 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                                 physical_network='physnet1')
         self.assertEqual(self.pci_tagged_devices,
                          self.pci_stats.pools[1]['devices'])
-        self._assertPoolContent(self.pci_stats.pools[2], '1137', '0071',
+        self._assertPoolContent(self.pci_stats.pools[5], '1137', '0071',
                                 1,
-                                physical_network='physnet1')
+                                physical_network='physnet1',
+                                remote_managed='false')
         self.assertEqual(dev1,
-                         self.pci_stats.pools[2]['devices'][0])
+                         self.pci_stats.pools[5]['devices'][0])
 
 
 class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
@@ -622,7 +713,11 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PciDeviceVFPFStatsTestCase, self).setUp()
         white_list = ['{"vendor_id":"8086","product_id":"1528"}',
-                      '{"vendor_id":"8086","product_id":"1515"}']
+                      '{"vendor_id":"8086","product_id":"1515"}',
+                      '{"vendor_id":"15b3","product_id":"a2d6", '
+                      '"remote_managed": "false"}',
+                      '{"vendor_id":"15b3","product_id":"101e", '
+                      '"remote_managed": "true"}']
         self.flags(passthrough_whitelist=white_list, group='pci')
         self.pci_stats = stats.PciDeviceStats(objects.NUMATopology())
 
@@ -644,6 +739,26 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
             dev_obj.child_devices = []
             self.sriov_pf_devices.append(dev_obj)
 
+        # PF devices for remote_managed VFs.
+        self.sriov_pf_devices_remote = []
+        for dev in range(2):
+            pci_dev = {
+                'compute_node_id': 1,
+                'address': '0001:81:00.%d' % dev,
+                'vendor_id': '15b3',
+                'product_id': 'a2d6',
+                'status': 'available',
+                'request_id': None,
+                'dev_type': fields.PciDeviceType.SRIOV_PF,
+                'parent_addr': None,
+                'numa_node': 0,
+                "capabilities": {"vpd": {
+                    "card_serial_number": "MT2113X00000"}},
+            }
+            dev_obj = objects.PciDevice.create(None, pci_dev)
+            dev_obj.child_devices = []
+            self.sriov_pf_devices_remote.append(dev_obj)
+
         self.sriov_vf_devices = []
         for dev in range(8):
             pci_dev = {
@@ -661,6 +776,25 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
             dev_obj.parent_device = self.sriov_pf_devices[int(dev / 4)]
             dev_obj.parent_device.child_devices.append(dev_obj)
             self.sriov_vf_devices.append(dev_obj)
+
+        self.sriov_vf_devices_remote = []
+        for dev in range(8):
+            pci_dev = {
+                'compute_node_id': 1,
+                'address': '0001:81:10.%d' % dev,
+                'vendor_id': '15b3',
+                'product_id': '101e',
+                'status': 'available',
+                'request_id': None,
+                'dev_type': fields.PciDeviceType.SRIOV_VF,
+                'parent_addr': '0001:81:00.%d' % int(dev / 4),
+                'numa_node': 0,
+                "capabilities": {"vpd": {"card_serial_number": "MT2113X00000"}}
+            }
+            dev_obj = objects.PciDevice.create(None, pci_dev)
+            dev_obj.parent_device = self.sriov_pf_devices_remote[int(dev / 4)]
+            dev_obj.parent_device.child_devices.append(dev_obj)
+            self.sriov_vf_devices_remote.append(dev_obj)
 
         self.vdpa_devices = []
         for dev in range(8):
@@ -683,6 +817,8 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
         list(map(self.pci_stats.add_device, self.sriov_pf_devices))
         list(map(self.pci_stats.add_device, self.sriov_vf_devices))
         list(map(self.pci_stats.add_device, self.vdpa_devices))
+        list(map(self.pci_stats.add_device, self.sriov_pf_devices_remote))
+        list(map(self.pci_stats.add_device, self.sriov_vf_devices_remote))
 
     def test_consume_VDPA_requests(self):
         self._create_pci_devices()
@@ -726,7 +862,8 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
         free_devs = self.pci_stats.get_free_devs()
         # Validate that there are no free devices left, as when allocating
         # both available PFs, its VFs should not be available.
-        self.assertEqual(0, len(free_devs))
+        self.assertEqual(0, len([d for d in free_devs
+                                 if d.product_id == '1515']))
 
     def test_consume_VF_and_PF_requests(self):
         self._create_pci_devices()
@@ -754,3 +891,67 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
         pci_requests = [objects.InstancePCIRequest(count=9,
                             spec=[{'product_id': '1515'}])]
         self.assertIsNone(self.pci_stats.consume_requests(pci_requests))
+
+    def test_consume_PF_not_remote_managed(self):
+        self._create_pci_devices()
+        pci_requests = [objects.InstancePCIRequest(count=2,
+                            spec=[{'product_id': '1528',
+                                   'dev_type': 'type-PF',
+                                   PCI_REMOTE_MANAGED_TAG: 'false'}])]
+        devs = self.pci_stats.consume_requests(pci_requests)
+        self.assertEqual(2, len(devs))
+        self.assertEqual(set(['1528']),
+                            set([dev.product_id for dev in devs]))
+        free_devs = self.pci_stats.get_free_devs()
+        # Validate that there are no free devices left with the
+        # product ID under test, as when allocating both available
+        # PFs, its VFs should not be available.
+        self.assertEqual(0, len([d for d in free_devs
+                                 if d.product_id == '1528']))
+
+    def test_consume_VF_requests_remote_managed(self):
+        self._create_pci_devices()
+        pci_requests = [objects.InstancePCIRequest(count=2,
+                            spec=[{PCI_REMOTE_MANAGED_TAG: 'true'}])]
+        devs = self.pci_stats.consume_requests(pci_requests)
+        self.assertEqual(2, len(devs))
+        self.assertEqual(set(['101e']),
+                            set([dev.product_id for dev in devs]))
+        free_devs = self.pci_stats.get_free_devs()
+        # Validate that the parents of these VFs has been removed
+        # from pools.
+        for dev in devs:
+            self.assertNotIn(dev.parent_addr,
+                             [free_dev.address for free_dev in free_devs])
+
+    def test_consume_VF_requests_remote_managed_filtered(self):
+        self._create_pci_devices()
+        pci_requests = [objects.InstancePCIRequest(count=1,
+                            spec=[{'product_id': '101e',
+                                   PCI_REMOTE_MANAGED_TAG: 'false'}]),
+                        objects.InstancePCIRequest(count=1,
+                            spec=[{'product_id': '101e'}])]
+        free_devs_before = self.pci_stats.get_free_devs()
+        devs = self.pci_stats.consume_requests(pci_requests)
+        self.assertIsNone(devs)
+        free_devs_after = self.pci_stats.get_free_devs()
+        self.assertEqual(free_devs_before, free_devs_after)
+
+    def test_consume_VF_requests_remote_managed_mix(self):
+        self._create_pci_devices()
+        pci_requests = [objects.InstancePCIRequest(count=1,
+                            spec=[{'product_id': '101e',
+                                   PCI_REMOTE_MANAGED_TAG: 'true'}]),
+                        objects.InstancePCIRequest(count=1,
+                            spec=[{'product_id': '1515',
+                                   PCI_REMOTE_MANAGED_TAG: 'false'}])]
+        devs = self.pci_stats.consume_requests(pci_requests)
+        self.assertEqual(2, len(devs))
+        self.assertEqual(set(['101e', '1515']),
+                            set([dev.product_id for dev in devs]))
+        free_devs = self.pci_stats.get_free_devs()
+        # Validate that the parents of these VFs has been removed
+        # from pools.
+        for dev in devs:
+            self.assertNotIn(dev.parent_addr,
+                             [free_dev.address for free_dev in free_devs])

@@ -1565,6 +1565,16 @@ class PciRequestFromVIFNotFound(NotFound):
                 "PCI address: %(pci_slot)s on compute node: %(node_id)s")
 
 
+class PciDeviceRemoteManagedNotPresent(NovaException):
+    msg_fmt = _('Invalid PCI Whitelist: A device specified as "remote_managed"'
+                ' is not actually present on the host')
+
+
+class PciDeviceInvalidPFRemoteManaged(NovaException):
+    msg_fmt = _('Invalid PCI Whitelist: PFs must not have the "remote_managed"'
+                'tag, device address: %(address)s')
+
+
 # Cannot be templated, msg needs to be constructed when raised.
 class InternalError(NovaException):
     """Generic hypervisor errors.
