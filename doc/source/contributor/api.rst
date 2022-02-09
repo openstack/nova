@@ -1,23 +1,38 @@
 Extending the API
 =================
 
-Background
-----------
+.. note::
+
+    This document provides general background information on how one can extend
+    the REST API in nova. For information on the microversion support including
+    how to add new microversions, see :doc:`/contributor/microversions`. For
+    information on how to use the API, refer to the `API guide`__ and `API
+    reference guide`__.
+
+    .. __: https://docs.openstack.org/api-guide/compute/
+    .. __: https://docs.openstack.org/api-ref/compute/
+
+Nova's API is a mostly RESTful API. REST stands for *Representational State
+Transfer* and provides an architecture "style" for distributed systems using
+HTTP for transport. Figure out a way to express your request and response in
+terms of resources that are being created, modified, read, or destroyed.
 
 Nova has v2.1 API frameworks which supports microversions.
-
 This document covers how to add API for the v2.1 API framework. A
-:doc:`microversions specific document <microversions>` covers the details
+:doc:`microversions-specific document <microversions>` covers the details
 around what is required for the microversions part.
 
 The v2.1 API framework is under ``nova/api`` and each API is implemented in
 ``nova/api/openstack/compute``.
 
-Note that any change to the Nova API to be merged will first require a
-spec be approved first. See `here <https://opendev.org/openstack/nova-specs>`_
-for the appropriate repository. For guidance on the design of the API
-please refer to the `OpenStack API WG
-<https://wiki.openstack.org/wiki/API_Working_Group>`_
+.. note::
+
+    Any change to the Nova API to be merged will first require a spec be
+    approved first.
+    See `here <https://opendev.org/openstack/nova-specs>`_ for the appropriate
+    repository.
+    For guidance on the design of the API please refer to the `OpenStack API WG
+    <https://wiki.openstack.org/wiki/API_Working_Group>`_
 
 
 Basic API Controller
@@ -25,7 +40,9 @@ Basic API Controller
 
 API controller includes the implementation of API methods for a resource.
 
-A very basic controller of a v2.1 API::
+A very basic controller of a v2.1 API:
+
+.. code-block:: python
 
     """Basic Controller"""
 
@@ -51,6 +68,8 @@ A very basic controller of a v2.1 API::
 
         # Defining support for other RESTFul methods based on resource.
 
+        # ...
+
 
 See `servers.py <https://opendev.org/openstack/nova/src/branch/master/nova/api/openstack/compute/servers.py>`_ for ref.
 
@@ -63,7 +82,9 @@ The URL mapping is based on the plain list which routes the API request to
 appropriate controller and method. Each API needs to add its route information
 in ``nova/api/openstack/compute/routes.py``.
 
-A basic skeleton of URL mapping in routers.py::
+A basic skeleton of URL mapping in ``routers.py``:
+
+.. code-block:: python
 
     """URL Mapping Router List"""
 
@@ -74,7 +95,8 @@ A basic skeleton of URL mapping in routers.py::
 
     # Create a controller object
     basic_controller = functools.partial(
-        _create_controller, basic_api.BasicController, [], [])
+        _create_controller, basic_api.BasicController, [], [],
+    )
 
     # Routing list structure:
     # (
@@ -88,20 +110,16 @@ A basic skeleton of URL mapping in routers.py::
     #     ...
     # )
     ROUTE_LIST = (
-        .
-        .
-        .
+        # ...
         ('/basic', {
             'GET': [basic_controller, 'index'],
             'POST': [basic_controller, 'create']
         }),
-        .
-        .
-        .
+        # ...
     )
 
-Complete routing list can be found in `routes.py <https://opendev.org/openstack/nova/src/branch/master/nova/api/openstack/compute/routes.py>`_.
-
+Complete routing list can be found in `routes.py
+<https://opendev.org/openstack/nova/src/branch/master/nova/api/openstack/compute/routes.py>`_.
 
 Policy
 ~~~~~~
@@ -113,7 +131,7 @@ Modularity
 ~~~~~~~~~~
 
 The Nova REST API is separated into different controllers in the directory
-'nova/api/openstack/compute/'
+``nova/api/openstack/compute/``.
 
 Because microversions are supported in the Nova REST API, the API can be
 extended without any new controller. But for code readability, the Nova REST API
@@ -140,39 +158,13 @@ JSON-Schema
 
 The v2.1 API validates a REST request body with JSON-Schema library.
 Valid body formats are defined with JSON-Schema in the directory
-'nova/api/openstack/compute/schemas'. Each definition is used at the
-corresponding method with the ``validation.schema`` decorator like::
+``nova/api/openstack/compute/schemas``. Each definition is used at the
+corresponding method with the ``validation.schema`` decorator like:
+
+.. code-block:: python
 
     @validation.schema(schema.update_something)
-    def update(self, req, id, body):
-        ....
-
-Similarly to controller modularity, JSON-Schema definitions can be added
-in same or separate JSON-Schema module.
-
-The following are the combinations of extensible API and method name
-which returns additional JSON-Schema parameters:
-
-* Create a server API  - get_server_create_schema()
-
-For example, keypairs extension(Keypairs class) contains the method
-get_server_create_schema() which returns::
-
-    {
-        'key_name': parameter_types.name,
-    }
-
-then the parameter key_name is allowed on Create a server API.
-
-.. note:: Currently only create schema are implemented in modular way.
-          Final goal is to merge them all and define the concluded
-          process in this doc.
-
-These are essentially hooks into the servers controller which allow other
-controller to modify behaviour without having to modify servers.py. In
-the past not having this capability led to very large chunks of
-unrelated code being added to servers.py which was difficult to
-maintain.
+        def update(self, req, id, body):
 
 
 Unit Tests
@@ -187,7 +179,7 @@ Negative tests would include such things as:
 
 * Request schema validation failures, for both the request body and query
   parameters
-* HTTPNotFound or other >=400 response code failures
+* ``HTTPNotFound`` or other >=400 response code failures
 
 
 Functional tests and API Samples
@@ -203,6 +195,7 @@ The API samples tests are made of two parts:
   ``doc/api_samples/``. There is typically one directory per API controller
   with subdirectories per microversion for that API controller. The unversioned
   samples are used for the base v2.0 / v2.1 APIs.
+
 * Corresponding API sample templates found under path
   ``nova/tests/functional/api_sample_tests/api_samples``. These have a similar
   structure to the API reference docs samples, except the format of the sample
@@ -220,7 +213,7 @@ need to be made.
 
 Note that it is possible to automatically generate the API reference doc
 samples using the templates by simply running the tests using
-``tox -r -e api-samples``. This relies, of course, upon the test and templates
+``tox -e api-samples``. This relies, of course, upon the test and templates
 being correct for the test to pass, which may take some iteration.
 
 In general, if you are adding a new microversion to an existing API controller,
@@ -228,7 +221,7 @@ it is easiest to simply copy an existing test and modify it for the new
 microversion and the new samples/templates.
 
 The functional API samples tests are not the simplest thing in the world to
-get used to, and can be very frustrating at times when they fail in not
+get used to and it can be very frustrating at times when they fail in not
 obvious ways. If you need help debugging a functional API sample test failure,
 feel free to post your work-in-progress change for review and ask for help in
 the ``openstack-nova`` OFTC IRC channel.
@@ -270,11 +263,13 @@ The general steps for deprecating a REST API are:
 
 * Set a maximum allowed microversion for the route. Requests beyond that
   microversion on that route will result in a ``404 HTTPNotFound`` error.
+
 * Update the Compute API reference documentation to indicate the route is
   deprecated and move it to the bottom of the list with the other deprecated
   APIs.
+
 * Deprecate, and eventually remove, related CLI / SDK functionality in other
-  projects like python-novaclient.
+  projects like *python-novaclient*.
 
 
 Removing deprecated APIs
@@ -294,15 +289,20 @@ The general steps for removing support for a deprecated REST API are:
   microversion that does not support a deprecated API. 410 means the resource
   is gone and not coming back, which is more appropriate when the API is
   fully removed and will not work at any microversion.
+
 * Related configuration options, policy rules, and schema validation are
   removed.
+
 * The API reference documentation should be updated to move the documentation
   for the removed API to the `Obsolete APIs`_ section and mention in which
   release the API was removed.
+
 * Unit tests can be removed.
+
 * API sample functional tests can be changed to assert the 410 response
   behavior, but can otherwise be mostly gutted. Related \*.tpl files for the
   API sample functional tests can be deleted since they will not be used.
+
 * An "upgrade" :doc:`release note <releasenotes>` should be added to mention
   the REST API routes that were removed along with any related configuration
   options that were also removed.

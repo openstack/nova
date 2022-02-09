@@ -1,4 +1,4 @@
-redirectmatch 301 ^/nova/([^/]+)/addmethod.openstackapi.html$ /nova/$1/contributor/api-2.html
+redirectmatch 301 ^/nova/([^/]+)/addmethod.openstackapi.html$ /nova/$1/contributor/api.html
 redirectmatch 301 ^/nova/([^/]+)/admin/flavors2.html$ /nova/$1/admin/flavors.html
 redirectmatch 301 ^/nova/([^/]+)/admin/numa.html$ /nova/$1/admin/cpu-topologies.html
 redirectmatch 301 ^/nova/([^/]+)/admin/quotas2.html$ /nova/$1/admin/quotas.html
@@ -85,3 +85,4 @@ redirectmatch 301 ^/nova/([^/]+)/admin/system-admin.html$ /nova/$1/admin/index.h
 redirectmatch 301 ^/nova/([^/]+)/admin/port_with_resource_request.html$ /nova/$1/admin/ports-with-resource-requests.html
 redirectmatch 301 ^/nova/([^/]+)/admin/manage-users.html$ /nova/$1/admin/architecture.html
 redirectmatch 301 ^/nova/([^/]+)/admin/mitigation-for-Intel-MDS-security-flaws.html /nova/$1/admin/cpu-models.html
+redirectmatch 301 ^/nova/([^/]+)/contributor/api-2.html$ /nova/$1/contributor/api.html
