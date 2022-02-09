@@ -1126,6 +1126,28 @@ class ResourceTracker(object):
             LOG.error('Unable to find services table record for nova-compute '
                       'host %s', self.host)
 
+    def _should_expose_remote_managed_ports_trait(self,
+                                                  is_supported: bool):
+        """Determine whether COMPUTE_REMOTE_MANAGED_PORTS should be exposed.
+
+        Determines if the COMPUTE_REMOTE_MANAGED_PORTS trait needs to be
+        exposed based on the respective compute driver capability and
+        the presence of remote managed devices on a given host. Whether such
+        devices are present or not depends on the Whitelist configuration
+        (presence of a remote_managed tag association with some PCI devices)
+        and their physical presence (plugged in, enumerated by the OS).
+
+        The aim of having this check is to optimize host lookup by prefiltering
+        hosts that have compute driver support but no hardware. The check
+        does not consider free device count - just the presence of device
+        pools since device availability may change between a prefilter check
+        and a later check in PciPassthroughFilter.
+
+        :param bool is_supported: Is the trait supported by the compute driver
+        """
+        return (is_supported and
+            self.pci_tracker.pci_stats.has_remote_managed_device_pools())
+
     def _get_traits(self, context, nodename, provider_tree):
         """Synchronizes internal and external traits for the node provider.
 
@@ -1149,7 +1171,11 @@ class ResourceTracker(object):
         # traits that are missing, and remove any existing set traits
         # that are not currently supported.
         for trait, supported in self.driver.capabilities_as_traits().items():
-            if supported:
+            add_trait = supported
+            if trait == os_traits.COMPUTE_REMOTE_MANAGED_PORTS:
+                add_trait &= self._should_expose_remote_managed_ports_trait(
+                    supported)
+            if add_trait:
                 traits.add(trait)
             elif trait in traits:
                 traits.remove(trait)

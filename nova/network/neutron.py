@@ -2183,6 +2183,27 @@ class API:
             # the port binding profile and we can handle it as a boolean.
             return strutils.bool_from_string(value)
 
+    @staticmethod
+    def _is_remote_managed(vnic_type):
+        """Determine if the port is remote_managed or not by VNIC type.
+
+        :param str vnic_type: The VNIC type to assess.
+        :return: A boolean indicator whether the NIC is remote managed or not.
+        :rtype: bool
+        """
+        return vnic_type == network_model.VNIC_TYPE_REMOTE_MANAGED
+
+    def is_remote_managed_port(self, context, port_id):
+        """Determine if a port has a REMOTE_MANAGED VNIC type.
+
+        :param context: The request context
+        :param port_id: The id of the Neutron port
+        """
+        port = self.show_port(context, port_id)['port']
+        return self._is_remote_managed(
+            port.get('binding:vnic_type', network_model.VNIC_TYPE_NORMAL)
+        )
+
     # NOTE(sean-k-mooney): we might want to have this return a
     # nova.network.model.VIF object instead in the future.
     def _get_port_vnic_info(self, context, neutron, port_id):

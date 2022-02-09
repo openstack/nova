@@ -1577,15 +1577,28 @@ class TestUpdateComputeNode(BaseTestCase):
         self.rt._update(mock.sentinel.ctx, new_compute)
         save_mock.assert_called_once_with()
 
+    @mock.patch(
+        'nova.pci.stats.PciDeviceStats.has_remote_managed_device_pools',
+        return_value=True)
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait')
-    def test_existing_node_capabilities_as_traits(self, mock_sync_disabled):
+    def test_existing_node_capabilities_as_traits(
+        self, mock_sync_disabled, mock_has_remote_managed_device_pools):
         """The capabilities_as_traits() driver method returns traits
         information for a node/provider.
         """
         self._setup_rt()
         rc = self.rt.reportclient
         rc.set_traits_for_provider = mock.MagicMock()
+
+        # TODO(dmitriis): Remove once the PCI tracker is always created
+        # upon the resource tracker initialization.
+        with mock.patch.object(
+            objects.PciDeviceList, 'get_by_compute_node',
+            return_value=objects.PciDeviceList()
+        ):
+            self.rt.pci_tracker = pci_manager.PciDevTracker(
+                mock.sentinel.ctx, _COMPUTE_NODE_FIXTURES[0])
 
         # Emulate a driver that has implemented the update_from_provider_tree()
         # virt driver method
