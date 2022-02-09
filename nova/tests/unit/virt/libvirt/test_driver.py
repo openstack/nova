@@ -19214,8 +19214,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         instance = objects.Instance(**self.test_instance)
         instance.vm_state = vm_states.BUILDING
-        vifs = [{'id': uuids.vif_1, 'active': False},
-                {'id': uuids.vif_2, 'active': False}]
+        vifs = [
+            network_model.VIF(id=uuids.vif_1, active=False),
+            network_model.VIF(id=uuids.vif_2, active=False)
+        ]
 
         @mock.patch.object(drvr, 'plug_vifs')
         @mock.patch.object(drvr, '_create_guest')
@@ -19411,6 +19413,23 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         network_model.VIF(id='2', active=True)]
         events = drvr._get_neutron_events(network_info)
         self.assertEqual([('network-vif-plugged', '1')], events)
+
+    def test_get_neutron_events_remote_managed(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        network_info = [
+            network_model.VIF(
+                id=uuids.vif_1,
+                vnic_type=network_model.VNIC_TYPE_REMOTE_MANAGED),
+            network_model.VIF(
+                id=uuids.vif_2,
+                vnic_type=network_model.VNIC_TYPE_REMOTE_MANAGED,
+                active=True),
+        ]
+        events = drvr._get_neutron_events(network_info)
+        # For VNIC_TYPE_REMOTE_MANAGED events are only bind-time currently.
+        # Until this changes, they need to be filtered out to avoid waiting
+        # for them unnecessarily.
+        self.assertEqual([], events)
 
     def test_unplug_vifs_ignores_errors(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())

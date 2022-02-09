@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 60
+SERVICE_VERSION = 61
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -212,6 +212,9 @@ SERVICE_VERSION_HISTORY = (
     # Version 60: Compute RPC v6.0:
     # Add support for interface attach operation with neutron extended resource
     # request
+    {'compute_rpc': '6.0'},
+    # Version 61: Compute RPC v6.0:
+    # Add support for remotely-managed ports (vnic-type 'remote-managed')
     {'compute_rpc': '6.0'},
 )
 

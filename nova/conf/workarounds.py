@@ -313,6 +313,7 @@ use outside of a CI or developer cloud.
                         "vdpa",
                         "accelerator-direct",
                         "accelerator-direct-physical",
+                        "remote-managed",
                     ]),
                 default=[],
                 help="""
@@ -336,6 +337,7 @@ during hard reboot. The possible values are neutron port vnic types:
 * vdpa
 * accelerator-direct
 * accelerator-direct-physical
+* remote-managed
 
 Adding a ``vnic_type`` to this configuration makes Nova wait for a
 network-vif-plugged event for each of the instance's vifs having the specific

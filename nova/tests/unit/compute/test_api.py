@@ -206,6 +206,10 @@ class _ComputeAPIUnitTestMixIn(object):
         list_obj.obj_reset_changes()
         return list_obj
 
+    @mock.patch(
+        'nova.network.neutron.API.is_remote_managed_port',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.conductor.conductor_api.ComputeTaskAPI.build_instances')
     @mock.patch('nova.compute.api.API._record_action_start')
@@ -7240,6 +7244,37 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(device_profile='smartnic1')])
         self.compute_api._check_support_vnic_accelerator(self.context,
+            requested_networks)
+        mock_get.assert_called_once_with(self.context, ['nova-compute'])
+
+    @mock.patch(
+        'nova.network.neutron.API.is_remote_managed_port',
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=60)
+    def test_check_support_vnic_remote_managed_version_before_61(
+            self, mock_get):
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=uuids.port)])
+        self.assertRaisesRegex(exception.ForbiddenWithRemoteManagedPorts,
+            'Remote-managed ports are not supported until an upgrade is fully'
+            ' finished.',
+            self.compute_api._check_support_vnic_remote_managed,
+            self.context,
+            requested_networks)
+        mock_get.assert_called_once_with(self.context, ['nova-compute'])
+
+    @mock.patch(
+        'nova.network.neutron.API.is_remote_managed_port',
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=61)
+    def test_check_support_vnic_remote_managed_version_61(self, mock_get):
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=uuids.port)])
+        self.compute_api._check_support_vnic_remote_managed(self.context,
             requested_networks)
         mock_get.assert_called_once_with(self.context, ['nova-compute'])
 

@@ -178,6 +178,7 @@ class InterfaceAttachmentController(wsgi.Controller):
                 exception.InterfaceAttachPciClaimFailed,
                 exception.InterfaceAttachResourceAllocationFailed,
                 exception.ForbiddenPortsWithAccelerator,
+                exception.ForbiddenWithRemoteManagedPorts,
                 exception.ExtendedResourceRequestOldCompute,
                 ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())

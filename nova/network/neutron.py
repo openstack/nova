@@ -2375,7 +2375,13 @@ class API:
                 # libvirt to expose the nic feature. At the moment
                 # there is a limitation that deployers cannot use both
                 # SR-IOV modes (legacy and ovs) in the same deployment.
-                spec = {pci_request.PCI_NET_TAG: physnet}
+                spec = {
+                    pci_request.PCI_NET_TAG: physnet,
+                    # Convert the value to string since tags are compared as
+                    # string values case-insensitively.
+                    pci_request.PCI_REMOTE_MANAGED_TAG:
+                    str(self._is_remote_managed(vnic_type)),
+                }
                 dev_type = pci_request.DEVICE_TYPE_FOR_VNIC_TYPE.get(vnic_type)
                 if dev_type:
                     spec[pci_request.PCI_DEVICE_TYPE_TAG] = dev_type

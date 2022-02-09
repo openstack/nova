@@ -6197,7 +6197,8 @@ class TestAPI(TestAPIBase):
                 objects.NetworkRequest(port_id=uuids.portid_4),
                 objects.NetworkRequest(port_id=uuids.portid_5),
                 objects.NetworkRequest(port_id=uuids.trusted_port),
-                objects.NetworkRequest(port_id=uuids.portid_vdpa)])
+                objects.NetworkRequest(port_id=uuids.portid_vdpa),
+                objects.NetworkRequest(port_id=uuids.portid_remote_managed)])
         pci_requests = objects.InstancePCIRequests(requests=[])
         # _get_port_vnic_info should be called for every NetworkRequest with a
         # port_id attribute (so six times)
@@ -6211,13 +6212,14 @@ class TestAPI(TestAPIBase):
             (model.VNIC_TYPE_DIRECT, True, 'netN',
              mock.sentinel.resource_request2, None, None),
             (model.VNIC_TYPE_VDPA, None, 'netN', None, None, None),
+            (model.VNIC_TYPE_REMOTE_MANAGED, None, 'netN', None, None, None),
         ]
         # _get_physnet_tunneled_info should be called for every NetworkRequest
         # (so seven times)
         mock_get_physnet_tunneled_info.side_effect = [
             ('physnet1', False), ('physnet1', False), ('', True),
             ('physnet1', False), ('physnet2', False), ('physnet3', False),
-            ('physnet4', False), ('physnet1', False)
+            ('physnet4', False), ('physnet1', False), ('physnet1', False),
         ]
         api = neutronapi.API()
 
@@ -6234,13 +6236,16 @@ class TestAPI(TestAPIBase):
                 mock.sentinel.request_group1,
                 mock.sentinel.request_group2],
             port_resource_requests)
-        self.assertEqual(6, len(pci_requests.requests))
+        self.assertEqual(7, len(pci_requests.requests))
         has_pci_request_id = [net.pci_request_id is not None for net in
                               requested_networks.objects]
         self.assertEqual(pci_requests.requests[3].spec[0]["dev_type"],
                          "type-PF")
         self.assertEqual(pci_requests.requests[5].spec[0]["dev_type"], "vdpa")
-        expected_results = [True, False, False, True, True, True, True, True]
+        self.assertEqual(pci_requests.requests[6].spec[0]["remote_managed"],
+                         'True')
+        expected_results = [True, False, False, True, True, True, True, True,
+                            True]
         self.assertEqual(expected_results, has_pci_request_id)
         # Make sure only the trusted VF has the 'trusted' tag set in the spec.
         for pci_req in pci_requests.requests:
@@ -6252,11 +6257,23 @@ class TestAPI(TestAPIBase):
             else:
                 self.assertNotIn(pci_request.PCI_TRUSTED_TAG, spec)
 
+        # Only remote-managed ports must have the remote_managed tag set
+        # to True.
+        for pci_req in pci_requests.requests:
+            spec = pci_req.spec[0]
+            if pci_req.requester_id == uuids.portid_remote_managed:
+                self.assertEqual('True',
+                                 spec[pci_request.PCI_REMOTE_MANAGED_TAG])
+            else:
+                self.assertEqual('False',
+                                 spec[pci_request.PCI_REMOTE_MANAGED_TAG])
+
         # Only SRIOV ports and those with a resource_request will have
         # pci_req.requester_id.
         self.assertEqual(
             [uuids.portid_1, uuids.portid_3, uuids.portid_4, uuids.portid_5,
-             uuids.trusted_port, uuids.portid_vdpa],
+             uuids.trusted_port, uuids.portid_vdpa,
+             uuids.portid_remote_managed],
             [pci_req.requester_id for pci_req in pci_requests.requests])
 
         self.assertCountEqual(

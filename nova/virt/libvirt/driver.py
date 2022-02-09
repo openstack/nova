@@ -7232,7 +7232,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # anything that might be stale (cache-wise) assume it's
         # already up so we don't block on it.
         return [('network-vif-plugged', vif['id'])
-                for vif in network_info if vif.get('active', True) is False]
+                for vif in network_info if vif.get('active', True) is False and
+                vif['vnic_type'] != network_model.VNIC_TYPE_REMOTE_MANAGED]
 
     def _create_guest_with_network(
         self,

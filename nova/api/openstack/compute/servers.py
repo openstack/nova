@@ -862,6 +862,7 @@ class ServersController(wsgi.Controller):
                 exception.DeviceProfileError,
                 exception.ComputeHostNotFound,
                 exception.ForbiddenPortsWithAccelerator,
+                exception.ForbiddenWithRemoteManagedPorts,
                 exception.ExtendedResourceRequestOldCompute,
                 ) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
