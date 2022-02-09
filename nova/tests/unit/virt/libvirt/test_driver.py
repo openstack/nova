@@ -21530,6 +21530,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           context.get_admin_context(), ins_ref, '10.0.0.2',
                           flavor_obj, None)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_cleanup_failed_instance_base')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unplug_vifs')
     @mock.patch('nova.virt.libvirt.utils.save_and_migrate_vtpm_dir')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
@@ -21546,7 +21548,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self, ctxt, flavor_obj, mock_execute, mock_exists, mock_rename,
             mock_is_shared, mock_get_host_ip, mock_destroy,
             mock_get_disk_info, mock_vtpm, mock_unplug_vifs,
-            block_device_info=None, params_for_instance=None):
+            mock_cleanup, block_device_info=None, params_for_instance=None):
         """Test for nova.virt.libvirt.driver.LivirtConnection
         .migrate_disk_and_power_off.
         """
@@ -21561,6 +21563,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                ctxt, instance, '10.0.0.2', flavor_obj, None,
                block_device_info=block_device_info)
 
+        mock_cleanup.assert_called_once()
+        mock_cleanup.reset_mock()
         self.assertEqual(out, disk_info_text)
         mock_vtpm.assert_called_with(
             instance.uuid, mock.ANY, mock.ANY, '10.0.0.2', mock.ANY, mock.ANY)
@@ -21571,6 +21575,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                ctxt, instance, '10.0.0.1', flavor_obj, None,
                block_device_info=block_device_info)
 
+        mock_cleanup.assert_called_once()
         self.assertEqual(out, disk_info_text)
         mock_vtpm.assert_called_with(
             instance.uuid, mock.ANY, mock.ANY, '10.0.0.1', mock.ANY, mock.ANY)
@@ -22468,8 +22473,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             self.assertFalse(drvr.image_backend.remove_snap.called)
 
     @mock.patch.object(shutil, 'rmtree')
-    def test_cleanup_failed_migration(self, mock_rmtree):
-        self.drvr._cleanup_failed_migration('/fake/inst')
+    def test_cleanup_failed_instance_base(self, mock_rmtree):
+        self.drvr._cleanup_failed_instance_base('/fake/inst')
         mock_rmtree.assert_called_once_with('/fake/inst')
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_cleanup_resize')
