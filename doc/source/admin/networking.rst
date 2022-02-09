@@ -206,10 +206,10 @@ virtio-net Multiqueue
 
 .. versionadded:: 12.0.0 (Liberty)
 
-.. versionchanged:: 24.0.0 (Xena)
+.. versionchanged:: 25.0.0 (Yoga)
 
    Support for configuring multiqueue via the ``hw:vif_multiqueue_enabled``
-   flavor extra spec was introduced in the Xena (24.0.0) release.
+   flavor extra spec was introduced in the Yoga (25.0.0) release.
 
 .. important::
 
