@@ -164,6 +164,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         "supports_trusted_certs": False,
         "supports_pcpus": False,
         "supports_accelerators": False,
+        "supports_remote_managed_ports": False,
 
         # Image type support flags
         "supports_image_type_aki": False,

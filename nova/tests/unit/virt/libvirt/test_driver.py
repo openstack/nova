@@ -885,6 +885,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         )
         mock_supports.assert_called_once_with()
 
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, '_register_instance_machine_type',
+        new=mock.Mock())
+    @mock.patch.object(
+        host.Host, 'supports_remote_managed_ports',
+        new_callable=mock.PropertyMock)
+    def test_driver_capabilities_remote_managed_ports(self, mock_supports):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.init_host("dummyhost")
+        self.assertTrue(
+            drvr.capabilities['supports_remote_managed_ports'],
+            "Driver capabilities for 'supports_remote_managed_ports' "
+            "is invalid when host should support this feature"
+        )
+        mock_supports.assert_called_once_with()
+
     def test_driver_raises_on_non_linux_platform(self):
         with utils.temporary_mutation(sys, platform='darwin'):
             self.assertRaises(

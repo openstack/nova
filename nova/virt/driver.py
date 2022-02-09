@@ -126,6 +126,7 @@ CAPABILITY_TRAITS_MAP = {
     "supports_secure_boot": os_traits.COMPUTE_SECURITY_UEFI_SECURE_BOOT,
     "supports_socket_pci_numa_affinity":
         os_traits.COMPUTE_SOCKET_PCI_NUMA_AFFINITY,
+    "supports_remote_managed_ports": os_traits.COMPUTE_REMOTE_MANAGED_PORTS,
 }
 
 
@@ -194,6 +195,7 @@ class ComputeDriver(object):
         "supports_vtpm": False,
         "supports_secure_boot": False,
         "supports_socket_pci_numa_affinity": False,
+        "supports_remote_managed_ports": False,
 
         # Image type support flags
         "supports_image_type_aki": False,

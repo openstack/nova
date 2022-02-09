@@ -46,6 +46,7 @@ class ZVMDriver(driver.ComputeDriver):
     """z/VM implementation of ComputeDriver."""
     capabilities = {
         "supports_pcpus": False,
+        "supports_remote_managed_ports": False,
 
         # Image type support flags
         "supports_image_type_aki": False,

@@ -110,6 +110,10 @@ class PciDeviceStats(object):
                                 fields.PciDeviceType.SRIOV_PF,
                                 fields.PciDeviceType.VDPA):
             return
+
+        # A tag is added here rather than at the client side to avoid an
+        # issue with having objects without this tag specified during an
+        # upgrade to the first version that supports handling this tag.
         if pool.get(PCI_REMOTE_MANAGED_TAG) is None:
             # NOTE: tags are compared as strings case-insensitively, see
             # pci_device_prop_match in nova/pci/utils.py.
