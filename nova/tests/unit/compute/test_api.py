@@ -521,6 +521,36 @@ class _ComputeAPIUnitTestMixIn(object):
                                                 instance, fake_bdm)
 
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(
+        objects.BlockDeviceMapping, 'get_by_volume_and_instance')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_volume')
+    def test_attach_volume_reserve_bdm_timeout(
+            self, mock_get_by_volume, mock_get_by_volume_and_instance,
+            mock_reserve):
+        mock_get_by_volume.side_effect = exception.VolumeBDMNotFound(
+            volume_id='fake-volume-id')
+
+        fake_bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
+        mock_get_by_volume_and_instance.return_value = fake_bdm
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        mock_reserve.side_effect = oslo_exceptions.MessagingTimeout()
+
+        mock_volume_api = mock.patch.object(self.compute_api, 'volume_api',
+                                            mock.MagicMock(spec=cinder.API))
+
+        with mock_volume_api as mock_v_api:
+            mock_v_api.get.return_value = volume
+            self.assertRaises(oslo_exceptions.MessagingTimeout,
+                                self.compute_api.attach_volume,
+                                self.context, instance, volume['id'])
+            mock_get_by_volume_and_instance.assert_called_once_with(
+                self.context, volume['id'], instance.uuid)
+            fake_bdm.destroy.assert_called_once_with()
+
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_volume')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
     def test_attach_volume_attachment_create_fails(
