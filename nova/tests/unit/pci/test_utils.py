@@ -239,7 +239,7 @@ class GetVfNumByPciAddressTestCase(test.NoDBTestCase):
         mock_iglob.return_value = self.paths
         mock_readlink.return_value = '../../0000:00:00.1'
         vf_num = utils.get_vf_num_by_pci_address(self.pci_address)
-        self.assertEqual(vf_num, '3')
+        self.assertEqual(vf_num, 3)
 
     @mock.patch.object(os, 'readlink')
     @mock.patch.object(glob, 'iglob')

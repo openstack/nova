@@ -191,7 +191,7 @@ def get_mac_by_pci_address(pci_addr: str, pf_interface: bool = False) -> str:
         raise exception.PciDeviceNotFoundById(id=pci_addr)
 
 
-def get_vf_num_by_pci_address(pci_addr: str) -> str:
+def get_vf_num_by_pci_address(pci_addr: str) -> int:
     """Get the VF number based on a VF's pci address
 
     A VF is associated with an VF number, which ip link command uses to
@@ -210,4 +210,4 @@ def get_vf_num_by_pci_address(pci_addr: str) -> str:
     else:
         raise exception.PciDeviceNotFoundById(id=pci_addr)
 
-    return vf_num
+    return int(vf_num)
