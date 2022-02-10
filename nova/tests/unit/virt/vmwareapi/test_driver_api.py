@@ -2628,7 +2628,8 @@ class VMwareAPIVMTestCase(test.TestCase,
         # currently there are 2 data stores
         self.assertEqual(2, len(ds_util._DS_DC_MAPPING))
 
-    def _create_live_migrate_data(self):
+    def _create_live_migrate_data(self, source_compute=None,
+                                  dest_compute=None):
         data = objects.migrate_data.VMwareLiveMigrateData()
 
         data.dest_cluster_ref = "cluster-0"
@@ -2664,6 +2665,11 @@ class VMwareAPIVMTestCase(test.TestCase,
                 }
             }
         }
+        migration = objects.Migration(
+            source_compute=source_compute,
+            dest_compute=dest_compute,
+        )
+        data.migration = migration
 
         return data
 
@@ -2703,8 +2709,7 @@ class VMwareAPIVMTestCase(test.TestCase,
     @mock.patch.object(vim_util, 'deserialize_object')
     @mock.patch.object(volumeops.VMwareVolumeOps,
         'map_volumes_to_devices', returns=[])
-    @mock.patch.object(driver.VMwareVCDriver, '_create_dest_session')
-    def test_live_migration(self, create_dest_session, volumes_to_devices,
+    def test_live_migration(self, volumes_to_devices,
                             deserialize_object,
                             get_hardware_devices, relocate_vm):
         self._create_instance()
@@ -2727,12 +2732,11 @@ class VMwareAPIVMTestCase(test.TestCase,
         post_method.assert_called()
         recover_method.assert_not_called()
 
-    @mock.patch.object(driver.VMwareVCDriver, '_create_dest_session')
     @mock.patch.object(volumeops.VMwareVolumeOps,
         'map_volumes_to_devices', returns=[])
     @mock.patch.object(vmops.VMwareVMOps,
         'live_migration', side_effect=test.TestingException)
-    def test_live_migration_failure_rollback(self, create_dest_session,
+    def test_live_migration_failure_rollback(self,
                     mock_live_migration,
                     volumes_to_devices):
         self._create_instance()
