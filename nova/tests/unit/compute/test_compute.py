@@ -8859,7 +8859,7 @@ class ComputeAPITestCase(BaseTestCase):
         group.create()
         get_group_mock.return_value = group
 
-        self.assertRaises(exception.QuotaError, self.compute_api.create,
+        self.assertRaises(exception.OverQuota, self.compute_api.create,
             self.context, self.default_flavor, self.fake_image['id'],
             scheduler_hints={'group': group.uuid},
             check_server_group_quota=True)

@@ -400,7 +400,7 @@ class API:
     def _check_injected_file_quota(self, context, injected_files):
         """Enforce quota limits on injected files.
 
-        Raises a QuotaError if any limit is exceeded.
+        Raises a OverQuota if any limit is exceeded.
         """
         if not injected_files:
             return
@@ -1474,7 +1474,7 @@ class API:
                         except exception.OverQuota:
                             msg = _("Quota exceeded, too many servers in "
                                     "group")
-                            raise exception.QuotaError(msg)
+                            raise exception.OverQuota(msg)
 
                     members = objects.InstanceGroup.add_members(
                         context, instance_group.uuid, [instance.uuid])
@@ -1494,7 +1494,7 @@ class API:
                                 context, instance_group.id, [instance.uuid])
                             msg = _("Quota exceeded, too many servers in "
                                     "group")
-                            raise exception.QuotaError(msg)
+                            raise exception.OverQuota(msg)
                     # list of members added to servers group in this iteration
                     # is needed to check quota of server group during add next
                     # instance

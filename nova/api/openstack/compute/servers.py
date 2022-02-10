@@ -797,8 +797,7 @@ class ServersController(wsgi.Controller):
                 supports_multiattach=supports_multiattach,
                 supports_port_resource_request=supports_port_resource_request,
                 **create_kwargs)
-        except (exception.QuotaError,
-                exception.PortLimitExceeded) as error:
+        except exception.OverQuota as error:
             raise exc.HTTPForbidden(
                 explanation=error.format_message())
         except exception.ImageNotFound:
@@ -1054,7 +1053,7 @@ class ServersController(wsgi.Controller):
         try:
             self.compute_api.resize(context, instance, flavor_id,
                                     auto_disk_config=auto_disk_config)
-        except exception.QuotaError as error:
+        except exception.OverQuota as error:
             raise exc.HTTPForbidden(
                 explanation=error.format_message())
         except (
@@ -1238,7 +1237,7 @@ class ServersController(wsgi.Controller):
         except exception.KeypairNotFound:
             msg = _("Invalid key_name provided.")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.QuotaError as error:
+        except exception.OverQuota as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
         except (exception.AutoDiskConfigDisabledByImage,
                 exception.CertificateValidationFailed,

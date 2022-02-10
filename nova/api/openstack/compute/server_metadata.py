@@ -114,7 +114,7 @@ class ServerMetadataController(wsgi.Controller):
                                                              server,
                                                              metadata,
                                                              delete)
-        except exception.QuotaError as error:
+        except exception.OverQuota as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
