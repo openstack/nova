@@ -52,7 +52,8 @@ class ConfigDriveTestCase(test.TestCase):
         vmwareapi_fake.reset()
         stubs.set_stubs(self)
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
-        self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
+        virtapi = fake.FakeComputeVirtAPI(mock.MagicMock())
+        self.conn = driver.VMwareVCDriver(virtapi)
         self.network_info = utils.get_test_network_info()
         self.node_name = self.conn._nodename
         image_ref = self.glance.auto_disk_config_enabled_image['id']

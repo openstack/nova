@@ -686,6 +686,11 @@ class FakeVirtAPI(virtapi.VirtAPI):
         pass
 
 
+class FakeComputeVirtAPI(FakeVirtAPI):
+    def __init__(self, compute):
+        self._compute = compute
+
+
 class SmallFakeDriver(FakeDriver):
     # The api samples expect specific cpu memory and disk sizes. In order to
     # allow the FakeVirt driver to be used outside of the unit tests, provide

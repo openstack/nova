@@ -55,6 +55,7 @@ from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
 from nova.virt import driver as v_driver
+from nova.virt import fake
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
@@ -186,7 +187,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         service = self._create_service(host=HOST)
         mock_svc.return_value = service
 
-        self.conn = driver.VMwareVCDriver(None, False)
+        virtapi = fake.FakeComputeVirtAPI(mock.MagicMock())
+        self.conn = driver.VMwareVCDriver(virtapi, False)
         self.assertFalse(service.disabled)
         self._set_exception_vars()
         self.node_name = self.conn._nodename
@@ -2401,7 +2403,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         # currently there are 2 data stores
         self.assertEqual(2, len(ds_util._DS_DC_MAPPING))
 
-    def _create_live_migrate_data(self):
+    def _create_live_migrate_data(self, source_compute=None,
+                                  dest_compute=None):
         data = objects.migrate_data.VMwareLiveMigrateData()
 
         data.dest_cluster_ref = "cluster-0"
@@ -2437,6 +2440,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 }
             }
         }
+        migration = objects.Migration(
+            source_compute=source_compute,
+            dest_compute=dest_compute,
+        )
+        data.migration = migration
 
         return data
 
@@ -2476,8 +2484,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     @mock.patch.object(vim_util, 'deserialize_object')
     @mock.patch.object(driver.VMwareVCDriver, '_get_volume_mappings',
                        returns=[])
-    @mock.patch.object(driver.VMwareVCDriver, '_create_dest_session')
-    def test_live_migration(self, create_dest_session, get_volume_mappings,
+    def test_live_migration(self, get_volume_mappings,
                             deserialize_object,
                             get_hardware_devices, relocate_vm):
         self._create_instance()
@@ -2500,13 +2507,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         post_method.assert_called()
         recover_method.assert_not_called()
 
-    @mock.patch.object(driver.VMwareVCDriver, '_create_dest_session')
     @mock.patch.object(driver.VMwareVCDriver, '_get_volume_mappings',
                        returns=[])
     @mock.patch.object(vmops.VMwareVMOps,
         'live_migration', side_effect=test.TestingException)
     def test_live_migration_failure_rollback(self, mock_live_migration,
-                    get_volume_mappings, create_dest_session):
+                    get_volume_mappings):
         self._create_instance()
         migrate_data = self._create_live_migrate_data()
 

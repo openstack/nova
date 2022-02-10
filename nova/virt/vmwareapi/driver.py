@@ -54,8 +54,8 @@ from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
+from nova.virt.vmwareapi.rpc import VmwareRpcService
 from nova.virt.vmwareapi import session
-from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util as nova_vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
@@ -163,6 +163,9 @@ class VMwareVCDriver(driver.ComputeDriver):
             cluster_util.is_drs_enabled(self._session, self._cluster_ref)
         # Register the OpenStack extension
         self._register_openstack_extension()
+
+        virtapi._compute.additional_endpoints.extend([
+            VmwareRpcService(self)])
 
     def _check_min_version(self):
         min_version = v_utils.convert_version_to_int(constants.MIN_VC_VERSION)
@@ -783,11 +786,11 @@ class VMwareVCDriver(driver.ComputeDriver):
         data.cluster_name = self._cluster_name
         data.dest_cluster_ref = vim_util.get_moref_value(self._cluster_ref)
         data.datastore_regex = CONF.vmware.datastore_regex
-        client_factory = self._session.client.factory
+        client_factory = self._session.vim.client.factory
 
-        service = vm_util.create_service_locator(client_factory, url,
-            self._vcenter_uuid,
-            vm_util.create_service_locator_name_password(
+        service = vm_util.create_service_locator(client_factory,
+            url, self._vcenter_uuid,
+            vm_util.create_service_locator_name_password(client_factory,
                 username=CONF.vmware.host_username,
                 password=CONF.vmware.host_password))
 
@@ -806,7 +809,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                                       dest_check_data, block_device_info=None):
         """Check if it is possible to execute live migration."""
 
-        client_factory = self._session.client.factory
+        client_factory = self._session.vim.client.factory
         defaults = dest_check_data.relocate_defaults
         service_locator = nova_vim_util.deserialize_object(client_factory,
                                                            defaults["service"],
@@ -918,14 +921,13 @@ class VMwareVCDriver(driver.ComputeDriver):
             post_method(context, instance, dest, block_migration, migrate_data)
             return
 
-        # We require the target-datastore for all volume-attachment
-        required_volume_attributes = ["datastore_ref"]
         try:
-            if migrate_data.is_same_vcenter:
-                dest_session = self._session
-            else:
+            # We require the target-datastore for all volume-attachment
+            required_volume_attributes = ["datastore_ref"]
+
+            target = self._vmops.api_for_migration(migrate_data.migration)
+            if not migrate_data.is_same_vcenter:
                 # For the shadow vm fixup after migration
-                dest_session = self._create_dest_session(migrate_data)
                 required_volume_attributes.append('volume')
 
             # Validate that we have all necessary information for the
@@ -934,7 +936,16 @@ class VMwareVCDriver(driver.ComputeDriver):
             # are created prior the live-migration
             volumes = self._get_checked_volumes(context, instance,
                 required_volume_attributes)
-            self._set_vif_infos(migrate_data, dest_session)
+            if 'vifs' not in migrate_data or not migrate_data.vifs:
+                migrate_data.vif_infos = []
+            else:
+                dest_network_info = [
+                    vif.get_dest_vif()
+                    for vif in migrate_data.vifs
+                ]
+                vif_model = None  # Doesn't matter as we won't change the type
+                migrate_data.vif_infos = target.get_vif_info(context,
+                    vif_model=vif_model, network_info=dest_network_info)
             self._vmops.live_migration(instance, migrate_data, volumes)
             LOG.info("Migration operation completed", instance=instance)
             post_method(context, instance, dest, block_migration, migrate_data)
@@ -982,40 +993,6 @@ class VMwareVCDriver(driver.ComputeDriver):
                                                         "Datastore")
             volume_infos.append(data)
         return self._volumeops.map_volumes_to_devices(instance, volume_infos)
-
-    def _set_vif_infos(self, migrate_data, session):
-        if 'vifs' not in migrate_data or not migrate_data.vifs:
-            migrate_data.vif_infos = []
-            return
-
-        cluster_ref = vim_util.get_moref(migrate_data.dest_cluster_ref,
-            "ClusterComputeResource")
-        dest_network_info = [
-            vif.get_dest_vif()
-            for vif in migrate_data.vifs
-        ]
-
-        vif_model = None  # We are not reading that value
-        migrate_data.vif_infos = vmwarevif.get_vif_info(session,
-            cluster_ref, utils.is_neutron(), vif_model, dest_network_info)
-
-    def _create_dest_session(self, migrate_data):
-        defaults = migrate_data.relocate_defaults
-        client_factory = self._session.client.factory
-        service_locator = nova_vim_util.deserialize_object(client_factory,
-                                                           defaults["service"],
-                                                           "ServiceLocator")
-        dest_url = urllib.parse.urlparse(service_locator.url)
-
-        dest_session = session.VMwareAPISession(
-            host_ip=dest_url.hostname,
-            host_port=dest_url.port,
-            username=service_locator.credential.username,
-            password=service_locator.credential.password,
-            # TODO(fwiesel): SSL Settings
-        )
-
-        return dest_session
 
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,

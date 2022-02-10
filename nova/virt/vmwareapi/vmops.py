@@ -61,6 +61,7 @@ from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import imagecache
 from nova.virt.vmwareapi import images
+from nova.virt.vmwareapi.rpc import VmwareRpcApi
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -1266,7 +1267,7 @@ class VMwareVMOps(object):
         def _get_vm_and_vmdk_attribs():
             # Get the vmdk info that the VM is pointing to
             vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                              instance.uuid)
+                                              uuid=instance.uuid)
             if not vmdk.path:
                 LOG.debug("No root disk defined. Unable to snapshot.",
                           instance=instance)
@@ -1782,9 +1783,9 @@ class VMwareVMOps(object):
 
         # Checks if the migration needs a disk resize down.
         if (not boot_from_volume and (
-            flavor.root_gb < instance.flavor.root_gb or
-            (flavor.root_gb != 0 and
-             flavor.root_gb < vmdk.capacity_in_bytes / units.Gi))):
+                flavor.root_gb < instance.flavor.root_gb or
+                (flavor.root_gb != 0 and
+                flavor.root_gb < vmdk.capacity_in_bytes / units.Gi))):
             reason = _("Unable to shrink disk.")
             raise exception.InstanceFaultRollback(
                 exception.ResizeError(reason=reason))
@@ -1799,6 +1800,19 @@ class VMwareVMOps(object):
         self._update_instance_progress(context, instance,
                                        step=1,
                                        total_steps=RESIZE_TOTAL_STEPS)
+
+    def get_vif_info(self, ctxt, vif_model=None, network_info=None):
+        vif_info = vmwarevif.get_vif_info(self._session,
+                                          self._cluster,
+                                          vif_model,
+                                          network_info)
+        return vif_info
+
+    def api_for_migration(self, migration):
+        if migration.dest_compute == migration.source_compute:
+            return self
+
+        return VmwareRpcApi(migration.dest_compute)
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
