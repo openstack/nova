@@ -24,17 +24,17 @@ POLICY_ROOT = 'os_compute_api:os-volumes-attachments:%s'
 volumes_attachments_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="List volume attachments for an instance",
         operations=[
             {'method': 'GET',
              'path': '/servers/{server_id}/os-volume_attachments'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Attach a volume to an instance",
         operations=[
             {
@@ -42,10 +42,10 @@ volumes_attachments_policies = [
                 'path': '/servers/{server_id}/os-volume_attachments'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="Show details of a volume attachment",
         operations=[
             {
@@ -54,10 +54,10 @@ volumes_attachments_policies = [
                  '/servers/{server_id}/os-volume_attachments/{volume_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="""Update a volume attachment.
 New 'update' policy about 'swap + update' request (which is possible
 only >2.85) only <swap policy> is checked. We expect <swap policy> to be
@@ -70,10 +70,17 @@ always superset of this policy permission.
                  '/servers/{server_id}/os-volume_attachments/{volume_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'swap',
-        check_str=base.SYSTEM_ADMIN,
+        # TODO(gmann): This is internal API policy and supposed to be called
+        # only by cinder. Add 'service' role in this policy so that cinder
+        # can call it with user having 'service' role (not having server's
+        # project_id). That is for phase-2 of RBAC goal and until then,
+        # we keep it open for all admin in any project. We cannot default it to
+        # PROJECT_ADMIN which has the project_id in check_str and will fail
+        # if cinder call it with other project_id.
+        check_str=base.ADMIN,
         description="Update a volume attachment with a different volumeId",
         operations=[
             {
@@ -82,10 +89,10 @@ always superset of this policy permission.
                  '/servers/{server_id}/os-volume_attachments/{volume_id}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Detach a volume from an instance",
         operations=[
             {
@@ -94,7 +101,7 @@ always superset of this policy permission.
                  '/servers/{server_id}/os-volume_attachments/{volume_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 

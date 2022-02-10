@@ -20,6 +20,8 @@ from nova.compute import vm_states
 from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
+from nova.policies import base as base_policy
+from nova.policies import volumes as v_policies
 from nova.policies import volumes_attachments as va_policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
@@ -92,77 +94,50 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
             task_state=None, launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
 
-        # Check that admin or owner is able to list/create/show/delete
-        # the attached volume.
-        self.admin_or_owner_authorized_contexts = [
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow
+        # resource owner- having same project id and no role check) is
+        # able create/delete/update the volume attachment.
+        self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_foo_context,
-            self.project_reader_context, self.project_member_context
-        ]
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
 
-        self.admin_or_owner_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow
+        # resource owner- having same project id and no role check) is
+        # able get the volume attachment.
+        self.project_reader_authorized_contexts = (
+            self.project_member_authorized_contexts)
 
-        # Check that admin is able to update the attached volume
-        self.admin_authorized_contexts = [
-            self.legacy_admin_context,
-            self.system_admin_context,
-            self.project_admin_context
-        ]
-        # Check that non-admin is not able to update the attached
-        # volume
-        self.admin_unauthorized_contexts = [
-            self.system_member_context,
-            self.system_reader_context,
-            self.system_foo_context,
-            self.project_member_context,
-            self.other_project_member_context,
-            self.project_foo_context,
-            self.project_reader_context,
-            self.other_project_reader_context,
-        ]
-
-        self.reader_authorized_contexts = [
+        # By default, legacy rule are enable and scope check is disabled.
+        # system admin, legacy admin, and project admin is able to update
+        # volume attachment with a different volumeId.
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.system_reader_context, self.system_member_context,
-            self.project_admin_context, self.project_reader_context,
-            self.project_member_context, self.project_foo_context
-        ]
-
-        self.reader_unauthorized_contexts = [
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+            self.project_admin_context]
 
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     def test_index_volume_attach_policy(self, mock_get_instance):
         rule_name = self.policy_root % "index"
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.index,
-                                 self.req, FAKE_UUID)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.controller.index,
+                                self.req, FAKE_UUID)
 
     def test_show_volume_attach_policy(self):
         rule_name = self.policy_root % "show"
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.show,
-                                 self.req, FAKE_UUID, FAKE_UUID_A)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.controller.show,
+                                self.req, FAKE_UUID, FAKE_UUID_A)
 
     @mock.patch('nova.compute.api.API.attach_volume')
     def test_create_volume_attach_policy(self, mock_attach_volume):
         rule_name = self.policy_root % "create"
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B,
                                      'device': '/dev/fake'}}
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name, self.controller.create,
-                                 self.req, FAKE_UUID, body=body)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller.create,
+                                self.req, FAKE_UUID, body=body)
 
     @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
     def test_update_volume_attach_policy(self, mock_bdm_save):
@@ -171,28 +146,25 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
         body = {'volumeAttachment': {
             'volumeId': FAKE_UUID_A,
             'delete_on_termination': True}}
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name, self.controller.update,
-                                 req, FAKE_UUID,
-                                 FAKE_UUID_A, body=body)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller.update,
+                                req, FAKE_UUID,
+                                FAKE_UUID_A, body=body)
 
     @mock.patch('nova.compute.api.API.detach_volume')
     def test_delete_volume_attach_policy(self, mock_detach_volume):
         rule_name = self.policy_root % "delete"
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name, self.controller.delete,
-                                 self.req, FAKE_UUID, FAKE_UUID_A)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller.delete,
+                                self.req, FAKE_UUID, FAKE_UUID_A)
 
     @mock.patch('nova.compute.api.API.swap_volume')
     def test_swap_volume_attach_policy(self, mock_swap_volume):
         rule_name = self.policy_root % "swap"
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller.update,
-                                 self.req, FAKE_UUID, FAKE_UUID_A, body=body)
+        self.common_policy_auth(self.project_admin_authorized_contexts,
+                                rule_name, self.controller.update,
+                                self.req, FAKE_UUID, FAKE_UUID_A, body=body)
 
     @mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
     @mock.patch('nova.compute.api.API.swap_volume')
@@ -225,12 +197,31 @@ class VolumeAttachPolicyTest(base.BasePolicyTest):
         req = fakes.HTTPRequest.blank('', version='2.85')
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B,
             'delete_on_termination': True}}
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller.update,
-                                 req, FAKE_UUID, FAKE_UUID_A, body=body)
+        self.common_policy_auth(self.project_admin_authorized_contexts,
+                                rule_name, self.controller.update,
+                                req, FAKE_UUID, FAKE_UUID_A, body=body)
         mock_swap_volume.assert_called()
         mock_bdm_save.assert_called()
+
+
+class VolumeAttachNoLegacyNoScopePolicyTest(VolumeAttachPolicyTest):
+    """Test volume attachment APIs policies with no legacy deprecated rules
+    and no scope checks which means new defaults only.
+
+    """
+
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(VolumeAttachNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, only project admin, member, or reader will be
+        # able to perform volume attachment operation on its own project.
+        self.project_reader_authorized_contexts = [
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context]
+
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
 
 
 class VolumeAttachScopeTypePolicyTest(VolumeAttachPolicyTest):
@@ -248,77 +239,39 @@ class VolumeAttachScopeTypePolicyTest(VolumeAttachPolicyTest):
         super(VolumeAttachScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system admin is able to update the attached volume
-        self.admin_authorized_contexts = [
-            self.system_admin_context]
-        # Check that non-system or non-admin is not able to update
-        # the attached volume.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
+        # Scope enable will not allow system admin to perform the
+        # volume attachments.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context,
             self.project_admin_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
+            self.project_reader_context, self.project_foo_context]
+
+        self.project_reader_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
+
+        self.project_admin_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context]
 
 
-class VolumeAttachNoLegacyPolicyTest(VolumeAttachPolicyTest):
+class VolumeAttachScopeTypeNoLegacyPolicyTest(VolumeAttachScopeTypePolicyTest):
     """Test os-volume-attachments APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to access
-    system_admin_or_owner APIs.
+    and no legacy deprecated rules.
     """
     without_deprecated_rules = True
 
     def setUp(self):
-        super(VolumeAttachNoLegacyPolicyTest, self).setUp()
+        super(VolumeAttachScopeTypeNoLegacyPolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
-
-        # Check that system or projct admin or owner is able to
-        # list/create/show/delete the attached volume.
-        self.admin_or_owner_authorized_contexts = [
-            self.system_admin_context,
-            self.project_admin_context,
-            self.project_member_context
-        ]
-
-        # Check that non-system and non-admin/owner is not able to
-        # list/create/show/delete the attached volume.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.project_reader_context,
-            self.project_foo_context, self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
-
-        # Check that admin is able to update the attached volume
-        self.admin_authorized_contexts = [
-            self.system_admin_context
-        ]
-        # Check that non-admin is not able to update the attached
-        # volume
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
+        # With scope enable and no legacy rule, it will not allow
+        # system users and project admin/member/reader will be able to
+        # perform volume attachment operation on its own project.
+        self.project_reader_authorized_contexts = [
             self.project_admin_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
-
-        self.reader_authorized_contexts = [
-            self.system_admin_context, self.system_reader_context,
-            self.system_member_context, self.project_admin_context,
-            self.project_reader_context, self.project_member_context
-        ]
-
-        self.reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_foo_context,
-            self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+            self.project_reader_context]
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
 
 
 class VolumesPolicyTest(base.BasePolicyTest):
@@ -336,14 +289,14 @@ class VolumesPolicyTest(base.BasePolicyTest):
         self.snapshot_ctlr = volumes_v21.SnapshotController()
         self.req = fakes.HTTPRequest.blank('')
         self.controller._translate_volume_summary_view = mock.MagicMock()
-        # Check that everyone is able to perform crud operations
+        # Everyone will be able to perform crud operations
         # on volume and volume snapshots.
         # NOTE: Nova cannot verify the volume/snapshot owner during nova policy
         # enforcement so will be passing context's project_id as target to
         # policy and always pass. If requester is not admin or owner
         # of volume/snapshot then cinder will be returning the appropriate
         # error.
-        self.everyone_authorized_contexts = [
+        self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
@@ -352,94 +305,142 @@ class VolumesPolicyTest(base.BasePolicyTest):
             self.system_foo_context,
             self.other_project_member_context
         ]
-        self.everyone_unauthorized_contexts = []
+        self.project_reader_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context,
+            self.other_project_reader_context,
+            self.system_member_context, self.system_reader_context,
+            self.system_foo_context,
+            self.other_project_member_context
+        ]
 
     @mock.patch('nova.volume.cinder.API.get_all')
     def test_list_volumes_policy(self, mock_get):
-        rule_name = "os_compute_api:os-volumes"
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
-                                 rule_name, self.controller.index,
-                                 self.req)
+        rule_name = "os_compute_api:os-volumes:list"
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.controller.index,
+                                self.req)
 
     @mock.patch('nova.volume.cinder.API.get_all')
     def test_list_detail_volumes_policy(self, mock_get):
-        rule_name = "os_compute_api:os-volumes"
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
-                                 rule_name, self.controller.detail,
-                                 self.req)
+        rule_name = "os_compute_api:os-volumes:detail"
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.controller.detail,
+                                self.req)
 
     @mock.patch('nova.volume.cinder.API.get')
     def test_show_volume_policy(self, mock_get):
-        rule_name = "os_compute_api:os-volumes"
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
-                                 rule_name, self.controller.show,
-                                 self.req, uuids.fake_id)
+        rule_name = "os_compute_api:os-volumes:show"
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.controller.show,
+                                self.req, uuids.fake_id)
 
     @mock.patch('nova.api.openstack.compute.volumes.'
         '_translate_volume_detail_view')
     @mock.patch('nova.volume.cinder.API.create')
     def test_create_volumes_policy(self, mock_create, mock_view):
-        rule_name = "os_compute_api:os-volumes"
+        rule_name = "os_compute_api:os-volumes:create"
         body = {"volume": {"size": 100,
                "display_name": "Volume Test Name",
                "display_description": "Volume Test Desc",
                "availability_zone": "zone1:host1"}}
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
-                                 rule_name, self.controller.create,
-                                 self.req, body=body)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller.create,
+                                self.req, body=body)
 
     @mock.patch('nova.volume.cinder.API.delete')
     def test_delete_volume_policy(self, mock_delete):
-        rule_name = "os_compute_api:os-volumes"
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
-                                 rule_name, self.controller.delete,
-                                 self.req, uuids.fake_id)
+        rule_name = "os_compute_api:os-volumes:delete"
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller.delete,
+                                self.req, uuids.fake_id)
 
     @mock.patch('nova.volume.cinder.API.get_all_snapshots')
     def test_list_snapshots_policy(self, mock_get):
-        rule_name = "os_compute_api:os-volumes"
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
-                                 rule_name, self.snapshot_ctlr.index,
-                                 self.req)
+        rule_name = "os_compute_api:os-volumes:snapshots:list"
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.snapshot_ctlr.index,
+                                self.req)
 
     @mock.patch('nova.volume.cinder.API.get_all_snapshots')
     def test_list_detail_snapshots_policy(self, mock_get):
-        rule_name = "os_compute_api:os-volumes"
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
-                                 rule_name, self.snapshot_ctlr.detail,
-                                 self.req)
+        rule_name = "os_compute_api:os-volumes:snapshots:detail"
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.snapshot_ctlr.detail,
+                                self.req)
 
     @mock.patch('nova.volume.cinder.API.get_snapshot')
     def test_show_snapshot_policy(self, mock_get):
-        rule_name = "os_compute_api:os-volumes"
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
-                                 rule_name, self.snapshot_ctlr.show,
-                                 self.req, uuids.fake_id)
+        rule_name = "os_compute_api:os-volumes:snapshots:show"
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.snapshot_ctlr.show,
+                                self.req, uuids.fake_id)
 
     @mock.patch('nova.volume.cinder.API.create_snapshot')
     def test_create_snapshot_policy(self, mock_create):
-        rule_name = "os_compute_api:os-volumes"
+        rule_name = "os_compute_api:os-volumes:snapshots:create"
         body = {"snapshot": {"volume_id": uuids.fake_id}}
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
-                                 rule_name, self.snapshot_ctlr.create,
-                                 self.req, body=body)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.snapshot_ctlr.create,
+                                self.req, body=body)
 
     @mock.patch('nova.volume.cinder.API.delete_snapshot')
     def test_delete_snapshot_policy(self, mock_delete):
-        rule_name = "os_compute_api:os-volumes"
-        self.common_policy_check(self.everyone_authorized_contexts,
-                                 self.everyone_unauthorized_contexts,
-                                 rule_name, self.snapshot_ctlr.delete,
-                                 self.req, uuids.fake_id)
+        rule_name = "os_compute_api:os-volumes:snapshots:delete"
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.snapshot_ctlr.delete,
+                                self.req, uuids.fake_id)
+
+
+class VolumesNoLegacyNoScopePolicyTest(VolumesPolicyTest):
+    """Test Volume APIs policies with no legacy deprecated rules
+    and no scope checks which means new defaults only.
+
+    """
+
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        v_policies.POLICY_NAME % 'list':
+            base_policy.PROJECT_READER,
+        v_policies.POLICY_NAME % 'detail':
+            base_policy.PROJECT_READER,
+        v_policies.POLICY_NAME % 'show':
+            base_policy.PROJECT_READER,
+        v_policies.POLICY_NAME % 'create':
+            base_policy.PROJECT_MEMBER,
+        v_policies.POLICY_NAME % 'delete':
+            base_policy.PROJECT_MEMBER,
+        v_policies.POLICY_NAME % 'snapshots:list':
+            base_policy.PROJECT_READER,
+        v_policies.POLICY_NAME % 'snapshots:detail':
+            base_policy.PROJECT_READER,
+        v_policies.POLICY_NAME % 'snapshots:delete':
+            base_policy.PROJECT_MEMBER,
+        v_policies.POLICY_NAME % 'snapshots:create':
+            base_policy.PROJECT_MEMBER,
+        v_policies.POLICY_NAME % 'snapshots:show':
+            base_policy.PROJECT_READER,
+    }
+
+    def setUp(self):
+        super(VolumesNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy, project other roles like foo will not be able
+        # to operate on volume and snapshot.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.system_member_context,
+            self.other_project_member_context
+        ]
+        self.project_reader_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context,
+            self.other_project_reader_context,
+            self.system_member_context, self.system_reader_context,
+            self.other_project_member_context
+        ]
 
 
 class VolumesScopeTypePolicyTest(VolumesPolicyTest):
@@ -456,3 +457,65 @@ class VolumesScopeTypePolicyTest(VolumesPolicyTest):
     def setUp(self):
         super(VolumesScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # With scope enabled, system users will not be able to
+        # operate on volume and snapshot.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context, self.other_project_reader_context,
+            self.other_project_member_context
+        ]
+        self.project_reader_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context, self.other_project_reader_context,
+            self.other_project_member_context
+        ]
+
+
+class VolumesScopeTypeNoLegacyPolicyTest(VolumesScopeTypePolicyTest):
+    """Test Volume APIs policies with system scope enabled,
+    and no legacy deprecated rules.
+    """
+    without_deprecated_rules = True
+
+    rules_without_deprecation = {
+        v_policies.POLICY_NAME % 'list':
+            base_policy.PROJECT_READER,
+        v_policies.POLICY_NAME % 'detail':
+            base_policy.PROJECT_READER,
+        v_policies.POLICY_NAME % 'show':
+            base_policy.PROJECT_READER,
+        v_policies.POLICY_NAME % 'create':
+            base_policy.PROJECT_MEMBER,
+        v_policies.POLICY_NAME % 'delete':
+            base_policy.PROJECT_MEMBER,
+        v_policies.POLICY_NAME % 'snapshots:list':
+            base_policy.PROJECT_READER,
+        v_policies.POLICY_NAME % 'snapshots:detail':
+            base_policy.PROJECT_READER,
+        v_policies.POLICY_NAME % 'snapshots:delete':
+            base_policy.PROJECT_MEMBER,
+        v_policies.POLICY_NAME % 'snapshots:create':
+            base_policy.PROJECT_MEMBER,
+        v_policies.POLICY_NAME % 'snapshots:show':
+            base_policy.PROJECT_READER,
+    }
+
+    def setUp(self):
+        super(VolumesScopeTypeNoLegacyPolicyTest, self).setUp()
+        self.flags(enforce_scope=True, group="oslo_policy")
+        # With no legacy and scope enabled, system users and project
+        # other roles like foo will not be able to operate on volume
+        # and snapshot.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_member_context,
+            self.other_project_member_context
+        ]
+        self.project_reader_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_member_context, self.project_reader_context,
+            self.other_project_reader_context,
+            self.other_project_member_context
+        ]

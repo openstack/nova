@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-server-tags:%s'
 server_tags_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete_all',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Delete all the server tags",
         operations=[
             {
@@ -32,10 +32,10 @@ server_tags_policies = [
                 'path': '/servers/{server_id}/tags'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="List all tags for given server",
         operations=[
             {
@@ -43,10 +43,10 @@ server_tags_policies = [
                 'path': '/servers/{server_id}/tags'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update_all',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Replace all tags on specified server with the new set "
         "of tags.",
         operations=[
@@ -56,10 +56,10 @@ server_tags_policies = [
 
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Delete a single tag from the specified server",
         operations=[
             {
@@ -67,11 +67,11 @@ server_tags_policies = [
                 'path': '/servers/{server_id}/tags/{tag}'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Add a single tag to the server if server has no "
         "specified tag",
         operations=[
@@ -80,11 +80,11 @@ server_tags_policies = [
                 'path': '/servers/{server_id}/tags/{tag}'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="Check tag existence on the server.",
         operations=[
             {
@@ -92,7 +92,7 @@ server_tags_policies = [
                 'path': '/servers/{server_id}/tags/{tag}'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
 ]
 

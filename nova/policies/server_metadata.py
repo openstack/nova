@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:server-metadata:%s'
 server_metadata_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="List all metadata of a server",
         operations=[
             {
@@ -32,11 +32,11 @@ server_metadata_policies = [
                 'method': 'GET'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="Show metadata for a server",
         operations=[
             {
@@ -44,11 +44,11 @@ server_metadata_policies = [
                 'method': 'GET'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Create metadata for a server",
         operations=[
             {
@@ -56,11 +56,11 @@ server_metadata_policies = [
                 'method': 'POST'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update_all',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Replace metadata for a server",
         operations=[
             {
@@ -68,11 +68,11 @@ server_metadata_policies = [
                 'method': 'PUT'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Update metadata from a server",
         operations=[
             {
@@ -80,11 +80,11 @@ server_metadata_policies = [
                 'method': 'PUT'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Delete metadata from a server",
         operations=[
             {
@@ -92,7 +92,7 @@ server_metadata_policies = [
                 'method': 'DELETE'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
 ]
 

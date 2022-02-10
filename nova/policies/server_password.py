@@ -37,7 +37,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 server_password_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="Show the encrypted administrative "
         "password of a server",
         operations=[
@@ -46,11 +46,11 @@ server_password_policies = [
                 'path': '/servers/{server_id}/os-server-password'
             },
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'clear',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Clear the encrypted administrative "
         "password of a server",
         operations=[
@@ -59,7 +59,7 @@ server_password_policies = [
                 'path': '/servers/{server_id}/os-server-password'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
 ]
 

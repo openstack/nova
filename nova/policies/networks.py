@@ -38,7 +38,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 networks_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'list',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="""List networks for the project.
 
 This API is proxy calls to the Network service. This is deprecated.""",
@@ -48,11 +48,11 @@ This API is proxy calls to the Network service. This is deprecated.""",
                 'path': '/os-networks'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="""Show network details.
 
 This API is proxy calls to the Network service. This is deprecated.""",
@@ -62,7 +62,7 @@ This API is proxy calls to the Network service. This is deprecated.""",
                 'path': '/os-networks/{network_id}'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
 ]
 

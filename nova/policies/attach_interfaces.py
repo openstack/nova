@@ -37,7 +37,7 @@ DEPRECATED_INTERFACES_POLICY = policy.DeprecatedRule(
 attach_interfaces_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'list',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="List port interfaces attached to a server",
         operations=[
             {
@@ -45,11 +45,11 @@ attach_interfaces_policies = [
                 'path': '/servers/{server_id}/os-interface'
             },
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_INTERFACES_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="Show details of a port interface attached to a server",
         operations=[
             {
@@ -57,11 +57,11 @@ attach_interfaces_policies = [
                 'path': '/servers/{server_id}/os-interface/{port_id}'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_INTERFACES_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Attach an interface to a server",
         operations=[
             {
@@ -69,11 +69,11 @@ attach_interfaces_policies = [
                 'path': '/servers/{server_id}/os-interface'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_INTERFACES_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Detach an interface from a server",
         operations=[
             {
@@ -81,7 +81,7 @@ attach_interfaces_policies = [
                 'path': '/servers/{server_id}/os-interface/{port_id}'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_INTERFACES_POLICY)
 ]
 

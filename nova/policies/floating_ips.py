@@ -38,7 +38,7 @@ DEPRECATED_FIP_POLICY = policy.DeprecatedRule(
 floating_ips_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'add',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Associate floating IPs to server. "
         " This API is deprecated.",
         operations=[
@@ -47,11 +47,11 @@ floating_ips_policies = [
                 'path': '/servers/{server_id}/action (addFloatingIp)'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'remove',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Disassociate floating IPs to server. "
         " This API is deprecated.",
         operations=[
@@ -60,11 +60,11 @@ floating_ips_policies = [
                 'path': '/servers/{server_id}/action (removeFloatingIp)'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'list',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="List floating IPs. This API is deprecated.",
         operations=[
             {
@@ -72,11 +72,11 @@ floating_ips_policies = [
                 'path': '/os-floating-ips'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'create',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Create floating IPs. This API is deprecated.",
         operations=[
             {
@@ -84,11 +84,11 @@ floating_ips_policies = [
                 'path': '/os-floating-ips'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="Show floating IPs. This API is deprecated.",
         operations=[
             {
@@ -96,11 +96,11 @@ floating_ips_policies = [
                 'path': '/os-floating-ips/{floating_ip_id}'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'delete',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Delete floating IPs. This API is deprecated.",
         operations=[
             {
@@ -108,7 +108,7 @@ floating_ips_policies = [
                 'path': '/os-floating-ips/{floating_ip_id}'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_FIP_POLICY),
 ]
 

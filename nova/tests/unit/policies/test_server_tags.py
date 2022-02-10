@@ -50,51 +50,32 @@ class ServerTagsPolicyTest(base.BasePolicyTest):
         self.stub_out('nova.objects.InstanceMapping.get_by_instance_uuid',
                       lambda s, c, u: inst_map)
 
-        # Check that admin or and server owner is able to perform
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow server
+        # owner- having same project id and no role check) is able to perform,
         # operations on server tags.
-        self.admin_or_owner_authorized_contexts = [
+        self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context
-        ]
-        # Check that non-admin/owner is not able to perform operations
-        # on server tags
-        self.admin_or_owner_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context
-        ]
-        # Check that reader or and server owner is able to perform operations
-        # on server tags.
-        self.reader_or_owner_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.system_member_context, self.system_reader_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context]
-        # Check that non-reader/owner is not able to perform operations
-        # on server tags.
-        self.reader_or_owner_unauthorized_contexts = [
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context
-        ]
+        self.project_reader_authorized_contexts = (
+            self.project_member_authorized_contexts)
 
     @mock.patch('nova.objects.TagList.get_by_resource_id')
     def test_index_server_tags_policy(self, mock_tag):
         rule_name = policies.POLICY_ROOT % 'index'
-        self.common_policy_check(self.reader_or_owner_authorized_contexts,
-                                 self.reader_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.index,
-                                 self.req, self.instance.uuid)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name,
+                                self.controller.index,
+                                self.req, self.instance.uuid)
 
     @mock.patch('nova.objects.Tag.exists')
     def test_show_server_tags_policy(self, mock_exists):
         rule_name = policies.POLICY_ROOT % 'show'
-        self.common_policy_check(self.reader_or_owner_authorized_contexts,
-                                 self.reader_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.show,
-                                 self.req, self.instance.uuid, uuids.fake_id)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name,
+                                self.controller.show,
+                                self.req, self.instance.uuid, uuids.fake_id)
 
     @mock.patch('nova.notifications.base.send_instance_update_notification')
     @mock.patch('nova.db.main.api.instance_tag_get_by_instance_uuid')
@@ -102,33 +83,30 @@ class ServerTagsPolicyTest(base.BasePolicyTest):
     def test_update_server_tags_policy(self, mock_create, mock_tag,
         mock_notf):
         rule_name = policies.POLICY_ROOT % 'update'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.update,
-                                 self.req, self.instance.uuid, uuids.fake_id,
-                                 body=None)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name,
+                                self.controller.update,
+                                self.req, self.instance.uuid, uuids.fake_id,
+                                body=None)
 
     @mock.patch('nova.notifications.base.send_instance_update_notification')
     @mock.patch('nova.db.main.api.instance_tag_set')
     def test_update_all_server_tags_policy(self, mock_set, mock_notf):
         rule_name = policies.POLICY_ROOT % 'update_all'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.update_all,
-                                 self.req, self.instance.uuid,
-                                 body={'tags': ['tag1', 'tag2']})
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name,
+                                self.controller.update_all,
+                                self.req, self.instance.uuid,
+                                body={'tags': ['tag1', 'tag2']})
 
     @mock.patch('nova.notifications.base.send_instance_update_notification')
     @mock.patch('nova.objects.TagList.destroy')
     def test_delete_all_server_tags_policy(self, mock_destroy, mock_notf):
         rule_name = policies.POLICY_ROOT % 'delete_all'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.delete_all,
-                                 self.req, self.instance.uuid)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name,
+                                self.controller.delete_all,
+                                self.req, self.instance.uuid)
 
     @mock.patch('nova.notifications.base.send_instance_update_notification')
     @mock.patch('nova.db.main.api.instance_tag_get_by_instance_uuid')
@@ -136,11 +114,28 @@ class ServerTagsPolicyTest(base.BasePolicyTest):
     def test_delete_server_tags_policy(self, mock_destroy, mock_get,
         mock_notf):
         rule_name = policies.POLICY_ROOT % 'delete'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.delete,
-                                 self.req, self.instance.uuid, uuids.fake_id)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name,
+                                self.controller.delete,
+                                self.req, self.instance.uuid, uuids.fake_id)
+
+
+class ServerTagsNoLegacyNoScopePolicyTest(ServerTagsPolicyTest):
+    """Test Server Tags APIs policies with no legacy deprecated rules
+    and no scope checks.
+
+    """
+
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(ServerTagsNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, legacy admin loose power.
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
+        self.project_reader_authorized_contexts = [
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context]
 
 
 class ServerTagsScopeTypePolicyTest(ServerTagsPolicyTest):
@@ -156,9 +151,16 @@ class ServerTagsScopeTypePolicyTest(ServerTagsPolicyTest):
     def setUp(self):
         super(ServerTagsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # With Scope enable, system users no longer allowed.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
+        self.project_reader_authorized_contexts = (
+            self.project_member_authorized_contexts)
 
 
-class ServerTagsNoLegacyPolicyTest(ServerTagsScopeTypePolicyTest):
+class ServerTagsScopeTypeNoLegacyPolicyTest(ServerTagsScopeTypePolicyTest):
     """Test Server Tags APIs policies with system scope enabled,
     and no more deprecated rules that allow the legacy admin API to
     access system APIs.
@@ -166,32 +168,11 @@ class ServerTagsNoLegacyPolicyTest(ServerTagsScopeTypePolicyTest):
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ServerTagsNoLegacyPolicyTest, self).setUp()
-        # Check that system admin or project member is able to
-        # perform operations on server tags.
-        self.admin_or_owner_authorized_contexts = [
-            self.system_admin_context, self.project_admin_context,
-            self.project_member_context]
-        # Check that non-system/admin/member is not able to
-        # perform operations on server tags.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_reader_context,
-            self.system_foo_context, self.system_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context
-        ]
-        # Check that system reader or owner is able to
-        # perform operations on server tags.
-        self.reader_or_owner_authorized_contexts = [
-            self.system_admin_context,
-            self.system_member_context, self.system_reader_context,
+        super(ServerTagsScopeTypeNoLegacyPolicyTest, self).setUp()
+        # With no legacy and scope enable, only project admin, member,
+        # and reader will be able to allowed operation on server tags.
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
+        self.project_reader_authorized_contexts = [
             self.project_admin_context, self.project_member_context,
             self.project_reader_context]
-        # Check that non-system/reader/owner is not able to
-        # perform operations on server tags.
-        self.reader_or_owner_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_foo_context,
-            self.project_foo_context, self.other_project_member_context,
-            self.other_project_reader_context
-        ]

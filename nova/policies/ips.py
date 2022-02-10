@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:ips:%s'
 ips_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="Show IP addresses details for a network label of a "
         " server",
         operations=[
@@ -33,10 +33,10 @@ ips_policies = [
                 'path': '/servers/{server_id}/ips/{network_label}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="List IP addresses that are assigned to a server",
         operations=[
             {
@@ -44,7 +44,7 @@ ips_policies = [
                 'path': '/servers/{server_id}/ips'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 

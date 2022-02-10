@@ -41,51 +41,56 @@ class ServerPasswordPolicyTest(base.BasePolicyTest):
                 id=1, uuid=uuids.fake_id, project_id=self.project_id,
                 system_metadata={}, expected_attrs=['system_metadata'])
         self.mock_get.return_value = self.instance
-
-        # Check that admin or and server owner is able to
-        # delete the server password.
-        self.admin_or_owner_authorized_contexts = [
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow server
+        # owner- having same project id and no role check) is able to delete,
+        # the server Password.
+        self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context]
-        # Check that non-admin/owner is not able to delete
-        # the server password.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context
-        ]
-        # Check that admin or and server owner is able to get
-        # the server password.
-        self.reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.system_member_context, self.system_reader_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
-        # Check that non-admin/owner is not able to get
-        # the server password.
-        self.reader_unauthorized_contexts = [
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context
-        ]
+        # and they can get their own server password.
+        self.project_reader_authorized_contexts = (
+            self.project_member_authorized_contexts)
 
     @mock.patch('nova.api.metadata.password.extract_password')
     def test_index_server_password_policy(self, mock_pass):
         rule_name = policies.BASE_POLICY_NAME % 'show'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.index,
-                                 self.req, self.instance.uuid)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name,
+                                self.controller.index,
+                                self.req, self.instance.uuid)
 
     @mock.patch('nova.api.metadata.password.convert_password')
     def test_clear_server_password_policy(self, mock_pass):
         rule_name = policies.BASE_POLICY_NAME % 'clear'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.clear,
-                                 self.req, self.instance.uuid)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name,
+                                self.controller.clear,
+                                self.req, self.instance.uuid)
+
+
+class ServerPasswordNoLegacyNoScopePolicyTest(ServerPasswordPolicyTest):
+    """Test Server Password APIs policies with no legacy deprecated rules
+    and no scope checks.
+
+    """
+
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        policies.BASE_POLICY_NAME % 'show':
+            base_policy.PROJECT_READER,
+        policies.BASE_POLICY_NAME % 'clear':
+            base_policy.PROJECT_MEMBER}
+
+    def setUp(self):
+        super(ServerPasswordNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, legacy admin loose power.
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
+        self.project_reader_authorized_contexts = [
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context]
 
 
 class ServerPasswordScopeTypePolicyTest(ServerPasswordPolicyTest):
@@ -101,50 +106,33 @@ class ServerPasswordScopeTypePolicyTest(ServerPasswordPolicyTest):
     def setUp(self):
         super(ServerPasswordScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # With Scope enable, system users no longer allowed.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
+        self.project_reader_authorized_contexts = (
+            self.project_member_authorized_contexts)
 
 
-class ServerPasswordNoLegacyPolicyTest(ServerPasswordScopeTypePolicyTest):
+class ServerPasswordScopeTypeNoLegacyPolicyTest(
+        ServerPasswordScopeTypePolicyTest):
     """Test Server Password APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system_admin_or_owner APIs.
+    and no more deprecated rules.
     """
     without_deprecated_rules = True
     rules_without_deprecation = {
         policies.BASE_POLICY_NAME % 'show':
-            base_policy.PROJECT_READER_OR_SYSTEM_READER,
+            base_policy.PROJECT_READER,
         policies.BASE_POLICY_NAME % 'clear':
-            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
+            base_policy.PROJECT_MEMBER}
 
     def setUp(self):
-        super(ServerPasswordNoLegacyPolicyTest, self).setUp()
-
-        # Check that system or projct admin or owner is able to clear
-        # server password.
-        self.admin_or_owner_authorized_contexts = [
-            self.system_admin_context,
+        super(ServerPasswordScopeTypeNoLegacyPolicyTest, self).setUp()
+        # With no legacy and scope enable, only project admin, member,
+        # and reader will be able to allowed operation on server password.
+        self.project_member_authorized_contexts = [
             self.project_admin_context, self.project_member_context]
-        # Check that non-system and non-admin/owner is not able to clear
-        # server password.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_reader_context,
-            self.project_foo_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context]
-
-        # Check that system reader or projct owner is able to get
-        # server password.
-        self.reader_authorized_contexts = [
-            self.system_admin_context,
-            self.project_admin_context, self.system_member_context,
-            self.system_reader_context, self.project_reader_context,
-            self.project_member_context,
-        ]
-
-        # Check that non-system reader nd non-admin/owner is not able to get
-        # server password.
-        self.reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_foo_context,
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context
-        ]
+        self.project_reader_authorized_contexts = [
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context]
