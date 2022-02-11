@@ -370,6 +370,15 @@ class RequestSpec(base.NovaObject):
 
         return spec
 
+    def update_scheduler_hints(self, scheduler_hints):
+        if (not self.obj_attr_is_set('scheduler_hints') or
+                self.scheduler_hints is None):
+            self._from_hints(scheduler_hints)
+        else:
+            self.scheduler_hints.update(
+                {hint: value if isinstance(value, list) else [value]
+                 for hint, value in scheduler_hints.items()})
+
     def get_scheduler_hint(self, hint_name, default=None):
         """Convenient helper for accessing a particular scheduler hint since
         it is hydrated by putting a single item into a list.

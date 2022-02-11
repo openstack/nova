@@ -1228,8 +1228,8 @@ def request_is_rebuild(spec_obj):
         return False
     if 'scheduler_hints' not in spec_obj:
         return False
-    check_type = spec_obj.scheduler_hints.get('_nova_check_type')
-    return check_type == ['rebuild']
+    check_type = spec_obj.get_scheduler_hint('_nova_check_type')
+    return check_type == 'rebuild'
 
 
 def request_is_resize(spec_obj):
@@ -1241,8 +1241,21 @@ def request_is_resize(spec_obj):
         return False
     if 'scheduler_hints' not in spec_obj:
         return False
-    check_type = spec_obj.scheduler_hints.get('_nova_check_type')
-    return check_type == ['resize']
+    check_type = spec_obj.get_scheduler_hint('_nova_check_type')
+    return check_type == 'resize'
+
+
+def request_is_live_migrate(spec_obj):
+    """Returns True if request is for a live migration
+
+    :param spec_obj: An objects.RequestSpec to examine (or None).
+    """
+    if not spec_obj:
+        return False
+    if 'scheduler_hints' not in spec_obj:
+        return False
+    check_type = spec_obj.get_scheduler_hint('_nova_check_type')
+    return check_type == 'live_migrate'
 
 
 def claim_resources(ctx, client, spec_obj, instance_uuid, alloc_req,

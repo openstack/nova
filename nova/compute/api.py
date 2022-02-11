@@ -4274,7 +4274,11 @@ class API:
                     context, image, new_flavor, root_bdm=None,
                     validate_pci=True)
 
-        filter_properties = {'ignore_hosts': []}
+        # Not to be confused with scheduler_hint (singular)
+        scheduler_hints = {'_nova_check_type': ['resize']}
+        filter_properties = {'ignore_hosts': [],
+                             'scheduler_hints': scheduler_hints}
+
         if not self._allow_resize_to_same_host(same_flavor, instance):
             filter_properties['ignore_hosts'].append(instance.host)
 
@@ -4323,6 +4327,10 @@ class API:
         # resource consumption for this operation is written to the database
         # by compute.
         scheduler_hint = {'filter_properties': filter_properties}
+        # Yes, that is confusing: scheduler_hint is the
+        # parameter named for the resize_instance api call,
+        # which takes has filter_properties which in turn has
+        # scheduler_hints (plural).
 
         if host_name is None:
             # If 'host_name' is not specified,
@@ -4338,7 +4346,6 @@ class API:
                 host=node.host, node=node.hypervisor_hostname,
                 allow_cross_cell_move=allow_cross_cell_resize)
 
-        scheduler_hint['_nova_check_type'] = ['resize']
         # Asynchronously RPC cast to conductor so the response is not blocked
         # during scheduling. If something fails the user can find out via
         # instance actions.

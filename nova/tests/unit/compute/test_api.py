@@ -2092,6 +2092,9 @@ class _ComputeAPIUnitTestMixIn(object):
             else:
                 filter_properties = {'ignore_hosts': [fake_inst['host']]}
 
+            filter_properties['scheduler_hints'] = {
+                '_nova_check_type': ['resize']}
+
             if request_spec:
                 fake_spec = objects.RequestSpec(
                     pci_requests=objects.InstancePCIRequests(requests=[]))
@@ -2107,7 +2110,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
             scheduler_hint = {
                 'filter_properties': filter_properties,
-                '_nova_check_type': ['resize'],
             }
 
         mock_allow_cross_cell_resize = self.useFixture(

@@ -293,6 +293,18 @@ class _TestRequestSpecObject(object):
         spec._from_hints(None)
         self.assertIsNone(spec.scheduler_hints)
 
+    def test_update_scheduler_hints(self):
+        spec = objects.RequestSpec(
+            scheduler_hints={'foo': ['1'],
+                             'bar': ['2'],
+                             'baz': ['5']})
+        spec.update_scheduler_hints({'foo': '2',
+                                     'bar': ['3']})
+        expected = {'foo': ['2'],
+                    'bar': ['3'],
+                    'baz': ['5']}
+        self.assertEqual(expected, spec.scheduler_hints)
+
     @mock.patch.object(objects.SchedulerLimits, 'from_dict')
     def test_from_primitives(self, mock_limits):
         spec_dict = {'instance_type': objects.Flavor(),
