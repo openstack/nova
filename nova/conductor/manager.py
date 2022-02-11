@@ -346,11 +346,7 @@ class ComputeTaskManager:
             # original RequestSpec object for make sure the scheduler verifies
             # the right one and not the original flavor
             request_spec.flavor = flavor
-            if (not request_spec.obj_attr_is_set('scheduler_hints') or
-                request_spec.scheduler_hints is None):
-                request_spec._from_hints(scheduler_hints)
-            else:
-                request_spec.scheduler_hints.update(scheduler_hints)
+            request_spec.update_scheduler_hints(scheduler_hints)
         return request_spec
 
     def _cold_migrate(self, context, instance, flavor, filter_properties,

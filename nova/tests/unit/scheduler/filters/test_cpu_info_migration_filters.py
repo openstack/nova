@@ -36,22 +36,20 @@ class TestCpuFlagsMigrationFilter(test.NoDBTestCase):
         )
 
     @mock.patch.object(cpu_info_migration_filter, 'get_admin_context')
-    @mock.patch.object(cpu_info_migration_filter, 'request_is_resize')
-    @mock.patch.object(cpu_info_migration_filter, 'request_is_rebuild')
+    @mock.patch.object(cpu_info_migration_filter, 'request_is_live_migrate')
     @mock.patch.object(ComputeNode, 'get_by_host_and_nodename')
-    def _test_filter_all(self, mock_get_cn, mock_is_rebuild, mock_is_resize,
-            mock_get_admin_context, compute_node=None, is_resize=False,
-            is_rebuild=False, hosts=None, filtered_hosts=None,
+    def _test_filter_all(self, mock_get_cn, mock_is_live_migrate,
+            mock_get_admin_context, compute_node=None, is_live_migrate=True,
+            hosts=None, filtered_hosts=None,
             **scheduler_hints):
         if not scheduler_hints:
             scheduler_hints = self._default_scheduler_hints
-        hosts = mock.sentinel.hosts if hosts is None else hosts
+        hosts = [mock.sentinel.host] if hosts is None else hosts
         if filtered_hosts is None:
             filtered_hosts = hosts
         admin_ctx = mock.sentinel.admin_ctxt
         mock_get_admin_context.return_value = admin_ctx
-        mock_is_rebuild.return_value = is_rebuild
-        mock_is_resize.return_value = is_resize
+        mock_is_live_migrate.return_value = is_live_migrate
         mock_get_cn.side_effect = compute_node
         spec_obj = objects.RequestSpec(
                         context=mock.sentinel.ctx,
@@ -66,10 +64,8 @@ class TestCpuFlagsMigrationFilter(test.NoDBTestCase):
             pass
 
         self.assertEqual(result, filtered_hosts)
-        if is_resize:
-            mock_is_resize.assert_called_with(spec_obj)
-        if is_rebuild:
-            mock_is_rebuild.assert_called_with(spec_obj)
+        mock_is_live_migrate.assert_called_with(spec_obj)
+
         if compute_node is None:
             mock_get_admin_context.assert_not_called()
             mock_get_cn.assert_not_called()
@@ -93,11 +89,8 @@ class TestCpuFlagsMigrationFilter(test.NoDBTestCase):
     def test_no_source_node_pass_through(self):
         self._test_filter_all_no_host_passes(source_node=['node1'])
 
-    def test_resize_pass_through(self):
-        self._test_filter_all_no_host_passes(is_resize=True)
-
-    def test_rebuild_pass_through(self):
-        self._test_filter_all_no_host_passes(is_rebuild=True)
+    def test_non_live_migrate_pass_through(self):
+        self._test_filter_all_no_host_passes(is_live_migrate=False)
 
     def test_missing_compute_host_pass_through(self):
         def raise_exception(_, host, node):

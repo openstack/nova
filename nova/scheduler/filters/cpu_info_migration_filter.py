@@ -22,8 +22,7 @@ from nova.context import get_admin_context
 from nova.exception import ComputeHostNotFound
 from nova.objects.compute_node import ComputeNode
 from nova.scheduler import filters
-from nova.scheduler.utils import request_is_rebuild
-from nova.scheduler.utils import request_is_resize
+from nova.scheduler.utils import request_is_live_migrate
 
 LOG = logging.getLogger(__name__)
 
@@ -44,12 +43,10 @@ class CpuInfoMigrationFilter(filters.BaseHostFilter):
     def filter_all(self, filter_obj_list, spec_obj):
         source_host = spec_obj.get_scheduler_hint('source_host')
         source_node = spec_obj.get_scheduler_hint('source_node')
-        # This filter only applies to live-migration,
-        # Not normal builds, resizes, and rebuilds
-        if (not source_host or
-                not source_node or
-                request_is_resize(spec_obj) or
-                request_is_rebuild(spec_obj)):
+
+        if (not request_is_live_migrate(spec_obj) or
+                not source_host or
+                not source_node):
             return filter_obj_list
 
         try:
