@@ -110,7 +110,7 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
             raise exception.ObjectActionError(action='save',
                                               reason='address is not mutable')
         db_vif = main_db_api.virtual_interface_update(
-            self._context, self.address, updates)
+            self._context, self.uuid, updates)
         return self._from_db_object(self._context, self, db_vif)
 
     @base.remotable_classmethod
