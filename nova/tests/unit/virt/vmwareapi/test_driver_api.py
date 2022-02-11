@@ -248,7 +248,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         vmwareapi_fake.cleanup()
 
     def test_get_host_ip_addr(self):
-        self.assertEqual(HOST, self.conn.get_host_ip_addr())
+        host = '1.0|{}'.format(self.conn._vcenter_uuid)
+        self.assertEqual(host, self.conn.get_host_ip_addr())
 
     def test_init_host_with_no_session(self):
         self.conn._session = mock.Mock()
@@ -660,7 +661,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             self.assertTrue(self.cd_attach_called)
 
     @mock.patch.object(vmops.VMwareVMOps, 'power_off')
-    @mock.patch.object(driver.VMwareVCDriver, 'detach_volume')
+    @mock.patch.object(volumeops.VMwareVolumeOps, 'detach_volume')
     @mock.patch.object(vmops.VMwareVMOps, 'destroy')
     def test_destroy_with_attached_volumes(self,
                                            mock_destroy,
@@ -678,7 +679,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                           block_device_info=bdi)
         mock_power_off.assert_called_once_with(self.instance)
         mock_detach_volume.assert_called_once_with(
-            None, connection_info, self.instance, 'fake-name')
+            connection_info, self.instance)
         mock_destroy.assert_called_once_with(self.instance, True)
 
     @mock.patch.object(vmops.VMwareVMOps, 'power_off',
@@ -699,7 +700,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         mock_power_off.assert_called_once_with(self.instance)
         mock_destroy.assert_called_once_with(self.instance, True)
 
-    @mock.patch.object(driver.VMwareVCDriver, 'detach_volume',
+    @mock.patch.object(volumeops.VMwareVolumeOps, 'detach_volume',
                        side_effect=exception.NovaException())
     @mock.patch.object(vmops.VMwareVMOps, 'destroy')
     def test_destroy_with_attached_volumes_with_exception(
@@ -714,11 +715,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.assertRaises(exception.NovaException,
                           self.conn.destroy, self.context, self.instance,
                           self.network_info, block_device_info=bdi)
-        mock_detach_volume.assert_called_once_with(
-            None, connection_info, self.instance, 'fake-name')
+        mock_detach_volume.assert_called_once_with(connection_info,
+                                                   self.instance)
         self.assertFalse(mock_destroy.called)
 
-    @mock.patch.object(driver.VMwareVCDriver, 'detach_volume',
+    @mock.patch.object(volumeops.VMwareVolumeOps, 'detach_volume',
                        side_effect=exception.DiskNotFound(message='oh man'))
     @mock.patch.object(vmops.VMwareVMOps, 'destroy')
     def test_destroy_with_attached_volumes_with_disk_not_found(
@@ -733,7 +734,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.conn.destroy(self.context, self.instance, self.network_info,
                           block_device_info=bdi)
         mock_detach_volume.assert_called_once_with(
-            None, connection_info, self.instance, 'fake-name')
+            connection_info, self.instance)
         self.assertTrue(mock_destroy.called)
         mock_destroy.assert_called_once_with(self.instance, True)
 
@@ -1528,7 +1529,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 self.assertFalse(mock_reboot.called)
 
     @mock.patch('nova.virt.driver.block_device_info_get_mapping')
-    @mock.patch('nova.virt.vmwareapi.driver.VMwareVCDriver.detach_volume')
+    @mock.patch.object(volumeops.VMwareVolumeOps, 'detach_volume')
     def test_detach_instance_volumes(
             self, detach_volume, block_device_info_get_mapping):
         self._create_vm()
@@ -1552,10 +1553,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 block_device_info)
             vmops.power_off.assert_called_once_with(self.instance)
             exp_detach_calls = [
-                mock.call(None, mock.sentinel.connection_info_1,
-                          self.instance, 'dev1'),
-                mock.call(None, mock.sentinel.connection_info_2,
-                          self.instance, 'dev2')]
+                mock.call(mock.sentinel.connection_info_1, self.instance),
+                mock.call(mock.sentinel.connection_info_2, self.instance)]
             self.assertEqual(exp_detach_calls, detach_volume.call_args_list)
 
     def test_destroy(self):
@@ -1604,25 +1603,49 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                               None, self.destroy_disks)
             self.assertFalse(mock_destroy.called)
 
-    def _destroy_instance_without_vm_ref(self,
-                                         task_state=None):
+    def _destroy_instance_without_vm_ref(self, task_state=None,
+                                         reverting_in_place_migration=False):
 
         self._create_instance()
         with test.nested(
+             mock.patch.object(vm_util, 'get_vm_ref',
+                               return_value='fake-ref'),
+             mock.patch.object(vm_util, 'get_vm_name'),
              mock.patch.object(self.conn._session,
                                '_call_method'),
-             mock.patch.object(self.conn._vmops,
-                               '_destroy_instance')
-        ) as (mock_call, mock_destroy):
+             mock.patch.object(self.conn._vmops, '_destroy_instance'),
+             mock.patch.object(self.conn, '_detach_instance_volumes'),
+        ) as (mock_get_vm_ref, mock_get_vm_name, mock_call, mock_destroy,
+                mock_detach):
+            if reverting_in_place_migration:
+                mock_get_vm_name.return_value = 'fake-vm-name'
+            else:
+                mock_get_vm_name.return_value = self.instance.uuid
+
+            block_device_info = mock.sentinel.block_device_info
+
             self.instance.task_state = task_state
             self.conn.destroy(self.context, self.instance,
                               self.network_info,
-                              None, True)
+                              block_device_info, True)
+
             if task_state == task_states.RESIZE_REVERTING:
-                expected = 0
+                mock_get_vm_ref.assert_called_once_with(self.conn._session,
+                                                        self.instance)
+                mock_get_vm_name.assert_called_once_with(self.conn._session,
+                    mock_get_vm_ref.return_value)
+                if reverting_in_place_migration:
+                    mock_destroy.assert_not_called()
+                else:
+                    mock_destroy.assert_called_once_with(self.instance,
+                                                         destroy_disks=True)
+                    mock_detach.assert_called_once_with(self.instance,
+                                                        block_device_info)
             else:
-                expected = 1
-            self.assertEqual(expected, mock_destroy.call_count)
+                mock_destroy.assert_called_once_with(self.instance,
+                                                     destroy_disks=True)
+                mock_detach.assert_called_once_with(self.instance,
+                                                    block_device_info)
             self.assertFalse(mock_call.called)
 
     def test_destroy_instance_without_vm_ref(self):
@@ -1631,6 +1654,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     def test_destroy_instance_without_vm_ref_with_resize_revert(self):
         self._destroy_instance_without_vm_ref(
             task_state=task_states.RESIZE_REVERTING)
+
+    def test_destroy_instance_reverting_in_place_migration(self):
+        self._destroy_instance_without_vm_ref(
+            task_state=task_states.RESIZE_REVERTING,
+            reverting_in_place_migration=True)
 
     def test_destroy_instance_with_vm_ref_and_with_volumes(self):
         self.destroy_disks = True
@@ -2414,12 +2442,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     def test_resize_to_smaller_disk(self):
         self._create_vm(flavor='m1.large')
         flavor = self._get_flavor_by_name('m1.small')
+        fake_dest = '1.0|vcenter-uuid'
         with test.nested(
             mock.patch('nova.compute.utils.is_volume_backed_instance',
                        return_value=False)):
             self.assertRaises(exception.InstanceFaultRollback,
                               self.conn.migrate_disk_and_power_off,
-                              self.context, self.instance, 'fake_dest', flavor,
+                              self.context, self.instance, fake_dest, flavor,
                               None)
 
     def test_spawn_attach_volume_vmdk(self):

@@ -119,7 +119,8 @@ class VMwareVMOpsTestCase(test.TestCase):
         self._vmops = vmops.VMwareVMOps(self._session, self._virtapi,
                                         self._volumeops,
                                         mock.Mock,
-                                        cluster=cluster.obj)
+                                        cluster=cluster.obj,
+                                        vcenter_uuid=uuids.vcenter)
         self._cluster = cluster
         self._image_meta = objects.ImageMeta.from_dict({'id': self._image_id,
                                                         'owner': ''})
@@ -609,7 +610,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                   succeeds=False)
 
     def _test_finish_migration(self, power_on=True, resize_instance=False,
-                               migration=None, relocate_fails=False):
+                               migration=None):
         with test.nested(
                 mock.patch.object(self._vmops,
                                   '_resize_create_ephemerals_and_swap'),
@@ -617,6 +618,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                 mock.patch.object(vm_util, "power_on_instance"),
                 mock.patch.object(vm_util, "get_vm_ref",
                                   return_value='fake-ref'),
+                mock.patch.object(vm_util, "reconfigure_vm"),
                 mock.patch.object(vmops.VMwareVMOps,
                                   "_remove_ephemerals_and_swap"),
                 mock.patch.object(vm_util, 'get_vmdk_info'),
@@ -628,89 +630,83 @@ class VMwareVMOpsTestCase(test.TestCase):
                 mock.patch.object(vmops.VMwareVMOps,
                                   "update_cluster_placement"),
                 mock.patch('nova.compute.utils.is_volume_backed_instance',
-                    return_value=False)
+                    return_value=False),
+                mock.patch.object(vmops.VMwareVMOps,
+                                  "_get_vm_networking_spec"),
+                mock.patch.object(images,
+                                  "get_vsphere_location"),
+                mock.patch.object(ds_util,
+                                  "get_datastore",
+                                  return_value=self._ds),
         ) as (fake_resize_create_ephemerals_and_swap,
               fake_update_instance_progress, fake_power_on, fake_get_vm_ref,
-              fake_remove_ephemerals_and_swap, fake_get_vmdk_info,
-              fake_resize_vm, fake_resize_disk, fake_relocate_vm,
-              fake_detach_volumes, fake_attach_volumes,
-              fake_update_cluster_placement, fake_is_volume_backed):
+              fake_reconfigure_vm, fake_remove_ephemerals_and_swap,
+              fake_get_vmdk_info, fake_resize_vm, fake_resize_disk,
+              fake_relocate_vm, fake_detach_volumes, fake_attach_volumes,
+              fake_update_cluster_placement, fake_is_volume_backed,
+              fake_get_vm_networking_spec, fake_get_vsphere_location,
+              fake_get_datastore):
+            vm_ref = fake_get_vm_ref.return_value
             migration = migration or objects.Migration(dest_compute="nova",
-                                                       source_compute="nova")
-            if relocate_fails:
-                fake_relocate_vm.side_effect = test.TestingException
+                source_compute="nova", uuid=uuids.migration)
+            block_device_info = mock.sentinel.block_device_info
+
             vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
                                     'fake-adapter',
                                     'fake-disk',
                                     self._instance.flavor.root_gb * units.Gi,
                                     'fake-device')
             fake_get_vmdk_info.return_value = vmdk
-            vm_ref_calls = [mock.call(self._session, self._instance)]
-            try:
-                self._vmops.finish_migration(context=self._context,
-                                             migration=migration,
-                                             instance=self._instance,
-                                             disk_info=None,
-                                             network_info=None,
-                                             block_device_info=None,
-                                             resize_instance=resize_instance,
-                                             image_meta=None,
-                                             power_on=power_on)
-            except test.TestingException:
-                pass
-            relocate_failed = False
-            if migration.dest_compute != migration.source_compute:
-                fake_relocate_vm.\
-                    assert_called_once_with('fake-ref', self._context,
-                                            self._instance, None, None)
-                fake_detach_volumes.assert_called_once_with(self._instance,
-                                                            None)
-                fake_attach_volumes.assert_called_once_with(self._instance,
-                                                            None,
-                                                            vmdk.adapter_type)
-                if not relocate_fails:
-                    fake_update_cluster_placement.assert_called_once_with(
-                        self._context, self._instance)
-                else:
-                    fake_update_cluster_placement.assert_not_called()
-                    relocate_failed = True
 
-            if not relocate_failed:
-                fake_resize_create_ephemerals_and_swap.assert_called_once_with(
-                    'fake-ref', self._instance, None)
-                fake_remove_ephemerals_and_swap.assert_called_once_with(
-                    'fake-ref')
-                if power_on:
-                    fake_power_on.assert_called_once_with(self._session,
-                                                          self._instance,
-                                                          vm_ref='fake-ref')
-                else:
-                    self.assertFalse(fake_power_on.called)
+            self._vmops.finish_migration(context=self._context,
+                                         migration=migration,
+                                         instance=self._instance,
+                                         disk_info=None,
+                                         network_info=None,
+                                         block_device_info=block_device_info,
+                                         resize_instance=resize_instance,
+                                         image_meta=None,
+                                         power_on=power_on)
+            fake_attach_volumes.assert_called_once_with(self._instance,
+                block_device_info,
+                constants.DEFAULT_ADAPTER_TYPE)
 
-                fake_resize_vm.assert_called_once_with(self._context,
-                                                       self._instance,
-                                                       'fake-ref',
-                                                       self._instance.flavor,
-                                                       mock.ANY)
-                if resize_instance:
-                    fake_resize_disk.\
-                        assert_called_once_with(self._instance,
-                                                'fake-ref',
-                                                vmdk,
-                                                self._instance.flavor)
-
-                calls = [mock.call(self._context, self._instance, step=i,
-                                   total_steps=vmops.RESIZE_TOTAL_STEPS)
-                         for i in range(2, 7)]
-                fake_update_instance_progress.assert_has_calls(calls)
+            fake_resize_create_ephemerals_and_swap.assert_called_once_with(
+                'fake-ref', self._instance, block_device_info)
+            fake_remove_ephemerals_and_swap.assert_called_once_with(
+                'fake-ref')
+            if power_on:
+                fake_power_on.assert_called_once_with(self._session,
+                                                        self._instance)
             else:
-                fake_resize_create_ephemerals_and_swap.assert_not_called()
-                fake_remove_ephemerals_and_swap.assert_not_called()
-                fake_power_on.assert_not_called()
-                fake_resize_vm.assert_not_called()
+                self.assertFalse(fake_power_on.called)
+
+            fake_resize_vm.assert_called_once_with(self._context,
+                                                    self._instance,
+                                                    vm_ref,
+                                                    self._instance.flavor,
+                                                    mock.ANY)
+            if resize_instance:
+                fake_resize_disk.\
+                    assert_called_once_with(self._instance,
+                                            vm_ref,
+                                            vmdk,
+                                            self._instance.flavor)
+            else:
                 fake_resize_disk.assert_not_called()
-                fake_update_instance_progress.assert_not_called()
-            fake_get_vm_ref.assert_has_calls(vm_ref_calls)
+
+            calls = [mock.call(self._context, self._instance, step=i,
+                                total_steps=vmops.RESIZE_TOTAL_STEPS)
+                        for i in range(5, vmops.RESIZE_TOTAL_STEPS)]
+            fake_update_instance_progress.assert_has_calls(calls)
+            fake_update_cluster_placement.assert_called_once_with(
+                    self._context, self._instance)
+
+            if power_on:
+                fake_power_on.assert_called_once_with(self._session,
+                                                      self._instance)
+            else:
+                self.assertFalse(fake_power_on.called)
 
     def test_finish_migration_power_on(self):
         self._test_finish_migration(power_on=True, resize_instance=False)
@@ -720,17 +716,6 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def test_finish_migration_power_on_resize(self):
         self._test_finish_migration(power_on=True, resize_instance=True)
-
-    def test_finish_migration_another_cluster(self, relocate_fails=False):
-        self._test_finish_migration(power_on=True,
-                                    resize_instance=False,
-                                    relocate_fails=relocate_fails,
-                                    migration=objects.Migration(
-                                        dest_compute="dest",
-                                        source_compute="source"))
-
-    def test_finish_migration_relocate_fails(self):
-        self.test_finish_migration_another_cluster(relocate_fails=True)
 
     @mock.patch.object(vmops.VMwareVMOps, '_create_swap')
     @mock.patch.object(vmops.VMwareVMOps, '_create_ephemeral')
@@ -783,6 +768,86 @@ class VMwareVMOpsTestCase(test.TestCase):
         vmdk = vm_util.VmdkInfo(None, None, None, 0, None)
         self._test_resize_create_ephemerals(vmdk, None)
 
+    @mock.patch.object(ds_util, 'get_datastore')
+    @mock.patch.object(images, 'get_vsphere_location')
+    @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
+    @mock.patch.object(vm_util, 'rename_vm')
+    @mock.patch.object(vm_util, '_get_vm_ref_from_vm_uuid',
+                       return_value=mock.sentinel.migrated_vm)
+    @mock.patch.object(vm_util, 'power_on_instance')
+    @mock.patch.object(vm_util, 'reconfigure_vm')
+    @mock.patch.object(vmops.VMwareVMOps, '_attach_volumes')
+    @mock.patch.object(vmops.VMwareVMOps, "_get_vm_networking_spec",
+                       return_value=mock.sentinel.networking_spec)
+    @mock.patch.object(vmops.VMwareVMOps, "_update_vnic_index")
+    @mock.patch.object(vm_util, 'get_vmdk_info')
+    @mock.patch.object(objects.MigrationContext, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
+    def test_finish_revert_migration(self, fake_migration_get,
+                                     fake_migration_context_get,
+                                     fake_get_vmdk_info,
+                                     fake_update_vnic_index,
+                                     fake_get_vm_networking_spec,
+                                     fake_attach_volumes,
+                                     fake_reconfigure_vm, fake_power_on,
+                                     fake_get_vm_ref_by_uuid,
+                                     fake_rename_vm,
+                                     fake_update_cluster_placement,
+                                     fake_get_vsphere_location,
+                                     fake_get_datastore,
+                                     legacy_migration=False):
+        vm_ref = fake_get_vm_ref_by_uuid.return_value
+        fake_get_datastore.return_value = self._ds
+        if not legacy_migration:
+            dest = self._vmops.get_host_ip_addr()
+        else:
+            dest = "127.0.0.1"
+        migration = objects.Migration(
+            dest_host=dest, uuid=uuidutils.generate_uuid())
+        fake_migration_get.return_value = migration
+
+        migration_context = objects.MigrationContext()
+        migration_context.instance_uuid = self._instance.uuid
+        migration_context.migration_id = 101
+        fake_migration_context_get.return_value = migration_context
+        self._instance.migration_context = migration_context
+
+        vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
+                                'fake-adapter',
+                                'fake-disk',
+                                self._instance.flavor.root_gb * units.Gi,
+                                'fake-device')
+        fake_get_vmdk_info.return_value = vmdk
+        self._vmops.finish_revert_migration(self._context, self._instance,
+                                            mock.sentinel.network_info,
+                                            mock.sentinel.block_device_info,
+                                            power_on=True)
+        fake_migration_get.assert_called_once_with(self._context, 101,
+                                                   self._instance.uuid)
+        fake_get_vm_ref_by_uuid.assert_called_once_with(self._session,
+                                                        migration.uuid)
+        if legacy_migration:
+            fake_get_vmdk_info.assert_called_once_with(
+                self._session, vm_ref, uuid=self._instance.uuid)
+        else:
+            fake_reconfigure_vm.assert_called_once_with(
+                self._session, vm_ref, mock.sentinel.networking_spec
+            )
+            fake_attach_volumes.assert_called_once_with(
+                self._instance, mock.sentinel.block_device_info,
+                constants.DEFAULT_ADAPTER_TYPE,
+                existing_disks={})
+            fake_get_vm_networking_spec.assert_called_once_with(
+                self._instance, mock.sentinel.network_info)
+            fake_update_vnic_index.assert_called_once_with(
+                self._context, self._instance, mock.sentinel.network_info
+            )
+            fake_rename_vm.assert_called_once_with(self._session, vm_ref,
+                                                   self._instance)
+        fake_power_on.assert_called_once_with(self._session, self._instance)
+
+    @mock.patch.object(objects.MigrationContext, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
     @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vmops.VMwareVMOps, '_resize_create_ephemerals_and_swap')
@@ -803,20 +868,16 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_attach_volumes')
     @mock.patch.object(vmops.VMwareVMOps, '_relocate_vm')
     @mock.patch.object(vmops.VMwareVMOps, 'list_instances')
-    def _test_finish_revert_migration(self, fake_list_instances,
-                                      fake_relocate_vm, fake_attach_volumes,
-                                      fake_detach_volumes, fake_power_on,
-                                      fake_get_vm_ref, fake_power_off,
-                                      fake_resize_spec, fake_reconfigure_vm,
-                                      fake_get_browser,
-                                      fake_original_exists, fake_disk_move,
-                                      fake_disk_delete,
-                                      fake_remove_ephemerals_and_swap,
-                                      fake_resize_create_ephemerals_and_swap,
-                                      fake_get_extra_specs,
-                                      fake_update_cluster_placement,
-                                      power_on, instances_list=None,
-                                      relocate_fails=False):
+    def _test_finish_revert_in_place_migration(
+            self, fake_list_instances, fake_relocate_vm, fake_attach_volumes,
+            fake_detach_volumes, fake_power_on, fake_get_vm_ref,
+            fake_power_off, fake_resize_spec, fake_reconfigure_vm,
+            fake_get_browser, fake_original_exists, fake_disk_move,
+            fake_disk_delete, fake_remove_ephemerals_and_swap,
+            fake_resize_create_ephemerals_and_swap, fake_get_extra_specs,
+            fake_update_cluster_placement,
+            fake_migration_get_by_id_and_instance, fake_get_by_instance_uuid,
+            power_on, instances_list=None, relocate_fails=False):
         """Tests the finish_revert_migration method on vmops."""
         datastore = ds_obj.Datastore(ref='fake-ref', name='fake')
         device = vmwareapi_fake.DataObject()
@@ -832,6 +893,16 @@ class VMwareVMOpsTestCase(test.TestCase):
                                  vmFolder='fake_folder')
         extra_specs = vm_util.ExtraSpecs()
         fake_get_extra_specs.return_value = extra_specs
+        fake_migration_get_by_id_and_instance.return_value = \
+            objects.Migration(dest_host='fake-host',
+                              uuid=uuidutils.generate_uuid())
+
+        migration_context = objects.MigrationContext()
+        migration_context.instance_uuid = self._instance.uuid
+        migration_context.migration_id = 101
+        fake_get_by_instance_uuid.return_value = migration_context
+        self._instance.migration_context = migration_context
+
         with test.nested(
             mock.patch.object(self._vmops, 'get_datacenter_ref_and_name',
                               return_value=dc_info),
@@ -930,11 +1001,11 @@ class VMwareVMOpsTestCase(test.TestCase):
         else:
             self.assertFalse(fake_power_on.called)
 
-    def test_finish_revert_migration_power_on(self):
-        self._test_finish_revert_migration(power_on=True)
+    def test_finish_revert_in_place_migration_power_on(self):
+        self._test_finish_revert_in_place_migration(power_on=True)
 
-    def test_finish_revert_migration_power_off(self):
-        self._test_finish_revert_migration(power_on=False)
+    def test_finish_revert_in_place_migration_power_off(self):
+        self._test_finish_revert_in_place_migration(power_on=False)
 
     def _test_find_esx_host(self, cluster_hosts, ds_hosts):
         def mock_call_method(module, method, *args, **kwargs):
@@ -1023,31 +1094,32 @@ class VMwareVMOpsTestCase(test.TestCase):
             mock_get_ds.assert_called_once_with(self._session, 'cluster_ref',
                                                 None)
 
-    def test_finish_revert_migration_another_cluster(self,
-                                                     relocate_fails=False):
+    def test_finish_revert_in_place_migration_another_cluster(
+            self, relocate_fails=False):
         instances_list = ["fake_uuid_foo_bar"]
-        self._test_finish_revert_migration(power_on=True,
-                                           instances_list=instances_list,
-                                           relocate_fails=relocate_fails)
+        self._test_finish_revert_in_place_migration(
+            power_on=True, instances_list=instances_list,
+            relocate_fails=relocate_fails)
 
-    def test_finish_revert_migration_relocate_fails(self):
-        self.test_finish_revert_migration_another_cluster(relocate_fails=True)
+    def test_finish_revert_in_place_migration_relocate_fails(self):
+        self.test_finish_revert_in_place_migration_another_cluster(
+            relocate_fails=True)
 
     @mock.patch.object(volumeops.VMwareVolumeOps, 'attach_volume')
     def test_attach_volumes(self, fake_attach_volume):
         block_device_info = {
             'block_device_mapping': [
-                {'boot_index': -1, 'connection_info': {'id': 'c'}},
-                {'boot_index': 1, 'connection_info': {'id': 'b'}},
-                {'boot_index': 0, 'connection_info': {'id': 'a'}},
+                {'mount_device': '/dev/sda', 'connection_info': {'id': 'c'}},
+                {'mount_device': '/dev/sdb', 'connection_info': {'id': 'b'}},
+                {'mount_device': '/dev/sdc', 'connection_info': {'id': 'a'}},
             ]
         }
         self._vmops._attach_volumes(self._instance, block_device_info,
                                     mock.sentinel.adapter_type)
         fake_attach_volume.assert_has_calls([
-            mock.call({'id': 'a'}, self._instance, mock.sentinel.adapter_type),
-            mock.call({'id': 'b'}, self._instance, mock.sentinel.adapter_type),
             mock.call({'id': 'c'}, self._instance, mock.sentinel.adapter_type),
+            mock.call({'id': 'b'}, self._instance, mock.sentinel.adapter_type),
+            mock.call({'id': 'a'}, self._instance, mock.sentinel.adapter_type),
         ])
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
@@ -1055,8 +1127,11 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
-    def test_resize_vm(self, fake_resize_spec, fake_reconfigure,
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='vm-ref')
+    def test_resize_vm(self, fake_get_vm_ref,
+                       fake_resize_spec, fake_reconfigure,
                        fake_get_extra_specs, fake_get_metadata):
+        vm_ref = mock.sentinel.vm_ref
         extra_specs = vm_util.ExtraSpecs()
         fake_get_extra_specs.return_value = extra_specs
         fake_get_metadata.return_value = self._metadata
@@ -1066,8 +1141,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                 extra_specs={})
         instance = self._instance.obj_clone()
         instance.old_flavor = instance.flavor.obj_clone()
-        self._vmops._resize_vm(self._context, instance, 'vm-ref', flavor,
-                               None)
+        self._vmops._resize_vm(self._context, instance, vm_ref, flavor, None)
         fake_get_metadata.assert_called_once_with(self._context,
                                                   instance,
                                                   flavor=flavor)
@@ -1075,7 +1149,7 @@ class VMwareVMOpsTestCase(test.TestCase):
             self._session.vim.client.factory, 2, 1024, extra_specs,
             metadata=self._metadata)
         fake_reconfigure.assert_called_once_with(self._session,
-                                                 'vm-ref', 'fake-spec')
+                                                 vm_ref, 'fake-spec')
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
@@ -1083,11 +1157,14 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
+    @mock.patch.object(vm_util, 'get_vm_ref',
+                       return_value=mock.sentinel.vm_ref)
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
-    def test_resize_vm_bigvm_upsize(self, fake_drs_override, fake_resize_spec,
-                                    fake_reconfigure,
+    def test_resize_vm_bigvm_upsize(self, fake_drs_override, fake_get_vm_ref,
+                                    fake_resize_spec, fake_reconfigure,
                                     fake_cleanup_after_special_spawning,
                                     fake_get_extra_specs, fake_get_metadata):
+        vm_ref = fake_get_vm_ref.return_value
         extra_specs = vm_util.ExtraSpecs()
         fake_get_extra_specs.return_value = extra_specs
         fake_get_metadata.return_value = self._metadata
@@ -1097,12 +1174,11 @@ class VMwareVMOpsTestCase(test.TestCase):
                                 extra_specs={})
         instance = self._instance.obj_clone()
         instance.old_flavor = instance.flavor.obj_clone()
-        self._vmops._resize_vm(self._context, instance, 'vm-ref', flavor,
-                               None)
+        self._vmops._resize_vm(self._context, instance, vm_ref, flavor, None)
         behavior = constants.DRS_BEHAVIOR_PARTIALLY_AUTOMATED
         fake_drs_override.assert_called_once_with(self._session,
                                                   self._cluster.obj,
-                                                  'vm-ref',
+                                                  vm_ref,
                                                   operation='add',
                                                   behavior=behavior)
         expected = (self._context, int(flavor.memory_mb), flavor)
@@ -1114,11 +1190,14 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
                        return_value='fake-spec')
+    @mock.patch.object(vm_util, 'get_vm_ref',
+                       return_value=mock.sentinel.vm_ref)
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
-    def test_resize_vm_bigvm_downsize(self, fake_drs_override,
+    def test_resize_vm_bigvm_downsize(self, fake_drs_override, fake_get_vm_ref,
                                       fake_resize_spec, fake_reconfigure,
                                       fake_cleanup_after_special_spawning,
                                       fake_get_extra_specs, fake_get_metadata):
+        vm_ref = fake_get_vm_ref.return_value
         extra_specs = vm_util.ExtraSpecs()
         fake_get_extra_specs.return_value = extra_specs
         fake_get_metadata.return_value = self._metadata
@@ -1129,11 +1208,10 @@ class VMwareVMOpsTestCase(test.TestCase):
         instance = self._instance.obj_clone()
         instance.old_flavor = instance.flavor.obj_clone()
         instance.old_flavor.memory_mb = CONF.bigvm_mb
-        self._vmops._resize_vm(self._context, instance, 'vm-ref', flavor,
-                               None)
+        self._vmops._resize_vm(self._context, instance, vm_ref, flavor, None)
         fake_drs_override.assert_called_once_with(self._session,
                                                   self._cluster.obj,
-                                                  'vm-ref',
+                                                  vm_ref,
                                                   operation='remove')
         expected = (self._context, int(flavor.memory_mb), flavor)
         fake_cleanup_after_special_spawning.assert_called_once_with(*expected)
@@ -1180,8 +1258,11 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(ds_util, 'disk_move')
     @mock.patch.object(ds_util, 'disk_copy')
-    def test_resize_disk(self, fake_disk_copy, fake_disk_move,
+    @mock.patch.object(vm_util, 'get_vm_ref',
+                       return_value=mock.sentinel.vm_ref)
+    def test_resize_disk(self, fake_get_vm_ref, fake_disk_copy, fake_disk_move,
                          fake_get_extra_specs, fake_extend):
+        vm_ref = fake_get_vm_ref.return_value
         datastore = ds_obj.Datastore(ref='fake-ref', name='fake')
         device = vmwareapi_fake.DataObject()
         backing = vmwareapi_fake.DataObject()
@@ -1206,12 +1287,12 @@ class VMwareVMOpsTestCase(test.TestCase):
             instance.old_flavor = instance.flavor.obj_clone()
             flavor = fake_flavor.fake_flavor_obj(self._context,
                          root_gb=self._instance.flavor.root_gb + 1)
-            self._vmops._resize_disk(instance, 'fake-ref', vmdk, flavor)
+            self._vmops._resize_disk(instance, vm_ref, vmdk, flavor)
             fake_get_dc_ref_and_name.assert_called_once_with(datastore.ref)
             fake_disk_copy.assert_called_once_with(
                 self._session, dc_info.ref, '[fake] uuid/root.vmdk',
                 '[fake] uuid/resized.vmdk')
-            mock_detach_disk.assert_called_once_with('fake-ref',
+            mock_detach_disk.assert_called_once_with(vm_ref,
                                                      instance,
                                                      device)
             fake_extend.assert_called_once_with(
@@ -1227,7 +1308,7 @@ class VMwareVMOpsTestCase(test.TestCase):
             fake_disk_move.assert_has_calls(calls)
 
             mock_attach_disk.assert_called_once_with(
-                    'fake-ref', instance, 'fake-adapter', 'fake-disk',
+                    vm_ref, instance, 'fake-adapter', 'fake-disk',
                     '[fake] uuid/root.vmdk',
                     disk_io_limits=extra_specs.disk_io_limits)
 
@@ -1246,15 +1327,48 @@ class VMwareVMOpsTestCase(test.TestCase):
         detach_devices.assert_called_once_with(self._vmops._session,
                                                mock.sentinel.vm_ref, devices)
 
+    @mock.patch.object(vm_util, '_get_vm_ref_from_vm_uuid',
+                       return_value=mock.sentinel.migrated_vm)
+    @mock.patch.object(vm_util, 'destroy_vm')
+    @mock.patch.object(vmops.VMwareVMOps, 'api_for_migration')
+    @mock.patch.object(vmops.VMwareVMOps, '_is_in_place_migration',
+                       return_value=False)
+    def test_confirm_migration(self, fake_legacy_test, mock_api,
+                              fake_destroy, fake_get_vm_ref_from_uuid):
+        migration = objects.Migration(uuid=uuids.migration)
+        self._vmops.confirm_migration(self._context, migration, self._instance,
+                                        network_info=None)
+
+        fake_get_vm_ref_from_uuid.assert_called_once_with(self._session,
+                                                          migration.uuid)
+        fake_destroy.assert_called_once_with(self._session, self._instance,
+                                             mock.sentinel.migrated_vm)
+        op = mock_api.return_value.confirm_migration_destination
+        op.assert_called_once_with(self._context, self._instance)
+
+    @mock.patch.object(vm_util, 'rename_vm')
+    @mock.patch.object(vm_util, 'get_vm_ref',
+                       return_value=mock.sentinel.vm_ref)
+    def test_confirm_migration_destination(self, fake_get_vm_ref,
+                                           fake_rename_vm):
+        self._vmops.confirm_migration_destination(self._context,
+                                                  self._instance)
+
+        fake_get_vm_ref.assert_called_once_with(self._session,
+                                                self._instance)
+        fake_rename_vm.assert_called_once_with(self._session,
+                                               fake_get_vm_ref.return_value,
+                                               self._instance)
+
     @mock.patch.object(ds_util, 'disk_delete')
     @mock.patch.object(ds_util, 'file_exists',
                        return_value=True)
     @mock.patch.object(vmops.VMwareVMOps, '_get_ds_browser',
                        return_value='fake-browser')
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
-    def test_confirm_migration(self, fake_get_vm_ref, fake_get_browser,
-                               fake_original_exists,
-                               fake_disk_delete):
+    def test_confirm_in_place_migration(
+            self, fake_get_vm_ref, fake_get_browser, fake_original_exists,
+            fake_disk_delete):
         """Tests the confirm_migration method on vmops."""
         datastore = ds_obj.Datastore(ref='fake-ref', name='fake')
         device = vmwareapi_fake.DataObject()
@@ -1268,13 +1382,16 @@ class VMwareVMOpsTestCase(test.TestCase):
                                 device)
         dc_info = ds_util.DcInfo(ref='fake_ref', name='fake',
                                  vmFolder='fake_folder')
+        migration = objects.Migration(dest_host='fake-host',
+                                      uuid=uuidutils.generate_uuid())
         with test.nested(
             mock.patch.object(self._vmops, 'get_datacenter_ref_and_name',
                               return_value=dc_info),
             mock.patch.object(vm_util, 'get_vmdk_info',
                               return_value=vmdk)
         ) as (fake_get_dc_ref_and_name, fake_get_vmdk_info):
-            self._vmops.confirm_migration(None,
+            self._vmops.confirm_migration(self._context,
+                                          migration,
                                           self._instance,
                                           None)
             fake_get_vm_ref.assert_called_once_with(self._session,
@@ -1293,6 +1410,11 @@ class VMwareVMOpsTestCase(test.TestCase):
         self._test_migrate_disk_and_power_off(
             flavor_root_gb=self._instance.flavor.root_gb + 1)
 
+    def test_migrate_disk_and_power_off_rolls_back_on_failure(self):
+        self._test_migrate_disk_and_power_off(
+            flavor_root_gb=self._instance.flavor.root_gb + 1,
+            migrate_fails=True)
+
     def test_migrate_disk_and_power_off_zero_disk_flavor(self):
         self._instance.flavor.root_gb = 0
         self._test_migrate_disk_and_power_off(flavor_root_gb=0)
@@ -1304,55 +1426,307 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
+    @mock.patch.object(vmops.VMwareVMOps, '_do_finish_revert_migration')
+    @mock.patch.object(objects.ImageMeta, 'from_instance')
+    @mock.patch.object(vm_util, 'reconfigure_vm_device_change')
+    @mock.patch.object(vm_util, 'rename_vm')
     @mock.patch.object(vm_util, 'get_vmdk_info')
+    @mock.patch.object(vm_util, 'power_on_instance')
     @mock.patch.object(vm_util, 'power_off_instance')
+    @mock.patch.object(vm_util, 'get_hardware_devices_by_type',
+                       return_value={})
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='source-ref')
+    @mock.patch.object(vmops.VMwareVMOps, "_do_migrate_disk")
+    @mock.patch.object(vmops.VMwareVMOps, "_get_remove_network_device_change")
+    @mock.patch.object(vmops.VMwareVMOps, "_detach_volumes")
     @mock.patch.object(vmops.VMwareVMOps, "_update_instance_progress")
-    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
-    def _test_migrate_disk_and_power_off(self, fake_get_vm_ref, fake_progress,
-                                         fake_power_off, fake_get_vmdk_info,
+    def _test_migrate_disk_and_power_off(self,
+                                         fake_progress, fake_detach_volumes,
+                                         fake_get_remove_network_device_change,
+                                         fake_do_migrate_disk,
+                                         fake_get_vm_ref,
+                                         fake_get_hardware_devices_by_type,
+                                         fake_power_off,
+                                         fake_power_on, fake_get_vmdk_info,
+                                         fake_rename_vm, fake_vm_device_change,
+                                         fake_image_meta, fake_finish_revert,
                                          fake_is_volume_backed,
-                                         flavor_root_gb):
+                                         flavor_root_gb,
+                                         migrate_fails=False):
+        block_device_info = mock.sentinel.block_device_info
+
         vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
                                 'fake-adapter',
                                 'fake-disk',
                                 self._instance.flavor.root_gb * units.Gi,
                                 'fake-device')
+        image_meta = {'properties': {'fake-meta': 'fake-meta'}}
+        fake_image_meta.return_value = image_meta
+        dest = self._vmops.get_host_ip_addr()
         fake_get_vmdk_info.return_value = vmdk
+        fake_get_remove_network_device_change.return_value = ['fake-device']
         flavor = fake_flavor.fake_flavor_obj(self._context,
                                              root_gb=flavor_root_gb)
-        self._vmops.migrate_disk_and_power_off(self._context,
-                                               self._instance,
-                                               None,
-                                               flavor)
+        if migrate_fails:
+            fake_do_migrate_disk.side_effect = test.TestingException
+            self.assertRaises(exception.InstanceFaultRollback,
+                              self._vmops.migrate_disk_and_power_off,
+                              self._context, self._instance, dest, flavor,
+                              network_info=None,
+                              block_device_info=block_device_info)
+        else:
+            self._vmops.migrate_disk_and_power_off(
+                self._context, self._instance, dest, flavor, network_info=None,
+                block_device_info=block_device_info)
 
-        fake_get_vm_ref.assert_called_once_with(self._session,
-                                                self._instance)
-
-        fake_power_off.assert_called_once_with(self._session,
-                                               self._instance,
-                                               'fake-ref')
         calls = [mock.call(self._context, self._instance, step=i,
                            total_steps=vmops.RESIZE_TOTAL_STEPS)
-                 for i in range(2)]
+                 for i in range(4)]
         fake_progress.assert_has_calls(calls)
 
+        fake_get_vm_ref.assert_called_with(self._session, self._instance)
+        fake_get_vmdk_info.assert_called_once_with(self._session, 'source-ref')
+
+        fake_rename_vm.assert_called_once_with(self._session, 'source-ref',
+                                               self._instance)
+        fake_power_off.assert_called_once_with(self._session, self._instance,
+                                               'source-ref')
+        fake_detach_volumes.assert_called_once_with(
+            self._instance, block_device_info)
+        fake_get_remove_network_device_change.assert_called_once_with(
+            'source-ref')
+        fake_vm_device_change.assert_called_once_with(self._session,
+                                                      'source-ref',
+                                                      ['fake-device'])
+        dest_data = self._vmops._decode_host_addr(dest)
+        fake_do_migrate_disk.assert_called_once_with(self._context,
+            'source-ref', self._instance, dest_data, flavor)
+        if migrate_fails:
+            fake_finish_revert.assert_called_once_with(self._context,
+                self._instance, block_device_info, None, 'source-ref',
+                fake_get_hardware_devices_by_type.return_value)
+            fake_power_on.assert_called_once_with(
+                self._session, self._instance)
+
+    def test_migrate_disk_and_power_off_rejects_version(self):
+        """Rejects a different migration_version"""
+        dest = 'fake-v1|cluster|.*|localhost|443|None|None'
+
+        self.assertRaises(exception.NovaException,
+                          self._vmops.migrate_disk_and_power_off,
+                          self._context, self._instance_values, dest,
+                          self._flavor, None, None)
+
+    @mock.patch.object(vm_util, 'rename_vm')
+    @mock.patch.object(objects.MigrationContext, 'get_by_instance_uuid')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_project_folder')
+    @mock.patch.object(vmops.VMwareVMOps, 'get_datacenter_ref_and_name')
+    @mock.patch.object(vmops.VMwareVMOps, 'change_vm_instance_uuid')
+    @mock.patch.object(vm_util, 'get_res_pool_ref')
+    @mock.patch.object(ds_util, 'get_datastore')
+    @mock.patch.object(ds_util, 'get_allowed_datastore_types')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_storage_policy')
+    @mock.patch.object(objects.ImageMeta, 'from_instance')
+    @mock.patch.object(session.VMwareAPISession, '_wait_for_task')
+    @mock.patch.object(session.VMwareAPISession, '_call_method')
+    @mock.patch.object(objects.Migration, 'get_by_id_and_instance')
+    def _test_do_migrate_disk(self, fake_migration_get, fake_call_method,
+                              fake_wait_for_task, fake_image_meta,
+                              fake_get_storage_policy, fake_allowed_ds_types,
+                              fake_get_datastore, fake_get_res_pool_ref,
+                              fake_change_uuid, fake_get_dc_ref_name,
+                              fake_get_project_folder,
+                              fake_migration_context_get,
+                              fake_rename_vm, dest, change_uuid_fails=False):
+
+        vm_ref = mock.sentinel.vm_ref
+        folder_ref = mock.sentinel.folder
+        datastore_ref = mock.sentinel.datastore
+        disk_move_type = mock.sentinel.disk_move_type
+        service = mock.sentinel.service
+
+        # {'migration_version': parts[0], 'vcenter_uuid': parts[1]}
+        remote = dest['vcenter_uuid'] != uuids.vcenter
+        fake_get_project_folder.return_value = folder_ref
+        fake_get_dc_ref_name.return_value = 'fake-dc-info'
+        fake_get_res_pool_ref.return_value = 'fake-respool'
+        fake_get_datastore.return_value = mock.Mock(ref=datastore_ref)
+
+        migration_context = objects.MigrationContext()
+        migration_context.instance_uuid = self._instance.uuid
+        migration_context.migration_id = 101
+        fake_migration_context_get.return_value = migration_context
+        self._instance.migration_context = migration_context
+
+        migration = objects.Migration()
+        migration.uuid = uuids.migration_uuid
+        migration.dest_compute = dest['vcenter_uuid']
+        migration.source_compute = uuids.vcenter
+        fake_migration_get.return_value = migration
+
+        fake_wait_for_task.side_effect = [mock.Mock(result='fake-cloned-ref'),
+                                          None]
+
+        if remote:
+            rpc_api = mock.Mock()
+            remote_relocate_spec = rpc_api.get_relocate_spec.return_value
+            remote_relocate_spec.folder = folder_ref
+            remote_relocate_spec.datastore = datastore_ref
+            remote_relocate_spec.diskMoveType = disk_move_type
+            remote_relocate_spec.service = service
+            with mock.patch.object(self._vmops, 'api_for_migration',
+                    return_value=rpc_api):
+                self._vmops._do_migrate_disk(self._context, vm_ref,
+                                             self._instance,
+                                             dest, self._flavor)
+
+        else:
+            self._vmops._do_migrate_disk(self._context, vm_ref, self._instance,
+                                         dest, mock.sentinel.flavor)
+        # Migration is fetched from the DB
+        fake_migration_get.assert_called_once_with(self._context,
+            migration_context.migration_id, self._instance.uuid)
+
+        # VM is cloned with CloneVM_Task
+        _, args, kwargs = fake_call_method.mock_calls[0]
+        self.assertEqual('CloneVM_Task', args[1])
+        self.assertEqual(vm_ref, args[2])
+        self.assertEqual(folder_ref, kwargs['folder'])
+        self.assertEqual(self._instance.uuid, kwargs['name'])
+        spec = kwargs['spec']
+        self.assertFalse(spec.powerOn)
+        # Relocate spec
+        self.assertEqual(datastore_ref, spec.location.datastore)
+        if remote:
+            self.assertEqual(disk_move_type, spec.location.diskMoveType)
+            self.assertEqual(service, spec.location.service)
+            fake_change_uuid.assert_called_once_with(self._context,
+                                                     self._instance,
+                                                     vm_ref,
+                                                     uuid=migration.uuid),
+
+            rpc_api.change_vm_instance_uuid.assert_called_once_with(
+                self._context, self._instance, 'fake-cloned-ref')
+        else:
+            self.assertEqual('moveAllDiskBackingsAndAllowSharing',
+                            spec.location.diskMoveType)
+            self.assertIsNone(spec.location.service)
+            fake_change_uuid.assert_has_calls([
+                mock.call(self._context, self._instance, vm_ref,
+                          uuid=migration.uuid),
+                mock.call(self._context, self._instance, 'fake-cloned-ref')
+            ])
+
+    def test_do_migrate_disk_local_session(self):
+        decoded = {'vcenter_uuid': uuids.vcenter}
+        self._test_do_migrate_disk(dest=decoded)
+
+    def test_do_migrate_disk_remote_session(self):
+        decoded = {'vcenter_uuid': uuids.other_vcenter}
+        self._test_do_migrate_disk(dest=decoded)
+
+    @mock.patch.object(vif, 'get_vif_info')
+    @mock.patch.object(vif, 'get_network_device')
+    @mock.patch.object(vm_util, 'get_hardware_devices')
+    @mock.patch.object(vm_util, 'set_net_device_backing')
+    def test_get_network_device_change(self, fake_set_net_device_backing,
+                                       fake_get_hardware_devices,
+                                       fake_get_network_device,
+                                       fake_get_vif_info):
+        vm_ref = 'fake-ref'
+        network_info = ['fake-net']
+        hardware_devices = ['fake-hw-device']
+        image_meta = mock.NonCallableMock(
+                        properties={'fake-meta': 'fake-meta'})
+        vif_infos = [{'mac_address': 'fake-mac-0'},
+                     {'mac_address': 'fake-mac-1'}]
+        net_devices = ['device-1', 'device-2']
+        fake_get_vif_info.return_value = vif_infos
+        fake_get_hardware_devices.return_value = hardware_devices
+        fake_get_network_device.side_effect = net_devices
+
+        device_change = self._vmops._get_network_device_change(
+            vm_ref, image_meta, network_info)
+
+        fake_get_network_device.assert_has_calls([
+            mock.call(hardware_devices, vif_infos[0]['mac_address']),
+            mock.call(hardware_devices, vif_infos[1]['mac_address'])
+        ])
+
+        client_factory = self._session.vim.client.factory
+        fake_set_net_device_backing.assert_has_calls([
+            mock.call(client_factory, net_devices[0], vif_infos[0]),
+            mock.call(client_factory, net_devices[1], vif_infos[1])
+        ])
+
+        self.assertEqual(len(device_change), 2)
+        self.assertEqual(device_change[0].device, net_devices[0])
+        self.assertEqual(device_change[0].operation, 'edit')
+        self.assertEqual(device_change[1].device, net_devices[1])
+        self.assertEqual(device_change[1].operation, 'edit')
+
+    def test_get_network_device_change_fails_mac_address(self):
+        with test.nested(
+                mock.patch.object(self._session, '_call_method'),
+                mock.patch.object(vif, 'get_vif_info'),
+                mock.patch.object(vif, 'get_network_device'),
+                mock.patch.object(vm_util, 'set_net_device_backing')
+        ) as (fake_call_method, fake_get_vif_info, fake_get_network_device,
+              fake_set_net_device_backing):
+            vif_info = [{'mac_address': 'fake-mac-0'},
+                        {'mac_address': 'fake-mac-999'}]
+            vm_ref = 'fake-ref'
+            network_info = ['fake-net']
+            hardware_devices = ['fake-hw-device']
+            image_meta = mock.MagicMock(properties={'fake-meta': 'fake-meta'})
+            fake_get_vif_info.return_value = vif_info
+            fake_call_method.return_value = hardware_devices
+            # For one of the mac addresses we couldn't find a network device
+            fake_get_network_device.side_effect = ['fake-device', None]
+
+            self.assertRaises(exception.NotFound,
+                              self._vmops._get_network_device_change,
+                              vm_ref, image_meta, network_info)
+
+            fake_get_network_device.assert_has_calls([
+                mock.call(hardware_devices, vif_info[0]['mac_address']),
+                mock.call(hardware_devices, vif_info[1]['mac_address'])
+            ])
+
+            fake_set_net_device_backing.assert_called_once_with(
+                self._session.vim.client.factory, 'fake-device', vif_info[0])
+
+    @mock.patch.object(ds_util, 'get_datastore')
+    @mock.patch.object(images, 'get_vsphere_location')
+    @mock.patch.object(vmops.VMwareVMOps, "_get_vm_networking_spec")
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     @mock.patch.object(vmops.VMwareVMOps, '_resize_create_ephemerals_and_swap')
     @mock.patch.object(vmops.VMwareVMOps, "_remove_ephemerals_and_swap")
-    @mock.patch.object(vm_util, 'get_vmdk_info')
     @mock.patch.object(vmops.VMwareVMOps, "_resize_disk")
     @mock.patch.object(vmops.VMwareVMOps, "_resize_vm")
-    @mock.patch.object(vm_util, 'power_on_instance')
+    @mock.patch.object(vmops.VMwareVMOps, "update_cluster_placement")
+    @mock.patch.object(vmops.VMwareVMOps, "disable_drs_if_needed")
     @mock.patch.object(vmops.VMwareVMOps, "_update_instance_progress")
-    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
+    @mock.patch.object(vm_util, 'power_on_instance')
+    @mock.patch.object(vm_util, "reconfigure_vm")
+    @mock.patch.object(vm_util, 'get_vm_ref',
+                       return_value='fake-ref')
     def test_finish_migration_root_block_device(self, fake_get_vm_ref,
-                                                fake_progress, fake_power_on,
+                                                fake_reconfiugre_vm,
+                                                fake_power_on,
+                                                fake_progress,
+                                                fake_disable_drs_if_needed,
+                                                fake_update_cluster_placement,
                                                 fake_resize_vm,
                                                 fake_resize_disk,
-                                                fake_get_vmdk_info,
                                                 fake_remove_eph_and_swap,
                                                 fake_resize_create_eph_swap,
-                                                fake_bdm_get_by_instance_uuid):
+                                                fake_bdm_get_by_instance_uuid,
+                                                fake_get_vm_networking_spec,
+                                                fake_get_vsphere_location,
+                                                fake_get_datastore):
+        fake_get_datastore.return_value = self._ds
+        vm_ref = fake_get_vm_ref.return_value
         # shrinking the root-disk should be ignored
         bdms = objects.block_device.block_device_make_list_from_dicts(
             self._context, [
@@ -1397,32 +1771,33 @@ class VMwareVMOpsTestCase(test.TestCase):
         fake_bdm_get_by_instance_uuid.return_value = bdms
 
         migration = objects.Migration(source_compute="nova",
-                                      dest_compute="nova")
+                                      dest_compute="nova",
+                                      uuid=uuids.migration)
+        network_info = []
         self._vmops.finish_migration(context=self._context,
                                      migration=migration,
                                      instance=self._instance,
                                      disk_info=None,
-                                     network_info=None,
+                                     network_info=network_info,
                                      block_device_info=None,
                                      resize_instance=True,
                                      image_meta=self._image_meta,
                                      power_on=True)
-        fake_get_vm_ref.assert_called_once_with(self._session,
-                                                self._instance)
+        fake_get_vm_ref.assert_called_once_with(self._session, self._instance)
         fake_resize_create_eph_swap.assert_called_once_with(
-            'fake-ref', self._instance, None)
-        fake_remove_eph_and_swap.assert_called_once_with('fake-ref')
-        fake_power_on.assert_called_once_with(self._session, self._instance,
-                                              vm_ref='fake-ref')
+            vm_ref, self._instance, None)
+        fake_remove_eph_and_swap.assert_called_once_with(vm_ref)
+        fake_power_on.assert_called_once_with(self._session, self._instance)
         fake_resize_vm.assert_called_once_with(self._context, self._instance,
-                                               'fake-ref',
+                                               vm_ref,
                                                self._instance.flavor,
                                                self._image_meta)
-        fake_get_vmdk_info.assert_not_called()
+        fake_get_vm_networking_spec.assert_called_once_with(self._instance,
+            network_info)
         fake_resize_disk.assert_not_called()
         calls = [mock.call(self._context, self._instance, step=i,
                            total_steps=vmops.RESIZE_TOTAL_STEPS)
-                 for i in range(2, 7)]
+                 for i in range(5, 10)]
         fake_progress.assert_has_calls(calls)
 
     @mock.patch.object(vutil, 'WithRetrieval')

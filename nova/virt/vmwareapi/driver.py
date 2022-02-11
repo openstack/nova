@@ -177,6 +177,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                                         self._volumeops,
                                         self._vc_state,
                                         self._cluster_ref,
+                                        self._vcenter_uuid,
                                         datastore_regex=self._datastore_regex,
                                         datastore_hagroup_regex=
                                             self._datastore_hagroup_regex)
@@ -187,7 +188,7 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         virtapi._compute.additional_endpoints.extend([
             special_spawning._SpecialVmSpawningServer(self),
-            VmwareRpcService(self)])
+            VmwareRpcService(self._vmops)])
 
     def _check_min_version(self):
         min_version = v_utils.convert_version_to_int(constants.MIN_VC_VERSION)
@@ -305,12 +306,13 @@ class VMwareVCDriver(driver.ComputeDriver):
         off the instance before the end.
         """
         # TODO(PhilDay): Add support for timeout (clean shutdown)
-        return self._vmops.migrate_disk_and_power_off(context, instance,
-                                                      dest, flavor)
+        return self._vmops.migrate_disk_and_power_off(
+            context, instance, dest, flavor, network_info, block_device_info)
 
     def confirm_migration(self, context, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
-        self._vmops.confirm_migration(migration, instance, network_info)
+        self._vmops.confirm_migration(context, migration, instance,
+                                      network_info)
 
     def finish_revert_migration(self, context, instance, network_info,
                                 migration, block_device_info=None,
@@ -582,7 +584,7 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def get_host_ip_addr(self):
         """Returns the IP address of the vCenter host."""
-        return CONF.vmware.host_ip
+        return self._vmops.get_host_ip_addr()
 
     def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance."""
@@ -606,10 +608,7 @@ class VMwareVCDriver(driver.ComputeDriver):
             for disk in block_device_mapping:
                 connection_info = disk['connection_info']
                 try:
-                    # NOTE(claudiub): Passing None as the context, as it is
-                    # not currently used.
-                    self.detach_volume(None, connection_info, instance,
-                                       disk.get('device_name'))
+                    self._volumeops.detach_volume(connection_info, instance)
                 except exception.DiskNotFound:
                     LOG.warning('The volume %s does not exist!',
                                 disk.get('device_name'),
@@ -632,10 +631,15 @@ class VMwareVCDriver(driver.ComputeDriver):
         if not instance.node:
             return
 
-        # A resize uses the same instance on the VC. We do not delete that
-        # VM in the event of a revert
+        # While resize_reverting, we use the special vm name to identify the
+        # temporary vm, so we need to use the correct vm_ref for destroying it.
         if instance.task_state == task_states.RESIZE_REVERTING:
-            return
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
+            vm_name = vm_util.get_vm_name(self._session, vm_ref)
+            if vm_name != instance.uuid:
+                # This is an older migration that doesn't have a clone.
+                # By reverting it, we shouldn't destroy the VM.
+                return
 
         # We need to detach attached volumes
         if block_device_info is not None:

@@ -856,6 +856,64 @@ def get_hardware_devices(session, vm_ref):
     return vim_util.get_array_items(hardware_devices)
 
 
+def _in_boot_order(disk1, disk2):
+    return (disk2.controllerKey > disk1.controllerKey or
+        disk2.controllerKey == disk2.controllerKey and
+        disk2.unitNumber > disk1.unitNumber)
+
+
+def get_hardware_devices_by_type(session, vm_ref):
+    nics = {}
+    controllers = {}
+    disks = {}
+    swap = []
+    ephemeral = []
+    first_device = None
+
+    for device in get_hardware_devices(session, vm_ref):
+        device_type = device.__class__.__name__
+        if device_type in ALL_SUPPORTED_NETWORK_DEVICES:
+            mac_address = getattr(device, 'macAddress', None)
+            if not mac_address:
+                LOG.warning("Could not ge mac address of NIC {}", device.key)
+                continue
+            if mac_address in nics:
+                LOG.warning("Multiple NICs with the same MAC")
+                continue
+
+            nics[mac_address] = device
+        elif device_type in CONTROLLER_TO_ADAPTER_TYPE:
+            controllers[int(device.key)] = device
+        elif device_type == "VirtualDisk":
+            backing_type = device.backing.__class__.__name__
+            if backing_type == "VirtualDiskFlatVer2BackingInfo":
+                if "swap" in device.backing.fileName:
+                    swap.append(device)
+                elif "ephemeral" in device.backing.fileName:
+                    ephemeral.append(device)
+                else:
+                    if not first_device or not _in_boot_order(first_device,
+                                                              device):
+                        first_device = device
+                    uuid = getattr(device.backing, "uuid", None)
+                    if not uuid:
+                        LOG.warning("Failed to get uuid from device {}",
+                                    device.key)
+                        continue
+                    disks[uuid.lower()] = device
+            elif backing_type == "VirtualDiskRawDiskMappingVer1BackingInfo":
+                disks[device.backing.lunUuid.lower()] = device
+
+    return {
+        "nics": nics,
+        "controllers": controllers,
+        "swap": swap,
+        "ephemeral": ephemeral,
+        "disks": disks,
+        "root_device": first_device
+    }
+
+
 def get_vmdk_info(session, vm_ref):
     """Returns information for the first VMDK attached to the given VM."""
     hardware_devices = get_hardware_devices(session, vm_ref)
@@ -874,10 +932,8 @@ def get_vmdk_info(session, vm_ref):
                 path = ds_obj.DatastorePath.parse(device.backing.fileName)
                 if not path.basename.endswith('.vmdk'):
                     continue
-                if not first_device \
-                    or first_device.controllerKey > device.controllerKey \
-                    or first_device.controllerKey == device.controllerKey \
-                        and first_device.unitNumber > device.unitNumber:
+                if first_device is None or not _in_boot_order(first_device,
+                                                              device):
                     first_device = device
         elif device.__class__.__name__ in CONTROLLER_TO_ADAPTER_TYPE:
             adapter_type_dict[device.key] = CONTROLLER_TO_ADAPTER_TYPE[
@@ -1363,6 +1419,15 @@ def get_vm_state(session, instance):
     vm_state = session._call_method(vutil, "get_object_property",
                                     vm_ref, "runtime.powerState")
     return constants.POWER_STATES[vm_state]
+
+
+def get_vm_name(session, vm_ref):
+    return get_object_property(session, vm_ref, "name")
+
+
+def get_object_property(session, mo_ref, property):
+    return session._call_method(vutil, "get_object_property",
+                                mo_ref, property)
 
 
 def _set_host_reservations(stats, host_reservations_map, host_moref):
@@ -1959,7 +2024,11 @@ def get_vm_detach_port_index(session, vm_ref, iface_id):
 
 
 def power_off_instance(session, instance, vm_ref=None):
-    """Power off the specified instance."""
+    """Power off the specified instance.
+
+    Returns True if the VM was powered off by this call, or False
+    of the VM was already powered off.
+    """
 
     if vm_ref is None:
         vm_ref = get_vm_ref(session, instance)
@@ -1970,8 +2039,10 @@ def power_off_instance(session, instance, vm_ref=None):
                                          "PowerOffVM_Task", vm_ref)
         session._wait_for_task(poweroff_task)
         LOG.debug("Powered off the VM", instance=instance)
+        return True
     except vexc.InvalidPowerStateException:
         LOG.debug("VM already powered off", instance=instance)
+        return False
 
 
 def find_rescue_device(hardware_devices, instance):
@@ -2084,8 +2155,8 @@ def _get_vm_name(display_name, id_):
     return id_[:36]
 
 
-def rename_vm(session, vm_ref, instance):
-    vm_name = _get_vm_name(instance.display_name, instance.uuid)
+def rename_vm(session, vm_ref, instance, vm_name=None):
+    vm_name = vm_name or _get_vm_name(instance.display_name, instance.uuid)
     rename_task = session._call_method(session.vim, "Rename_Task", vm_ref,
                                        newName=vm_name)
     session._wait_for_task(rename_task)
@@ -2179,3 +2250,16 @@ def create_service_locator(client_factory, url, vcenter_instance_uuid,
     sl.credential = credential
     sl.sslThumbprint = ssl_thumbprint
     return sl
+
+
+def reconfigure_vm_device_change(session, vm_ref, device_change):
+    """Reconfigure a VM to add/edit/remove devices.
+
+    The device_change should be a VirtualDeviceConfigSpec.
+    """
+    if not device_change:
+        return
+    client_factory = session.vim.client.factory
+    config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
+    config_spec.deviceChange = device_change
+    reconfigure_vm(session, vm_ref, config_spec)

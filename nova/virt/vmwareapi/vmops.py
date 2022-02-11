@@ -21,11 +21,13 @@ Class for VM tasks like spawn, snapshot, suspend, resume etc.
 
 import collections
 import copy
-import decorator
 import itertools
+from operator import itemgetter
 import os
 import re
 import time
+
+import decorator
 
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
@@ -74,7 +76,8 @@ CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
-RESIZE_TOTAL_STEPS = 7
+RESIZE_TOTAL_STEPS = 11
+HOST_IP_ADDR_SEPARATOR = "|"
 
 
 class VirtualMachineInstanceConfigInfo(object):
@@ -134,11 +137,32 @@ def retry_if_task_in_progress(f, *args, **kwargs):
             pass
 
 
+@decorator.decorator
+def log_exception(f, except_=None, *args, **kwargs):
+    try:
+        return f(*args, **kwargs)
+    except Exception as e:
+        if not except_ or not isinstance(e, except_):
+            LOG.exception("Unexpected exception")
+        raise e
+
+
 class VMwareVMOps(object):
     """Management class for VM-related tasks."""
 
+    """Version that ensures the consistency of the migration logic.
+
+    During the cold migration (_migrate_disk_and_power_off) the source host
+    performs some calls on the destination vCenter service, for which we
+    expect that the destination compute host would behave the same. For
+    migrations where we receive a different migration_version, we must reject
+    and throw an error.
+    """
+    MIGRATION_VERSION = "1.0"
+
     def __init__(self, session, virtapi, volumeops, vc_state, cluster=None,
-                 datastore_regex=None, datastore_hagroup_regex=None):
+                 vcenter_uuid=None, datastore_regex=None,
+                 datastore_hagroup_regex=None):
         """Initializer."""
         self.compute_api = compute.API()
         self._session = session
@@ -146,6 +170,7 @@ class VMwareVMOps(object):
         self._volumeops = volumeops
         self._vc_state = vc_state
         self._cluster = cluster
+        self._vcenter_uuid = vcenter_uuid
         self._root_resource_pool = vm_util.get_res_pool_ref(self._session,
                                                             self._cluster)
         self._datastore_regex = datastore_regex
@@ -327,6 +352,30 @@ class VMwareVMOps(object):
                                                  vm_name=vm_name)
 
         return config_spec
+
+    def get_host_ip_addr(self):
+        data = [
+            self.MIGRATION_VERSION,
+            self._vcenter_uuid
+        ]
+        return HOST_IP_ADDR_SEPARATOR.join(data)
+
+    @staticmethod
+    def _decode_host_addr(encoded_addr):
+        parts = encoded_addr.split(HOST_IP_ADDR_SEPARATOR)
+        try:
+            return {'migration_version': parts[0],
+                    'vcenter_uuid': parts[1]}
+        except Exception as error:
+            LOG.error("Failed to decode the host address: %s", error)
+            raise error_util.InvalidHostAddrFormat()
+
+    def _is_in_place_migration(self, migration):
+        try:
+            self._decode_host_addr(migration.dest_host)
+            return False
+        except error_util.InvalidHostAddrFormat:
+            return True
 
     def build_virtual_machine(self, instance, context, image_info, datastore,
                               network_info, extra_specs, metadata, vm_folder,
@@ -2015,10 +2064,31 @@ class VMwareVMOps(object):
         self._create_swap(block_device_info, instance, vm_ref, dc_info,
                           datastore, folder, vmdk.adapter_type)
 
-    def migrate_disk_and_power_off(self, context, instance, dest, flavor):
+    @log_exception(except_=exception.InstanceFaultRollback)
+    def migrate_disk_and_power_off(self, context, instance, dest, flavor,
+                                   network_info, block_device_info):
         """Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
         """
+        try:
+            decoded = self._decode_host_addr(dest)
+        except error_util.InvalidHostAddrFormat:
+            message = ("Can't migrate to the destination host because its "
+                       "information couldn't be understood. Probably it is "
+                       "an older version of VMwareVCDriver which doesn't "
+                       "support cross-host migration.")
+            raise exception.InstanceFaultRollback(
+                exception.MigrationError(message=message))
+
+        if decoded['migration_version'] != self.MIGRATION_VERSION:
+            message = ("Can't migrate to the destination host because of "
+                       "version mismatch. Current version is %(source)s but "
+                       "the destination host has %(dest)s") % {
+                          'source': self.MIGRATION_VERSION,
+                          'dest': decoded['migration_version']}
+            raise exception.InstanceFaultRollback(
+                exception.MigrationError(message=message))
+
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
 
@@ -2039,13 +2109,34 @@ class VMwareVMOps(object):
                                        step=0,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
+        # Ensure the VM is named as expected (and not just the instance uuid)
+        vm_util.rename_vm(self._session, vm_ref, instance)
+
         # 1. Power off the instance
-        vm_util.power_off_instance(self._session, instance, vm_ref)
+        vm_was_on = vm_util.power_off_instance(self._session, instance,
+                                               vm_ref)
+
         self._update_instance_progress(context, instance,
                                        step=1,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
+        try:
+            return self._do_migrate_disk_and_power_off(context, instance,
+                decoded, flavor, network_info, block_device_info)
+        except Exception as e:
+            LOG.exception("Failed to _do_migrate_disk_and_power_off")
+            hardware = vm_util.get_hardware_devices_by_type(self._session,
+                vm_ref)
+
+            self._do_finish_revert_migration(context, instance,
+                block_device_info, network_info, vm_ref, hardware)
+
+            if vm_was_on:
+                vm_util.power_on_instance(self._session, instance)
+            raise exception.InstanceFaultRollback(e)
+
     def get_vif_info(self, ctxt, vif_model=None, network_info=None):
+        """ctxt is only there to provide the same signature as rpc calls"""
         vif_info = vmwarevif.get_vif_info(self._session,
                                           self._cluster,
                                           vif_model,
@@ -2058,8 +2149,61 @@ class VMwareVMOps(object):
 
         return VmwareRpcApi(migration.dest_compute)
 
-    def confirm_migration(self, migration, instance, network_info):
+    def confirm_migration(self, context, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
+        # To ensure compatibility with unfinished migrations with the previous
+        # code, we check the version of the migration and call the appropriate
+        # function for the kind of migration.
+        if self._is_in_place_migration(migration):
+            self._do_confirm_in_place_migration(instance)
+        else:
+            self._do_confirm_migration(context, instance, migration)
+
+    def _do_migrate_disk_and_power_off(self, context, instance, dest, flavor,
+                                       network_info, block_device_info):
+        source_vm_ref = vm_util.get_vm_ref(self._session, instance)
+        # 2. Detach the volumes
+        self._detach_volumes(instance, block_device_info)
+
+        self._update_instance_progress(context, instance,
+                                       step=2,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+
+        # 3. Detach network interfaces
+        device_change = self._get_remove_network_device_change(source_vm_ref)
+
+        vm_util.reconfigure_vm_device_change(self._session, source_vm_ref,
+                                             device_change)
+        self._update_instance_progress(context, instance,
+                                       step=3,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+
+        # 4. Copy the VM to the dest
+        self._do_migrate_disk(context, source_vm_ref, instance, dest, flavor)
+        self._update_instance_progress(context, instance,
+                                       step=4,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+
+    def _do_confirm_migration(self, context, instance, migration):
+        original_vm_ref = vm_util.search_vm_ref_by_identifier(self._session,
+                                                              migration.uuid)
+        if not original_vm_ref:
+            LOG.warning(("Cannot find source vm for instance {}"
+                         " in migration {}").format(
+                         instance.uuid, migration.uuid), instance=instance)
+            # We do not want to call destroy without an explicit vm-ref,
+            # as that will fall back to destroying now active vm
+        else:
+            vm_util.destroy_vm(self._session, instance, original_vm_ref)
+        target = self.api_for_migration(migration)
+        target.confirm_migration_destination(context, instance)
+
+    def confirm_migration_destination(self, context, instance):
+        # Set the final name to the VM
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        vm_util.rename_vm(self._session, vm_ref, instance)
+
+    def _do_confirm_in_place_migration(self, instance):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         if not vmdk.device:
@@ -2110,6 +2254,60 @@ class VMwareVMOps(object):
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info, power_on=True):
         """Finish reverting a resize."""
+        # This DB call can be removed in Train, when the migration object will
+        # be passed as parameter.
+        migration = objects.Migration.get_by_id_and_instance(
+            context, instance.migration_context.migration_id,
+            instance.uuid)
+
+        # To ensure compatibility with unfinished migrations with the previous
+        # code, we check the version of the migration and call the appropriate
+        # function for the kind of migration.
+        if self._is_in_place_migration(migration):
+            self._do_finish_revert_in_place_migration(
+                context, instance, block_device_info, network_info)
+        else:
+            # This is the new
+            vm_ref = vm_util.search_vm_ref_by_identifier(self._session,
+                                                         migration.uuid)
+            self._do_finish_revert_migration(context, instance,
+                                             block_device_info,
+                                             network_info, vm_ref)
+
+        if power_on:
+            vm_util.power_on_instance(self._session, instance)
+
+    def _do_finish_revert_migration(self, context, instance,
+                                    block_device_info, network_info,
+                                    vm_ref, existing_hardware=None):
+        """Adds networking and volumes back to an instance.
+
+        This is being used when a user reverts a migration, or when the
+        driver rolls back a failed migration in _migrate_disk_and_power_off()
+        """
+        # First we change the uuid back, so that the VM can be found again
+        if network_info and existing_hardware:
+            nics = existing_hardware["nics"]
+            network_info = [vif for vif in network_info
+                            if vif['address'] not in nics]
+        config_spec = self._get_vm_networking_spec(instance, network_info)
+        config_spec.instanceUuid = instance.uuid
+        vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
+        vm_util.vm_ref_cache_update(instance.uuid, vm_ref)
+        self._update_vnic_index(context, instance, network_info)
+
+        # Now the disks
+        disks = existing_hardware["disks"] if existing_hardware else {}
+        vi = self._get_instance_config_info(context, instance)
+        self._attach_volumes(instance, block_device_info, vi.ii.adapter_type,
+                             existing_disks=disks)
+        # Finally, we rename the VM so that we can discriminate between
+        # incompletely and completely configured vms by the naming scheme
+        # (as it is during instance creation)
+        vm_util.rename_vm(self._session, vm_ref, instance)
+
+    def _do_finish_revert_in_place_migration(self, context, instance,
+                                             block_device_info, network_info):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         # Ensure that the VM is off
         vm_util.power_off_instance(self._session, instance, vm_ref)
@@ -2151,9 +2349,6 @@ class VMwareVMOps(object):
             finally:
                 self._attach_volumes(instance, block_device_info, adapter_type)
 
-        if power_on:
-            vm_util.power_on_instance(self._session, instance)
-
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance=False,
                          block_device_info=None, power_on=True):
@@ -2163,70 +2358,85 @@ class VMwareVMOps(object):
         flavor = instance.flavor
         boot_from_volume = compute_utils.is_volume_backed_instance(context,
                                                                    instance)
-        reattach_volumes = False
-        # 2. Relocate the VM if necessary
-        # If the dest_compute is different from the source_compute, it means we
-        # need to relocate the VM here since we are running on the dest_compute
-        if migration.source_compute != migration.dest_compute:
-            # Get the root disk vmdk object's adapter type
-            vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
-            adapter_type = vmdk.adapter_type
 
-            self._detach_volumes(instance, block_device_info)
-            reattach_volumes = True
-            LOG.debug("Relocating VM for migration to %s",
-                      migration.dest_compute, instance=instance)
-            try:
-                self._relocate_vm(vm_ref, context, instance, network_info,
-                                  image_meta)
-                LOG.debug("Relocated VM to %s", migration.dest_compute,
-                          instance=instance)
-            except Exception as e:
-                with excutils.save_and_reraise_exception():
-                    LOG.error("Relocating the VM failed with error: %s", e,
-                              instance=instance)
-                    self._attach_volumes(instance, block_device_info,
-                                         adapter_type)
-
-            self.update_cluster_placement(context, instance)
-            self.disable_drs_if_needed(instance)
-
-        self._update_instance_progress(context, instance,
-                                       step=2,
-                                       total_steps=RESIZE_TOTAL_STEPS)
-        # 3.Reconfigure the VM and disk
-        self._resize_vm(context, instance, vm_ref, flavor, image_meta)
-        if not boot_from_volume and resize_instance:
-            vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
-            self._resize_disk(instance, vm_ref, vmdk, flavor)
-        self._update_instance_progress(context, instance,
-                                       step=3,
-                                       total_steps=RESIZE_TOTAL_STEPS)
-
-        # 4. Purge ephemeral and swap disks
-        self._remove_ephemerals_and_swap(vm_ref)
-        self._update_instance_progress(context, instance,
-                                       step=4,
-                                       total_steps=RESIZE_TOTAL_STEPS)
-        # 5. Update ephemerals
-        self._resize_create_ephemerals_and_swap(vm_ref, instance,
-                                                block_device_info)
+        # 4. Reconfigure the VM and disk
         self._update_instance_progress(context, instance,
                                        step=5,
                                        total_steps=RESIZE_TOTAL_STEPS)
+        self._resize_vm(context, instance, vm_ref, flavor, image_meta)
 
-        # 6. Attach the volumes (if necessary)
-        if reattach_volumes:
-            self._attach_volumes(instance, block_device_info, adapter_type)
+        if not boot_from_volume and resize_instance:
+            vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
+            self._resize_disk(instance, vm_ref, vmdk, flavor)
+
+        # 5. Purge ephemeral and swap disks
         self._update_instance_progress(context, instance,
                                        step=6,
                                        total_steps=RESIZE_TOTAL_STEPS)
-        # 7. Start VM
-        if power_on:
-            vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
+        self._remove_ephemerals_and_swap(vm_ref)
+
+        # 6. Update ephemerals
         self._update_instance_progress(context, instance,
                                        step=7,
                                        total_steps=RESIZE_TOTAL_STEPS)
+        self._resize_create_ephemerals_and_swap(vm_ref, instance,
+                                                block_device_info)
+        # 7. Attach the volumes
+        self._update_instance_progress(context, instance,
+                                       step=8,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+
+        vi = self._get_instance_config_info(context, instance, image_meta)
+        self._attach_volumes(instance, block_device_info, vi.ii.adapter_type)
+
+        # 8. Create the networking
+        self._update_instance_progress(context, instance,
+                                       step=9,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+        config_spec = self._get_vm_networking_spec(instance, network_info)
+        vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
+        self._update_vnic_index(context, instance, network_info)
+
+        # 9. Update DRS
+        self._update_instance_progress(context, instance,
+                                       step=10,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+        self.update_cluster_placement(context, instance)
+        self.disable_drs_if_needed(instance)
+
+        # 10. Start VM
+        client_factory = self._session.vim.client.factory
+        # Set the machine.id parameter of the instance to inject
+        # the NIC configuration inside the VM
+        if CONF.flat_injected:
+            self._set_machine_id(client_factory, instance, network_info,
+                                 vm_ref=vm_ref)
+
+        # Set the vnc configuration of the instance, vnc port starts from 5900
+        if CONF.vnc.enabled:
+            self._get_and_set_vnc_config(client_factory, instance, vm_ref)
+
+        self._update_instance_progress(context, instance,
+                                       step=11,
+                                       total_steps=RESIZE_TOTAL_STEPS)
+
+        if power_on:
+            vm_util.power_on_instance(self._session, instance)
+
+    def _get_vm_networking_spec(self, instance, network_info):
+        client_factory = self._session.vim.client.factory
+        config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
+        extra_specs = self._get_extra_specs(instance.flavor,
+                                            instance.image_meta)
+        vif_model = instance.image_meta.properties.get('hw_vif_model',
+            constants.DEFAULT_VIF_MODEL)
+
+        vm_util.append_vif_infos_to_config_spec(
+            client_factory,
+            config_spec,
+            self.get_vif_info(None, vif_model, network_info),
+            extra_specs.vif_limits)
+        return config_spec
 
     def _relocate_vm(self, vm_ref, context, instance, network_info,
                      image_meta=None):
@@ -2249,36 +2459,42 @@ class VMwareVMOps(object):
         spec = vm_util.relocate_vm_spec(client_factory,
                                         res_pool=self._root_resource_pool,
                                         folder=folder, datastore=datastore.ref)
+        spec.deviceChange = self._get_network_device_change(vm_ref,
+                                                            image_meta,
+                                                            network_info)
+        vm_util.relocate_vm(self._session, vm_ref, spec=spec)
+
+    def _get_network_device_change(self, vm_ref, image_meta, network_info):
+        device_changes = []
+        if not network_info:
+            return device_changes
 
         # Iterate over the network adapters and update the backing
-        if network_info:
-            spec.deviceChange = []
-            vif_model = image_meta.properties.get('hw_vif_model',
-                                                  constants.DEFAULT_VIF_MODEL)
-            hardware_devices = vm_util.get_hardware_devices(self._session,
-                                                            vm_ref)
-            vif_infos = vmwarevif.get_vif_info(self._session,
-                                               self._cluster,
-                                               vif_model,
-                                               network_info)
-            for vif_info in vif_infos:
-                device = vmwarevif.get_network_device(hardware_devices,
-                                                      vif_info['mac_address'])
-                if not device:
-                    msg = _("No device with MAC address %s exists on the "
-                            "VM") % vif_info['mac_address']
-                    raise exception.NotFound(msg)
+        vif_model = image_meta.properties.get('hw_vif_model',
+                                                constants.DEFAULT_VIF_MODEL)
+        hardware_devices = vm_util.get_hardware_devices(self._session, vm_ref)
+        vif_infos = vmwarevif.get_vif_info(self._session,
+                                           self._cluster,
+                                           vif_model,
+                                           network_info)
+        client_factory = self._session.vim.client.factory
 
-                # Update the network device backing
-                config_spec = client_factory.create(
-                    'ns0:VirtualDeviceConfigSpec')
-                vm_util.set_net_device_backing(
-                    client_factory, device, vif_info)
-                config_spec.operation = "edit"
-                config_spec.device = device
-                spec.deviceChange.append(config_spec)
+        for vif_info in vif_infos:
+            device = vmwarevif.get_network_device(hardware_devices,
+                                                    vif_info['mac_address'])
+            if not device:
+                msg = _("No device with MAC address %s exists on the "
+                        "VM") % vif_info['mac_address']
+                raise exception.NotFound(msg)
 
-        vm_util.relocate_vm(self._session, vm_ref, spec=spec)
+            # Update the network device backing
+            config_spec = client_factory.create('ns0:VirtualDeviceConfigSpec')
+            vm_util.set_net_device_backing(client_factory, device, vif_info)
+            config_spec.operation = "edit"
+            config_spec.device = device
+            device_changes.append(config_spec)
+
+        return device_changes
 
     def live_migration(self, instance, migrate_data, volume_mapping):
         defaults = migrate_data.relocate_defaults
@@ -2348,17 +2564,28 @@ class VMwareVMOps(object):
         vm_util.relocate_vm(self._session, vm_ref, spec=relocate_spec)
 
     def _detach_volumes(self, instance, block_device_info):
-        block_devices = driver.block_device_info_get_mapping(block_device_info)
-        for disk in block_devices:
-            self._volumeops.detach_volume(disk['connection_info'], instance)
-
-    def _attach_volumes(self, instance, block_device_info, adapter_type):
         disks = driver.block_device_info_get_mapping(block_device_info)
-        # make sure the disks are attached by the boot_index order (if any)
+        # Detach the volumes in reverse order, so if we roll it back
+        # that the device order will still be preserved
         for disk in sorted(disks,
-                           key=lambda d: d['boot_index']
-                           if 'boot_index' in d and d['boot_index'] > -1
-                           else len(disks)):
+                           reverse=True,
+                           key=itemgetter('mount_device')):
+            try:
+                self._volumeops.detach_volume(disk['connection_info'],
+                                              instance)
+            except exception.DiskNotFound:
+                LOG.warning(("Cannot find disk {}."
+                             " Assuming it to be removed").format(disk))
+
+    def _attach_volumes(self, instance, block_device_info, adapter_type,
+                        existing_disks=None):
+        disks = driver.block_device_info_get_mapping(block_device_info)
+        # make sure the disks are attached by the device_name order
+        for disk in sorted(disks,
+                           key=itemgetter('mount_device')):
+            if existing_disks and disk['volume_id'] in existing_disks:
+                continue
+
             adapter_type = disk.get('disk_bus') or adapter_type
             self._volumeops.attach_volume(disk['connection_info'], instance,
                                           adapter_type)
@@ -2407,6 +2634,136 @@ class VMwareVMOps(object):
         # find the most suitable datastore on the destination cluster
         return ds_util.get_datastore(self._session, cluster_ref,
                                      datastore_regex)
+
+    def _get_remove_network_device_change(self, vm_ref):
+        device_change = []
+        for device in vm_util.get_hardware_devices(self._session, vm_ref):
+            if (device.__class__.__name__
+                    not in vm_util.ALL_SUPPORTED_NETWORK_DEVICES):
+                continue
+            # Update the network device backing
+            config_spec = self._session.vim.client.factory.create(
+                'ns0:VirtualDeviceConfigSpec')
+            config_spec.operation = "remove"
+            config_spec.device = device
+            device_change.append(config_spec)
+        return device_change
+
+    def get_relocate_spec(self, context, instance, flavor,
+                          factory=None, remote=False):
+        session = self._session
+        cluster = self._cluster
+
+        if not remote:
+            disk_move_type = "moveAllDiskBackingsAndAllowSharing"
+            service_spec = None
+        else:
+            # For migration to other vCenter service the disk_move_type
+            # needs to be moveAllDiskBackingsAndDisallowSharing
+            disk_move_type = "moveAllDiskBackingsAndDisallowSharing"
+            service_spec = self._get_service_locator_spec()
+
+        image_meta = instance.image_meta
+        storage_policy = self._get_storage_policy(flavor)
+        allowed_ds_types = ds_util.get_allowed_datastore_types(
+            image_meta.properties.hw_disk_type)
+        res_pool = vm_util.get_res_pool_ref(session, cluster)
+        datastore = ds_util.get_datastore(session, cluster,
+                                          self._datastore_regex,
+                                          storage_policy,
+                                          allowed_ds_types)
+        dc_info = self.get_datacenter_ref_and_name(datastore.ref)
+        folder = self._get_project_folder(dc_info, instance.project_id,
+                                          'Instances')
+
+        factory = factory or session.vim.client.factory
+        rel_spec = vm_util.relocate_vm_spec(factory,
+                                            disk_move_type=disk_move_type,
+                                            res_pool=res_pool, folder=folder,
+                                            datastore=datastore.ref)
+        rel_spec.service = service_spec
+        return rel_spec
+
+    def change_vm_instance_uuid(self, context, instance, vm_ref, uuid=None):
+        # NOTE: the caller must take care that it is safe to assign the UUID
+        # to the VM. Calling this with an UUID that's already assigned to
+        # another VM will break NSX-T.
+        session = self._session
+        uuid = uuid or instance.uuid
+        cf = session.vim.client.factory
+        config_spec = cf.create('ns0:VirtualMachineConfigSpec')
+        config_spec.instanceUuid = uuid
+        config_spec.extraConfig = vm_util.create_extra_config(cf,
+            {'nvp.vm-uuid': uuid})  # Another way to identify the vm
+
+        vm_util.reconfigure_vm(session, vm_ref, config_spec)
+        if uuid != instance.uuid:
+            # After reconfigure to clear any cache update before it
+            vm_util.vm_ref_cache_delete(instance.uuid)
+        vm_util.vm_ref_cache_update(uuid, vm_ref)
+
+    def rollback_migrate_disk(self, context, instance, cloned_vm_ref):
+        return vm_util.destroy_vm(self._session, instance, cloned_vm_ref)
+
+    def _do_migrate_disk(self, context, vm_ref, instance, dest_data, flavor):
+        """Copies the VM to the destination by doing a clone.
+
+        If the destination is another vCenter service, it creates a new
+        VMwareAPISession to the destination vCenter service to gather the
+        needed info for cloning the vm: datastore, service locator, folder.
+        """
+
+        migration = objects.Migration.get_by_id_and_instance(
+            context, instance.migration_context.migration_id,
+            instance.uuid)
+
+        target = self.api_for_migration(migration)
+        factory = self._session.vim.client.factory
+        rel_spec = target.get_relocate_spec(context, instance, flavor,
+                                            factory=factory)
+
+        # We name the VM just by the instance.uuid to follow the same pattern
+        # as in the instance creation
+        # This causes the folder on the datastore to be named by the
+        # instance.uuid potentially with a suffix in case the source and
+        # destination are on the same datastore
+        cloned_vm = self._clone_vm(vm_ref, rel_spec, name=instance.uuid)
+        LOG.info("Cloned VM with temporary name '%s'", instance.uuid,
+                 instance=instance)
+        try:
+            # keep track of the old vm by assigning migration.uuid to it
+            self.change_vm_instance_uuid(context, instance, vm_ref,
+                                         uuid=migration.uuid)
+
+            target.change_vm_instance_uuid(context, instance, cloned_vm)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                target.rollback_migrate_disk(context, instance, cloned_vm)
+
+        source_name = "{} (Mig {})".format(instance.uuid, migration.uuid)
+        vm_util.rename_vm(self._session, vm_ref, instance, vm_name=source_name)
+
+    def _get_service_locator_spec(self):
+        cf = self._session.vim.client.factory
+        url = "https://{}:{}".format(CONF.vmware.host_ip,
+                                     CONF.vmware.host_port)
+        credential = vm_util.create_service_locator_name_password(
+            cf, CONF.vmware.host_username, CONF.vmware.host_password)
+        return vm_util.create_service_locator(cf, url, self._vcenter_uuid,
+                                              credential)
+
+    def _clone_vm(self, vm_ref, rel_spec, name):
+        """Returns a MoRef of the newly-created VM"""
+        client_factory = self._session.vim.client.factory
+        clone_spec = vm_util.clone_vm_spec(client_factory, rel_spec)
+        vm_clone_task = self._session._call_method(self._session.vim,
+                                                   "CloneVM_Task",
+                                                   vm_ref,
+                                                   folder=rel_spec.folder,
+                                                   name=name,
+                                                   spec=clone_spec)
+        task_info = self._session._wait_for_task(vm_clone_task)
+        return task_info.result
 
     def poll_rebooting_instances(self, timeout, instances):
         """Poll for rebooting instances."""
@@ -2497,6 +2854,8 @@ class VMwareVMOps(object):
 
     @staticmethod
     def _get_machine_id_str(network_info):
+        if not network_info:
+            return
         machine_id_str = ''
         for vif in network_info:
             # TODO(vish): add support for dns2
@@ -3623,3 +3982,13 @@ class VMwareVMOps(object):
                                                        datastore.ref)
             LOG.debug("Moved instance %s in server-group %s to hagroup %s.",
                       instance.uuid, sg_uuid, hagroup)
+
+    def _get_instance_config_info(self, context, instance, image_meta=None):
+        """Returns VirtualMachineInstanceConfigInfo based on instance."""
+        image_meta = image_meta or instance.image_meta
+        image_info = images.VMwareImage.from_image(context,
+                                                   instance.image_ref,
+                                                   image_meta)
+        extra_specs = self._get_extra_specs(instance.flavor, image_meta)
+        return self._get_vm_config_info(context, instance, image_info,
+                                        extra_specs)

@@ -41,3 +41,8 @@ class PbmDefaultPolicyUnspecified(exception.Invalid):
 
 class PbmDefaultPolicyDoesNotExist(exception.NovaException):
     msg_fmt = _("The default PBM policy doesn't exist on the backend.")
+
+
+class InvalidHostAddrFormat(exception.NovaException):
+    msg_fmt = _("The provided host address couldn't be recognised as a valid "
+                "format supported by the VMwareVCDriver.")
