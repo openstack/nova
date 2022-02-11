@@ -131,21 +131,6 @@ class ShardFilter(filters.BaseHostFilter):
                         'shard_prefix': self._SHARD_PREFIX})
             return False
 
-        # forbid changing the shard of an instance
-        instance_host = spec_obj.get_scheduler_hint('source_host')
-        resize_or_rebuild = (spec_obj.get_scheduler_hint('_nova_check_type')
-                             in ('resize', 'rebuild'))
-        host_shard_hosts = set(host
-                               for aggr in host_shard_aggrs
-                               for host in aggr.hosts)
-        if (resize_or_rebuild and instance_host and
-                instance_host not in host_shard_hosts):
-            LOG.debug('%(host_state)s is in another shard than the '
-                      'instance\'s %(instance_host)s',
-                      {'host_state': host_state,
-                       'instance_host': instance_host})
-            return False
-
         project_id = spec_obj.project_id
 
         shards = self._get_shards(project_id)

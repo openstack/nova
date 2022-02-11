@@ -19,10 +19,13 @@ This is the gateway which allows us gathering VMWare related information from
 other hosts and perform cross vCenter operations.
 """
 import oslo_messaging as messaging
+from oslo_vmware import vim_util as vutil
 
 from nova.compute import rpcapi
+from nova.objects.instance import Instance
 from nova import profiler
 from nova import rpc
+from nova.virt.vmwareapi import vim_util
 
 
 _NAMESPACE = 'vmwareapi'
@@ -47,15 +50,66 @@ class VmwareRpcApi(object):
         return self._call('get_vif_info', ctxt, vif_model=vif_model,
                           network_info=network_info,)
 
+    def get_relocate_spec(self, ctxt, instance=None, flavor=None,
+                          factory=None):
+        ser = self._call('get_relocate_spec', ctxt,
+                         instance_uuid=instance.uuid, flavor=flavor)
+
+        return vim_util.deserialize_object(factory, ser,
+                                           'VirtualMachineRelocateSpec')
+
+    def change_vm_instance_uuid(self, ctxt, instance=None, cloned_vm_ref=None,
+                                uuid=None):
+        cloned_vm_ref_value = vutil.get_moref_value(cloned_vm_ref)
+        return self._call('change_vm_instance_uuid', ctxt,
+                          instance_uuid=instance.uuid,
+                          cloned_vm_ref_value=cloned_vm_ref_value,
+                          uuid=uuid)
+
+    def rollback_migrate_disk(self, ctxt, instance=None, cloned_vm_ref=None):
+        cloned_vm_ref_value = vutil.get_moref_value(cloned_vm_ref)
+        return self._call('rollback_migrate_disk', ctxt,
+                          instance_uuid=instance.uuid,
+                          cloned_vm_ref_value=cloned_vm_ref_value)
+
+    def confirm_migration_destination(self, ctxt, instance=None):
+        return self._call('confirm_migration_destination', ctxt,
+                          instance_uuid=instance.uuid)
+
 
 @profiler.trace_cls("rpc")
 class VmwareRpcService(object):
     target = messaging.Target(version=_VERSION, namespace=_NAMESPACE)
 
-    def __init__(self, driver):
-        self._driver = driver
+    def __init__(self, vm_ops):
+        self._vm_ops = vm_ops
 
     def get_vif_info(self, ctxt, vif_model=None, network_info=None):
-        return self._driver._vmops.get_vif_info(ctxt, vif_model=vif_model,
-                                                network_info=network_info,
-                                                )
+        return self._vm_ops.get_vif_info(ctxt, vif_model=vif_model,
+                                         network_info=network_info)
+
+    def get_relocate_spec(self, ctxt, instance_uuid=None, flavor=None):
+        instance = Instance.get_by_uuid(ctxt, instance_uuid, expected_attrs=[])
+        spec = self._vm_ops.get_relocate_spec(ctxt, instance, flavor,
+                                              remote=True)
+        return vim_util.serialize_object(spec, typed=True)
+
+    def change_vm_instance_uuid(self, ctxt, instance_uuid=None,
+                                cloned_vm_ref_value=None, uuid=None):
+        instance = Instance.get_by_uuid(ctxt, instance_uuid, expected_attrs=[])
+        cloned_vm_ref = vutil.get_moref(cloned_vm_ref_value, 'VirtualMachine')
+
+        return self._vm_ops.change_vm_instance_uuid(ctxt, instance,
+                                                    cloned_vm_ref,
+                                                    uuid=uuid)
+
+    def rollback_migrate_disk(self, ctxt, instance_uuid=None,
+                              cloned_vm_ref_value=None):
+        cloned_vm_ref = vutil.get_moref(cloned_vm_ref_value, 'VirtualMachine')
+        instance = Instance.get_by_uuid(ctxt, instance_uuid, expected_attrs=[])
+        return self._vm_ops.rollback_migrate_disk(ctxt, instance,
+                                                  cloned_vm_ref)
+
+    def confirm_migration_destination(self, ctxt, instance_uuid=None):
+        instance = Instance.get_by_uuid(ctxt, instance_uuid, expected_attrs=[])
+        return self._vm_ops.confirm_migration_destination(ctxt, instance)

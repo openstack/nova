@@ -178,7 +178,7 @@ class TestShardFilter(test.NoDBTestCase):
 
         self.filt_cls._PROJECT_SHARD_CACHE['foo'] = ['vc-a-0', 'vc-a-1',
                                                      'vc-b-0']
-        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_shard_project_has_sharding_enabled_any_host_passes(self):
         self.filt_cls._PROJECT_SHARD_CACHE['baz'] = ['sharding_enabled']
