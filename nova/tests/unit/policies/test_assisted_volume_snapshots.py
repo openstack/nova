@@ -32,18 +32,12 @@ class AssistedVolumeSnapshotPolicyTest(base.BasePolicyTest):
         super(AssistedVolumeSnapshotPolicyTest, self).setUp()
         self.controller = snapshots.AssistedVolumeSnapshotsController()
         self.req = fakes.HTTPRequest.blank('')
-        # Check that admin is able to take volume snapshot.
-        self.admin_authorized_contexts = [
+        # By default, legacy rule are enable and scope check is disabled.
+        # system admin, legacy admin, and project admin is able to
+        # take volume snapshot.
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
-        # Check that non-admin is not able to take volume snapshot.
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
 
     @mock.patch('nova.compute.api.API.volume_snapshot_create')
     def test_assisted_create_policy(self, mock_create):
@@ -52,10 +46,9 @@ class AssistedVolumeSnapshotPolicyTest(base.BasePolicyTest):
                              'create_info': {'type': 'qcow2',
                                              'new_file': 'new_file',
                                              'snapshot_id': 'snapshot_id'}}}
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller.create,
-                                 self.req, body=body)
+        self.common_policy_auth(self.project_admin_authorized_contexts,
+                                rule_name, self.controller.create,
+                                self.req, body=body)
 
     @mock.patch('nova.compute.api.API.volume_snapshot_delete')
     def test_assisted_delete_policy(self, mock_delete):
@@ -64,11 +57,20 @@ class AssistedVolumeSnapshotPolicyTest(base.BasePolicyTest):
             'delete_info': jsonutils.dumps({'volume_id': '1'}),
         }
         req = fakes.HTTPRequest.blank('?%s' % urllib.parse.urlencode(params))
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.delete,
-                                 req, 1)
+        self.common_policy_auth(self.project_admin_authorized_contexts,
+                                rule_name,
+                                self.controller.delete,
+                                req, 1)
+
+
+class AssistedSnapshotNoLegacyNoScopePolicyTest(
+        AssistedVolumeSnapshotPolicyTest):
+    """Test Assisted Snapshot APIs policies with no legacy deprecated rules
+    and no scope checks.
+
+    """
+
+    without_deprecated_rules = True
 
 
 class AssistedSnapshotScopeTypePolicyTest(AssistedVolumeSnapshotPolicyTest):
@@ -85,16 +87,15 @@ class AssistedSnapshotScopeTypePolicyTest(AssistedVolumeSnapshotPolicyTest):
         super(AssistedSnapshotScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system admin is able to take volume snapshot.
-        self.admin_authorized_contexts = [
-            self.system_admin_context]
-        # Check that non-system or non-admin is not able to take volume
-        # snapshot.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
-            self.project_admin_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
+        # With scope check enabled, system admin is not able to
+        # take volume snapshot.
+        self.project_admin_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context]
+
+
+class AssistedSnapshotScopeTypeNoLegacyPolicyTest(
+        AssistedSnapshotScopeTypePolicyTest):
+    """Test os-volume-attachments APIs policies with system scope enabled,
+    and no legacy deprecated rules.
+    """
+    without_deprecated_rules = True

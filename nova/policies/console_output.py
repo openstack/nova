@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-console-output'
 console_output_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description='Show console output for a server',
         operations=[
             {
@@ -32,7 +32,7 @@ console_output_policies = [
                 'path': '/servers/{server_id}/action (os-getConsoleOutput)'
             }
         ],
-        scope_types=['system', 'project'])
+        scope_types=['project'])
 ]
 
 

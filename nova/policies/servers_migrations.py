@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:servers:migrations:%s'
 servers_migrations_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="Show details for an in-progress live migration for a "
         "given server",
         operations=[
@@ -33,10 +33,10 @@ servers_migrations_policies = [
                 'path': '/servers/{server_id}/migrations/{migration_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'force_complete',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="Force an in-progress live migration for a given server "
         "to complete",
         operations=[
@@ -46,10 +46,10 @@ servers_migrations_policies = [
                         '/action (force_complete)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="Delete(Abort) an in-progress live migration",
         operations=[
             {
@@ -57,10 +57,10 @@ servers_migrations_policies = [
                 'path': '/servers/{server_id}/migrations/{migration_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="Lists in-progress live migrations for a given server",
         operations=[
             {
@@ -68,7 +68,7 @@ servers_migrations_policies = [
                 'path': '/servers/{server_id}/migrations'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 

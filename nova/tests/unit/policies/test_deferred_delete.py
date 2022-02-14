@@ -47,37 +47,29 @@ class DeferredDeletePolicyTest(base.BasePolicyTest):
                 id=1, uuid=uuid, user_id=user_id, vm_state=vm_states.ACTIVE,
                 task_state=None, launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
-        # Check that admin or owner is able to force delete or restore server.
-        self.admin_authorized_contexts = [
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow server
+        # owner- having same project id and no role check) is able to force
+        # delete or restore server.
+        self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context
-        ]
-        # Check that non-admin and non-owner is not able to force delete or
-        # restore server.
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+            self.project_reader_context, self.project_foo_context]
 
     @mock.patch('nova.compute.api.API.restore')
     def test_restore_server_policy(self, mock_restore):
         rule_name = dd_policies.BASE_POLICY_NAME % 'restore'
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller._restore,
-                                 self.req, self.instance.uuid,
-                                 body={'restore': {}})
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller._restore,
+                                self.req, self.instance.uuid,
+                                body={'restore': {}})
 
     def test_force_delete_server_policy(self):
         rule_name = dd_policies.BASE_POLICY_NAME % 'force'
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller._force_delete,
-                                 self.req, self.instance.uuid,
-                                 body={'forceDelete': {}})
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller._force_delete,
+                                self.req, self.instance.uuid,
+                                body={'forceDelete': {}})
 
     def test_force_delete_server_policy_failed_with_other_user(self):
         rule_name = dd_policies.BASE_POLICY_NAME % 'force'
@@ -103,6 +95,27 @@ class DeferredDeletePolicyTest(base.BasePolicyTest):
             self.req.environ['nova.context'], self.instance)
 
 
+class DeferredDeleteNoLegacyNoScopePolicyTest(DeferredDeletePolicyTest):
+    """Test Deferred Delete server APIs policies with no legacy deprecated
+    rule and no scope check.
+
+    """
+
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        dd_policies.BASE_POLICY_NAME % 'restore':
+            base_policy.PROJECT_MEMBER,
+        dd_policies.BASE_POLICY_NAME % 'force':
+            base_policy.PROJECT_MEMBER}
+
+    def setUp(self):
+        super(DeferredDeleteNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, only project admin or member is able to force
+        # delete or restore server.
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
+
+
 class DeferredDeleteScopeTypePolicyTest(DeferredDeletePolicyTest):
     """Test Deferred Delete APIs policies with system scope enabled.
 
@@ -117,36 +130,29 @@ class DeferredDeleteScopeTypePolicyTest(DeferredDeletePolicyTest):
     def setUp(self):
         super(DeferredDeleteScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # Scope enable will not allow system admin.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
 
 
-class DeferredDeleteNoLegacyPolicyTest(DeferredDeletePolicyTest):
+class DeferredDeleteScopeTypeNoLegacyPolicyTest(
+        DeferredDeleteScopeTypePolicyTest):
     """Test Deferred Delete APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system_admin_or_owner APIs.
+    and no more deprecated rules.
     """
     without_deprecated_rules = True
     rules_without_deprecation = {
         dd_policies.BASE_POLICY_NAME % 'restore':
-            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+            base_policy.PROJECT_MEMBER,
         dd_policies.BASE_POLICY_NAME % 'force':
-            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
+            base_policy.PROJECT_MEMBER}
 
     def setUp(self):
-        super(DeferredDeleteNoLegacyPolicyTest, self).setUp()
+        super(DeferredDeleteScopeTypeNoLegacyPolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
-
-        # Check that system or projct admin or owner is able to
-        # force delete or restore server.
-        self.admin_authorized_contexts = [
-            self.system_admin_context,
+        # With scope enable and no legacy rule, only project admin/member is
+        # able to force delete or restore server.
+        self.project_member_authorized_contexts = [
             self.project_admin_context, self.project_member_context]
-        # Check that non-system and non-admin/owner is not able to
-        # force delete or restore server.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_reader_context,
-            self.project_foo_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]

@@ -43,20 +43,14 @@ class CreateBackupPolicyTest(base.BasePolicyTest):
                 id=1, uuid=uuid, vm_state=vm_states.ACTIVE,
                 task_state=None, launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
-        # Check that admin or owner is able to create server backup.
-        self.admin_authorized_contexts = [
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow server
+        # owner- having same project id and no role check) is able to create
+        # server backup.
+        self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context
-        ]
-        # Check that non-admin and non-owner is not able to create server
-        # backup.
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+            self.project_reader_context, self.project_foo_context]
 
     @mock.patch('nova.compute.api.API.backup')
     def test_create_backup_policy(self, mock_backup):
@@ -68,11 +62,26 @@ class CreateBackupPolicyTest(base.BasePolicyTest):
                 'rotation': 1,
             },
         }
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller._create_backup,
-                                 self.req, self.instance.uuid,
-                                 body=body)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller._create_backup,
+                                self.req, self.instance.uuid,
+                                body=body)
+
+
+class CreateBackupNoLegacyNoScopePolicyTest(CreateBackupPolicyTest):
+    """Test Create Backup server APIs policies with no legacy deprecated rules
+    and no scope checks.
+
+    """
+
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(CreateBackupNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, only project admin or member will be
+        # able to create the server backup.
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
 
 
 class CreateBackupScopeTypePolicyTest(CreateBackupPolicyTest):
@@ -89,31 +98,22 @@ class CreateBackupScopeTypePolicyTest(CreateBackupPolicyTest):
     def setUp(self):
         super(CreateBackupScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # Scope enable will not allow system users to create the server.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
 
 
-class CreateBackupNoLegacyPolicyTest(CreateBackupPolicyTest):
+class CreateBackupScopeTypeNoLegacyPolicyTest(CreateBackupScopeTypePolicyTest):
     """Test Create Backup APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system_admin_or_owner APIs.
+    and no more deprecated rules.
     """
     without_deprecated_rules = True
 
     def setUp(self):
-        super(CreateBackupNoLegacyPolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # Check that system or projct admin or owner is able to create
-        # server backup.
-        self.admin_authorized_contexts = [
-            self.system_admin_context,
+        super(CreateBackupScopeTypeNoLegacyPolicyTest, self).setUp()
+        # With scope enable and no legacy rule, only project admin/member
+        # will be able to create the server backup.
+        self.project_member_authorized_contexts = [
             self.project_admin_context, self.project_member_context]
-        # Check that non-system and non-admin/owner is not able to
-        # create server backup.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_reader_context,
-            self.project_foo_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]

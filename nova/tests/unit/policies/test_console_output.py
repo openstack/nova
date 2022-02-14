@@ -43,30 +43,37 @@ class ConsoleOutputPolicyTest(base.BasePolicyTest):
                 id=1, uuid=uuid, vm_state=vm_states.ACTIVE,
                 task_state=None, launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
-        # Check that admin or owner is able to get the server console.
-        self.admin_authorized_contexts = [
+        # With legacy rule, any admin and role in project
+        # can get the server console.
+        self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context
-        ]
-        # Check that non-admin and non-owner is not able to get the server
-        # console.
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+            self.project_reader_context, self.project_foo_context]
 
     @mock.patch('nova.compute.api.API.get_console_output')
     def test_console_output_policy(self, mock_console):
         mock_console.return_value = '\n'.join([str(i) for i in range(2)])
         rule_name = "os_compute_api:os-console-output"
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller.get_console_output,
-                                 self.req, self.instance.uuid,
-                                 body={'os-getConsoleOutput': {}})
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller.get_console_output,
+                                self.req, self.instance.uuid,
+                                body={'os-getConsoleOutput': {}})
+
+
+class ConsoleOutputNoLegacyNoScopePolicyTest(ConsoleOutputPolicyTest):
+    """Test Server Console Output APIs policies with no legacy deprecated
+    rule and no scope check.
+
+    """
+
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(ConsoleOutputNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, only project admin or member is able to
+        # get the server console.
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
 
 
 class ConsoleOutputScopeTypePolicyTest(ConsoleOutputPolicyTest):
@@ -83,31 +90,24 @@ class ConsoleOutputScopeTypePolicyTest(ConsoleOutputPolicyTest):
     def setUp(self):
         super(ConsoleOutputScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # Scope enable will not allow system admin.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
 
 
-class ConsoleOutputNoLegacyPolicyTest(ConsoleOutputPolicyTest):
+class ConsoleOutputScopeTypeNoLegacyPolicyTest(
+        ConsoleOutputScopeTypePolicyTest):
     """Test Console Output APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system_admin_or_owner APIs.
+    and no more deprecated rules.
     """
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ConsoleOutputNoLegacyPolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
+        super(ConsoleOutputScopeTypeNoLegacyPolicyTest, self).setUp()
 
-        # Check that system or projct admin or owner is able to
+        # With scope enable and no legacy rule, only project admin/member can
         # get the server console.
-        self.admin_authorized_contexts = [
-            self.system_admin_context,
+        self.project_member_authorized_contexts = [
             self.project_admin_context, self.project_member_context]
-        # Check that non-system and non-admin/owner is not able to
-        # get the server console.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_reader_context,
-            self.project_foo_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]

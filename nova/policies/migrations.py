@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-migrations:%s'
 migrations_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="List migrations",
         operations=[
             {
@@ -32,7 +32,7 @@ migrations_policies = [
                 'path': '/os-migrations'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
 ]
 
 

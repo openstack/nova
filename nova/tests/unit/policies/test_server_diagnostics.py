@@ -46,26 +46,29 @@ class ServerDiagnosticsPolicyTest(base.BasePolicyTest):
                 task_state=None, launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
 
-        # Check that admin is able to get server diagnostics.
-        self.admin_authorized_contexts = [
+        # With legacy rule, any admin is able get server diagnostics.
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context
-        ]
-        # Check that non-admin is not able to get server diagnostics.
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+            self.project_admin_context]
 
     def test_server_diagnostics_policy(self):
         rule_name = policies.BASE_POLICY_NAME
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller.index,
-                                 self.req, self.instance.uuid)
+        self.common_policy_auth(self.project_admin_authorized_contexts,
+                                rule_name, self.controller.index,
+                                self.req, self.instance.uuid)
+
+
+class ServerDiagnosticsNoLegacyNoScopeTest(ServerDiagnosticsPolicyTest):
+    """Test Server Diagnostics API policies with deprecated rules
+    disabled, but scope checking still disabled.
+    """
+
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(ServerDiagnosticsNoLegacyNoScopeTest, self).setUp()
+        self.project_admin_authorized_contexts = [
+            self.project_admin_context]
 
 
 class ServerDiagnosticsScopeTypePolicyTest(ServerDiagnosticsPolicyTest):
@@ -82,9 +85,12 @@ class ServerDiagnosticsScopeTypePolicyTest(ServerDiagnosticsPolicyTest):
     def setUp(self):
         super(ServerDiagnosticsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # With scope enabled, system admin is not allowed.
+        self.project_admin_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context]
 
 
-class ServerDiagnosticsNoLegacyPolicyTest(
+class ServerDiagnosticsScopeTypeNoLegacyPolicyTest(
     ServerDiagnosticsScopeTypePolicyTest):
     """Test Server Diagnostics APIs policies with system scope enabled,
     and no more deprecated rules.
@@ -92,23 +98,14 @@ class ServerDiagnosticsNoLegacyPolicyTest(
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ServerDiagnosticsNoLegacyPolicyTest, self).setUp()
-        # Check that system admin is able to get server diagnostics.
-        self.admin_authorized_contexts = [
-            self.system_admin_context
-        ]
-        # Check that non system admin is not able to get server diagnostics.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+        super(ServerDiagnosticsScopeTypeNoLegacyPolicyTest, self).setUp()
+        # with no legacy rule and scope enable., only project admin is able to
+        # get server diagnostics.
+        self.project_admin_authorized_contexts = [self.project_admin_context]
 
 
-class ServerDiagnosticsOverridePolicyTest(ServerDiagnosticsNoLegacyPolicyTest):
+class ServerDiagnosticsOverridePolicyTest(
+    ServerDiagnosticsScopeTypeNoLegacyPolicyTest):
     """Test Server Diagnostics APIs policies with system and project scoped
     but default to system roles only are allowed for project roles
     if override by operators. This test is with system scope enable
@@ -119,22 +116,12 @@ class ServerDiagnosticsOverridePolicyTest(ServerDiagnosticsNoLegacyPolicyTest):
         super(ServerDiagnosticsOverridePolicyTest, self).setUp()
         rule = policies.BASE_POLICY_NAME
         # NOTE(gmann): override the rule to project member and verify it
-        # work as policy is system and projct scoped.
+        # work as policy is projct scoped.
         self.policy.set_rules({
-            rule: base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN},
+            rule: base_policy.PROJECT_MEMBER},
             overwrite=False)
 
-        # Check that system admin or project scoped role as override above
+        # Check that project member role as override above
         # is able to get server diagnostics.
-        self.admin_authorized_contexts = [
-            self.system_admin_context,
+        self.project_admin_authorized_contexts = [
             self.project_admin_context, self.project_member_context]
-        # Check that non-system admin or project role is not able to
-        # get server diagnostics.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
-            self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context,
-            self.other_project_reader_context,
-        ]

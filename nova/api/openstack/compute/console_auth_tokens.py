@@ -30,7 +30,7 @@ class ConsoleAuthTokensController(wsgi.Controller):
     def _show(self, req, id, rdp_only):
         """Checks a console auth token and returns the related connect info."""
         context = req.environ['nova.context']
-        context.can(cat_policies.BASE_POLICY_NAME, target={})
+        context.can(cat_policies.BASE_POLICY_NAME)
 
         token = id
         if not token:

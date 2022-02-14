@@ -35,37 +35,37 @@ class InstanceUsageAuditLogPolicyTest(base.BasePolicyTest):
         self.controller.host_api.task_log_get_all = mock.MagicMock()
         self.controller.host_api.service_get_all = mock.MagicMock()
 
-        # Check that admin is able to get instance usage audit log.
-        # NOTE(gmann): Until old default rule which is admin_api is
-        # deprecated and not removed, project admin and legacy admin
-        # will be able to get instance usage audit log. This make sure
-        # that existing tokens will keep working even we have changed
-        # this policy defaults to reader role.
-        self.reader_authorized_contexts = [
+        # With legacy rule, all admin_api will be able to get instance usage
+        # audit log.
+        self.admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.system_member_context,
-            self.system_reader_context]
-        # Check that non-admin is not able to get instance usage audit log.
-        self.reader_unauthorized_contexts = [
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
+            self.project_admin_context]
 
     def test_show_policy(self):
         rule_name = iual_policies.BASE_POLICY_NAME % 'show'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.show,
-                                 self.req, '2020-03-25 14:40:00')
+        self.common_policy_auth(self.admin_authorized_contexts,
+                                rule_name, self.controller.show,
+                                self.req, '2020-03-25 14:40:00')
 
     def test_index_policy(self):
         rule_name = iual_policies.BASE_POLICY_NAME % 'list'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.index,
-                                 self.req)
+        self.common_policy_auth(self.admin_authorized_contexts,
+                                rule_name, self.controller.index,
+                                self.req)
+
+
+class InstanceUsageNoLegacyNoScopeTest(InstanceUsageAuditLogPolicyTest):
+    """Test Instance Usage API policies with deprecated rules
+    disabled, but scope checking still disabled.
+    """
+
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        iual_policies.BASE_POLICY_NAME % 'list':
+            base_policy.ADMIN,
+        iual_policies.BASE_POLICY_NAME % 'show':
+            base_policy.ADMIN,
+    }
 
 
 class InstanceUsageScopeTypePolicyTest(InstanceUsageAuditLogPolicyTest):
@@ -83,29 +83,20 @@ class InstanceUsageScopeTypePolicyTest(InstanceUsageAuditLogPolicyTest):
         super(InstanceUsageScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system reader is able to get instance usage audit log.
-        self.reader_authorized_contexts = [
-            self.system_admin_context, self.system_member_context,
-            self.system_reader_context]
-        # Check that non-system-admin is not able to get instance
-        # usage audit log.
-        self.reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
+        # Scope checks remove project users power.
+        self.admin_authorized_contexts = [
+            self.system_admin_context]
 
 
-class InstanceUsageNoLegacyPolicyTest(InstanceUsageScopeTypePolicyTest):
+class InstanceUsageScopeTypeNoLegacyPolicyTest(
+        InstanceUsageScopeTypePolicyTest):
     """Test Instance Usage Audit Log APIs policies with system scope enabled,
     and no more deprecated rules.
     """
     without_deprecated_rules = True
     rules_without_deprecation = {
         iual_policies.BASE_POLICY_NAME % 'list':
-            base_policy.SYSTEM_READER,
+            base_policy.ADMIN,
         iual_policies.BASE_POLICY_NAME % 'show':
-            base_policy.SYSTEM_READER,
+            base_policy.ADMIN,
     }

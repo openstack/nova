@@ -49,62 +49,61 @@ class FlavorAccessPolicyTest(base.BasePolicyTest):
         self.stub_out('nova.objects.flavor._get_projects_from_db',
                 lambda context, flavorid: [])
 
-        # Check that admin is able to add/remove flavor access
-        # to a tenant.
+        # With legacy rule and no scope checks, all admin is able to
+        # add/remove flavor access to a tenant.
         self.admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
-        # Check that non-admin is not able to add/remove flavor access
-        # to a tenant.
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
 
-        # Check that everyone is able to list flavor access
-        # information which is nothing but bug#1867840.
-        self.reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
-
-        self.reader_unauthorized_contexts = [
-        ]
+        # With legacy rule, anyone can access flavor access info.
+        self.admin_index_authorized_contexts = self.all_contexts
 
     def test_list_flavor_access_policy(self):
         rule_name = fa_policy.BASE_POLICY_NAME
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller_index.index,
-                                 self.req, '1')
+        self.common_policy_auth(self.admin_index_authorized_contexts,
+                                rule_name, self.controller_index.index,
+                                self.req, '1')
 
     @mock.patch('nova.objects.Flavor.add_access')
     def test_add_tenant_access_policy(self, mock_add):
         rule_name = fa_policy.POLICY_ROOT % "add_tenant_access"
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller._add_tenant_access,
-                                 self.req, '1',
-                                 body={'addTenantAccess': {'tenant': 't1'}})
+        self.common_policy_auth(self.admin_authorized_contexts,
+                                rule_name,
+                                self.controller._add_tenant_access,
+                                self.req, '1',
+                                body={'addTenantAccess': {'tenant': 't1'}})
 
     @mock.patch('nova.objects.Flavor.remove_access')
     def test_remove_tenant_access_policy(self, mock_remove):
         rule_name = fa_policy.POLICY_ROOT % "remove_tenant_access"
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller._remove_tenant_access,
-                                 self.req, '1',
-                                 body={'removeTenantAccess': {'tenant': 't1'}})
+        self.common_policy_auth(self.admin_authorized_contexts,
+                                rule_name,
+                                self.controller._remove_tenant_access,
+                                self.req, '1',
+                                body={'removeTenantAccess': {'tenant': 't1'}})
+
+
+class FlavorAccessNoLegacyNoScopeTest(FlavorAccessPolicyTest):
+    """Test Flavor Access API policies with deprecated rules
+    disabled, but scope checking still disabled.
+    """
+
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        fa_policy.POLICY_ROOT % "add_tenant_access":
+            base_policy.ADMIN,
+        fa_policy.POLICY_ROOT % "remove_tenant_access":
+            base_policy.ADMIN,
+        fa_policy.BASE_POLICY_NAME:
+            base_policy.ADMIN}
+
+    def setUp(self):
+        super(FlavorAccessNoLegacyNoScopeTest, self).setUp()
+
+        # with no legacy rule means all admin is able to list access info.
+        self.admin_index_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context]
 
 
 class FlavorAccessScopeTypePolicyTest(FlavorAccessPolicyTest):
@@ -122,81 +121,29 @@ class FlavorAccessScopeTypePolicyTest(FlavorAccessPolicyTest):
         super(FlavorAccessScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system admin is able to add/remove flavor access
-        # to a tenant.
+        # Scope checks remove project users power.
         self.admin_authorized_contexts = [
             self.system_admin_context]
-        # Check that non-system-admin is not able to add/remove flavor access
-        # to a tenant.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.project_admin_context,
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
-
-        # Check that system user is able to list flavor access
-        # information.
-        self.reader_authorized_contexts = [
-            self.system_admin_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context]
-        # Check that non-system is not able to list flavor access
-        # information.
-        self.reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.other_project_member_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_reader_context,
-        ]
+        self.admin_index_authorized_contexts = [
+            self.system_admin_context, self.system_member_context,
+            self.system_reader_context, self.system_foo_context]
 
 
-class FlavorAccessNoLegacyPolicyTest(FlavorAccessPolicyTest):
+class FlavorAccessScopeTypeNoLegacyPolicyTest(FlavorAccessScopeTypePolicyTest):
     """Test FlavorAccess APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system_redear APIs.
+    and no more deprecated rules.
     """
     without_deprecated_rules = True
     rules_without_deprecation = {
         fa_policy.POLICY_ROOT % "add_tenant_access":
-            base_policy.SYSTEM_ADMIN,
+            base_policy.ADMIN,
         fa_policy.POLICY_ROOT % "remove_tenant_access":
-            base_policy.SYSTEM_ADMIN,
+            base_policy.ADMIN,
         fa_policy.BASE_POLICY_NAME:
-            base_policy.SYSTEM_READER}
+            base_policy.ADMIN}
 
     def setUp(self):
-        super(FlavorAccessNoLegacyPolicyTest, self).setUp()
+        super(FlavorAccessScopeTypeNoLegacyPolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
-
-        # Check that system admin is able to add/remove flavor access
-        # to a tenant.
-        self.admin_authorized_contexts = [
+        self.admin_index_authorized_contexts = [
             self.system_admin_context]
-        # Check that non-system-admin is not able to add/remove flavor access
-        # to a tenant.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.project_admin_context,
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
-
-        # Check that system reader is able to list flavor access
-        # information.
-        self.reader_authorized_contexts = [
-            self.system_admin_context,
-            self.system_member_context, self.system_reader_context]
-        # Check that non-system-reader is not able to list flavor access
-        # information.
-        self.reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.other_project_member_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.system_foo_context,
-            self.other_project_reader_context,
-        ]
