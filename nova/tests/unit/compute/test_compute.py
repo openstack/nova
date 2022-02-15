@@ -5714,13 +5714,15 @@ class ComputeTestCase(BaseTestCase,
             objects=[objects.PciDevice(vendor_id='1377',
                                        product_id='0047',
                                        address='0000:0a:00.1',
-                                       request_id=uuids.req1)])
+                                       request_id=uuids.req1,
+                                       compute_node_id=1)])
 
         new_pci_devices = objects.PciDeviceList(
             objects=[objects.PciDevice(vendor_id='1377',
                                        product_id='0047',
                                        address='0000:0b:00.1',
-                                       request_id=uuids.req2)])
+                                       request_id=uuids.req2,
+                                       compute_node_id=2)])
 
         if expected_pci_addr == old_pci_devices[0].address:
             expected_pci_device = old_pci_devices[0]

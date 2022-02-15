@@ -4809,6 +4809,174 @@ class TestAPI(TestAPIBase):
         'nova.network.neutron.API.has_extended_resource_request_extension',
         new=mock.Mock(return_value=False),
     )
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_with_sriov_pf(
+        self, get_client_mock, get_pci_device_devspec_mock
+    ):
+        devspec = mock.Mock()
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
+        get_pci_device_devspec_mock.return_value = devspec
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.migration_context = objects.MigrationContext()
+        instance.migration_context.old_pci_devices = objects.PciDeviceList(
+            objects=[
+                objects.PciDevice(
+                    vendor_id='8086',
+                    product_id='154d',
+                    address='0000:0a:01',
+                    compute_node_id=1,
+                    request_id=uuids.pci_req,
+                    dev_type=obj_fields.PciDeviceType.SRIOV_PF,
+                    extra_info={'mac_address': 'b4:96:91:34:f4:36'},
+                )
+            ]
+        )
+        instance.pci_devices = instance.migration_context.old_pci_devices
+        instance.migration_context.new_pci_devices = objects.PciDeviceList(
+            objects=[
+                objects.PciDevice(
+                    vendor_id='8086',
+                    product_id='154d',
+                    address='0000:0a:02',
+                    compute_node_id=2,
+                    request_id=uuids.pci_req,
+                    dev_type=obj_fields.PciDeviceType.SRIOV_PF,
+                    extra_info={'mac_address': 'b4:96:91:34:f4:dd'},
+                )
+            ]
+        )
+        instance.pci_devices = instance.migration_context.new_pci_devices
+
+        fake_ports = {
+            'ports': [
+                {
+                    'id': uuids.port,
+                    'binding:vnic_type': 'direct-physical',
+                    constants.BINDING_HOST_ID: 'fake-host-old',
+                    constants.BINDING_PROFILE: {
+                        'pci_slot': '0000:0a:01',
+                        'physical_network': 'old_phys_net',
+                        'pci_vendor_info': 'old_pci_vendor_info',
+                    },
+                },
+            ]
+        }
+
+        migration = objects.Migration(
+            status='confirmed', migration_type='migration')
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+
+        update_port_mock = mock.Mock()
+        get_client_mock.return_value.update_port = update_port_mock
+
+        self.api._update_port_binding_for_instance(
+            self.context, instance, instance.host, migration)
+
+        # Assert that update_port is called with the binding:profile
+        # corresponding to the PCI device specified including MAC address.
+        update_port_mock.assert_called_once_with(
+            uuids.port,
+            {
+                'port': {
+                    constants.BINDING_HOST_ID: 'fake-host',
+                    'device_owner': 'compute:%s' % instance.availability_zone,
+                    constants.BINDING_PROFILE: {
+                        'pci_slot': '0000:0a:02',
+                        'physical_network': 'physnet1',
+                        'pci_vendor_info': '8086:154d',
+                        'device_mac_address': 'b4:96:91:34:f4:dd',
+                    },
+                }
+            },
+        )
+
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
+    @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
+    def test_update_port_bindings_for_instance_with_sriov_pf_no_migration(
+        self, get_client_mock, get_pci_device_devspec_mock
+    ):
+        devspec = mock.Mock()
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
+        get_pci_device_devspec_mock.return_value = devspec
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.pci_requests = objects.InstancePCIRequests(
+            instance_uuid=instance.uuid,
+            requests=[
+                objects.InstancePCIRequest(
+                    requester_id=uuids.port,
+                    request_id=uuids.pci_req,
+                )
+            ],
+        )
+        instance.pci_devices = objects.PciDeviceList(
+            objects=[
+                objects.PciDevice(
+                    vendor_id='8086',
+                    product_id='154d',
+                    address='0000:0a:02',
+                    compute_node_id=2,
+                    request_id=uuids.pci_req,
+                    dev_type=obj_fields.PciDeviceType.SRIOV_PF,
+                    extra_info={'mac_address': 'b4:96:91:34:f4:36'},
+                )
+            ]
+        )
+
+        fake_ports = {
+            'ports': [
+                {
+                    'id': uuids.port,
+                    'binding:vnic_type': 'direct-physical',
+                    constants.BINDING_HOST_ID: 'fake-host-old',
+                    constants.BINDING_PROFILE: {
+                        'pci_slot': '0000:0a:01',
+                        'physical_network': 'old_phys_net',
+                        'pci_vendor_info': 'old_pci_vendor_info',
+                        'device_mac_address': 'b4:96:91:34:f4:dd'
+                    },
+                },
+            ]
+        }
+
+        list_ports_mock = mock.Mock(return_value=fake_ports)
+        get_client_mock.return_value.list_ports = list_ports_mock
+
+        update_port_mock = mock.Mock()
+        get_client_mock.return_value.update_port = update_port_mock
+
+        self.api._update_port_binding_for_instance(
+            self.context, instance, instance.host)
+
+        # Assert that update_port is called with the binding:profile
+        # corresponding to the PCI device specified including MAC address.
+        update_port_mock.assert_called_once_with(
+            uuids.port,
+            {
+                'port': {
+                    constants.BINDING_HOST_ID: 'fake-host',
+                    'device_owner': 'compute:%s' % instance.availability_zone,
+                    constants.BINDING_PROFILE: {
+                        'pci_slot': '0000:0a:02',
+                        'physical_network': 'physnet1',
+                        'pci_vendor_info': '8086:154d',
+                        'device_mac_address': 'b4:96:91:34:f4:36',
+                    },
+                }
+            },
+        )
+
+    @mock.patch(
+        'nova.network.neutron.API.has_extended_resource_request_extension',
+        new=mock.Mock(return_value=False),
+    )
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_resource_req(
             self, get_client_mock):
@@ -7132,23 +7300,21 @@ class TestAPI(TestAPIBase):
                                              request_id=uuids.pci_request_id)
         bad_request = objects.InstancePCIRequest(
             requester_id=uuids.wrong_port_id)
-        device = objects.PciDevice(request_id=uuids.pci_request_id,
-                                   address='fake-pci-address')
+        device = objects.PciDevice(request_id=uuids.pci_request_id)
         bad_device = objects.PciDevice(request_id=uuids.wrong_request_id)
         # Test the happy path
         instance = objects.Instance(
             pci_requests=objects.InstancePCIRequests(requests=[request]),
             pci_devices=objects.PciDeviceList(objects=[device]))
         self.assertEqual(
-            'fake-pci-address',
-            self.api._get_port_pci_dev(
-                self.context, instance, fake_port).address)
+            device,
+            self.api._get_port_pci_dev(instance, fake_port))
         # Test not finding the request
         instance = objects.Instance(
             pci_requests=objects.InstancePCIRequests(
                 requests=[objects.InstancePCIRequest(bad_request)]))
         self.assertIsNone(
-            self.api._get_port_pci_dev(self.context, instance, fake_port))
+            self.api._get_port_pci_dev(instance, fake_port))
         mock_debug.assert_called_with('No PCI request found for port %s',
                                       uuids.fake_port_id, instance=instance)
         mock_debug.reset_mock()
@@ -7157,7 +7323,7 @@ class TestAPI(TestAPIBase):
             pci_requests=objects.InstancePCIRequests(requests=[request]),
             pci_devices=objects.PciDeviceList(objects=[bad_device]))
         self.assertIsNone(
-            self.api._get_port_pci_dev(self.context, instance, fake_port))
+            self.api._get_port_pci_dev(instance, fake_port))
         mock_debug.assert_called_with('No PCI device found for request %s',
                                       uuids.pci_request_id, instance=instance)
 
@@ -7682,6 +7848,45 @@ class TestAPIPortbinding(TestAPIBase):
                          port_req_body['port'][
                              constants.BINDING_PROFILE])
 
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
+    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    def test_populate_neutron_extension_values_binding_sriov_pf(
+        self, mock_get_instance_pci_devs, mock_get_devspec
+    ):
+        host_id = 'my_host_id'
+        instance = {'host': host_id}
+        port_req_body = {'port': {}}
+
+        pci_dev = objects.PciDevice(
+            request_id=uuids.pci_req,
+            address='0000:01:00',
+            parent_addr='0000:02:00',
+            vendor_id='8086',
+            product_id='154d',
+            dev_type=obj_fields.PciDeviceType.SRIOV_PF,
+            extra_info={'mac_address': 'b4:96:91:34:f4:36'}
+        )
+
+        expected_profile = {
+            'pci_vendor_info': '8086:154d',
+            'pci_slot': '0000:01:00',
+            'physical_network': 'physnet1',
+            'device_mac_address': 'b4:96:91:34:f4:36',
+        }
+
+        mock_get_instance_pci_devs.return_value = [pci_dev]
+        devspec = mock.Mock()
+        devspec.get_tags.return_value = {'physical_network': 'physnet1'}
+        mock_get_devspec.return_value = devspec
+
+        self.api._populate_neutron_binding_profile(
+            instance, uuids.pci_req, port_req_body, None)
+
+        self.assertEqual(
+            expected_profile,
+            port_req_body['port'][constants.BINDING_PROFILE]
+        )
+
     @mock.patch.object(
         pci_utils, 'get_vf_num_by_pci_address',
         new=mock.MagicMock(side_effect=(lambda vf_a: 1
@@ -7753,21 +7958,29 @@ class TestAPIPortbinding(TestAPIBase):
         devspec.get_tags.return_value = {'physical_network': 'physnet1'}
         mock_get_pci_device_devspec.return_value = devspec
 
-        pci_dev = {'vendor_id': 'a2d6',
-                   'product_id': '15b3',
-                   'address': '0000:0a:00.0',
-                   'card_serial_number': 'MT2113X00000',
-                   'dev_type': obj_fields.PciDeviceType.SRIOV_PF,
-                  }
-        PciDevice = collections.namedtuple('PciDevice',
-                               ['vendor_id', 'product_id', 'address',
-                                'card_serial_number', 'dev_type'])
-        mydev = PciDevice(**pci_dev)
+        pci_dev = objects.PciDevice(
+            request_id=uuids.pci_req,
+            address='0000:0a:00.0',
+            parent_addr='0000:02:00',
+            vendor_id='a2d6',
+            product_id='15b3',
+            dev_type=obj_fields.PciDeviceType.SRIOV_PF,
+            extra_info={
+                'capabilities': jsonutils.dumps(
+                    {'card_serial_number': 'MT2113X00000'}),
+                'mac_address': 'b4:96:91:34:f4:36',
+            },
 
-        self.assertEqual({'pci_slot': '0000:0a:00.0',
-                          'pci_vendor_info': 'a2d6:15b3',
-                          'physical_network': 'physnet1'},
-                         self.api._get_pci_device_profile(mydev))
+        )
+        self.assertEqual(
+            {
+                'pci_slot': '0000:0a:00.0',
+                'pci_vendor_info': 'a2d6:15b3',
+                'physical_network': 'physnet1',
+                'device_mac_address': 'b4:96:91:34:f4:36',
+            },
+            self.api._get_pci_device_profile(pci_dev),
+        )
 
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
