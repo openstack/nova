@@ -10820,6 +10820,8 @@ class ComputeManager(manager.Manager):
             profile['pci_slot'] = pci_dev.address
             profile['pci_vendor_info'] = ':'.join([pci_dev.vendor_id,
                                                    pci_dev.product_id])
+            if pci_dev.mac_address:
+                profile['device_mac_address'] = pci_dev.mac_address
             mig_vif.profile = profile
             LOG.debug("Updating migrate VIF profile for port %(port_id)s:"
                       "%(profile)s", {'port_id': port_id,

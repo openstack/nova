@@ -667,7 +667,8 @@ class API:
             # for the physical device but don't want to overwrite the other
             # information in the binding profile.
             for profile_key in ('pci_vendor_info', 'pci_slot',
-                                constants.ALLOCATION, 'arq_uuid'):
+                                constants.ALLOCATION, 'arq_uuid',
+                                'device_mac_address'):
                 if profile_key in port_profile:
                     del port_profile[profile_key]
             port_req_body['port'][constants.BINDING_PROFILE] = port_profile
@@ -1286,6 +1287,10 @@ class API:
                     network=network, neutron=neutron,
                     bind_host_id=bind_host_id,
                     port_arq=port_arq)
+                # NOTE(gibi): Remove this once we are sure that the fix for
+                # bug 1942329 is always present in the deployed neutron. The
+                # _populate_neutron_extension_values() call above already
+                # populated this MAC to the binding profile instead.
                 self._populate_pci_mac_address(instance,
                     request.pci_request_id, port_req_body)
 
@@ -1506,11 +1511,27 @@ class API:
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
         if dev_spec:
-            return {'pci_vendor_info': "%s:%s" %
-                        (pci_dev.vendor_id, pci_dev.product_id),
-                    'pci_slot': pci_dev.address,
-                    'physical_network':
-                        dev_spec.get_tags().get('physical_network')}
+            dev_profile = {
+                'pci_vendor_info': "%s:%s"
+                % (pci_dev.vendor_id, pci_dev.product_id),
+                'pci_slot': pci_dev.address,
+                'physical_network': dev_spec.get_tags().get(
+                    'physical_network'
+                ),
+            }
+            if pci_dev.dev_type == obj_fields.PciDeviceType.SRIOV_PF:
+                # In general the MAC address information flows fom the neutron
+                # port to the device in the backend. Except for direct-physical
+                # ports. In that case the MAC address flows from the physical
+                # device, the PF, to the neutron port. So when such a port is
+                # being bound to a host the port's MAC address needs to be
+                # updated. Nova needs to put the new MAC into the binding
+                # profile.
+                if pci_dev.mac_address:
+                    dev_profile['device_mac_address'] = pci_dev.mac_address
+
+            return dev_profile
+
         raise exception.PciDeviceNotFound(node_id=pci_dev.compute_node_id,
                                           address=pci_dev.address)
 
@@ -3512,11 +3533,10 @@ class API:
                   migration.get('status') == 'reverted')
         return instance.migration_context.get_pci_mapping_for_migration(revert)
 
-    def _get_port_pci_dev(self, context, instance, port):
+    def _get_port_pci_dev(self, instance, port):
         """Find the PCI device corresponding to the port.
         Assumes the port is an SRIOV one.
 
-        :param context: The request context.
         :param instance: The instance to which the port is attached.
         :param port: The Neutron port, as obtained from the Neutron API
             JSON form.
@@ -3604,15 +3624,14 @@ class API:
                             raise exception.PortUpdateFailed(port_id=p['id'],
                                 reason=_("Unable to correlate PCI slot %s") %
                                          pci_slot)
-                # NOTE(artom) If migration is None, this is an unshevle, and we
-                # need to figure out the pci_slot from the InstancePCIRequest
-                # and PciDevice objects.
+                # NOTE(artom) If migration is None, this is an unshelve, and we
+                # need to figure out the pci related binding information from
+                # the InstancePCIRequest and PciDevice objects.
                 else:
-                    pci_dev = self._get_port_pci_dev(context, instance, p)
+                    pci_dev = self._get_port_pci_dev(instance, p)
                     if pci_dev:
                         binding_profile.update(
-                            self._get_pci_device_profile(pci_dev)
-                        )
+                            self._get_pci_device_profile(pci_dev))
                         updates[constants.BINDING_PROFILE] = binding_profile
 
             # NOTE(gibi): during live migration the conductor already sets the

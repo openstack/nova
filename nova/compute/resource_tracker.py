@@ -328,7 +328,12 @@ class ResourceTracker(object):
             migration_id=migration.id,
             old_numa_topology=instance.numa_topology,
             new_numa_topology=claim.claimed_numa_topology,
-            old_pci_devices=instance.pci_devices,
+            # NOTE(gibi): the _update_usage_from_migration call below appends
+            # the newly claimed pci devices to the instance.pci_devices list
+            # to keep the migration context independent we need to make a copy
+            # that list here. We need a deep copy as we need to duplicate
+            # the instance.pci_devices.objects list
+            old_pci_devices=copy.deepcopy(instance.pci_devices),
             new_pci_devices=claimed_pci_devices,
             old_pci_requests=instance.pci_requests,
             new_pci_requests=new_pci_requests,

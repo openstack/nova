@@ -887,6 +887,36 @@ class FakeLiveMigrateDriverWithNestedCustomResources(
 
 
 class FakeDriverWithPciResources(SmallFakeDriver):
+    """NOTE: this driver provides symmetric compute nodes. Each compute will
+    have the same resources with the same addresses. It is dangerous as using
+    this driver can hide issues when in an asymmetric environment nova fails to
+    update entities according to the host specific addresses (e.g. pci_slot of
+    the neutron port bindings).
+
+    The current non virt driver specific functional test environment has many
+    shortcomings making it really hard to simulate host specific virt drivers.
+
+    1) The virt driver is instantiated by the service logic from the name of
+    the driver class. This makes passing input to the driver instance from the
+    test at init time pretty impossible. This could be solved with some
+    fixtures around nova.virt.driver.load_compute_driver()
+
+    2) The compute service access the hypervisor not only via the virt
+    interface but also reads the sysfs of the host. So simply providing a fake
+    virt driver instance is not enough to isolate simulated compute services
+    that are running on the same host. Also these low level sysfs reads are not
+    having host specific information in the call params. So simply mocking the
+    low level call does not give a way to provide host specific return values.
+
+    3) CONF is global, and it is read dynamically by the driver. So
+    providing host specific CONF to driver instances without race conditions
+    between the drivers are extremely hard especially if periodic tasks are
+    enabled.
+
+    The libvirt based functional test env under nova.tests.functional.libvirt
+    has better support to create asymmetric environments. So please consider
+    using that if possible instead.
+    """
 
     PCI_ADDR_PF1 = '0000:01:00.0'
     PCI_ADDR_PF1_VF1 = '0000:01:00.1'
@@ -950,6 +980,15 @@ class FakeDriverWithPciResources(SmallFakeDriver):
                 ),
             ],
                              group='pci')
+
+            # These mocks should be removed after bug
+            # https://bugs.launchpad.net/nova/+bug/1961587 has been fixed and
+            # every SRIOV device related information is transferred through the
+            # virt driver and the PciDevice object instead of queried with
+            # sysfs calls by the network.neutron.API code.
+            self.useFixture(fixtures.MockPatch(
+                'nova.pci.utils.get_mac_by_pci_address',
+                return_value='52:54:00:1e:59:c6'))
 
     def get_available_resource(self, nodename):
         host_status = super(
