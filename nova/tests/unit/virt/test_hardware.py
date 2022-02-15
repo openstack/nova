@@ -5452,6 +5452,56 @@ class PCINUMAAffinityPolicyTest(test.NoDBTestCase):
             image_meta.properties.hw_pci_numa_affinity_policy = "fake"
 
 
+class PMUEnabledTest(test.NoDBTestCase):
+
+    def test_pmu_image_and_flavor_conflict(self):
+        """Tests that calling _validate_flavor_image_nostatus()
+        with an image that conflicts with the flavor raises but no
+        exception is raised if there is no conflict.
+        """
+        flavor = objects.Flavor(
+            name='foo', vcpus=1, memory_mb=512, root_gb=1,
+            extra_specs={'hw:pmu': "true"})
+        image_meta = objects.ImageMeta.from_dict({
+            'name': 'bar', 'properties': {'hw_pmu': False},
+        })
+        self.assertRaises(
+            exception.FlavorImageConflict,
+            hw.get_pmu_constraint,
+            flavor, image_meta)
+
+    def test_pmu_image_and_flavor_same_value(self):
+        # assert that if both the image and flavor are set to the same value
+        # no exception is raised and the function returns nothing.
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=512, root_gb=1, extra_specs={'hw:pmu': "true"})
+        image_meta = objects.ImageMeta.from_dict({
+            'properties': {'hw_pmu': True},
+        })
+        self.assertTrue(hw.get_pmu_constraint(flavor, image_meta))
+
+    def test_pmu_image_only(self):
+        # assert that if only the image metadata is set then it is valid
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=512, root_gb=1, extra_specs={})
+
+        # ensure string to bool conversion works for image metadata
+        # property by using "yes".
+        image_meta = objects.ImageMeta.from_dict({
+            'properties': {'hw_pmu': 'yes'},
+        })
+        self.assertTrue(hw.get_pmu_constraint(flavor, image_meta))
+
+    def test_pmu_flavor_only(self):
+        # assert that if only the flavor extra_spec is set then it is valid
+        # and test the string to bool conversion of "on" works.
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=512, root_gb=1, extra_specs={'hw:pmu': "on"})
+
+        image_meta = objects.ImageMeta.from_dict({'properties': {}})
+        self.assertTrue(hw.get_pmu_constraint(flavor, image_meta))
+
+
 @ddt.ddt
 class VIFMultiqueueEnabledTest(test.NoDBTestCase):
 
