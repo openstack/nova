@@ -1156,9 +1156,9 @@ Active:          8381604 kB
             dev for dev in node_devs.values() if dev.name() in devs]
 
         name = "pci_0000_04_00_3"
-        actual_vf = self.host._get_pcidev_info(
+        actual_pf = self.host._get_pcidev_info(
             name, node_devs[name], net_devs, [], [])
-        expect_vf = {
+        expect_pf = {
             "dev_id": "pci_0000_04_00_3",
             "address": "0000:04:00.3",
             "product_id": '1521',
@@ -1166,8 +1166,10 @@ Active:          8381604 kB
             "vendor_id": '8086',
             "label": 'label_8086_1521',
             "dev_type": obj_fields.PciDeviceType.SRIOV_PF,
+            # value defined in the LibvirtFixture
+            "mac_address": "52:54:00:1e:59:c6",
             }
-        self.assertEqual(expect_vf, actual_vf)
+        self.assertEqual(expect_pf, actual_pf)
 
         name = "pci_0000_04_10_7"
         actual_vf = self.host._get_pcidev_info(
@@ -1222,9 +1224,9 @@ Active:          8381604 kB
         self.assertEqual(expect_vf, actual_vf)
 
         name = "pci_0000_03_00_0"
-        actual_vf = self.host._get_pcidev_info(
+        actual_pf = self.host._get_pcidev_info(
             name, node_devs[name], net_devs, [], [])
-        expect_vf = {
+        expect_pf = {
             "dev_id": "pci_0000_03_00_0",
             "address": "0000:03:00.0",
             "product_id": '1013',
@@ -1232,13 +1234,15 @@ Active:          8381604 kB
             "vendor_id": '15b3',
             "label": 'label_15b3_1013',
             "dev_type": obj_fields.PciDeviceType.SRIOV_PF,
+            # value defined in the LibvirtFixture
+            "mac_address": "52:54:00:1e:59:c6",
             }
-        self.assertEqual(expect_vf, actual_vf)
+        self.assertEqual(expect_pf, actual_pf)
 
         name = "pci_0000_03_00_1"
-        actual_vf = self.host._get_pcidev_info(
+        actual_pf = self.host._get_pcidev_info(
             name, node_devs[name], net_devs, [], [])
-        expect_vf = {
+        expect_pf = {
             "dev_id": "pci_0000_03_00_1",
             "address": "0000:03:00.1",
             "product_id": '1013',
@@ -1246,8 +1250,10 @@ Active:          8381604 kB
             "vendor_id": '15b3',
             "label": 'label_15b3_1013',
             "dev_type": obj_fields.PciDeviceType.SRIOV_PF,
+            # value defined in the LibvirtFixture
+            "mac_address": "52:54:00:1e:59:c6",
             }
-        self.assertEqual(expect_vf, actual_vf)
+        self.assertEqual(expect_pf, actual_pf)
 
         # Parent PF with a VPD cap.
         name = "pci_0000_82_00_0"
@@ -1264,6 +1270,8 @@ Active:          8381604 kB
             "capabilities": {
                 # Should be obtained from the parent PF in this case.
                 "vpd": {"card_serial_number": "MT2113X00000"}},
+            # value defined in the LibvirtFixture
+            "mac_address": "52:54:00:1e:59:c6",
         }
         self.assertEqual(expect_pf, actual_pf)
 

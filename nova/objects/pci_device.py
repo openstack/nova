@@ -148,6 +148,12 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                     reason='dev_type=%s not supported in version %s' % (
                         dev_type, target_version))
 
+    def __repr__(self):
+        return (
+            f'PciDevice(address={self.address}, '
+            f'compute_node_id={self.compute_node_id})'
+        )
+
     def update_device(self, dev_dict):
         """Sync the content from device dictionary to device object.
 
@@ -175,6 +181,9 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 # NOTE(ralonsoh): list of parameters currently added to
                 # "extra_info" dict:
                 #     - "capabilities": dict of (strings/list of strings)
+                #     - "parent_ifname": the netdev name of the parent (PF)
+                #        device of a VF
+                #     - "mac_address": the MAC address of the PF
                 extra_info = self.extra_info
                 data = v if isinstance(v, str) else jsonutils.dumps(v)
                 extra_info.update({k: data})
@@ -566,6 +575,13 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         caps = jsonutils.loads(caps_json)
         return caps.get('vpd', {}).get('card_serial_number')
 
+    @property
+    def mac_address(self):
+        """The MAC address of the PF physical device or None if the device is
+        not a PF or if the MAC is not available.
+        """
+        return self.extra_info.get('mac_address')
+
 
 @base.NovaObjectRegistry.register
 class PciDeviceList(base.ObjectListBase, base.NovaObject):
@@ -605,3 +621,6 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
                                                            parent_addr)
         return base.obj_make_list(context, cls(context), objects.PciDevice,
                                   db_dev_list)
+
+    def __repr__(self):
+        return f"PciDeviceList(objects={[repr(obj) for obj in self.objects]})"

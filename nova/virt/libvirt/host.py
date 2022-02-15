@@ -1267,6 +1267,20 @@ class Host(object):
             return None
         return vpd_cap.card_serial_number
 
+    def _get_pf_details(self, device: dict, pci_address: str) -> dict:
+        if device.get('dev_type') != fields.PciDeviceType.SRIOV_PF:
+            return {}
+
+        try:
+            return {
+                'mac_address': pci_utils.get_mac_by_pci_address(pci_address)
+            }
+        except exception.PciDeviceNotFoundById:
+            LOG.debug(
+                'Cannot get MAC address of the PF %s. It is probably attached '
+                'to a guest already', pci_address)
+            return {}
+
     def _get_pcidev_info(
         self,
         devname: str,
@@ -1426,6 +1440,7 @@ class Host(object):
             _get_device_type(cfgdev, address, dev, net_devs, vdpa_devs))
         device.update(_get_device_capabilities(device, dev, net_devs))
         device.update(_get_vpd_details(device, dev, pci_devs))
+        device.update(self._get_pf_details(device, address))
         return device
 
     def get_vdpa_nodedev_by_address(
