@@ -409,6 +409,7 @@ class ServersController(wsgi.Controller):
 
         networks = []
         network_uuids = []
+        port_uuids = []
         for network in requested_networks:
             request = objects.NetworkRequest()
             try:
@@ -417,18 +418,31 @@ class ServersController(wsgi.Controller):
                 # it will use one of the available IP address from the network
                 request.address = network.get('fixed_ip', None)
                 request.port_id = network.get('port', None)
-
                 request.tag = network.get('tag', None)
 
                 if request.port_id:
-                    request.network_id = None
-                    if request.address is not None:
-                        msg = _("Specified Fixed IP '%(addr)s' cannot be used "
-                                "with port '%(port)s': the two cannot be "
-                                "specified together.") % {
-                                    "addr": request.address,
-                                    "port": request.port_id}
+                    if request.port_id in port_uuids:
+                        msg = _(
+                            "Port ID '%(port)s' was specified twice: you "
+                            "cannot attach a port multiple times."
+                        ) % {
+                            "port": request.port_id,
+                        }
                         raise exc.HTTPBadRequest(explanation=msg)
+
+                    if request.address is not None:
+                        msg = _(
+                            "Specified Fixed IP '%(addr)s' cannot be used "
+                            "with port '%(port)s': the two cannot be "
+                            "specified together."
+                        ) % {
+                            "addr": request.address,
+                            "port": request.port_id,
+                        }
+                        raise exc.HTTPBadRequest(explanation=msg)
+
+                    request.network_id = None
+                    port_uuids.append(request.port_id)
                 else:
                     request.network_id = network['uuid']
                     self._validate_network_id(

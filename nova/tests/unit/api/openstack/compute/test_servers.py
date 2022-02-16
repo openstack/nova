@@ -389,17 +389,36 @@ class ServersControllerTest(_ServersControllerTest):
                           (network, None, None, None, None, None)],
                           res.as_tuples())
 
-    def test_requested_networks_enabled_conflict_on_fixed_ip(self):
-        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+    def test_requested_networks_duplicate_ports(self):
+        """The same port can't be specified twice."""
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
-        addr = '10.0.0.1'
-        requested_networks = [{'uuid': network,
-                               'fixed_ip': addr,
-                               'port': port}]
-        self.assertRaises(
+        requested_networks = [{'port': port}, {'port': port}]
+        exc = self.assertRaises(
             webob.exc.HTTPBadRequest,
             self.controller._get_requested_networks,
-            requested_networks)
+            requested_networks,
+        )
+        self.assertIn(
+            "Port ID 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee' was specified "
+            "twice",
+            str(exc),
+        )
+
+    def test_requested_networks_conflict_on_fixed_ip(self):
+        """A fixed IP can't be specified at the same as a port ID."""
+        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        addr = '10.0.0.1'
+        requested_networks = [{'fixed_ip': addr, 'port': port}]
+        exc = self.assertRaises(
+            webob.exc.HTTPBadRequest,
+            self.controller._get_requested_networks,
+            requested_networks,
+        )
+        self.assertIn(
+            "Specified Fixed IP '10.0.0.1' cannot be used with port "
+            "'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'",
+            str(exc),
+        )
 
     def test_requested_networks_api_enabled_with_v2_subclass(self):
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
