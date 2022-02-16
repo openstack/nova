@@ -16,7 +16,7 @@ import mock
 
 from oslo_serialization import jsonutils
 
-from nova.exception import ComputeHostNotFound
+from nova import exception
 from nova import objects
 from nova.objects.compute_node import ComputeNode
 from nova.scheduler.filters import cpu_info_migration_filter
@@ -35,12 +35,21 @@ class TestCpuFlagsMigrationFilter(test.NoDBTestCase):
             source_node=[self.SOURCE_NODE.hypervisor_hostname],
         )
 
-    @mock.patch.object(cpu_info_migration_filter, 'get_admin_context')
+    @mock.patch('nova.context.get_admin_context')
+    @mock.patch('nova.context.target_cell')
     @mock.patch.object(cpu_info_migration_filter, 'request_is_live_migrate')
     @mock.patch.object(ComputeNode, 'get_by_host_and_nodename')
-    def _test_filter_all(self, mock_get_cn, mock_is_live_migrate,
-            mock_get_admin_context, compute_node=None, is_live_migrate=True,
-            hosts=None, filtered_hosts=None,
+    @mock.patch.object(cpu_info_migration_filter, 'HostMapping')
+    def _test_filter_all(self,
+            mock_host_mapping,
+            mock_get_cn,
+            mock_is_live_migrate,
+            mock_target_cell,
+            mock_get_admin_context,
+            compute_node=None,
+            is_live_migrate=True,
+            hosts=None,
+            filtered_hosts=None,
             **scheduler_hints):
         if not scheduler_hints:
             scheduler_hints = self._default_scheduler_hints
@@ -54,6 +63,12 @@ class TestCpuFlagsMigrationFilter(test.NoDBTestCase):
         spec_obj = objects.RequestSpec(
                         context=mock.sentinel.ctx,
                         scheduler_hints=scheduler_hints)
+
+        cell_mapping = mock.sentinel.cell_mapping
+        mock_host_mapping.get_by_host.return_value.cell_mapping = cell_mapping
+
+        cell_ctxt = mock.sentinel.cell_ctxt
+        mock_target_cell.return_value.__enter__.return_value = cell_ctxt
 
         result = self.filter.filter_all(hosts, spec_obj)
 
@@ -73,7 +88,7 @@ class TestCpuFlagsMigrationFilter(test.NoDBTestCase):
             mock_get_admin_context.assert_called()
             source_host = spec_obj.get_scheduler_hint('source_host')
             source_node = spec_obj.get_scheduler_hint('source_node')
-            mock_get_cn.assert_called_with(admin_ctx, source_host, source_node)
+            mock_get_cn.assert_called_with(cell_ctxt, source_host, source_node)
         return spec_obj
 
     def _test_filter_all_no_host_passes(self, **kwargs):
@@ -92,9 +107,15 @@ class TestCpuFlagsMigrationFilter(test.NoDBTestCase):
     def test_non_live_migrate_pass_through(self):
         self._test_filter_all_no_host_passes(is_live_migrate=False)
 
-    def test_missing_compute_host_pass_through(self):
+    def test_missing_compute_host_filters_all(self):
         def raise_exception(_, host, node):
-            raise ComputeHostNotFound(host=host)
+            raise exception.ComputeHostNotFound(host=host)
+        self._test_filter_all_no_host_passes(
+            compute_node=raise_exception, hosts=[])
+
+    def test_missing_host_mapping_filters_all(self):
+        def raise_exception(_, host, node):
+            raise exception.HostMappingNotFound(name=host)
         self._test_filter_all_no_host_passes(
             compute_node=raise_exception, hosts=[])
 

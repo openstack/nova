@@ -18,9 +18,10 @@ import six
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
-from nova.context import get_admin_context
-from nova.exception import ComputeHostNotFound
+from nova import context as nova_context
+from nova import exception
 from nova.objects.compute_node import ComputeNode
+from nova.objects.host_mapping import HostMapping
 from nova.scheduler import filters
 from nova.scheduler.utils import request_is_live_migrate
 
@@ -50,14 +51,22 @@ class CpuInfoMigrationFilter(filters.BaseHostFilter):
             return filter_obj_list
 
         try:
-            ctx = get_admin_context()
-            compute_node = ComputeNode.get_by_host_and_nodename(
-                ctx, source_host, source_node)
-            source_cpu_flags = self._parse_cpu_info(compute_node.cpu_info)
-        except ComputeHostNotFound:
+            context = nova_context.get_admin_context()
+            host_mapping = HostMapping.get_by_host(context, source_host)
+            cell_mapping = host_mapping.cell_mapping
+            with nova_context.target_cell(context, cell_mapping) as cctxt:
+                compute_node = ComputeNode.get_by_host_and_nodename(
+                    cctxt, source_host, source_node)
+        except exception.ComputeHostNotFound:
             LOG.warning("Cannot find source host/node %s/%s",
                         source_host, source_node)
             return []
+        except exception.HostMappingNotFound:
+            LOG.warning("Cannot find host mapping for host %s", source_host)
+            return []
+
+        try:
+            source_cpu_flags = self._parse_cpu_info(compute_node.cpu_info)
         except (ValueError, KeyError):
             LOG.warning("Cannot parse cpu_info for source host/node %s/%s: %s",
                         source_host, source_node, compute_node.cpu_info)
@@ -80,9 +89,10 @@ class CpuInfoMigrationFilter(filters.BaseHostFilter):
         try:
             cpu_flags = CpuInfoMigrationFilter._parse_cpu_info(
                 host_state.cpu_info)
-            return source_cpu_flags.issubset(cpu_flags)
         except (ValueError, KeyError):
             LOG.warning(
                 "Cannot parse cpu_info for target host/node (%s/%s) '%s'",
                 host_state.host, host_state.nodename, host_state.cpu_info)
             return False
+
+        return source_cpu_flags.issubset(cpu_flags)
