@@ -1745,11 +1745,11 @@ class Host(object):
         arch: str,
         machine: str,
         has_secure_boot: bool,
-    ) -> ty.Tuple[str, str]:
+    ) -> ty.Tuple[str, str, bool]:
         """Get loader for the specified architecture and machine type.
 
-        :returns: A tuple of the bootloader executable path and the NVRAM
-            template path.
+        :returns: A the bootloader executable path and the NVRAM
+            template path and a bool indicating if we need to enable SMM.
         """
 
         machine = self.get_canonical_machine_type(arch, machine)
@@ -1779,6 +1779,7 @@ class Host(object):
             return (
                 loader['mapping']['executable']['filename'],
                 loader['mapping']['nvram-template']['filename'],
+                'requires-smm' in loader['features'],
             )
 
         raise exception.UEFINotSupported()

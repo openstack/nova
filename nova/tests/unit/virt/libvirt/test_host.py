@@ -1900,6 +1900,14 @@ cg /cgroup/memory cg opt1,opt2 0 0
         loader = self.host.get_loader('x86_64', 'q35', has_secure_boot=True)
         self.assertIsNotNone(loader)
 
+        # check that SMM bool is false as we don't need it
+        self.assertFalse(loader[2])
+
+        # check that we get SMM bool correctly (True) when required
+        loaders[0]['features'].append('requires-smm')
+        loader = self.host.get_loader('x86_64', 'q35', has_secure_boot=True)
+        self.assertTrue(loader[2])
+
         # while it should fail here since we don't want it now
         self.assertRaises(
             exception.UEFINotSupported,
