@@ -32,7 +32,6 @@ from nova import objects
 from nova.objects import fields
 from nova.objects import virtual_interface
 from nova.policies import extended_server_attributes as esa_policies
-from nova.policies import flavor_extra_specs as fes_policies
 from nova.policies import servers as servers_policies
 from nova import utils
 
@@ -234,7 +233,9 @@ class ViewBuilder(common.ViewBuilder):
             if api_version_request.is_supported(request, min_version='2.47'):
                 context = request.environ['nova.context']
                 show_extra_specs = context.can(
-                    fes_policies.POLICY_ROOT % 'index', fatal=False)
+                    servers_policies.SERVERS % 'show:flavor-extra-specs',
+                    fatal=False,
+                    target={'project_id': instance.project_id})
 
         if cell_down_support and 'display_name' not in instance:
             # NOTE(tssurya): If the microversion is >= 2.69, this boolean will
@@ -437,8 +438,9 @@ class ViewBuilder(common.ViewBuilder):
         if api_version_request.is_supported(request, min_version='2.47'):
             # Determine if we should show extra_specs in the inlined flavor
             # once before we iterate the list of instances
-            show_extra_specs = context.can(fes_policies.POLICY_ROOT % 'index',
-                                           fatal=False)
+            show_extra_specs = context.can(
+                servers_policies.SERVERS % 'show:flavor-extra-specs',
+                fatal=False)
         else:
             show_extra_specs = False
         show_extended_attr = context.can(

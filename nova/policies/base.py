@@ -56,6 +56,7 @@ PROJECT_MEMBER = 'rule:project_member_api'
 PROJECT_READER = 'rule:project_reader_api'
 PROJECT_MEMBER_OR_SYSTEM_ADMIN = 'rule:system_admin_or_owner'
 PROJECT_READER_OR_SYSTEM_READER = 'rule:system_or_project_reader'
+PROJECT_READER_OR_ADMIN = 'rule:project_reader_or_admin'
 ADMIN = 'rule:context_is_admin'
 
 # NOTE(gmann): Below is the mapping of new roles and scope_types
@@ -139,6 +140,11 @@ rules = [
         "system_or_project_reader",
         "rule:system_reader_api or rule:project_reader_api",
         "Default rule for System+Project read only APIs.",
+        deprecated_rule=DEPRECATED_ADMIN_OR_OWNER_POLICY),
+    policy.RuleDefault(
+        "project_reader_or_admin",
+        "rule:project_reader_api or rule:context_is_admin",
+        "Default rule for Project reader and admin APIs.",
         deprecated_rule=DEPRECATED_ADMIN_OR_OWNER_POLICY)
 ]
 

@@ -409,6 +409,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:servers:resize",
 "os_compute_api:servers:revert_resize",
 "os_compute_api:servers:show",
+"os_compute_api:servers:show:flavor-extra-specs",
 "os_compute_api:servers:update",
 "os_compute_api:servers:create_image:allow_volume_backed",
 "os_compute_api:os-admin-password",
@@ -560,7 +561,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
                          'system_admin_api', 'system_reader_api',
                          'project_admin_api', 'project_member_api',
                          'project_reader_api', 'system_admin_or_owner',
-                         'system_or_project_reader')
+                         'system_or_project_reader', 'project_reader_or_admin')
         result = set(rules.keys()) - set(self.admin_only_rules +
             self.admin_or_owner_rules +
             self.allow_all_rules + self.system_reader_rules +

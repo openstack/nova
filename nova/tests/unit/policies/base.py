@@ -149,6 +149,8 @@ class BasePolicyTest(test.TestCase):
                     "role:admin and system_scope:all",
                 "system_reader_api":
                     "role:reader and system_scope:all",
+                "project_reader_or_admin":
+                    "rule:project_reader_api or rule:context_is_admin",
                 "project_admin_api":
                     "role:admin and project_id:%(project_id)s",
                 "project_member_api":
