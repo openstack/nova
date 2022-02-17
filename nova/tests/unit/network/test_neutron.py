@@ -3738,6 +3738,27 @@ class TestAPI(TestAPIBase):
         count = self.api.validate_networks(self.context, requested_networks, 1)
         self.assertEqual(1, count)
 
+    @mock.patch('nova.network.neutron.API._show_port')
+    def test_deferred_ip_port_none_allocation(self, mock_show):
+        """Test behavior when the 'none' IP allocation policy is used."""
+        port = {
+            'network_id': 'my_netid1',
+            'device_id': None,
+            'id': uuids.port,
+            'fixed_ips': [],  # no fixed ip
+            'ip_allocation': 'none',
+            'binding:vif_details': {
+                'connectivity': 'l2',
+            },
+        }
+
+        mock_show.return_value = port
+
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=port['id'])])
+        count = self.api.validate_networks(self.context, requested_networks, 1)
+        self.assertEqual(1, count)
+
     @mock.patch('oslo_concurrency.lockutils.lock')
     def test_get_instance_nw_info_locks_per_instance(self, mock_lock):
         instance = objects.Instance(uuid=uuids.fake)
