@@ -2295,14 +2295,67 @@ def numa_fit_instance_to_host(
 
     host_cells = host_topology.cells
 
-    # If PCI device(s) are not required, prefer host cells that don't have
-    # devices attached. Presence of a given numa_node in a PCI pool is
-    # indicative of a PCI device being associated with that node
-    if not pci_requests and pci_stats:
-        # TODO(stephenfin): pci_stats can't be None here but mypy can't figure
-        # that out for some reason
-        host_cells = sorted(host_cells, key=lambda cell: cell.id in [
-            pool['numa_node'] for pool in pci_stats.pools])  # type: ignore
+    # We need to perform all optimizations only if number of instance's
+    # cells less than host's cells number. If it's equal, we'll use
+    # all cells and no sorting of the cells list is needed.
+    if len(host_topology) > len(instance_topology):
+        pack = CONF.compute.packing_host_numa_cells_allocation_strategy
+        # To balance NUMA cells usage based on several parameters
+        # some sorts performed on host_cells list to move less used cells
+        # to the beginning of the host_cells list (when pack variable is set to
+        # 'False'). When pack is set to 'True', most used cells will be put at
+        # the beginning of the host_cells list.
+
+        # Fist sort is based on memory usage. cell.avail_memory returns free
+        # memory for cell. Revert sorting to get cells with more free memory
+        # first when pack is 'False'
+        host_cells = sorted(
+            host_cells,
+            reverse=not pack,
+            key=lambda cell: cell.avail_memory)
+
+        # Next sort based on available dedicated or shared CPUs.
+        # cpu_policy is set to the same value in all cells so we use
+        # first cell in list (it exists if instance_topology defined)
+        # to get cpu_policy
+        if instance_topology.cells[0].cpu_policy in (
+                None, fields.CPUAllocationPolicy.SHARED):
+            # sort based on used CPUs
+            host_cells = sorted(
+                host_cells,
+                reverse=pack,
+                key=lambda cell: cell.cpu_usage)
+
+        else:
+            # sort based on presence of pinned CPUs
+            host_cells = sorted(
+                host_cells,
+                reverse=not pack,
+                key=lambda cell: len(cell.free_pcpus))
+
+        # Perform sort only if pci_stats exists
+        if pci_stats:
+            # Create dict with numa cell id as key
+            # and total number of free pci devices as value.
+            total_pci_in_cell: ty.Dict[int, int] = {}
+            for pool in pci_stats.pools:
+                if pool['numa_node'] in list(total_pci_in_cell):
+                    total_pci_in_cell[pool['numa_node']] += pool['count']
+                else:
+                    total_pci_in_cell[pool['numa_node']] = pool['count']
+            # For backward compatibility we will always 'spread':
+            # we always move host cells with PCI at the beginning if PCI
+            # requested by VM and move host cells with PCI at the end of the
+            # list if PCI isn't requested by VM
+            if pci_requests:
+                host_cells = sorted(
+                    host_cells,
+                    reverse=True,
+                    key=lambda cell: total_pci_in_cell.get(cell.id, 0))
+            else:
+                host_cells = sorted(
+                    host_cells,
+                    key=lambda cell: total_pci_in_cell.get(cell.id, 0))
 
     for host_cell_perm in itertools.permutations(
             host_cells, len(instance_topology)):

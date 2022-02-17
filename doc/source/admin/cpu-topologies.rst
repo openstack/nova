@@ -95,14 +95,64 @@ In all cases where NUMA awareness is used, the ``NUMATopologyFilter``
 filter must be enabled. Details on this filter are provided in
 :doc:`/admin/scheduling`.
 
+The host's NUMA node(s) used are chosen based on some logic and controlled by
+``packing_host_numa_cells_allocation_strategy`` configuration variable in
+nova.conf. By default ``packing_host_numa_cells_allocation_strategy``
+variable is set to ``True``. It leads to attempt to chose NUMA node(s) with
+less amount of free resources (or in other words **more used** NUMA nodes)
+first. It is so-called "pack" strategy - we try to place as much as possible
+load at **more used** host's NUMA node until it will be completely exhausted.
+And only after we will choose **most used** host's NUMA node from the rest
+available nodes on host. "Spread" strategy is reverse to "pack" strategy.
+The NUMA node(s) with **more free** resources will be used first. So "spread"
+strategy will try to balance load between all NUMA nodes and keep number of
+free resources on all NUMA nodes as more equal as possible.
+
 .. caution::
 
-   The NUMA node(s) used are normally chosen at random. However, if a PCI
-   passthrough or SR-IOV device is attached to the instance, then the NUMA
-   node that the device is associated with will be used. This can provide
-   important performance improvements. However, booting a large number of
-   similar instances can result in unbalanced NUMA node usage. Care should
-   be taken to mitigate this issue. See this `discussion`_ for more details.
+    Host's NUMA nodes are placed in list and list is sorted based on strategy
+    chosen and resource available in each NUMA node. Sorts are performed on
+    same list one after another, so the last sort implemented is the sort
+    with most priority.
+
+The python performed so-called stable sort. It means that each sort executed
+on same list will change order of list items only if item's property we sort on
+differs. If this properties in all list's items are equal than elements order
+will not changed.
+
+Sorts are performed on host's NUMA nodes list in the following order:
+
+*  sort based on available memory on node(first sort-less priority)
+*  sort based on cpu usage (in case of shared CPUs requested by guest
+   VM topology) or free pinned cpus otherwise.
+*  sort based on number of free PCI device on node(last sort-top priority)
+
+Top sorting priority is for host's NUMA nodes with PCI devices attached. If VM
+requested PCI device(s) logic **always** puts host's NUMA nodes with more PCI
+devices at the beginnig of the host's NUMA nodes list. If PCI devices isn't
+requested by VM than NUMA nodes with no (or less) PCI device available will be
+placed at the beginnig of the list.
+
+.. caution::
+
+   The described logic for PCI devices is used **both** for "pack" and "spread"
+   strategies. It is done to keep backward compatibility with previous nova
+   versions.
+
+
+During "pack" logic implementation rest (two) sorts are performed with sort
+order to move NUMA nodes with more available resources (CPUs and memory) at the
+END of host's NUMA nodes list. Sort based on memory is the first sort
+implemented and has least priority.
+
+During "spread" logic implementation rest (two) sorts are performed with sort
+order to move NUMA nodes with more available resources (CPUs and memory) at the
+BEGINNING of host's NUMA nodes list. Sort based on memory is the first sort
+implemented and has least priority.
+
+Finally resulting list (after all sorts) is passed next and attempts to place
+VM's NUMA node to host's NUMA node are performed starting from the first
+host's NUMA node in list.
 
 .. caution::
 
@@ -724,5 +774,4 @@ instances with a NUMA topology.
 
 .. Links
 .. _`Image metadata`: https://docs.openstack.org/image-guide/introduction.html#image-metadata
-.. _`discussion`: http://lists.openstack.org/pipermail/openstack-dev/2016-March/090367.html
 .. _`MTTCG project`: http://wiki.qemu.org/Features/tcg-multithread
