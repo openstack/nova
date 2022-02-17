@@ -37,6 +37,42 @@ A full guide on configuring and using SR-IOV is provided in the
    Nova will ignore PCI devices reported by the hypervisor if the address is
    outside of these ranges.
 
+.. versionadded:: 25.0.0
+
+   For information on creating servers with remotely-managed SR-IOV network
+   interfaces of SmartNIC DPUs, refer to the relevant section in
+   :neutron-doc:`Networking Guide <admin/ovn/smartnic_dpu>`.
+
+   **Limitations**
+
+   * Only VFs are supported and they must be tagged in the Nova Compute
+     configuration in the ``passthrough_whitelist`` option as
+     ``remote_managed: "true"``. There is no auto-discovery of this based
+     on vendor and product IDs;
+   * Either VF or its respective PF must expose a PCI VPD capability with a
+     unique card serial number according to the PCI/PCIe specifications
+     (see `the Libvirt docs <https://libvirt.org/drvnodedev.html#VPDCap>`_ to
+     get an example of how VPD data is represented and what to expect). If
+     this is not the case, those devices will not appear in allocation pools;
+   * Only the Libvirt driver is capable of supporting this feature at the
+     time of writing;
+   * The support for VPD capability handling in Libvirt was added in release
+     `7.9.0 <https://libvirt.org/news.html#v7-9-0-2021-11-01>`_ - older
+     versions are not supported by this feature;
+   * All compute nodes must be upgraded to the Yoga release in order for
+     scheduling of nodes with ``VNIC_TYPE_REMOTE_MANAGED`` ports to succeed;
+   * The same limitations apply to operations like live migration as with
+     `legacy SR-IOV ports <https://docs.openstack.org/neutron/latest/admin/config-sriov.html#known-limitations>`_;
+   * Clearing a VLAN by programming VLAN 0 must not result in errors in the
+     VF kernel driver at the compute host. Before v8.1.0 Libvirt clears
+     a VLAN by programming VLAN 0 before passing a VF through to the guest
+     which may result in an error depending on your driver and kernel version
+     (see, for example, `this bug <https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1957753>`_
+     which discusses a case relevant to one driver). As of Libvirt v8.1.0,
+     EPERM errors encountered while programming VLAN 0 are ignored if
+     VLAN clearning is not explicitly requested in the device XML (i.e.
+     VLAN 0 is not specified explicitly).
+
 NUMA Affinity
 -------------
 
