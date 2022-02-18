@@ -14,7 +14,6 @@ import functools
 
 import fixtures
 import mock
-from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 
@@ -38,7 +37,6 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.policies import base
 
 CONF = nova.conf.CONF
-LOG = logging.getLogger(__name__)
 
 
 class ServersPolicyTest(base.BasePolicyTest):

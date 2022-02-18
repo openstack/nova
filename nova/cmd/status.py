@@ -279,7 +279,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
                 "2. Use a pre-existing sample config file from the Train "
                 "release. 3. Use an empty or non-existent file to take all "
                 "the defaults.")
-        rule = "system_admin_api"
+        rule = "context_is_admin"
         rule_new_default = "role:admin and system_scope:all"
         status = upgradecheck.Result(upgradecheck.Code.SUCCESS)
         # NOTE(gmann): Initialise the policy if it not initialized.

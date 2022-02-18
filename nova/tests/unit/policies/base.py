@@ -53,7 +53,7 @@ class BasePolicyTest(test.TestCase):
     # For Example:
     # rules_without_deprecation{
     #    "os_compute_api:os-deferred-delete:restore":
-    #        "rule:system_admin_or_owner"}
+    #        "rule:project_admin_api"}
     rules_without_deprecation = {}
 
     def setUp(self):
@@ -141,14 +141,6 @@ class BasePolicyTest(test.TestCase):
             self.rules_without_deprecation.update({
                 "context_is_admin":
                     "role:admin",
-                "system_admin_or_owner":
-                    "rule:system_admin_api or rule:project_member_api",
-                "system_or_project_reader":
-                    "rule:system_reader_api or rule:project_reader_api",
-                "system_admin_api":
-                    "role:admin and system_scope:all",
-                "system_reader_api":
-                    "role:reader and system_scope:all",
                 "project_reader_or_admin":
                     "rule:project_reader_api or rule:context_is_admin",
                 "project_admin_api":
