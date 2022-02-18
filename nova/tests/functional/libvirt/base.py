@@ -316,6 +316,21 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
         'binding:vif_type': 'ovs',
         'binding:vnic_type': 'normal',
     }
+    network_3_port_2 = {
+        'id': '132c3875-b175-4b20-8a57-7a76219a13ae',
+        'network_id': network_3['id'],
+        'status': 'ACTIVE',
+        'mac_address': 'd2:0b:fd:99:89:8b',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.2.7',
+                'subnet_id': subnet_3['id']
+            }
+        ],
+        'binding:vif_details': {},
+        'binding:vif_type': 'ovs',
+        'binding:vnic_type': 'remote-managed',
+    }
     network_4_port_1 = {
         'id': 'b4cd0b93-2ac8-40a7-9fa4-2cd680ccdf3e',
         'network_id': network_4['id'],
@@ -360,6 +375,21 @@ class LibvirtNeutronFixture(nova_fixtures.NeutronFixture):
         'binding:vif_details': {'vlan': 42},
         'binding:vif_type': 'hw_veb',
         'binding:vnic_type': 'direct',
+    }
+    network_4_port_4 = {
+        'id': 'a31e381d-41ec-41e4-b5a5-ec4ef705fafa',
+        'network_id': network_1['id'],
+        'status': 'ACTIVE',
+        'mac_address': '71:ce:c7:2b:cd:dd',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.4.9',
+                'subnet_id': subnet_4['id']
+            }
+        ],
+        'binding:vif_details': {},
+        'binding:vif_type': 'ovs',
+        'binding:vnic_type': 'remote-managed',
     }
 
     def __init__(self, test):

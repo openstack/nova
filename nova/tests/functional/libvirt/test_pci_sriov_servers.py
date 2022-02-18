@@ -31,6 +31,7 @@ from nova import context
 from nova.network import constants
 from nova import objects
 from nova.objects import fields
+from nova.pci.utils import parse_address
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.api import client
@@ -72,7 +73,47 @@ class _PCIServersTestBase(base.ServersTestBase):
         self.assertEqual(free, len([d for d in devices if d.is_available()]))
 
 
-class SRIOVServersTest(_PCIServersTestBase):
+class _PCIServersWithMigrationTestBase(_PCIServersTestBase):
+
+    def setUp(self):
+        super().setUp()
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.tests.fixtures.libvirt.Domain.migrateToURI3',
+            self._migrate_stub))
+
+    def _migrate_stub(self, domain, destination, params, flags):
+        """Stub out migrateToURI3."""
+
+        src_hostname = domain._connection.hostname
+        dst_hostname = urlparse.urlparse(destination).netloc
+
+        # In a real live migration, libvirt and QEMU on the source and
+        # destination talk it out, resulting in the instance starting to exist
+        # on the destination. Fakelibvirt cannot do that, so we have to
+        # manually create the "incoming" instance on the destination
+        # fakelibvirt.
+        dst = self.computes[dst_hostname]
+        dst.driver._host.get_connection().createXML(
+            params['destination_xml'],
+            'fake-createXML-doesnt-care-about-flags')
+
+        src = self.computes[src_hostname]
+        conn = src.driver._host.get_connection()
+
+        # because migrateToURI3 is spawned in a background thread, this method
+        # does not block the upper nova layers. Because we don't want nova to
+        # think the live migration has finished until this method is done, the
+        # last thing we do is make fakelibvirt's Domain.jobStats() return
+        # VIR_DOMAIN_JOB_COMPLETED.
+        server = etree.fromstring(
+            params['destination_xml']
+        ).find('./uuid').text
+        dom = conn.lookupByUUIDString(server)
+        dom.complete_job()
+
+
+class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
     # TODO(stephenfin): We're using this because we want to be able to force
     # the host during scheduling. We should instead look at overriding policy
@@ -119,40 +160,6 @@ class SRIOVServersTest(_PCIServersTestBase):
         # new fixture here means that we re-stub what the previous neutron
         # fixture already stubbed.
         self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
-
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.tests.fixtures.libvirt.Domain.migrateToURI3',
-            self._migrate_stub))
-
-    def _migrate_stub(self, domain, destination, params, flags):
-        """Stub out migrateToURI3."""
-
-        src_hostname = domain._connection.hostname
-        dst_hostname = urlparse.urlparse(destination).netloc
-
-        # In a real live migration, libvirt and QEMU on the source and
-        # destination talk it out, resulting in the instance starting to exist
-        # on the destination. Fakelibvirt cannot do that, so we have to
-        # manually create the "incoming" instance on the destination
-        # fakelibvirt.
-        dst = self.computes[dst_hostname]
-        dst.driver._host.get_connection().createXML(
-            params['destination_xml'],
-            'fake-createXML-doesnt-care-about-flags')
-
-        src = self.computes[src_hostname]
-        conn = src.driver._host.get_connection()
-
-        # because migrateToURI3 is spawned in a background thread, this method
-        # does not block the upper nova layers. Because we don't want nova to
-        # think the live migration has finished until this method is done, the
-        # last thing we do is make fakelibvirt's Domain.jobStats() return
-        # VIR_DOMAIN_JOB_COMPLETED.
-        server = etree.fromstring(
-            params['destination_xml']
-        ).find('./uuid').text
-        dom = conn.lookupByUUIDString(server)
-        dom.complete_job()
 
     def _disable_sriov_in_pf(self, pci_info):
         # Check for PF and change the capability from virt_functions
@@ -1686,3 +1693,578 @@ class PCIServersWithPortNUMAPoliciesTest(_PCIServersTestBase):
             ],
         )
         self.assertTrue(self.mock_filter.called)
+
+
+class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
+
+    ADMIN_API = True
+    microversion = 'latest'
+
+    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+        # A PF with access to physnet4.
+        {
+            'vendor_id': '15b3',
+            'product_id': 'a2dc',
+            'physical_network': 'physnet4',
+            'remote_managed': 'false',
+        },
+        # A VF with access to physnet4.
+        {
+            'vendor_id': '15b3',
+            'product_id': '1021',
+            'physical_network': 'physnet4',
+            'remote_managed': 'true',
+        },
+        # A PF programmed to forward traffic to an overlay network.
+        {
+            'vendor_id': '15b3',
+            'product_id': 'a2d6',
+            'physical_network': None,
+            'remote_managed': 'false',
+        },
+        # A VF programmed to forward traffic to an overlay network.
+        {
+            'vendor_id': '15b3',
+            'product_id': '101e',
+            'physical_network': None,
+            'remote_managed': 'true',
+        },
+    )]
+
+    PCI_ALIAS = []
+
+    NUM_PFS = 1
+    NUM_VFS = 4
+    vf_ratio = NUM_VFS // NUM_PFS
+
+    # Min Libvirt version that supports working with PCI VPD.
+    FAKE_LIBVIRT_VERSION = 7_009_000  # 7.9.0
+    FAKE_QEMU_VERSION = 5_001_000  # 5.1.0
+
+    def setUp(self):
+        super().setUp()
+        self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
+
+        self.useFixture(fixtures.MockPatch(
+            'nova.pci.utils.get_vf_num_by_pci_address',
+            new=mock.MagicMock(
+                side_effect=lambda addr: self._get_pci_function_number(addr))))
+
+        self.useFixture(fixtures.MockPatch(
+            'nova.pci.utils.get_mac_by_pci_address',
+            new=mock.MagicMock(
+                side_effect=(
+                    lambda addr: {
+                        "0000:80:00.0": "52:54:00:1e:59:42",
+                        "0000:81:00.0": "52:54:00:1e:59:01",
+                        "0000:82:00.0": "52:54:00:1e:59:02",
+                    }.get(addr)
+                )
+            )
+        ))
+
+    @classmethod
+    def _get_pci_function_number(cls, pci_addr: str):
+        """Get a VF function number based on a PCI address.
+
+        Assume that the PCI ARI capability is enabled (slot bits become a part
+        of a function number).
+        """
+        _, _, slot, function = parse_address(pci_addr)
+        # The number of PFs is extracted to get a VF number.
+        return int(slot, 16) + int(function, 16) - cls.NUM_PFS
+
+    def start_compute(
+        self, hostname='test_compute0', host_info=None, pci_info=None,
+        mdev_info=None, vdpa_info=None,
+        libvirt_version=None,
+        qemu_version=None):
+
+        if not pci_info:
+            pci_info = fakelibvirt.HostPCIDevicesInfo(
+                num_pci=0, num_pfs=0, num_vfs=0)
+
+            pci_info.add_device(
+                dev_type='PF',
+                bus=0x81,
+                slot=0x0,
+                function=0,
+                iommu_group=42,
+                numa_node=0,
+                vf_ratio=self.vf_ratio,
+                vend_id='15b3',
+                vend_name='Mellanox Technologies',
+                prod_id='a2dc',
+                prod_name='BlueField-3 integrated ConnectX-7 controller',
+                driver_name='mlx5_core',
+                vpd_fields={
+                    'name': 'MT43244 BlueField-3 integrated ConnectX-7',
+                    'readonly': {
+                        'serial_number': 'MT0000X00001',
+                    },
+                }
+            )
+
+            for idx in range(self.NUM_VFS):
+                pci_info.add_device(
+                    dev_type='VF',
+                    bus=0x81,
+                    slot=0x0,
+                    function=idx + 1,
+                    iommu_group=idx + 43,
+                    numa_node=0,
+                    vf_ratio=self.vf_ratio,
+                    parent=(0x81, 0x0, 0),
+                    vend_id='15b3',
+                    vend_name='Mellanox Technologies',
+                    prod_id='1021',
+                    prod_name='MT2910 Family [ConnectX-7]',
+                    driver_name='mlx5_core',
+                    vpd_fields={
+                        'name': 'MT2910 Family [ConnectX-7]',
+                        'readonly': {
+                            'serial_number': 'MT0000X00001',
+                        },
+                    }
+                )
+
+            pci_info.add_device(
+                dev_type='PF',
+                bus=0x82,
+                slot=0x0,
+                function=0,
+                iommu_group=84,
+                numa_node=0,
+                vf_ratio=self.vf_ratio,
+                vend_id='15b3',
+                vend_name='Mellanox Technologies',
+                prod_id='a2d6',
+                prod_name='MT42822 BlueField-2 integrated ConnectX-6',
+                driver_name='mlx5_core',
+                vpd_fields={
+                    'name': 'MT42822 BlueField-2 integrated ConnectX-6',
+                    'readonly': {
+                        'serial_number': 'MT0000X00002',
+                    },
+                }
+            )
+
+            for idx in range(self.NUM_VFS):
+                pci_info.add_device(
+                    dev_type='VF',
+                    bus=0x82,
+                    slot=0x0,
+                    function=idx + 1,
+                    iommu_group=idx + 85,
+                    numa_node=0,
+                    vf_ratio=self.vf_ratio,
+                    parent=(0x82, 0x0, 0),
+                    vend_id='15b3',
+                    vend_name='Mellanox Technologies',
+                    prod_id='101e',
+                    prod_name='ConnectX Family mlx5Gen Virtual Function',
+                    driver_name='mlx5_core')
+
+        return super().start_compute(
+            hostname=hostname, host_info=host_info, pci_info=pci_info,
+            mdev_info=mdev_info, vdpa_info=vdpa_info,
+            libvirt_version=libvirt_version or self.FAKE_LIBVIRT_VERSION,
+            qemu_version=qemu_version or self.FAKE_QEMU_VERSION)
+
+    def create_remote_managed_tunnel_port(self):
+        dpu_tunnel_port = {
+            'id': uuids.dpu_tunnel_port,
+            'network_id': self.neutron.network_3['id'],
+            'status': 'ACTIVE',
+            'mac_address': 'fa:16:3e:f0:a4:bb',
+            'fixed_ips': [
+                {
+                    'ip_address': '192.168.2.8',
+                    'subnet_id': self.neutron.subnet_3['id']
+                }
+            ],
+            'binding:vif_details': {},
+            'binding:vif_type': 'ovs',
+            'binding:vnic_type': 'remote-managed',
+        }
+
+        self.neutron.create_port({'port': dpu_tunnel_port})
+        return dpu_tunnel_port
+
+    def create_remote_managed_physnet_port(self):
+        dpu_physnet_port = {
+            'id': uuids.dpu_physnet_port,
+            'network_id': self.neutron.network_4['id'],
+            'status': 'ACTIVE',
+            'mac_address': 'd2:0b:fd:99:89:8b',
+            'fixed_ips': [
+                {
+                    'ip_address': '192.168.4.10',
+                    'subnet_id': self.neutron.subnet_4['id']
+                }
+            ],
+            'binding:vif_details': {},
+            'binding:vif_type': 'ovs',
+            'binding:vnic_type': 'remote-managed',
+        }
+
+        self.neutron.create_port({'port': dpu_physnet_port})
+        return dpu_physnet_port
+
+    def test_create_server_physnet(self):
+        """Create an instance with a tunnel remote-managed port."""
+
+        hostname = self.start_compute()
+        num_pci = (self.NUM_PFS + self.NUM_VFS) * 2
+
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci)
+
+        dpu_port = self.create_remote_managed_physnet_port()
+
+        port = self.neutron.show_port(dpu_port['id'])['port']
+        self.assertNotIn('binding:profile', port)
+
+        self._create_server(networks=[{'port': dpu_port['id']}])
+
+        # Ensure there is one less VF available and that the PF
+        # is no longer usable.
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci - 2)
+
+        # Ensure the binding:profile details sent to Neutron are correct after
+        # a port update.
+        port = self.neutron.show_port(dpu_port['id'])['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual({
+            'card_serial_number': 'MT0000X00001',
+            'pci_slot': '0000:81:00.4',
+            'pci_vendor_info': '15b3:1021',
+            'pf_mac_address': '52:54:00:1e:59:01',
+            'physical_network': 'physnet4',
+            'vf_num': 3
+        }, port['binding:profile'])
+
+    def test_create_server_tunnel(self):
+        """Create an instance with a tunnel remote-managed port."""
+
+        hostname = self.start_compute()
+        num_pci = (self.NUM_PFS + self.NUM_VFS) * 2
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci)
+
+        dpu_port = self.create_remote_managed_tunnel_port()
+        port = self.neutron.show_port(dpu_port['id'])['port']
+        self.assertNotIn('binding:profile', port)
+
+        self._create_server(networks=[{'port': dpu_port['id']}])
+
+        # Ensure there is one less VF available and that the PF
+        # is no longer usable.
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci - 2)
+
+        # Ensure the binding:profile details sent to Neutron are correct after
+        # a port update.
+        port = self.neutron.show_port(dpu_port['id'])['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual({
+            'card_serial_number': 'MT0000X00002',
+            'pci_slot': '0000:82:00.4',
+            'pci_vendor_info': '15b3:101e',
+            'pf_mac_address': '52:54:00:1e:59:02',
+            'physical_network': None,
+            'vf_num': 3
+        }, port['binding:profile'])
+
+    def _test_common(self, op, *args, **kwargs):
+        self.start_compute()
+        dpu_port = self.create_remote_managed_tunnel_port()
+        server = self._create_server(networks=[{'port': dpu_port['id']}])
+        op(server, *args, **kwargs)
+
+    def test_attach_interface(self):
+        self.start_compute()
+
+        dpu_port = self.create_remote_managed_tunnel_port()
+        server = self._create_server(networks='none')
+
+        self._attach_interface(server, dpu_port['id'])
+
+        port = self.neutron.show_port(dpu_port['id'])['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '15b3:101e',
+                'pci_slot': '0000:82:00.4',
+                'physical_network': None,
+                'pf_mac_address': '52:54:00:1e:59:02',
+                'vf_num': 3,
+                'card_serial_number': 'MT0000X00002',
+            },
+            port['binding:profile'],
+        )
+
+    def test_detach_interface(self):
+        self._test_common(self._detach_interface, uuids.dpu_tunnel_port)
+
+        port = self.neutron.show_port(uuids.dpu_tunnel_port)['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual({}, port['binding:profile'])
+
+    def test_shelve(self):
+        self._test_common(self._shelve_server)
+
+        port = self.neutron.show_port(uuids.dpu_tunnel_port)['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '15b3:101e',
+                'pci_slot': '0000:82:00.4',
+                'physical_network': None,
+                'pf_mac_address': '52:54:00:1e:59:02',
+                'vf_num': 3,
+                'card_serial_number': 'MT0000X00002',
+            },
+            port['binding:profile'],
+        )
+
+    def test_suspend(self):
+        self.start_compute()
+        dpu_port = self.create_remote_managed_tunnel_port()
+        server = self._create_server(networks=[{'port': dpu_port['id']}])
+        self._suspend_server(server)
+        # TODO(dmitriis): detachDevice does not properly handle hostdevs
+        # so full suspend/resume testing is problematic.
+
+    def _test_move_operation_with_neutron(self, move_operation, dpu_port):
+        """Test a move operation with a remote-managed port.
+        """
+        compute1_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=0, num_vfs=0)
+
+        compute1_pci_info.add_device(
+            dev_type='PF',
+            bus=0x80,
+            slot=0x0,
+            function=0,
+            iommu_group=84,
+            numa_node=1,
+            vf_ratio=self.vf_ratio,
+            vend_id='15b3',
+            vend_name='Mellanox Technologies',
+            prod_id='a2d6',
+            prod_name='MT42822 BlueField-2 integrated ConnectX-6',
+            driver_name='mlx5_core',
+            vpd_fields={
+                'name': 'MT42822 BlueField-2 integrated ConnectX-6',
+                'readonly': {
+                    'serial_number': 'MT0000X00042',
+                },
+            }
+        )
+        for idx in range(self.NUM_VFS):
+            compute1_pci_info.add_device(
+                dev_type='VF',
+                bus=0x80,
+                slot=0x0,
+                function=idx + 1,
+                iommu_group=idx + 85,
+                numa_node=1,
+                vf_ratio=self.vf_ratio,
+                parent=(0x80, 0x0, 0),
+                vend_id='15b3',
+                vend_name='Mellanox Technologies',
+                prod_id='101e',
+                prod_name='ConnectX Family mlx5Gen Virtual Function',
+                driver_name='mlx5_core',
+                vpd_fields={
+                    'name': 'MT42822 BlueField-2 integrated ConnectX-6',
+                    'readonly': {
+                        'serial_number': 'MT0000X00042',
+                    },
+                }
+            )
+
+        self.start_compute(hostname='test_compute0')
+        self.start_compute(hostname='test_compute1',
+                           pci_info=compute1_pci_info)
+
+        port = self.neutron.show_port(dpu_port['id'])['port']
+        self.assertNotIn('binding:profile', port)
+
+        flavor_id = self._create_flavor(vcpu=4)
+        server = self._create_server(
+            flavor_id=flavor_id,
+            networks=[{'port': dpu_port['id']}],
+            host='test_compute0',
+        )
+
+        self.assertEqual('test_compute0', server['OS-EXT-SRV-ATTR:host'])
+        self.assertPCIDeviceCounts('test_compute0', total=10, free=8)
+        self.assertPCIDeviceCounts('test_compute1', total=5, free=5)
+
+        port = self.neutron.show_port(dpu_port['id'])['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '15b3:101e',
+                'pci_slot': '0000:82:00.4',
+                'physical_network': None,
+                'pf_mac_address': '52:54:00:1e:59:02',
+                'vf_num': 3,
+                'card_serial_number': 'MT0000X00002',
+            },
+            port['binding:profile'],
+        )
+
+        move_operation(server)
+
+    def test_unshelve_server_with_neutron(self):
+        def move_operation(source_server):
+            self._shelve_server(source_server)
+            # Disable the source compute, to force unshelving on the dest.
+            self.api.put_service(
+                self.computes['test_compute0'].service_ref.uuid,
+                {'status': 'disabled'})
+            self._unshelve_server(source_server)
+
+        dpu_port = self.create_remote_managed_tunnel_port()
+        self._test_move_operation_with_neutron(move_operation, dpu_port)
+
+        self.assertPCIDeviceCounts('test_compute0', total=10, free=10)
+        self.assertPCIDeviceCounts('test_compute1', total=5, free=3)
+
+        # Ensure the binding:profile details got updated, including the
+        # fields relevant to remote-managed ports.
+        port = self.neutron.show_port(dpu_port['id'])['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '15b3:101e',
+                'pci_slot': '0000:80:00.4',
+                'physical_network': None,
+                'pf_mac_address': '52:54:00:1e:59:42',
+                'vf_num': 3,
+                'card_serial_number': 'MT0000X00042',
+            },
+            port['binding:profile'],
+        )
+
+    def test_cold_migrate_server_with_neutron(self):
+        def move_operation(source_server):
+            with mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                            '.migrate_disk_and_power_off', return_value='{}'):
+                server = self._migrate_server(source_server)
+                self._confirm_resize(server)
+
+                self.assertPCIDeviceCounts('test_compute0', total=10, free=10)
+                self.assertPCIDeviceCounts('test_compute1', total=5, free=3)
+
+                # Ensure the binding:profile details got updated, including the
+                # fields relevant to remote-managed ports.
+                port = self.neutron.show_port(dpu_port['id'])['port']
+                self.assertIn('binding:profile', port)
+                self.assertEqual(
+                    {
+                        'pci_vendor_info': '15b3:101e',
+                        'pci_slot': '0000:80:00.4',
+                        'physical_network': None,
+                        'pf_mac_address': '52:54:00:1e:59:42',
+                        'vf_num': 3,
+                        'card_serial_number': 'MT0000X00042',
+                    },
+                    port['binding:profile'],
+                )
+
+        dpu_port = self.create_remote_managed_tunnel_port()
+        self._test_move_operation_with_neutron(move_operation, dpu_port)
+
+    def test_cold_migrate_server_with_neutron_revert(self):
+        def move_operation(source_server):
+            with mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                            '.migrate_disk_and_power_off', return_value='{}'):
+                server = self._migrate_server(source_server)
+
+                self.assertPCIDeviceCounts('test_compute0', total=10, free=8)
+                self.assertPCIDeviceCounts('test_compute1', total=5, free=3)
+
+                self._revert_resize(server)
+
+                self.assertPCIDeviceCounts('test_compute0', total=10, free=8)
+                self.assertPCIDeviceCounts('test_compute1', total=5, free=5)
+
+                port = self.neutron.show_port(dpu_port['id'])['port']
+                self.assertIn('binding:profile', port)
+                self.assertEqual(
+                    {
+                        'pci_vendor_info': '15b3:101e',
+                        'pci_slot': '0000:82:00.4',
+                        'physical_network': None,
+                        'pf_mac_address': '52:54:00:1e:59:02',
+                        'vf_num': 3,
+                        'card_serial_number': 'MT0000X00002',
+                    },
+                    port['binding:profile'],
+                )
+
+        dpu_port = self.create_remote_managed_tunnel_port()
+        self._test_move_operation_with_neutron(move_operation, dpu_port)
+
+    def test_evacuate_server_with_neutron(self):
+        def move_operation(source_server):
+            # Down the source compute to enable the evacuation
+            self.api.put_service(
+                self.computes['test_compute0'].service_ref.uuid,
+                {'forced_down': True})
+            self.computes['test_compute0'].stop()
+            self._evacuate_server(source_server)
+
+        dpu_port = self.create_remote_managed_tunnel_port()
+        self._test_move_operation_with_neutron(move_operation, dpu_port)
+
+        self.assertPCIDeviceCounts('test_compute0', total=10, free=8)
+        self.assertPCIDeviceCounts('test_compute1', total=5, free=3)
+
+        # Ensure the binding:profile details got updated, including the
+        # fields relevant to remote-managed ports.
+        port = self.neutron.show_port(dpu_port['id'])['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '15b3:101e',
+                'pci_slot': '0000:80:00.4',
+                'physical_network': None,
+                'pf_mac_address': '52:54:00:1e:59:42',
+                'vf_num': 3,
+                'card_serial_number': 'MT0000X00042',
+            },
+            port['binding:profile'],
+        )
+
+    def test_live_migrate_server_with_neutron(self):
+        """Live migrate an instance using a remote-managed port.
+
+        This should succeed since we support this via detach and attach of the
+        PCI device similar to how this is done for SR-IOV ports.
+        """
+        def move_operation(source_server):
+            self._live_migrate(source_server, 'completed')
+
+        dpu_port = self.create_remote_managed_tunnel_port()
+        self._test_move_operation_with_neutron(move_operation, dpu_port)
+
+        self.assertPCIDeviceCounts('test_compute0', total=10, free=10)
+        self.assertPCIDeviceCounts('test_compute1', total=5, free=3)
+
+        # Ensure the binding:profile details got updated, including the
+        # fields relevant to remote-managed ports.
+        port = self.neutron.show_port(dpu_port['id'])['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '15b3:101e',
+                'pci_slot': '0000:80:00.4',
+                'physical_network': None,
+                'pf_mac_address': '52:54:00:1e:59:42',
+                'vf_num': 3,
+                'card_serial_number': 'MT0000X00042',
+            },
+            port['binding:profile'],
+        )
