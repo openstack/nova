@@ -1191,8 +1191,8 @@ field.
 
 .. _microversion 2.90:
 
-2.90 (Maximum in Xena)
-----------------------
+2.90 (Maximum in Xena and Yoga)
+-------------------------------
 
 The ``POST /servers`` (create server), ``PUT /servers/{id}`` (update server)
 and ``POST /servers/{server_id}/action (rebuild)`` (rebuild server) APIs now
