@@ -119,31 +119,31 @@ def vm_refs_cache_reset():
     _VM_REFS_CACHE = {}
 
 
-def vm_ref_cache_delete(id):
-    _VM_REFS_CACHE.pop(id, None)
+def vm_ref_cache_delete(id_):
+    _VM_REFS_CACHE.pop(id_, None)
 
 
-def vm_ref_cache_update(id, vm_ref):
-    _VM_REFS_CACHE[id] = vm_ref
+def vm_ref_cache_update(id_, vm_ref):
+    _VM_REFS_CACHE[id_] = vm_ref
 
 
-def vm_ref_cache_get(id):
-    return _VM_REFS_CACHE.get(id)
+def vm_ref_cache_get(id_):
+    return _VM_REFS_CACHE.get(id_)
 
 
-def _vm_ref_cache(id, func, session, data):
-    vm_ref = vm_ref_cache_get(id)
+def _vm_ref_cache(id_, func, session, data):
+    vm_ref = vm_ref_cache_get(id_)
     if not vm_ref:
         vm_ref = func(session, data)
-        vm_ref_cache_update(id, vm_ref)
+        vm_ref_cache_update(id_, vm_ref)
     return vm_ref
 
 
 def vm_ref_cache_from_instance(func):
     @functools.wraps(func)
     def wrapper(session, instance):
-        id = instance.uuid
-        return _vm_ref_cache(id, func, session, instance)
+        id_ = instance.uuid
+        return _vm_ref_cache(id_, func, session, instance)
     return wrapper
 
 
@@ -1536,8 +1536,8 @@ def find_rescue_device(hardware_devices, instance):
     raise exception.NotFound(msg)
 
 
-def get_ephemeral_name(id):
-    return 'ephemeral_%d.vmdk' % id
+def get_ephemeral_name(id_):
+    return 'ephemeral_%d.vmdk' % id_
 
 
 def _detach_and_delete_devices_config_spec(client_factory, devices):
@@ -1619,11 +1619,11 @@ def folder_ref_cache_get(path):
     return _FOLDER_PATH_REF_MAPPING.get(path)
 
 
-def _get_vm_name(display_name, id):
+def _get_vm_name(display_name, id_):
     if display_name:
-        return '%s (%s)' % (display_name[:41], id[:36])
-    else:
-        return id[:36]
+        return '%s (%s)' % (display_name[:41], id_[:36])
+
+    return id_[:36]
 
 
 def rename_vm(session, vm_ref, instance):

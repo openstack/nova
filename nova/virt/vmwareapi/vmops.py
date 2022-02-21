@@ -263,11 +263,11 @@ class VMwareVMOps(object):
             parent_folder = folder_ref
         return folder_ref
 
-    def _get_folder_name(self, name, id):
+    def _get_folder_name(self, name, id_):
         # Maximum folder length must be less than 80 characters.
         # The 'id' length is 36. The maximum prefix for name is 40.
         # We cannot truncate the 'id' as this is unique across OpenStack.
-        return '%s (%s)' % (name[:40], id[:36])
+        return '%s (%s)' % (name[:40], id_[:36])
 
     def build_virtual_machine(self, instance, image_info,
                               dc_info, datastore, network_info, extra_specs,
