@@ -124,6 +124,19 @@ def update_instance_cache_with_nw_info(impl, context, instance, nw_info=None):
         ic.network_info = nw_info
         ic.save()
         instance.info_cache = ic
+    except exception.InstanceNotFound as e:
+        # The instance could have moved during a cross-cell migration when we
+        # receive an external event from neutron. Avoid logging a traceback
+        # when it happens.
+        msg = str(e)
+        if e.__class__.__name__.endswith('_Remote'):
+            # If this exception was raised remotely over RPC, the traceback(s)
+            # will be appended to the message. Truncate it in that case.
+            msg = utils.safe_truncate(msg.split('\n', 1)[0], 255)
+        LOG.info('Failed storing info cache due to: %s. '
+                 'The instance may have moved to another cell during a '
+                 'cross-cell migration', msg, instance=instance)
+        raise exception.InstanceNotFound(message=msg)
     except Exception:
         with excutils.save_and_reraise_exception():
             LOG.exception('Failed storing info cache', instance=instance)

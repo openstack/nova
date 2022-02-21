@@ -7463,6 +7463,41 @@ class TestAPIModuleMethods(test.NoDBTestCase):
 
         self.assertEqual(networks, [{'id': 1}, {'id': 2}, {'id': 3}])
 
+    @mock.patch('nova.network.neutron.LOG.info')
+    @mock.patch('nova.network.neutron.LOG.exception')
+    @mock.patch('nova.objects.instance_info_cache.InstanceInfoCache.save')
+    def test_update_instance_cache_with_nw_info_not_found(self, mock_save,
+                                                          mock_log_exc,
+                                                          mock_log_info):
+        """Tests that an attempt to update (save) the instance info cache will
+        not log a traceback but will reraise the exception for caller handling.
+        """
+        # Simulate the oslo.messaging created "<OriginalClass>_Remote" subclass
+        # type we'll be catching.
+        class InstanceNotFound_Remote(exception.InstanceNotFound):
+
+            def __init__(self, message=None, **kwargs):
+                super().__init__(message=message, **kwargs)
+
+        # Simulate a long exception message containing tracebacks because
+        # oslo.messaging appends them.
+        message = 'Instance was not found.\n'.ljust(255, '*')
+        mock_save.side_effect = InstanceNotFound_Remote(message=message,
+                                                        instance_id=uuids.inst)
+        api = neutronapi.API()
+        ctxt = context.get_context()
+        instance = fake_instance.fake_instance_obj(ctxt, uuid=uuids.i)
+
+        self.assertRaises(
+            exception.InstanceNotFound,
+            neutronapi.update_instance_cache_with_nw_info, api, ctxt, instance,
+            nw_info=model.NetworkInfo())
+
+        # Verify we didn't log exception at level ERROR.
+        mock_log_exc.assert_not_called()
+        # Verify exception message was truncated before logging it.
+        self.assertLessEqual(len(mock_log_info.call_args.args[1]), 255)
+
 
 class TestAPIPortbinding(TestAPIBase):
 
