@@ -170,8 +170,8 @@ class FakeVersionedNotifier(FakeNotifier):
                 'test case which is different from the currently running test '
                 'case %s. This notification is ignored. The sender test case '
                 'probably leaked a running eventlet that emitted '
-                'notifications after the test case finished. Now this eventlet'
-                'is terminated by raising this exception.' %
+                'notifications after the test case finished. Now this '
+                'eventlet is terminated by raising this exception.' %
                 (event_type, sender_test_case_id, self.test_case_id))
 
         payload = self._serializer.serialize_entity(ctxt, payload)
