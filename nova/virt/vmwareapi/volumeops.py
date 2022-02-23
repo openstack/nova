@@ -367,6 +367,53 @@ class VMwareVolumeOps(object):
                                device_name=device_name)
         LOG.debug("Attached ISCSI: %s", connection_info, instance=instance)
 
+    def _get_controller_key_and_unit(self, vm_ref, adapter_type):
+        LOG.debug("_get_controller_key_and_unit vm: %(vm_ref)s, adapter: "
+                  "%(adapter)s.",
+                  {'vm_ref': vm_ref, 'adapter': adapter_type})
+        client_factory = self._session.vim.client.factory
+        devices = self._session._call_method(vutil,
+                                             "get_object_property",
+                                             vm_ref,
+                                             "config.hardware.device")
+        return vm_util.allocate_controller_key_and_unit_number(
+            client_factory, devices, adapter_type)
+
+    def _attach_fcd(self, vm_ref, adapter_type, fcd_id, ds_ref_val):
+        (controller_key, unit_number,
+         controller_spec) = self._get_controller_key_and_unit(
+             vm_ref, adapter_type)
+
+        if controller_spec:
+            # No controller available to attach, create one first.
+            config_spec = self._session.vim.client.factory.create(
+                'ns0:VirtualMachineConfigSpec')
+            config_spec.deviceChange = [controller_spec]
+            vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
+            (controller_key, unit_number,
+             controller_spec) = self._get_controller_key_and_unit(
+                 vm_ref, adapter_type)
+
+        vm_util.attach_fcd(
+            self._session, vm_ref, fcd_id, ds_ref_val, controller_key,
+            unit_number)
+
+    def _attach_volume_fcd(self, connection_info, instance):
+        """Attach fcd volume storage to VM instance."""
+        LOG.debug("_attach_volume_fcd: %s", connection_info, instance=instance)
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        data = connection_info['data']
+        adapter_type = data['adapter_type']
+
+        if adapter_type == constants.ADAPTER_TYPE_IDE:
+            state = vm_util.get_vm_state(self._session, instance)
+            if state != power_state.SHUTDOWN:
+                raise exception.Invalid(_('%s does not support disk '
+                                          'hotplug.') % adapter_type)
+
+        self._attach_fcd(vm_ref, adapter_type, data['id'], data['ds_ref_val'])
+        LOG.debug("Attached fcd: %s", connection_info, instance=instance)
+
     def attach_volume(self, connection_info, instance, adapter_type=None):
         """Attach volume storage to VM instance."""
         driver_type = connection_info['driver_volume_type']
@@ -376,6 +423,8 @@ class VMwareVolumeOps(object):
             self._attach_volume_vmdk(connection_info, instance, adapter_type)
         elif driver_type == constants.DISK_FORMAT_ISCSI:
             self._attach_volume_iscsi(connection_info, instance, adapter_type)
+        elif driver_type == constants.DISK_FORMAT_FCD:
+            self._attach_volume_fcd(connection_info, instance)
         else:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
@@ -558,6 +607,20 @@ class VMwareVolumeOps(object):
         self.detach_disk_from_vm(vm_ref, instance, device, destroy_disk=True)
         LOG.debug("Detached ISCSI: %s", connection_info, instance=instance)
 
+    def _detach_volume_fcd(self, connection_info, instance):
+        """Detach fcd volume storage to VM instance."""
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        data = connection_info['data']
+        adapter_type = data['adapter_type']
+
+        if adapter_type == constants.ADAPTER_TYPE_IDE:
+            state = vm_util.get_vm_state(self._session, instance)
+            if state != power_state.SHUTDOWN:
+                raise exception.Invalid(_('%s does not support disk '
+                                          'hotplug.') % adapter_type)
+
+        vm_util.detach_fcd(self._session, vm_ref, data['id'])
+
     def detach_volume(self, connection_info, instance):
         """Detach volume storage to VM instance."""
         driver_type = connection_info['driver_volume_type']
@@ -567,6 +630,8 @@ class VMwareVolumeOps(object):
             self._detach_volume_vmdk(connection_info, instance)
         elif driver_type == constants.DISK_FORMAT_ISCSI:
             self._detach_volume_iscsi(connection_info, instance)
+        elif driver_type == constants.DISK_FORMAT_FCD:
+            self._detach_volume_fcd(connection_info, instance)
         else:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 

@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Added support for VMware VStorageObject based volumes in
+    VMware vCenter driver. vSphere version 6.5 is required.

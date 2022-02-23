@@ -23,6 +23,7 @@ from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
+from oslo_vmware import vim_util as vutil
 
 from nova import exception
 from nova.network import model as network_model
@@ -1986,6 +1987,66 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 'fake_rename_task')
         mock_get_name.assert_called_once_with(self._instance.display_name,
                                               self._instance.uuid)
+
+    def test_create_fcd_id_obj(self):
+        fcd_id_obj = mock.Mock()
+        client_factory = mock.Mock()
+        client_factory.create.return_value = fcd_id_obj
+        fcd_id = mock.sentinel.fcd_id
+        ret = vm_util._create_fcd_id_obj(client_factory, fcd_id)
+
+        self.assertEqual(fcd_id_obj, ret)
+        self.assertEqual(fcd_id, ret.id)
+        client_factory.create.assert_called_once_with('ns0:ID')
+
+    @mock.patch.object(vm_util, '_create_fcd_id_obj')
+    @mock.patch.object(vutil, 'get_moref')
+    def test_attach_fcd(self, get_moref, create_fcd_id_obj):
+        disk_id = mock.sentinel.disk_id
+        create_fcd_id_obj.return_value = disk_id
+
+        ds_ref = mock.sentinel.ds_ref
+        get_moref.return_value = ds_ref
+
+        task = mock.sentinel.task
+        session = mock.Mock()
+        session._call_method.return_value = task
+
+        vm_ref = mock.sentinel.vm_ref
+        fcd_id = mock.sentinel.fcd_id
+        ds_ref_val = mock.sentinel.ds_ref_val
+        controller_key = mock.sentinel.controller_key
+        unit_number = mock.sentinel.unit_number
+        vm_util.attach_fcd(
+            session, vm_ref, fcd_id, ds_ref_val, controller_key, unit_number)
+
+        create_fcd_id_obj.assert_called_once_with(
+            session.vim.client.factory, fcd_id)
+        get_moref.assert_called_once_with(ds_ref_val, 'Datastore')
+        session._call_method.assert_called_once_with(
+            session.vim, "AttachDisk_Task", vm_ref, diskId=disk_id,
+            datastore=ds_ref, controllerKey=controller_key,
+            unitNumber=unit_number)
+        session._wait_for_task.assert_called_once_with(task)
+
+    @mock.patch.object(vm_util, '_create_fcd_id_obj')
+    def test_detach_fcd(self, create_fcd_id_obj):
+        disk_id = mock.sentinel.disk_id
+        create_fcd_id_obj.return_value = disk_id
+
+        task = mock.sentinel.task
+        session = mock.Mock()
+        session._call_method.return_value = task
+
+        vm_ref = mock.sentinel.vm_ref
+        fcd_id = mock.sentinel.fcd_id
+        vm_util.detach_fcd(session, vm_ref, fcd_id)
+
+        create_fcd_id_obj.assert_called_once_with(
+            session.vim.client.factory, fcd_id)
+        session._call_method.assert_called_once_with(
+            session.vim, "DetachDisk_Task", vm_ref, diskId=disk_id)
+        session._wait_for_task.assert_called_once_with(task)
 
 
 @mock.patch.object(driver.VMwareAPISession, 'vim', stubs.fake_vim_prop)
