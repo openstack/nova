@@ -538,3 +538,19 @@ class TestImageMetaProps(test.NoDBTestCase):
             hw_pci_numa_affinity_policy=fields.PCINUMAAffinityPolicy.SOCKET)
         self.assertRaises(exception.ObjectActionError,
                           obj.obj_to_primitive, '1.27')
+
+    def test_obj_make_compatible_viommu_model(self):
+        """Check 'hw_viommu_model' compatibility."""
+        # assert that 'hw_viommu_model' is supported on a suitably new version
+        obj = objects.ImageMetaProps(
+            hw_viommu_model=objects.fields.VIOMMUModel.VIRTIO,
+        )
+        primitive = obj.obj_to_primitive('1.34')
+        self.assertIn('hw_viommu_model', primitive['nova_object.data'])
+        self.assertEqual(
+            objects.fields.VIOMMUModel.VIRTIO,
+            primitive['nova_object.data']['hw_viommu_model'])
+
+        # and is absent on older versions
+        primitive = obj.obj_to_primitive('1.33')
+        self.assertNotIn('hw_viommu_model', primitive['nova_object.data'])

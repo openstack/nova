@@ -395,3 +395,61 @@ be added to the resource provider representing the matching PCI devices.
    It is suggested to use the PCI address of the device instead.
 
 For deeper technical details please read the `nova specification. <https://specs.openstack.org/openstack/nova-specs/specs/zed/approved/pci-device-tracking-in-placement.html>`_
+
+
+Virtual IOMMU support
+---------------------
+
+With provided :nova:extra-spec:`hw:viommu_model` flavor extra spec or equivalent
+image metadata property ``hw_viommu_model`` and with the guest CPU architecture
+and OS allows, we can enable vIOMMU in libvirt driver.
+
+.. note::
+
+    Enable vIOMMU might introduce significant performance overhead.
+    You can see performance comparision table from
+    `AMD vIOMMU session on KVM Forum 2021`_.
+    For the above reason, vIOMMU should only be enabled for workflow that
+    require it.
+
+.. _`AMD vIOMMU session on KVM Forum 2021`: https://static.sched.com/hosted_files/kvmforum2021/da/vIOMMU%20KVM%20Forum%202021%20-%20v4.pdf
+
+Here are four possible values allowed for ``hw:viommu_model``
+(and ``hw_viommu_model``):
+
+**virtio**
+    Supported on Libvirt since 8.3.0, for Q35 and ARM virt guests.
+
+**smmuv3**
+    Supported on Libvirt since 5.5.0, for ARM virt guests.
+**intel**
+    Supported for for Q35 guests.
+
+**auto**
+    This option will translate to ``virtio`` if Libvirt supported,
+    else ``intel`` on X86 (Q35) and ``smmuv3`` on AArch64.
+
+For the viommu attributes:
+
+* ``intremap``, ``caching_mode``, and ``iotlb``
+  options for viommu (These attributes are driver attributes defined in
+  `Libvirt IOMMU Domain`_) will direcly enabled.
+
+* ``eim`` will directly enabled if machine type is Q35.
+  ``eim`` is driver attribute defined in `Libvirt IOMMU Domain`_.
+
+.. note::
+
+    eim(Extended Interrupt Mode) attribute (with possible values on and off)
+    can be used to configure Extended Interrupt Mode.
+    A q35 domain with split I/O APIC (as described in hypervisor features),
+    and both interrupt remapping and EIM turned on for the IOMMU, will be
+    able to use more than 255 vCPUs. Since 3.4.0 (QEMU/KVM only).
+
+* ``aw_bits`` attribute can used to set the address width to allow mapping
+  larger iova addresses in the guest. Since Qemu current supported
+  values are 39 and 48, we directly set this to larger width (48)
+  if Libvirt supported.
+  ``aw_bits`` is driver attribute defined in `Libvirt IOMMU Domain`_.
+
+.. _`Libvirt IOMMU Domain`: https://libvirt.org/formatdomain.html#iommu-devices

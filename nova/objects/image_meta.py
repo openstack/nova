@@ -191,14 +191,17 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.32: Added 'hw_ephemeral_encryption' and
     #                     'hw_ephemeral_encryption_format' fields
     # Version 1.33: Added 'hw_locked_memory' field
+    # Version 1.34: Added 'hw_viommu_model' field
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.33'
+    VERSION = '1.34'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 34):
+            primitive.pop('hw_viommu_model', None)
         if target_version < (1, 33):
             primitive.pop('hw_locked_memory', None)
         if target_version < (1, 32):
@@ -445,6 +448,9 @@ class ImageMetaProps(base.NovaObject):
 
         # name of a NIC device model eg virtio, e1000, rtl8139
         'hw_vif_model': fields.VIFModelField(),
+
+        # name of IOMMU device model eg virtio, intel, smmuv3, or auto
+        'hw_viommu_model': fields.VIOMMUModelField(),
 
         # "xen" vs "hvm"
         'hw_vm_mode': fields.VMModeField(),

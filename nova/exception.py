@@ -207,6 +207,16 @@ class Invalid(NovaException):
     code = 400
 
 
+class InvalidVIOMMUMachineType(Invalid):
+    msg_fmt = _("vIOMMU is not supported by Current machine type %(mtype)s "
+                "(Architecture: %(arch)s).")
+
+
+class InvalidVIOMMUArchitecture(Invalid):
+    msg_fmt = _("vIOMMU required either x86 or AArch64 architecture, "
+                "but given architecture %(arch)s.")
+
+
 class InvalidConfiguration(Invalid):
     msg_fmt = _("Configuration is Invalid.")
 

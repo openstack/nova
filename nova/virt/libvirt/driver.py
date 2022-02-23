@@ -221,6 +221,12 @@ MIN_QEMU_VERSION = (4, 2, 0)
 NEXT_MIN_LIBVIRT_VERSION = (7, 0, 0)
 NEXT_MIN_QEMU_VERSION = (5, 2, 0)
 
+# vIOMMU driver attribute aw_bits minimal support version.
+MIN_LIBVIRT_VIOMMU_AW_BITS = (6, 5, 0)
+
+# vIOMMU model value `virtio` minimal support version
+MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL = (8, 3, 0)
+
 MIN_LIBVIRT_AARCH64_CPU_COMPARE = (6, 9, 0)
 
 # Virtuozzo driver support
@@ -6134,9 +6140,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 image_meta.properties.get('img_hide_hypervisor_id'))
 
         if CONF.libvirt.virt_type in ('qemu', 'kvm'):
-            guest.features.append(vconfig.LibvirtConfigGuestFeatureACPI())
+            guest.add_feature(vconfig.LibvirtConfigGuestFeatureACPI())
             if not CONF.workarounds.libvirt_disable_apic:
-                guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
+                guest.add_feature(vconfig.LibvirtConfigGuestFeatureAPIC())
 
         if CONF.libvirt.virt_type in ('qemu', 'kvm') and os_type == 'windows':
             hv = vconfig.LibvirtConfigGuestFeatureHyperV()
@@ -6180,16 +6186,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 fields.Architecture.I686, fields.Architecture.X86_64,
                 fields.Architecture.AARCH64,
             ):
-                guest.features.append(
+                guest.add_feature(
                     vconfig.LibvirtConfigGuestFeatureVMCoreInfo())
 
             if hide_hypervisor_id:
-                guest.features.append(
+                guest.add_feature(
                     vconfig.LibvirtConfigGuestFeatureKvmHidden())
 
             pmu = hardware.get_pmu_constraint(flavor, image_meta)
             if pmu is not None:
-                guest.features.append(
+                guest.add_feature(
                     vconfig.LibvirtConfigGuestFeaturePMU(pmu))
 
     def _check_number_of_serial_console(self, num_ports):
@@ -6671,16 +6677,24 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._create_consoles_qemu_kvm(
                     guest_cfg, instance, flavor, image_meta)
 
-    def _is_mipsel_guest(self, image_meta):
+    def _is_mipsel_guest(self, image_meta: 'objects.ImageMeta') -> bool:
         archs = (fields.Architecture.MIPSEL, fields.Architecture.MIPS64EL)
         return self._check_emulation_arch(image_meta) in archs
 
-    def _is_s390x_guest(self, image_meta):
+    def _is_s390x_guest(self, image_meta: 'objects.ImageMeta') -> bool:
         archs = (fields.Architecture.S390, fields.Architecture.S390X)
         return self._check_emulation_arch(image_meta) in archs
 
-    def _is_ppc64_guest(self, image_meta):
+    def _is_ppc64_guest(self, image_meta: 'objects.ImageMeta') -> bool:
         archs = (fields.Architecture.PPC64, fields.Architecture.PPC64LE)
+        return self._check_emulation_arch(image_meta) in archs
+
+    def _is_aarch64_guest(self, image_meta: 'objects.ImageMeta') -> bool:
+        arch = fields.Architecture.AARCH64
+        return self._check_emulation_arch(image_meta) == arch
+
+    def _is_x86_guest(self, image_meta: 'objects.ImageMeta') -> bool:
+        archs = (fields.Architecture.I686, fields.Architecture.X86_64)
         return self._check_emulation_arch(image_meta) in archs
 
     def _create_consoles_qemu_kvm(self, guest_cfg, instance, flavor,
@@ -7060,6 +7074,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if vpmems:
             self._guest_add_vpmems(guest, vpmems)
 
+        self._guest_add_iommu_device(guest, image_meta, flavor)
+
         return guest
 
     def _get_ordered_vpmems(self, instance, flavor):
@@ -7364,6 +7380,92 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # returned for unit testing purposes
         return keyboard
+
+    def _get_iommu_model(
+        self,
+        guest: vconfig.LibvirtConfigGuest,
+        image_meta: 'objects.ImageMeta',
+        flavor: 'objects.Flavor',
+    ) -> ty.Optional[str]:
+        model = flavor.extra_specs.get(
+            'hw:viommu_model') or image_meta.properties.get(
+                'hw_viommu_model')
+        if not model:
+            return None
+
+        is_x86 = self._is_x86_guest(image_meta)
+        is_aarch64 = self._is_aarch64_guest(image_meta)
+
+        if is_x86:
+            if guest.os_mach_type is not None and not (
+                    'q35' in guest.os_mach_type
+            ):
+                arch = self._check_emulation_arch(image_meta)
+                mtype = guest.os_mach_type if (
+                    guest.os_mach_type is not None
+                ) else "unknown"
+                raise exception.InvalidVIOMMUMachineType(
+                    mtype=mtype, arch=arch)
+        elif is_aarch64:
+            if guest.os_mach_type is not None and not (
+                    'virt' in guest.os_mach_type
+            ):
+                arch = self._check_emulation_arch(image_meta)
+                mtype = guest.os_mach_type if (
+                    guest.os_mach_type is not None
+                ) else "unknown"
+                raise exception.InvalidVIOMMUMachineType(
+                    mtype=mtype, arch=arch)
+        else:
+            raise exception.InvalidVIOMMUArchitecture(
+                arch=self._check_emulation_arch(image_meta))
+
+        if model == fields.VIOMMUModel.AUTO:
+            if self._host.has_min_version(MIN_LIBVIRT_VIOMMU_VIRTIO_MODEL):
+                model = fields.VIOMMUModel.VIRTIO
+            elif self._is_x86_guest(image_meta) and (
+                guest.os_mach_type is not None and 'q35' in guest.os_mach_type
+            ):
+                model = fields.VIOMMUModel.INTEL
+            else:
+                # AArch64
+                model = fields.VIOMMUModel.SMMUV3
+        return model
+
+    def _guest_add_iommu_device(
+        self,
+        guest: vconfig.LibvirtConfigGuest,
+        image_meta: 'objects.ImageMeta',
+        flavor: 'objects.Flavor',
+    ) -> None:
+        """Add a virtual IOMMU device to allow e.g. vfio-pci usage."""
+        if CONF.libvirt.virt_type not in ('qemu', 'kvm'):
+            # vIOMMU requires QEMU
+            return
+
+        iommu = vconfig.LibvirtConfigGuestIOMMU()
+
+        iommu.model = self._get_iommu_model(guest, image_meta, flavor)
+        if iommu.model is None:
+            return
+
+        iommu.interrupt_remapping = True
+        iommu.caching_mode = True
+        iommu.iotlb = True
+
+        # As Qemu supported values are 39 and 48, we set this to
+        # larger width (48) by default and will not exposed to end user.
+        if self._host.has_min_version(MIN_LIBVIRT_VIOMMU_AW_BITS):
+            iommu.aw_bits = 48
+
+        if guest.os_mach_type is not None and 'q35' in guest.os_mach_type:
+            iommu.eim = True
+        else:
+            iommu.eim = False
+        guest.add_device(iommu)
+
+        ioapic = vconfig.LibvirtConfigGuestFeatureIOAPIC()
+        guest.add_feature(ioapic)
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,
                        image_meta, rescue=None,

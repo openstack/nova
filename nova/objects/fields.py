@@ -616,6 +616,16 @@ class VIFModel(BaseNovaEnum):
         return super(VIFModel, self).coerce(obj, attr, value)
 
 
+class VIOMMUModel(BaseNovaEnum):
+
+    INTEL = 'intel'
+    SMMUV3 = 'smmuv3'
+    VIRTIO = 'virtio'
+    AUTO = 'auto'
+
+    ALL = (INTEL, SMMUV3, VIRTIO, AUTO)
+
+
 class VMMode(BaseNovaEnum):
     """Represents possible vm modes for instances.
 
@@ -1299,6 +1309,10 @@ class VideoModelField(BaseEnumField):
 
 class VIFModelField(BaseEnumField):
     AUTO_TYPE = VIFModel()
+
+
+class VIOMMUModelField(BaseEnumField):
+    AUTO_TYPE = VIOMMUModel()
 
 
 class VMModeField(BaseEnumField):

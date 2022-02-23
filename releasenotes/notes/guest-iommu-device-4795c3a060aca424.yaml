@@ -1,0 +1,21 @@
+---
+features:
+  - |
+    The Libvirt driver can now add a virtual IOMMU device
+    to all created guests, when running on an x86 host and using the Q35
+    machine type or on AArch64.
+
+    To enable this, provide `hw:viommu_model` in flavor extra
+    spec or equivalent image metadata property `hw_viommu_model` and with the
+    guest CPU architecture and OS allows, we will enable viommu in Libvirt
+    driver. Support values intel|smmuv3|virtio|auto. Default to ``auto``.
+    Which ``auto`` will automatically select ``virtio`` if Libvirt supports it,
+    else ``intel`` on X86 (Q35) and ``smmuv3`` on AArch64.
+    vIOMMU config will raise invalid exception if the guest architecture is
+    neither X86 (Q35) or AArch64.
+
+    Note that, enable vIOMMU might introduce significant performance overhead.
+    You can see performance comparision table from
+    `AMD vIOMMU session on KVM Forum 2021`_.
+    For above reason, vIOMMU should only be enable for workflow that require it.
+    .. _`AMD vIOMMU session on KVM Forum 2021`: https://static.sched.com/hosted_files/kvmforum2021/da/vIOMMU%20KVM%20Forum%202021%20-%20v4.pdf
