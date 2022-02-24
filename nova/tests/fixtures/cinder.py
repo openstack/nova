@@ -327,6 +327,12 @@ class CinderFixture(fixtures.Fixture):
             _find_attachment(attachment_id)
             LOG.info('Completing volume attachment: %s', attachment_id)
 
+        def fake_reimage_volume(*args, **kwargs):
+            if self.IMAGE_BACKED_VOL not in args:
+                raise exception.VolumeNotFound()
+            if 'reimage_reserved' not in kwargs:
+                raise exception.InvalidInput('reimage_reserved not specified')
+
         self.test.stub_out(
             'nova.volume.cinder.API.attachment_create', fake_attachment_create)
         self.test.stub_out(
@@ -366,6 +372,9 @@ class CinderFixture(fixtures.Fixture):
         self.test.stub_out(
             'nova.volume.cinder.API.terminate_connection',
             lambda *args, **kwargs: None)
+        self.test.stub_out(
+            'nova.volume.cinder.API.reimage_volume',
+            fake_reimage_volume)
 
     def volume_ids_for_instance(self, instance_uuid):
         for volume_id, attachments in self.volume_to_attachment.items():

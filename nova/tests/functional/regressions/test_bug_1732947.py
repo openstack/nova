@@ -28,7 +28,9 @@ class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase):
     original image.
     """
     api_major_version = 'v2.1'
-    microversion = 'latest'
+    # We need microversion <=2.93 to get the old BFV rebuild behavior
+    # that was the environment for this regression.
+    microversion = '2.92'
 
     def _setup_scheduler_service(self):
         # Add the IsolatedHostsFilter to the list of enabled filters since it

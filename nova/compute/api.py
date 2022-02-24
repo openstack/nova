@@ -3589,7 +3589,7 @@ class API:
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
     def rebuild(self, context, instance, image_href, admin_password,
-                files_to_inject=None, **kwargs):
+                files_to_inject=None, reimage_boot_volume=False, **kwargs):
         """Rebuild the given instance with the provided attributes."""
         files_to_inject = files_to_inject or []
         metadata = kwargs.get('metadata', {})
@@ -3670,15 +3670,16 @@ class API:
             orig_image_ref = volume_image_metadata.get('image_id')
 
             if orig_image_ref != image_href:
-                # Leave a breadcrumb.
-                LOG.debug('Requested to rebuild instance with a new image %s '
-                          'for a volume-backed server with image %s in its '
-                          'root volume which is not supported.', image_href,
-                          orig_image_ref, instance=instance)
-                msg = _('Unable to rebuild with a different image for a '
-                        'volume-backed server.')
-                raise exception.ImageUnacceptable(
-                    image_id=image_href, reason=msg)
+                if not reimage_boot_volume:
+                    # Leave a breadcrumb.
+                    LOG.debug('Requested to rebuild instance with a new image '
+                              '%s for a volume-backed server with image %s in '
+                              'its root volume which is not supported.',
+                              image_href, orig_image_ref, instance=instance)
+                    msg = _('Unable to rebuild with a different image for a '
+                            'volume-backed server.')
+                    raise exception.ImageUnacceptable(
+                        image_id=image_href, reason=msg)
         else:
             orig_image_ref = instance.image_ref
 
@@ -3793,7 +3794,8 @@ class API:
                 image_ref=image_href, orig_image_ref=orig_image_ref,
                 orig_sys_metadata=orig_sys_metadata, bdms=bdms,
                 preserve_ephemeral=preserve_ephemeral, host=host,
-                request_spec=request_spec)
+                request_spec=request_spec,
+                reimage_boot_volume=reimage_boot_volume)
 
     def _check_volume_status(self, context, bdms):
         """Check whether the status of the volume is "in-use".

@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 from unittest import mock
 
 from nova import context
@@ -50,6 +51,9 @@ class BootFromVolumeTest(integrated_helpers._IntegratedTestBase):
         self.flags(allow_resize_to_same_host=True)
         super(BootFromVolumeTest, self).setUp()
         self.admin_api = self.api_fixture.admin_api
+        self.useFixture(nova_fixtures.CinderFixture(self))
+        self.useFixture(fixtures.MockPatch(
+            'nova.compute.manager.ComputeVirtAPI.wait_for_instance_event'))
 
     def test_boot_from_volume_larger_than_local_gb(self):
         # Verify no local disk is being used currently
@@ -135,6 +139,42 @@ class BootFromVolumeTest(integrated_helpers._IntegratedTestBase):
         # Rebuild
         # The image_uuid is from CinderFixture for the
         # volume representing IMAGE_BACKED_VOL.
+        image_uuid = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+        post_data = {'rebuild': {'imageRef': image_uuid}}
+        self.api.post_server_action(server_id, post_data)
+
+    def test_rebuild_volume_backed_larger_than_local_gb(self):
+        # Verify no local disk is being used currently
+        self._verify_zero_local_gb_used()
+
+        # Create flavors with disk larger than available host local disk
+        flavor_id = self._create_flavor(memory_mb=64, vcpu=1, disk=8192,
+                                        ephemeral=0)
+
+        # Boot a server with a flavor disk larger than the available local
+        # disk. It should succeed for boot from volume.
+        server = self._build_server(image_uuid='', flavor_id=flavor_id)
+        volume_uuid = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
+        bdm = {'boot_index': 0,
+               'uuid': volume_uuid,
+               'source_type': 'volume',
+               'destination_type': 'volume'}
+        server['block_device_mapping_v2'] = [bdm]
+        created_server = self.api.post_server({"server": server})
+        server_id = created_server['id']
+        self._wait_for_state_change(created_server, 'ACTIVE')
+
+        # Check that hypervisor local disk reporting is still 0
+        self._verify_zero_local_gb_used()
+        # Check that instance has not been saved with 0 root_gb
+        self._verify_instance_flavor_not_zero(server_id)
+        # Check that request spec has not been saved with 0 root_gb
+        self._verify_request_spec_flavor_not_zero(server_id)
+
+        # Rebuild
+        # The image_uuid is from CinderFixture for the
+        # volume representing IMAGE_BACKED_VOL.
+        self.api.microversion = '2.93'
         image_uuid = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
         post_data = {'rebuild': {'imageRef': image_uuid}}
         self.api.post_server_action(server_id, post_data)

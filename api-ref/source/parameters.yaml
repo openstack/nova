@@ -4019,14 +4019,15 @@ imageRef:
   type: string
 imageRef_rebuild:
   description: |
-    The UUID of the image to rebuild for your server instance.
-    It must be a valid UUID otherwise API will return 400.
-    If rebuilding a volume-backed server with a new image
-    (an image different from the image used when creating the volume),
-    the API will return 400.
-    For non-volume-backed servers, specifying a new image will result
-    in validating that the image is acceptable for the current compute host
-    on which the server exists. If the new image is not valid,
+    The UUID of the image to rebuild for your server instance.  It
+    must be a valid UUID otherwise API will return 400.  To rebuild a
+    volume-backed server with a new image, at least microversion 2.93
+    needs to be provided in the request else the request will fall
+    back to old behaviour i.e. the API will return 400 (for an image
+    different from the image used when creating the volume).  For
+    non-volume-backed servers, specifying a new image will result in
+    validating that the image is acceptable for the current compute
+    host on which the server exists. If the new image is not valid,
     the server will go into ``ERROR`` status.
   in: body
   required: true

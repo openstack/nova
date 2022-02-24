@@ -1205,6 +1205,9 @@ class ServersController(wsgi.Controller):
         ):
             kwargs['hostname'] = rebuild_dict['hostname']
 
+        if api_version_request.is_supported(req, min_version='2.93'):
+            kwargs['reimage_boot_volume'] = True
+
         for request_attribute, instance_attribute in attr_map.items():
             try:
                 if request_attribute == 'name':
