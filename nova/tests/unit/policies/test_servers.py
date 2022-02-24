@@ -40,23 +40,6 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
-def rule_if_system(system_rule, non_system_rule, context):
-    """Helper function to pick a rule based on system-ness of context.
-
-    This can be used (with functools.partial) to choose between two
-    rule names, based on whether or not the context has system
-    scope. Specifically if we will fail the parent of a nested policy
-    check based on scope_types=['project'], this can be used to choose
-    the parent rule name for the error message check in
-    common_policy_check().
-
-    """
-    if context.system_scope:
-        return system_rule
-    else:
-        return non_system_rule
-
-
 class ServersPolicyTest(base.BasePolicyTest):
     """Test Servers APIs policies with all possible context.
     This class defines the set of context with different roles
@@ -216,7 +199,8 @@ class ServersPolicyTest(base.BasePolicyTest):
         if not CONF.oslo_policy.enforce_scope:
             check_rule = rule_name
         else:
-            check_rule = functools.partial(rule_if_system, rule, rule_name)
+            check_rule = functools.partial(
+                base.rule_if_system, rule, rule_name)
 
         self.common_policy_auth(self.all_projects_admin_authorized_contexts,
                                 check_rule,
@@ -267,7 +251,8 @@ class ServersPolicyTest(base.BasePolicyTest):
         if not CONF.oslo_policy.enforce_scope:
             check_rule = rule_name
         else:
-            check_rule = functools.partial(rule_if_system, rule, rule_name)
+            check_rule = functools.partial(
+                base.rule_if_system, rule, rule_name)
 
         self.common_policy_auth(self.all_projects_admin_authorized_contexts,
                                 check_rule,
@@ -664,7 +649,8 @@ class ServersPolicyTest(base.BasePolicyTest):
         if not CONF.oslo_policy.enforce_scope:
             check_rule = rule_name
         else:
-            check_rule = functools.partial(rule_if_system, rule, rule_name)
+            check_rule = functools.partial(
+                base.rule_if_system, rule, rule_name)
 
         self.common_policy_auth(self.project_action_authorized_contexts,
                                 check_rule,
@@ -740,7 +726,8 @@ class ServersPolicyTest(base.BasePolicyTest):
         if not CONF.oslo_policy.enforce_scope:
             check_rule = rule_name
         else:
-            check_rule = functools.partial(rule_if_system, rule, rule_name)
+            check_rule = functools.partial(
+                base.rule_if_system, rule, rule_name)
         self.common_policy_auth(self.project_action_authorized_contexts,
                                 check_rule,
                                 self.controller._action_create_image,

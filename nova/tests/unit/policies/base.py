@@ -24,6 +24,23 @@ from nova.tests import fixtures
 LOG = logging.getLogger(__name__)
 
 
+def rule_if_system(system_rule, non_system_rule, context):
+    """Helper function to pick a rule based on system-ness of context.
+
+    This can be used (with functools.partial) to choose between two
+    rule names, based on whether or not the context has system
+    scope. Specifically if we will fail the parent of a nested policy
+    check based on scope_types=['project'], this can be used to choose
+    the parent rule name for the error message check in
+    common_policy_check().
+
+    """
+    if context.system_scope:
+        return system_rule
+    else:
+        return non_system_rule
+
+
 class BasePolicyTest(test.TestCase):
     # NOTE(gmann): Set this flag to True if you would like to tests the
     # new behaviour of policy without deprecated rules.
