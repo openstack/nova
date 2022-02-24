@@ -165,4 +165,5 @@ To update the stored image properties of an instance:
 
 .. code-block:: shell
 
-    $ nova-manage image_property set $instance_uuid --property $property
+    $ nova-manage image_property set \
+        $instance_uuid --property $property_name=$property_value

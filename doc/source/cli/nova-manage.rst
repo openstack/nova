@@ -521,6 +521,7 @@ This command should be run before ``nova-manage db sync``.
 
 .. _man-page-cells-v2:
 
+
 Cells v2 Commands
 =================
 
@@ -1144,6 +1145,7 @@ Delete a host by the given host name and the given cell UUID.
    * - 4
      - The host with the specified name has instances (host not empty).
 
+
 Placement Commands
 ==================
 
@@ -1531,6 +1533,7 @@ command.
    * - 6
      - Instance is not attached to volume
 
+
 Libvirt Commands
 ================
 
@@ -1668,6 +1671,7 @@ within an environment.
    * - 3
      - Instances found without ``hw_machine_type`` set
 
+
 Image Property Commands
 =======================
 
@@ -1754,11 +1758,13 @@ for example.
    * - 5
      - The provided image property value is invalid
 
+
 See Also
 ========
 
 :doc:`nova-policy(1) <nova-policy>`,
 :doc:`nova-status(1) <nova-status>`
+
 
 Bugs
 ====
