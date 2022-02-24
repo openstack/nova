@@ -666,8 +666,8 @@ class _TestComputeNodeObject(object):
             CONF.initial_disk_allocation_ratio, compute.disk_allocation_ratio)
 
         mock_update.assert_called_once_with(
-            self.context, 123, {'cpu_allocation_ratio': 16.0,
-                                'ram_allocation_ratio': 1.5,
+            self.context, 123, {'cpu_allocation_ratio': 4.0,
+                                'ram_allocation_ratio': 1.0,
                                 'disk_allocation_ratio': 1.0})
 
     @mock.patch('nova.db.main.api.compute_node_update')
@@ -694,8 +694,8 @@ class _TestComputeNodeObject(object):
             CONF.initial_disk_allocation_ratio, compute.disk_allocation_ratio)
 
         mock_update.assert_called_once_with(
-            self.context, 123, {'cpu_allocation_ratio': 16.0,
-                                'ram_allocation_ratio': 1.5,
+            self.context, 123, {'cpu_allocation_ratio': 4.0,
+                                'ram_allocation_ratio': 1.0,
                                 'disk_allocation_ratio': 1.0})
 
     @mock.patch('nova.db.main.api.compute_node_update')
@@ -722,8 +722,8 @@ class _TestComputeNodeObject(object):
             CONF.initial_disk_allocation_ratio, compute.disk_allocation_ratio)
 
         mock_update.assert_called_once_with(
-            self.context, 123, {'cpu_allocation_ratio': 16.0,
-                                'ram_allocation_ratio': 1.5,
+            self.context, 123, {'cpu_allocation_ratio': 4.0,
+                                'ram_allocation_ratio': 1.0,
                                 'disk_allocation_ratio': 1.0})
 
     def test_get_all_by_not_mapped(self):

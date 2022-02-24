@@ -21366,7 +21366,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'min_unit': 1,
                 'max_unit': self.vcpus,
                 'step_size': 1,
-                'allocation_ratio': 16.0,
+                'allocation_ratio': 4.0,
                 'reserved': 0,
             },
             orc.PCPU: {
@@ -21382,7 +21382,7 @@ class TestUpdateProviderTree(test.NoDBTestCase):
                 'min_unit': 1,
                 'max_unit': self.memory_mb,
                 'step_size': 1,
-                'allocation_ratio': 1.5,
+                'allocation_ratio': 1.0,
                 'reserved': 512,
             },
             orc.DISK_GB: {

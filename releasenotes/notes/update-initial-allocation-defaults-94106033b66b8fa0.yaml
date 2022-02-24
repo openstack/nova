@@ -1,0 +1,21 @@
+---
+upgrade:
+  - |
+    In this release the default values for the initial ram and cpu allocation
+    ratios have been updated to 1.0 and 4.0 respectively. This will not
+    affect any existing compute node resource providers but the new default
+    will take effect on the creation of new resource providers.
+other:
+  - |
+    The default initial allocation ratios enabled ram over commit by default
+    with a factor of ``1.5``. This value was chosen early in nova's history
+    as the predominant workload was web hosting or other light weight
+    virtualization. Similarly the default initial cpu allocation ratio
+    defaulted to 16. As more demanding workload from telco, enterprise,
+    scientific and governmental users became the norm the initial values we
+    had chosen became less and less correct overtime. These have now been
+    updated to reflect a more reasonable default for the majority of our users.
+    As of this release the initial ram allocation value is 1.0 disabling
+    overcommit by default for new compute nodes and the initial cpu allocation
+    ratio is now 4.0 which is a more reasonable overcommit for non idle
+    workloads.

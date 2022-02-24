@@ -82,7 +82,7 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
             },
             'MEMORY_MB': {
                 'total': 8192,
-                'allocation_ratio': 1.5,
+                'allocation_ratio': 1.0,
                 'max_unit': 8192,
                 'min_unit': 1,
                 'reserved': 512,
@@ -90,7 +90,7 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
             },
             'VCPU': {
                 'total': 10,
-                'allocation_ratio': 16.0,
+                'allocation_ratio': 4.0,
                 'max_unit': 10,
                 'min_unit': 1,
                 'reserved': 0,
