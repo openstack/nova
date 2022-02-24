@@ -1046,6 +1046,17 @@ class CinderApiTestCase(test.NoDBTestCase):
         mock_volumes.get_encryption_metadata.assert_called_once_with(
             {'encryption_key_id': 'fake_key'})
 
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_volume_reimage(self, mock_cinderclient):
+        mock_reimage = mock.MagicMock()
+        mock_volumes = mock.MagicMock(reimage=mock_reimage)
+        mock_cinderclient.return_value = mock.MagicMock(volumes=mock_volumes)
+        self.api.reimage_volume(
+            self.ctx, uuids.volume_id, uuids.image_id,
+            reimage_reserved=True)
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.68')
+        mock_reimage.assert_called_with(uuids.volume_id, uuids.image_id, True)
+
     def test_translate_cinder_exception_no_error(self):
         my_func = mock.Mock()
         my_func.__name__ = 'my_func'
