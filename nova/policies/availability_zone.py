@@ -36,7 +36,7 @@ availability_zone_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'detail',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="List detailed availability zone information with host "
         "information",
         operations=[

@@ -37,7 +37,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 hypervisors_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'list',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="List all hypervisors.",
         operations=[
             {
@@ -49,7 +49,7 @@ hypervisors_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'list-detail',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="List all hypervisors with details",
         operations=[
             {
@@ -61,7 +61,7 @@ hypervisors_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'statistics',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="Show summary statistics for all hypervisors "
         "over all compute nodes.",
         operations=[
@@ -74,7 +74,7 @@ hypervisors_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="Show details for a hypervisor.",
         operations=[
             {
@@ -86,7 +86,7 @@ hypervisors_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'uptime',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="Show the uptime of a hypervisor.",
         operations=[
             {
@@ -98,7 +98,7 @@ hypervisors_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'search',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="Search hypervisor by hypervisor_hostname pattern.",
         operations=[
             {
@@ -110,7 +110,7 @@ hypervisors_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'servers',
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="List all servers on hypervisors that can match "
         "the provided hypervisor_hostname pattern.",
         operations=[

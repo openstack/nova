@@ -36,76 +36,67 @@ class HypervisorsPolicyTest(base.BasePolicyTest):
         self.controller.host_api.service_get_by_compute_host = mock.MagicMock()
         self.controller.host_api.compute_node_get = mock.MagicMock()
 
-        # Check that system scoped admin, member and reader are able to
-        # perform operations on hypervisors.
-        # NOTE(gmann): Until old default rule which is admin_api is
-        # deprecated and not removed, project admin and legacy admin
-        # will be able to get hypervisors. This make sure that existing
-        # tokens will keep working even we have changed this policy defaults
-        # to reader role.
-        self.reader_authorized_contexts = [
-            self.system_admin_context, self.system_member_context,
-            self.system_reader_context, self.legacy_admin_context,
+        # With legacy rule and scope check disabled by default, system admin,
+        # legacy admin, and project admin will be able to perform hypervisors
+        # Operations.
+        self.system_admin_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
-        # Check that non-system-reader are not able to perform operations
-        # on hypervisors
-        self.reader_unauthorized_contexts = [
-            self.system_foo_context, self.other_project_member_context,
-            self.project_foo_context, self.project_member_context,
-            self.project_reader_context,
-            self.other_project_reader_context,
-        ]
 
     def test_list_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'list'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.index,
-                                 self.req)
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name, self.controller.index,
+                                self.req)
 
     def test_list_details_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'list-detail'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.detail,
-                                 self.req)
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name, self.controller.detail,
+                                self.req)
 
     def test_show_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'show'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.show,
-                                 self.req, 11111)
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name, self.controller.show,
+                                self.req, 11111)
 
     @mock.patch('nova.compute.api.HostAPI.get_host_uptime')
     def test_uptime_hypervisors_policy(self, mock_uptime):
         rule_name = hv_policies.BASE_POLICY_NAME % 'uptime'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.uptime,
-                                 self.req, 11111)
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name, self.controller.uptime,
+                                self.req, 11111)
 
     def test_search_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'search'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.search,
-                                 self.req, 11111)
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name, self.controller.search,
+                                self.req, 11111)
 
     def test_servers_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'servers'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.servers,
-                                 self.req, 11111)
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name, self.controller.servers,
+                                self.req, 11111)
 
     @mock.patch('nova.compute.api.HostAPI.compute_node_statistics')
     def test_statistics_hypervisors_policy(self, mock_statistics):
         rule_name = hv_policies.BASE_POLICY_NAME % 'statistics'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.statistics,
-                                 self.req)
+        self.common_policy_auth(self.system_admin_authorized_contexts,
+                                rule_name, self.controller.statistics,
+                                self.req)
+
+
+class HypervisorsNoLegacyNoScopePolicyTest(HypervisorsPolicyTest):
+    """Test Hypervisors APIs policies with no legacy deprecated rules
+    and no scope checks which means new defaults only. In this case
+    system admin, legacy admin, and project admin will be able to perform
+    Hypervisors Operations. Legacy admin will be allowed as policy is just
+    admin if no scope checks.
+    """
+
+    without_deprecated_rules = True
 
 
 class HypervisorsScopeTypePolicyTest(HypervisorsPolicyTest):
@@ -122,40 +113,32 @@ class HypervisorsScopeTypePolicyTest(HypervisorsPolicyTest):
         super(HypervisorsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # Check that system reader is able to perform operations
-        # on hypervisors.
-        self.reader_authorized_contexts = [
-            self.system_admin_context, self.system_member_context,
-            self.system_reader_context]
-        # Check that non-system-reader is not able to perform operations
-        # on hypervisors.
-        self.reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
+        # With scope checks enable, only system admin is able to perform
+        # hypervisors Operations.
+        self.system_admin_authorized_contexts = [self.system_admin_context]
 
 
-class HypervisorsNoLegacyPolicyTest(HypervisorsScopeTypePolicyTest):
-    """Test Hypervisors APIs policies with system scope enabled,
-    and no more deprecated rules.
+class HypervisorsScopeTypeNoLegacyPolicyTest(HypervisorsScopeTypePolicyTest):
+    """Test Hypervisors APIs policies with no legacy deprecated rules
+    and scope checks enabled which means scope + new defaults so
+    only system admin is able to perform hypervisors Operations.
     """
+
     without_deprecated_rules = True
+
     rules_without_deprecation = {
         hv_policies.BASE_POLICY_NAME % 'list':
-            base_policy.SYSTEM_READER,
+            base_policy.ADMIN,
         hv_policies.BASE_POLICY_NAME % 'list-detail':
-            base_policy.SYSTEM_READER,
+            base_policy.ADMIN,
         hv_policies.BASE_POLICY_NAME % 'show':
-            base_policy.SYSTEM_READER,
+            base_policy.ADMIN,
         hv_policies.BASE_POLICY_NAME % 'statistics':
-            base_policy.SYSTEM_READER,
+            base_policy.ADMIN,
         hv_policies.BASE_POLICY_NAME % 'uptime':
-            base_policy.SYSTEM_READER,
+            base_policy.ADMIN,
         hv_policies.BASE_POLICY_NAME % 'search':
-            base_policy.SYSTEM_READER,
+            base_policy.ADMIN,
         hv_policies.BASE_POLICY_NAME % 'servers':
-            base_policy.SYSTEM_READER,
+            base_policy.ADMIN,
     }
