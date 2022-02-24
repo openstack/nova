@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import typing as ty
 
 import os_resource_classes as orc
 from oslo_limit import exception as limit_exceptions
@@ -39,17 +40,23 @@ LEGACY_LIMITS = {
 }
 
 
-def _get_placement_usages(context, project_id):
+def _get_placement_usages(
+    context: 'nova.context.RequestContext', project_id: str
+) -> ty.Dict[str, int]:
     global PLACEMENT_CLIENT
     if not PLACEMENT_CLIENT:
         PLACEMENT_CLIENT = report.SchedulerReportClient()
     return PLACEMENT_CLIENT.get_usages_counts_for_limits(context, project_id)
 
 
-def _get_usage(context, project_id, resource_names):
+def _get_usage(
+    context: 'nova.context.RequestContext',
+    project_id: str,
+    resource_names: ty.List[str],
+) -> ty.Dict[str, int]:
     """Called by oslo_limit's enforcer"""
     if not limit_utils.use_unified_limits():
-        raise NotImplementedError("unified limits is disabled")
+        raise NotImplementedError("Unified limits support is disabled")
 
     count_servers = False
     resource_classes = []
@@ -113,7 +120,9 @@ def _get_usage(context, project_id, resource_names):
     return resource_counts
 
 
-def _get_deltas_by_flavor(flavor, is_bfv, count):
+def _get_deltas_by_flavor(
+    flavor: 'objects.Flavor', is_bfv: bool, count: int
+) -> ty.Dict[str, int]:
     if flavor is None:
         raise ValueError("flavor")
     if count < 0:
@@ -132,7 +141,9 @@ def _get_deltas_by_flavor(flavor, is_bfv, count):
     return deltas
 
 
-def _get_enforcer(context, project_id):
+def _get_enforcer(
+    context: 'nova.context.RequestContext', project_id: str
+) -> limit.Enforcer:
     # NOTE(johngarbutt) should we move context arg into oslo.limit?
     def callback(project_id, resource_names):
         return _get_usage(context, project_id, resource_names)
@@ -140,8 +151,15 @@ def _get_enforcer(context, project_id):
     return limit.Enforcer(callback)
 
 
-def enforce_num_instances_and_flavor(context, project_id, flavor, is_bfvm,
-                                     min_count, max_count, enforcer=None):
+def enforce_num_instances_and_flavor(
+    context: 'nova.context.RequestContext',
+    project_id: str,
+    flavor: 'objects.Flavor',
+    is_bfvm: bool,
+    min_count: int,
+    max_count: int,
+    enforcer: ty.Optional[limit.Enforcer] = None
+) -> int:
     """Return max instances possible, else raise TooManyInstances exception."""
     if not limit_utils.use_unified_limits():
         return max_count

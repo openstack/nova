@@ -1,6 +1,7 @@
 nova/compute/manager.py
 nova/crypto.py
 nova/limit/local.py
+nova/limit/placement.py
 nova/network/neutron.py
 nova/pci
 nova/privsep/path.py
