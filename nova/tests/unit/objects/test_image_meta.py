@@ -349,6 +349,25 @@ class TestImageMetaProps(test.NoDBTestCase):
             self.assertRaises(exception.ObjectActionError,
                               obj.obj_to_primitive, '1.0')
 
+    def test_obj_make_compatible_hw_emulation(self):
+        """Check 'hw_emulation_architecture' compatibility."""
+        # assert that 'hw_emulation_architecture' is supported
+        # on a suitably new version
+        obj = objects.ImageMetaProps(
+            hw_emulation_architecture=objects.fields.Architecture.AARCH64,
+        )
+        primitive = obj.obj_to_primitive('1.31')
+        self.assertIn('hw_emulation_architecture',
+            primitive['nova_object.data'])
+        self.assertEqual(
+            objects.fields.Architecture.AARCH64,
+            primitive['nova_object.data']['hw_emulation_architecture'])
+
+        # and is absent on older versions
+        primitive = obj.obj_to_primitive('1.29')
+        self.assertNotIn('hw_emulation_architecture',
+                         primitive['nova_object.data'])
+
     def test_obj_make_compatible_input_bus(self):
         """Check 'hw_input_bus' compatibility."""
         # assert that 'hw_input_bus' is supported on a suitably new version

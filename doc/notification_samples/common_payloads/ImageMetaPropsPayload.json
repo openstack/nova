@@ -4,5 +4,5 @@
         "hw_architecture": "x86_64"
     },
     "nova_object.name": "ImageMetaPropsPayload",
-    "nova_object.version": "1.8"
+    "nova_object.version": "1.9"
 }

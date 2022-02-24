@@ -187,14 +187,17 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.28: Added 'socket' to 'hw_pci_numa_affinity_policy'
     # Version 1.29: Added 'hw_input_bus' field
     # Version 1.30: Added 'bochs' as an option to 'hw_video_model'
+    # Version 1.31: Added 'hw_emulation_architecture' field
     # NOTE(efried): When bumping this version, the version of
     # ImageMetaPropsPayload must also be bumped. See its docstring for details.
-    VERSION = '1.30'
+    VERSION = '1.31'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 31):
+            primitive.pop('hw_emulation_architecture', None)
         if target_version < (1, 30):
             video = primitive.get('hw_video_model', None)
             if video == fields.VideoModel.BOCHS:
@@ -293,6 +296,10 @@ class ImageMetaProps(base.NovaObject):
     fields = {
         # name of guest hardware architecture eg i686, x86_64, ppc64
         'hw_architecture': fields.ArchitectureField(),
+
+        # hw_architecture field is leveraged for checks against physical nodes
+        # name of desired emulation architecture eg i686, x86_64, ppc64
+        'hw_emulation_architecture': fields.ArchitectureField(),
 
         # used to decide to expand root disk partition and fs to full size of
         # root disk
