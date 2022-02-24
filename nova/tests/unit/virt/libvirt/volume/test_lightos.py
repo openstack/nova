@@ -20,12 +20,9 @@ from os_brick import initiator
 
 class LibvirtLightVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
-    @mock.patch('queue.Queue', return_value='queue')
     @mock.patch('nova.utils.get_root_helper')
     @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory')
-    def test_libvirt_lightos_driver(self, mock_factory, mock_helper,
-                                    queue):
-        self.flags(group='libvirt')
+    def test_libvirt_lightos_driver(self, mock_factory, mock_helper):
         mock_helper.return_value = 'sudo'
         lightos.LibvirtLightOSVolumeDriver(self.fake_host)
         mock_factory.assert_called_once_with(
