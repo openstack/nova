@@ -25,7 +25,7 @@ CROSS_CELL_RESIZE = 'compute:servers:resize:cross_cell'
 rules = [
     policy.DocumentedRuleDefault(
         name=SERVERS % 'index',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="List all servers",
         operations=[
             {
@@ -33,10 +33,10 @@ rules = [
                 'path': '/servers'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'detail',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="List all servers with detailed information",
         operations=[
             {
@@ -44,10 +44,10 @@ rules = [
                 'path': '/servers/detail'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'index:get_all_tenants',
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="List all servers for all projects",
         operations=[
             {
@@ -55,10 +55,11 @@ rules = [
                 'path': '/servers'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
+
     policy.DocumentedRuleDefault(
         name=SERVERS % 'detail:get_all_tenants',
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="List all servers with detailed information for "
         " all projects",
         operations=[
@@ -67,10 +68,10 @@ rules = [
                 'path': '/servers/detail'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'allow_all_filters',
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="Allow all filters when listing servers",
         operations=[
             {
@@ -82,10 +83,10 @@ rules = [
                 'path': '/servers/detail'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="Show a server",
         operations=[
             {
@@ -93,12 +94,12 @@ rules = [
                 'path': '/servers/{server_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     # the details in host_status are pretty sensitive, only admins
     # should do that by default.
     policy.DocumentedRuleDefault(
         name=SERVERS % 'show:host_status',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="""
 Show a server with additional host status information.
 
@@ -129,10 +130,10 @@ API responses which are also controlled by this policy rule, like the
                 'path': '/servers/{server_id}/action (rebuild)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'show:host_status:unknown-only',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="""
 Show a server with additional host status information, only if host status is
 UNKNOWN.
@@ -162,7 +163,7 @@ allow everyone.
                 'path': '/servers/{server_id}/action (rebuild)'
             }
         ],
-        scope_types=['system', 'project'],),
+        scope_types=['project'],),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create',
         check_str=base.PROJECT_MEMBER,
@@ -176,16 +177,6 @@ allow everyone.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create:forced_host',
-        # TODO(gmann): We need to make it SYSTEM_ADMIN.
-        # PROJECT_ADMIN is added for now because create server
-        # policy is project scoped and there is no way to
-        # pass the project_id in request body for system scoped
-        # roles so that create server for other project with force host.
-        # To achieve that, we need to update the create server API to
-        # accept the project_id for whom the server needs to be created
-        # and then change the scope of this policy to system-only
-        # Because that is API change it needs to be done with new
-        # microversion.
         check_str=base.PROJECT_ADMIN,
         description="""
 Create a server on the specified host and/or node.
@@ -200,20 +191,9 @@ host and/or node by bypassing the scheduler filters unlike the
                 'path': '/servers'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=REQUESTED_DESTINATION,
-        # TODO(gmann): We need to make it SYSTEM_ADMIN.
-        # PROJECT_ADMIN is added for now because create server
-        # policy is project scoped and there is no way to
-        # pass the project_id in request body for system scoped
-        # roles so that create server for other project with requested
-        # destination.
-        # To achieve that, we need to update the create server API to
-        # accept the project_id for whom the server needs to be created
-        # and then change the scope of this policy to system-only
-        # Because that is API change it needs to be done with new
-        # microversion.
         check_str=base.PROJECT_ADMIN,
         description="""
 Create a server on the requested compute service host and/or
@@ -229,7 +209,7 @@ validated by the scheduler filters unlike the
                 'path': '/servers'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create:attach_volume',
         check_str=base.PROJECT_MEMBER,
@@ -288,7 +268,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=NETWORK_ATTACH_EXTERNAL,
         check_str=base.PROJECT_ADMIN,
@@ -305,10 +285,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/os-interface'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'delete',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Delete a server",
         operations=[
             {
@@ -316,10 +296,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'update',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Update a server",
         operations=[
             {
@@ -327,10 +307,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'confirm_resize',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Confirm a server resize",
         operations=[
             {
@@ -338,10 +318,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (confirmResize)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'revert_resize',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Revert a server resize",
         operations=[
             {
@@ -349,10 +329,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (revertResize)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'reboot',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Reboot a server",
         operations=[
             {
@@ -360,10 +340,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (reboot)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'resize',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Resize a server",
         operations=[
             {
@@ -371,7 +351,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (resize)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=CROSS_CELL_RESIZE,
         check_str=base.RULE_NOBODY,
@@ -386,10 +366,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (resize)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'rebuild',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Rebuild a server",
         operations=[
             {
@@ -397,10 +377,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (rebuild)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'rebuild:trusted_certs',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Rebuild a server with trusted image certificate IDs",
         operations=[
             {
@@ -408,10 +388,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (rebuild)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create_image',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Create an image from a server",
         operations=[
             {
@@ -419,10 +399,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (createImage)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create_image:allow_volume_backed',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Create an image from a volume backed server",
         operations=[
             {
@@ -430,10 +410,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (createImage)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'start',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Start a server",
         operations=[
             {
@@ -441,10 +421,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (os-start)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'stop',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Stop a server",
         operations=[
             {
@@ -452,10 +432,10 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (os-stop)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'trigger_crash_dump',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Trigger crash dump in a server",
         operations=[
             {
@@ -463,7 +443,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
                 'path': '/servers/{server_id}/action (trigger_crash_dump)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 
