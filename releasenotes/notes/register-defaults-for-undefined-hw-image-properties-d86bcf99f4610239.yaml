@@ -1,0 +1,15 @@
+other:
+  - |
+    Default image properties for device buses and models are now persisted in
+    the instance system metadata for the following image properties:
+
+    * ``hw_cdrom_bus``
+    * ``hw_disk_bus``
+    * ``hw_input_bus``
+    * ``hw_pointer_model``
+    * ``hw_video_model``
+    * ``hw_vif_model``
+
+    Instance device buses and models will now remain stable across reboots and
+    will not be changed by new defaults in libosinfo or the OpenStack Nova
+    libvirt driver.
