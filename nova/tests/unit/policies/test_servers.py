@@ -159,6 +159,17 @@ class ServersPolicyTest(base.BasePolicyTest):
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context])
 
+        # Admin (for APIs does not pass the project id as policy target
+        # for example, create server, list detail server) able to get
+        # all projects servers, create server on specific host etc.
+        # This is admin on any project because policy does not check
+        # the project id but they will be able to create server, get
+        # servers(unless all-tenant policy is allowed) of their own
+        # project only.
+        self.all_projects_admin_authorized_contexts = set([
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context])
+
         # Users able to do cross-cell migrations
         self.cross_cell_authorized_contexts = []
 
@@ -207,7 +218,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         else:
             check_rule = functools.partial(rule_if_system, rule, rule_name)
 
-        self.common_policy_auth(self.project_admin_authorized_contexts,
+        self.common_policy_auth(self.all_projects_admin_authorized_contexts,
                                 check_rule,
                                 self.controller.index,
                                 req)
@@ -258,7 +269,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         else:
             check_rule = functools.partial(rule_if_system, rule, rule_name)
 
-        self.common_policy_auth(self.project_admin_authorized_contexts,
+        self.common_policy_auth(self.all_projects_admin_authorized_contexts,
                                 check_rule,
                                 self.controller.detail,
                                 req)
@@ -275,9 +286,9 @@ class ServersPolicyTest(base.BasePolicyTest):
                          expected_attrs=None, sort_keys=None, sort_dirs=None,
                          cell_down_support=False, all_tenants=False):
             self.assertIsNotNone(search_opts)
-            if context not in self.project_admin_authorized_contexts:
+            if context not in self.all_projects_admin_authorized_contexts:
                 self.assertNotIn('host', search_opts)
-            if context in self.project_admin_authorized_contexts:
+            if context in self.all_projects_admin_authorized_contexts:
                 self.assertIn('host', search_opts)
             return objects.InstanceList(objects=self.servers)
 
@@ -286,7 +297,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         req = fakes.HTTPRequest.blank('/servers?host=1')
         rule_name = policies.SERVERS % 'allow_all_filters'
         self.common_policy_auth(
-            self.project_admin_authorized_contexts,
+            self.all_projects_admin_authorized_contexts,
             rule_name,
             self.controller.index,
             req, fatal=False)
@@ -303,9 +314,9 @@ class ServersPolicyTest(base.BasePolicyTest):
                          expected_attrs=None, sort_keys=None, sort_dirs=None,
                          cell_down_support=False, all_tenants=False):
             self.assertIsNotNone(search_opts)
-            if context not in self.project_admin_authorized_contexts:
+            if context not in self.all_projects_admin_authorized_contexts:
                 self.assertNotIn('host', search_opts)
-            if context in self.project_admin_authorized_contexts:
+            if context in self.all_projects_admin_authorized_contexts:
                 self.assertIn('host', search_opts)
             return objects.InstanceList(objects=self.servers)
         self.mock_get_all.side_effect = fake_get_all
@@ -313,7 +324,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         req = fakes.HTTPRequest.blank('/servers?host=1')
         rule_name = policies.SERVERS % 'allow_all_filters'
         self.common_policy_auth(
-            self.project_admin_authorized_contexts,
+            self.all_projects_admin_authorized_contexts,
             rule_name,
             self.controller.detail,
             req, fatal=False)
@@ -350,7 +361,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         self.policy.set_rules({rule: "@"}, overwrite=False)
         mock_create.return_value = ([self.instance], '')
         mock_az.return_value = ('test', 'host', None)
-        self.common_policy_auth(self.project_admin_authorized_contexts,
+        self.common_policy_auth(self.all_projects_admin_authorized_contexts,
                                 self.rule_forced_host,
                                 self.controller.create,
                                 self.req, body=self.body)
@@ -789,7 +800,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         req = fakes.HTTPRequest.blank('', version='2.3')
         rule_name = ea_policies.BASE_POLICY_NAME
         authorize_res, unauthorize_res = self.common_policy_auth(
-            self.project_admin_authorized_contexts,
+            self.all_projects_admin_authorized_contexts,
             rule_name, self.controller.detail, req,
             fatal=False)
         for attr in self.extended_attr:
@@ -849,8 +860,11 @@ class ServersPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
     @mock.patch.object(InstanceGroup, 'get_by_instance_uuid')
     @mock.patch('nova.compute.api.API.update_instance')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
     def test_server_update_with_extended_attr_policy(self,
-        mock_update, mock_group, mock_bdm):
+        mock_status, mock_update, mock_group, mock_bdm):
+        mock_update.return_value = self.instance
+        mock_status.return_value = fields.HostStatus.UP
         rule = policies.SERVERS % 'update'
         # server 'update' policy is checked before extended attributes
         # policy so we have to allow it for everyone otherwise it will fail
@@ -886,7 +900,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         req = fakes.HTTPRequest.blank('', version='2.16')
         rule_name = policies.SERVERS % 'show:host_status'
         authorize_res, unauthorize_res = self.common_policy_auth(
-            self.project_admin_authorized_contexts,
+            self.all_projects_admin_authorized_contexts,
             rule_name, self.controller.detail, req,
             fatal=False)
         for resp in authorize_res:
@@ -940,8 +954,11 @@ class ServersPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
     @mock.patch.object(InstanceGroup, 'get_by_instance_uuid')
     @mock.patch('nova.compute.api.API.update_instance')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
     def test_server_update_with_host_status_policy(self,
-        mock_update, mock_group, mock_bdm):
+        mock_status, mock_update, mock_group, mock_bdm):
+        mock_update.return_value = self.instance
+        mock_status.return_value = fields.HostStatus.UP
         rule = policies.SERVERS % 'update'
         # server 'update' policy is checked before host_status
         # policy so we have to allow it for everyone otherwise it will fail
@@ -984,7 +1001,7 @@ class ServersPolicyTest(base.BasePolicyTest):
         req = fakes.HTTPRequest.blank('', version='2.16')
         rule_name = policies.SERVERS % 'show:host_status:unknown-only'
         authorize_res, unauthorize_res = self.common_policy_auth(
-            self.project_admin_authorized_contexts,
+            self.all_projects_admin_authorized_contexts,
             rule_name, self.controller.detail, req,
             fatal=False)
         for resp in authorize_res:
@@ -1057,6 +1074,7 @@ class ServersPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.API.update_instance')
     def test_server_update_with_unknown_host_status_policy(self,
         mock_update, mock_group, mock_status, mock_bdm):
+        mock_update.return_value = self.instance
         mock_status.return_value = fields.HostStatus.UNKNOWN
         rule = policies.SERVERS % 'update'
         # server 'update' policy is checked before unknown host_status
@@ -1094,9 +1112,9 @@ class ServersPolicyTest(base.BasePolicyTest):
 
         def fake_create(context, *args, **kwargs):
             for attr in ['requested_host', 'requested_hypervisor_hostname']:
-                if context in self.project_admin_authorized_contexts:
+                if context in self.all_projects_admin_authorized_contexts:
                     self.assertIn(attr, kwargs)
-                if context not in self.project_admin_authorized_contexts:
+                if context not in self.all_projects_admin_authorized_contexts:
                     self.assertNotIn(attr, kwargs)
             return ([self.instance], '')
         mock_create.side_effect = fake_create
@@ -1114,7 +1132,7 @@ class ServersPolicyTest(base.BasePolicyTest):
             },
         }
 
-        self.common_policy_auth(self.project_admin_authorized_contexts,
+        self.common_policy_auth(self.all_projects_admin_authorized_contexts,
                                 self.rule_requested_destination,
                                 self.controller.create,
                                 req, body=body)
@@ -1188,11 +1206,11 @@ class ServersPolicyTest(base.BasePolicyTest):
         # which raise different error then PolicyNotAuthorized
         # if not allowed.
         neutron_api = neutron.API()
-        for context in self.project_admin_authorized_contexts:
+        for context in self.all_projects_admin_authorized_contexts:
             neutron_api._check_external_network_attach(context,
                     [{'id': 1, 'router:external': 'ext'}])
         unauth = (set(self.all_contexts) -
-                  set(self.project_admin_authorized_contexts))
+                  set(self.all_projects_admin_authorized_contexts))
         for context in unauth:
             self.assertRaises(exception.ExternalNetworkAttachForbidden,
                               neutron_api._check_external_network_attach,
@@ -1206,11 +1224,11 @@ class ServersPolicyTest(base.BasePolicyTest):
         flavor = objects.Flavor(
             vcpus=1, memory_mb=512, root_gb=0, extra_specs={'hw:pmu': "true"})
         compute_api = compute.API()
-        for context in self.project_admin_authorized_contexts:
+        for context in self.all_projects_admin_authorized_contexts:
             compute_api._validate_flavor_image_nostatus(context,
                     image, flavor, None)
         unauth = (set(self.all_contexts) -
-                  set(self.project_admin_authorized_contexts))
+                  set(self.all_projects_admin_authorized_contexts))
         for context in unauth:
             self.assertRaises(
                 exception.BootFromVolumeRequiredForZeroDiskFlavor,
@@ -1234,6 +1252,10 @@ class ServersNoLegacyNoScopeTest(ServersPolicyTest):
         # project).
         self.reduce_set('project_action_authorized', set([
             self.project_admin_context, self.project_member_context,
+        ]))
+
+        self.reduce_set('project_admin_authorized', set([
+            self.project_admin_context
         ]))
 
         # The only additional role that can read our resources is our
@@ -1314,6 +1336,9 @@ class ServersScopeTypePolicyTest(ServersPolicyTest):
         self.reduce_set('project_admin_authorized',
                         set([self.legacy_admin_context,
                              self.project_admin_context]))
+        self.reduce_set('all_projects_admin_authorized',
+                        set([self.legacy_admin_context,
+                             self.project_admin_context]))
 
         # With scope checking enabled, system users also lose access to read
         # project resources.
@@ -1339,6 +1364,11 @@ class ServersNoLegacyPolicyTest(ServersScopeTypePolicyTest):
             self.project_admin_context,
             self.project_member_context,
         ]))
+
+        # With no legacy rule and scope checks enable, only project
+        # admin can do admin things on project resource.
+        self.reduce_set('project_admin_authorized',
+                        set([self.project_admin_context]))
 
         # Only project_reader has additional read access to our
         # project resources.
