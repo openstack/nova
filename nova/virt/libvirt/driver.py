@@ -5118,6 +5118,43 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             mount.get_manager().host_down()
 
+    def _check_emulation_arch(self, image_meta):
+        # NOTE(chateaulav) In order to support emulation via qemu,
+        # there are required metadata properties that need applied
+        # to the designated glance image. The config drive is not
+        # supported. This leverages the hw_architecture and
+        # hw_emulation_architecture image_meta fields to allow for
+        # emulation to take advantage of all physical multiarch work
+        # being done.
+        #
+        # aarch64 emulation support metadata values:
+        # 'hw_emulation_architecture=aarch64'
+        # 'hw_firmware_type=uefi'
+        # 'hw_machine_type=virt'
+        #
+        # ppc64le emulation support metadata values:
+        # 'hw_emulation_architecture=ppc64le'
+        # 'hw_machine_type=pseries'
+        #
+        # s390x emulation support metadata values:
+        # 'hw_emulation_architecture=s390x'
+        # 'hw_machine_type=s390-ccw-virtio'
+        # 'hw_video_model=virtio'
+        #
+        # TODO(chateaulav) Further Work to be done:
+        # testing mips functionality while waiting on redhat libvirt
+        # patch https://listman.redhat.com/archives/libvir-list/
+        # 2016-May/msg00197.html
+        #
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1432101
+        emulation_arch = image_meta.properties.get("hw_emulation_architecture")
+        if emulation_arch:
+            arch = emulation_arch
+        else:
+            arch = libvirt_utils.get_arch(image_meta)
+
+        return arch
+
     def _get_cpu_model_mapping(self, model):
         """Get the CPU model mapping
 
@@ -5258,7 +5295,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_cpu_config(self, flavor, image_meta,
                               guest_cpu_numa_config, instance_numa_topology):
-        arch = libvirt_utils.get_arch(image_meta)
+        arch = self._check_emulation_arch(image_meta)
         cpu = self._get_guest_cpu_model_config(flavor, arch)
 
         if cpu is None:
@@ -5270,6 +5307,23 @@ class LibvirtDriver(driver.ComputeDriver):
         cpu.cores = topology.cores
         cpu.threads = topology.threads
         cpu.numa = guest_cpu_numa_config
+
+        caps = self._host.get_capabilities()
+        if arch != caps.host.cpu.arch:
+            # Try emulating. Other arch configs will go here
+            cpu.mode = None
+            if arch == fields.Architecture.AARCH64:
+                cpu.model = "cortex-a57"
+            elif arch == fields.Architecture.PPC64LE:
+                cpu.model = "POWER8"
+            # TODO(chateaulav): re-evaluate when libvirtd adds overall
+            # RISCV suuport as a supported architecture, as there is no
+            # cpu models associated, this simply associates X vcpus to the
+            # guest according to the flavor. Thes same issue should be
+            # present with mipsel due to same limitation, but has not been
+            # tested.
+            elif arch == fields.Architecture.MIPSEL:
+                cpu = None
 
         return cpu
 
@@ -5957,7 +6011,7 @@ class LibvirtDriver(driver.ComputeDriver):
         clk.add_timer(tmrtc)
 
         hpet = image_meta.properties.get('hw_time_hpet', False)
-        guestarch = libvirt_utils.get_arch(image_meta)
+        guestarch = self._check_emulation_arch(image_meta)
         if guestarch in (fields.Architecture.I686,
                          fields.Architecture.X86_64):
             # NOTE(rfolco): HPET is a hardware timer for x86 arch.
@@ -6020,7 +6074,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if CONF.libvirt.virt_type in ("qemu", "kvm"):
             # vmcoreinfo support is x86, ARM-only for now
-            guestarch = libvirt_utils.get_arch(image_meta)
+            guestarch = self._check_emulation_arch(image_meta)
             if guestarch in (
                 fields.Architecture.I686, fields.Architecture.X86_64,
                 fields.Architecture.AARCH64,
@@ -6081,8 +6135,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InvalidVideoMode(model=video_type)
             return video_type
 
-        guestarch = libvirt_utils.get_arch(image_meta)
-
+        guestarch = self._check_emulation_arch(image_meta)
         if CONF.libvirt.virt_type == 'parallels':
             return 'vga'
 
@@ -6114,8 +6167,9 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(kevinz): Only virtio device type is supported by AARCH64
             # so use 'virtio' instead when running on AArch64 hardware.
             return 'virtio'
-
-        if CONF.spice.enabled:
+        elif guestarch == fields.Architecture.MIPSEL:
+            return 'virtio'
+        elif CONF.spice.enabled:
             return 'qxl'
 
         # NOTE(lyarwood): Return None and default to the default of
@@ -6355,7 +6409,14 @@ class LibvirtDriver(driver.ComputeDriver):
         flavor: 'objects.Flavor',
     ) -> None:
         if CONF.libvirt.virt_type in ("kvm", "qemu"):
-            arch = libvirt_utils.get_arch(image_meta)
+            caps = self._host.get_capabilities()
+            host_arch = caps.host.cpu.arch
+            arch = self._check_emulation_arch(image_meta)
+            guest.os_arch = self._check_emulation_arch(image_meta)
+            if arch != host_arch:
+                # If emulating, downgrade to qemu
+                guest.virt_type = "qemu"
+
             if arch in (fields.Architecture.I686, fields.Architecture.X86_64):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
@@ -6502,13 +6563,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._create_consoles_qemu_kvm(
                     guest_cfg, instance, flavor, image_meta)
 
+    def _is_mipsel_guest(self, image_meta):
+        archs = (fields.Architecture.MIPSEL, fields.Architecture.MIPS64EL)
+        return self._check_emulation_arch(image_meta) in archs
+
     def _is_s390x_guest(self, image_meta):
-        s390x_archs = (fields.Architecture.S390, fields.Architecture.S390X)
-        return libvirt_utils.get_arch(image_meta) in s390x_archs
+        archs = (fields.Architecture.S390, fields.Architecture.S390X)
+        return self._check_emulation_arch(image_meta) in archs
 
     def _is_ppc64_guest(self, image_meta):
         archs = (fields.Architecture.PPC64, fields.Architecture.PPC64LE)
-        return libvirt_utils.get_arch(image_meta) in archs
+        return self._check_emulation_arch(image_meta) in archs
 
     def _create_consoles_qemu_kvm(self, guest_cfg, instance, flavor,
                                   image_meta):
@@ -6677,7 +6742,19 @@ class LibvirtDriver(driver.ComputeDriver):
         # controller (x86 gets one by default)
         usbhost.model = None
         if not self._guest_needs_usb(guest, image_meta):
-            usbhost.model = 'none'
+            archs = (
+                fields.Architecture.PPC,
+                fields.Architecture.PPC64,
+                fields.Architecture.PPC64LE,
+            )
+            if self._check_emulation_arch(image_meta) in archs:
+                # NOTE(chateaulav): during actual testing and implementation
+                # it wanted None for ppc, as this removes it from the domain
+                # xml, where 'none' adds it but then disables it causing
+                # libvirt errors and the instances not being able to build
+                usbhost.model = None
+            else:
+                usbhost.model = 'none'
         guest.add_device(usbhost)
 
     def _guest_add_pcie_root_ports(self, guest):
@@ -7174,7 +7251,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # libvirt will automatically add a PS2 keyboard)
             # TODO(stephenfin): We might want to do this for other non-x86
             # architectures
-            arch = libvirt_utils.get_arch(image_meta)
+            arch = self._check_emulation_arch(image_meta)
             if arch != fields.Architecture.AARCH64:
                 return None
 

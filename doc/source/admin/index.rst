@@ -227,3 +227,4 @@ Once you are running nova, the following information is extremely useful.
    upgrades
    node-down
    hw-machine-type
+   hw-emulation-architecture

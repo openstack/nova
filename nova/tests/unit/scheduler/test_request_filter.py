@@ -406,13 +406,15 @@ class TestRequestFilter(test.NoDBTestCase):
         self.assertIn('took %.1f seconds', log_lines[1])
 
     @mock.patch.object(request_filter, 'LOG', new=mock.Mock())
-    def test_transform_image_metadata(self):
+    def test_transform_image_metadata_x86(self):
         self.flags(image_metadata_prefilter=True, group='scheduler')
         properties = objects.ImageMetaProps(
             hw_disk_bus=objects.fields.DiskBus.SATA,
             hw_cdrom_bus=objects.fields.DiskBus.IDE,
             hw_video_model=objects.fields.VideoModel.QXL,
-            hw_vif_model=network_model.VIF_MODEL_VIRTIO
+            hw_vif_model=network_model.VIF_MODEL_VIRTIO,
+            hw_architecture=objects.fields.Architecture.X86_64,
+            hw_emulation_architecture=objects.fields.Architecture.AARCH64
         )
         reqspec = objects.RequestSpec(
             image=objects.ImageMeta(properties=properties),
@@ -426,6 +428,36 @@ class TestRequestFilter(test.NoDBTestCase):
             'COMPUTE_NET_VIF_MODEL_VIRTIO',
             'COMPUTE_STORAGE_BUS_IDE',
             'COMPUTE_STORAGE_BUS_SATA',
+            'HW_ARCH_X86_64',
+            'COMPUTE_ARCH_AARCH64',
+        }
+        self.assertEqual(expected, reqspec.root_required)
+
+    @mock.patch.object(request_filter, 'LOG', new=mock.Mock())
+    def test_transform_image_metadata_aarch64(self):
+        self.flags(image_metadata_prefilter=True, group='scheduler')
+        properties = objects.ImageMetaProps(
+            hw_disk_bus=objects.fields.DiskBus.SATA,
+            hw_cdrom_bus=objects.fields.DiskBus.IDE,
+            hw_video_model=objects.fields.VideoModel.QXL,
+            hw_vif_model=network_model.VIF_MODEL_VIRTIO,
+            hw_architecture=objects.fields.Architecture.AARCH64,
+            hw_emulation_architecture=objects.fields.Architecture.X86_64
+        )
+        reqspec = objects.RequestSpec(
+            image=objects.ImageMeta(properties=properties),
+            flavor=objects.Flavor(extra_specs={}),
+        )
+        self.assertTrue(
+            request_filter.transform_image_metadata(None, reqspec)
+        )
+        expected = {
+            'COMPUTE_GRAPHICS_MODEL_QXL',
+            'COMPUTE_NET_VIF_MODEL_VIRTIO',
+            'COMPUTE_STORAGE_BUS_IDE',
+            'COMPUTE_STORAGE_BUS_SATA',
+            'HW_ARCH_AARCH64',
+            'COMPUTE_ARCH_X86_64',
         }
         self.assertEqual(expected, reqspec.root_required)
 
