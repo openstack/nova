@@ -13,12 +13,15 @@
 import datetime
 from unittest import mock
 
+import fixtures
 from oslo_utils.fixture import uuidsentinel as uuids
 
+from nova.cmd import manage
 from nova import context as nova_context
 from nova import objects
 from nova import test
 from nova.tests.functional.libvirt import base
+from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
 
 
@@ -33,6 +36,7 @@ class LibvirtDeviceBusMigration(base.ServersTestBase):
         self.context = nova_context.get_admin_context()
         self.compute_hostname = self.start_compute()
         self.compute = self.computes[self.compute_hostname]
+        self.commands = manage.ImagePropertyCommands()
 
     def _unset_stashed_image_properties(self, server_id, properties):
         instance = objects.Instance.get_by_uuid(self.context, server_id)
@@ -232,3 +236,172 @@ class LibvirtDeviceBusMigration(base.ServersTestBase):
             server2, default_image_properties2)
         self._assert_stashed_image_properties_persist(
             server3, default_image_properties1)
+
+    def _assert_guest_config(self, config, image_properties):
+        verified_properties = set()
+
+        # Verify the machine type matches the image property
+        value = image_properties.get('hw_machine_type')
+        if value:
+            self.assertEqual(value, config.os_mach_type)
+            verified_properties.add('hw_machine_type')
+
+        # Look at all the devices and verify that their bus and model values
+        # match the desired image properties
+        for device in config.devices:
+            if isinstance(device, vconfig.LibvirtConfigGuestDisk):
+                if device.source_device == 'cdrom':
+                    value = image_properties.get('hw_cdrom_bus')
+                    if value:
+                        self.assertEqual(value, device.target_bus)
+                        verified_properties.add('hw_cdrom_bus')
+
+                if device.source_device == 'disk':
+                    value = image_properties.get('hw_disk_bus')
+                    if value:
+                        self.assertEqual(value, device.target_bus)
+                        verified_properties.add('hw_disk_bus')
+
+            if isinstance(device, vconfig.LibvirtConfigGuestInput):
+                value = image_properties.get('hw_input_bus')
+                if value:
+                    self.assertEqual(value, device.bus)
+                    verified_properties.add('hw_input_bus')
+
+                if device.type == 'tablet':
+                    value = image_properties.get('hw_pointer_model')
+                    if value:
+                        self.assertEqual('usbtablet', value)
+                        verified_properties.add('hw_pointer_model')
+
+            if isinstance(device, vconfig.LibvirtConfigGuestVideo):
+                value = image_properties.get('hw_video_model')
+                if value:
+                    self.assertEqual(value, device.type)
+                    verified_properties.add('hw_video_model')
+
+            if isinstance(device, vconfig.LibvirtConfigGuestInterface):
+                value = image_properties.get('hw_vif_model')
+                if value:
+                    self.assertEqual(value, device.model)
+                    verified_properties.add('hw_vif_model')
+
+        # If hw_pointer_model or hw_input_bus are in the image properties but
+        # we did not encounter devices for them, they should be None
+        for p in ['hw_pointer_model', 'hw_input_bus']:
+            if p in image_properties and p not in verified_properties:
+                self.assertIsNone(image_properties[p])
+                verified_properties.add(p)
+
+        # Assert that we verified all of the image properties
+        self.assertEqual(
+            len(image_properties), len(verified_properties),
+            f'image_properties: {image_properties}, '
+            f'verified_properties: {verified_properties}'
+        )
+
+    def test_machine_type_and_bus_and_model_migration(self):
+        """Assert the behaviour of the nova-manage image_property set command
+        when used to migrate between machine types and associated device buses.
+        """
+        # Create a pass-through mock around _get_guest_config to capture the
+        # config of an instance so we can assert things about it later.
+        # TODO(lyarwood): This seems like a useful thing to do in the libvirt
+        # func tests for all computes we start?
+        self.guest_configs = {}
+        orig_get_config = self.compute.driver._get_guest_config
+
+        def _get_guest_config(_self, *args, **kwargs):
+            guest_config = orig_get_config(*args, **kwargs)
+            instance = args[0]
+            self.guest_configs[instance.uuid] = guest_config
+            return self.guest_configs[instance.uuid]
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.LibvirtDriver._get_guest_config',
+            _get_guest_config))
+
+        pc_image_properties = {
+            'hw_machine_type': 'pc',
+            'hw_cdrom_bus': 'ide',
+            'hw_disk_bus': 'sata',
+            'hw_input_bus': 'usb',
+            'hw_pointer_model': 'usbtablet',
+            'hw_video_model': 'cirrus',
+            'hw_vif_model': 'e1000',
+        }
+        self.glance.create(
+            None,
+            {
+                'id': uuids.pc_image_uuid,
+                'name': 'pc_image',
+                'created_at': datetime.datetime(2011, 1, 1, 1, 2, 3),
+                'updated_at': datetime.datetime(2011, 1, 1, 1, 2, 3),
+                'deleted_at': None,
+                'deleted': False,
+                'status': 'active',
+                'is_public': False,
+                'container_format': 'bare',
+                'disk_format': 'qcow2',
+                'size': '74185822',
+                'min_ram': 0,
+                'min_disk': 0,
+                'protected': False,
+                'visibility': 'public',
+                'tags': [],
+                'properties': pc_image_properties,
+            }
+        )
+
+        body = self._build_server(
+            image_uuid=uuids.pc_image_uuid, networks='auto')
+
+        # Add a cdrom to be able to verify hw_cdrom_bus
+        body['block_device_mapping_v2'] = [{
+            'source_type': 'blank',
+            'destination_type': 'local',
+            'disk_bus': 'ide',
+            'device_type': 'cdrom',
+            'boot_index': 0,
+        }]
+
+        # Create the server and verify stashed image properties
+        server = self.api.post_server({'server': body})
+        self._wait_for_state_change(server, 'ACTIVE')
+        self._assert_stashed_image_properties(
+            server['id'], pc_image_properties)
+
+        # Verify the guest config matches the image properties
+        guest_config = self.guest_configs[server['id']]
+        self._assert_guest_config(guest_config, pc_image_properties)
+
+        # Set the image properties with nova-manage
+        self._stop_server(server)
+
+        q35_image_properties = {
+            'hw_machine_type': 'q35',
+            'hw_cdrom_bus': 'sata',
+            'hw_disk_bus': 'virtio',
+            'hw_input_bus': 'virtio',
+            'hw_pointer_model': 'usbtablet',
+            'hw_video_model': 'qxl',
+            'hw_vif_model': 'virtio',
+        }
+        property_list = [
+            f'{p}={value}' for p, value in q35_image_properties.items()
+        ]
+
+        self.commands.set(
+            instance_uuid=server['id'], image_properties=property_list)
+
+        # Verify the updated stashed image properties
+        self._start_server(server)
+        self._assert_stashed_image_properties(
+            server['id'], q35_image_properties)
+
+        # The guest config should reflect the new values except for the cdrom
+        # block device bus which is taken from the block_device_mapping record,
+        # not system_metadata, so it cannot be changed
+        q35_image_properties['hw_cdrom_bus'] = 'ide'
+        guest_config = self.guest_configs[server['id']]
+        self._assert_guest_config(guest_config, q35_image_properties)

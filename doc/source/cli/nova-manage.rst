@@ -1668,6 +1668,91 @@ within an environment.
    * - 3
      - Instances found without ``hw_machine_type`` set
 
+Image Property Commands
+=======================
+
+image_property show
+-------------------
+
+.. program:: nova-manage image_property show
+
+.. code-block:: shell
+
+    nova-manage image_property show [INSTANCE_UUID] [IMAGE_PROPERTY]
+
+Fetch and display the recorded image property ``IMAGE_PROPERTY`` of an
+instance identified by ``INSTANCE_UUID``.
+
+.. versionadded:: 25.0.0 (Yoga)
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Successfully completed
+   * - 1
+     - An unexpected error occurred
+   * - 2
+     - Unable to find instance or instance mapping
+   * - 3
+     - No image property found for instance
+
+image_property set
+------------------
+
+.. program:: nova-manage image_property set
+
+.. code-block:: shell
+
+    nova-manage image_property set \
+        [INSTANCE_UUID] [--property] [IMAGE_PROPERTY]=[VALUE]
+
+Set or update the recorded image property ``IMAGE_PROPERTY`` of instance
+``INSTANCE_UUID`` to value ``VALUE``.
+
+The following criteria must be met when using this command:
+
+* The instance must have a ``vm_state`` of ``STOPPED``, ``SHELVED`` or
+  ``SHELVED_OFFLOADED``.
+
+This command is useful for operators who need to update stored instance image
+properties that have become invalidated by a change of instance machine type,
+for example.
+
+.. versionadded:: 25.0.0 (Yoga)
+
+.. rubric:: Options
+
+.. option:: --property
+
+    Image property to set using the format name=value. For example:
+    ``--property hw_disk_bus=virtio --property hw_cdrom_bus=sata``.
+
+.. rubric:: Return codes
+
+.. list-table::
+   :widths: 20 80
+   :header-rows: 1
+
+   * - Return code
+     - Description
+   * - 0
+     - Update completed successfully
+   * - 1
+     - An unexpected error occurred
+   * - 2
+     - Unable to find instance or instance mapping
+   * - 3
+     - The instance has an invalid ``vm_state``
+   * - 4
+     - The provided image property name is invalid
+   * - 5
+     - The provided image property value is invalid
 
 See Also
 ========
