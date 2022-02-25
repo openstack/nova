@@ -51,40 +51,23 @@ class ServerTopologyPolicyTest(base.BasePolicyTest):
 
         # Check that system reader or and server owner is able to get
         # the server topology.
-        self.system_reader_or_owner_authorized_contexts = [
+        # With legacy rule and no scope checks, all admin is able to get
+        # server topology wth host info.
+        self.project_admin_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context]
+        # and project reader can get their server topology without host info.
+        self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.system_member_context, self.system_reader_context]
-        # Check that non-stem reader/owner is not able to get
-        # the server topology.
-        self.system_reader_or_owner_unauthorized_contexts = [
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
-        # Check that system reader is able to get the server topology
-        # host information.
-        self.system_reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.system_member_context,
-            self.system_reader_context]
-        # Check that non-system reader is not able to get the server topology
-        # host information.
-        self.system_reader_unauthorized_contexts = [
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context,
-            self.other_project_reader_context
-        ]
+            self.project_reader_context, self.project_foo_context]
 
     def test_index_server_topology_policy(self):
         rule_name = policies.BASE_POLICY_NAME % 'index'
-        self.common_policy_check(
-            self.system_reader_or_owner_authorized_contexts,
-            self.system_reader_or_owner_unauthorized_contexts,
-            rule_name,
-            self.controller.index,
-            self.req, self.instance.uuid)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name,
+                                self.controller.index,
+                                self.req, self.instance.uuid)
 
     def test_index_host_server_topology_policy(self):
         rule_name = policies.BASE_POLICY_NAME % 'host:index'
@@ -93,9 +76,8 @@ class ServerTopologyPolicyTest(base.BasePolicyTest):
         # fail first for unauthorized contexts.
         rule = policies.BASE_POLICY_NAME % 'index'
         self.policy.set_rules({rule: "@"}, overwrite=False)
-        authorize_res, unauthorize_res = self.common_policy_check(
-            self.system_reader_authorized_contexts,
-            self.system_reader_unauthorized_contexts,
+        authorize_res, unauthorize_res = self.common_policy_auth(
+            self.project_admin_authorized_contexts,
             rule_name, self.controller.index, self.req, self.instance.uuid,
             fatal=False)
         for resp in authorize_res:
@@ -104,6 +86,23 @@ class ServerTopologyPolicyTest(base.BasePolicyTest):
         for resp in unauthorize_res:
             self.assertNotIn('host_node', resp['nodes'][0])
             self.assertNotIn('cpu_pinning', resp['nodes'][0])
+
+
+class ServerTopologyNoLegacyNoScopePolicyTest(ServerTopologyPolicyTest):
+    """Test Server Topology APIs policies with no legacy deprecated rules
+    and no scope checks.
+
+    """
+
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(ServerTopologyNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, legacy admin loose power.
+        self.project_admin_authorized_contexts = [self.project_admin_context]
+        self.project_reader_authorized_contexts = [
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context]
 
 
 class ServerTopologyScopeTypePolicyTest(ServerTopologyPolicyTest):
@@ -119,24 +118,17 @@ class ServerTopologyScopeTypePolicyTest(ServerTopologyPolicyTest):
     def setUp(self):
         super(ServerTopologyScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
-
-        # Check that system reader is able to get the server topology
-        # host information.
-        self.system_reader_authorized_contexts = [
-            self.system_admin_context, self.system_member_context,
-            self.system_reader_context]
-        # Check that non-system/reader is not able to get the server topology
-        # host information.
-        self.system_reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_foo_context,
+        # With Scope enable, system users no longer allowed.
+        self.project_admin_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context]
+        self.project_reader_authorized_contexts = [
+            self.legacy_admin_context,
             self.project_admin_context, self.project_member_context,
-            self.other_project_member_context,
-            self.project_foo_context, self.project_reader_context,
-            self.other_project_reader_context,
-        ]
+            self.project_reader_context, self.project_foo_context]
 
 
-class ServerTopologyNoLegacyPolicyTest(ServerTopologyScopeTypePolicyTest):
+class ServerTopologyScopeTypeNoLegacyPolicyTest(
+        ServerTopologyScopeTypePolicyTest):
     """Test Server Topology APIs policies with system scope enabled,
     and no more deprecated rules that allow the legacy admin API to
     access system APIs.
@@ -144,18 +136,11 @@ class ServerTopologyNoLegacyPolicyTest(ServerTopologyScopeTypePolicyTest):
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ServerTopologyNoLegacyPolicyTest, self).setUp()
-        # Check that system reader/owner is able to get
-        # the server topology.
-        self.system_reader_or_owner_authorized_contexts = [
-            self.system_admin_context,
+        super(ServerTopologyScopeTypeNoLegacyPolicyTest, self).setUp()
+        # With no legacy and scope enable, only project admin, member,
+        # and reader will be able to get server topology and only admin
+        # with host info.
+        self.project_admin_authorized_contexts = [self.project_admin_context]
+        self.project_reader_authorized_contexts = [
             self.project_admin_context, self.project_member_context,
-            self.system_member_context, self.system_reader_context,
             self.project_reader_context]
-        # Check that non-system/reader/owner is not able to get
-        # the server topology.
-        self.system_reader_or_owner_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_foo_context,
-            self.other_project_member_context, self.project_foo_context,
-            self.other_project_reader_context,
-        ]

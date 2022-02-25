@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-quota-sets:%s'
 quota_sets_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="Update the quotas",
         operations=[
             {
@@ -32,7 +32,7 @@ quota_sets_policies = [
                 'path': '/os-quota-sets/{tenant_id}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'defaults',
         check_str=base.RULE_ANY,
@@ -46,7 +46,13 @@ quota_sets_policies = [
         scope_types=['system', 'project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        # TODO(gmann): Until we have domain admin or so to get other project's
+        # data, allow admin role(with scope check it will be project admin) to
+        # get other project quota. We cannot use PROJECT_ADMIN here as
+        # project_id passed in request url is used as policy targets which
+        # would not match with context's project_id fetched for rule
+        # PROJECT_ADMIN check.
+        check_str='(' + base.PROJECT_READER + ') or role:admin',
         description="Show a quota",
         operations=[
             {
@@ -54,10 +60,10 @@ quota_sets_policies = [
                 'path': '/os-quota-sets/{tenant_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="Revert quotas to defaults",
         operations=[
             {
@@ -65,10 +71,13 @@ quota_sets_policies = [
                 'path': '/os-quota-sets/{tenant_id}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'detail',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        # TODO(gmann): Until we have domain admin or so to get other project's
+        # data, allow admin role(with scope check it will be project admin) to
+        # get other project quota.
+        check_str='(' + base.PROJECT_READER + ') or role:admin',
         description="Show the detail of quota",
         operations=[
             {
@@ -76,7 +85,7 @@ quota_sets_policies = [
                 'path': '/os-quota-sets/{tenant_id}/detail'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 

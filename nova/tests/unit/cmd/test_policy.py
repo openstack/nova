@@ -129,7 +129,7 @@ class TestPolicyCheck(test.NoDBTestCase):
 
     def test_filter_rules_non_admin(self):
         context = nova_context.RequestContext()
-        rule_conditions = [base_policies.PROJECT_READER_OR_SYSTEM_READER]
+        rule_conditions = [base_policies.PROJECT_READER]
         expected_rules = [r.name for r in ia_policies.list_rules() if
                           r.check_str in rule_conditions]
         self._check_filter_rules(context, expected_rules=expected_rules)
@@ -156,7 +156,7 @@ class TestPolicyCheck(test.NoDBTestCase):
         db_context = nova_context.RequestContext(user_id='fake-user',
                                                  project_id='fake-project')
         instance = fake_instance.fake_instance_obj(db_context)
-        rule_conditions = [base_policies.PROJECT_READER_OR_SYSTEM_READER]
+        rule_conditions = [base_policies.PROJECT_READER]
         expected_rules = [r.name for r in ia_policies.list_rules() if
                           r.check_str in rule_conditions]
         self._check_filter_rules(db_context, instance, expected_rules)

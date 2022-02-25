@@ -167,7 +167,7 @@ class ServerGroupController(wsgi.Controller):
             # new defaults completly then we can remove the above check.
             # Until then, let's keep the old behaviour.
             context.can(sg_policies.POLICY_ROOT % 'index:all_projects',
-                        target={})
+                        target={'project_id': project_id})
             sgs = objects.InstanceGroupList.get_all(context)
         else:
             sgs = objects.InstanceGroupList.get_by_project_id(

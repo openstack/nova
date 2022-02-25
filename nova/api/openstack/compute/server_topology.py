@@ -35,7 +35,8 @@ class ServerTopologyController(wsgi.Controller):
                     target={'project_id': instance.project_id})
 
         host_policy = (st_policies.BASE_POLICY_NAME % 'host:index')
-        show_host_info = context.can(host_policy, fatal=False)
+        show_host_info = context.can(host_policy,
+            target={'project_id': instance.project_id}, fatal=False)
 
         return self._get_numa_topology(context, instance, show_host_info)
 

@@ -506,6 +506,11 @@ class VolumeAttachmentController(wsgi.Controller):
         # different from the 'id' in the url path, or only swap is allowed by
         # the microversion, we should check the swap volume policy.
         # otherwise, check the volume update policy.
+        # NOTE(gmann) We pass empty target to policy enforcement. This API
+        # is called by cinder which does not have correct project_id where
+        # server belongs to. By passing the empty target, we make sure that
+        # we do not check the requester project_id and allow users with
+        # allowed role to perform the swap volume.
         if only_swap or id != volume_id:
             context.can(va_policies.POLICY_ROOT % 'swap', target={})
         else:

@@ -38,7 +38,7 @@ class NetworksPolicyTest(base.BasePolicyTest):
         # enforcement so will be passing context's project_id as target to
         # policy and always pass. If requester is not admin or owner
         # of networks then neutron will be returning the appropriate error.
-        self.reader_authorized_contexts = [
+        self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
@@ -47,23 +47,47 @@ class NetworksPolicyTest(base.BasePolicyTest):
             self.system_foo_context,
             self.other_project_member_context
         ]
-        self.reader_unauthorized_contexts = []
 
     @mock.patch('nova.network.neutron.API.get_all')
     def test_list_networks_policy(self, mock_get):
         rule_name = "os_compute_api:os-networks:list"
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.index,
-                                 self.req)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.controller.index,
+                                self.req)
 
     @mock.patch('nova.network.neutron.API.get')
     def test_show_network_policy(self, mock_get):
         rule_name = "os_compute_api:os-networks:show"
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.show,
-                                 self.req, uuids.fake_id)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.controller.show,
+                                self.req, uuids.fake_id)
+
+
+class NetworksNoLegacyNoScopePolicyTest(NetworksPolicyTest):
+    """Test Networks APIs policies with no legacy deprecated rules
+    and no scope checks.
+
+    """
+
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        policies.POLICY_ROOT % 'list':
+            base_policy.PROJECT_READER,
+        policies.POLICY_ROOT % 'show':
+            base_policy.PROJECT_READER}
+
+    def setUp(self):
+        super(NetworksNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy, project other roles like foo will not be able
+        # to get network.
+        self.project_reader_authorized_contexts = [
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context,
+            self.other_project_reader_context,
+            self.system_member_context, self.system_reader_context,
+            self.other_project_member_context
+        ]
 
 
 class NetworksScopeTypePolicyTest(NetworksPolicyTest):
@@ -80,30 +104,30 @@ class NetworksScopeTypePolicyTest(NetworksPolicyTest):
     def setUp(self):
         super(NetworksScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        self.project_reader_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context, self.other_project_reader_context,
+            self.other_project_member_context
+        ]
 
 
-class NetworksNoLegacyPolicyTest(NetworksScopeTypePolicyTest):
+class NetworksScopeTypeNoLegacyPolicyTest(NetworksScopeTypePolicyTest):
     """Test Networks APIs policies with system scope enabled,
     and no more deprecated rules.
     """
     without_deprecated_rules = True
     rules_without_deprecation = {
         policies.POLICY_ROOT % 'list':
-            base_policy.PROJECT_READER_OR_SYSTEM_READER,
+            base_policy.PROJECT_READER,
         policies.POLICY_ROOT % 'show':
-            base_policy.PROJECT_READER_OR_SYSTEM_READER}
+            base_policy.PROJECT_READER}
 
     def setUp(self):
-        super(NetworksNoLegacyPolicyTest, self).setUp()
-        self.reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context,
+        super(NetworksScopeTypeNoLegacyPolicyTest, self).setUp()
+        self.project_reader_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context,
             self.project_member_context, self.project_reader_context,
-            self.system_member_context, self.system_reader_context,
             self.other_project_member_context,
             self.other_project_reader_context,
-        ]
-        self.reader_unauthorized_contexts = [
-            self.project_foo_context,
-            self.system_foo_context
         ]

@@ -38,7 +38,7 @@ DEPRECATED_INSTANCE_ACTION_POLICY = policy.DeprecatedRule(
 instance_actions_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'events:details',
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="""Add "details" key in action events for a server.
 
 This check is performed only after the check
@@ -56,10 +56,10 @@ but in the other hand it might leak information about the deployment
                 'path': '/servers/{server_id}/os-instance-actions/{request_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'events',
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="""Add events details in action details for a server.
 This check is performed only after the check
 os_compute_api:os-instance-actions:show passes. Beginning with Microversion
@@ -73,10 +73,10 @@ passes, the name of the host.""",
                 'path': '/servers/{server_id}/os-instance-actions/{request_id}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'list',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="""List actions for a server.""",
         operations=[
             {
@@ -84,11 +84,11 @@ passes, the name of the host.""",
                 'path': '/servers/{server_id}/os-instance-actions'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_INSTANCE_ACTION_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="""Show action details for a server.""",
         operations=[
             {
@@ -96,7 +96,7 @@ passes, the name of the host.""",
                 'path': '/servers/{server_id}/os-instance-actions/{request_id}'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_INSTANCE_ACTION_POLICY),
 ]
 

@@ -32,20 +32,11 @@ server_groups_policies = [
                 'method': 'POST'
             }
         ],
-        # (NOTE)gmann: Reason for 'project' only scope:
-        # POST SG need project_id to create the serve groups
-        # system scope members do not have project id for which
-        # SG needs to be created.
-        # If we allow system scope role also then created SG will have
-        # project_id of system role, not the one he/she wants to create the SG
-        # for (nobody can create the SG for other projects because API does
-        # not take project id in request ). So keeping this scoped to project
-        # only as these roles are the only ones who will be creating SG.
         scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Delete a server group",
         operations=[
             {
@@ -53,11 +44,11 @@ server_groups_policies = [
                 'method': 'DELETE'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="List all server groups",
         operations=[
             {
@@ -65,11 +56,11 @@ server_groups_policies = [
                 'method': 'GET'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index:all_projects',
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="List all server groups for all projects",
         operations=[
             {
@@ -77,11 +68,11 @@ server_groups_policies = [
                 'method': 'GET'
             }
         ],
-        scope_types=['system']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER,
         description="Show details of a server group",
         operations=[
             {
@@ -89,7 +80,7 @@ server_groups_policies = [
                 'method': 'GET'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
 ]
 

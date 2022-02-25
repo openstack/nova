@@ -40,92 +40,89 @@ class ServerMetadataPolicyTest(base.BasePolicyTest):
                 id=1, uuid=uuids.fake_id, project_id=self.project_id)
         self.mock_get.return_value = self.instance
 
-        # Check that admin or and server owner is able to CRUD
-        # the server metadata.
-        self.admin_or_owner_authorized_contexts = [
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow server
+        # owner- having same project id and no role check) is able to create,
+        # update, and delete the server metadata.
+        self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context]
-        # Check that non-admin/owner is not able to CRUD
-        # the server metadata
-        self.admin_or_owner_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context
-        ]
-        # Check that admin or and server owner is able to get
-        # the server metadata.
-        self.reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.system_member_context, self.system_reader_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
-        # Check that non-admin/owner is not able to get
-        # the server metadata.
-        self.reader_unauthorized_contexts = [
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context
-        ]
+        # and they can get their own server metadata.
+        self.project_reader_authorized_contexts = (
+            self.project_member_authorized_contexts)
 
     @mock.patch('nova.compute.api.API.get_instance_metadata')
     def test_index_server_Metadata_policy(self, mock_get):
         rule_name = policies.POLICY_ROOT % 'index'
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.index,
-                                 self.req, self.instance.uuid)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name,
+                                self.controller.index,
+                                self.req, self.instance.uuid)
 
     @mock.patch('nova.compute.api.API.get_instance_metadata')
     def test_show_server_Metadata_policy(self, mock_get):
         rule_name = policies.POLICY_ROOT % 'show'
         mock_get.return_value = {'key9': 'value'}
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.show,
-                                 self.req, self.instance.uuid, 'key9')
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name,
+                                self.controller.show,
+                                self.req, self.instance.uuid, 'key9')
 
     @mock.patch('nova.compute.api.API.update_instance_metadata')
     def test_create_server_Metadata_policy(self, mock_quota):
         rule_name = policies.POLICY_ROOT % 'create'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.create,
-                                 self.req, self.instance.uuid,
-                                 body={"metadata": {"key9": "value9"}})
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name,
+                                self.controller.create,
+                                self.req, self.instance.uuid,
+                                body={"metadata": {"key9": "value9"}})
 
     @mock.patch('nova.compute.api.API.update_instance_metadata')
     def test_update_server_Metadata_policy(self, mock_quota):
         rule_name = policies.POLICY_ROOT % 'update'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.update,
-                                 self.req, self.instance.uuid, 'key9',
-                                 body={"meta": {"key9": "value9"}})
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name,
+                                self.controller.update,
+                                self.req, self.instance.uuid, 'key9',
+                                body={"meta": {"key9": "value9"}})
 
     @mock.patch('nova.compute.api.API.update_instance_metadata')
     def test_update_all_server_Metadata_policy(self, mock_quota):
         rule_name = policies.POLICY_ROOT % 'update_all'
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.update_all,
-                                 self.req, self.instance.uuid,
-                                 body={"metadata": {"key9": "value9"}})
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name,
+                                self.controller.update_all,
+                                self.req, self.instance.uuid,
+                                body={"metadata": {"key9": "value9"}})
 
     @mock.patch('nova.compute.api.API.get_instance_metadata')
     @mock.patch('nova.compute.api.API.delete_instance_metadata')
     def test_delete_server_Metadata_policy(self, mock_delete, mock_get):
         rule_name = policies.POLICY_ROOT % 'delete'
         mock_get.return_value = {'key9': 'value'}
-        self.common_policy_check(self.admin_or_owner_authorized_contexts,
-                                 self.admin_or_owner_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.delete,
-                                 self.req, self.instance.uuid, 'key9')
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name,
+                                self.controller.delete,
+                                self.req, self.instance.uuid, 'key9')
+
+
+class ServerMetadataNoLegacyNoScopePolicyTest(ServerMetadataPolicyTest):
+    """Test Server Metadata APIs policies with no legacy deprecated rules
+    and no scope checks which means new defaults only.
+
+    """
+
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(ServerMetadataNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, legacy admin loose power.
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
+        self.project_reader_authorized_contexts = [
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context]
 
 
 class ServerMetadataScopeTypePolicyTest(ServerMetadataPolicyTest):
@@ -141,9 +138,17 @@ class ServerMetadataScopeTypePolicyTest(ServerMetadataPolicyTest):
     def setUp(self):
         super(ServerMetadataScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # With Scope enable, system users no longer allowed.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
+        self.project_reader_authorized_contexts = (
+            self.project_member_authorized_contexts)
 
 
-class ServerMetadataNoLegacyPolicyTest(ServerMetadataScopeTypePolicyTest):
+class ServerMetadataScopeTypeNoLegacyPolicyTest(
+        ServerMetadataScopeTypePolicyTest):
     """Test Server Metadata APIs policies with system scope enabled,
     and no more deprecated rules that allow the legacy admin API to
     access system APIs.
@@ -151,32 +156,11 @@ class ServerMetadataNoLegacyPolicyTest(ServerMetadataScopeTypePolicyTest):
     without_deprecated_rules = True
 
     def setUp(self):
-        super(ServerMetadataNoLegacyPolicyTest, self).setUp()
-        # Check that system admin or project member is able to create, update
-        # and delete the server metadata.
-        self.admin_or_owner_authorized_contexts = [
-            self.system_admin_context, self.project_admin_context,
-            self.project_member_context]
-        # Check that non-system/admin/member is not able to create, update
-        # and delete the server metadata.
-        self.admin_or_owner_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_reader_context,
-            self.system_foo_context, self.system_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context
-        ]
-        # Check that system admin or project member is able to
-        # get the server metadata.
-        self.reader_authorized_contexts = [
-            self.system_admin_context,
-            self.system_member_context, self.system_reader_context,
+        super(ServerMetadataScopeTypeNoLegacyPolicyTest, self).setUp()
+        # With no legacy and scope enable, only project admin, member,
+        # and reader will be able to allowed operation on server metadata.
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
+        self.project_reader_authorized_contexts = [
             self.project_admin_context, self.project_member_context,
             self.project_reader_context]
-        # Check that non-system/admin/member is not able to
-        # get the server metadata.
-        self.reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_foo_context,
-            self.project_foo_context, self.other_project_member_context,
-            self.other_project_reader_context
-        ]

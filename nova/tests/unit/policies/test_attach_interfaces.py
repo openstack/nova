@@ -47,40 +47,25 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
                 vm_state=vm_states.ACTIVE,
                 task_state=None, launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
-        self.admin_authorized_contexts = [
+        # With legacy rule and no scope checks, all admin, project members
+        # project reader or other project role(because legacy rule allow server
+        # owner- having same project id and no role check) is able to attach,
+        # detach an interface from a server.
+        self.project_member_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.project_foo_context,
-            self.project_reader_context, self.project_member_context
-        ]
-
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
-
-        self.reader_authorized_contexts = [
-            self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context, self.system_member_context,
-            self.system_reader_context, self.project_reader_context,
-            self.project_member_context, self.project_foo_context
-        ]
-
-        self.reader_unauthorized_contexts = [
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
+        # and they can get their own server attached interfaces.
+        self.project_reader_authorized_contexts = (
+            self.project_member_authorized_contexts)
 
     @mock.patch('nova.compute.api.API.get')
     @mock.patch('nova.network.neutron.API.list_ports')
     def test_index_interfaces_policy(self, mock_port, mock_get):
         rule_name = "os_compute_api:os-attach-interfaces:list"
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name, self.controller.index,
-                                 self.req, uuids.fake_id)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name, self.controller.index,
+                                self.req, uuids.fake_id)
 
     @mock.patch('nova.compute.api.API.get')
     @mock.patch('nova.network.neutron.API.show_port')
@@ -97,11 +82,10 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
             "fixed_ips": ["10.0.2.2"],
             "device_id": server_id,
         }}
-        self.common_policy_check(self.reader_authorized_contexts,
-                                 self.reader_unauthorized_contexts,
-                                 rule_name,
-                                 self.controller.show,
-                                 self.req, server_id, port_id)
+        self.common_policy_auth(self.project_reader_authorized_contexts,
+                                rule_name,
+                                self.controller.show,
+                                self.req, server_id, port_id)
 
     @mock.patch('nova.compute.api.API.get')
     @mock.patch('nova.api.openstack.compute.attach_interfaces'
@@ -110,19 +94,44 @@ class AttachInterfacesPolicyTest(base.BasePolicyTest):
     def test_attach_interface(self, mock_interface, mock_port, mock_get):
         rule_name = "os_compute_api:os-attach-interfaces:create"
         body = {'interfaceAttachment': {'net_id': uuids.fake_id}}
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller.create,
-                                 self.req, uuids.fake_id, body=body)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller.create,
+                                self.req, uuids.fake_id, body=body)
 
     @mock.patch('nova.compute.api.API.get')
     @mock.patch('nova.compute.api.API.detach_interface')
     def test_delete_interface(self, mock_detach, mock_get):
         rule_name = "os_compute_api:os-attach-interfaces:delete"
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller.delete,
-                                 self.req, uuids.fake_id, uuids.fake_id)
+        self.common_policy_auth(self.project_member_authorized_contexts,
+                                rule_name, self.controller.delete,
+                                self.req, uuids.fake_id, uuids.fake_id)
+
+
+class AttachInterfacesNoLegacyNoScopePolicyTest(AttachInterfacesPolicyTest):
+    """Test Attach Interfaces APIs policies with no legacy deprecated rules
+    and no scope checks.
+
+    """
+
+    without_deprecated_rules = True
+    rules_without_deprecation = {
+        ai_policies.POLICY_ROOT % 'list':
+            base_policy.PROJECT_READER,
+        ai_policies.POLICY_ROOT % 'show':
+            base_policy.PROJECT_READER,
+        ai_policies.POLICY_ROOT % 'create':
+            base_policy.PROJECT_MEMBER,
+        ai_policies.POLICY_ROOT % 'delete':
+            base_policy.PROJECT_MEMBER}
+
+    def setUp(self):
+        super(AttachInterfacesNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule, legacy admin loose power.
+        self.project_member_authorized_contexts = [
+            self.project_admin_context, self.project_member_context]
+        self.project_reader_authorized_contexts = [
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context]
 
 
 class AttachInterfacesScopeTypePolicyTest(AttachInterfacesPolicyTest):
@@ -138,6 +147,13 @@ class AttachInterfacesScopeTypePolicyTest(AttachInterfacesPolicyTest):
     def setUp(self):
         super(AttachInterfacesScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # With Scope enable, system users no longer allowed.
+        self.project_member_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context, self.project_foo_context]
+        self.project_reader_authorized_contexts = (
+            self.project_member_authorized_contexts)
 
 
 class AttachInterfacesDeprecatedPolicyTest(base.BasePolicyTest):
@@ -192,55 +208,28 @@ class AttachInterfacesDeprecatedPolicyTest(base.BasePolicyTest):
             exc.format_message())
 
 
-class AttachInterfacesNoLegacyPolicyTest(AttachInterfacesPolicyTest):
+class AttachInterfacesScopeTypeNoLegacyPolicyTest(
+        AttachInterfacesScopeTypePolicyTest):
     """Test Attach Interfaces APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system_admin_or_owner APIs.
+    and no more deprecated rules.
     """
     without_deprecated_rules = True
     rules_without_deprecation = {
         ai_policies.POLICY_ROOT % 'list':
-            base_policy.PROJECT_READER_OR_SYSTEM_READER,
+            base_policy.PROJECT_READER,
         ai_policies.POLICY_ROOT % 'show':
-            base_policy.PROJECT_READER_OR_SYSTEM_READER,
+            base_policy.PROJECT_READER,
         ai_policies.POLICY_ROOT % 'create':
-            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+            base_policy.PROJECT_MEMBER,
         ai_policies.POLICY_ROOT % 'delete':
-            base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN}
+            base_policy.PROJECT_MEMBER}
 
     def setUp(self):
-        super(AttachInterfacesNoLegacyPolicyTest, self).setUp()
-        self.flags(enforce_scope=True, group="oslo_policy")
-
-        # Check that system or projct admin or owner is able to
-        # create or delete interfaces.
-        self.admin_authorized_contexts = [
-            self.system_admin_context,
+        super(AttachInterfacesScopeTypeNoLegacyPolicyTest, self).setUp()
+        # With no legacy and scope enable, only project admin, member,
+        # and reader will be able to allowed operation on server interface.
+        self.project_member_authorized_contexts = [
             self.project_admin_context, self.project_member_context]
-        # Check that non-system and non-admin/owner is not able to
-        # create or delete interfaces.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_reader_context,
-            self.project_foo_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
-
-        # Check that system reader or projct is able to
-        # create or delete interfaces.
-        self.reader_authorized_contexts = [
-            self.system_admin_context,
-            self.project_admin_context, self.system_member_context,
-            self.system_reader_context, self.project_reader_context,
-            self.project_member_context
-        ]
-
-        # Check that non-system reader nd non-admin/owner is not able to
-        # create or delete interfaces.
-        self.reader_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_foo_context,
-            self.system_foo_context, self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+        self.project_reader_authorized_contexts = [
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context]
