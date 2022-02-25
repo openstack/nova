@@ -7488,17 +7488,9 @@ class LibvirtDriver(driver.ComputeDriver):
                         pause=pause, power_on=power_on,
                         post_xml_callback=post_xml_callback)
         except eventlet.timeout.Timeout:
-            # We never heard from Neutron
-            LOG.warning(
-                'Timeout waiting for %(events)s for instance with '
-                'vm_state %(vm_state)s and task_state %(task_state)s',
-                {
-                    'events': events,
-                    'vm_state': instance.vm_state,
-                    'task_state': instance.task_state,
-                },
-                instance=instance)
-
+            # We did not receive all expected events from Neutron, a warning
+            # has already been logged by wait_for_instance_event, but we need
+            # to decide if the issue is fatal.
             if CONF.vif_plugging_is_fatal:
                 # NOTE(stephenfin): don't worry, guest will be in scope since
                 # we can only hit this branch if the VIF plug timed out

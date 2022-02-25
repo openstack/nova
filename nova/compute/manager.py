@@ -402,6 +402,79 @@ class ComputeVirtAPI(virtapi.VirtAPI):
     def _default_error_callback(self, event_name, instance):
         raise exception.NovaException(_('Instance event failed'))
 
+    class _InstanceEvent:
+        EXPECTED = "expected"
+        WAITING = "waiting"
+        RECEIVED = "received"
+        RECEIVED_EARLY = "received early"
+        TIMED_OUT = "timed out"
+        RECEIVED_NOT_PROCESSED = "received but not processed"
+
+        def __init__(self, name: str, event: eventlet.event.Event) -> None:
+            self.name = name
+            self.event = event
+            self.status = self.EXPECTED
+            self.wait_time = None
+
+        def mark_as_received_early(self) -> None:
+            self.status = self.RECEIVED_EARLY
+
+        def is_received_early(self) -> bool:
+            return self.status == self.RECEIVED_EARLY
+
+        def _update_status_no_wait(self):
+            if self.status == self.EXPECTED and self.event.ready():
+                self.status = self.RECEIVED_NOT_PROCESSED
+
+        def wait(self) -> 'objects.InstanceExternalEvent':
+            self.status = self.WAITING
+            try:
+                with timeutils.StopWatch() as sw:
+                    instance_event = self.event.wait()
+            except eventlet.timeout.Timeout:
+                self.status = self.TIMED_OUT
+                self.wait_time = sw.elapsed()
+
+                raise
+
+            self.status = self.RECEIVED
+            self.wait_time = sw.elapsed()
+            return instance_event
+
+        def __str__(self) -> str:
+            self._update_status_no_wait()
+            if self.status == self.EXPECTED:
+                return f"{self.name}: expected but not received"
+            if self.status == self.RECEIVED:
+                return (
+                    f"{self.name}: received after waiting "
+                    f"{self.wait_time:.2f} seconds")
+            if self.status == self.TIMED_OUT:
+                return (
+                    f"{self.name}: timed out after "
+                    f"{self.wait_time:.2f} seconds")
+            return f"{self.name}: {self.status}"
+
+    @staticmethod
+    def _wait_for_instance_events(
+        instance: 'objects.Instance',
+        events: dict,
+        error_callback: ty.Callable,
+    ) -> None:
+        for event_name, event in events.items():
+            if event.is_received_early():
+                continue
+            else:
+                actual_event = event.wait()
+                if actual_event.status == 'completed':
+                    continue
+            # If we get here, we have an event that was not completed,
+            # nor skipped via exit_wait_early(). Decide whether to
+            # keep waiting by calling the error_callback() hook.
+            decision = error_callback(event_name, instance)
+            if decision is False:
+                break
+
     @contextlib.contextmanager
     def wait_for_instance_event(self, instance, event_names, deadline=300,
                                 error_callback=None):
@@ -454,9 +527,10 @@ class ComputeVirtAPI(virtapi.VirtAPI):
             name, tag = event_name
             event_name = objects.InstanceExternalEvent.make_key(name, tag)
             try:
-                events[event_name] = (
+                event = (
                     self._compute.instance_events.prepare_for_instance_event(
                         instance, name, tag))
+                events[event_name] = self._InstanceEvent(event_name, event)
             except exception.NovaException:
                 error_callback(event_name, instance)
                 # NOTE(danms): Don't wait for any of the events. They
@@ -468,25 +542,35 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         except self._exit_early_exc as e:
             early_events = set([objects.InstanceExternalEvent.make_key(n, t)
                                 for n, t in e.events])
-        else:
-            early_events = set([])
+
+            # If there are expected events that received early, mark them,
+            # so they won't be waited for later
+            for early_event_name in early_events:
+                if early_event_name in events:
+                    events[early_event_name].mark_as_received_early()
 
         sw = timeutils.StopWatch()
         sw.start()
-        with eventlet.timeout.Timeout(deadline):
-            for event_name, event in events.items():
-                if event_name in early_events:
-                    continue
-                else:
-                    actual_event = event.wait()
-                    if actual_event.status == 'completed':
-                        continue
-                # If we get here, we have an event that was not completed,
-                # nor skipped via exit_wait_early(). Decide whether to
-                # keep waiting by calling the error_callback() hook.
-                decision = error_callback(event_name, instance)
-                if decision is False:
-                    break
+        try:
+            with eventlet.timeout.Timeout(deadline):
+                self._wait_for_instance_events(
+                    instance, events, error_callback)
+        except eventlet.timeout.Timeout:
+            LOG.warning(
+                'Timeout waiting for %(events)s for instance with '
+                'vm_state %(vm_state)s and task_state %(task_state)s. '
+                'Event states are: %(event_states)s',
+                {
+                    'events': list(events.keys()),
+                    'vm_state': instance.vm_state,
+                    'task_state': instance.task_state,
+                    'event_states':
+                        ', '.join([str(event) for event in events.values()]),
+                },
+                instance=instance)
+
+            raise
+
         LOG.debug('Instance event wait completed in %i seconds for %s',
                   sw.elapsed(),
                   ','.join(x[0] for x in event_names),
