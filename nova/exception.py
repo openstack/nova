@@ -1270,7 +1270,7 @@ class OnsetFileContentLimitExceeded(OnsetFileLimitExceeded):
 
 
 class KeypairLimitExceeded(OverQuota):
-    msg_fmt = _("Maximum number of key pairs exceeded")
+    msg_fmt = _("Quota exceeded, too many key pairs.")
 
 
 class SecurityGroupLimitExceeded(OverQuota):

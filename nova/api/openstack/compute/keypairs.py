@@ -26,7 +26,6 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute_api
 from nova import exception
-from nova.i18n import _
 from nova.objects import keypair as keypair_obj
 from nova.policies import keypairs as kp_policies
 
@@ -119,9 +118,8 @@ class KeypairController(wsgi.Controller):
                     context, user_id, name, key_type_value)
                 keypair['private_key'] = private_key
                 return_priv_key = True
-        except exception.KeypairLimitExceeded:
-            msg = _("Quota exceeded, too many key pairs.")
-            raise webob.exc.HTTPForbidden(explanation=msg)
+        except exception.KeypairLimitExceeded as e:
+            raise webob.exc.HTTPForbidden(explanation=str(e))
         except exception.InvalidKeypair as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
         except exception.KeyPairExists as exc:
