@@ -22,22 +22,11 @@ import os
 
 
 def _monkey_patch():
-    # See https://bugs.launchpad.net/nova/+bug/1164822
-    # TODO(mdbooth): This feature was deprecated and removed in eventlet at
-    # some point but brought back in version 0.21.0, presumably because some
-    # users still required it to work round issues. However, there have been a
-    # number of greendns fixes in eventlet since then. Specifically, it looks
-    # as though the originally reported IPv6 issue may have been fixed in
-    # version 0.24.0. We should remove this when we can confirm that the
-    # original issue is fixed.
-    # NOTE(artom) eventlet processes environment variables at import-time. We
-    # therefore set this here, before importing eventlet, in order to correctly
-    # disable greendns.
-    os.environ['EVENTLET_NO_GREENDNS'] = 'yes'
-
     # NOTE(mdbooth): Anything imported here will not be monkey patched. It is
     # important to take care not to import anything here which requires monkey
     # patching.
+    # NOTE(artom) eventlet processes environment variables at import-time.
+    # as such any eventlet configuration should happen here if needed.
     import eventlet
     import sys
 
