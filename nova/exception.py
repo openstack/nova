@@ -135,6 +135,10 @@ class GlanceConnectionFailed(NovaException):
         "%(reason)s")
 
 
+class KeystoneConnectionFailed(NovaException):
+    msg_fmt = _("Connection to keystone host failed: %(reason)s")
+
+
 class CinderConnectionFailed(NovaException):
     msg_fmt = _("Connection to cinder host failed: %(reason)s")
 
@@ -1279,6 +1283,14 @@ class SecurityGroupLimitExceeded(OverQuota):
 
 class PortLimitExceeded(OverQuota):
     msg_fmt = _("Maximum number of ports exceeded")
+
+
+class ServerGroupLimitExceeded(OverQuota):
+    msg_fmt = _("Quota exceeded, too many server groups.")
+
+
+class GroupMemberLimitExceeded(OverQuota):
+    msg_fmt = _("Quota exceeded, too many servers in group")
 
 
 class AggregateNotFound(NotFound):
