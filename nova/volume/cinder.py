@@ -924,3 +924,9 @@ class API(object):
                           {'id': attachment_id,
                            'msg': str(ex),
                            'code': getattr(ex, 'code', None)})
+
+    @translate_volume_exception
+    def reimage_volume(self, context, volume_id, image_id,
+                       reimage_reserved=False):
+        cinderclient(context, '3.68').volumes.reimage(
+            volume_id, image_id, reimage_reserved)
