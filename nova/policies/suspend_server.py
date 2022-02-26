@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-suspend-server:%s'
 suspend_server_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'resume',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Resume suspended server",
         operations=[
             {
@@ -32,10 +32,10 @@ suspend_server_policies = [
                 'path': '/servers/{server_id}/action (resume)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'suspend',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Suspend server",
         operations=[
             {
@@ -43,7 +43,7 @@ suspend_server_policies = [
                 'path': '/servers/{server_id}/action (suspend)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 

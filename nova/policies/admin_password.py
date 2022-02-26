@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-admin-password'
 admin_password_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Change the administrative password for a server",
         operations=[
             {
@@ -32,7 +32,7 @@ admin_password_policies = [
                 'method': 'POST'
             }
         ],
-        scope_types=['system', 'project'])
+        scope_types=['project'])
 ]
 
 

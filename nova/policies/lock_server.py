@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-lock-server:%s'
 lock_server_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'lock',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Lock a server",
         operations=[
             {
@@ -32,11 +32,11 @@ lock_server_policies = [
                 'method': 'POST'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'unlock',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Unlock a server",
         operations=[
             {
@@ -44,11 +44,11 @@ lock_server_policies = [
                 'method': 'POST'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'unlock:unlock_override',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="""Unlock a server, regardless who locked the server.
 
 This check is performed only after the check
@@ -59,7 +59,7 @@ os_compute_api:os-lock-server:unlock passes""",
                 'method': 'POST'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
 ]
 

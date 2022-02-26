@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-admin-actions:%s'
 admin_actions_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'reset_state',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="Reset the state of a given server",
         operations=[
             {
@@ -32,10 +32,10 @@ admin_actions_policies = [
                 'path': '/servers/{server_id}/action (os-resetState)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'inject_network_info',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.PROJECT_ADMIN,
         description="Inject network information into the server",
         operations=[
             {
@@ -43,7 +43,7 @@ admin_actions_policies = [
                 'path': '/servers/{server_id}/action (injectNetworkInfo)'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 

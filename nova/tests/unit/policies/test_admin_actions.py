@@ -40,40 +40,48 @@ class AdminActionsPolicyTest(base.BasePolicyTest):
         uuid = uuids.fake_id
         self.instance = fake_instance.fake_instance_obj(
                 self.project_member_context,
-                id=1, uuid=uuid, vm_state=vm_states.ACTIVE,
-                task_state=None, launched_at=timeutils.utcnow())
+                id=1, uuid=uuid, project_id=self.project_id,
+                vm_state=vm_states.ACTIVE, task_state=None,
+                launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
-        # Check that admin is able to change the service
-        self.admin_authorized_contexts = [
+        # By default, legacy rule are enable and scope check is disabled.
+        # system admin, legacy admin, and project admin is able to perform
+        # server admin actions
+        self.project_action_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
-        # Check that non-admin is not able to change the service
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
 
     @mock.patch('nova.objects.Instance.save')
     def test_reset_state_policy(self, mock_save):
         rule_name = "os_compute_api:os-admin-actions:reset_state"
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller._reset_state,
-                                 self.req, self.instance.uuid,
-                                 body={'os-resetState': {'state': 'active'}})
+        self.common_policy_auth(self.project_action_authorized_contexts,
+                                rule_name, self.controller._reset_state,
+                                self.req, self.instance.uuid,
+                                body={'os-resetState': {'state': 'active'}})
 
     def test_inject_network_info_policy(self):
         rule_name = "os_compute_api:os-admin-actions:inject_network_info"
         with mock.patch.object(self.controller.compute_api,
                                "inject_network_info"):
-            self.common_policy_check(self.admin_authorized_contexts,
-                                     self.admin_unauthorized_contexts,
-                                     rule_name,
-                                     self.controller._inject_network_info,
-                                     self.req, self.instance.uuid, body={})
+            self.common_policy_auth(self.project_action_authorized_contexts,
+                                    rule_name,
+                                    self.controller._inject_network_info,
+                                    self.req, self.instance.uuid, body={})
+
+
+class AdminActionsNoLegacyNoScopePolicyTest(AdminActionsPolicyTest):
+    """Test Admin Actions APIs policies with no legacy deprecated rules
+    and no scope checks which means new defaults only.
+
+    """
+
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(AdminActionsNoLegacyNoScopePolicyTest, self).setUp()
+        # With no legacy rule and scope diable, only project admin
+        # is able to perform server admin actions.
+        self.project_action_authorized_contexts = [self.project_admin_context]
 
 
 class AdminActionsScopeTypePolicyTest(AdminActionsPolicyTest):
@@ -90,27 +98,22 @@ class AdminActionsScopeTypePolicyTest(AdminActionsPolicyTest):
     def setUp(self):
         super(AdminActionsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # With scope enable, system admin will not be able to
+        # perform server admin actions.
+        self.project_action_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context]
 
 
-class AdminActionsNoLegacyPolicyTest(AdminActionsScopeTypePolicyTest):
+class AdminActionsScopeTypeNoLegacyPolicyTest(AdminActionsScopeTypePolicyTest):
     """Test Admin Actions APIs policies with system scope enabled,
-    and no more deprecated rules.
+    and no more deprecated rules which means scope + new defaults so
+    only project admin is able to perform admin action on their server.
     """
     without_deprecated_rules = True
 
     def setUp(self):
-        super(AdminActionsScopeTypePolicyTest, self).setUp()
-        # Check that system admin is able to perform the system level actions
-        # on server.
-        self.admin_authorized_contexts = [
-            self.system_admin_context]
-        # Check that non-system or non-admin is not able to perform the system
-        # level actions on server.
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
-            self.project_admin_context, self.project_member_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]
+        super(AdminActionsScopeTypeNoLegacyPolicyTest, self).setUp()
+        # This is how our RBAC will looks like. With no legacy rule
+        # and scope enable, only project admin is able to perform
+        # server admin actions.
+        self.project_action_authorized_contexts = [self.project_admin_context]

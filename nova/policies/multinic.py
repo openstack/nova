@@ -38,7 +38,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 multinic_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'add',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="""Add a fixed IP address to a server.
 
 This API is proxy calls to the Network service. This is
@@ -49,11 +49,11 @@ deprecated.""",
                 'path': '/servers/{server_id}/action (addFixedIp)'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'remove',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="""Remove a fixed IP address from a server.
 
 This API is proxy calls to the Network service. This is
@@ -64,7 +64,7 @@ deprecated.""",
                 'path': '/servers/{server_id}/action (removeFixedIp)'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
 ]
 
