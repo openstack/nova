@@ -1110,6 +1110,8 @@ def check_num_instances_quota(
     deltas = {'instances': max_count, 'cores': req_cores, 'ram': req_ram}
 
     try:
+        # NOTE(johngarbutt) when using unified limits, this is call
+        # is a no op, and as such, this function always returns max_count
         objects.Quotas.check_deltas(context, deltas,
                                     project_id, user_id=user_id,
                                     check_project_id=project_id,

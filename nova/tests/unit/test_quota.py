@@ -60,6 +60,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         super(QuotaIntegrationTestCase, self).setUp()
         self.flags(instances=2,
                    cores=4,
+                   ram=16384,
                    group='quota')
 
         self.user_id = 'admin'
@@ -114,10 +115,10 @@ class QuotaIntegrationTestCase(test.TestCase):
                 flavor=self.flavor, image_href=image_uuid)
         except exception.OverQuota as e:
             expected_kwargs = {'code': 413,
-                               'req': '1, 1',
-                               'used': '8, 2',
-                               'allowed': '4, 2',
-                               'overs': 'cores, instances'}
+                               'req': '1, 1, 2048',
+                               'used': '8, 2, 16384',
+                               'allowed': '4, 2, 16384',
+                               'overs': 'cores, instances, ram'}
             self.assertEqual(expected_kwargs, e.kwargs)
         else:
             self.fail('Expected OverQuota exception')
@@ -244,7 +245,18 @@ class QuotaIntegrationTestCase(test.TestCase):
 
 
 class UnifiedLimitsIntegrationTestCase(QuotaIntegrationTestCase):
-    """Test that API and DB resources enforce properly with unified limits."""
+    """Test that API and DB resources enforce properly with unified limits.
+
+    Note: coverage for instances, cores, ram, and disk is located under
+    nova/tests/functional/. We don't attempt to test it here as the
+    PlacementFixture is needed to provide resource usages and it is only
+    available in the functional tests environment.
+
+    Note that any test that will succeed in creating a server also needs to be
+    able to use the PlacementFixture as cores, ram, and disk quota are enforced
+    while booting a server. These tests are also located under
+    nova/tests/functional/.
+    """
 
     def setUp(self):
         super(UnifiedLimitsIntegrationTestCase, self).setUp()
@@ -255,23 +267,33 @@ class UnifiedLimitsIntegrationTestCase(QuotaIntegrationTestCase):
                      local_limit.INJECTED_FILES_PATH: 255,
                      local_limit.KEY_PAIRS: 100,
                      local_limit.SERVER_GROUPS: 10,
-                     local_limit.SERVER_GROUP_MEMBERS: 10}
+                     local_limit.SERVER_GROUP_MEMBERS: 10,
+                     'servers': 10,
+                     'class:VCPU': 20,
+                     'class:MEMORY_MB': 50 * 1024,
+                     'class:DISK_GB': 100}
         self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
 
     def test_too_many_instances(self):
-        # TODO(johngarbutt) needs updating once we enforce resource limits
         pass
 
     def test_too_many_cores(self):
-        # TODO(johngarbutt) needs updating once we enforce resource limits
+        pass
+
+    def test_no_injected_files(self):
+        pass
+
+    def test_max_injected_files(self):
+        pass
+
+    def test_max_injected_file_content_bytes(self):
+        pass
+
+    def test_max_injected_file_path_bytes(self):
         pass
 
     def test_with_server_group_members(self):
-        self.useFixture(limit_fixture.LimitFixture(
-            {local_limit.SERVER_GROUP_MEMBERS: 1}, {}))
-        exc = self._test_with_server_group_members()
-        msg = ("Resource %s is over limit" % local_limit.SERVER_GROUP_MEMBERS)
-        self.assertIn(msg, str(exc))
+        pass
 
 
 @enginefacade.transaction_context_provider

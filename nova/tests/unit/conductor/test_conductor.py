@@ -19,6 +19,7 @@ import copy
 
 import mock
 from oslo_db import exception as db_exc
+from oslo_limit import exception as limit_exceptions
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
@@ -44,6 +45,7 @@ from nova.db.api import models as api_models
 from nova.db.main import api as main_db_api
 from nova import exception as exc
 from nova.image import glance as image_api
+from nova.limit import placement as placement_limit
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
@@ -2261,6 +2263,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         rs.instance_group = None
         rs.retry = None
         rs.limits = None
+        rs.is_bfv = False
         rs.create()
         params['request_specs'] = [rs]
         params['image'] = {'fake_data': 'should_pass_silently'}
@@ -2866,6 +2869,74 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             test.MatchType(context.RequestContext), 'build_instances',
             instance.uuid, test.MatchType(dict), 'error',
             test.MatchType(exc.TooManyInstances))
+        request_spec_dict = mock_notify.call_args_list[0][0][3]
+        for key in ('instance_type', 'num_instances', 'instance_properties',
+                    'image'):
+            self.assertIn(key, request_spec_dict)
+
+    @mock.patch.object(placement_limit, 'enforce_num_instances_and_flavor')
+    @mock.patch('nova.compute.utils.notify_about_compute_task_error')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    def test_schedule_and_build_over_quota_during_recheck_ul(self, mock_select,
+                                                             mock_notify,
+                                                             mock_enforce):
+        self.flags(driver="nova.quota.UnifiedLimitsDriver",
+                   cores=1,
+                   group="quota")
+        mock_select.return_value = [[fake_selection1]]
+        # Simulate a race where the first check passes and the recheck fails.
+        # First check occurs in compute/api.
+        project_id = self.params['context'].project_id
+        mock_enforce.side_effect = limit_exceptions.ProjectOverLimit(
+            project_id, [limit_exceptions.OverLimitInfo('cores', 2, 3, 0)])
+
+        original_save = objects.Instance.save
+
+        def fake_save(inst, *args, **kwargs):
+            # Make sure the context is targeted to the cell that the instance
+            # was created in.
+            self.assertIsNotNone(
+                inst._context.db_connection, 'Context is not targeted')
+            original_save(inst, *args, **kwargs)
+
+        self.stub_out('nova.objects.Instance.save', fake_save)
+
+        # This is needed to register the compute node in a cell.
+        self.start_service('compute', host='host1')
+        self.assertRaises(
+            limit_exceptions.ProjectOverLimit,
+            self.conductor.schedule_and_build_instances, **self.params)
+
+        mock_enforce.assert_called_once_with(
+            self.params['context'], project_id, mock.ANY, False, 0, 0)
+
+        # Verify we set the instance to ERROR state and set the fault message.
+        instances = objects.InstanceList.get_all(self.ctxt)
+        self.assertEqual(1, len(instances))
+        instance = instances[0]
+        self.assertEqual(vm_states.ERROR, instance.vm_state)
+        self.assertIsNone(instance.task_state)
+        self.assertIn('ProjectOverLimit', instance.fault.message)
+        # Verify we removed the build objects.
+        build_requests = objects.BuildRequestList.get_all(self.ctxt)
+        # Verify that the instance is mapped to a cell
+        inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
+            self.ctxt, instance.uuid)
+        self.assertIsNotNone(inst_mapping.cell_mapping)
+
+        self.assertEqual(0, len(build_requests))
+
+        @api_db_api.context_manager.reader
+        def request_spec_get_all(context):
+            return context.session.query(api_models.RequestSpec).all()
+
+        request_specs = request_spec_get_all(self.ctxt)
+        self.assertEqual(0, len(request_specs))
+
+        mock_notify.assert_called_once_with(
+            test.MatchType(context.RequestContext), 'build_instances',
+            instance.uuid, test.MatchType(dict), 'error',
+            test.MatchType(limit_exceptions.ProjectOverLimit))
         request_spec_dict = mock_notify.call_args_list[0][0][3]
         for key in ('instance_type', 'num_instances', 'instance_properties',
                     'image'):
