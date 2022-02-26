@@ -78,8 +78,7 @@ class LimitsController(wsgi.Controller):
         project_id = context.project_id
         if 'tenant_id' in req.GET:
             project_id = req.GET.get('tenant_id')
-            context.can(limits_policies.OTHER_PROJECT_LIMIT_POLICY_NAME,
-                        target={'project_id': project_id})
+            context.can(limits_policies.OTHER_PROJECT_LIMIT_POLICY_NAME)
 
         quotas = QUOTAS.get_project_quotas(context, project_id,
                                            usages=True)

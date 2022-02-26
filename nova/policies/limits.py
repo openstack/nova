@@ -46,10 +46,10 @@ limits_policies = [
                 'path': '/limits'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=OTHER_PROJECT_LIMIT_POLICY_NAME,
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="""Show rate and absolute limits of other project.
 
 This policy only checks if the user has access to the requested
@@ -61,7 +61,7 @@ os_compute_api:limits passes""",
                 'path': '/limits'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
 ]
 

@@ -47,28 +47,19 @@ class MigrateServerPolicyTest(base.BasePolicyTest):
                 task_state=None, launched_at=timeutils.utcnow())
         self.mock_get.return_value = self.instance
 
-        # Check that admin is able to migrate the server.
-        self.admin_authorized_contexts = [
+        # With legacy rule, any admin is able to migrate
+        # the server.
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context
-        ]
-        # Check that non-admin is not able to migrate the server
-        self.admin_unauthorized_contexts = [
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+            self.project_admin_context]
 
     @mock.patch('nova.compute.api.API.resize')
     def test_migrate_server_policy(self, mock_resize):
         rule_name = ms_policies.POLICY_ROOT % 'migrate'
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller._migrate,
-                                 self.req, self.instance.uuid,
-                                 body={'migrate': None})
+        self.common_policy_auth(self.project_admin_authorized_contexts,
+                                rule_name, self.controller._migrate,
+                                self.req, self.instance.uuid,
+                                body={'migrate': None})
 
     @mock.patch('nova.compute.api.API.live_migrate')
     def test_migrate_live_server_policy(self, mock_live_migrate):
@@ -78,11 +69,23 @@ class MigrateServerPolicyTest(base.BasePolicyTest):
                  'block_migration': "False",
                  'disk_over_commit': "False"}
                }
-        self.common_policy_check(self.admin_authorized_contexts,
-                                 self.admin_unauthorized_contexts,
-                                 rule_name, self.controller._migrate_live,
-                                 self.req, self.instance.uuid,
-                                 body=body)
+        self.common_policy_auth(self.project_admin_authorized_contexts,
+                                rule_name, self.controller._migrate_live,
+                                self.req, self.instance.uuid,
+                                body=body)
+
+
+class MigrateServerNoLegacyNoScopeTest(MigrateServerPolicyTest):
+    """Test Server Migrations API policies with deprecated rules
+    disabled, but scope checking still disabled.
+    """
+
+    without_deprecated_rules = True
+
+    def setUp(self):
+        super(MigrateServerNoLegacyNoScopeTest, self).setUp()
+        self.project_admin_authorized_contexts = [
+            self.project_admin_context]
 
 
 class MigrateServerScopeTypePolicyTest(MigrateServerPolicyTest):
@@ -99,32 +102,27 @@ class MigrateServerScopeTypePolicyTest(MigrateServerPolicyTest):
     def setUp(self):
         super(MigrateServerScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+        # With scope enabled, system admin is not allowed.
+        self.project_admin_authorized_contexts = [
+            self.legacy_admin_context, self.project_admin_context]
 
 
-class MigrateServerNoLegacyPolicyTest(MigrateServerScopeTypePolicyTest):
+class MigrateServerScopeTypeNoLegacyPolicyTest(
+        MigrateServerScopeTypePolicyTest):
     """Test Migrate Server APIs policies with system scope enabled,
     and no more deprecated rules.
     """
     without_deprecated_rules = True
 
     def setUp(self):
-        super(MigrateServerNoLegacyPolicyTest, self).setUp()
-        # Check that system admin is able to migrate the server.
-        self.admin_authorized_contexts = [
-            self.system_admin_context
-        ]
-        # Check that non system admin is not able to migrate the server
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.system_member_context, self.system_reader_context,
-            self.system_foo_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-        ]
+        super(MigrateServerScopeTypeNoLegacyPolicyTest, self).setUp()
+        # with no legacy rule and scope enable., only project admin is able to
+        # migrate the server.
+        self.project_admin_authorized_contexts = [self.project_admin_context]
 
 
-class MigrateServerOverridePolicyTest(MigrateServerNoLegacyPolicyTest):
+class MigrateServerOverridePolicyTest(
+        MigrateServerScopeTypeNoLegacyPolicyTest):
     """Test Migrate Server APIs policies with system and project scoped
     but default to system roles only are allowed for project roles
     if override by operators. This test is with system scope enable
@@ -138,21 +136,11 @@ class MigrateServerOverridePolicyTest(MigrateServerNoLegacyPolicyTest):
         # NOTE(gmann): override the rule to project member and verify it
         # work as policy is system and projct scoped.
         self.policy.set_rules({
-            rule_migrate: base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
-            rule_live_migrate: base_policy.PROJECT_MEMBER_OR_SYSTEM_ADMIN},
+            rule_migrate: base_policy.PROJECT_MEMBER,
+            rule_live_migrate: base_policy.PROJECT_MEMBER},
             overwrite=False)
 
-        # Check that system admin or project scoped role as override above
+        # Check that project member role as override above
         # is able to migrate the server
-        self.admin_authorized_contexts = [
-            self.system_admin_context,
+        self.project_admin_authorized_contexts = [
             self.project_admin_context, self.project_member_context]
-        # Check that non-system admin or project role is not able to
-        # migrate the server
-        self.admin_unauthorized_contexts = [
-            self.legacy_admin_context, self.system_member_context,
-            self.system_reader_context, self.system_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context,
-            self.project_foo_context, self.project_reader_context
-        ]

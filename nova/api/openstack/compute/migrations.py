@@ -89,7 +89,7 @@ class MigrationsController(wsgi.Controller):
                sort_dirs=None, sort_keys=None, limit=None, marker=None,
                allow_changes_since=False, allow_changes_before=False):
         context = req.environ['nova.context']
-        context.can(migrations_policies.POLICY_ROOT % 'index', target={})
+        context.can(migrations_policies.POLICY_ROOT % 'index')
         search_opts = {}
         search_opts.update(req.GET)
         if 'changes-since' in search_opts:

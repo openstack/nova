@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-console-auth-tokens'
 console_auth_tokens_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.SYSTEM_READER,
+        check_str=base.PROJECT_ADMIN,
         description="Show console connection information for a given console "
         "authentication token",
         operations=[
@@ -33,7 +33,7 @@ console_auth_tokens_policies = [
                 'path': '/os-console-auth-tokens/{console_token}'
             }
         ],
-        scope_types=['system'])
+        scope_types=['project'])
 ]
 
 

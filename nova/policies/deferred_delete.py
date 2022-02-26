@@ -36,7 +36,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 deferred_delete_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'restore',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Restore a soft deleted server",
         operations=[
             {
@@ -44,11 +44,11 @@ deferred_delete_policies = [
                 'path': '/servers/{server_id}/action (restore)'
             },
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'force',
-        check_str=base.PROJECT_MEMBER_OR_SYSTEM_ADMIN,
+        check_str=base.PROJECT_MEMBER,
         description="Force delete a server before deferred cleanup",
         operations=[
             {
@@ -56,7 +56,7 @@ deferred_delete_policies = [
                 'path': '/servers/{server_id}/action (forceDelete)'
             }
         ],
-        scope_types=['system', 'project'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY)
 ]
 

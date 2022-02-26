@@ -25,8 +25,8 @@ POLICY_ROOT = 'os_compute_api:os-flavor-access:%s'
 # NOTE(gmann): Deprecating this policy explicitly as old defaults
 # admin or owner is not suitable for that which should be admin (Bug#1867840)
 # but changing that will break old deployment so let's keep supporting
-# the old default also and new default can be SYSTEM_READER
-# SYSTEM_READER rule in base class is defined with the deprecated rule of admin
+# the old default also and new default can be System Admin.
+# System Admin rule in base class is defined with the deprecated rule of admin
 # not admin or owner which is the main reason that we need to explicitly
 # deprecate this policy here.
 DEPRECATED_REASON = """
@@ -45,7 +45,7 @@ DEPRECATED_FLAVOR_ACCESS_POLICY = policy.DeprecatedRule(
 flavor_access_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'add_tenant_access',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN,
         description="Add flavor access to a tenant",
         operations=[
             {
@@ -56,7 +56,7 @@ flavor_access_policies = [
         scope_types=['system']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'remove_tenant_access',
-        check_str=base.SYSTEM_ADMIN,
+        check_str=base.ADMIN,
         description="Remove flavor access from a tenant",
         operations=[
             {
@@ -67,7 +67,7 @@ flavor_access_policies = [
         scope_types=['system']),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.SYSTEM_READER,
+        check_str=base.ADMIN,
         description="""List flavor access information
 
 Allows access to the full list of tenants that have access
