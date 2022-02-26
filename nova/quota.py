@@ -801,7 +801,10 @@ class UnifiedLimitsDriver(NoopQuotaDriver):
         :param resources: A dictionary of the registered resources.
         :param quota_class: Placeholder, we always assume default quota class.
         """
+        # NOTE(johngarbutt): ignoring quota_class, as ignored in noop driver
+        return self.get_defaults(context, resources)
 
+    def get_defaults(self, context, resources):
         local_limits = local_limit.get_legacy_default_limits()
         # TODO(melwitt): This is temporary when we are in a state where cores,
         # ram, and instances quota limits are not known/enforced with unified
