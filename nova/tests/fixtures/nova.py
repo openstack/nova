@@ -22,6 +22,7 @@ from contextlib import contextmanager
 import functools
 import logging as std_logging
 import os
+import time
 import warnings
 
 import eventlet
@@ -451,6 +452,13 @@ class CellDatabases(fixtures.Fixture):
         #     yield to do the actual work. We can do schedulable things
         #     here and not exclude other threads from making progress.
         #     If an exception is raised, we capture that and save it.
+        #     Note that it is possible that another thread has changed the
+        #     global state (step #2) after we released the writer lock but
+        #     before we acquired the reader lock. If this happens, we will
+        #     detect the global state change and retry step #2 a limited number
+        #     of times. If we happen to race repeatedly with another thread and
+        #     exceed our retry limit, we will give up and raise a RuntimeError,
+        #     which will fail the test.
         #  4. If we changed state in #2, we need to change it back. So we grab
         #     a writer lock again and do that.
         #  5. Finally, if an exception was raised in #3 while state was
@@ -469,29 +477,47 @@ class CellDatabases(fixtures.Fixture):
 
         raised_exc = None
 
-        with self._cell_lock.write_lock():
-            if cell_mapping is not None:
-                # This assumes the next local DB access is the same cell that
-                # was targeted last time.
-                self._last_ctxt_mgr = desired
+        def set_last_ctxt_mgr():
+            with self._cell_lock.write_lock():
+                if cell_mapping is not None:
+                    # This assumes the next local DB access is the same cell
+                    # that was targeted last time.
+                    self._last_ctxt_mgr = desired
 
-        with self._cell_lock.read_lock():
-            if self._last_ctxt_mgr != desired:
-                # NOTE(danms): This is unlikely to happen, but it's possible
-                # another waiting writer changed the state between us letting
-                # it go and re-acquiring as a reader. If lockutils supported
-                # upgrading and downgrading locks, this wouldn't be a problem.
-                # Regardless, assert that it is still as we left it here
-                # so we don't hit the wrong cell. If this becomes a problem,
-                # we just need to retry the write section above until we land
-                # here with the cell we want.
-                raise RuntimeError('Global DB state changed underneath us')
+        # Set last context manager to the desired cell's context manager.
+        set_last_ctxt_mgr()
 
+        # Retry setting the last context manager if we detect that a writer
+        # changed global DB state before we take the read lock.
+        for retry_time in range(0, 3):
             try:
-                with self._real_target_cell(context, cell_mapping) as ccontext:
-                    yield ccontext
-            except Exception as exc:
-                raised_exc = exc
+                with self._cell_lock.read_lock():
+                    if self._last_ctxt_mgr != desired:
+                        # NOTE(danms): This is unlikely to happen, but it's
+                        # possible another waiting writer changed the state
+                        # between us letting it go and re-acquiring as a
+                        # reader. If lockutils supported upgrading and
+                        # downgrading locks, this wouldn't be a problem.
+                        # Regardless, assert that it is still as we left it
+                        # here so we don't hit the wrong cell. If this becomes
+                        # a problem, we just need to retry the write section
+                        # above until we land here with the cell we want.
+                        raise RuntimeError(
+                            'Global DB state changed underneath us')
+                    try:
+                        with self._real_target_cell(
+                            context, cell_mapping
+                        ) as ccontext:
+                            yield ccontext
+                    except Exception as exc:
+                        raised_exc = exc
+                    # Leave the retry loop after calling target_cell
+                    break
+            except RuntimeError:
+                # Give other threads a chance to make progress, increasing the
+                # wait time between attempts.
+                time.sleep(retry_time)
+                set_last_ctxt_mgr()
 
         with self._cell_lock.write_lock():
             # Once we have returned from the context, we need
