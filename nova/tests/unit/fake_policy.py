@@ -44,6 +44,7 @@ policy_data = """
     "os_compute_api:servers:trigger_crash_dump": "",
     "os_compute_api:servers:show:host_status": "",
     "os_compute_api:servers:show": "",
+    "os_compute_api:servers:show:flavor-extra-specs" : "",
     "os_compute_api:servers:show:host_status:unknown-only": "",
     "os_compute_api:servers:allow_all_filters": "",
     "os_compute_api:servers:migrations:force_complete": "",

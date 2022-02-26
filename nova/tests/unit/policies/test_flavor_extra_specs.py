@@ -10,22 +10,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
 import mock
 from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.api.openstack.compute import flavor_manage
 from nova.api.openstack.compute import flavors
 from nova.api.openstack.compute import flavors_extraspecs
-from nova.api.openstack.compute import servers
-from nova.compute import vm_states
-from nova import objects
 from nova.policies import flavor_extra_specs as policies
 from nova.policies import flavor_manage as fm_policies
-from nova.policies import servers as s_policies
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_flavor
-from nova.tests.unit import fake_instance
 from nova.tests.unit.policies import base
 
 
@@ -42,30 +36,7 @@ class FlavorExtraSpecsPolicyTest(base.BasePolicyTest):
         self.controller = flavors_extraspecs.FlavorExtraSpecsController()
         self.flavor_ctrl = flavors.FlavorsController()
         self.fm_ctrl = flavor_manage.FlavorManageController()
-        self.server_ctrl = servers.ServersController()
         self.req = fakes.HTTPRequest.blank('')
-        self.server_ctrl._view_builder._add_security_grps = mock.MagicMock()
-        self.server_ctrl._view_builder._get_metadata = mock.MagicMock()
-        self.server_ctrl._view_builder._get_addresses = mock.MagicMock()
-        self.server_ctrl._view_builder._get_host_id = mock.MagicMock()
-        self.server_ctrl._view_builder._get_fault = mock.MagicMock()
-        self.server_ctrl._view_builder._add_host_status = mock.MagicMock()
-
-        self.instance = fake_instance.fake_instance_obj(
-                self.project_member_context,
-                id=1, uuid=uuids.fake_id, project_id=self.project_id,
-                vm_state=vm_states.ACTIVE)
-
-        self.mock_get = self.useFixture(
-            fixtures.MockPatch('nova.api.openstack.common.get_instance')).mock
-        self.mock_get.return_value = self.instance
-
-        fakes.stub_out_secgroup_api(
-            self, security_groups=[{'name': 'default'}])
-        self.mock_get_all = self.useFixture(fixtures.MockPatchObject(
-            self.server_ctrl.compute_api, 'get_all')).mock
-        self.mock_get_all.return_value = objects.InstanceList(
-            objects=[self.instance])
 
         def get_flavor_extra_specs(context, flavor_id):
             return fake_flavor.fake_flavor_obj(
@@ -86,8 +57,6 @@ class FlavorExtraSpecsPolicyTest(base.BasePolicyTest):
         # authorized in the case of things that distinguish between
         # scopes, since scope checking is disabled.
         self.all_system_authorized_contexts = (self.all_project_contexts |
-                                               self.all_system_contexts)
-        self.all_project_authorized_contexts = (self.all_project_contexts |
                                                self.all_system_contexts)
 
         # In the base/legacy case, any admin is an admin.
@@ -226,85 +195,6 @@ class FlavorExtraSpecsPolicyTest(base.BasePolicyTest):
         for resp in unauthorize_res:
             self.assertNotIn('extra_specs', resp['flavor'])
 
-    def test_server_detail_with_extra_specs_policy(self):
-        rule = s_policies.SERVERS % 'detail'
-        # server 'detail' policy is checked before flavor extra specs 'index'
-        # policy so we have to allow it for everyone otherwise it will fail
-        # first for unauthorized contexts.
-        self.policy.set_rules({rule: "@"}, overwrite=False)
-        req = fakes.HTTPRequest.blank('', version='2.47')
-        rule_name = policies.POLICY_ROOT % 'index'
-        authorize_res, unauthorize_res = self.common_policy_auth(
-            self.all_project_authorized_contexts,
-            rule_name, self.server_ctrl.detail, req,
-            fatal=False)
-        for resp in authorize_res:
-            self.assertIn('extra_specs', resp['servers'][0]['flavor'])
-        for resp in unauthorize_res:
-            self.assertNotIn('extra_specs', resp['servers'][0]['flavor'])
-
-    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
-    @mock.patch('nova.compute.api.API.get_instance_host_status')
-    def test_server_show_with_extra_specs_policy(self, mock_get, mock_block):
-        rule = s_policies.SERVERS % 'show'
-        # server 'show' policy is checked before flavor extra specs 'index'
-        # policy so we have to allow it for everyone otherwise it will fail
-        # first for unauthorized contexts.
-        self.policy.set_rules({rule: "@"}, overwrite=False)
-        req = fakes.HTTPRequest.blank('', version='2.47')
-        rule_name = policies.POLICY_ROOT % 'index'
-        authorize_res, unauthorize_res = self.common_policy_auth(
-            self.all_project_authorized_contexts,
-            rule_name, self.server_ctrl.show, req, 'fake',
-            fatal=False)
-        for resp in authorize_res:
-            self.assertIn('extra_specs', resp['server']['flavor'])
-        for resp in unauthorize_res:
-            self.assertNotIn('extra_specs', resp['server']['flavor'])
-
-    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
-    @mock.patch('nova.compute.api.API.get_instance_host_status')
-    @mock.patch('nova.compute.api.API.rebuild')
-    def test_server_rebuild_with_extra_specs_policy(self, mock_rebuild,
-        mock_get, mock_bdm):
-        rule = s_policies.SERVERS % 'rebuild'
-        # server 'rebuild' policy is checked before flavor extra specs 'index'
-        # policy so we have to allow it for everyone otherwise it will fail
-        # first for unauthorized contexts.
-        self.policy.set_rules({rule: "@"}, overwrite=False)
-        req = fakes.HTTPRequest.blank('', version='2.47')
-        rule_name = policies.POLICY_ROOT % 'index'
-        authorize_res, unauthorize_res = self.common_policy_auth(
-            self.all_project_authorized_contexts,
-            rule_name, self.server_ctrl._action_rebuild,
-            req, self.instance.uuid,
-            body={'rebuild': {"imageRef": uuids.fake_id}},
-            fatal=False)
-        for resp in authorize_res:
-            self.assertIn('extra_specs', resp.obj['server']['flavor'])
-        for resp in unauthorize_res:
-            self.assertNotIn('extra_specs', resp.obj['server']['flavor'])
-
-    @mock.patch('nova.compute.api.API.update_instance')
-    def test_server_update_with_extra_specs_policy(self, mock_update):
-        rule = s_policies.SERVERS % 'update'
-        # server 'update' policy is checked before flavor extra specs 'index'
-        # policy so we have to allow it for everyone otherwise it will fail
-        # first for unauthorized contexts.
-        self.policy.set_rules({rule: "@"}, overwrite=False)
-        req = fakes.HTTPRequest.blank('', version='2.47')
-        rule_name = policies.POLICY_ROOT % 'index'
-        authorize_res, unauthorize_res = self.common_policy_auth(
-            self.all_project_authorized_contexts,
-            rule_name, self.server_ctrl.update,
-            req, self.instance.uuid,
-            body={'server': {'name': 'test'}},
-            fatal=False)
-        for resp in authorize_res:
-            self.assertIn('extra_specs', resp['server']['flavor'])
-        for resp in unauthorize_res:
-            self.assertNotIn('extra_specs', resp['server']['flavor'])
-
 
 class FlavorExtraSpecsScopeTypePolicyTest(FlavorExtraSpecsPolicyTest):
     """Test Flavor Extra Specs APIs policies with system scope enabled.
@@ -326,17 +216,6 @@ class FlavorExtraSpecsScopeTypePolicyTest(FlavorExtraSpecsPolicyTest):
         # Only system_admin can do system admin things
         self.admin_authorized_contexts = [self.system_admin_context]
 
-        # Scope checking is in effect, so break apart project/system
-        # authorization. Note that even for the server tests above, we
-        # are technically authorizing against a server-embedded flavor
-        # (which has no project affiliation like the actual flavor it
-        # came from) and thus the other_project_* contexts are
-        # technically valid here. In reality, failure for
-        # other_project_* to get the server itself would prevent those
-        # projects from seeing the flavor extra_specs for it.
-        self.all_project_authorized_contexts = self.all_project_contexts
-        self.all_system_authorized_contexts = self.all_system_contexts
-
 
 class FlavorExtraSpecsNoLegacyNoScopeTest(FlavorExtraSpecsPolicyTest):
     """Test Flavor Extra Specs API policies with deprecated rules
@@ -355,15 +234,13 @@ class FlavorExtraSpecsNoLegacyNoScopeTest(FlavorExtraSpecsPolicyTest):
                 self.system_foo_context,
                 self.project_foo_context,
             ])
-        self.reduce_set('all_project_authorized', everything_but_foo)
         self.reduce_set('all_system_authorized', everything_but_foo)
         self.reduce_set('all_authorized', everything_but_foo)
 
 
 class FlavorExtraSpecsNoLegacyPolicyTest(FlavorExtraSpecsScopeTypePolicyTest):
     """Test Flavor Extra Specs APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system_admin_or_owner APIs.
+    and no more deprecated rules.
     """
     without_deprecated_rules = True
 
@@ -373,9 +250,6 @@ class FlavorExtraSpecsNoLegacyPolicyTest(FlavorExtraSpecsScopeTypePolicyTest):
         # access. Same note as above, regarding other_project_*
         # contexts. With scope checking enabled, project and system
         # contexts stay separate.
-        self.reduce_set(
-            'all_project_authorized',
-            self.all_project_contexts - set([self.project_foo_context]))
         self.reduce_set(
             'all_system_authorized',
             self.all_system_contexts - set([self.system_foo_context]))

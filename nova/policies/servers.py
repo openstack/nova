@@ -22,6 +22,17 @@ ZERO_DISK_FLAVOR = SERVERS % 'create:zero_disk_flavor'
 REQUESTED_DESTINATION = 'compute:servers:create:requested_destination'
 CROSS_CELL_RESIZE = 'compute:servers:resize:cross_cell'
 
+DEPRECATED_POLICY = policy.DeprecatedRule(
+    'os_compute_api:os-flavor-extra-specs:index',
+    base.RULE_ADMIN_OR_OWNER,
+)
+
+DEPRECATED_REASON = """
+Policies for showing flavor extra specs in server APIs response is
+seprated as new policy. This policy is deprecated only for that but
+not for list extra specs and showing it in flavor API response.
+"""
+
 rules = [
     policy.DocumentedRuleDefault(
         name=SERVERS % 'index',
@@ -95,6 +106,36 @@ rules = [
             }
         ],
         scope_types=['project']),
+    policy.DocumentedRuleDefault(
+        name=SERVERS % 'show:flavor-extra-specs',
+        check_str=base.PROJECT_READER,
+        description="Starting with microversion 2.47, the flavor and its "
+        "extra specs used for a server is also returned in the response "
+        "when showing server details, updating a server or rebuilding a "
+        "server.",
+        operations=[
+            # Microversion 2.47 operations for servers:
+            {
+                'path': '/servers/detail',
+                'method': 'GET'
+            },
+            {
+                'path': '/servers/{server_id}',
+                'method': 'GET'
+            },
+            {
+                'path': '/servers/{server_id}',
+                'method': 'PUT'
+            },
+            {
+                'path': '/servers/{server_id}/action (rebuild)',
+                'method': 'POST'
+            },
+        ],
+        scope_types=['project'],
+        deprecated_rule=DEPRECATED_POLICY,
+        deprecated_reason=DEPRECATED_REASON,
+        deprecated_since='25.0.0'),
     # the details in host_status are pretty sensitive, only admins
     # should do that by default.
     policy.DocumentedRuleDefault(

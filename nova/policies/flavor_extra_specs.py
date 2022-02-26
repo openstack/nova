@@ -17,14 +17,12 @@ from oslo_policy import policy
 
 from nova.policies import base
 
-
 POLICY_ROOT = 'os_compute_api:os-flavor-extra-specs:%s'
-
 
 flavor_extra_specs_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER_OR_SYSTEM_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="Show an extra spec for a flavor",
         operations=[
             {
@@ -75,33 +73,14 @@ flavor_extra_specs_policies = [
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="List extra specs for a flavor. Starting with "
-        "microversion 2.47, the flavor used for a server is also returned "
-        "in the response when showing server details, updating a server or "
-        "rebuilding a server. Starting with microversion 2.61, extra specs "
-        "may be returned in responses for the flavor resource.",
+        "microversion 2.61, extra specs may be returned in responses "
+        "for the flavor resource.",
         operations=[
             {
                 'path': '/flavors/{flavor_id}/os-extra_specs/',
                 'method': 'GET'
-            },
-            # Microversion 2.47 operations for servers:
-            {
-                'path': '/servers/detail',
-                'method': 'GET'
-            },
-            {
-                'path': '/servers/{server_id}',
-                'method': 'GET'
-            },
-            {
-                'path': '/servers/{server_id}',
-                'method': 'PUT'
-            },
-            {
-                'path': '/servers/{server_id}/action (rebuild)',
-                'method': 'POST'
             },
             # Microversion 2.61 operations for flavors:
             {

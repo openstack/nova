@@ -29,6 +29,7 @@ from nova.network import neutron
 from nova import objects
 from nova.objects import fields
 from nova.objects.instance_group import InstanceGroup
+from nova.policies import base as base_policy
 from nova.policies import extended_server_attributes as ea_policies
 from nova.policies import servers as policies
 from nova.tests.unit.api.openstack import fakes
@@ -323,6 +324,102 @@ class ServersPolicyTest(base.BasePolicyTest):
             rule_name,
             self.controller.show,
             self.req, self.instance.uuid)
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    def test_server_show_with_extra_specs_policy(self, mock_get, mock_block):
+        rule = policies.SERVERS % 'show'
+        # server 'show' policy is checked before flavor extra specs
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.47')
+        rule_name = policies.SERVERS % 'show:flavor-extra-specs'
+        authorize_res, unauthorize_res = self.common_policy_auth(
+            self.project_reader_authorized_contexts,
+            rule_name, self.controller.show, req,
+            self.instance.uuid, fatal=False)
+        for resp in authorize_res:
+            self.assertIn('extra_specs', resp['server']['flavor'])
+        for resp in unauthorize_res:
+            self.assertNotIn('extra_specs', resp['server']['flavor'])
+
+    @mock.patch('nova.compute.api.API.get_all')
+    def test_server_detail_with_extra_specs_policy(self, mock_get):
+
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None,
+                         cell_down_support=False, all_tenants=False):
+            self.assertIsNotNone(search_opts)
+            if 'project_id' in search_opts or 'user_id' in search_opts:
+                return objects.InstanceList(objects=self.servers)
+            else:
+                raise
+
+        self.mock_get_all.side_effect = fake_get_all
+        rule = policies.SERVERS % 'detail'
+        # server 'detail' policy is checked before flavor extra specs
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.47')
+        rule_name = policies.SERVERS % 'show:flavor-extra-specs'
+        authorize_res, unauthorize_res = self.common_policy_auth(
+            self.everyone_authorized_contexts,
+            rule_name, self.controller.detail, req,
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('extra_specs', resp['servers'][0]['flavor'])
+        for resp in unauthorize_res:
+            self.assertNotIn('extra_specs', resp['servers'][0]['flavor'])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.get_instance_host_status')
+    @mock.patch('nova.compute.api.API.rebuild')
+    def test_server_rebuild_with_extra_specs_policy(self, mock_rebuild,
+        mock_get, mock_bdm):
+        rule = policies.SERVERS % 'rebuild'
+        # server 'rebuild' policy is checked before flavor extra specs
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.47')
+        rule_name = policies.SERVERS % 'show:flavor-extra-specs'
+        authorize_res, unauthorize_res = self.common_policy_auth(
+            self.project_reader_authorized_contexts,
+            rule_name, self.controller._action_rebuild,
+            req, self.instance.uuid,
+            body={'rebuild': {"imageRef": uuids.fake_id}},
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('extra_specs', resp.obj['server']['flavor'])
+        for resp in unauthorize_res:
+            self.assertNotIn('extra_specs', resp.obj['server']['flavor'])
+
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid')
+    @mock.patch.object(InstanceGroup, 'get_by_instance_uuid')
+    @mock.patch('nova.compute.api.API.update_instance')
+    def test_server_update_with_extra_specs_policy(self,
+            mock_update, mock_group, mock_bdm):
+        mock_update.return_value = self.instance
+        rule = policies.SERVERS % 'update'
+        # server 'update' policy is checked before flavor extra specs
+        # policy so we have to allow it for everyone otherwise it will fail
+        # first for unauthorized contexts.
+        self.policy.set_rules({rule: "@"}, overwrite=False)
+        req = fakes.HTTPRequest.blank('', version='2.47')
+        rule_name = policies.SERVERS % 'show:flavor-extra-specs'
+        authorize_res, unauthorize_res = self.common_policy_auth(
+            self.project_reader_authorized_contexts,
+            rule_name, self.controller.update,
+            req, self.instance.uuid,
+            body={'server': {'name': 'test'}},
+            fatal=False)
+        for resp in authorize_res:
+            self.assertIn('extra_specs', resp['server']['flavor'])
+        for resp in unauthorize_res:
+            self.assertNotIn('extra_specs', resp['server']['flavor'])
 
     @mock.patch('nova.compute.api.API.create')
     def test_create_server_policy(self, mock_create):
@@ -1228,6 +1325,10 @@ class ServersNoLegacyNoScopeTest(ServersPolicyTest):
     checking still disabled.
     """
     without_deprecated_rules = True
+    rules_without_deprecation = {
+        policies.SERVERS % 'show:flavor-extra-specs':
+            base_policy.PROJECT_READER,
+    }
 
     def setUp(self):
         super(ServersNoLegacyNoScopeTest, self).setUp()
@@ -1335,10 +1436,13 @@ class ServersScopeTypePolicyTest(ServersPolicyTest):
 
 class ServersNoLegacyPolicyTest(ServersScopeTypePolicyTest):
     """Test Servers APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system_admin_or_owner APIs.
+    and no more deprecated rules.
     """
     without_deprecated_rules = True
+    rules_without_deprecation = {
+        policies.SERVERS % 'show:flavor-extra-specs':
+            base_policy.PROJECT_READER,
+    }
 
     def setUp(self):
         super(ServersNoLegacyPolicyTest, self).setUp()
