@@ -1223,6 +1223,17 @@ def _server_group_count_members_by_user_legacy(context, group, user_id):
     return {'user': {'server_group_members': count}}
 
 
+def is_qfd_populated(context):
+    global UID_QFD_POPULATED_CACHE_ALL
+    if not UID_QFD_POPULATED_CACHE_ALL:
+        LOG.debug('Checking whether user_id and queued_for_delete are '
+                  'populated for all projects')
+        UID_QFD_POPULATED_CACHE_ALL = _user_id_queued_for_delete_populated(
+            context)
+
+    return UID_QFD_POPULATED_CACHE_ALL
+
+
 def _server_group_count_members_by_user(context, group, user_id):
     """Get the count of server group members for a group by user.
 
@@ -1240,14 +1251,7 @@ def _server_group_count_members_by_user(context, group, user_id):
     # So, we check whether user_id/queued_for_delete is populated for all
     # records and cache the result to prevent unnecessary checking once the
     # data migration has been completed.
-    global UID_QFD_POPULATED_CACHE_ALL
-    if not UID_QFD_POPULATED_CACHE_ALL:
-        LOG.debug('Checking whether user_id and queued_for_delete are '
-                  'populated for all projects')
-        UID_QFD_POPULATED_CACHE_ALL = _user_id_queued_for_delete_populated(
-            context)
-
-    if UID_QFD_POPULATED_CACHE_ALL:
+    if is_qfd_populated(context):
         count = objects.InstanceMappingList.get_count_by_uuids_and_user(
             context, group.members, user_id)
         return {'user': {'server_group_members': count}}

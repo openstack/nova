@@ -384,6 +384,24 @@ before compute nodes have been able to update their service record. In an FFU,
 the service records in the database will be more than one version old until
 the compute nodes start up, but control services need to be online first.
 """),
+    cfg.BoolOpt('unified_limits_count_pcpu_as_vcpu',
+                default=False,
+                help="""
+When using unified limits, use VCPU + PCPU for VCPU quota usage.
+
+If the deployment is configured to use unified limits via
+``[quota]driver=nova.quota.UnifiedLimitsDriver``, by default VCPU resources are
+counted independently from PCPU resources, consistent with how they are
+represented in the placement service.
+
+Legacy quota behavior counts PCPU as VCPU and returns the sum of VCPU + PCPU
+usage as the usage count for VCPU. Operators relying on the aggregation of
+VCPU and PCPU resource usage counts should set this option to True.
+
+Related options:
+
+* :oslo.config:option:`quota.driver`
+"""),
 ]
 
 
