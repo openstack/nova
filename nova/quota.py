@@ -28,6 +28,7 @@ from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
 from nova.db.main import api as main_db_api
 from nova import exception
+from nova.limit import local as local_limit
 from nova import objects
 from nova.scheduler.client import report
 from nova import utils
@@ -791,6 +792,30 @@ class UnifiedLimitsDriver(NoopQuotaDriver):
     def get_reserved(self):
         # To make unified limits APIs the same as the DB driver, return 0
         return 0
+
+    def get_class_quotas(self, context, resources, quota_class):
+        """Given a list of resources, retrieve the quotas for the given
+        quota class.
+
+        :param context: The request context, for access checks.
+        :param resources: A dictionary of the registered resources.
+        :param quota_class: Placeholder, we always assume default quota class.
+        """
+
+        local_limits = local_limit.get_legacy_default_limits()
+        # TODO(melwitt): This is temporary when we are in a state where cores,
+        # ram, and instances quota limits are not known/enforced with unified
+        # limits yet. This will occur in later patches and when it does, we
+        # will change the default to 0 to signal to operators that they need to
+        # register a limit for a resource before that resource will be
+        # allocated.
+        # Default to unlimited, as per no-op for everything that isn't
+        # a local limit
+        quotas = {}
+        for resource in resources.values():
+            quotas[resource.name] = local_limits.get(resource.name, -1)
+
+        return quotas
 
 
 class BaseResource(object):

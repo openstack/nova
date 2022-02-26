@@ -22,6 +22,7 @@ from oslo_log import log as logging
 import nova.conf
 from nova import context as nova_context
 from nova import exception
+from nova.limit import utils as nova_limit_utils
 from nova import objects
 
 LOG = logging.getLogger(__name__)
@@ -119,7 +120,7 @@ def enforce_api_limit(entity_type: str, count: int) -> None:
     This is generally used for limiting the size of certain API requests
     that eventually get stored in the database.
     """
-    if CONF.quota.driver != UNIFIED_LIMITS_DRIVER:
+    if not nova_limit_utils.use_unified_limits():
         return
 
     if entity_type not in API_LIMITS:
@@ -163,7 +164,7 @@ def enforce_db_limit(
     * server_groups scope is context.project_id
     * server_group_members scope is server_group_uuid
     """
-    if CONF.quota.driver != UNIFIED_LIMITS_DRIVER:
+    if not nova_limit_utils.use_unified_limits():
         return
 
     if entity_type not in DB_COUNT_FUNCTION.keys():

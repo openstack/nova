@@ -24,6 +24,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from nova import context
 from nova import exception
 from nova.limit import local as local_limit
+from nova.limit import utils as limit_utils
 from nova import objects
 from nova import test
 
@@ -33,7 +34,7 @@ CONF = cfg.CONF
 class TestLocalLimits(test.NoDBTestCase):
     def setUp(self):
         super(TestLocalLimits, self).setUp()
-        self.flags(driver=local_limit.UNIFIED_LIMITS_DRIVER, group="quota")
+        self.flags(driver=limit_utils.UNIFIED_LIMITS_DRIVER, group="quota")
         self.context = context.RequestContext()
 
     def test_enforce_api_limit_metadata(self):
@@ -240,7 +241,7 @@ class GetLegacyLimitsTest(test.NoDBTestCase):
                        "server_group_members": 7}
         self.resources = list(local_limit.API_LIMITS | local_limit.DB_LIMITS)
         self.resources.sort()
-        self.flags(driver=local_limit.UNIFIED_LIMITS_DRIVER, group="quota")
+        self.flags(driver=limit_utils.UNIFIED_LIMITS_DRIVER, group="quota")
 
     def test_convert_keys_to_legacy_name(self):
         limits = local_limit._convert_keys_to_legacy_name(self.new)

@@ -20,6 +20,7 @@ from nova.api.openstack.compute.schemas import quota_classes
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
+from nova.limit import utils as limit_utils
 from nova import objects
 from nova.policies import quota_class_sets as qcs_policies
 from nova import quota
@@ -129,11 +130,20 @@ class QuotaClassSetsController(wsgi.Controller):
 
         quota_class = id
 
-        for key, value in body['quota_class_set'].items():
-            try:
-                objects.Quotas.update_class(context, quota_class, key, value)
-            except exception.QuotaClassNotFound:
-                objects.Quotas.create_class(context, quota_class, key, value)
+        quota_updates = body['quota_class_set'].items()
+        # TODO(johngarbutt) eventually cores, ram and instances changes will
+        # get sent to keystone when using unified limits, but only when the
+        # quota_class == "default".
+        if not limit_utils.use_unified_limits():
+            # When not unified limits, keep updating the database, even though
+            # the noop driver doesn't read these values
+            for key, value in quota_updates:
+                try:
+                    objects.Quotas.update_class(
+                        context, quota_class, key, value)
+                except exception.QuotaClassNotFound:
+                    objects.Quotas.create_class(
+                        context, quota_class, key, value)
 
         values = QUOTAS.get_class_quotas(context, quota_class)
         return self._format_quota_set(None, values, filtered_quotas,
