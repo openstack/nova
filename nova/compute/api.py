@@ -59,6 +59,7 @@ from nova import exception
 from nova import exception_wrapper
 from nova.i18n import _
 from nova.image import glance
+from nova.limit import local as local_limit
 from nova.network import constants
 from nova.network import model as network_model
 from nova.network import neutron
@@ -409,6 +410,10 @@ class API:
         try:
             objects.Quotas.limit_check(context,
                                        injected_files=len(injected_files))
+            local_limit.enforce_api_limit(local_limit.INJECTED_FILES,
+                                          len(injected_files))
+        except exception.OnsetFileLimitExceeded:
+            raise
         except exception.OverQuota:
             raise exception.OnsetFileLimitExceeded()
 
@@ -424,6 +429,16 @@ class API:
             objects.Quotas.limit_check(context,
                                        injected_file_path_bytes=max_path,
                                        injected_file_content_bytes=max_content)
+            # TODO(johngarbutt) we can simplify the except clause when
+            # the above legacy quota check is removed.
+            local_limit.enforce_api_limit(
+                local_limit.INJECTED_FILES_PATH, max_path)
+            local_limit.enforce_api_limit(
+                local_limit.INJECTED_FILES_CONTENT, max_content)
+        except exception.OnsetFilePathLimitExceeded:
+            raise
+        except exception.OnsetFileContentLimitExceeded:
+            raise
         except exception.OverQuota as exc:
             # Favor path limit over content limit for reporting
             # purposes
@@ -444,6 +459,10 @@ class API:
         num_metadata = len(metadata)
         try:
             objects.Quotas.limit_check(context, metadata_items=num_metadata)
+            local_limit.enforce_api_limit(
+                local_limit.SERVER_METADATA_ITEMS, num_metadata)
+        except exception.MetadataLimitExceeded:
+            raise
         except exception.OverQuota as exc:
             quota_metadata = exc.kwargs['quotas']['metadata_items']
             raise exception.MetadataLimitExceeded(allowed=quota_metadata)
@@ -1451,6 +1470,11 @@ class API:
                             objects.Quotas.check_deltas(
                                 context, {'server_group_members': 1},
                                 instance_group, context.user_id)
+                            local_limit.enforce_db_limit(
+                                context, local_limit.SERVER_GROUP_MEMBERS,
+                                entity_scope=instance_group.uuid, delta=1)
+                        except exception.GroupMemberLimitExceeded:
+                            raise
                         except exception.OverQuota:
                             msg = _("Quota exceeded, too many servers in "
                                     "group")
@@ -1469,6 +1493,19 @@ class API:
                             objects.Quotas.check_deltas(
                                 context, {'server_group_members': 0},
                                 instance_group, context.user_id)
+                            # TODO(johngarbutt): decide if we need this check
+                            # The quota rechecking of limits is really just to
+                            # protect against denial of service attacks that
+                            # aim to fill up the database. Its usefulness could
+                            # be debated.
+                            local_limit.enforce_db_limit(
+                                context, local_limit.SERVER_GROUP_MEMBERS,
+                                entity_scope=instance_group.uuid, delta=0)
+                        except exception.GroupMemberLimitExceeded:
+                            with excutils.save_and_reraise_exception():
+                                objects.InstanceGroup._remove_members_in_db(
+                                    context, instance_group.id,
+                                    [instance.uuid])
                         except exception.OverQuota:
                             objects.InstanceGroup._remove_members_in_db(
                                 context, instance_group.id, [instance.uuid])
@@ -6551,6 +6588,10 @@ class KeypairAPI:
                          '1 and 255 characters long'))
         try:
             objects.Quotas.check_deltas(context, {'key_pairs': 1}, user_id)
+            local_limit.enforce_db_limit(context, local_limit.KEY_PAIRS,
+                                         entity_scope=user_id, delta=1)
+        except exception.KeypairLimitExceeded:
+            raise
         except exception.OverQuota:
             raise exception.KeypairLimitExceeded()
 
@@ -6623,6 +6664,15 @@ class KeypairAPI:
         if CONF.quota.recheck_quota:
             try:
                 objects.Quotas.check_deltas(context, {'key_pairs': 0}, user_id)
+                # TODO(johngarbutt) do we really need this recheck?
+                # The quota rechecking of limits is really just to protect
+                # against denial of service attacks that aim to fill up the
+                # database. Its usefulness could be debated.
+                local_limit.enforce_db_limit(context, local_limit.KEY_PAIRS,
+                                             entity_scope=user_id, delta=0)
+            except exception.KeypairLimitExceeded:
+                with excutils.save_and_reraise_exception():
+                    keypair.destroy()
             except exception.OverQuota:
                 keypair.destroy()
                 raise exception.KeypairLimitExceeded()

@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 import mock
 
 from oslo_config import cfg
@@ -202,3 +204,53 @@ class TestLocalLimits(test.NoDBTestCase):
                           local_limit.enforce_db_limit,
                           self.context, local_limit.SERVER_GROUP_MEMBERS,
                           uuids.server_group, 11)
+
+    @mock.patch.object(objects.InstanceGroupList, "get_counts")
+    def test_get_in_use(self, mock_count):
+        mock_count.return_value = {'project': {'server_groups': 9}}
+        usages = local_limit.get_in_use(self.context, uuids.project_id)
+        expected_usages = {
+            'injected_file_content_bytes': 0,
+            'injected_file_path_bytes': 0,
+            'injected_files': 0,
+            'key_pairs': 0,
+            'metadata_items': 0,
+            'server_group_members': 0,
+            'server_groups': 9
+        }
+        self.assertEqual(expected_usages, usages)
+
+
+class GetLegacyLimitsTest(test.NoDBTestCase):
+    def setUp(self):
+        super(GetLegacyLimitsTest, self).setUp()
+        self.new = {"server_metadata_items": 1,
+                    "server_injected_files": 2,
+                    "server_injected_file_content_bytes": 3,
+                    "server_injected_file_path_bytes": 4,
+                    "server_key_pairs": 5,
+                    "server_groups": 6,
+                    "server_group_members": 7}
+        self.legacy = {"metadata_items": 1,
+                       "injected_files": 2,
+                       "injected_file_content_bytes": 3,
+                       "injected_file_path_bytes": 4,
+                       "key_pairs": 5,
+                       "server_groups": 6,
+                       "server_group_members": 7}
+        self.resources = list(local_limit.API_LIMITS | local_limit.DB_LIMITS)
+        self.resources.sort()
+        self.flags(driver=local_limit.UNIFIED_LIMITS_DRIVER, group="quota")
+
+    def test_convert_keys_to_legacy_name(self):
+        limits = local_limit._convert_keys_to_legacy_name(self.new)
+        self.assertEqual(self.legacy, limits)
+
+    def test_get_legacy_default_limits(self):
+        reglimits = copy.deepcopy(self.new)
+        reglimits.pop('server_key_pairs')
+        self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
+        limits = local_limit.get_legacy_default_limits()
+        expected = copy.deepcopy(self.legacy)
+        expected['key_pairs'] = 0
+        self.assertEqual(expected, limits)

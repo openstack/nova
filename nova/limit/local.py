@@ -45,6 +45,11 @@ API_LIMITS = set([
 KEY_PAIRS = "server_key_pairs"
 SERVER_GROUPS = "server_groups"
 SERVER_GROUP_MEMBERS = "server_group_members"
+DB_LIMITS = set([
+    KEY_PAIRS,
+    SERVER_GROUPS,
+    SERVER_GROUP_MEMBERS,
+])
 
 # Checks only happen when we are using the unified limits driver
 UNIFIED_LIMITS_DRIVER = "nova.quota.UnifiedLimitsDriver"
@@ -61,6 +66,42 @@ EXCEPTIONS = {
     SERVER_GROUPS: exception.ServerGroupLimitExceeded,
     SERVER_GROUP_MEMBERS: exception.GroupMemberLimitExceeded,
 }
+
+# Map new limit-based quota names to the legacy ones.
+LEGACY_LIMITS = {
+    SERVER_METADATA_ITEMS: "metadata_items",
+    INJECTED_FILES: "injected_files",
+    INJECTED_FILES_CONTENT: "injected_file_content_bytes",
+    INJECTED_FILES_PATH: "injected_file_path_bytes",
+    KEY_PAIRS: "key_pairs",
+    SERVER_GROUPS: SERVER_GROUPS,
+    SERVER_GROUP_MEMBERS: SERVER_GROUP_MEMBERS,
+}
+
+
+def get_in_use(context, project_id):
+    """Returns in use counts for each resource, for given project.
+
+    This sounds simple but many resources can't be counted per project,
+    so the only sensible value is 0. For example, key pairs are counted
+    per user, and server group members are counted per server group,
+    and metadata items are counted per server.
+    This behaviour is consistent with what is returned today by the
+    DB based quota driver.
+    """
+    count = _server_group_count(context, project_id)['server_groups']
+    usages = {
+        # DB limits
+        SERVER_GROUPS: count,
+        SERVER_GROUP_MEMBERS: 0,
+        KEY_PAIRS: 0,
+        # API limits
+        SERVER_METADATA_ITEMS: 0,
+        INJECTED_FILES: 0,
+        INJECTED_FILES_CONTENT: 0,
+        INJECTED_FILES_PATH: 0,
+    }
+    return _convert_keys_to_legacy_name(usages)
 
 
 def always_zero_usage(
@@ -148,6 +189,21 @@ def enforce_db_limit(
         # Copy the exception message to a OverQuota to propagate to the
         # API layer.
         raise EXCEPTIONS.get(entity_type, exception.OverQuota)(str(e))
+
+
+def _convert_keys_to_legacy_name(new_dict):
+    legacy = {}
+    for new_name, old_name in LEGACY_LIMITS.items():
+        # defensive incase oslo or keystone doesn't give us an answer
+        legacy[old_name] = new_dict.get(new_name) or 0
+    return legacy
+
+
+def get_legacy_default_limits():
+    # TODO(johngarbutt): need oslo.limit API for this, it should do caching
+    enforcer = limit.Enforcer(lambda: None)
+    new_limits = enforcer.get_registered_limits(LEGACY_LIMITS.keys())
+    return _convert_keys_to_legacy_name(dict(new_limits))
 
 
 def _keypair_count(context, user_id, *args):

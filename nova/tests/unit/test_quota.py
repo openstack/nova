@@ -17,12 +17,15 @@
 import ddt
 import mock
 from oslo_db.sqlalchemy import enginefacade
+from oslo_limit import fixture as limit_fixture
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova.compute import api as compute
 import nova.conf
 from nova import context
 from nova.db.main import models
 from nova import exception
+from nova.limit import local as local_limit
 from nova import objects
 from nova import quota
 from nova import test
@@ -97,7 +100,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         # _instances_cores_ram_count().
         inst_map = objects.InstanceMapping(
             self.context, instance_uuid=inst.uuid, project_id=inst.project_id,
-            cell_mapping=cell1)
+            user_id=inst.user_id, cell_mapping=cell1)
         inst_map.create()
         return inst
 
@@ -204,6 +207,71 @@ class QuotaIntegrationTestCase(test.TestCase):
         files = [(path, 'config = quotatest')]
         self.assertRaises(exception.OverQuota,
                           self._create_with_injected_files, files)
+
+    def _test_with_server_group_members(self):
+        # use a known image uuid to avoid ImageNotFound errors
+        image_uuid = nova_fixtures.GlanceFixture.image4['id']
+
+        instance_group = objects.InstanceGroup(self.context,
+                                               policy="anti-affinity")
+        instance_group.name = "foo"
+        instance_group.project_id = self.context.project_id
+        instance_group.user_id = self.context.user_id
+        instance_group.uuid = uuids.instance_group
+        instance_group.create()
+
+        self.addCleanup(instance_group.destroy)
+
+        self.compute_api.create(
+            self.context, flavor=self.flavor,
+            image_href=image_uuid,
+            scheduler_hints={'group': uuids.instance_group},
+            check_server_group_quota=True)
+
+        exc = self.assertRaises(exception.OverQuota, self.compute_api.create,
+                                self.context,
+                                flavor=self.flavor,
+                                image_href=image_uuid,
+                                scheduler_hints={
+                                    'group': uuids.instance_group},
+                                check_server_group_quota=True)
+        return exc
+
+    def test_with_server_group_members(self):
+        self.flags(server_group_members=1, group="quota")
+        exc = self._test_with_server_group_members()
+        self.assertEqual("Quota exceeded, too many servers in group", str(exc))
+
+
+class UnifiedLimitsIntegrationTestCase(QuotaIntegrationTestCase):
+    """Test that API and DB resources enforce properly with unified limits."""
+
+    def setUp(self):
+        super(UnifiedLimitsIntegrationTestCase, self).setUp()
+        self.flags(driver="nova.quota.UnifiedLimitsDriver", group="quota")
+        reglimits = {local_limit.SERVER_METADATA_ITEMS: 128,
+                     local_limit.INJECTED_FILES: 5,
+                     local_limit.INJECTED_FILES_CONTENT: 10 * 1024,
+                     local_limit.INJECTED_FILES_PATH: 255,
+                     local_limit.KEY_PAIRS: 100,
+                     local_limit.SERVER_GROUPS: 10,
+                     local_limit.SERVER_GROUP_MEMBERS: 10}
+        self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
+
+    def test_too_many_instances(self):
+        # TODO(johngarbutt) needs updating once we enforce resource limits
+        pass
+
+    def test_too_many_cores(self):
+        # TODO(johngarbutt) needs updating once we enforce resource limits
+        pass
+
+    def test_with_server_group_members(self):
+        self.useFixture(limit_fixture.LimitFixture(
+            {local_limit.SERVER_GROUP_MEMBERS: 1}, {}))
+        exc = self._test_with_server_group_members()
+        msg = ("Resource %s is over limit" % local_limit.SERVER_GROUP_MEMBERS)
+        self.assertIn(msg, str(exc))
 
 
 @enginefacade.transaction_context_provider

@@ -15,12 +15,15 @@
 
 import mock
 from oslo_config import cfg
+from oslo_limit import fixture as limit_fixture
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.compute import server_groups as sg_v21
 from nova import context
+from nova import exception
+from nova.limit import local as local_limit
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -116,14 +119,41 @@ class ServerGroupQuotasTestV21(test.TestCase):
                           self.controller.create,
                           self.req, body={'server_group': sgroup})
 
+    def _test_create_server_group_during_recheck(self, mock_method):
+        self._setup_quotas()
+        sgroup = server_group_template()
+        policies = ['anti-affinity']
+        sgroup['policies'] = policies
+        e = self.assertRaises(webob.exc.HTTPForbidden,
+                              self.controller.create,
+                              self.req, body={'server_group': sgroup})
+        self.assertEqual(2, mock_method.call_count)
+        return e
+
     @mock.patch('nova.objects.Quotas.check_deltas')
-    def test_create_server_group_recheck_disabled(self, mock_check):
+    def test_create_server_group_during_recheck(self, mock_check):
+        """Simulate a race where this request initially has enough quota to
+        progress partially through the create path but then fails the quota
+        recheck because a parallel request filled up the quota first.
+        """
+        # First quota check succeeds, second (recheck) fails.
+        mock_check.side_effect = [None,
+                                  exception.OverQuota(overs='server_groups')]
+        e = self._test_create_server_group_during_recheck(mock_check)
+        expected = 'Quota exceeded, too many server groups.'
+        self.assertEqual(expected, str(e))
+
+    def _test_create_server_group_recheck_disabled(self):
         self.flags(recheck_quota=False, group='quota')
         self._setup_quotas()
         sgroup = server_group_template()
         policies = ['anti-affinity']
         sgroup['policies'] = policies
         self.controller.create(self.req, body={'server_group': sgroup})
+
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_create_server_group_recheck_disabled(self, mock_check):
+        self._test_create_server_group_recheck_disabled()
         ctxt = self.req.environ['nova.context']
         mock_check.assert_called_once_with(ctxt, {'server_groups': 1},
                                            ctxt.project_id, ctxt.user_id)
@@ -170,3 +200,75 @@ class ServerGroupQuotasTestV21(test.TestCase):
         else:
             status_int = resp.status_int
         self.assertEqual(204, status_int)
+
+
+class ServerGroupQuotasUnifiedLimitsTestV21(ServerGroupQuotasTestV21):
+
+    def setUp(self):
+        super(ServerGroupQuotasUnifiedLimitsTestV21, self).setUp()
+        self.flags(driver='nova.quota.UnifiedLimitsDriver', group='quota')
+        self.req = fakes.HTTPRequest.blank('')
+        self.controller = sg_v21.ServerGroupController()
+        self.useFixture(limit_fixture.LimitFixture({'server_groups': 10}, {}))
+
+    @mock.patch('nova.limit.local.enforce_db_limit')
+    def test_create_server_group_during_recheck(self, mock_enforce):
+        """Simulate a race where this request initially has enough quota to
+        progress partially through the create path but then fails the quota
+        recheck because a parallel request filled up the quota first.
+        """
+        # First quota check succeeds, second (recheck) fails.
+        mock_enforce.side_effect = [
+            None,
+            exception.ServerGroupLimitExceeded(message='oslo.limit message')]
+        # Run the test using the unified limits enforce method.
+        e = self._test_create_server_group_during_recheck(mock_enforce)
+        expected = 'oslo.limit message'
+        self.assertEqual(expected, str(e))
+
+    @mock.patch('nova.limit.local.enforce_db_limit')
+    def test_create_server_group_recheck_disabled(self, mock_enforce):
+        # Run the test using the unified limits enforce method.
+        self._test_create_server_group_recheck_disabled()
+        ctxt = self.req.environ['nova.context']
+        mock_enforce.assert_called_once_with(ctxt, 'server_groups',
+                                             entity_scope=ctxt.project_id,
+                                             delta=1)
+
+    def test_create_group_fails_with_zero_quota(self):
+        self.useFixture(limit_fixture.LimitFixture({'server_groups': 0}, {}))
+        sgroup = {'name': 'test', 'policies': ['anti-affinity']}
+        exc = self.assertRaises(webob.exc.HTTPForbidden,
+                                self.controller.create,
+                                self.req, body={'server_group': sgroup})
+        msg = ("Resource %s is over limit" % local_limit.SERVER_GROUPS)
+        self.assertIn(msg, str(exc))
+
+    def test_create_only_one_group_when_limit_is_one(self):
+        self.useFixture(limit_fixture.LimitFixture({'server_groups': 1}, {}))
+        policies = ['anti-affinity']
+        sgroup = {'name': 'test', 'policies': policies}
+        res_dict = self.controller.create(
+            self.req, body={'server_group': sgroup})
+        self.assertEqual(res_dict['server_group']['name'], 'test')
+        self.assertTrue(uuidutils.is_uuid_like(res_dict['server_group']['id']))
+        self.assertEqual(res_dict['server_group']['policies'], policies)
+
+        # prove we can't create two, as limited to one
+        sgroup2 = {'name': 'test2', 'policies': policies}
+        exc = self.assertRaises(webob.exc.HTTPForbidden,
+                                self.controller.create,
+                                self.req, body={'server_group': sgroup2})
+        msg = ("Resource %s is over limit" % local_limit.SERVER_GROUPS)
+        self.assertIn(msg, str(exc))
+
+        # delete first one
+        self.controller.delete(self.req, res_dict['server_group']['id'])
+
+        # prove we can now create the second one
+        res_dict2 = self.controller.create(
+            self.req, body={'server_group': sgroup2})
+        self.assertEqual(res_dict2['server_group']['name'], 'test2')
+        self.assertTrue(
+            uuidutils.is_uuid_like(res_dict2['server_group']['id']))
+        self.assertEqual(res_dict2['server_group']['policies'], policies)
