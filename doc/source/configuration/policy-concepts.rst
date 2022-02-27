@@ -41,7 +41,7 @@ resources from project or system level resources. Please refer to
 :keystone-doc:`this document </admin/tokens-overview.html#authorization-scopes>`
 and `system scope specification <https://specs.openstack.org/openstack/keystone-specs/specs/keystone/queens/system-scope.html>`_ to understand the scope concept.
 
-In the Nova 21.0.0 (Ussuri) release, Nova policies implemented
+In the Nova 25.0.0 (Yoga) release, Nova policies implemented
 the scope concept and default roles provided by keystone (admin, member,
 and reader). Using common roles from keystone reduces the likelihood of
 similar, but different, roles implemented across projects or deployments
@@ -112,15 +112,15 @@ Policies with a ``scope_type`` of ``system and project`` means a user with a
 resource. All the system and project level operation's policies have defaulted
 to ``scope_type`` of ``['system', 'project']``.
 
-For example, consider the ``POST /servers/{server_id}/action (os-migrateLive)``
+For example, consider the ``GET /flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}``
 API.
 
 .. code::
 
-    # Live migrate a server to a new host without a reboot
-    # POST  /servers/{server_id}/action (os-migrateLive)
+    # Show an extra spec for a flavor
+    # GET /flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
     # Intended scope(s): system, project
-    #"os_compute_api:os-migrate-server:migrate_live": "rule:system_admin_api"
+    #"os_compute_api:os-flavor-extra-specs:show": "rule:project_reader_or_admin"
 
 These scope types provide a way to differentiate between system-level and
 project-level access roles. You can control the information with scope of the
@@ -212,11 +212,12 @@ Nova supported scope & Roles
 Nova supports the below combination of scopes and roles where roles can be
 overridden in the policy.yaml file but scope is not override-able.
 
-#. SYSTEM_ADMIN: ``admin`` role on ``system`` scope
+#. ADMIN: ``admin`` role on ``system`` scope. This is System Administrator to
+   perform the system level resource operations. Example: enable/disable compute
+   services.
 
-#. SYSTEM_READER: ``reader`` role on ``system`` scope
-
-#. PROJECT_ADMIN: ``admin`` role on ``project`` scope
+#. PROJECT_ADMIN: ``admin`` role on ``project`` scope. This is used to perform
+   admin level operation within project. For example: Live migrate server.
 
    .. note::
 
@@ -231,17 +232,18 @@ overridden in the policy.yaml file but scope is not override-able.
       via API. This limitation will be addressed in a future release.
 
 
-#. PROJECT_MEMBER: ``member`` role on ``project`` scope
+#. PROJECT_MEMBER: ``member`` role on ``project`` scope. This is used to perform
+   resource owner level operation within project. For example: Pause a server.
 
-#. PROJECT_READER: ``reader`` role on ``project`` scope
 
-#. PROJECT_MEMBER_OR_SYSTEM_ADMIN: ``admin`` role on ``system`` scope
-   or ``member`` role on ``project`` scope. Such policy rules are scoped
-   as both ``system`` as well as ``project``.
+#. PROJECT_READER: ``reader`` role on ``project`` scope. This is used to perform
+   read-only operation within project. For example: Get server.
 
-#. PROJECT_READER_OR_SYSTEM_READER: ``reader`` role on ``system`` scope
-   or ``project`` scope. Such policy rules are scoped as both ``system``
-   as well as ``project``.
+
+#. PROJECT_READER_OR_ADMIN: ``admin`` role on ``system`` scope
+   or ``reader`` role on ``project`` scope. Such policy rules are scoped
+   as both ``system`` as well as ``project``. Example: to allow system
+   admin and project reader to list flavor extra specs.
 
    .. note:: As of now, only ``system`` and ``project`` scopes are supported in Nova.
 
@@ -252,8 +254,9 @@ Backward compatibility with versions prior to 21.0.0 (Ussuri) is maintained by
 supporting the old defaults and disabling the ``scope_type`` feature by default.
 This means the old defaults and deployments that use them will keep working
 as-is. However, we encourage every deployment to switch to new policy.
-``scope_type`` will be enabled by default and the old defaults will be removed
-starting in the 23.0.0 (W) release.
+Scope checks are disabled by default and will be enabled by default starting
+Nova 26.0.0 (OpenStack Zed release) and the old defaults will be removed
+starting in the Nova 27.0.0 release.
 
 To implement the new default reader roles, some policies needed to become
 granular. They have been renamed, with the old names still supported for
@@ -323,9 +326,9 @@ Below table show how legacy rules are mapped to new rules:
 +====================+==================================+=================+===================+
 |                    |                                  | *Roles*         | *Scope*           |
 |                    +----------------------------------+-----------------+-------------------+
-|                    | SYSTEM_ADMIN                     | admin           | system            |
+|                    | ADMIN                            | admin           | system            |
 | Project Admin      +----------------------------------+-----------------+                   |
-| Role               | SYSTEM_READER                    | reader          |                   |
+| Role               | PROJECT_ADMIN                    | admin           | project           |
 |                    |                                  |                 |                   |
 +--------------------+----------------------------------+-----------------+-------------------+
 |                    | PROJECT_ADMIN                    | admin           | project           |
@@ -334,12 +337,10 @@ Below table show how legacy rules are mapped to new rules:
 |                    +----------------------------------+-----------------+                   |
 | Project admin or   | PROJECT_READER                   | reader          |                   |
 | owner role         +----------------------------------+-----------------+-------------------+
-|                    | PROJECT_MEMBER_OR_SYSTEM_ADMIN   | admin on system | system            |
-|                    |                                  | or member on    | OR                |
+|                    | PROJECT_READER_OR_ADMIN          | admin on system | system            |
+|                    |                                  | or reader on    | OR                |
 |                    |                                  | project         | project           |
-|                    +----------------------------------+-----------------+                   |
-|                    | PROJECT_READER_OR_SYSTEM_READER  | reader          |                   |
 +--------------------+----------------------------------+-----------------+-------------------+
 
-We expect all deployments to migrate to new policy by 23.0.0 release so that
+We expect all deployments to migrate to new policy by 27.0.0 release so that
 we can remove the support of old policies.

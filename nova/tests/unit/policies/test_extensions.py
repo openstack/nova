@@ -75,7 +75,6 @@ class ExtensionsScopeTypePolicyTest(ExtensionsPolicyTest):
 
 class ExtensionsNoLegacyPolicyTest(ExtensionsScopeTypePolicyTest):
     """Test Extensions APIs policies with system scope enabled,
-    and no more deprecated rules that allow the legacy admin API to
-    access system_admin_or_owner APIs.
+    and no more deprecated rules.
     """
     without_deprecated_rules = True

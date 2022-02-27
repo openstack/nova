@@ -1,0 +1,30 @@
+---
+features:
+  - |
+    The Nova policies have been modified to isolate the system and project
+    level APIs policy. This means system users will be allowed to perform
+    the operation on system level resources and will not to allowed any
+    operation on project level resources. Project Level APIs operation will be
+    performed by the project scoped users.
+    Currently, nova supports:
+
+    * ``system admin``
+    * ``project admin``
+    * ``project member``
+    * ``project reader``
+
+    For the details on what changed from the existing policy, please refer the
+    `RBAC new guidelines`_. We have implemented only phase-1
+    `RBAC new guidelines`_.
+    Currently, scope checks and new defaults are disabled by default. You can
+    enable them by switching the below config option in ``nova.conf`` file::
+
+      [oslo_policy]
+      enforce_new_defaults=True
+      enforce_scope=True
+
+    Please refer `Policy New Defaults`_ for detail about policy new defaults
+    and migration plan.
+
+    .. _RBAC new guidelines: https://governance.openstack.org/tc/goals/selected/consistent-and-secure-rbac.html#phase-1
+    .. _Policy New Defaults: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html

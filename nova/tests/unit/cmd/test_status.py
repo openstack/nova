@@ -401,7 +401,7 @@ class TestUpgradeCheckPolicy(test.NoDBTestCase):
     def setUp(self):
         super(TestUpgradeCheckPolicy, self).setUp()
         self.cmd = status.UpgradeCommands()
-        self.rule_name = "system_admin_api"
+        self.rule_name = "context_is_admin"
 
     def tearDown(self):
         super(TestUpgradeCheckPolicy, self).tearDown()
