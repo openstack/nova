@@ -467,6 +467,20 @@ class TestGlanceClientWrapperRetries(test.NoDBTestCase):
     @mock.patch('random.shuffle')
     @mock.patch('time.sleep')
     @mock.patch('nova.image.glance._glanceclient_from_endpoint')
+    def test_retry_works_for_corrupted_image(self, create_client_mock,
+                                         sleep_mock, shuffle_mock):
+        side_effect = [
+            IOError,
+            None
+        ]
+        self._mock_client_images_response(create_client_mock, side_effect)
+        self.flags(num_retries=1, group='glance')
+        client = glance.GlanceClientWrapper()
+        self.assert_retry_attempted(sleep_mock, client, 'https://host2:9293')
+
+    @mock.patch('random.shuffle')
+    @mock.patch('time.sleep')
+    @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_retry_works_with_generators(self, create_client_mock,
                                          sleep_mock, shuffle_mock):
         def some_generator(exception):
