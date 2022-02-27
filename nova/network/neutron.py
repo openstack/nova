@@ -1404,16 +1404,6 @@ class API:
             constants.RESOURCE_REQUEST_GROUPS, context, client,
         )
 
-    # TODO(stephenfin): This is optionally used by the XenAPI virt driver, but
-    # I can't find what defines it and suspect it's dead code. Consider
-    # removing the functionality
-    def has_qos_queue_extension(self, context=None, client=None):
-        """Check if the 'qos-queue' extension is enabled.
-
-        This extension is provided by a XenServer neutron plugin...we think.
-        """
-        return self._has_extension(constants.QOS_QUEUE, context, client)
-
     def has_vnic_index_extension(self, context=None, client=None):
         """Check if the 'vnic-index' extension is enabled.
 
@@ -1715,10 +1705,6 @@ class API:
         if neutron is None:
             neutron = get_client(context)
 
-        if self.has_qos_queue_extension(client=neutron):
-            flavor = instance.get_flavor()
-            rxtx_factor = flavor.get('rxtx_factor')
-            port_req_body['port']['rxtx_factor'] = rxtx_factor
         port_req_body['port'][constants.BINDING_HOST_ID] = bind_host_id
         self._populate_neutron_binding_profile(instance,
                                                pci_request_id,
