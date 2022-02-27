@@ -26,6 +26,7 @@ from nova import context
 from nova.db.main import models
 from nova import exception
 from nova.limit import local as local_limit
+from nova.limit import placement as placement_limit
 from nova import objects
 from nova import quota
 from nova import test
@@ -1990,101 +1991,109 @@ class UnifiedLimitsDriverTestCase(NoopQuotaDriverTestCase):
         self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
 
         self.expected_without_dict = {
-            'cores': -1,
+            'cores': 2,
             'fixed_ips': -1,
             'floating_ips': -1,
             'injected_file_content_bytes': 10240,
             'injected_file_path_bytes': 255,
             'injected_files': 5,
-            'instances': -1,
+            'instances': 1,
             'key_pairs': 100,
             'metadata_items': 128,
-            'ram': -1,
+            'ram': 0,
             'security_group_rules': -1,
             'security_groups': -1,
             'server_group_members': 10,
             'server_groups': 12,
         }
         self.expected_without_usages = {
-            'cores': {'limit': -1},
+            'cores': {'limit': 2},
             'fixed_ips': {'limit': -1},
             'floating_ips': {'limit': -1},
             'injected_file_content_bytes': {'limit': 10240},
             'injected_file_path_bytes': {'limit': 255},
             'injected_files': {'limit': 5},
-            'instances': {'limit': -1},
+            'instances': {'limit': 1},
             'key_pairs': {'limit': 100},
             'metadata_items': {'limit': 128},
-            'ram': {'limit': -1},
+            'ram': {'limit': 3},
             'security_group_rules': {'limit': -1},
             'security_groups': {'limit': -1},
             'server_group_members': {'limit': 10},
             'server_groups': {'limit': 12}
         }
         self.expected_with_usages = {
-            'cores': {'in_use': -1, 'limit': -1},
-            'fixed_ips': {'in_use': -1, 'limit': -1},
-            'floating_ips': {'in_use': -1, 'limit': -1},
+            'cores': {'in_use': 5, 'limit': 2},
+            'fixed_ips': {'in_use': 0, 'limit': -1},
+            'floating_ips': {'in_use': 0, 'limit': -1},
             'injected_file_content_bytes': {'in_use': 0, 'limit': 10240},
             'injected_file_path_bytes': {'in_use': 0, 'limit': 255},
             'injected_files': {'in_use': 0, 'limit': 5},
-            'instances': {'in_use': -1, 'limit': -1},
+            'instances': {'in_use': 4, 'limit': 1},
             'key_pairs': {'in_use': 0, 'limit': 100},
             'metadata_items': {'in_use': 0, 'limit': 128},
-            'ram': {'in_use': -1, 'limit': -1},
-            'security_group_rules': {'in_use': -1, 'limit': -1},
-            'security_groups': {'in_use': -1, 'limit': -1},
+            'ram': {'in_use': 6, 'limit': 3},
+            'security_group_rules': {'in_use': 0, 'limit': -1},
+            'security_groups': {'in_use': 0, 'limit': -1},
             'server_group_members': {'in_use': 0, 'limit': 10},
             'server_groups': {'in_use': 9, 'limit': 12}
         }
 
-    def test_get_class_quotas(self):
-        result = self.driver.get_class_quotas(
-            None, quota.QUOTAS._resources, 'default')
-        expected_limits = {
-            'cores': -1,
-            'fixed_ips': -1,
-            'floating_ips': -1,
-            'injected_file_content_bytes': 10240,
-            'injected_file_path_bytes': 255,
-            'injected_files': 5,
-            'instances': -1,
-            'key_pairs': 100,
-            'metadata_items': 128,
-            'ram': -1,
-            'security_group_rules': -1,
-            'security_groups': -1,
-            'server_group_members': 10,
-            'server_groups': 12,
-        }
-        self.assertEqual(expected_limits, result)
+    @mock.patch.object(placement_limit, "get_legacy_default_limits")
+    def test_get_defaults(self, mock_default):
+        # zero for ram simulates no registered limit for ram
+        mock_default.return_value = {"instances": 1, "cores": 2, "ram": 0}
+        result = self.driver.get_defaults(None, quota.QUOTAS._resources)
+        self.assertEqual(self.expected_without_dict, result)
+        mock_default.assert_called_once_with()
 
+    @mock.patch.object(placement_limit, "get_legacy_default_limits")
+    def test_get_class_quotas(self, mock_default):
+        mock_default.return_value = {"instances": 1, "cores": 2, "ram": 0}
+        result = self.driver.get_class_quotas(
+            None, quota.QUOTAS._resources, 'test_class')
+        self.assertEqual(self.expected_without_dict, result)
+        mock_default.assert_called_once_with()
+
+    @mock.patch.object(placement_limit, "get_legacy_counts")
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
     @mock.patch.object(objects.InstanceGroupList, "get_counts")
-    def test_get_project_quotas(self, mock_count):
+    def test_get_project_quotas(self, mock_count, mock_proj, mock_kcount):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
+        mock_kcount.return_value = {"instances": 4, "cores": 5, "ram": 6}
         mock_count.return_value = {'project': {'server_groups': 9}}
         result = self.driver.get_project_quotas(
             None, quota.QUOTAS._resources, 'test_project')
         self.assertEqual(self.expected_with_usages, result)
         mock_count.assert_called_once_with(None, "test_project")
 
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
     @mock.patch.object(objects.InstanceGroupList, "get_counts")
-    def test_get_project_quotas_no_usages(self, mock_count):
+    def test_get_project_quotas_no_usages(self, mock_count, mock_proj):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
         result = self.driver.get_project_quotas(
             None, quota.QUOTAS._resources, 'test_project', usages=False)
         self.assertEqual(self.expected_without_usages, result)
         # ensure usages not fetched when not required
         self.assertEqual(0, mock_count.call_count)
+        mock_proj.assert_called_once_with("test_project")
 
+    @mock.patch.object(placement_limit, "get_legacy_counts")
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
     @mock.patch.object(objects.InstanceGroupList, "get_counts")
-    def test_get_user_quotas(self, mock_count):
+    def test_get_user_quotas(self, mock_count, mock_proj, mock_kcount):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
+        mock_kcount.return_value = {"instances": 4, "cores": 5, "ram": 6}
         mock_count.return_value = {'project': {'server_groups': 9}}
         result = self.driver.get_user_quotas(
             None, quota.QUOTAS._resources, 'test_project', 'fake_user')
         self.assertEqual(self.expected_with_usages, result)
         mock_count.assert_called_once_with(None, "test_project")
 
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
     @mock.patch.object(objects.InstanceGroupList, "get_counts")
-    def test_get_user_quotas_no_usages(self, mock_count):
+    def test_get_user_quotas_no_usages(self, mock_count, mock_proj):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
         result = self.driver.get_user_quotas(
             None, quota.QUOTAS._resources, 'test_project', 'fake_user',
             usages=False)

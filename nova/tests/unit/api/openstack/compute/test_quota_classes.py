@@ -21,6 +21,7 @@ from nova.api.openstack.compute import quota_classes \
        as quota_classes_v21
 from nova import exception
 from nova.limit import local as local_limit
+from nova.limit import placement as placement_limit
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -279,20 +280,22 @@ class UnifiedLimitsQuotaClassesTest(NoopQuotaClassesTest):
                      local_limit.SERVER_GROUP_MEMBERS: 10}
         self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
 
-    def test_show_v21(self):
+    @mock.patch.object(placement_limit, "get_legacy_default_limits")
+    def test_show_v21(self, mock_default):
+        mock_default.return_value = {"instances": 1, "cores": 2, "ram": 3}
         req = fakes.HTTPRequest.blank("")
         response = self.controller.show(req, "test_class")
         expected_response = {
             'quota_class_set': {
                 'id': 'test_class',
-                'cores': -1,
+                'cores': 2,
                 'fixed_ips': -1,
                 'floating_ips': -1,
-                'ram': -1,
+                'ram': 3,
                 'injected_file_content_bytes': 10240,
                 'injected_file_path_bytes': 255,
                 'injected_files': 5,
-                'instances': -1,
+                'instances': 1,
                 'key_pairs': 100,
                 'metadata_items': 128,
                 'security_group_rules': -1,
@@ -301,15 +304,17 @@ class UnifiedLimitsQuotaClassesTest(NoopQuotaClassesTest):
         }
         self.assertEqual(expected_response, response)
 
-    def test_show_v257(self):
+    @mock.patch.object(placement_limit, "get_legacy_default_limits")
+    def test_show_v257(self, mock_default):
+        mock_default.return_value = {"instances": 1, "cores": 2, "ram": 3}
         req = fakes.HTTPRequest.blank("", version='2.57')
         response = self.controller.show(req, "default")
         expected_response = {
             'quota_class_set': {
                 'id': 'default',
-                'cores': -1,
-                'instances': -1,
-                'ram': -1,
+                'cores': 2,
+                'instances': 1,
+                'ram': 3,
                 'key_pairs': 100,
                 'metadata_items': 128,
                 'server_group_members': 10,
@@ -325,23 +330,25 @@ class UnifiedLimitsQuotaClassesTest(NoopQuotaClassesTest):
         self.assertRaises(exception.ValidationError, self.controller.update,
                           req, 'test_class', body=body)
 
+    @mock.patch.object(placement_limit, "get_legacy_default_limits")
     @mock.patch.object(objects.Quotas, "update_class")
-    def test_update_v21(self, mock_update):
+    def test_update_v21(self, mock_update, mock_default):
+        mock_default.return_value = {"instances": 1, "cores": 2, "ram": 3}
         req = fakes.HTTPRequest.blank("")
         body = {'quota_class_set': {'ram': 51200}}
         response = self.controller.update(req, 'default', body=body)
         expected_response = {
             'quota_class_set': {
-                'cores': -1,
+                'cores': 2,
                 'fixed_ips': -1,
                 'floating_ips': -1,
                 'injected_file_content_bytes': 10240,
                 'injected_file_path_bytes': 255,
                 'injected_files': 5,
-                'instances': -1,
+                'instances': 1,
                 'key_pairs': 100,
                 'metadata_items': 128,
-                'ram': -1,
+                'ram': 3,
                 'security_group_rules': -1,
                 'security_groups': -1
             }
@@ -350,16 +357,18 @@ class UnifiedLimitsQuotaClassesTest(NoopQuotaClassesTest):
         # TODO(johngarbutt) we should be proxying to keystone
         self.assertEqual(0, mock_update.call_count)
 
+    @mock.patch.object(placement_limit, "get_legacy_default_limits")
     @mock.patch.object(objects.Quotas, "update_class")
-    def test_update_v257(self, mock_update):
+    def test_update_v257(self, mock_update, mock_default):
+        mock_default.return_value = {"instances": 1, "cores": 2, "ram": 3}
         req = fakes.HTTPRequest.blank("", version='2.57')
         body = {'quota_class_set': {'ram': 51200}}
         response = self.controller.update(req, 'default', body=body)
         expected_response = {
             'quota_class_set': {
-                'cores': -1,
-                'instances': -1,
-                'ram': -1,
+                'cores': 2,
+                'instances': 1,
+                'ram': 3,
                 'key_pairs': 100,
                 'metadata_items': 128,
                 'server_group_members': 10,

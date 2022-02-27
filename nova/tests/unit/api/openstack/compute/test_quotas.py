@@ -23,6 +23,7 @@ from nova.api.openstack.compute import quota_sets as quotas_v21
 from nova.db import constants as db_const
 from nova import exception
 from nova.limit import local as local_limit
+from nova.limit import placement as placement_limit
 from nova import objects
 from nova import quota
 from nova import test
@@ -869,7 +870,8 @@ class NoopQuotaSetsTest(test.NoDBTestCase):
 
 class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
     quota_driver = "nova.quota.UnifiedLimitsDriver"
-    expected_detail = {'in_use': -1, 'limit': -1, 'reserved': 0}
+    # this matches what the db driver returns
+    expected_detail = {'in_use': 0, 'limit': -1, 'reserved': 0}
 
     def setUp(self):
         super(UnifiedLimitsQuotaSetsTest, self).setUp()
@@ -882,22 +884,24 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
                      local_limit.SERVER_GROUP_MEMBERS: 10}
         self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
 
-    def test_show_v21(self):
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
+    def test_show_v21(self, mock_proj):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
         req = fakes.HTTPRequest.blank("")
         response = self.controller.show(req, uuids.project_id)
         expected_response = {
             'quota_set': {
                 'id': uuids.project_id,
-                'cores': -1,
+                'cores': 2,
                 'fixed_ips': -1,
                 'floating_ips': -1,
                 'injected_file_content_bytes': 10240,
                 'injected_file_path_bytes': 255,
                 'injected_files': 5,
-                'instances': -1,
+                'instances': 1,
                 'key_pairs': 100,
                 'metadata_items': 128,
-                'ram': -1,
+                'ram': 3,
                 'security_group_rules': -1,
                 'security_groups': -1,
                 'server_group_members': 10,
@@ -906,30 +910,37 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
         }
         self.assertEqual(expected_response, response)
 
-    def test_show_v257(self):
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
+    def test_show_v257(self, mock_proj):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
         req = fakes.HTTPRequest.blank("", version='2.57')
         response = self.controller.show(req, uuids.project_id)
         expected_response = {
             'quota_set': {
                 'id': uuids.project_id,
-                'cores': -1,
-                'instances': -1,
+                'cores': 2,
+                'instances': 1,
                 'key_pairs': 100,
                 'metadata_items': 128,
-                'ram': -1,
+                'ram': 3,
                 'server_group_members': 10,
                 'server_groups': 12}}
         self.assertEqual(expected_response, response)
 
+    @mock.patch.object(placement_limit, "get_legacy_counts")
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
     @mock.patch.object(objects.InstanceGroupList, "get_counts")
-    def test_detail_v21(self, mock_count):
+    def test_detail_v21(self, mock_count, mock_proj, mock_kcount):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
+        mock_kcount.return_value = {"instances": 4, "cores": 5, "ram": 6}
         mock_count.return_value = {'project': {'server_groups': 9}}
         req = fakes.HTTPRequest.blank("")
         response = self.controller.detail(req, uuids.project_id)
         expected_response = {
             'quota_set': {
                 'id': uuids.project_id,
-                'cores': self.expected_detail,
+                'cores': {
+                    'in_use': 5, 'limit': 2, 'reserved': 0},
                 'fixed_ips': self.expected_detail,
                 'floating_ips': self.expected_detail,
                 'injected_file_content_bytes': {
@@ -938,12 +949,14 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
                     'in_use': 0, 'limit': 255, 'reserved': 0},
                 'injected_files': {
                     'in_use': 0, 'limit': 5, 'reserved': 0},
-                'instances': self.expected_detail,
+                'instances': {
+                    'in_use': 4, 'limit': 1, 'reserved': 0},
                 'key_pairs': {
                     'in_use': 0, 'limit': 100, 'reserved': 0},
                 'metadata_items': {
                     'in_use': 0, 'limit': 128, 'reserved': 0},
-                'ram': self.expected_detail,
+                'ram': {
+                    'in_use': 6, 'limit': 3, 'reserved': 0},
                 'security_group_rules': self.expected_detail,
                 'security_groups': self.expected_detail,
                 'server_group_members': {
@@ -954,15 +967,20 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
         }
         self.assertEqual(expected_response, response)
 
+    @mock.patch.object(placement_limit, "get_legacy_counts")
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
     @mock.patch.object(objects.InstanceGroupList, "get_counts")
-    def test_detail_v21_user(self, mock_count):
+    def test_detail_v21_user(self, mock_count, mock_proj, mock_kcount):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
+        mock_kcount.return_value = {"instances": 4, "cores": 5, "ram": 6}
         mock_count.return_value = {'project': {'server_groups': 9}}
         req = fakes.HTTPRequest.blank("?user_id=42")
         response = self.controller.detail(req, uuids.project_id)
         expected_response = {
             'quota_set': {
                 'id': uuids.project_id,
-                'cores': self.expected_detail,
+                'cores': {
+                    'in_use': 5, 'limit': 2, 'reserved': 0},
                 'fixed_ips': self.expected_detail,
                 'floating_ips': self.expected_detail,
                 'injected_file_content_bytes': {
@@ -971,12 +989,14 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
                     'in_use': 0, 'limit': 255, 'reserved': 0},
                 'injected_files': {
                     'in_use': 0, 'limit': 5, 'reserved': 0},
-                'instances': self.expected_detail,
+                'instances': {
+                    'in_use': 4, 'limit': 1, 'reserved': 0},
                 'key_pairs': {
                     'in_use': 0, 'limit': 100, 'reserved': 0},
                 'metadata_items': {
                     'in_use': 0, 'limit': 128, 'reserved': 0},
-                'ram': self.expected_detail,
+                'ram': {
+                    'in_use': 6, 'limit': 3, 'reserved': 0},
                 'security_group_rules': self.expected_detail,
                 'security_groups': self.expected_detail,
                 'server_group_members': {
@@ -987,24 +1007,26 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
         }
         self.assertEqual(expected_response, response)
 
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
     @mock.patch.object(objects.Quotas, "create_limit")
-    def test_update_v21(self, mock_create):
+    def test_update_v21(self, mock_create, mock_proj):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
         req = fakes.HTTPRequest.blank("")
         # TODO(johngarbutt) still need to implement get_settable_quotas
         body = {'quota_set': {'server_groups': 2}}
         response = self.controller.update(req, uuids.project_id, body=body)
         expected_response = {
             'quota_set': {
-                'cores': -1,
+                'cores': 2,
                 'fixed_ips': -1,
                 'floating_ips': -1,
                 'injected_file_content_bytes': 10240,
                 'injected_file_path_bytes': 255,
                 'injected_files': 5,
-                'instances': -1,
+                'instances': 1,
                 'key_pairs': 100,
                 'metadata_items': 128,
-                'ram': -1,
+                'ram': 3,
                 'security_group_rules': -1,
                 'security_groups': -1,
                 'server_group_members': 10,
@@ -1014,23 +1036,25 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
         self.assertEqual(expected_response, response)
         self.assertEqual(0, mock_create.call_count)
 
+    @mock.patch.object(placement_limit, "get_legacy_project_limits")
     @mock.patch.object(objects.Quotas, "create_limit")
-    def test_update_v21_user(self, mock_create):
+    def test_update_v21_user(self, mock_create, mock_proj):
+        mock_proj.return_value = {"instances": 1, "cores": 2, "ram": 3}
         req = fakes.HTTPRequest.blank("?user_id=42")
         body = {'quota_set': {'key_pairs': 52}}
         response = self.controller.update(req, uuids.project_id, body=body)
         expected_response = {
             'quota_set': {
-                'cores': -1,
+                'cores': 2,
                 'fixed_ips': -1,
                 'floating_ips': -1,
                 'injected_file_content_bytes': 10240,
                 'injected_file_path_bytes': 255,
                 'injected_files': 5,
-                'instances': -1,
+                'instances': 1,
                 'key_pairs': 100,
                 'metadata_items': 128,
-                'ram': -1,
+                'ram': 3,
                 'security_group_rules': -1,
                 'security_groups': -1,
                 'server_group_members': 10,
@@ -1040,22 +1064,24 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
         self.assertEqual(expected_response, response)
         self.assertEqual(0, mock_create.call_count)
 
-    def test_defaults_v21(self):
+    @mock.patch.object(placement_limit, "get_legacy_default_limits")
+    def test_defaults_v21(self, mock_default):
+        mock_default.return_value = {"instances": 1, "cores": 2, "ram": 3}
         req = fakes.HTTPRequest.blank("")
         response = self.controller.defaults(req, uuids.project_id)
         expected_response = {
             'quota_set': {
                 'id': uuids.project_id,
-                'cores': -1,
+                'cores': 2,
                 'fixed_ips': -1,
                 'floating_ips': -1,
                 'injected_file_content_bytes': 10240,
                 'injected_file_path_bytes': 255,
                 'injected_files': 5,
-                'instances': -1,
+                'instances': 1,
                 'key_pairs': 100,
                 'metadata_items': 128,
-                'ram': -1,
+                'ram': 3,
                 'security_group_rules': -1,
                 'security_groups': -1,
                 'server_group_members': 10,
@@ -1079,16 +1105,16 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
         expected_response = {
             'quota_set': {
                 'id': uuids.project_id,
-                'cores': -1,
+                'cores': 0,
                 'fixed_ips': -1,
                 'floating_ips': -1,
                 'injected_file_content_bytes': 4,
                 'injected_file_path_bytes': 5,
                 'injected_files': 6,
-                'instances': -1,
+                'instances': 0,
                 'key_pairs': 1,
                 'metadata_items': 7,
-                'ram': -1,
+                'ram': 0,
                 'security_group_rules': -1,
                 'security_groups': -1,
                 'server_group_members': 2,
