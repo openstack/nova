@@ -671,6 +671,8 @@
              - ^setup.cfg$
              - ^tools/.*$
              - ^tox.ini$
+        - grenade-skip-level:
+            irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
