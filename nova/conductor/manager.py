@@ -235,7 +235,7 @@ class ComputeTaskManager:
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.23')
+    target = messaging.Target(namespace='compute_task', version='1.24')
 
     def __init__(self):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
@@ -1344,7 +1344,7 @@ class ComputeTaskManager:
                 limits=limits,
                 request_spec=request_spec,
                 accel_uuids=accel_uuids,
-                reimage_boot_volume=False)
+                reimage_boot_volume=reimage_boot_volume)
 
     def _validate_image_traits_for_rebuild(self, context, instance, image_ref):
         """Validates that the traits specified in the image can be satisfied

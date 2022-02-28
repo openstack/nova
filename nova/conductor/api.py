@@ -144,7 +144,7 @@ class ComputeTaskAPI(object):
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate=False, on_shared_storage=False,
                          preserve_ephemeral=False, host=None,
-                         request_spec=None):
+                         request_spec=None, reimage_boot_volume=False):
         self.conductor_compute_rpcapi.rebuild_instance(context,
                 instance=instance,
                 new_pass=new_pass,
@@ -157,7 +157,8 @@ class ComputeTaskAPI(object):
                 on_shared_storage=on_shared_storage,
                 preserve_ephemeral=preserve_ephemeral,
                 host=host,
-                request_spec=request_spec)
+                request_spec=request_spec,
+                reimage_boot_volume=reimage_boot_volume)
 
     def cache_images(self, context, aggregate, image_ids):
         """Request images be pre-cached on hosts within an aggregate.
