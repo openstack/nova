@@ -421,6 +421,7 @@ class ComputeAPI(object):
         'victoria': '5.12',
         'wallaby': '6.0',
         'xena': '6.0',
+        'yoga': '6.0',
     }
 
     @property
