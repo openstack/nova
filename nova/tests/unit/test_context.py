@@ -196,7 +196,6 @@ class ContextTestCase(test.NoDBTestCase):
                            'roles': [],
                            'service_catalog': [],
                            'show_deleted': False,
-                           'tenant': 222,
                            'timestamp': '2015-03-02T22:31:56.641629',
                            'user': 111,
                            'user_domain': None,
