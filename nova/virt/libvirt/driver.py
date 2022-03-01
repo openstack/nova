@@ -3271,14 +3271,15 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.create_cow_image(src_back_path, disk_delta,
                                        src_disk_size)
 
-        quiesced = False
         try:
-            self._set_quiesced(context, instance, image_meta, True)
-            quiesced = True
+            self._can_quiesce(instance, image_meta)
         except exception.NovaException as err:
-            if self._requires_quiesce(image_meta):
+            if image_meta.properties.get('os_require_quiesce', False):
+                LOG.error('Quiescing instance failed but image property '
+                          '"os_require_quiesce" is set: %(reason)s.',
+                          {'reason': err}, instance=instance)
                 raise
-            LOG.info('Skipping quiescing instance: %(reason)s.',
+            LOG.info('Quiescing instance not available: %(reason)s.',
                      {'reason': err}, instance=instance)
 
         try:
@@ -3299,12 +3300,24 @@ class LibvirtDriver(driver.ComputeDriver):
             while not dev.is_job_complete():
                 time.sleep(0.5)
 
+        finally:
+            quiesced = False
+            try:
+                # NOTE: The freeze FS is applied after the end of
+                # the mirroring of the disk to minimize the time of
+                # the freeze. The mirror between both disks is finished,
+                # sync continuously, and stopped after abort_job().
+                self.quiesce(context, instance, image_meta)
+                quiesced = True
+            except exception.NovaException as err:
+                LOG.info('Skipping quiescing instance: %(reason)s.',
+                         {'reason': err}, instance=instance)
+
             dev.abort_job()
             nova.privsep.path.chown(disk_delta, uid=os.getuid())
-        finally:
             self._host.write_instance_config(xml)
             if quiesced:
-                self._set_quiesced(context, instance, image_meta, False)
+                self.unquiesce(context, instance, image_meta)
 
         # Convert the delta (CoW) image with a backing file to a flat
         # image with no backing file.

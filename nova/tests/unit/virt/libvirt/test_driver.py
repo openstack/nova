@@ -19985,9 +19985,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.patch('nova.virt.libvirt.utils.get_disk_backing_file'),
                 mock.patch('nova.virt.libvirt.utils.create_cow_image'),
                 mock.patch('nova.virt.libvirt.utils.extract_snapshot'),
-                mock.patch.object(drvr, '_set_quiesced')
+                mock.patch.object(drvr, '_set_quiesced'),
+                mock.patch.object(drvr, '_can_quiesce')
         ) as (mock_define, mock_size, mock_backing, mock_create_cow,
-              mock_snapshot, mock_quiesce):
+              mock_snapshot, mock_quiesce, mock_can_quiesce):
 
             xmldoc = "<domain/>"
             srcfile = "/first/path"
@@ -20002,7 +20003,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             guest = libvirt_guest.Guest(mock_dom)
 
             if not can_quiesce:
-                mock_quiesce.side_effect = (
+                mock_can_quiesce.side_effect = (
                     exception.InstanceQuiesceNotSupported(
                         instance_id=self.test_instance['id'], reason='test'))
 
@@ -20033,6 +20034,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_define.assert_called_once_with(xmldoc)
             mock_quiesce.assert_any_call(mock.ANY, self.test_instance,
                                          mock.ANY, True)
+
             if can_quiesce:
                 mock_quiesce.assert_any_call(mock.ANY, self.test_instance,
                                              mock.ANY, False)
