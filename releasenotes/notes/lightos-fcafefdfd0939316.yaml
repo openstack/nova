@@ -1,0 +1,8 @@
+---
+features:
+  - |
+   Nova now support integration with the Lightbits Labs
+   (http://www.lightbitslabs.com) LightOS storage solution.
+   LightOS is a software-defined, cloud native,
+   high-performance, clustered scale-out and redundant NVMe/TCP storage
+   that performs like local NVMe flash.
