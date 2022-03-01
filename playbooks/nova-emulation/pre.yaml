@@ -1,0 +1,35 @@
+- hosts: controller
+  tasks:
+    - name: create local.sh
+      become: yes
+      blockinfile:
+        path: /opt/stack/devstack/local.sh
+        create: True
+        mode: 0777
+        block: |
+          #!/bin/bash
+          sudo apt update
+          sudo apt install -yy qemu-system qemu-efi-aarch64 qemu-efi-arm
+          # This changes the default image metadata to enable emulation
+          source /opt/stack/devstack/openrc admin
+
+          image_id=$(openstack image list -f value -c ID | awk 'NR==1{print $1}')
+
+          echo "Setting required image metadata properties"
+          openstack image set --property hw_emulation_architecture=aarch64 ${image_id}
+          openstack image set --property hw_firmware_type=uefi ${image_id}
+          openstack image set --property hw_machine_type=virt ${image_id}
+
+          meta_props=$(openstack image show ${image_id} | grep properties | sed 's/,\||/\n/g' | grep hw_)
+
+          for prop in ${meta_props};
+          do
+              if [ -z "${prop}" ]
+              then
+                  echo "Image Properties not set"
+                  exit 5
+              else
+                  echo ${prop}
+              fi
+          done
+
