@@ -170,6 +170,9 @@ Milestone 3
 
 * For nova, set the launchpad milestone release as “released” with the date
 
+* Write the `cycle highlights
+  <https://docs.openstack.org/project-team-guide/release-management.html#cycle-highlights>`__
+
 Week following milestone 3
 --------------------------
 
