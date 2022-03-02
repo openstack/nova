@@ -568,15 +568,21 @@ class Flat(Image):
         def copy_raw_image(base, target, size):
             libvirt_utils.copy_image(base, target)
             if size:
-                image = imgmodel.LocalFileImage(target,
-                                                self.driver_format)
-                disk.extend(image, size)
+                self.resize_image(size)
 
         generating = 'image_id' not in kwargs
         if generating:
             if not self.exists():
                 # Generating image in place
                 prepare_template(target=self.path, *args, **kwargs)
+
+            # NOTE(plibeau): extend the disk in the case of image is not
+            # accessible anymore by the customer and the base image is
+            # available on source compute during the resize of the
+            # instance.
+            else:
+                if size:
+                    self.resize_image(size)
         else:
             if not os.path.exists(base):
                 prepare_template(target=base, *args, **kwargs)
