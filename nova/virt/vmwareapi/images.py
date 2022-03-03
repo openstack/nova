@@ -393,7 +393,7 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
 
     LOG.info("Downloaded image file data %(image_ref)s",
              {'image_ref': instance.image_ref}, instance=instance)
-    vmdk = vm_util.get_vmdk_info(session, imported_vm_ref, vm_name)
+    vmdk = vm_util.get_vmdk_info(session, imported_vm_ref)
     vm_util.mark_vm_as_template(session, instance, imported_vm_ref)
     return vmdk.capacity_in_bytes, vmdk.path
 
@@ -543,8 +543,7 @@ def fetch_image_ova(context, instance, session, vm_name, ds_name,
                 LOG.info("Downloaded OVA image file %(image_ref)s",
                          {'image_ref': instance.image_ref}, instance=instance)
                 vmdk = vm_util.get_vmdk_info(session,
-                                             imported_vm_ref,
-                                             vm_name)
+                                             imported_vm_ref)
                 vm_util.mark_vm_as_template(session, instance, imported_vm_ref)
                 return vmdk.capacity_in_bytes, vmdk.path
         raise exception.ImageUnacceptable(

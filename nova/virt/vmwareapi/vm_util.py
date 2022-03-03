@@ -823,17 +823,15 @@ def get_hardware_devices(session, vm_ref):
     return vim_util.get_array_items(hardware_devices)
 
 
-def get_vmdk_info(session, vm_ref, uuid=None):
-    """Returns information for the primary VMDK attached to the given VM."""
+def get_vmdk_info(session, vm_ref):
+    """Returns information for the first VMDK attached to the given VM."""
     hardware_devices = get_hardware_devices(session, vm_ref)
     vmdk_file_path = None
     vmdk_controller_key = None
     disk_type = None
     capacity_in_bytes = 0
 
-    # Determine if we need to get the details of the root disk
-    root_device = None
-    vmdk_device = None
+    first_device = None
 
     adapter_type_dict = {}
     for device in hardware_devices:
@@ -843,28 +841,24 @@ def get_vmdk_info(session, vm_ref, uuid=None):
                 path = ds_obj.DatastorePath.parse(device.backing.fileName)
                 if not path.basename.endswith('.vmdk'):
                     continue
-                if not root_device or \
-                        root_device.controllerKey > device.controllerKey or \
-                        root_device.controllerKey == device.controllerKey and \
-                        root_device.unitNumber > device.unitNumber:
-                    root_device = device
-                vmdk_device = device
+                if not first_device \
+                    or first_device.controllerKey > device.controllerKey \
+                    or first_device.controllerKey == device.controllerKey \
+                        and first_device.unitNumber > device.unitNumber:
+                    first_device = device
         elif device.__class__.__name__ in CONTROLLER_TO_ADAPTER_TYPE:
             adapter_type_dict[device.key] = CONTROLLER_TO_ADAPTER_TYPE[
                 device.__class__.__name__]
 
-    if uuid:
-        vmdk_device = root_device
-
-    if vmdk_device:
-        vmdk_file_path = vmdk_device.backing.fileName
-        capacity_in_bytes = _get_device_capacity(vmdk_device)
-        vmdk_controller_key = vmdk_device.controllerKey
-        disk_type = _get_device_disk_type(vmdk_device)
+    if first_device:
+        vmdk_file_path = first_device.backing.fileName
+        capacity_in_bytes = _get_device_capacity(first_device)
+        vmdk_controller_key = first_device.controllerKey
+        disk_type = _get_device_disk_type(first_device)
 
     adapter_type = adapter_type_dict.get(vmdk_controller_key)
     return VmdkInfo(vmdk_file_path, adapter_type, disk_type,
-                    capacity_in_bytes, vmdk_device)
+                    capacity_in_bytes, first_device)
 
 
 scsi_controller_classes = {

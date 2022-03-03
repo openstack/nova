@@ -653,9 +653,7 @@ class VMwareVMOps(object):
 
     def _cache_vm_image_from_template(self, vi, templ_vm_ref):
         LOG.debug("Caching VDMK from template VM", instance=vi.instance)
-        vm_name = self._get_image_template_vm_name(vi.ii.image_id,
-                                                   vi.datastore.name)
-        vmdk = vm_util.get_vmdk_info(self._session, templ_vm_ref, vm_name)
+        vmdk = vm_util.get_vmdk_info(self._session, templ_vm_ref)
         # The size of the image is different from the size of the virtual disk.
         # We want to use the latter. On vSAN this is the only way to get this
         # size because there is no VMDK descriptor.
@@ -1376,8 +1374,7 @@ class VMwareVMOps(object):
 
         def _get_vm_and_vmdk_attribs():
             # Get the vmdk info that the VM is pointing to
-            vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                              uuid=instance.uuid)
+            vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
             if not vmdk.path:
                 LOG.debug("No root disk defined. Unable to snapshot.",
                           instance=instance)
@@ -1613,8 +1610,7 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         # Get the root disk vmdk object
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                     uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         ds_ref = vmdk.device.backing.datastore
         datastore = ds_obj.get_datastore_by_ref(self._session, ds_ref)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
@@ -1865,8 +1861,7 @@ class VMwareVMOps(object):
 
     def _resize_create_ephemerals_and_swap(self, vm_ref, instance,
                                            block_device_info):
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                     uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         if not vmdk.device:
             LOG.debug("No root disk attached!", instance=instance)
             return
@@ -1884,8 +1879,7 @@ class VMwareVMOps(object):
         off the instance before the end.
         """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                     uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
 
         boot_from_volume = compute_utils.is_volume_backed_instance(context,
                                                                    instance)
@@ -1926,8 +1920,7 @@ class VMwareVMOps(object):
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                     uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         if not vmdk.device:
             return
         ds_ref = vmdk.device.backing.datastore
@@ -1992,8 +1985,7 @@ class VMwareVMOps(object):
             metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                     uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         if vmdk.device:
             self._revert_migration_update_disks(vm_ref, instance, vmdk,
                                                 block_device_info)
@@ -2036,8 +2028,7 @@ class VMwareVMOps(object):
         # need to relocate the VM here since we are running on the dest_compute
         if migration.source_compute != migration.dest_compute:
             # Get the root disk vmdk object's adapter type
-            vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                         uuid=instance.uuid)
+            vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
             adapter_type = vmdk.adapter_type
 
             self._detach_volumes(instance, block_device_info)
@@ -2064,8 +2055,7 @@ class VMwareVMOps(object):
         # 3.Reconfigure the VM and disk
         self._resize_vm(context, instance, vm_ref, flavor, image_meta)
         if not boot_from_volume and resize_instance:
-            vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                         uuid=instance.uuid)
+            vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
             self._resize_disk(instance, vm_ref, vmdk, flavor)
         self._update_instance_progress(context, instance,
                                        step=3,
@@ -2252,7 +2242,7 @@ class VMwareVMOps(object):
         migrated to. Return the current datastore if it is already connected to
         the specified cluster.
         """
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref, uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         ds_ref = vmdk.device.backing.datastore
         cluster_datastores = self._session._call_method(vutil,
                                                         'get_object_property',

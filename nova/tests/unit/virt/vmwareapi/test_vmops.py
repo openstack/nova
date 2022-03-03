@@ -750,7 +750,7 @@ class VMwareVMOpsTestCase(test.TestCase):
             self._vmops._resize_create_ephemerals_and_swap(
                 'vm-ref', self._instance, 'block-devices')
             mock_get_vmdk_info.assert_called_once_with(
-                self._session, 'vm-ref', uuid=self._instance.uuid)
+                self._session, 'vm-ref')
             if vmdk.device:
                 mock_get_datastore_by_ref.assert_called_once_with(
                     self._session, datastore.ref)
@@ -886,7 +886,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                         'fake-spec')
             # Validate disk configuration
             fake_get_vmdk_info.assert_called_once_with(
-                self._session, 'fake-ref', uuid=self._instance.uuid)
+                self._session, 'fake-ref')
             fake_get_browser.assert_called_once_with('fake-ref')
             fake_original_exists.assert_called_once_with(
                  self._session, 'fake-browser',
@@ -993,8 +993,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                    'fake_vm', 'cluster_ref',
                                                    None)
             self.assertIs(ds, ret)
-            mock_get_vmdk.assert_called_once_with(self._session, 'fake_vm',
-                                                  uuid=self._instance.uuid)
+            mock_get_vmdk.assert_called_once_with(self._session, 'fake_vm')
             mock_get_ds.assert_called_once_with(self._session, ds_ref)
 
     @mock.patch.object(vm_util, 'get_vmdk_info')
@@ -1020,8 +1019,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                    'fake_vm', 'cluster_ref',
                                                    None)
             self.assertIs(ds, ret)
-            mock_get_vmdk.assert_called_once_with(self._session, 'fake_vm',
-                                                  uuid=self._instance.uuid)
+            mock_get_vmdk.assert_called_once_with(self._session, 'fake_vm')
             mock_get_ds.assert_called_once_with(self._session, 'cluster_ref',
                                                 None)
 
@@ -1282,7 +1280,7 @@ class VMwareVMOpsTestCase(test.TestCase):
             fake_get_vm_ref.assert_called_once_with(self._session,
                                                     self._instance)
             fake_get_vmdk_info.assert_called_once_with(
-                self._session, 'fake-ref', uuid=self._instance.uuid)
+                self._session, 'fake-ref')
             fake_get_browser.assert_called_once_with('fake-ref')
             fake_original_exists.assert_called_once_with(
                 self._session, 'fake-browser',
