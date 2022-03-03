@@ -529,22 +529,16 @@ class VirtualMachine(ManagedObject):
             if len(val.deviceChange) < 2:
                 return
 
-            # Case of Reconfig of VM to attach disk
-            controller_key = val.deviceChange[0].device.controllerKey
-            filename = val.deviceChange[0].device.backing.fileName
+            # Case of Reconfig of VM to attach disk, just take the device...
+            disk = val.deviceChange[0].device
 
-            disk = VirtualDisk()
-            disk.controllerKey = controller_key
-
-            disk_backing = VirtualDiskFlatVer2BackingInfo()
-            disk_backing.fileName = filename
-            disk_backing.key = -101
-            disk.backing = disk_backing
-            disk.capacityInBytes = 1024
-            disk.capacityInKB = 1
+            # ...and fill out missing information (in case of a disk)
+            if isinstance(disk.backing, VirtualDiskFlatVer2BackingInfo):
+                disk.capacityInBytes = 1024
+                disk.capacityInKB = 1
 
             controller = VirtualLsiLogicController()
-            controller.key = controller_key
+            controller.key = disk.controllerKey
 
             devices = _create_array_of_type('VirtualDevice')
             devices.VirtualDevice = [disk, controller, self.device[0]]

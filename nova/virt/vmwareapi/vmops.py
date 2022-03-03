@@ -987,8 +987,7 @@ class VMwareVMOps(object):
 
         def _get_vm_and_vmdk_attribs():
             # Get the vmdk info that the VM is pointing to
-            vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                              instance.uuid)
+            vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
             if not vmdk.path:
                 LOG.debug("No root disk defined. Unable to snapshot.",
                           instance=instance)
@@ -1204,8 +1203,7 @@ class VMwareVMOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         # Get the root disk vmdk object
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                     uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         ds_ref = vmdk.device.backing.datastore
         datastore = ds_obj.get_datastore_by_ref(self._session, ds_ref)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
@@ -1412,8 +1410,7 @@ class VMwareVMOps(object):
 
     def _resize_create_ephemerals_and_swap(self, vm_ref, instance,
                                            block_device_info):
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                     uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         if not vmdk.device:
             LOG.debug("No root disk attached!", instance=instance)
             return
@@ -1432,8 +1429,7 @@ class VMwareVMOps(object):
         off the instance before the end.
         """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                     uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
 
         # Checks if the migration needs a disk resize down.
         if (flavor.root_gb < instance.flavor.root_gb or
@@ -1478,8 +1474,7 @@ class VMwareVMOps(object):
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                     uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         if not vmdk.device:
             return
         ds_ref = vmdk.device.backing.datastore
@@ -1544,8 +1539,7 @@ class VMwareVMOps(object):
             metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
-                                     uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         if vmdk.device:
             self._revert_migration_update_disks(vm_ref, instance, vmdk,
                                                 block_device_info)
@@ -1595,7 +1589,7 @@ class VMwareVMOps(object):
         migrated to. Return the current datastore if it is already connected to
         the specified cluster.
         """
-        vmdk = vm_util.get_vmdk_info(self._session, vm_ref, uuid=instance.uuid)
+        vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
         ds_ref = vmdk.device.backing.datastore
         cluster_datastores = self._session._call_method(vutil,
                                                         'get_object_property',

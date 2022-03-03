@@ -169,7 +169,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
             mock_image_transfer.assert_called_once_with(mock_read_handle,
                                                         mock_write_handle)
             mock_get_vmdk_info.assert_called_once_with(
-                    session, mock.sentinel.vm_ref, 'fake-vm')
+                    session, mock.sentinel.vm_ref)
             session._call_method.assert_called_once_with(
                     session.vim, "UnregisterVM", mock.sentinel.vm_ref)
 
@@ -219,7 +219,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
             session._call_method.assert_called_once_with(
                     session.vim, "UnregisterVM", mock.sentinel.vm_ref)
             mock_get_vmdk_info.assert_called_once_with(
-                    session, mock.sentinel.vm_ref, 'fake-vm')
+                    session, mock.sentinel.vm_ref)
 
     def test_from_image_with_image_ref(self):
         raw_disk_size_in_gb = 83

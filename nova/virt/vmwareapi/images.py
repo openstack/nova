@@ -360,7 +360,7 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
 
     LOG.info("Downloaded image file data %(image_ref)s",
              {'image_ref': instance.image_ref}, instance=instance)
-    vmdk = vm_util.get_vmdk_info(session, imported_vm_ref, vm_name)
+    vmdk = vm_util.get_vmdk_info(session, imported_vm_ref)
     session._call_method(session.vim, "UnregisterVM", imported_vm_ref)
     LOG.info("The imported VM was unregistered", instance=instance)
     return vmdk.capacity_in_bytes
@@ -424,8 +424,7 @@ def fetch_image_ova(context, instance, session, vm_name, ds_name,
                          {'image_ref': instance.image_ref}, instance=instance)
                 imported_vm_ref = write_handle.get_imported_vm()
                 vmdk = vm_util.get_vmdk_info(session,
-                                             imported_vm_ref,
-                                             vm_name)
+                                             imported_vm_ref)
                 session._call_method(session.vim, "UnregisterVM",
                                      imported_vm_ref)
                 LOG.info("The imported VM was unregistered",
