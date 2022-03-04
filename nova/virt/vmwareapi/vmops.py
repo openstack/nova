@@ -1507,6 +1507,9 @@ class VMwareVMOps(object):
         config_spec.numCoresPerSocket = 1
         config_spec.memoryMB = 16
         config_spec.uuid = image_id  # Not instanceUuid,
+        config_spec.extraConfig = vm_util.create_extra_config(client_factory,
+            {'nvp.vm-uuid': ''})  # Another way to identify the vm
+
         # as we need to import the same image in different datastores
 
         if disks:
