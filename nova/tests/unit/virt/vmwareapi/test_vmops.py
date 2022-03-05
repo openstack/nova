@@ -69,14 +69,16 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         self._virtapi = mock.Mock()
         self._image_id = uuids.image
-        fake_ds_ref = vmwareapi_fake.ManagedObjectReference(value='fake-ds')
+        fake_ds_ref = vmwareapi_fake.ManagedObjectReference(
+            name='Datastore', value='fake-ds')
         self._ds = ds_obj.Datastore(
                 ref=fake_ds_ref, name='fake_ds',
                 capacity=10 * units.Gi,
                 freespace=10 * units.Gi)
         self._dc_info = ds_util.DcInfo(
                 ref='fake_dc_ref', name='fake_dc',
-                vmFolder='fake_vm_folder')
+                vmFolder=vmwareapi_fake.ManagedObjectReference(
+                    name='Folder', value='fake_vm_folder'))
         cluster = vmwareapi_fake.create_cluster('fake_cluster', fake_ds_ref)
         self._uuid = uuids.foo
         fake_info_cache = {
@@ -297,7 +299,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_save.assert_called_once_with()
         self.assertEqual(50, self._instance.progress)
 
-    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake_ref')
+    @mock.patch.object(vm_util, 'get_vm_ref',
+        return_value=vmwareapi_fake.ManagedObjectReference())
     def test_get_info(self, mock_get_vm_ref):
         result = {
             'summary.config.numCpu': 4,
@@ -2059,7 +2062,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                    extra_specs,
                                                    self._metadata)
 
-        vm = vmwareapi_fake._get_object(vm_ref)
+        vm = vmwareapi_fake.get_object(vm_ref)
 
         # Test basic VM parameters
         self.assertEqual(self._instance.uuid, vm.name)
@@ -2082,7 +2085,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         datastores = vm.datastore.ManagedObjectReference
         self.assertEqual(1, len(datastores))
 
-        datastore = vmwareapi_fake._get_object(datastores[0])
+        datastore = vmwareapi_fake.get_object(datastores[0])
         self.assertEqual(self._ds.name, datastore.get('summary.name'))
 
         # Test that the VM's network is configured as specified
