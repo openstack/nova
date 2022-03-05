@@ -6991,6 +6991,12 @@ class ComputeManager(manager.Manager):
                 objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid))
 
+            # Now that we have the lock check that we haven't raced another
+            # request and ensure there is no existing attachment
+            if any(b for b in bdms if b.volume_id == volume_id):
+                msg = _("volume %s already attached") % volume_id
+                raise exception.InvalidVolume(reason=msg)
+
             # NOTE(ndipanov): We need to explicitly set all the fields on the
             #                 object so that obj_load_attr does not fail
             new_bdm = objects.BlockDeviceMapping(
