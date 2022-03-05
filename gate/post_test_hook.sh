@@ -59,9 +59,7 @@ set -e
 purge_db
 
 # We need to get the admin credentials to run the OSC CLIs for Placement.
-set +x
-source $BASE/devstack/openrc admin
-set -x
+export OS_CLOUD=devstack-admin
 
 # Verify whether instances were archived from all cells. Admin credentials are
 # needed to list deleted instances across all projects.
@@ -271,3 +269,66 @@ set -e
 # Verify whether online data migrations run after archiving will succeed.
 # See for more details: https://bugs.launchpad.net/nova/+bug/1824435
 $MANAGE db online_data_migrations
+
+
+# Test global registered unified limits by updating registered limits and
+# attempting to create resources. Because these quota limits are global, we
+# can't test them in tempest because modifying global limits can cause other
+# tests running in parallel to fail.
+echo "Testing unified limits registered limits"
+
+# Get the registered limits IDs.
+reglimit_ids_names=$(openstack registered limit list -f value -c "ID" -c "Resource Name")
+
+# Put them in a map to lookup ID from name for subsequent limit set commands.
+# Requires Bash 4.
+declare -A id_name_map
+while read id name
+    do id_name_map["$name"]="$id"
+done <<< "$reglimit_ids_names"
+
+# Server metadata items
+#
+# Set the quota to 1.
+metadata_items_id="${id_name_map["server_metadata_items"]}"
+
+bash -c "unset OS_USERNAME OS_TENANT_NAME OS_PROJECT_NAME;
+    openstack --os-cloud devstack-system-admin registered limit set \
+        --default-limit 1 $metadata_items_id"
+
+# Create a server. Should succeed with one metadata item.
+openstack --os-compute-api-version 2.37 \
+    server create --image ${image_id} --flavor ${flavor_id} --nic none \
+    --property cool=true --wait metadata-items-test1
+
+# Try to create another server with two metadata items. This should fail.
+set +e
+output=$(openstack --os-compute-api-version 2.37 \
+    server create --image ${image_id} --flavor ${flavor_id} --nic none \
+    --property cool=true --property location=fridge \
+    --wait metadata-items-test2)
+rc=$?
+set -e
+# Return code should be 1 if server create failed.
+if [[ ${rc} -ne 1 ]]; then
+    echo "Expected return code 1 from server create with two metadata items"
+    exit 2
+fi
+# Verify it's a quota error.
+if [[ ! "HTTP 403" =~ "$output" ]]; then
+    echo "Expected HTTP 403 from server create with two metadata items"
+    exit 2
+fi
+
+# Increase the quota limit to two.
+bash -c "unset OS_USERNAME OS_TENANT_NAME OS_PROJECT_NAME;
+    openstack --os-cloud devstack-system-admin registered limit set \
+        --default-limit 2 $metadata_items_id"
+
+# Second server create should succeed now.
+openstack --os-compute-api-version 2.37 \
+    server create --image ${image_id} --flavor ${flavor_id} --nic none \
+    --property cool=true --property location=fridge --wait metadata-items-test2
+
+# Delete the servers.
+openstack server delete metadata-items-test1 metadata-items-test2
