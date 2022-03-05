@@ -36,7 +36,7 @@ def fake_vim_prop(arg):
     return fake.get_fake_vim_object(arg)
 
 
-def fake_is_vim_object(arg, module):
+def fake_is_vim_object(module):
     """Stubs out the VMwareAPISession's is_vim_object method."""
     return isinstance(module, fake.FakeVim)
 
@@ -74,9 +74,10 @@ def set_stubs(test):
                   fake.fake_upload_image)
     test.stub_out('nova.virt.vmwareapi.images.fetch_image',
                   fake.fake_fetch_image)
-    test.stub_out('nova.virt.vmwareapi.driver.VMwareAPISession.vim',
+    test.stub_out('nova.virt.vmwareapi.session.VMwareAPISession.vim',
                   fake_vim_prop)
-    test.stub_out('nova.virt.vmwareapi.driver.VMwareAPISession._is_vim_object',
+    test.stub_out('nova.virt.vmwareapi.session.VMwareAPISession.'
+                  '_is_vim_object',
                   fake_is_vim_object)
     test.stub_out('nova.network.neutron.API.update_instance_vnic_index',
                   lambda *args, **kwargs: None)

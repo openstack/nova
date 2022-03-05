@@ -37,9 +37,9 @@ from nova.tests.unit.virt.vmwareapi import stubs
 from nova import version
 from nova.virt import hardware
 from nova.virt.vmwareapi import constants
-from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import images
+from nova.virt.vmwareapi import session
 from nova.virt.vmwareapi import vif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -65,7 +65,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.flags(my_ip='',
                    flat_injected=True)
         self._context = context.RequestContext('fake_user', 'fake_project')
-        self._session = driver.VMwareAPISession()
+        self._session = session.VMwareAPISession()
 
         self._virtapi = mock.Mock()
         self._image_id = uuids.image

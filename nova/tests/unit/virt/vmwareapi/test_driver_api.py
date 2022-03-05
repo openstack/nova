@@ -61,6 +61,7 @@ from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import imagecache
 from nova.virt.vmwareapi import images
+from nova.virt.vmwareapi import session
 from nova.virt.vmwareapi import vif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -109,20 +110,11 @@ DEFAULT_FLAVOR_OBJS = [
 ]
 
 
-def _fake_create_session(inst):
-    session = vmwareapi_fake.DataObject()
-    session.key = 'fake_key'
-    session.userName = 'fake_username'
-    session._pbm_wsdl_loc = None
-    session._pbm = None
-    inst._session = session
-
-
 class VMwareDriverStartupTestCase(test.NoDBTestCase):
     def _start_driver_with_flags(self, expected_exception_type, startup_flags):
         self.flags(**startup_flags)
         with mock.patch(
-                'nova.virt.vmwareapi.driver.VMwareAPISession.__init__'):
+                'nova.virt.vmwareapi.session.VMwareAPISession.__init__'):
             e = self.assertRaises(Exception, driver.VMwareVCDriver, None)  # noqa
             self.assertIs(type(e), expected_exception_type)
 
@@ -152,36 +144,6 @@ class VMwareDriverStartupTestCase(test.NoDBTestCase):
                 dict(host_ip='ip', host_password='password',
                      host_username="user", datastore_regex="bad(regex",
                      group='vmware'))
-
-
-class VMwareSessionTestCase(test.NoDBTestCase):
-
-    @mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
-                       return_value=False)
-    def test_call_method(self, mock_is_vim):
-        with test.nested(
-                mock.patch.object(driver.VMwareAPISession, '_create_session',
-                                  _fake_create_session),
-                mock.patch.object(driver.VMwareAPISession, 'invoke_api'),
-        ) as (fake_create, fake_invoke):
-            session = driver.VMwareAPISession()
-            session._vim = mock.Mock()
-            module = mock.Mock()
-            session._call_method(module, 'fira')
-            fake_invoke.assert_called_once_with(module, 'fira', session._vim)
-
-    @mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
-                       return_value=True)
-    def test_call_method_vim(self, mock_is_vim):
-        with test.nested(
-                mock.patch.object(driver.VMwareAPISession, '_create_session',
-                                  _fake_create_session),
-                mock.patch.object(driver.VMwareAPISession, 'invoke_api'),
-        ) as (fake_create, fake_invoke):
-            session = driver.VMwareAPISession()
-            module = mock.Mock()
-            session._call_method(module, 'fira')
-            fake_invoke.assert_called_once_with(module, 'fira')
 
 
 class VMwareAPIVMTestCase(test.NoDBTestCase,
@@ -337,7 +299,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                        _fake_check_session)
 
         with mock.patch.object(greenthread, 'sleep'):
-            self.conn = driver.VMwareAPISession()
+            self.conn = session.VMwareAPISession()
         self.assertEqual(2, self.attempts)
 
     def _get_flavor_by_name(self, type):
