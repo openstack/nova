@@ -1942,7 +1942,8 @@ class VMwareAPIVMTestCase(test.TestCase,
         return {'driver_volume_type': type,
                 'serial': 'volume-fake-id',
                 'data': {'volume': 'vm-10',
-                         'volume_id': 'volume-fake-id'}}
+                         'volume_id': 'volume-fake-id',
+                         'profile_id': 'fake-profile-id'}}
 
     @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
     @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps.'
@@ -2001,7 +2002,7 @@ class VMwareAPIVMTestCase(test.TestCase,
             attach_disk_to_vm.assert_called_once_with(mock.sentinel.vm_ref,
                 self.instance, adapter_type, disk_type, vmdk_path='fake-path',
                 volume_uuid=connection_info['data']['volume_id'],
-                backing_uuid=disk_uuid)
+                backing_uuid=disk_uuid, profile_id='fake-profile-id')
 
     @mock.patch.object(vmops.VMwareVMOps, 'update_cached_instances')
     def test_detach_vmdk_disk_from_vm(self, mock_update_cached_instances):
@@ -2071,7 +2072,8 @@ class VMwareAPIVMTestCase(test.TestCase,
                                     mount_point)
 
             mock_attach_disk.assert_called_once_with(mock.ANY, self.instance,
-                mock.ANY, 'rdmp', device_name=mock.ANY)
+                mock.ANY, 'rdmp', device_name=mock.ANY,
+                profile_id='fake-profile-id')
             mock_iscsi_get_target.assert_called_once_with(
                 connection_info['data'])
 
