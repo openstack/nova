@@ -761,7 +761,8 @@ def get_vmdk_attach_config_spec(client_factory,
                                 controller_key=None,
                                 unit_number=None,
                                 device_name=None,
-                                disk_io_limits=None):
+                                disk_io_limits=None,
+                                profile_id=None):
     """Builds the vmdk attach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
@@ -769,7 +770,8 @@ def get_vmdk_attach_config_spec(client_factory,
     virtual_device_config_spec = _create_virtual_disk_spec(client_factory,
                                 controller_key, disk_type, file_path,
                                 disk_size, linked_clone,
-                                unit_number, device_name, disk_io_limits)
+                                unit_number, device_name, disk_io_limits,
+                                profile_id=profile_id)
 
     device_config_spec.append(virtual_device_config_spec)
 
@@ -1113,7 +1115,8 @@ def _create_virtual_disk_spec(client_factory, controller_key,
                               linked_clone=False,
                               unit_number=None,
                               device_name=None,
-                              disk_io_limits=None):
+                              disk_io_limits=None,
+                              profile_id=None):
     """Builds spec for the creation of a new/ attaching of an already existing
     Virtual Disk to the VM.
     """
@@ -1170,6 +1173,12 @@ def _create_virtual_disk_spec(client_factory, controller_key,
             'ns0:StorageIOAllocationInfo')
 
     virtual_device_config.device = virtual_disk
+
+    if profile_id:
+        disk_profile = \
+            client_factory.create('ns0:VirtualMachineDefinedProfileSpec')
+        disk_profile.profileId = profile_id
+        virtual_device_config.profile = [disk_profile]
 
     return virtual_device_config
 

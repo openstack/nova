@@ -62,7 +62,8 @@ class VMwareVolumeOps(object):
                           adapter_type, disk_type, vmdk_path=None,
                           disk_size=None, linked_clone=False,
                           device_name=None, disk_io_limits=None,
-                          volume_uuid=None, backing_uuid=None):
+                          volume_uuid=None, backing_uuid=None,
+                          profile_id=None):
         """Attach disk to VM by reconfiguration.
 
         If volume_uuid and backing_uuid are given, also store the uuid of the
@@ -79,7 +80,8 @@ class VMwareVolumeOps(object):
         vmdk_attach_config_spec = vm_util.get_vmdk_attach_config_spec(
                                     client_factory, disk_type, vmdk_path,
                                     disk_size, linked_clone, controller_key,
-                                    unit_number, device_name, disk_io_limits)
+                                    unit_number, device_name, disk_io_limits,
+                                    profile_id=profile_id)
         if controller_spec:
             vmdk_attach_config_spec.deviceChange.append(controller_spec)
 
@@ -381,7 +383,8 @@ class VMwareVolumeOps(object):
         self.attach_disk_to_vm(vm_ref, instance, adapter_type, vmdk.disk_type,
                                vmdk_path=vmdk.path,
                                volume_uuid=data['volume_id'],
-                               backing_uuid=vmdk.device.backing.uuid)
+                               backing_uuid=vmdk.device.backing.uuid,
+                               profile_id=data['profile_id'])
 
         LOG.debug("Attached VMDK: %s", connection_info, instance=instance)
 
@@ -408,7 +411,8 @@ class VMwareVolumeOps(object):
 
         self.attach_disk_to_vm(vm_ref, instance,
                                adapter_type, 'rdmp',
-                               device_name=device_name)
+                               device_name=device_name,
+                               profile_id=data.get('profile_id'))
         LOG.debug("Attached ISCSI: %s", connection_info, instance=instance)
 
     def _get_controller_key_and_unit(self, vm_ref, adapter_type):
@@ -498,7 +502,8 @@ class VMwareVolumeOps(object):
         return self._get_res_pool_of_host(host)
 
     def _consolidate_vmdk_volume(self, instance, vm_ref, device, volume_ref,
-                                 adapter_type=None, disk_type=None):
+                                 adapter_type=None, disk_type=None,
+                                 profile_id=None):
         """Consolidate volume backing VMDK files if needed.
 
         The volume's VMDK file attached to an instance can be moved by SDRS
@@ -576,7 +581,8 @@ class VMwareVolumeOps(object):
         # Attach the current volume to the volume_ref
         self.attach_disk_to_vm(volume_ref, instance,
                                adapter_type, disk_type,
-                               vmdk_path=current_device_path)
+                               vmdk_path=current_device_path,
+                               profile_id=profile_id)
 
     def _get_vmdk_backed_disk_device(self, vm_ref, connection_info_data):
         # Get the vmdk file name that the VM is pointing to
@@ -621,7 +627,8 @@ class VMwareVolumeOps(object):
 
         self._consolidate_vmdk_volume(instance, vm_ref, device, volume_ref,
                                       adapter_type=adapter_type,
-                                      disk_type=disk_type)
+                                      disk_type=disk_type,
+                                      profile_id=data.get('profile_id'))
 
         self.detach_disk_from_vm(vm_ref, instance, device,
                                  volume_uuid=data['volume_id'])
@@ -752,7 +759,8 @@ class VMwareVolumeOps(object):
                     instance,
                     constants.DEFAULT_ADAPTER_TYPE,
                     disk_type,
-                    current_device_path
+                    current_device_path,
+                    profile_id=data.get("profile_id")
                     )
             except Exception:
                 LOG.exception("Failed to attach volume {}. Device {}".format(

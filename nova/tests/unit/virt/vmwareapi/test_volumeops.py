@@ -257,7 +257,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                                'serial': 'volume-fake-id',
                                'data': {'volume': 'vm-10',
                                         'volume_id':
-                                        'd11a82de-ddaa-448d-b50a-a255a7e61a1e'
+                                        'd11a82de-ddaa-448d-b50a-a255a7e61a1e',
+                                        'profile_id': 'fake-profile-id'
                                         }}
             instance = mock.MagicMock(name='fake-name',
                                       vm_state=vm_states.ACTIVE)
@@ -273,7 +274,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             consolidate_vmdk_volume.assert_called_once_with(
                 instance, mock.sentinel.vm_ref, virtual_disk,
                 mock.sentinel.volume_ref, adapter_type=adapter_type,
-                disk_type='fake-disk-type')
+                disk_type='fake-disk-type', profile_id='fake-profile-id')
             detach_disk_from_vm.assert_called_once_with(
                 mock.sentinel.vm_ref, instance, virtual_disk,
                 volume_uuid=connection_info['data']['volume_id'])
@@ -457,7 +458,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         connection_info = {'driver_volume_type': constants.DISK_FORMAT_VMDK,
                            'serial': 'volume-fake-id',
                            'data': {'volume': 'vm-10',
-                                    'volume_id': 'volume-fake-id'}}
+                                    'volume_id': 'volume-fake-id',
+                                    'profile_id': 'fake-profile-id'}}
         vm_ref = 'fake-vm-ref'
         volume_device = mock.MagicMock()
         volume_device.backing.fileName = 'fake-path'
@@ -496,7 +498,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                 vm_ref, self._instance, adapter_type,
                 constants.DISK_TYPE_PREALLOCATED, vmdk_path='fake-path',
                 volume_uuid=connection_info['data']['volume_id'],
-                backing_uuid=disk_uuid)
+                backing_uuid=disk_uuid, profile_id='fake-profile-id')
             if adapter_type == constants.ADAPTER_TYPE_IDE:
                 get_vm_state.assert_called_once_with(self._volumeops._session,
                                                      self._instance)
@@ -533,7 +535,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
                 self.assertTrue(get_scsi_adapter_type.called)
             attach_disk_to_vm.assert_called_once_with(vm_ref,
                 self._instance, adapter_type, 'rdmp',
-                device_name=mock.sentinel.device_name)
+                device_name=mock.sentinel.device_name, profile_id=None)
 
     def test_attach_volume_vmdk(self):
         for adapter_type in (None, constants.DEFAULT_ADAPTER_TYPE,
@@ -726,7 +728,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
         self._volumeops._consolidate_vmdk_volume(instance, vm_ref, device,
                                                  volume_ref, adapter_type,
-                                                 disk_type)
+                                                 disk_type,
+                                                 profile_id='fake-profile-id')
 
         get_vmdk_base_volume_device.assert_called_once_with(volume_ref)
         relocate_vm.assert_called_once_with(self._session,
@@ -735,7 +738,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             volume_ref, instance, original_device, destroy_disk=True)
         attach_disk_to_vm.assert_called_once_with(
             volume_ref, instance, adapter_type, disk_type,
-            vmdk_path=new_file_name)
+            vmdk_path=new_file_name, profile_id='fake-profile-id')
 
     @mock.patch.object(volumeops.VMwareVolumeOps,
                        '_get_vmdk_base_volume_device')
@@ -786,7 +789,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             volume_ref, instance, original_device)
         attach_disk_to_vm.assert_called_once_with(
             volume_ref, instance, adapter_type, disk_type,
-            vmdk_path=new_file_name)
+            vmdk_path=new_file_name, profile_id=None)
 
     def test_iscsi_get_host_iqn(self):
         host_mor = mock.Mock()
