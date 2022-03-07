@@ -117,16 +117,12 @@ class LiveMigrationQueuedAbortTestVmStatus(LiveMigrationWithLockBase):
             '/servers/%s/migrations/%s' % (self.server_b['id'],
                                            serverb_migration['id']))
         self._wait_for_migration_status(self.server_b, ['cancelled'])
-        # Unlock live migrations and confirm that server_a becomes
-        # active again after successful live migration
+        # Unlock live migrations and confirm that both servers become
+        # active again after successful (server_a) and aborted
+        # (server_b) live migrations
         self.lock_live_migration.release()
         self._wait_for_state_change(self.server_a, 'ACTIVE')
-
-        # FIXME(artom) Assert the server_b never comes out of 'MIGRATING'
-        self.assertRaises(
-            AssertionError,
-            self._wait_for_state_change, self.server_b, 'ACTIVE')
-        self._wait_for_state_change(self.server_b, 'MIGRATING')
+        self._wait_for_state_change(self.server_b, 'ACTIVE')
 
 
 class LiveMigrationQueuedAbortTestLeftoversRemoved(LiveMigrationWithLockBase):
@@ -182,18 +178,16 @@ class LiveMigrationQueuedAbortTestLeftoversRemoved(LiveMigrationWithLockBase):
             '/servers/%s/migrations/%s' % (self.server_b['id'],
                                            migration_server_b['id']))
         self._wait_for_migration_status(self.server_b, ['cancelled'])
-        # Unlock live migrations and confirm that server_a becomes
-        # active again after successful live migration
+        # Unlock live migrations and confirm that both servers become
+        # active again after successful (server_a) and aborted
+        # (server_b) live migrations
         self.lock_live_migration.release()
         self._wait_for_state_change(self.server_a, 'ACTIVE')
         self._wait_for_migration_status(self.server_a, ['completed'])
-        # FIXME(astupnikov) Assert the server_b never comes out of 'MIGRATING'
-        # This should be fixed after bug #1949808 is addressed
-        self._wait_for_state_change(self.server_b, 'MIGRATING')
+        self._wait_for_state_change(self.server_b, 'ACTIVE')
 
-        # FIXME(astupnikov) Because of bug #1960412 allocations for aborted
-        # queued live migration (server_b) would not be removed. Allocations
-        # for completed live migration  (server_a) should be empty.
+        # Allocations for both successful (server_a) and aborted queued live
+        # migration (server_b) should be removed.
         allocations_server_a_migration = self.placement.get(
             '/allocations/%s' % migration_server_a['uuid']
         ).body['allocations']
@@ -201,17 +195,11 @@ class LiveMigrationQueuedAbortTestLeftoversRemoved(LiveMigrationWithLockBase):
         allocations_server_b_migration = self.placement.get(
             '/allocations/%s' % migration_server_b['uuid']
         ).body['allocations']
-        src_uuid = self.api.api_get(
-            'os-hypervisors?hypervisor_hostname_pattern=%s' %
-            self.src_hostname).body['hypervisors'][0]['id']
-        self.assertIn(src_uuid, allocations_server_b_migration)
+        self.assertEqual({}, allocations_server_b_migration)
 
-        # FIXME(astupnikov) Because of bug #1960412 INACTIVE port binding
-        # on destination host would not be removed when queued live migration
-        # is aborted, so 2 port bindings would exist for server_b port from
-        # Neutron's perspective.
-        # server_a should be migrated to dest compute, server_b should still
-        # be hosted by src compute.
+        # INACTIVE port binding  on destination host should be removed when
+        # queued live migration is aborted, so only 1 port binding would
+        # exist for ports attached to both servers.
         port_binding_server_a = copy.deepcopy(
             self.neutron._port_bindings[self.neutron.port_1['id']]
         )
@@ -220,4 +208,5 @@ class LiveMigrationQueuedAbortTestLeftoversRemoved(LiveMigrationWithLockBase):
         port_binding_server_b = copy.deepcopy(
             self.neutron._port_bindings[self.neutron.port_2['id']]
         )
-        self.assertEqual(2, len(port_binding_server_b))
+        self.assertEqual(1, len(port_binding_server_b))
+        self.assertNotIn('dest', port_binding_server_b)
