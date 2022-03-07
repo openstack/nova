@@ -1105,7 +1105,7 @@ class VDPAServersTest(_PCIServersTestBase):
         # fixture already stubbed.
         self.neutron = self.useFixture(base.LibvirtNeutronFixture(self))
 
-    def start_compute(self):
+    def start_vdpa_compute(self, hostname='compute-0'):
         vf_ratio = self.NUM_VFS // self.NUM_PFS
 
         pci_info = fakelibvirt.HostPCIDevicesInfo(
@@ -1143,7 +1143,7 @@ class VDPAServersTest(_PCIServersTestBase):
                 driver_name='mlx5_core')
             vdpa_info.add_device(f'vdpa_vdpa{idx}', idx, vf)
 
-        return super().start_compute(
+        return super().start_compute(hostname=hostname,
             pci_info=pci_info, vdpa_info=vdpa_info,
             libvirt_version=self.FAKE_LIBVIRT_VERSION,
             qemu_version=self.FAKE_QEMU_VERSION)
@@ -1198,7 +1198,7 @@ class VDPAServersTest(_PCIServersTestBase):
             fake_create,
         )
 
-        hostname = self.start_compute()
+        hostname = self.start_vdpa_compute()
         num_pci = self.NUM_PFS + self.NUM_VFS
 
         # both the PF and VF with vDPA capabilities (dev_type=vdpa) should have
@@ -1231,12 +1231,16 @@ class VDPAServersTest(_PCIServersTestBase):
             port['binding:profile'],
         )
 
-    def _test_common(self, op, *args, **kwargs):
-        self.start_compute()
-
+    def _create_port_and_server(self):
         # create the port and a server, with the port attached to the server
         vdpa_port = self.create_vdpa_port()
         server = self._create_server(networks=[{'port': vdpa_port['id']}])
+        return vdpa_port, server
+
+    def _test_common(self, op, *args, **kwargs):
+        self.start_vdpa_compute()
+
+        vdpa_port, server = self._create_port_and_server()
 
         # attempt the unsupported action and ensure it fails
         ex = self.assertRaises(
@@ -1247,13 +1251,11 @@ class VDPAServersTest(_PCIServersTestBase):
             ex.response.text)
 
     def test_attach_interface(self):
-        self.start_compute()
-
+        self.start_vdpa_compute()
         # create the port and a server, but don't attach the port to the server
         # yet
         vdpa_port = self.create_vdpa_port()
         server = self._create_server(networks='none')
-
         # attempt to attach the port to the server
         ex = self.assertRaises(
             client.OpenStackApiException,
@@ -1265,21 +1267,282 @@ class VDPAServersTest(_PCIServersTestBase):
     def test_detach_interface(self):
         self._test_common(self._detach_interface, uuids.vdpa_port)
 
-    def test_shelve(self):
-        self._test_common(self._shelve_server)
+    def test_shelve_offload(self):
+        hostname = self.start_vdpa_compute()
+        vdpa_port, server = self._create_port_and_server()
+        # assert the port is bound to the vm and the compute host
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertEqual(server['id'], port['device_id'])
+        self.assertEqual(hostname, port['binding:host_id'])
+        num_pci = self.NUM_PFS + self.NUM_VFS
+        # -2 we claim the vdpa device which make the parent PF unavailable
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci - 2)
+        server = self._shelve_server(server)
+        # now that the vm is shelve offloaded it should not be bound
+        # to any host but should still be owned by the vm
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertEqual(server['id'], port['device_id'])
+        # FIXME(sean-k-mooney): we should be unbinding the port from
+        # the host when we shelve offload but we don't today.
+        # This is unrelated to vdpa port and is a general issue.
+        self.assertEqual(hostname, port['binding:host_id'])
+        self.assertIn('binding:profile', port)
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci)
+
+    def test_unshelve_to_same_host(self):
+        hostname = self.start_vdpa_compute()
+        num_pci = self.NUM_PFS + self.NUM_VFS
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci)
+
+        vdpa_port, server = self._create_port_and_server()
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci - 2)
+        self.assertEqual(
+            hostname, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertEqual(hostname, port['binding:host_id'])
+
+        server = self._shelve_server(server)
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci)
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        # FIXME(sean-k-mooney): shelve  offload should unbind the port
+        # self.assertEqual('', port['binding:host_id'])
+        self.assertEqual(hostname, port['binding:host_id'])
+
+        server = self._unshelve_server(server)
+        self.assertPCIDeviceCounts(hostname, total=num_pci, free=num_pci - 2)
+        self.assertEqual(
+            hostname, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertEqual(hostname, port['binding:host_id'])
+
+    def test_unshelve_to_different_host(self):
+        source = self.start_vdpa_compute(hostname='source')
+        dest = self.start_vdpa_compute(hostname='dest')
+
+        num_pci = self.NUM_PFS + self.NUM_VFS
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci)
+
+        # ensure we boot the vm on the "source" compute
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'disabled'})
+        vdpa_port, server = self._create_port_and_server()
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        self.assertEqual(
+            source, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertEqual(source, port['binding:host_id'])
+
+        server = self._shelve_server(server)
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        # FIXME(sean-k-mooney): shelve should unbind the port
+        # self.assertEqual('', port['binding:host_id'])
+        self.assertEqual(source, port['binding:host_id'])
+
+        # force the unshelve to the other host
+        self.api.put_service(
+            self.computes['source'].service_ref.uuid, {'status': 'disabled'})
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'enabled'})
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci)
+        server = self._unshelve_server(server)
+        # the dest devices should be claimed
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci - 2)
+        # and the source host devices should still be free
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+        self.assertEqual(
+            dest, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertEqual(dest, port['binding:host_id'])
+
+    def test_evacute(self):
+        source = self.start_vdpa_compute(hostname='source')
+        dest = self.start_vdpa_compute(hostname='dest')
+
+        num_pci = self.NUM_PFS + self.NUM_VFS
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci)
+
+        # ensure we boot the vm on the "source" compute
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'disabled'})
+        vdpa_port, server = self._create_port_and_server()
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        self.assertEqual(
+            source, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertEqual(source, port['binding:host_id'])
+
+        # stop the source compute and enable the dest
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'enabled'})
+        self.computes['source'].stop()
+        # Down the source compute to enable the evacuation
+        self.api.put_service(
+            self.computes['source'].service_ref.uuid, {'forced_down': True})
+
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci)
+        server = self._evacuate_server(server)
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci - 2)
+        self.assertEqual(
+            dest, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertEqual(dest, port['binding:host_id'])
+
+        # as the source compute is offline the pci claims will not be cleaned
+        # up on the source compute.
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        # but if you fix/restart the source node the allocations for evacuated
+        # instances should be released.
+        self.restart_compute_service(source)
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+
+    def test_resize_same_host(self):
+        self.flags(allow_resize_to_same_host=True)
+        num_pci = self.NUM_PFS + self.NUM_VFS
+        source = self.start_vdpa_compute()
+        vdpa_port, server = self._create_port_and_server()
+        # before we resize the vm should be using 1 VF but that will mark
+        # the PF as unavailable so we assert 2 devices are in use.
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        flavor_id = self._create_flavor(name='new-flavor')
+        self.assertNotEqual(server['flavor']['original_name'], 'new-flavor')
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            server = self._resize_server(server, flavor_id)
+            self.assertEqual(
+                server['flavor']['original_name'], 'new-flavor')
+            # in resize verify the VF claims should be doubled even
+            # for same host resize so assert that 3 are in devices in use
+            # 1 PF and 2 VFs .
+            self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 3)
+            server = self._confirm_resize(server)
+            # but once we confrim it should be reduced back to 1 PF and 1 VF
+            self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+            # assert the hostname has not have changed as part
+            # of the resize.
+            self.assertEqual(
+                source, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+
+    def test_resize_different_host(self):
+        self.flags(allow_resize_to_same_host=False)
+        source = self.start_vdpa_compute(hostname='source')
+        dest = self.start_vdpa_compute(hostname='dest')
+
+        num_pci = self.NUM_PFS + self.NUM_VFS
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci)
+
+        # ensure we boot the vm on the "source" compute
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'disabled'})
+        vdpa_port, server = self._create_port_and_server()
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        flavor_id = self._create_flavor(name='new-flavor')
+        self.assertNotEqual(server['flavor']['original_name'], 'new-flavor')
+        # disable the source compute and enable the dest
+        self.api.put_service(
+            self.computes['source'].service_ref.uuid, {'status': 'disabled'})
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'enabled'})
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            server = self._resize_server(server, flavor_id)
+            self.assertEqual(
+                server['flavor']['original_name'], 'new-flavor')
+            self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+            self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci - 2)
+            server = self._confirm_resize(server)
+            self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+            self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci - 2)
+            self.assertEqual(
+                dest, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+
+    def test_resize_revert(self):
+        self.flags(allow_resize_to_same_host=False)
+        source = self.start_vdpa_compute(hostname='source')
+        dest = self.start_vdpa_compute(hostname='dest')
+
+        num_pci = self.NUM_PFS + self.NUM_VFS
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci)
+
+        # ensure we boot the vm on the "source" compute
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'disabled'})
+        vdpa_port, server = self._create_port_and_server()
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        flavor_id = self._create_flavor(name='new-flavor')
+        self.assertNotEqual(server['flavor']['original_name'], 'new-flavor')
+        # disable the source compute and enable the dest
+        self.api.put_service(
+            self.computes['source'].service_ref.uuid, {'status': 'disabled'})
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'enabled'})
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            server = self._resize_server(server, flavor_id)
+            self.assertEqual(
+                server['flavor']['original_name'], 'new-flavor')
+            # in resize verify both the dest and source pci claims should be
+            # present.
+            self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+            self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci - 2)
+            server = self._revert_resize(server)
+            # but once we revert the dest claims should be freed.
+            self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci)
+            self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+            self.assertEqual(
+                source, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+
+    def test_cold_migrate(self):
+        source = self.start_vdpa_compute(hostname='source')
+        dest = self.start_vdpa_compute(hostname='dest')
+
+        num_pci = self.NUM_PFS + self.NUM_VFS
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci)
+
+        # ensure we boot the vm on the "source" compute
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'disabled'})
+        vdpa_port, server = self._create_port_and_server()
+        self.assertEqual(
+            source, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        # enable the dest we do not need to disable the source since cold
+        # migrate wont happen to the same host in the libvirt driver
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'enabled'})
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off', return_value='{}',
+        ):
+            server = self._migrate_server(server)
+            self.assertEqual(
+                dest, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+            self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+            self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci - 2)
+            server = self._confirm_resize(server)
+            self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+            self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci - 2)
+            self.assertEqual(
+                dest, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
 
     def test_suspend(self):
         self._test_common(self._suspend_server)
-
-    def test_evacute(self):
-        self._test_common(self._evacuate_server)
-
-    def test_resize(self):
-        flavor_id = self._create_flavor()
-        self._test_common(self._resize_server, flavor_id)
-
-    def test_cold_migrate(self):
-        self._test_common(self._migrate_server)
 
 
 class PCIServersTest(_PCIServersTestBase):

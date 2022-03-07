@@ -198,6 +198,7 @@ instance for these kind of workloads.
    virtual-gpu
    file-backed-memory
    ports-with-resource-requests
+   vdpa
    virtual-persistent-memory
    emulated-tpm
    uefi
