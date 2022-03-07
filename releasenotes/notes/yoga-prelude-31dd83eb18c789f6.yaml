@@ -1,0 +1,49 @@
+---
+prelude: |
+    The 25.0.0 release includes many new features and bug fixes. Please be
+    sure to read the upgrade section which describes the required actions to
+    upgrade your cloud from 24.0.0 (Xena) to 25.0.0 (Yoga).
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for Yoga is `v2.90`__ (same
+      as the Xena release).
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html
+
+    - Experimental support is added for Keystone's `unified limits`__.
+      This will allow operators to test this feature in non-production
+      systems so we can collect early feedback about performance.
+
+      .. __: https://docs.openstack.org/keystone/latest/admin/unified-limits.html
+
+    - Keystone's policy concepts of system vs. project scope and roles has been
+      implemented in Nova and `defaults roles and scopes have been defined`__,
+      while legacy policies continue to be enabled by default. Operators are
+      encouraged to familiarize with the new policies and `enable them
+      in advance`__ before Nova switches from the legacy roles in a later
+      release.
+
+      .. __: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html#nova-supported-scope-roles
+      .. __: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html#migration-plan
+
+
+    - Support is added for network backends that leverage SmartNICs to
+      `offload the control plane from the host server`__. Accordingly, Neutron
+      needs to be `configured`__ in order to enable it correctly.
+      Increased security is enabled by removing the control plane from the
+      host server and overhead is reduced by leveraging the cpu and ram
+      resources on modern SmartNIC DPUs.
+
+      .. __: https://docs.openstack.org/nova/latest/admin/networking.html#sr-iov
+      .. __: https://docs.openstack.org/neutron/latest/admin/ovn/smartnic_dpu
+
+
+    - Experimental support for `emulated architecture is now implemented`__.
+      AArch64, PPC64LE, MIPs, and s390x guest architectures are
+      available independent of the host architecture. This is strictly not
+      intended for production use for various reasons, including no security
+      guarantees.
+
+      .. __: https://docs.openstack.org/nova/latest/admin/hw-emulation-architecture.html
