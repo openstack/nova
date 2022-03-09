@@ -20,7 +20,6 @@ from oslo_limit import limit
 from oslo_log import log as logging
 
 import nova.conf
-from nova import context as nova_context
 from nova import exception
 from nova.limit import utils as nova_limit_utils
 from nova import objects
@@ -80,7 +79,9 @@ LEGACY_LIMITS = {
 }
 
 
-def get_in_use(context, project_id):
+def get_in_use(
+    context: 'nova.context.RequestContext', project_id: str
+) -> ty.Dict[str, int]:
     """Returns in use counts for each resource, for given project.
 
     This sounds simple but many resources can't be counted per project,
@@ -144,7 +145,7 @@ def enforce_api_limit(entity_type: str, count: int) -> None:
 
 
 def enforce_db_limit(
-    context: nova_context.RequestContext,
+    context: 'nova.context.RequestContext',
     entity_type: str,
     entity_scope: ty.Any,
     delta: int
@@ -192,7 +193,9 @@ def enforce_db_limit(
         raise EXCEPTIONS.get(entity_type, exception.OverQuota)(str(e))
 
 
-def _convert_keys_to_legacy_name(new_dict):
+def _convert_keys_to_legacy_name(
+    new_dict: ty.Dict[str, int]
+) -> ty.Dict[str, int]:
     legacy = {}
     for new_name, old_name in LEGACY_LIMITS.items():
         # defensive incase oslo or keystone doesn't give us an answer
@@ -200,7 +203,7 @@ def _convert_keys_to_legacy_name(new_dict):
     return legacy
 
 
-def get_legacy_default_limits():
+def get_legacy_default_limits() -> ty.Dict[str, int]:
     # TODO(johngarbutt): need oslo.limit API for this, it should do caching
     enforcer = limit.Enforcer(lambda: None)
     new_limits = enforcer.get_registered_limits(LEGACY_LIMITS.keys())

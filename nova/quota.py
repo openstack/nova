@@ -1243,6 +1243,26 @@ def _server_group_count_members_by_user_legacy(context, group, user_id):
 
 
 def is_qfd_populated(context):
+    """Check if user_id and queued_for_delete fields are populated.
+
+    This method is related to counting quota usage from placement. It is not
+    yet possible to count instances from placement, so in the meantime we can
+    use instance mappings for counting. This method is used to determine
+    whether the user_id and queued_for_delete columns are populated in the API
+    database's instance_mappings table. Instance mapping records are not
+    deleted from the database until the database is archived, so
+    queued_for_delete tells us whether or not we should count them for instance
+    quota usage. The user_id field enables us to scope instance quota usage to
+    a user (legacy quota).
+
+    Scoping instance quota to a user is only possible
+    when counting quota usage from placement is configured and unified limits
+    is not configured. When unified limits is configured, quotas are scoped
+    only to projects.
+
+    In the future when it is possible to count instance usage from placement,
+    this method will no longer be needed.
+    """
     global UID_QFD_POPULATED_CACHE_ALL
     if not UID_QFD_POPULATED_CACHE_ALL:
         LOG.debug('Checking whether user_id and queued_for_delete are '

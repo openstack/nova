@@ -79,7 +79,7 @@ class TestGetUsage(test.NoDBTestCase):
         self.flags(driver="nova.quota.NoopQuotaDriver", group="quota")
         e = self.assertRaises(NotImplementedError, placement_limits._get_usage,
                               self.context, uuids.project, [])
-        self.assertEqual("unified limits is disabled", str(e))
+        self.assertEqual("Unified limits support is disabled", str(e))
 
     @mock.patch.object(quota, "is_qfd_populated")
     @mock.patch.object(objects.InstanceMappingList, "get_counts")
