@@ -1,0 +1,14 @@
+---
+fixes:
+  - |
+    During the havana cycle it was discovered that eventlet
+    monkey patching of greendns broke ipv6.
+    https://bugs.launchpad.net/nova/+bug/1164822
+    Since then nova has been disabling eventlet monkey patching
+    of greendns. Eventlet adressed the ipv6 limitation in v0.17
+    with the introduction of python 3 support in 2015. Nova
+    however continued to disable it, which can result i slow dns
+    queries blocking the entire nova api or other binary
+    because socket.getaddrinfo becomes a blocking call into glibc
+    see: https://bugs.launchpad.net/nova/+bug/1964149 for
+    more details.
