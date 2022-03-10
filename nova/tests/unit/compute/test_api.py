@@ -8659,3 +8659,52 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self.assertRaises(
             exception.ServiceUnavailable,
             self.compute_api.detach_volume, self.context, instance, None)
+
+    def get_fake_share_mapping(self):
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.uuid = uuids.share_mapping
+        share_mapping.instance_uuid = uuids.instance
+        share_mapping.share_id = uuids.share
+        share_mapping.status = 'inactive'
+        share_mapping.tag = 'fake_tag'
+        share_mapping.export_location = '192.168.122.152:/manila/share'
+        share_mapping.share_proto = 'NFS'
+        return share_mapping
+
+    @mock.patch('oslo_messaging.rpc.client._BaseCallContext.cast')
+    def test_allow_share(self, mock_cast):
+        instance = self._create_instance_obj(
+                params=dict(vm_state=vm_states.STOPPED))
+        self.assertEqual(instance.vm_state, vm_states.STOPPED)
+        self.assertIsNone(instance.task_state)
+
+        share_mapping = self.get_fake_share_mapping()
+
+        self.compute_api.allow_share(
+            self.context, instance, share_mapping=share_mapping
+        )
+
+        mock_cast.assert_called_with(
+            self.context,
+            'allow_share',
+            instance=instance,
+            share_mapping=share_mapping)
+
+    @mock.patch('oslo_messaging.rpc.client._BaseCallContext.cast')
+    def test_deny_share(self, mock_cast):
+        instance = self._create_instance_obj(
+                params=dict(vm_state=vm_states.STOPPED))
+        self.assertEqual(instance.vm_state, vm_states.STOPPED)
+        self.assertIsNone(instance.task_state)
+
+        share_mapping = self.get_fake_share_mapping()
+
+        self.compute_api.deny_share(
+            self.context, instance, share_mapping=share_mapping
+        )
+
+        mock_cast.assert_called_with(
+            self.context,
+            'deny_share',
+            instance=instance,
+            share_mapping=share_mapping)

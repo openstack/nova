@@ -48,6 +48,8 @@ class ProviderTreeTests(integrated_helpers.ProviderUsageBaseTestCase):
             os_traits.COMPUTE_ADDRESS_SPACE_EMULATED,
             os_traits.COMPUTE_ADDRESS_SPACE_PASSTHROUGH,
             os_traits.COMPUTE_SECURITY_STATELESS_FIRMWARE,
+            os_traits.COMPUTE_STORAGE_VIRTIO_FS,
+            os_traits.COMPUTE_MEM_BACKING_FILE,
         ]
     ])
 

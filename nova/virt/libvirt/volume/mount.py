@@ -344,6 +344,7 @@ class _HostMountState(object):
         :param mountpoint: The directory where the filesystem is be
                            mounted on the local compute host.
         :param instance: The instance the volume was attached to.
+        :returns: True if the mountpoint is still in used by another instance
         """
         LOG.debug('_HostMountState.umount(vol_name=%(vol_name)s, '
                   'mountpoint=%(mountpoint)s) generation %(gen)s',
@@ -372,6 +373,8 @@ class _HostMountState(object):
                       'generation %(gen)s completed successfully',
                       {'mountpoint': mountpoint, 'gen': self.generation},
                       instance=instance)
+
+            return mount.in_use()
 
     def _real_umount(self, mountpoint):
         # Unmount and delete a mountpoint.
@@ -417,4 +420,4 @@ def umount(vol_name, mountpoint, instance):
     _HostMountStateManager singleton.
     """
     with __manager__.get_state() as mount_state:
-        mount_state.umount(vol_name, mountpoint, instance)
+        return mount_state.umount(vol_name, mountpoint, instance)

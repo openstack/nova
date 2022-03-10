@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 67
+SERVICE_VERSION = 68
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -234,7 +234,9 @@ SERVICE_VERSION_HISTORY = (
     # Version 67: Compute RPC v6.3:
     # Add delete_attachment parameter to remove_volume_connection()
     {'compute_rpc': '6.3'},
-
+    # Version 68: Compute RPC v6.4:
+    # Add support for shares
+    {'compute_rpc': '6.4'},
 )
 
 # This is the version after which we can rely on having a persistent

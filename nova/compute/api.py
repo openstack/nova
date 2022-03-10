@@ -6032,6 +6032,14 @@ class API:
             host_statuses[instance.uuid] = host_status
         return host_statuses
 
+    def allow_share(self, context, instance, share_mapping):
+        self.compute_rpcapi.allow_share(
+            context, instance, share_mapping)
+
+    def deny_share(self, context, instance, share_mapping):
+        self.compute_rpcapi.deny_share(
+            context, instance, share_mapping)
+
 
 def target_host_cell(fn):
     """Target a host-based function to a cell.

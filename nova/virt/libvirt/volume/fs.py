@@ -121,7 +121,7 @@ class LibvirtMountedFileSystemVolumeDriver(LibvirtBaseFileSystemVolumeDriver,
         vol_name = connection_info['data']['name']
         mountpoint = self._get_mount_path(connection_info)
 
-        mount.umount(vol_name, mountpoint, instance)
+        return mount.umount(vol_name, mountpoint, instance)
 
     @abc.abstractmethod
     def _mount_options(self, connection_info):

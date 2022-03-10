@@ -76,6 +76,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         "supports_address_space_passthrough": False,
         "supports_address_space_emulated": False,
         "supports_stateless_firmware": False,
+        "supports_virtio_fs": False,
+        "supports_mem_backing_file": False,
 
         # Image type support flags
         "supports_image_type_aki": False,
@@ -664,7 +666,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         self._vmops.power_off(instance, timeout, retry_interval)
 
     def power_on(self, context, instance, network_info,
-                 block_device_info=None, accel_info=None):
+                 block_device_info=None, accel_info=None, share_info=None):
         """Power on the specified instance."""
         self._vmops.power_on(instance)
 

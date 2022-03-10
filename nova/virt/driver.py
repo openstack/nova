@@ -221,6 +221,8 @@ CAPABILITY_TRAITS_MAP = {
         os_traits.COMPUTE_ADDRESS_SPACE_EMULATED,
     "supports_stateless_firmware":
         os_traits.COMPUTE_SECURITY_STATELESS_FIRMWARE,
+    "supports_virtio_fs": os_traits.COMPUTE_STORAGE_VIRTIO_FS,
+    "supports_mem_backing_file": os_traits.COMPUTE_MEM_BACKING_FILE,
 }
 
 
@@ -292,6 +294,8 @@ class ComputeDriver(object):
         "supports_remote_managed_ports": False,
         "supports_address_space_passthrough": False,
         "supports_address_space_emulated": False,
+        "supports_virtio_fs": False,
+        "supports_mem_backing_file": False,
 
         # Ephemeral encryption support flags
         "supports_ephemeral_encryption": False,
@@ -1038,14 +1042,37 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def power_on(self, context, instance, network_info,
-                 block_device_info=None, accel_info=None):
+                 block_device_info=None, accel_info=None, share_info=None):
         """Power on the specified instance.
 
+        :param context: security context
         :param instance: nova.objects.instance.Instance
         :param network_info: instance network information
         :param block_device_info: instance volume block device info
         :param accel_info: List of accelerator request dicts. The exact
             data struct is doc'd in nova/virt/driver.py::spawn().
+        :param share_info: a ShareMappingList containing the attached shares.
+        """
+        raise NotImplementedError()
+
+    def mount_share(self, context, instance, share_mapping):
+        """Mount a manila share to the compute node.
+
+        :param context: security context
+        :param instance: nova.objects.instance.Instance
+        :param share_mapping: nova.objects.share_mapping.ShareMapping object
+            that define the share
+        """
+        raise NotImplementedError()
+
+    def umount_share(self, context, instance, share_mapping):
+        """Unmount a manila share from the compute node.
+
+        :param context: security context
+        :param instance: nova.objects.instance.Instance
+        :param share_mapping: nova.objects.share_mapping.ShareMapping object
+            that define the share
+        :returns: True if the mountpoint is still in used by another instance
         """
         raise NotImplementedError()
 

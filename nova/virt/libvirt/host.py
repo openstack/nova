@@ -62,6 +62,7 @@ from nova import rpc
 from nova import utils
 from nova.virt import event as virtevent
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import driver
 from nova.virt.libvirt import event as libvirtevent
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import migration as libvirt_migrate
@@ -1766,6 +1767,46 @@ class Host(object):
         msg = _('Invalid machine type: %s')
         raise exception.InternalError(msg % machine)
 
+    def _check_file_backed_memory_support(self):
+        if not CONF.libvirt.file_backed_memory:
+            return False
+
+        # file_backed_memory is only compatible with qemu/kvm virts
+        if CONF.libvirt.virt_type not in ("qemu", "kvm"):
+            raise exception.InternalError(
+                _('Running Nova with file_backed_memory and virt_type '
+                  '%(type)s is not supported. file_backed_memory is only '
+                  'supported with qemu and kvm types.') %
+                {'type': CONF.libvirt.virt_type})
+
+        # file-backed memory doesn't work with memory overcommit.
+        # Block service startup if file-backed memory is enabled and
+        # ram_allocation_ratio is not 1.0
+        if CONF.ram_allocation_ratio != 1.0:
+            raise exception.InternalError(
+                'Running Nova with file_backed_memory requires '
+                'ram_allocation_ratio configured to 1.0')
+
+        if CONF.reserved_host_memory_mb:
+            # this is a hard failure as placement won't allow total < reserved
+            if CONF.reserved_host_memory_mb >= CONF.libvirt.file_backed_memory:
+                msg = _(
+                    "'[libvirt] file_backed_memory', which represents total "
+                    "memory reported to placement, must be greater than "
+                    "reserved memory configured via '[DEFAULT] "
+                    "reserved_host_memory_mb'"
+                )
+                raise exception.InternalError(msg)
+
+            # TODO(stephenfin): Change this to an exception in W or later
+            LOG.warning(
+                "Reserving memory via '[DEFAULT] reserved_host_memory_mb' "
+                "is not compatible with file-backed memory. Consider "
+                "setting '[DEFAULT] reserved_host_memory_mb' to 0. This will "
+                "be an error in a future release."
+            )
+        return True
+
     @property
     def has_hyperthreading(self) -> bool:
         """Determine if host CPU has SMT, a.k.a. HyperThreading.
@@ -1813,6 +1854,16 @@ class Host(object):
         LOG.debug('No UEFI support detected')
         self._supports_uefi = False
         return False
+
+    @property
+    def supports_virtio_fs(self) -> bool:
+        return self.has_min_version(
+            lv_ver=driver.MIN_LIBVIRT_VERSION,
+            hv_ver=driver.MIN_QEMU_VERSION)
+
+    @property
+    def supports_mem_backing_file(self) -> bool:
+        return self._check_file_backed_memory_support()
 
     @property
     def supports_secure_boot(self) -> bool:

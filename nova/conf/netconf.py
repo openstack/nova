@@ -35,6 +35,7 @@ Possible values:
 Related options:
 
 * my_block_storage_ip
+* my_shared_fs_storage_ip
 """),
     cfg.StrOpt("my_block_storage_ip",
         default="$my_ip",
@@ -48,6 +49,20 @@ Possible values:
 Related options:
 
 * my_ip - if my_block_storage_ip is not set, then my_ip value is used.
+"""),
+    cfg.StrOpt("my_shared_fs_storage_ip",
+        default="$my_ip",
+        help="""
+The IP address which is used to connect to the shared_fs storage (manila)
+network.
+
+Possible values:
+
+* String with valid IP address. Default is IP address of this host.
+
+Related options:
+
+* my_ip - if my_shared_fs_storage_ip is not set, then my_ip value is used.
 """),
     cfg.HostDomainOpt("host",
         default=socket.gethostname(),

@@ -45,6 +45,7 @@ import eventlet.semaphore
 import eventlet.timeout
 import futurist
 from keystoneauth1 import exceptions as keystone_exception
+from openstack import exceptions as sdk_exc
 import os_traits
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -91,6 +92,7 @@ from nova import safe_utils
 from nova.scheduler.client import query
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
+from nova.share import manila
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
@@ -618,7 +620,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='6.3')
+    target = messaging.Target(version='6.4')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -634,6 +636,7 @@ class ComputeManager(manager.Manager):
         self.virtapi = ComputeVirtAPI(self)
         self.network_api = neutron.API()
         self.volume_api = cinder.API()
+        self.manila_api = manila.API()
         self.image_api = glance.API()
         self._last_bw_usage_poll = 0.0
         self.compute_api = compute.API()
@@ -3100,11 +3103,14 @@ class ComputeManager(manager.Manager):
 
         return timeout, retry_interval
 
-    def _power_off_instance(self, instance, clean_shutdown=True):
+    def _power_off_instance(self, context, instance, clean_shutdown=True):
         """Power off an instance on this host."""
+        share_info = self._get_share_info(context, instance)
         timeout, retry_interval = self._get_power_off_values(
             instance, clean_shutdown)
         self.driver.power_off(instance, timeout, retry_interval)
+        share_info.deactivate_all()
+        self._umount_all_shares(context, instance, share_info)
 
     def _shutdown_instance(self, context, instance,
                            bdms, requested_networks=None, notify=True,
@@ -3366,6 +3372,7 @@ class ComputeManager(manager.Manager):
         @utils.synchronized(instance.uuid)
         def do_stop_instance():
             current_power_state = self._get_power_state(instance)
+
             LOG.debug('Stopping instance; current vm_state: %(vm_state)s, '
                       'current task_state: %(task_state)s, current DB '
                       'power_state: %(db_power_state)s, current VM '
@@ -3397,7 +3404,7 @@ class ComputeManager(manager.Manager):
                         self.host, action=fields.NotificationAction.POWER_OFF,
                         phase=fields.NotificationPhase.START)
 
-            self._power_off_instance(instance, clean_shutdown)
+            self._power_off_instance(context, instance, clean_shutdown)
             instance.power_state = self._get_power_state(instance)
             instance.vm_state = vm_states.STOPPED
             instance.task_state = None
@@ -3416,9 +3423,14 @@ class ComputeManager(manager.Manager):
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
         accel_info = self._get_accel_info(context, instance)
+
+        share_info = self._get_share_info(context, instance)
+
+        self._mount_all_shares(context, instance, share_info)
         self.driver.power_on(context, instance,
                              network_info,
-                             block_device_info, accel_info)
+                             block_device_info, accel_info, share_info)
+        share_info.activate_all()
 
     def _delete_snapshot_of_shelved_instance(self, context, instance,
                                              snapshot_id):
@@ -3507,7 +3519,7 @@ class ComputeManager(manager.Manager):
             except NotImplementedError:
                 # Fallback to just powering off the instance if the
                 # hypervisor doesn't implement the soft_delete method
-                self.driver.power_off(instance)
+                self.driver.power_off(context, instance)
             instance.power_state = self._get_power_state(instance)
             instance.vm_state = vm_states.SOFT_DELETED
             instance.task_state = None
@@ -3682,7 +3694,7 @@ class ComputeManager(manager.Manager):
             detach_block_devices(context, bdms,
                                  detach_root_bdm=detach_root_bdm)
         else:
-            self._power_off_instance(instance, clean_shutdown=True)
+            self._power_off_instance(context, instance, clean_shutdown=True)
             detach_block_devices(context, bdms,
                                  detach_root_bdm=detach_root_bdm)
             if reimage_boot_volume:
@@ -4261,6 +4273,47 @@ class ComputeManager(manager.Manager):
         for bdm in bdms_to_delete:
             bdms.objects.remove(bdm)
 
+    def _get_share_info(self, context, instance):
+        share_info = objects.ShareMappingList(context)
+
+        for share_mapping in objects.ShareMappingList.get_by_instance_uuid(
+            context, instance.uuid
+        ):
+            if (
+                share_mapping.status == fields.ShareMappingStatus.ATTACHING or
+                share_mapping.status == fields.ShareMappingStatus.DETACHING
+            ):
+                # If the share status is attaching it means we are racing with
+                # the compute node. The mount is not completed yet or something
+                # really bad happened. So we set the instance in error state.
+                LOG.error(
+                    "Share id '%s' attached to server id '%s' is "
+                    "still in '%s' state. Setting the instance "
+                    "in error.",
+                    share_mapping.share_id,
+                    instance.id,
+                    share_mapping.status,
+                )
+                self._set_instance_obj_error_state(
+                    instance, clean_task_state=True
+                )
+                raise exception.ShareErrorUnexpectedStatus(
+                    share_id=share_mapping.share_id,
+                    instance_uuid=instance.id,
+                )
+
+            if share_mapping.status == fields.ShareMappingStatus.ERROR:
+                LOG.warning(
+                    "Share id '%s' attached to server id '%s' is in "
+                    "error state.",
+                    share_mapping.share_id,
+                    instance.id
+                )
+
+            share_info.objects.append(share_mapping)
+
+        return share_info
+
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
@@ -4531,6 +4584,249 @@ class ComputeManager(manager.Manager):
             LOG.debug('Instance disappeared during volume snapshot delete',
                       instance=instance)
 
+    @messaging.expected_exceptions(NotImplementedError)
+    @wrap_exception()
+    def allow_share(self, context, instance, share_mapping):
+
+        @utils.synchronized(share_mapping.share_id)
+        def _allow_share(context, instance, share_mapping):
+            def _has_access():
+                access = self.manila_api.get_access(
+                    context,
+                    share_mapping.share_id,
+                    access_type,
+                    access_to
+                )
+                return access is not None and access.state == 'active'
+
+            def _apply_policy():
+                # self.manila_api.lock(share_mapping.share_id)
+                # Explicitly locking the share is not needed as
+                # create_access_rule() from the sdk will do it if the
+                # lock_visibility and lock_deletion flags are passed
+                self.manila_api.allow(
+                    context,
+                    share_mapping.share_id,
+                    access_type,
+                    access_to,
+                    "rw",
+                )
+
+            def _wait_policy_to_be_applied():
+                # Ensure the share policy is updated, this will avoid
+                # a race condition mounting the share if it is not the case.
+                max_retries = CONF.manila.share_apply_policy_timeout
+                attempt_count = 0
+                while attempt_count < max_retries:
+                    if _has_access():
+                        LOG.debug(
+                            "Allow policy set on share %s ",
+                            share_mapping.share_id,
+                        )
+                        break
+                    else:
+                        LOG.debug(
+                            "Waiting policy to be set on share %s ",
+                            share_mapping.share_id,
+                        )
+                        time.sleep(1)
+                        attempt_count += 1
+
+                if attempt_count >= max_retries:
+                    raise exception.ShareAccessGrantError(
+                        share_id=share_mapping.share_id,
+                        reason="Failed to set allow policy on share, "
+                        "too many retries",
+                    )
+
+            try:
+                access_type = 'ip'
+                access_to = CONF.my_shared_fs_storage_ip
+
+                if not _has_access():
+                    _apply_policy()
+                    _wait_policy_to_be_applied()
+
+                # Set the share from attaching to inactive
+                self._set_share_mapping_status(
+                    share_mapping, fields.ShareMappingStatus.INACTIVE
+                )
+
+            except (
+                exception.ShareNotFound,
+                exception.ShareAccessGrantError,
+            ) as e:
+                self._set_share_mapping_status(
+                    share_mapping, fields.ShareMappingStatus.ERROR
+                )
+                LOG.error(e.format_message())
+                raise
+            except (
+                sdk_exc.BadRequestException,
+            ) as e:
+                self._set_share_mapping_status(
+                    share_mapping, fields.ShareMappingStatus.ERROR
+                )
+                LOG.error(
+                    "%s: %s error from url: %s, %s",
+                    e.message,
+                    e.source,
+                    e.url,
+                    e.details,
+                )
+                raise
+            except keystone_exception.http.Unauthorized as e:
+                self._set_share_mapping_status(
+                    share_mapping, fields.ShareMappingStatus.ERROR
+                )
+                LOG.error(e)
+                raise
+
+        _allow_share(context, instance, share_mapping)
+
+    @messaging.expected_exceptions(NotImplementedError)
+    @wrap_exception()
+    def deny_share(self, context, instance, share_mapping):
+
+        @utils.synchronized(share_mapping.share_id)
+        def _deny_share(context, instance, share_mapping):
+            def check_share_usage(context, instance_uuid):
+                share_mappings_used_by_share = (
+                    objects.share_mapping.ShareMappingList.get_by_share_id(
+                        context, share_mapping.share_id
+                    )
+                )
+
+                # Logic explanation:
+                #
+                # Warning: Here we have a list of share_mapping using our
+                # share (usually share_mappings is a list of share_mapping used
+                # by an instance).
+                # A share IS NOT used (detachable) if:
+                # - The share status is INACTIVE or ERROR on our instance.
+                # - The share status is DETACHING on all other instances.
+                #       +-- reverse the logic as the function check if a share
+                #       |   IS used.
+                #       v
+                return not all(
+                    (
+                        (
+                            sm.instance_uuid == instance_uuid and
+                            (
+                                sm.status
+                                in (
+                                    fields.ShareMappingStatus.INACTIVE,
+                                    fields.ShareMappingStatus.ERROR,
+                                )
+                            )
+                        ) or
+                        sm.status == fields.ShareMappingStatus.DETACHING
+                    )
+                    for sm in share_mappings_used_by_share
+                )
+
+            try:
+                still_used = check_share_usage(
+                    context, instance.uuid
+                )
+
+                access_type = 'ip'
+                access_to = CONF.my_shared_fs_storage_ip
+                if not still_used:
+                    # self.manila_api.unlock(share_mapping.share_id)
+                    # Explicit unlocking the share is not needed as
+                    # delete_access_rule() from the sdk will do it if the
+                    # "unrestrict" parameter is passed
+                    self.manila_api.deny(
+                        context,
+                        share_mapping.share_id,
+                        access_type,
+                        access_to,
+                    )
+
+                share_mapping.delete()
+
+            except exception.ShareAccessRemovalError as e:
+                self._set_share_mapping_status(
+                    share_mapping, fields.ShareMappingStatus.ERROR
+                )
+                LOG.error(e.format_message())
+                raise
+            except keystone_exception.http.Unauthorized as e:
+                self._set_share_mapping_status(
+                    share_mapping, fields.ShareMappingStatus.ERROR
+                )
+                LOG.error(e)
+                raise
+            except (exception.ShareNotFound, exception.ShareAccessNotFound):
+                # Ignore the error if for any reason there is nothing to
+                # remove from manila, so we can still detach the share.
+                share_mapping.delete()
+
+        _deny_share(context, instance, share_mapping)
+
+    @wrap_exception()
+    def _mount_all_shares(self, context, instance, share_info):
+        for share_mapping in share_info:
+            self._mount_share(context, instance, share_mapping)
+
+    @wrap_exception()
+    def _umount_all_shares(self, context, instance, share_info):
+        for share_mapping in share_info:
+            self._umount_share(context, instance, share_mapping)
+
+    @wrap_exception()
+    def _mount_share(self, context, instance, share_mapping):
+
+        @utils.synchronized(share_mapping.share_id)
+        def _mount_share(context, instance, share_mapping):
+            try:
+                LOG.debug("Mounting share %s", share_mapping.share_id)
+                self.driver.mount_share(context, instance, share_mapping)
+
+            except (
+                exception.ShareMountError,
+            ) as e:
+                self._set_share_mapping_and_instance_in_error(
+                    instance, share_mapping
+                )
+                LOG.error(e.format_message())
+                raise
+
+        _mount_share(context, instance, share_mapping)
+
+    @wrap_exception()
+    def _umount_share(self, context, instance, share_mapping):
+
+        @utils.synchronized(share_mapping.share_id)
+        def _umount_share(context, instance, share_mapping):
+            try:
+                self.driver.umount_share(context, instance, share_mapping)
+
+            except (
+                exception.ShareUmountError,
+            ) as e:
+                self._set_share_mapping_and_instance_in_error(
+                    instance, share_mapping
+                )
+                LOG.error(e.format_message())
+                raise
+
+        _umount_share(context, instance, share_mapping)
+
+    def _set_share_mapping_status(self, share_mapping, status):
+        share_mapping.status = status
+        share_mapping.save()
+
+    def _set_share_mapping_and_instance_in_error(
+        self, instance, share_mapping
+    ):
+        share_mapping.status = fields.ShareMappingStatus.ERROR
+        share_mapping.save()
+        self._set_instance_obj_error_state(
+            instance, clean_task_state=True
+        )
+
     @wrap_instance_fault
     def _rotate_backups(self, context, instance, backup_type, rotation):
         """Delete excess backups associated to an instance.
@@ -4705,7 +5001,7 @@ class ComputeManager(manager.Manager):
             phase=fields.NotificationPhase.START)
 
         try:
-            self._power_off_instance(instance, clean_shutdown)
+            self._power_off_instance(context, instance, clean_shutdown)
 
             self.driver.rescue(context, instance, network_info,
                                rescue_image_meta, admin_password,
@@ -5995,7 +6291,7 @@ class ComputeManager(manager.Manager):
         # potentially running in two places.
         LOG.debug('Stopping instance', instance=instance)
         try:
-            self._power_off_instance(instance)
+            self._power_off_instance(ctxt, instance)
         except Exception as e:
             LOG.exception('Failed to power off instance.', instance=instance)
             raise exception.InstancePowerOffFailure(reason=str(e))
@@ -6944,7 +7240,7 @@ class ComputeManager(manager.Manager):
         # running.
         if instance.power_state == power_state.PAUSED:
             clean_shutdown = False
-        self._power_off_instance(instance, clean_shutdown)
+        self._power_off_instance(context, instance, clean_shutdown)
         self.driver.snapshot(context, instance, image_id, update_task_state)
 
         instance.system_metadata['shelved_at'] = timeutils.utcnow().isoformat()
@@ -7006,7 +7302,7 @@ class ComputeManager(manager.Manager):
                 self.host, action=fields.NotificationAction.SHELVE_OFFLOAD,
                 phase=fields.NotificationPhase.START, bdms=bdms)
 
-        self._power_off_instance(instance, clean_shutdown)
+        self._power_off_instance(context, instance, clean_shutdown)
         current_power_state = self._get_power_state(instance)
         network_info = self.network_api.get_instance_nw_info(context, instance)
 
@@ -10784,7 +11080,7 @@ class ComputeManager(manager.Manager):
                              "DELETED but still present on host.",
                              instance.name, instance=instance)
                     try:
-                        self.driver.power_off(instance)
+                        self.driver.power_off(context, instance)
                     except Exception:
                         LOG.warning("Failed to power off instance",
                                     instance=instance, exc_info=True)

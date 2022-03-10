@@ -1327,3 +1327,30 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             'access the database. You should run this '
             'service without the [api_database]/connection '
             'config option.')
+
+    def get_fake_share_mapping(self):
+        share_mapping = objects.ShareMapping(self.context)
+        share_mapping.uuid = uuids.share_mapping
+        share_mapping.instance_uuid = uuids.instance
+        share_mapping.share_id = uuids.share
+        share_mapping.status = 'inactive'
+        share_mapping.tag = 'fake_tag'
+        share_mapping.export_location = '192.168.122.152:/manila/share'
+        share_mapping.share_proto = 'NFS'
+        return share_mapping
+
+    def test_allow_share(self):
+        self._test_compute_api(
+            'allow_share',
+            'cast',
+            instance=self.fake_instance_obj,
+            share_mapping=self.get_fake_share_mapping(),
+            version='6.4')
+
+    def test_deny_share(self):
+        self._test_compute_api(
+            'deny_share',
+            'cast',
+            instance=self.fake_instance_obj,
+            share_mapping=self.get_fake_share_mapping(),
+            version='6.4')
