@@ -51,6 +51,20 @@ CONF = cfg.CONF
 
 class TestLogging(testtools.TestCase):
     def test_default_logging(self):
+        # This test validates that in default logging mode,
+        # we have two logging handlers:
+        # 1 x to display default messages (info, error, warnings...)
+        # 1 x to redirect debug messages to null and so don't display them.
+
+        # However, if OS_DEBUG=True is set in a shell session, then the test is
+        # run and fails. Because, in debug mode, we should have
+        # only one handler to display all messages.
+
+        # Here, we explicitly set OS_DEBUG=0.
+        # So it will ensure we have two handlers whatever
+        # OS_DEBUG value set in the user shell.
+        self.useFixture(fx.EnvironmentVariable('OS_DEBUG', '0'))
+
         stdlog = self.useFixture(fixtures.StandardLogging())
         root = logging.getLogger()
         # there should be a null handler as well at DEBUG
