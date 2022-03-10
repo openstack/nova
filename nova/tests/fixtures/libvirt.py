@@ -275,6 +275,7 @@ class FakePCIDevice(object):
             <product id='0x%(prod_id)s'>%(prod_name)s</product>
             <vendor id='0x%(vend_id)s'>%(vend_name)s</vendor>
         %(capability)s
+        %(vpd_capability)s
             <iommuGroup number='%(iommu_group)d'>
               <address domain='0x0000' bus='%(bus)#02x' slot='%(slot)#02x' function='0x%(function)d'/>
             </iommuGroup>
@@ -293,13 +294,22 @@ class FakePCIDevice(object):
         <availableInstances>%(instances)s</availableInstances>
         </type>""".strip())  # noqa
 
+    vpd_cap_templ = textwrap.dedent("""
+        <capability type='vpd'>
+        <name>%(name)s</name>
+        %(fields)s
+        </capability>""".strip())
+    vpd_fields_templ = textwrap.dedent("""
+        <fields access='%(access)s'>%(section_fields)s</fields>""".strip())
+    vpd_field_templ = """<%(field_name)s>%(field_value)s</%(field_name)s>"""
+
     is_capable_of_mdevs = False
 
     def __init__(
         self, dev_type, bus, slot, function, iommu_group, numa_node, *,
         vf_ratio=None, multiple_gpu_types=False, generic_types=False,
         parent=None, vend_id=None, vend_name=None, prod_id=None,
-        prod_name=None, driver_name=None,
+        prod_name=None, driver_name=None, vpd_fields=None
     ):
         """Populate pci devices
 
@@ -339,6 +349,8 @@ class FakePCIDevice(object):
         self.prod_id = prod_id
         self.prod_name = prod_name
         self.driver_name = driver_name
+
+        self.vpd_fields = vpd_fields
 
         self.generate_xml()
 
@@ -447,6 +459,7 @@ class FakePCIDevice(object):
             'prod_name': prod_name,
             'driver': driver,
             'capability': capability,
+            'vpd_capability': self.format_vpd_cap(),
             'iommu_group': self.iommu_group,
             'numa_node': self.numa_node,
             'parent': parent,
@@ -456,6 +469,30 @@ class FakePCIDevice(object):
         # Libvirt omits the NUMA element so we remove it.
         if self.numa_node == -1:
             self.pci_device = self.pci_device.replace("<numa node='-1'/>", "")
+
+    def format_vpd_cap(self):
+        if not self.vpd_fields:
+            return ''
+        fields = []
+        for access_type in ('readonly', 'readwrite'):
+            section_fields = []
+            for field_name, field_value in self.vpd_fields.get(
+                    access_type, {}).items():
+                section_fields.append(self.vpd_field_templ % {
+                    'field_name': field_name,
+                    'field_value': field_value,
+                })
+            if section_fields:
+                fields.append(
+                    self.vpd_fields_templ % {
+                        'access': access_type,
+                        'section_fields': '\n'.join(section_fields),
+                    }
+                )
+        return self.vpd_cap_templ % {
+            'name': self.vpd_fields.get('name', ''),
+            'fields': '\n'.join(fields)
+        }
 
     def XMLDesc(self, flags):
         return self.pci_device
@@ -572,7 +609,7 @@ class HostPCIDevicesInfo(object):
         self, dev_type, bus, slot, function, iommu_group, numa_node,
         vf_ratio=None, multiple_gpu_types=False, generic_types=False,
         parent=None, vend_id=None, vend_name=None, prod_id=None,
-        prod_name=None, driver_name=None,
+        prod_name=None, driver_name=None, vpd_fields=None,
     ):
         pci_dev_name = _get_libvirt_nodedev_name(bus, slot, function)
 
@@ -593,7 +630,9 @@ class HostPCIDevicesInfo(object):
             vend_name=vend_name,
             prod_id=prod_id,
             prod_name=prod_name,
-            driver_name=driver_name)
+            driver_name=driver_name,
+            vpd_fields=vpd_fields,
+        )
         self.devices[pci_dev_name] = dev
         return dev
 

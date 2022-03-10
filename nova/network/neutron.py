@@ -3663,15 +3663,15 @@ class API:
                   migration.get('status') == 'reverted')
         return instance.migration_context.get_pci_mapping_for_migration(revert)
 
-    def _get_port_pci_slot(self, context, instance, port):
-        """Find the PCI address of the device corresponding to the port.
+    def _get_port_pci_dev(self, context, instance, port):
+        """Find the PCI device corresponding to the port.
         Assumes the port is an SRIOV one.
 
         :param context: The request context.
         :param instance: The instance to which the port is attached.
         :param port: The Neutron port, as obtained from the Neutron API
             JSON form.
-        :return: The PCI address as a string, or None if unable to find.
+        :return: The PciDevice object, or None if unable to find.
         """
         # Find the port's PCIRequest, or return None
         for r in instance.pci_requests.requests:
@@ -3691,8 +3691,26 @@ class API:
             LOG.debug('No PCI device found for request %s',
                       request.request_id, instance=instance)
             return None
-        # Return the device's PCI address
-        return device.address
+        return device
+
+    def _update_port_pci_binding_profile(self, pci_dev, binding_profile):
+        """Update the binding profile dict with new PCI device data.
+
+        :param pci_dev: The PciDevice object to update the profile with.
+        :param binding_profile: The dict to update.
+        """
+        binding_profile.update({'pci_slot': pci_dev.address})
+        if binding_profile.get('card_serial_number'):
+            binding_profile.update({
+                'card_serial_number': pci_dev.card_serial_number})
+        if binding_profile.get('pf_mac_address'):
+            binding_profile.update({
+                'pf_mac_address': pci_utils.get_mac_by_pci_address(
+                    pci_dev.parent_addr)})
+        if binding_profile.get('vf_num'):
+            binding_profile.update({
+                'vf_num': pci_utils.get_vf_num_by_pci_address(
+                    pci_dev.address)})
 
     def _update_port_binding_for_instance(
             self, context, instance, host, migration=None,
@@ -3760,9 +3778,10 @@ class API:
                 # need to figure out the pci_slot from the InstancePCIRequest
                 # and PciDevice objects.
                 else:
-                    pci_slot = self._get_port_pci_slot(context, instance, p)
-                    if pci_slot:
-                        binding_profile.update({'pci_slot': pci_slot})
+                    pci_dev = self._get_port_pci_dev(context, instance, p)
+                    if pci_dev:
+                        self._update_port_pci_binding_profile(pci_dev,
+                                                              binding_profile)
                         updates[constants.BINDING_PROFILE] = binding_profile
 
             # NOTE(gibi): during live migration the conductor already sets the
