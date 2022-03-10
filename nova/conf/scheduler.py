@@ -407,6 +407,26 @@ Possible values:
 * An integer or float value between 1-100, where the value corresponds to
   the percent of RAM to be unallocated.
 """),
+    cfg.FloatOpt("prefer_same_shard_resize_weight_multiplier",
+        default=1.0,
+        help="""
+Prefer scheduling on same-shard on resize weight multiplier.
+
+This option determines how strongly the previous shard should be preferred for
+scheduling a resizing instance. A positive value will result in the scheduler
+preferring the same shard that the instance was previously running on. A
+negative value would prefer all other shards over the instance's previous
+aggregate.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'resize_same_shard' weigher is enabled.
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multipler
+  ratio for this weigher.
+"""),
     cfg.FloatOpt("hv_ram_class_weight_multiplier",
         default=1.0,
         help="""
