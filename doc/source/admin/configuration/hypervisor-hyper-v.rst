@@ -311,7 +311,7 @@ To install ``nova-compute``, run:
 Configure nova-compute
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The ``nova.conf`` file must be placed in ``C:\etc\nova`` for running OpenStack
+The ``nova.conf`` file must be placed in ``C:\nova\etc\nova`` for running OpenStack
 on Hyper-V. Below is a sample ``nova.conf`` for Windows:
 
 .. code-block:: ini
@@ -425,7 +425,7 @@ Windows server:
 
 .. code-block:: none
 
-   PS C:\> C:\Python27\python.exe c:\Python27\Scripts\nova-compute --config-file c:\etc\nova\nova.conf
+   PS C:\> C:\Python38\python.exe c:\Python38\Scripts\nova-compute --config-file c:\nova\etc\nova\nova.conf
 
 
 Troubleshooting
