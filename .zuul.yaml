@@ -887,6 +887,7 @@
         - nova-emulation
         - ironic-tempest-ipa-wholedisk-direct-tinyipa-multinode-shard
         - tempest-centos9-stream-fips
+        - whitebox-devstack-multinode
     experimental:
       jobs:
         - ironic-tempest-bfv:
@@ -917,3 +918,4 @@
         - nova-emulation
         - tempest-integrated-compute-centos-9-stream:
             irrelevant-files: *nova-base-irrelevant-files
+        - whitebox-devstack-multinode
