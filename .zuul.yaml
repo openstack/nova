@@ -585,6 +585,15 @@
         GLANCE_STANDALONE: True
         GLANCE_USE_IMPORT_WORKFLOW: True
         DEVSTACK_PARALLEL: True
+      # NOTE(danms): This job is pretty heavy as it is, so we disable some
+      # services that are not relevant to the nova-glance-ceph scenario
+      # that this job is intended to validate.
+      devstack_services:
+        c-bak: false
+        s-account: false
+        s-container: false
+        s-object: false
+        s-proxy: false
       devstack_local_conf:
         post-config:
           $NOVA_CONF:
