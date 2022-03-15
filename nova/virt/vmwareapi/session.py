@@ -136,6 +136,10 @@ class VMwareAPISession(api.VMwareAPISession):
                     # We have found the argument with the moref
                     # causing the exception and we can try to recover it
                     arg.fetch_moref(self)
+                    if not arg.moref:
+                        # We didn't recover the reference
+                        ctxt.reraise = True
+                        break
                     moref_arg = get_moref_value(arg.moref)
                     if moref != moref_arg:
                         # We actually recovered, so do not raise `monfe`
