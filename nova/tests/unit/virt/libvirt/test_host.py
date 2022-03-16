@@ -1113,6 +1113,10 @@ Active:          8381604 kB
         expect_vf = ["rx", "tx", "sg", "tso", "gso", "gro", "rxvlan", "txvlan"]
         self.assertEqual(expect_vf, actualvf)
 
+    @mock.patch.object(pci_utils, 'get_mac_by_pci_address',
+                       new=mock.MagicMock(
+                           side_effect=exception.PciDeviceNotFoundById(
+                               '0000:04:00.3')))
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address')
     def test_get_pcidev_info_non_nic(self, mock_get_ifname):
         dev_name = "pci_0000_04_11_7"
@@ -1184,7 +1188,9 @@ Active:          8381604 kB
             "parent_ifname": "ens1",
             "capabilities": {
                 "network": ["rx", "tx", "sg", "tso", "gso", "gro",
-                            "rxvlan", "txvlan"]},
+                            "rxvlan", "txvlan"],
+                "sriov": {"pf_mac_address": "52:54:00:1e:59:c6",
+                          "vf_num": 1}},
             }
         self.assertEqual(expect_vf, actual_vf)
 
@@ -1202,7 +1208,9 @@ Active:          8381604 kB
             "parent_addr": '0000:04:00.3',
             "capabilities": {
                 "network": ["rx", "tx", "sg", "tso", "gso", "gro",
-                            "rxvlan", "txvlan"]},
+                            "rxvlan", "txvlan"],
+                "sriov": {"pf_mac_address": "52:54:00:1e:59:c6",
+                          "vf_num": 1}},
             "parent_ifname": "ens1",
         }
         self.assertEqual(expect_vf, actual_vf)
@@ -1284,6 +1292,8 @@ Active:          8381604 kB
             "capabilities": {
                 "network": ["rx", "tx", "sg", "tso", "gso", "gro", "rxvlan",
                             "txvlan", "rxhash"],
+                "sriov": {"pf_mac_address": "52:54:00:1e:59:c6",
+                          "vf_num": 1},
                 # Should be obtained from the parent PF in this case.
                 "vpd": {"card_serial_number": "MT2113X00000"}},
         }
@@ -1323,6 +1333,12 @@ Active:          8381604 kB
             "vendor_id": "15b3",
             "label": "label_15b3_101e",
             "dev_type": obj_fields.PciDeviceType.SRIOV_VF,
+            'parent_ifname': 'ens1',
+            "capabilities": {
+                "network": ["rx", "tx", "sg", "tso", "gso", "gro",
+                            "rxvlan", "txvlan", "rxhash"],
+                "sriov": {"pf_mac_address": "52:54:00:1e:59:c6",
+                          "vf_num": 1}},
         }
 
         self.assertEqual(expect_vf, actual_vf)

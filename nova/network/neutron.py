@@ -1571,40 +1571,16 @@ class API:
         forwarding.
         """
         vf_profile: ty.Dict[str, ty.Union[str, int]] = {}
-        try:
-            pf_mac = pci_utils.get_mac_by_pci_address(pci_dev.parent_addr)
-        except (exception.PciDeviceNotFoundById) as e:
-            LOG.debug(
-                "Could not determine PF MAC address for a VF with"
-                " addr %(addr)s, error: %(e)s",
-                {"addr": pci_dev.address, "e": e})
-            # NOTE(dmitriis): we do not raise here since not all PFs will
-            # have netdevs even when VFs are netdevs (see LP: #1915255). The
-            # rest of the fields (VF number and card serial) are not enough
-            # to fully identify the VF so they are not populated either.
-            return vf_profile
-        try:
-            vf_num = pci_utils.get_vf_num_by_pci_address(
-                pci_dev.address)
-        except exception.PciDeviceNotFoundById as e:
-            # This is unlikely to happen because the kernel has a common SR-IOV
-            # code that creates physfn symlinks, however, it would be better
-            # to avoid raising an exception here and simply warn an operator
-            # that things did not go as planned.
-            LOG.warning(
-                "Could not determine a VF logical number for a VF"
-                " with addr %(addr)s, error: %(e)s", {
-                    "addr": pci_dev.address, "e": e})
-            return vf_profile
+
+        pf_mac = pci_dev.sriov_cap.get('pf_mac_address')
+        vf_num = pci_dev.sriov_cap.get('vf_num')
         card_serial_number = pci_dev.card_serial_number
-        if card_serial_number:
+        if all((pf_mac, vf_num, card_serial_number)):
             vf_profile.update({
-                'card_serial_number': card_serial_number
+                'card_serial_number': card_serial_number,
+                'pf_mac_address': pf_mac,
+                'vf_num': vf_num,
             })
-        vf_profile.update({
-            'pf_mac_address': pf_mac,
-            'vf_num': vf_num,
-        })
         return vf_profile
 
     def _get_pci_device_profile(self, pci_dev):

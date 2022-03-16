@@ -1380,6 +1380,37 @@ class Host(object):
                 vpd_info = {'card_serial_number': card_serial_number}
             return vpd_info
 
+        def _get_sriov_netdev_details(
+            device_dict: dict,
+            device: 'libvirt.virNodeDevice',
+        ) -> ty.Dict[str, ty.Dict[str, ty.Any]]:
+            """Get SR-IOV related information"""
+            sriov_info: ty.Dict[str, ty.Any] = {}
+
+            if device_dict.get('dev_type') != fields.PciDeviceType.SRIOV_VF:
+                return sriov_info
+
+            pf_addr = device_dict['parent_addr']
+
+            # A netdev VF may be associated with a PF which does not have a
+            # netdev as described in LP #1915255.
+            try:
+                sriov_info.update({
+                    'pf_mac_address': pci_utils.get_mac_by_pci_address(pf_addr)
+                })
+            except exception.PciDeviceNotFoundById:
+                LOG.debug(f'Could not get a PF mac for {pf_addr}')
+                # For the purposes Nova uses this information currently,
+                # having both a PF MAC and a VF number is needed so we return
+                # an empty dict if a PF MAC is not available.
+                return {}
+
+            vf_num = pci_utils.get_vf_num_by_pci_address(
+                device_dict['address'])
+
+            sriov_info.update({'vf_num': vf_num})
+            return sriov_info
+
         def _get_device_capabilities(
             device_dict: dict,
             device: 'libvirt.virNodeDevice',
@@ -1398,6 +1429,11 @@ class Host(object):
                 pcinet_info = self._get_pcinet_info(device, net_devs)
                 if pcinet_info:
                     caps['network'] = pcinet_info
+                    # Only attempt to get SR-IOV details if a VF is a netdev
+                    # because there are no use cases for other dev types yet.
+                sriov_caps = _get_sriov_netdev_details(device_dict, dev)
+                if sriov_caps:
+                    caps['sriov'] = sriov_caps
 
             vpd_info = _get_vpd_details(device_dict, device, pci_devs)
             if vpd_info:

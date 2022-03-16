@@ -2185,6 +2185,27 @@ _fake_NodeDevXml = {
         <capability type='80203'/>
       </capability>
     </device>""",  # noqa:E501
+    "net_enp130s0f0v0_36_33_10_a3_94_65": """
+    <device>
+      <name>net_enp130s0f0v0_36_33_10_a3_94_64</name>
+      <path>/sys/devices/pci0002:80/0002:80:03.0/0002:82:00.3/net/enp130s0f0v0</path>
+      <parent>pci_0002_82_00_3</parent>
+      <capability type='net'>
+        <interface>enp130s0f0v0</interface>
+        <address>36:33:10:a3:94:65</address>
+        <link state='down'/>
+        <feature name='rx'/>
+        <feature name='tx'/>
+        <feature name='sg'/>
+        <feature name='tso'/>
+        <feature name='gso'/>
+        <feature name='gro'/>
+        <feature name='rxvlan'/>
+        <feature name='txvlan'/>
+        <feature name='rxhash'/>
+        <capability type='80203'/>
+      </capability>
+    </device>""",  # noqa:E501
 }
 
 _fake_NodeDevXml_parents = {
