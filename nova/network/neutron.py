@@ -3694,25 +3694,6 @@ class API:
             return None
         return device
 
-    def _update_port_pci_binding_profile(self, pci_dev, binding_profile):
-        """Update the binding profile dict with new PCI device data.
-
-        :param pci_dev: The PciDevice object to update the profile with.
-        :param binding_profile: The dict to update.
-        """
-        binding_profile.update({'pci_slot': pci_dev.address})
-        if binding_profile.get('card_serial_number'):
-            binding_profile.update({
-                'card_serial_number': pci_dev.card_serial_number})
-        if binding_profile.get('pf_mac_address'):
-            binding_profile.update({
-                'pf_mac_address': pci_utils.get_mac_by_pci_address(
-                    pci_dev.parent_addr)})
-        if binding_profile.get('vf_num'):
-            binding_profile.update({
-                'vf_num': pci_utils.get_vf_num_by_pci_address(
-                    pci_dev.address)})
-
     def _update_port_binding_for_instance(
             self, context, instance, host, migration=None,
             provider_mappings=None):
@@ -3781,8 +3762,9 @@ class API:
                 else:
                     pci_dev = self._get_port_pci_dev(context, instance, p)
                     if pci_dev:
-                        self._update_port_pci_binding_profile(pci_dev,
-                                                              binding_profile)
+                        binding_profile.update(
+                            self._get_pci_device_profile(pci_dev)
+                        )
                         updates[constants.BINDING_PROFILE] = binding_profile
 
             # NOTE(gibi): during live migration the conductor already sets the
