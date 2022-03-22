@@ -321,8 +321,9 @@ def append_vif_infos_to_config_spec(client_factory, config_spec,
     if not hasattr(config_spec, 'deviceChange') or \
         not config_spec.deviceChange:
         config_spec.deviceChange = []
-    for vif_info in vif_infos:
-        vif_spec = _create_vif_spec(client_factory, vif_info, vif_limits)
+    for offset, vif_info in enumerate(vif_infos):
+        vif_spec = _create_vif_spec(client_factory, vif_info, vif_limits,
+            offset)
         config_spec.deviceChange.append(vif_spec)
 
     if not hasattr(config_spec, 'extraConfig') or \
@@ -631,7 +632,8 @@ def _create_vif_spec(client_factory, vif_info, vif_limits=None, offset=0):
     # The Server assigns a Key to the device. Here we pass a -ve temporary key.
     # -ve because actual keys are +ve numbers and we don't
     # want a clash with the key that server might associate with the device
-    net_device.key = -47
+    # We add a potential offset, so that multiple nics do not get the same key
+    net_device.key = -47 + offset
     net_device.addressType = "manual"
     net_device.macAddress = mac_address
     net_device.wakeOnLanEnabled = True
