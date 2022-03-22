@@ -81,6 +81,11 @@ class MigrateServerController(wsgi.Controller):
             exception.ExtendedResourceRequestOldCompute,
         ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
+        except (
+            exception.ForbiddenSharesNotSupported,
+            exception.ForbiddenWithShare,
+        ) as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
 
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
@@ -156,6 +161,11 @@ class MigrateServerController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'os-migrateLive', id)
+        except (
+            exception.ForbiddenSharesNotSupported,
+            exception.ForbiddenWithShare,
+        ) as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
 
     def _get_force_param_for_live_migration(self, body, host):
         force = body["os-migrateLive"].get("force", False)

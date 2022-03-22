@@ -257,6 +257,14 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.95 - Evacuate will now stop instance at destination.
     * 2.96 - Add support for returning pinned_availability_zone in
              ``server show`` and ``server list --long`` responses.
+    * 2.97 - Adds new API ``GET /servers/{server_id}/shares`` which shows
+             shares attachments of a given server.
+             ``GET /servers/{server_id}/shares/{share_id} which gives details
+             about a share attachment.
+             ``POST /servers/{server_id}/shares/{share_id} which create an
+             attachment.
+             ``DELETE /servers/{server_id}/shares/{share_id} which delete an
+             attachment.
 """
 
 # The minimum and maximum versions of the API supported
@@ -265,7 +273,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = '2.1'
-_MAX_API_VERSION = '2.96'
+_MAX_API_VERSION = '2.97'
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

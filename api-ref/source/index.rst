@@ -31,6 +31,7 @@ the `API guide <https://docs.openstack.org/api-guide/compute/index.html>`_.
 .. include:: os-instance-actions.inc
 .. include:: os-interface.inc
 .. include:: os-server-password.inc
+.. include:: os-server-shares.inc
 .. include:: os-volume-attachments.inc
 .. include:: flavors.inc
 .. include:: os-flavor-access.inc

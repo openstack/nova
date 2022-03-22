@@ -203,12 +203,15 @@ class API(object):
         def filter_export_locations(export_locations):
             # Return the preferred path otherwise choose the first one
             paths = []
-            for export_location in export_locations:
-                if export_location.is_preferred:
-                    return export_location.path
-                else:
-                    paths.append(export_location.path)
-            return paths[0]
+            try:
+                for export_location in export_locations:
+                    if export_location.is_preferred:
+                        return export_location.path
+                    else:
+                        paths.append(export_location.path)
+                return paths[0]
+            except (IndexError, NameError):
+                return None
 
         client = _manilaclient(context, admin=False)
         LOG.debug("Get share id:'%s' data from manila", share_id)

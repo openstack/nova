@@ -56,6 +56,7 @@ from nova.policies import server_external_events
 from nova.policies import server_groups
 from nova.policies import server_metadata
 from nova.policies import server_password
+from nova.policies import server_shares
 from nova.policies import server_tags
 from nova.policies import server_topology
 from nova.policies import servers
@@ -114,6 +115,7 @@ def list_rules():
         server_groups.list_rules(),
         server_metadata.list_rules(),
         server_password.list_rules(),
+        server_shares.list_rules(),
         server_tags.list_rules(),
         server_topology.list_rules(),
         servers.list_rules(),

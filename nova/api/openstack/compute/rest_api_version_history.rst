@@ -1255,3 +1255,16 @@ behavior.
 
 The ``server show`` and ``server list --long`` responses now include the
 pinned availability zone as well.
+
+.. _microversion 2.97:
+
+2.97
+----
+
+This microversion introduces the new Manila Share Attachment feature,
+streamlining the process of attaching and mounting Manila file shares to
+instances. It includes a new set of APIs to easily add, remove, list, and
+display shares. For detailed insights and usage instructions, please refer
+to the `manage-shares documentation`_.
+
+.. _manage-shares documentation: https://docs.openstack.org/nova/latest/admin/manage-shares.html

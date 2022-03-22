@@ -357,6 +357,23 @@ image_id = {
     'type': 'string', 'format': 'uuid'
 }
 
+share_id = {
+    'type': 'string', 'format': 'uuid'
+}
+
+share_tag = {
+    'type': 'string', 'minLength': 1, 'maxLength': 255,
+    'pattern': '^[a-zA-Z0-9-]*$'
+}
+
+share_export_location = {
+    'type': 'string'
+}
+
+share_status = {
+    'type': 'string',
+    'enum': ['active', 'inactive', 'attaching', 'detaching', 'error']
+}
 
 image_id_or_empty_string = {
     'oneOf': [
