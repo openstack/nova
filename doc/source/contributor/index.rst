@@ -140,8 +140,6 @@ changes done to the API, as the impact can be very wide.
 
 * :doc:`/contributor/api`: How the code is structured inside the API layer
 
-* :doc:`/contributor/api-2`: (needs update)
-
 * :doc:`/contributor/microversions`: How the API is (micro)versioned and what
   you need to do when adding an API exposed feature that needs a new
   microversion.
@@ -160,7 +158,6 @@ extend.
    :hidden:
 
    api
-   api-2
    microversions
    api-ref-guideline
    notifications
