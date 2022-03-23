@@ -163,6 +163,7 @@ log management and live migration of instances.
    security-groups
    security
    vendordata
+   notifications
 
 
 Advanced configuration
