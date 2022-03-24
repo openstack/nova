@@ -1307,6 +1307,12 @@ class VMwareVMOps(object):
                                                 vm_group_name, vm_ref,
                                                 remove=remove)
 
+    def prepare_for_spawn(self, instance):
+        if (int(instance.flavor.memory_mb) % 4 != 0):
+            reason = _("Memory size is not multiple of 4")
+            raise exception.InstanceUnacceptable(instance_id=instance.uuid,
+                                                 reason=reason)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
 

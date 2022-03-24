@@ -179,7 +179,7 @@ class VMwareVMOpsTestCase(test.TestCase):
             "projectid:fake_project\n"
             "projectname:None\n"
             "flavor:name:m1.micro\n"
-            "flavor:memory_mb:6\n"
+            "flavor:memory_mb:8\n"
             "flavor:vcpus:28\n"
             "flavor:ephemeral_gb:8128\n"
             "flavor:root_gb:496\n"
@@ -1994,6 +1994,15 @@ class VMwareVMOpsTestCase(test.TestCase):
         mock_attach_cdrom_to_vm.assert_called_once_with(
                 vm_ref, self._instance, self._ds.ref, str(upload_iso_path))
 
+    def test_prepare_for_spawn_invalid_ram(self):
+        instance = self._instance.obj_clone()
+        flavor = objects.Flavor(vcpus=1, memory_mb=6, ephemeral_gb=1,
+                                swap=1024, extra_specs={})
+        instance.flavor = flavor
+        self.assertRaises(exception.InstanceUnacceptable,
+                          self._vmops.prepare_for_spawn,
+                          instance)
+
     @mock.patch('nova.image.glance.API.get')
     @mock.patch.object(vmops.LOG, 'debug')
     @mock.patch.object(vmops.VMwareVMOps, '_fetch_image_if_missing')
@@ -3086,7 +3095,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     def _validate_flavor_extra_specs(self, flavor_extra_specs, expected):
         # Validate that the extra specs are parsed correctly
         flavor = objects.Flavor(name='my-flavor',
-                                memory_mb=6,
+                                memory_mb=8,
                                 vcpus=28,
                                 root_gb=496,
                                 ephemeral_gb=8128,
@@ -3634,7 +3643,7 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def test_get_storage_policy_none(self):
         flavor = objects.Flavor(name='m1.small',
-                                memory_mb=6,
+                                memory_mb=8,
                                 vcpus=28,
                                 root_gb=496,
                                 ephemeral_gb=8128,
@@ -3648,7 +3657,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     def test_get_storage_policy_extra_specs(self):
         extra_specs = {'vmware:storage_policy': 'flavor-policy'}
         flavor = objects.Flavor(name='m1.small',
-                                memory_mb=6,
+                                memory_mb=8,
                                 vcpus=28,
                                 root_gb=496,
                                 ephemeral_gb=8128,
@@ -3732,7 +3741,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     def test_get_instance_metadata(self):
         flavor = objects.Flavor(id=7,
                                 name='m1.small',
-                                memory_mb=6,
+                                memory_mb=8,
                                 vcpus=28,
                                 root_gb=496,
                                 ephemeral_gb=8128,
@@ -3747,7 +3756,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                     "projectid:fake_project\n"
                     "projectname:None\n"
                     "flavor:name:m1.small\n"
-                    "flavor:memory_mb:6\n"
+                    "flavor:memory_mb:8\n"
                     "flavor:vcpus:28\n"
                     "flavor:ephemeral_gb:8128\n"
                     "flavor:root_gb:496\n"
@@ -3864,7 +3873,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     def test_get_cores_per_socket(self):
         extra_specs = {'hw:cpu_sockets': 7}
         flavor = objects.Flavor(name='m1.small',
-                                memory_mb=6,
+                                memory_mb=8,
                                 vcpus=28,
                                 root_gb=496,
                                 ephemeral_gb=8128,

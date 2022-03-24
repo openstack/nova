@@ -592,6 +592,10 @@ class VMwareVCDriver(driver.ComputeDriver):
         # where cpu traits are added. In the vmware world, this is where we
         # would add nested providers representing tenant VDC and similar.
 
+    def prepare_for_spawn(self, instance):
+        """Perform pre-checks for spawn."""
+        self._vmops.prepare_for_spawn(instance)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
               block_device_info=None, power_on=True, accel_info=None):
