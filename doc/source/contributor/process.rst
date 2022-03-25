@@ -36,8 +36,8 @@ If you are new to Nova, please read this first: :ref:`getting_involved`.
 Dates overview
 ==============
 
-For Yoga, please see:
-https://wiki.openstack.org/wiki/Nova/Yoga_Release_Schedule
+For Zed, please see:
+https://wiki.openstack.org/wiki/Nova/Zed_Release_Schedule
 
 .. note:: Throughout this document any link which references the name of a
           release cycle in the link can usually be changed to the name of the
@@ -102,9 +102,9 @@ Why we have a Spec Freeze:
 
 By the freeze date, we expect all blueprints that will be approved for the
 cycle to be listed on launchpad and all relevant specs to be merged.
-For Yoga, blueprints can be found at
-https://blueprints.launchpad.net/nova/yoga and specs at
-https://specs.openstack.org/openstack/nova-specs/specs/yoga/index.html
+For Zed, blueprints can be found at
+https://blueprints.launchpad.net/nova/zed and specs at
+https://specs.openstack.org/openstack/nova-specs/specs/zed/index.html
 
 Starting with Liberty, we are keeping a backlog open for submission at all
 times.
