@@ -539,6 +539,15 @@ def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
     # `memoryAllocation` support on resize.
     resize_spec.memoryReservationLockedToMax = False
 
+    if extra_specs.cores_per_socket:
+        resize_spec.numCoresPerSocket = int(extra_specs.cores_per_socket)
+    # NOTE(jkulik): this only works with 6.7 and newer
+    if int(vcpus) > 128:
+        flags = client_factory.create('ns0:VirtualMachineFlagInfo')
+        flags.vvtdEnabled = True
+        flags.virtualMmuUsage = 'automatic'
+        resize_spec.flags = flags
+
     extra_config = []
     # big VMs need to prefer HT threads to stay in NUMA nodes
     if extra_specs.numa_prefer_ht is not None:
