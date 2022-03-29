@@ -1595,6 +1595,9 @@ class VMwareVMOpsTestCase(test.TestCase):
         self.assertEqual(self._instance.uuid, kwargs['name'])
         spec = kwargs['spec']
         self.assertFalse(spec.powerOn)
+        self.assertEqual(4, spec.config.memoryMB)
+        self.assertEqual(1, spec.config.numCPUs)
+        self.assertEqual(1, spec.config.numCoresPerSocket)
         # Relocate spec
         self.assertEqual(datastore_ref, spec.location.datastore)
         if remote:

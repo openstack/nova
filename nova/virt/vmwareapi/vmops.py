@@ -2004,8 +2004,8 @@ class VMwareVMOps(object):
                                                             vm_ref,
                                                             operation='remove')
             except Exception:
-                LOG.exception('Could not remove DRS override.',
-                              instance=instance)
+                LOG.warning('Could not remove DRS override.',
+                            instance=instance)
 
         self._clean_up_after_special_spawning(context, flavor.memory_mb,
                                               flavor)
@@ -2722,12 +2722,23 @@ class VMwareVMOps(object):
         rel_spec = target.get_relocate_spec(context, instance, flavor,
                                             factory=factory)
 
+        # Scale the cloned vm down to minimal resources,
+        # so that it fits the source hypervisor as well as the destination.
+        # The actual size will configured after the migration, and should
+        # fit thanks to the scheduler logic
+        client_factory = self._session.vim.client.factory
+        config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
+        config_spec.memoryMB = 4
+        config_spec.numCPUs = 1
+        config_spec.numCoresPerSocket = 1
+
         # We name the VM just by the instance.uuid to follow the same pattern
         # as in the instance creation
         # This causes the folder on the datastore to be named by the
         # instance.uuid potentially with a suffix in case the source and
         # destination are on the same datastore
-        cloned_vm = self._clone_vm(vm_ref, rel_spec, name=instance.uuid)
+        cloned_vm = self._clone_vm(vm_ref, rel_spec, name=instance.uuid,
+                                   config_spec=config_spec)
         LOG.info("Cloned VM with temporary name '%s'", instance.uuid,
                  instance=instance)
         try:
@@ -2752,10 +2763,11 @@ class VMwareVMOps(object):
         return vm_util.create_service_locator(cf, url, self._vcenter_uuid,
                                               credential)
 
-    def _clone_vm(self, vm_ref, rel_spec, name):
+    def _clone_vm(self, vm_ref, rel_spec, name, config_spec=None):
         """Returns a MoRef of the newly-created VM"""
         client_factory = self._session.vim.client.factory
         clone_spec = vm_util.clone_vm_spec(client_factory, rel_spec)
+        clone_spec.config = config_spec
         vm_clone_task = self._session._call_method(self._session.vim,
                                                    "CloneVM_Task",
                                                    vm_ref,
