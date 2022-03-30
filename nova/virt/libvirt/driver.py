@@ -2711,7 +2711,7 @@ class LibvirtDriver(driver.ComputeDriver):
                   instance=instance)
         block_device.resize(new_size)
 
-    def _resize_attached_encrypted_volume(self, original_new_size,
+    def _resize_attached_encrypted_volume(self, context, original_new_size,
                                           block_device, instance,
                                           connection_info, encryption):
         # TODO(lyarwood): Also handle the dm-crpyt encryption providers of
@@ -2757,6 +2757,17 @@ class LibvirtDriver(driver.ComputeDriver):
                     LOG.exception('Unknown error when attempting to find the '
                                   'payload_offset for LUKSv1 encrypted disk '
                                   '%s.', path, instance=instance)
+
+        else:  # os-brick encryptor driver
+            encryptor = self._get_volume_encryptor(connection_info, encryption)
+            decrypted_device_new_size = encryptor.extend_volume(context,
+                                                                **encryption)
+            if decrypted_device_new_size is None:
+                raise exception.VolumeExtendFailed(
+                    volume_id=block_device._disk,
+                    reason="Encryptor extend failed."
+                )
+
         # NOTE(lyarwood): Resize the decrypted device within the instance to
         # the calculated size as with normal volumes.
         self._resize_attached_volume(
@@ -2805,7 +2816,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     context, self._volume_api, volume_id, connection_info)
                 if encryption:
                     self._resize_attached_encrypted_volume(
-                        new_size, dev, instance,
+                        context, new_size, dev, instance,
                         connection_info, encryption)
                 else:
                     self._resize_attached_volume(
