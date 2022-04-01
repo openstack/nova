@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2020-04-25 15:32+0000\n"
+"POT-Creation-Date: 2022-03-30 00:54+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -132,18 +132,6 @@ msgid "Affinity instance group policy was violated."
 msgstr "Zásada skupiny slučivosti instance byla porušena."
 
 #, python-format
-msgid "Agent does not support the call: %(method)s"
-msgstr "Agent volání nepodporuje: %(method)s"
-
-#, python-format
-msgid ""
-"Agent-build with hypervisor %(hypervisor)s os %(os)s architecture "
-"%(architecture)s exists."
-msgstr ""
-"Sestavení agenta existuje s hypervizorem %(hypervisor)s, operačním systémem "
-"%(os)s a architekturou %(architecture)s"
-
-#, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
 msgstr "Agregát %(aggregate_id)s již má hostitele %(host)s."
 
@@ -161,18 +149,8 @@ msgstr ""
 "Agregát %(aggregate_id)s nemá žádná metadata s klíčem %(metadata_key)s."
 
 #, python-format
-msgid ""
-"Aggregate %(aggregate_id)s: action '%(action)s' caused an error: %(reason)s."
-msgstr ""
-"Agregát %(aggregate_id)s: činnost '%(action)s' způsobila chybu: %(reason)s."
-
-#, python-format
 msgid "Aggregate %(aggregate_name)s already exists."
 msgstr "Agregát %(aggregate_name)s již existuje."
-
-#, python-format
-msgid "Aggregate for host %(host)s count not be found."
-msgstr "Agregát pro počet hostitelů %(host)s nelze nalézt."
 
 msgid "An unknown error has occurred. Please try your request again."
 msgstr "Vyskytla se neznámá chyba. Prosím zopakujte Váš požadavek."
@@ -331,12 +309,6 @@ msgstr "Nelze najít požadovaný obraz"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "Nelze zpracovat žádost o ověření přihlašovacích údajů %d"
 
-msgid "Can't resize a disk to 0 GB."
-msgstr "Nelze změnit velikost disku na 0 GB."
-
-msgid "Can't resize down ephemeral disks."
-msgstr "Nelze zmenšit efemerní disky."
-
 msgid "Can't retrieve root device path from instance libvirt configuration"
 msgstr "Nelze získat cestu kořenového zařízení z nastavení libvirt instance"
 
@@ -369,12 +341,6 @@ msgstr "Nelze připojit jeden nebo více svazků k mnoha instancím"
 #, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Nelze volat %(method)s na osiřelém objektu %(objtype)s"
-
-msgid "Cannot find SR of content-type ISO"
-msgstr "Nelze najít SR typu obsahu ISO"
-
-msgid "Cannot find SR to read/write VDI."
-msgstr "Nelze najít SR pro čtení/zápis VDI."
 
 msgid "Cannot find image for rebuild"
 msgstr "Nelze najít obraz ke znovu sestavení"
@@ -494,10 +460,6 @@ msgid "Connection to libvirt lost: %s"
 msgstr "Připojování k libvirt ztraceno: %s"
 
 #, python-format
-msgid "Connection to the hypervisor is broken on host: %(host)s"
-msgstr "Připojení k hypervizoru je rozbité na hostiteli: %(host)s"
-
-#, python-format
 msgid ""
 "Console log output could not be retrieved for instance %(instance_id)s. "
 "Reason: %(reason)s"
@@ -569,18 +531,8 @@ msgid "Default PBM policy is required if PBM is enabled."
 msgstr "Výchozí zásada PVM je pro povolení PBM vyžadována."
 
 #, python-format
-msgid "Deleted %(records)d records from table '%(table_name)s'."
-msgstr "Smazáno %(records)d záznamů z tabulky '%(table_name)s'."
-
-#, python-format
 msgid "Device '%(device)s' not found."
 msgstr "Zařízení '%(device)s' nenalezeno."
-
-#, python-format
-msgid ""
-"Device id %(id)s specified is not supported by hypervisor version %(version)s"
-msgstr ""
-"ID zařízení %(id)s zadáno, ale není podporováno verzí hypervizoru %(version)s"
 
 msgid "Device name contains spaces."
 msgstr "Název zařízení obsahuje mezery."
@@ -589,31 +541,12 @@ msgid "Device name empty or too long."
 msgstr "Název zařízení je prázdný nebo příliš dlouhý."
 
 #, python-format
-msgid ""
-"Different types in %(table)s.%(column)s and shadow table: %(c_type)s "
-"%(shadow_c_type)s"
-msgstr ""
-"Různé typy v %(table)s.%(column)s a stínové tabulce: %(c_type)s "
-"%(shadow_c_type)s"
-
-#, python-format
-msgid "Disk contains a filesystem we are unable to resize: %s"
-msgstr "Disk obsahuje souborový systém, jehož velikost nelze změnit: %s"
-
-#, python-format
 msgid "Disk format %(disk_format)s is not acceptable"
 msgstr "Formát disku %(disk_format)s není přijatelný"
 
 #, python-format
 msgid "Disk info file is invalid: %(reason)s"
 msgstr "Soubor informací o disku je neplatný: %(reason)s"
-
-msgid "Disk must have only one partition."
-msgstr "Disk musí mít pouze jeden oddíl."
-
-#, python-format
-msgid "Disk with id: %s not found attached to instance."
-msgstr "Disk s id: %s nebylo připojeno k instanci."
 
 #, python-format
 msgid "Driver Error: %s"
@@ -626,10 +559,6 @@ msgid ""
 msgstr ""
 "Chyba při ničení instance na uzlu %(node)s. Stav poskytování bude "
 "'%(state)s'."
-
-#, python-format
-msgid "Error during following call to agent: %(method)s"
-msgstr "Chyba během následujícího volání agenta: %(method)s"
 
 #, python-format
 msgid "Error during unshelve instance %(instance_id)s: %(reason)s"
@@ -683,9 +612,6 @@ msgstr "Chyba při připojování %(image)s pomocí libguestfs (%(e)s)"
 msgid "Error when creating resource monitor: %(monitor)s"
 msgstr "Chyba při vytváření monitoru zdroje: %(monitor)s"
 
-msgid "Error: Agent is disabled"
-msgstr "Chyba: Agent je zakázán"
-
 #, python-format
 msgid "Event %(event)s not found for action id %(action_id)s"
 msgstr "Událost %(event)s nenalezena pro id žádosti %(action_id)s"
@@ -716,10 +642,6 @@ msgstr "Překročen maximální počet pokusů. %(reason)s"
 #, python-format
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "Očekáváno uuid ale obdrženo %(uuid)s."
-
-#, python-format
-msgid "Extra column %(table)s.%(column)s in shadow table"
-msgstr "Sloupec %(table)s.%(column)s je ve stínové tabulce navíc"
 
 msgid "Extracting vmdk from OVA failed."
 msgstr "Extrahování vmdk z OVA selhalo."
@@ -775,9 +697,6 @@ msgstr "Nelze mapovat oddíly: %s"
 msgid "Failed to mount filesystem: %s"
 msgstr "Nelze připojit souborový systém: %s"
 
-msgid "Failed to parse information about a pci device for passthrough"
-msgstr "Nelze zpracovat informace o zařízení pci pro průchod"
-
 #, python-format
 msgid "Failed to power off instance: %(reason)s"
 msgstr "Nelze vypnout instanci: %(reason)s"
@@ -785,14 +704,6 @@ msgstr "Nelze vypnout instanci: %(reason)s"
 #, python-format
 msgid "Failed to power on instance: %(reason)s"
 msgstr "Nelze zapnout instanci: %(reason)s"
-
-#, python-format
-msgid ""
-"Failed to prepare PCI device %(id)s for instance %(instance_uuid)s: "
-"%(reason)s"
-msgstr ""
-"Nelze připravit PCI zařízení %(id)s pro instanci %(instance_uuid)s: "
-"%(reason)s"
 
 #, python-format
 msgid "Failed to provision instance %(inst)s: %(reason)s"
@@ -826,9 +737,6 @@ msgstr "Nelze spustit qemu-img info na %(path)s : %(error)s"
 msgid "Failed to set admin password on %(instance)s because %(reason)s"
 msgstr "Nelze nastavit heslo správce v %(instance)s z důvodu %(reason)s"
 
-msgid "Failed to spawn, rolling back"
-msgstr "Nelze vytvořit, vráceno zpět"
-
 #, python-format
 msgid "Failed to suspend instance: %(reason)s"
 msgstr "Nelze pozastavit instanci: %(reason)s"
@@ -843,10 +751,6 @@ msgstr "Chyba při přípravě blokového zařízení."
 #, python-format
 msgid "File %(file_path)s could not be found."
 msgstr "Soubor %(file_path)s nemohl být nalezen."
-
-#, python-format
-msgid "File path %s not valid"
-msgstr "Cesta souboru %s není paltná"
 
 #, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
@@ -970,18 +874,6 @@ msgid "Found no disk to snapshot."
 msgstr "Nenalezen žádný disk k pořízení snímku."
 
 #, python-format
-msgid "Found no network for bridge %s"
-msgstr "Žádná síť pro most %s nenalezena"
-
-#, python-format
-msgid "Found non-unique network for bridge %s"
-msgstr "Nalezena sít mostu %s, která není jedinečná"
-
-#, python-format
-msgid "Found non-unique network for name_label %s"
-msgstr "Nalezena síť s názvem štítku %s, který není jedinečný"
-
-#, python-format
 msgid "Host %(host)s could not be found."
 msgstr "Hostitel %(host)s nemohl být nalezen."
 
@@ -1000,9 +892,6 @@ msgstr "Hostitel nepodporuje hosty s nastavenou topologií NUMA"
 
 msgid "Host does not support guests with custom memory page sizes"
 msgstr "Hostitel nepodporuje hosty s vlastní velikostí stránek paměti"
-
-msgid "Host startup on XenServer is not supported."
-msgstr "Spuštění hostitele na XenServer není podporováno."
 
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
@@ -1207,10 +1096,6 @@ msgstr "Instance nemá žádného zdrojového hostitele"
 msgid "Instance has not been resized."
 msgstr "Instanci nebyla změněna velikost."
 
-#, python-format
-msgid "Instance is already in Rescue Mode: %s"
-msgstr "Instance již je v záchranném režimu: %s"
-
 msgid "Instance is not a member of specified network"
 msgstr "Instance není členem zadané sítě"
 
@@ -1229,10 +1114,6 @@ msgstr ""
 #, python-format
 msgid "Insufficient compute resources: %(reason)s."
 msgstr "Nedostatečné výpočetní zdroje: %(reason)s."
-
-#, python-format
-msgid "Insufficient free memory on compute node to start %(uuid)s."
-msgstr "Pro spuštění %(uuid)s je ve výpočetním uzlu nedostatek volné paměti."
 
 #, python-format
 msgid "Interface %(interface)s not found."
@@ -1425,13 +1306,6 @@ msgid ""
 "It is not allowed to create an interface on external network %(network_uuid)s"
 msgstr "Na vnější síti %(network_uuid)s není povoleno vytvářet rozhraní"
 
-#, python-format
-msgid ""
-"Kernel/Ramdisk image is too large: %(vdi_size)d bytes, max %(max_size)d bytes"
-msgstr ""
-"Obraz Kernel/Ramdisk je příliš velký: %(vdi_size)d bajtů, max %(max_size)d "
-"bajtů"
-
 msgid ""
 "Key Names can only contain alphanumeric characters, periods, dashes, "
 "underscores, colons and spaces."
@@ -1489,9 +1363,6 @@ msgstr "Indikátor %(marker)s nemohl být nalezen."
 msgid "Maximum number of floating IPs exceeded"
 msgstr "Překročen maximálních počet plovoucích IP adres"
 
-msgid "Maximum number of key pairs exceeded"
-msgstr "Překročen maximálních počet párů klíčů"
-
 #, python-format
 msgid "Maximum number of metadata items exceeds %(allowed)d"
 msgstr "Maximální počet popisných položek překračuje %(allowed)d"
@@ -1522,12 +1393,6 @@ msgstr ""
 "Metrika %(name)s nemohla být nalezena v uzlu výpočetního hostitele %(host)s."
 "%(node)s."
 
-msgid "Migrate Receive failed"
-msgstr "Přijetí přesunu selhalo"
-
-msgid "Migrate Send failed"
-msgstr "Odeslání přesunu selhalo"
-
 #, python-format
 msgid "Migration %(migration_id)s could not be found."
 msgstr "Přesun %(migration_id)s nemohl být nalezen."
@@ -1551,10 +1416,6 @@ msgstr "Chyba kontroly před přesunem: %(reason)s"
 #, python-format
 msgid "Missing arguments: %s"
 msgstr "Chybí argumenty: %s"
-
-#, python-format
-msgid "Missing column %(table)s.%(column)s in shadow table"
-msgstr "Ve stínové tabulce chybí sloupec %(table)s.%(column)s"
 
 msgid "Missing device UUID."
 msgstr "UUID zařízení chybí."
@@ -1638,13 +1499,6 @@ msgid "Must not input both network_id and port_id"
 msgstr "Id sítě a id portu nesmí být zadány najednou"
 
 msgid ""
-"Must specify connection_url, connection_username (optionally), and "
-"connection_password to use compute_driver=xenapi.XenAPIDriver"
-msgstr ""
-"Pro použití compute_driver=xenapi.XenAPIDriver musíte zadat url připojení a "
-"volitelně uživatelské jméno a heslo připojení"
-
-msgid ""
 "Must specify host_ip, host_username and host_password to use vmwareapi."
 "VMwareVCDriver"
 msgstr ""
@@ -1693,10 +1547,6 @@ msgstr "Žádné mapování blokového zařízení s id %(id)s."
 
 msgid "No Unique Match Found."
 msgstr "Nenalezena žádná jedinečná shoda."
-
-#, python-format
-msgid "No agent-build associated with id %(id)s."
-msgstr "Žádné sestavení agenta není přidruženo k id %(id)s."
 
 msgid "No compute host specified"
 msgstr "Nezadán žádný výpočetní hostitel"
@@ -1748,15 +1598,8 @@ msgstr "V %(root)s z %(image)s nenalezeny žádné body připojení"
 msgid "No operating system found in %s"
 msgstr "V %s nenalezen žádný operační systém"
 
-#, python-format
-msgid "No primary VDI found for %s"
-msgstr "Nenalezen žádný hlavní VDI pro %s"
-
 msgid "No root disk defined."
 msgstr "Nezadán žádný kořenový disk."
-
-msgid "No suitable network for migrate"
-msgstr "Žádné vhodné sítě pro přesun"
 
 msgid "No valid host found for cold migrate"
 msgstr "Nebyl nalezen žádný platný hostitel pro přesun při nepoužívání"
@@ -1831,14 +1674,6 @@ msgstr "Jeden nebo více hostitelů již jsou v zónách dostupnosti %s"
 msgid "Only administrators may list deleted instances"
 msgstr "Pouze správci mohou vypsat smazané instance"
 
-#, python-format
-msgid ""
-"Only file-based SRs (ext/NFS) are supported by this feature.  SR %(uuid)s is "
-"of type %(type)s"
-msgstr ""
-"Pouze souborové SR (ext/NFS) jsou touto funkcí podporovány. SR %(uuid)s má "
-"typ %(type)s"
-
 msgid "Origin header does not match this host."
 msgstr "Hlavička původu neodpovídá tomuto hostiteli."
 
@@ -1879,10 +1714,6 @@ msgstr "PCI zařízení %(id)s nenalezeno"
 #, python-format
 msgid "PCI device request %(requests)s failed"
 msgstr "Žádost zařízení PCI %(requests)s selhala"
-
-#, python-format
-msgid "PIF %s does not contain IP address"
-msgstr "Fyz. rozhraní %s neobsahuje IP adresu"
 
 #, python-format
 msgid "Page size %(pagesize)s forbidden against '%(against)s'"
@@ -1983,10 +1814,6 @@ msgid "Quota exceeded, too many servers in group"
 msgstr "Kvóta překročena, příliš mnoho serverů ve skupině"
 
 #, python-format
-msgid "Quota exceeded: code=%(code)s"
-msgstr "Kvóta překročena: kód=%(code)s"
-
-#, python-format
 msgid "Quota exists for project %(project_id)s, resource %(resource)s"
 msgstr "Kvóta existuje pro projekt %(project_id)s, zdroj %(resource)s"
 
@@ -2015,10 +1842,6 @@ msgid ""
 "%(maximum)s."
 msgstr ""
 "Limit kvóty %(limit)s pro %(resource)s musí být menší nebo rovno %(maximum)s."
-
-#, python-format
-msgid "Reached maximum number of retries trying to unplug VBD %s"
-msgstr "Dosaženo maximálního počtu nových pokusů o odpojení VBD %s"
 
 msgid "Request body and URI mismatch"
 msgstr "Neshoda s tělem požadavku a URI"
@@ -2178,23 +2001,12 @@ msgid "Set admin password is not supported"
 msgstr "Nastavení hesla správce není podporováno"
 
 #, python-format
-msgid "Shadow table with name %(name)s already exists."
-msgstr "Stínová tabulka s názvem %(name)s již existuje."
-
-#, python-format
 msgid "Share '%s' is not supported"
 msgstr "Sdílení '%s' není podporováno"
 
 #, python-format
 msgid "Share level '%s' cannot have share configured"
 msgstr "Úroveň sdílení '%s' nemůže mít sdílení nastavena"
-
-msgid ""
-"Shrinking the filesystem down with resize2fs has failed, please check if you "
-"have enough free space on your disk."
-msgstr ""
-"Zmenšení souborového systému pomocí resize2fs selhalo, prosím zkontrolujte, "
-"zda máte na svém disku dostatek volného místa."
 
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
@@ -2219,12 +2031,6 @@ msgstr "Zadaný klíč řazení byl neplatný."
 
 msgid "Specified fixed address not assigned to instance"
 msgstr "Zadaná pevná adresa není k instanci přidělena"
-
-msgid "Specify `table_name` or `table` param"
-msgstr "Zadejte parametr `table_name` nebo `table`"
-
-msgid "Specify only one param `table_name` `table`"
-msgstr "Zadejte pouze jeden parametr `table_name` `table`"
 
 msgid "Started"
 msgstr "Spuštěno"
@@ -2291,9 +2097,6 @@ msgstr "Instance vyžaduje novější verzi hypervizoru, než byla poskytnuta."
 msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
 msgstr "Počet zadaných portů: %(ports)d přesahuje limit: %(quota)d"
 
-msgid "The only partition should be partition 1."
-msgstr "Jediným oddílem by měl být oddíl 1."
-
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr "Zadaná cesta zařízení RNG: (%(path)s) se nevyskytuje na hostiteli."
@@ -2356,47 +2159,12 @@ msgstr ""
 "Svazek nemůže být přidělen ke stejnému názvu zařízení jako kořenové zařízení "
 "%s"
 
-#, python-format
-msgid ""
-"There are %(records)d records in the '%(table_name)s' table where the uuid "
-"or instance_uuid column is NULL. Run this command again with the --delete "
-"option after you have backed up any necessary data."
-msgstr ""
-"V tabulce '%(table_name)s' existuje %(records)d  záznamů, kde uuid nebo uuid "
-"instance je prázdné. Poté, co jste provedli zálohu všech důležitých dat, "
-"spusťte tento příkaz znovu s volbou --delete."
-
-#, python-format
-msgid ""
-"There are %(records)d records in the '%(table_name)s' table where the uuid "
-"or instance_uuid column is NULL. These must be manually cleaned up before "
-"the migration will pass. Consider running the 'nova-manage db "
-"null_instance_uuid_scan' command."
-msgstr ""
-"V tabulce '%(table_name)s' existuje %(records)d  záznamů, kde uuid nebo uuid "
-"instance je prázdné. Tyto musí být ručně vyčištěny předtím, než bude "
-"přesunutí úspěšně dokončeno. Zvažte spustit příkaz 'nova-manage db "
-"null_instance_uuid_scan'."
-
 msgid "There are not enough hosts available."
 msgstr "Není dostatek dostupných hostitelů."
 
 #, python-format
-msgid ""
-"There are still %(count)i unmigrated flavor records. Migration cannot "
-"continue until all instance flavor records have been migrated to the new "
-"format. Please run `nova-manage db migrate_flavor_data' first."
-msgstr ""
-"Stále existuje %(count)i nepřesunutých záznamů konfigurace. Přesun nemůže "
-"pokračovat, dokud nebudou všechny záznamy konfigurace instance přesunuty do "
-"nového formátu. Prosím nejdříve spusťte `nova-manage db migrate_flavor_data'."
-
-#, python-format
 msgid "There is no such action: %s"
 msgstr "Žádná taková činnost: %s"
-
-msgid "There were no records found where instance_uuid was NULL."
-msgstr "Nebyly nalezeny žádné záznamy, kde uuid instance bylo prázdné."
 
 #, python-format
 msgid ""
@@ -2405,9 +2173,6 @@ msgid ""
 msgstr ""
 "Hypervizor tohoto uzlu výpočtu je starší než minimální podporovaná verze: "
 "%(version)s."
-
-msgid "This domU must be running on the host specified by connection_url"
-msgstr "Tento domU musí být spuštěn na hostiteli zadaném v url připojení."
 
 msgid ""
 "This method needs to be called with either networks=None and port_ids=None "
@@ -2427,10 +2192,6 @@ msgid ""
 msgstr ""
 "Tato služba je starší (v%(thisver)i) než minimální verze (v%(minver)i) ve "
 "zbytku nasazení. Nelze pokračovat."
-
-#, python-format
-msgid "Timeout waiting for device %s to be created"
-msgstr "Vypršel časový limit při čekání na vytvoření zařízení %s"
 
 msgid "Timeout waiting for response from cell"
 msgstr "Při čekání na odpověď od buňky vypršel čas"
@@ -2470,41 +2231,12 @@ msgid "Unable to authenticate Ironic client."
 msgstr "Nelze ověřit klienta ironic."
 
 #, python-format
-msgid "Unable to contact guest agent. The following call timed out: %(method)s"
-msgstr ""
-"Nelze kontaktovat agenta hosta. Následujícímu volání vypršel čas: %(method)s"
-
-#, python-format
-msgid "Unable to destroy VBD %s"
-msgstr "Nelze zničit VBD %s"
-
-#, python-format
-msgid "Unable to destroy VDI %s"
-msgstr "Nelze zničit VDI %s"
-
-#, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr "Nelze zjistit řadič disku pro '%s'"
 
 #, python-format
 msgid "Unable to determine disk prefix for %s"
 msgstr "Nelze zjistit předponu disku pro %s"
-
-#, python-format
-msgid "Unable to eject %s from the pool; No master found"
-msgstr "Nelze vyjmout %s ze zásoby; Nenalezen žádný správce zásoby"
-
-#, python-format
-msgid "Unable to eject %s from the pool; pool not empty"
-msgstr "Nelze vyjmout %s ze zásoby; zásoba není prázdná"
-
-#, python-format
-msgid "Unable to find SR from VBD %s"
-msgstr "Nelze najít SR z VBD %s"
-
-#, python-format
-msgid "Unable to find SR from VDI %s"
-msgstr "Nelze najít SR z VDI %s"
 
 #, python-format
 msgid "Unable to find ca_file : %s"
@@ -2525,9 +2257,6 @@ msgstr "Nelze najít cíl ISCSI"
 msgid "Unable to find key_file : %s"
 msgstr "Nelze najít soubor s klíčem : %s"
 
-msgid "Unable to find root VBD/VDI for VM"
-msgstr "Nelze najít kořen VBD/VDI pro VM"
-
 msgid "Unable to find volume"
 msgstr "Nelze najít svazek"
 
@@ -2536,22 +2265,6 @@ msgstr "Nelze získat UUID hostitele: /etc/machine-id neexistuje"
 
 msgid "Unable to get host UUID: /etc/machine-id is empty"
 msgstr "Nelze získat UUID hostitele: /etc/machine-id je prázdné"
-
-#, python-format
-msgid "Unable to get record of VDI %s on"
-msgstr "Nelze získat záznam VDI %s na"
-
-#, python-format
-msgid "Unable to introduce VDI for SR %s"
-msgstr "Nelze zavést VDI pro SR %s"
-
-#, python-format
-msgid "Unable to introduce VDI on SR %s"
-msgstr "Nelze zavést VDI na SR %s"
-
-#, python-format
-msgid "Unable to join %s in the pool"
-msgstr "Nelze připojit %s do zásoby"
 
 msgid ""
 "Unable to launch multiple instances with a single configured port ID. Please "
@@ -2583,10 +2296,6 @@ msgstr ""
 "Nelze přesunout instanci (%(instance_id)s) na současného hostitele "
 "(%(host)s)."
 
-#, python-format
-msgid "Unable to obtain target information %s"
-msgstr "Nelze získat informace o cíli %s"
-
 msgid "Unable to resize disk down."
 msgstr "Nelze zmenšit velikost disku."
 
@@ -2595,13 +2304,6 @@ msgstr "Nelze nastavit heslo instance"
 
 msgid "Unable to shrink disk."
 msgstr "Nelze zmenšit disk."
-
-msgid "Unable to terminate instance."
-msgstr "Nelze ukončit instanci."
-
-#, python-format
-msgid "Unable to unplug VBD %s"
-msgstr "Nelze odpojit VBD %s"
 
 #, python-format
 msgid "Unacceptable CPU info: %(reason)s"
@@ -2620,16 +2322,6 @@ msgid ""
 msgstr ""
 "Neurčený kořen mapování blokového zařízení: BlockDeviceMappingList obsahuje "
 "mapování blokového zařízení z více instancí."
-
-#, python-format
-msgid ""
-"Unexpected API Error. Please report this at http://bugs.launchpad.net/nova/ "
-"and attach the Nova API log if possible.\n"
-"%s"
-msgstr ""
-"Neočekávaná chyba API. Prosím nahlaste ji na http://bugs.launchpad.net/nova/ "
-"a pokud možno připojte k ní záznam Nova API.\n"
-"%s"
 
 #, python-format
 msgid "Unexpected aggregate action %s"
@@ -2691,9 +2383,6 @@ msgstr "Pokus o vyskladnění, ale obraz %s nemůže být nalezen."
 msgid "Unsupported Content-Type"
 msgstr "Nepodporovaný Content-Type"
 
-msgid "Upgrade DB using Essex release first."
-msgstr "Nejdříve aktualizujte DB pomocí verze z Essex."
-
 #, python-format
 msgid "User %(username)s not found in password file."
 msgstr "Uživatel %(username)s nenalezen v souboru hesel."
@@ -2714,24 +2403,6 @@ msgid ""
 msgstr ""
 "Použití různých syntaxí mapování blokového zařízení není povoleno ve stejné "
 "žádosti."
-
-#, python-format
-msgid ""
-"VDI %(vdi_ref)s is %(virtual_size)d bytes which is larger than flavor size "
-"of %(new_disk_size)d bytes."
-msgstr ""
-"VDI %(vdi_ref)s má %(virtual_size)d bajtů, což jje více než velikost "
-"konfigurace mající %(new_disk_size)d bajtů."
-
-#, python-format
-msgid ""
-"VDI not found on SR %(sr)s (vdi_uuid %(vdi_uuid)s, target_lun %(target_lun)s)"
-msgstr ""
-"VDi nenalezeno v SR %(sr)s (uuid vid %(vdi_uuid)s,cílový lun %(target_lun)s)"
-
-#, python-format
-msgid "VHD coalesce attempts exceeded (%d), giving up..."
-msgstr "Překročen počet pokusů (%d) o splynutí VHD, operace zrušena..."
 
 #, python-format
 msgid ""
@@ -2803,13 +2474,6 @@ msgstr ""
 "Svazek nastavuje velikost bloku, ale současný hypervizor libvirt '%s' "
 "nepodporuje vlastní velikost bloku"
 
-#, python-format
-msgid ""
-"We do not support scheme '%s' under Python < 2.7.4, please use http or https"
-msgstr ""
-"Schéma '%s' není podporováno v Python s verzí < 2.7.4, prosím použijte http "
-"nebo https"
-
 msgid "When resizing, instances must change flavor!"
 msgstr "Při změně velikosti musí instance změnit konfiguraci!"
 
@@ -2823,9 +2487,6 @@ msgstr ""
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"
 msgstr "Špatná metoda kvóty %(method)s použita na zdroj %(res)s"
-
-msgid "Wrong type of hook method. Only 'pre' and 'post' type allowed"
-msgstr "Špatný typ metody háku. Jsou povoleny pouze typy 'pre¨a 'post'"
 
 msgid "X-Forwarded-For is missing from request."
 msgstr "X-Forwarded-For v žádosti chybí"
@@ -2841,9 +2502,6 @@ msgstr "X-Metadata-Provider v žádosti chybí."
 
 msgid "X-Tenant-ID header is missing from request."
 msgstr "Hlavička X-Tenant-ID v žádosti chybí."
-
-msgid "XAPI supporting relax-xsm-sr-check=true required"
-msgstr "Vyžadováno XAPI podporující relax-xsm-sr-check=true"
 
 msgid "You are not allowed to delete the image."
 msgstr "Nemáte oprávnění smazat tento obraz."
@@ -2867,16 +2525,6 @@ msgstr "Je dostupných nula plovoucích IP adres."
 
 msgid "admin password can't be changed on existing disk"
 msgstr "heslo správce nelze měnit na existujícím disku"
-
-msgid "aggregate deleted"
-msgstr "agregát smazán"
-
-msgid "aggregate in error"
-msgstr "agregát má chybu"
-
-#, python-format
-msgid "assert_can_migrate failed because: %s"
-msgstr "assert_can_migrate selhalo protože: %s"
 
 msgid "cannot understand JSON"
 msgstr "JSON nelze porozumět"
@@ -2938,9 +2586,6 @@ msgstr "obraz již je připojen"
 msgid "instance %s is not running"
 msgstr "Instance %s není spuštěna"
 
-msgid "instance has a kernel or ramdisk but not both"
-msgstr "Instance má kernel nebo ramdisk, ale ne oba"
-
 msgid "instance is a required argument to use @refresh_cache"
 msgstr "instance je povinný argument pro použití @refresh_cache"
 
@@ -2993,9 +2638,6 @@ msgstr "zařízení nbd %s se nezobrazilo"
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd nedostupné: modul nenačten"
 
-msgid "no hosts to remove"
-msgstr "žádní hostitelé pro odstranění"
-
 #, python-format
 msgid "no match found for %s"
 msgstr "nebyla nalezena shoda pro %s"
@@ -3044,9 +2686,6 @@ msgstr ""
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr "set_admin_password není tímto ovladačem nebo hostem instance zavedeno."
 
-msgid "setup in progress"
-msgstr "probíhá nastavování"
-
 #, python-format
 msgid "snapshot for %s"
 msgstr "snímek pro %s"
@@ -3062,9 +2701,6 @@ msgstr "příliš mnoho klíčů těla"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "zrušení pozastavení není v vmwareapi podporováno"
-
-msgid "version should be an integer"
-msgstr "verze by měla být celé číslo"
 
 #, python-format
 msgid "vg %s must be LVM volume group"
@@ -3092,14 +2728,3 @@ msgid ""
 "volume '%(vol)s' status must be 'in-use'. Currently in '%(status)s' status"
 msgstr ""
 "stav svazku '%(vol)s' musí být 'in-use'. Nyní je ve stavu '%(status)s'."
-
-#, python-format
-msgid "xenapi.fake does not have an implementation for %s"
-msgstr "xenapi.fake nemá zavedeno %s"
-
-#, python-format
-msgid ""
-"xenapi.fake does not have an implementation for %s or it has been called "
-"with the wrong number of arguments"
-msgstr ""
-"xenapi.fake nemá zavedeno %s, nebo byl zavolán se špatným počtem argumentů"

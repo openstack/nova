@@ -17,7 +17,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2020-04-25 15:32+0000\n"
+"POT-Creation-Date: 2022-03-30 00:54+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -147,18 +147,6 @@ msgid "Affinity instance group policy was violated."
 msgstr "Gruppenrichtlinie von Affinitätsinstanz wurde nicht eingehalten."
 
 #, python-format
-msgid "Agent does not support the call: %(method)s"
-msgstr "Agent unterstützt den Aufruf nicht: %(method)s"
-
-#, python-format
-msgid ""
-"Agent-build with hypervisor %(hypervisor)s os %(os)s architecture "
-"%(architecture)s exists."
-msgstr ""
-"Agentenbuild mit Hypervisor %(hypervisor)s, Betriebssystem %(os)s, "
-"Architektur %(architecture)s ist bereits vorhanden."
-
-#, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
 msgstr "Aggregate %(aggregate_id)s hat bereits einen Host %(host)s."
 
@@ -177,23 +165,12 @@ msgstr ""
 "%(metadata_key)s."
 
 #, python-format
-msgid ""
-"Aggregate %(aggregate_id)s: action '%(action)s' caused an error: %(reason)s."
-msgstr ""
-"Aggregat %(aggregate_id)s: Aktion '%(action)s' hat einen Fehler verursacht: "
-"%(reason)s."
-
-#, python-format
 msgid "Aggregate %(aggregate_name)s already exists."
 msgstr "Aggregat %(aggregate_name)s ist bereits vorhanden."
 
 #, python-format
 msgid "Aggregate %s does not support empty named availability zone"
 msgstr "Aggregat %s unterstützt keine leeren, bezeichneten Verfügbarkeitszonen"
-
-#, python-format
-msgid "Aggregate for host %(host)s count not be found."
-msgstr "Aggregat für Host %(host)s konnte nicht gefunden werden. "
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -383,12 +360,6 @@ msgstr ""
 "Authentifizierungsanforderung für %d-Berechtigungsnachweis kann nicht "
 "verarbeitet werden"
 
-msgid "Can't resize a disk to 0 GB."
-msgstr "Die Größe einer Festplatte kann nicht auf 0 GB geändert werden."
-
-msgid "Can't resize down ephemeral disks."
-msgstr "Größe von inaktiven ephemeren Platten kann nicht geändert werden."
-
 msgid "Can't retrieve root device path from instance libvirt configuration"
 msgstr ""
 "Stammdatenträgerpfad kann nicht aus libvirt-Konfiguration der Instanz "
@@ -437,12 +408,6 @@ msgid ""
 msgstr ""
 "Übergeordneter Speicherpool für %s wurde nicht erkannt. Der Speicherort für "
 "Abbilder kann nicht ermittelt werden."
-
-msgid "Cannot find SR of content-type ISO"
-msgstr "SR mit 'content-type' = ISO kann nicht gefunden werden"
-
-msgid "Cannot find SR to read/write VDI."
-msgstr "SR zum Lesen/Schreiben von VDI kann nicht gefunden werden."
 
 msgid "Cannot find image for rebuild"
 msgstr "Image für Wiederherstellung kann nicht gefunden werden"
@@ -580,10 +545,6 @@ msgid "Connection to libvirt lost: %s"
 msgstr "Verbindung zu libvirt verloren: %s"
 
 #, python-format
-msgid "Connection to the hypervisor is broken on host: %(host)s"
-msgstr "Verbindung zum Hypervisor ist unterbrochen auf Host: %(host)s"
-
-#, python-format
 msgid ""
 "Console log output could not be retrieved for instance %(instance_id)s. "
 "Reason: %(reason)s"
@@ -660,26 +621,12 @@ msgid "Default PBM policy is required if PBM is enabled."
 msgstr "Standard-PBM-Richtlinie ist erforderlich, wenn PBM aktiviert ist."
 
 #, python-format
-msgid "Deleted %(records)d records from table '%(table_name)s'."
-msgstr "%(records)d Datensätze aus Tabelle '%(table_name)s' gelöscht."
-
-msgid "Destroy instance failed"
-msgstr "Zerstören der Instanz fehlgeschlagen"
-
-#, python-format
 msgid "Device '%(device)s' not found."
 msgstr "Das Gerät '%(device)s' wurde nicht gefunden."
 
 #, python-format
 msgid "Device detach failed for %(device)s: %(reason)s"
 msgstr "Abhängen des Geräts fehlgeschlagen für %(device)s: %(reason)s"
-
-#, python-format
-msgid ""
-"Device id %(id)s specified is not supported by hypervisor version %(version)s"
-msgstr ""
-"Angegebene Einheiten-ID %(id)s wird nicht unterstützt von Hypervisorversion "
-"%(version)s"
 
 msgid "Device name contains spaces."
 msgstr "Gerätename enthält Leerzeichen."
@@ -692,32 +639,12 @@ msgid "Device type mismatch for alias '%s'"
 msgstr "Gerätetypabweichung für Alias '%s'"
 
 #, python-format
-msgid ""
-"Different types in %(table)s.%(column)s and shadow table: %(c_type)s "
-"%(shadow_c_type)s"
-msgstr ""
-"Verschiedenen Typen in %(table)s.%(column)s und der Spiegeltabelle: "
-"%(c_type)s %(shadow_c_type)s"
-
-#, python-format
-msgid "Disk contains a filesystem we are unable to resize: %s"
-msgstr ""
-"Platte enthält ein Dateisystem, dessen Größe nicht geändert werden kann: %s"
-
-#, python-format
 msgid "Disk format %(disk_format)s is not acceptable"
 msgstr "Datenträgerformat %(disk_format)s ist nicht zulässig"
 
 #, python-format
 msgid "Disk info file is invalid: %(reason)s"
 msgstr "Datei mit Datenträgerinformationen ist ungültig: %(reason)s"
-
-msgid "Disk must have only one partition."
-msgstr "Festplatte darf nur eine Partition haben."
-
-#, python-format
-msgid "Disk with id: %s not found attached to instance."
-msgstr "Platte mit ID %s nicht an Instanz angehängt gefunden."
 
 #, python-format
 msgid "Driver Error: %s"
@@ -734,10 +661,6 @@ msgid ""
 msgstr ""
 "Fehler beim Löschen der Instanz auf Knoten %(node)s. Bereitstellungsstatus "
 "ist noch '%(state)s'."
-
-#, python-format
-msgid "Error during following call to agent: %(method)s"
-msgstr "Fehler bei folgendem Aufruf an Agenten: %(method)s"
 
 #, python-format
 msgid "Error during unshelve instance %(instance_id)s: %(reason)s"
@@ -791,9 +714,6 @@ msgstr "Fehler beim Einhängen %(image)s mit libguestfs (%(e)s)"
 msgid "Error when creating resource monitor: %(monitor)s"
 msgstr "Fehler beim Erstellen von Ressourcenüberwachung: %(monitor)s"
 
-msgid "Error: Agent is disabled"
-msgstr "Fehler: Agent ist deaktiviert"
-
 #, python-format
 msgid "Event %(event)s not found for action id %(action_id)s"
 msgstr "Ereignis %(event)s nicht gefunden für Aktions-ID '%(action_id)s'"
@@ -825,10 +745,6 @@ msgstr "Maximale Anzahl der WIederholungen überschritten. %(reason)s"
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "UUID erwartet, aber %(uuid)s erhalten."
 
-#, python-format
-msgid "Extra column %(table)s.%(column)s in shadow table"
-msgstr "Zusatzspalte %(table)s.%(column)s in Spiegeltabelle"
-
 msgid "Extracting vmdk from OVA failed."
 msgstr "Extraktion von vmdk aus OVA fehlgeschlagen."
 
@@ -858,10 +774,6 @@ msgstr ""
 "Anhängen des Netzwerkgeräteadapters an %(instance_uuid)s fehlgeschlagen"
 
 #, python-format
-msgid "Failed to create vif %s"
-msgstr "Vif %s konnte nicht erstellt werden."
-
-#, python-format
 msgid "Failed to deploy instance: %(reason)s"
 msgstr "Instanz konnte nicht implementiert werden: %(reason)s"
 
@@ -879,10 +791,6 @@ msgid "Failed to encrypt text: %(reason)s"
 msgstr "Fehler beim Verschlüsseln des Textes: %(reason)s"
 
 #, python-format
-msgid "Failed to forget the SR for volume %s"
-msgstr "Fehler beim Vergessen des SR für Datenträger %s"
-
-#, python-format
 msgid "Failed to launch instances: %(reason)s"
 msgstr "Fehler beim Starten der Instanz: %(reason)s"
 
@@ -894,11 +802,6 @@ msgstr "Partitionen konnten nicht zugeordnet werden: %s"
 msgid "Failed to mount filesystem: %s"
 msgstr "Fehler beim Anhängen von Dateisystem: %s"
 
-msgid "Failed to parse information about a pci device for passthrough"
-msgstr ""
-"Fehler beim Analysieren von Informationen zu einer PCI-Einheit für "
-"Passthrough"
-
 #, python-format
 msgid "Failed to power off instance: %(reason)s"
 msgstr "Instanz konnte nicht ausgeschaltet werden: %(reason)s"
@@ -906,14 +809,6 @@ msgstr "Instanz konnte nicht ausgeschaltet werden: %(reason)s"
 #, python-format
 msgid "Failed to power on instance: %(reason)s"
 msgstr "Instanz konnte nicht eingeschaltet werden: %(reason)s"
-
-#, python-format
-msgid ""
-"Failed to prepare PCI device %(id)s for instance %(instance_uuid)s: "
-"%(reason)s"
-msgstr ""
-"Vorbereitung des  PCI Gerätes %(id)s für Instanz %(instance_uuid)s "
-"fehlgeschlagen: %(reason)s"
 
 #, python-format
 msgid "Failed to provision instance %(inst)s: %(reason)s"
@@ -953,9 +848,6 @@ msgstr ""
 "Administratorkennwort für %(instance)s konnte nicht festgelegt werden "
 "aufgrund von %(reason)s"
 
-msgid "Failed to spawn, rolling back"
-msgstr "Generierung nicht möglich, Rollback wird durchgeführt"
-
 #, python-format
 msgid "Failed to suspend instance: %(reason)s"
 msgstr "Instanz konnte nicht ausgesetzt werden: %(reason)s"
@@ -963,10 +855,6 @@ msgstr "Instanz konnte nicht ausgesetzt werden: %(reason)s"
 #, python-format
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "Instanz konnte nicht beendet werden: %(reason)s"
-
-#, python-format
-msgid "Failed to unplug vif %s"
-msgstr "Vif %s konnte nicht entfernt werden."
 
 #, python-format
 msgid "Failed to unplug virtual interface: %(reason)s"
@@ -978,10 +866,6 @@ msgstr "Fehler beim Vorbereiten des Block-Gerätes."
 #, python-format
 msgid "File %(file_path)s could not be found."
 msgstr "Datei %(file_path)s konnte nicht gefunden werden."
-
-#, python-format
-msgid "File path %s not valid"
-msgstr "Dateipfad %s nicht gültig"
 
 #, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
@@ -1116,21 +1000,6 @@ msgstr ""
 msgid "Found no disk to snapshot."
 msgstr "Es wurde keine Platte für eine Momentaufnahme gefunden."
 
-#, python-format
-msgid "Found no network for bridge %s"
-msgstr "Kein Netz für Brücke %s gefunden"
-
-#, python-format
-msgid "Found non-unique network for bridge %s"
-msgstr "Nicht eindeutiges Netz für Brücke %s gefunden"
-
-#, python-format
-msgid "Found non-unique network for name_label %s"
-msgstr "Nicht eindeutiges Netz für name_label %s gefunden"
-
-msgid "Guest does not have a console available"
-msgstr "Gast hat keine Konsole verfügbar"
-
 msgid "Guest does not have a console available."
 msgstr "Für Gast ist keine Konsole verfügbar."
 
@@ -1158,9 +1027,6 @@ msgstr "Host unterstützt keine Gäste mit NUMA-Topologiegruppe"
 msgid "Host does not support guests with custom memory page sizes"
 msgstr ""
 "Host unterstützt keine Gäste mit benutzerdefinierter Speicherseitengröße"
-
-msgid "Host startup on XenServer is not supported."
-msgstr "Hoststart auf XenServer wird nicht unterstützt."
 
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
@@ -1394,10 +1260,6 @@ msgstr "Instanzgröße wurde nicht angepasst."
 msgid "Instance hostname %(hostname)s is not a valid DNS name"
 msgstr "Instanzhostname %(hostname)s ist kein gültiger DNS-Name."
 
-#, python-format
-msgid "Instance is already in Rescue Mode: %s"
-msgstr "Instanz ist bereits im Rettungsmodus: %s"
-
 msgid "Instance is not a member of specified network"
 msgstr "Instanz ist nicht Mitglied des angegebenen Netzes"
 
@@ -1417,12 +1279,6 @@ msgstr ""
 #, python-format
 msgid "Insufficient compute resources: %(reason)s."
 msgstr "Nicht genug Compute Ressourcen: %(reason)s"
-
-#, python-format
-msgid "Insufficient free memory on compute node to start %(uuid)s."
-msgstr ""
-"Nicht genügend freier Speicherplatz auf Rechenknoten zum Starten von "
-"%(uuid)s."
 
 #, python-format
 msgid "Interface %(interface)s not found."
@@ -1624,13 +1480,6 @@ msgstr ""
 "Das Erstellen einer Schnittstelle auf externem Netz %(network_uuid)s ist "
 "nicht zulässig"
 
-#, python-format
-msgid ""
-"Kernel/Ramdisk image is too large: %(vdi_size)d bytes, max %(max_size)d bytes"
-msgstr ""
-"Kernel-/RAM-Plattenimage ist zu groß: %(vdi_size)d Byte, maximal "
-"%(max_size)d Byte"
-
 msgid ""
 "Key Names can only contain alphanumeric characters, periods, dashes, "
 "underscores, colons and spaces."
@@ -1695,9 +1544,6 @@ msgstr "Marker %(marker)s konnte nicht gefunden werden. "
 msgid "Maximum number of floating IPs exceeded"
 msgstr "Maximale Anzahl an Floating IPs überschritten"
 
-msgid "Maximum number of key pairs exceeded"
-msgstr "Maximale Anzahl an Schlüsselpaaren überschritten"
-
 #, python-format
 msgid "Maximum number of metadata items exceeds %(allowed)d"
 msgstr "Maximale Anzahl an Metadatenelementen überschreitet %(allowed)d"
@@ -1727,12 +1573,6 @@ msgid ""
 msgstr ""
 "Messwert %(name)s konnte auf dem Rechenhostknoten %(host)s.%(node)s nicht "
 "gefunden werden."
-
-msgid "Migrate Receive failed"
-msgstr "Empfangen der Migration fehlgeschlagen"
-
-msgid "Migrate Send failed"
-msgstr "Senden der Migration fehlgeschlagen"
 
 #, python-format
 msgid "Migration %(id)s for server %(uuid)s is not live-migration."
@@ -1779,10 +1619,6 @@ msgstr "Fehler für ausgewählte Migrationsziele: %(reason)s"
 #, python-format
 msgid "Missing arguments: %s"
 msgstr "Fehlende Argumente: %s"
-
-#, python-format
-msgid "Missing column %(table)s.%(column)s in shadow table"
-msgstr "Fehlende Spalte %(table)s.%(column)s in Spiegeltabelle"
 
 msgid "Missing device UUID."
 msgstr "Fehlende Gerät-UUID."
@@ -1867,14 +1703,6 @@ msgid "Must not input both network_id and port_id"
 msgstr "Es dürfen nicht sowohl network_id als auch port_id eingegeben werden"
 
 msgid ""
-"Must specify connection_url, connection_username (optionally), and "
-"connection_password to use compute_driver=xenapi.XenAPIDriver"
-msgstr ""
-"Angabe von connection_url, connection_username (optional) und "
-"connection_password erforderlich zum Verwenden von compute_driver=xenapi."
-"XenAPIDriver"
-
-msgid ""
 "Must specify host_ip, host_username and host_password to use vmwareapi."
 "VMwareVCDriver"
 msgstr ""
@@ -1932,10 +1760,6 @@ msgstr "Keine Block-Geräte-Zuordnung mit ID %(id)s."
 msgid "No Unique Match Found."
 msgstr "Keine eindeutige Übereinstimmung gefunden."
 
-#, python-format
-msgid "No agent-build associated with id %(id)s."
-msgstr "Kein Agenten-Build ist ID '%(id)s' zugeordnet."
-
 msgid "No compute host specified"
 msgstr "Kein Rechenhost angegeben "
 
@@ -1970,10 +1794,6 @@ msgstr "Keine freien nbd-Geräte"
 msgid "No host available on cluster"
 msgstr "Kein Host verfügbar auf Cluster"
 
-#, python-format
-msgid "No host with name %s found"
-msgstr "Kein Host mit dem Namen %s gefunden"
-
 msgid "No hosts found to map to cell, exiting."
 msgstr "Keine Host für die Zuordnung zur Zelle gefunden. Wird beendet."
 
@@ -2007,10 +1827,6 @@ msgstr "Kein Einhängepunkt gefunden in %(root)s von %(image)s"
 msgid "No operating system found in %s"
 msgstr "Kein Betriebssystem gefunden in %s"
 
-#, python-format
-msgid "No primary VDI found for %s"
-msgstr "Kein primäres VDI für %s gefunden"
-
 msgid "No root disk defined."
 msgstr "Keine Root-Festplatte bestimmt."
 
@@ -2021,9 +1837,6 @@ msgid ""
 msgstr ""
 "Es wurde kein bestimmtes Netzwerk angefordert und für das Projekt "
 "'%(project_id)s' ist kein Netzwerk verfügbar."
-
-msgid "No suitable network for migrate"
-msgstr "Kein geeignetes Netzwerk zum Migrieren"
 
 msgid "No valid host found for cold migrate"
 msgstr "Keinen gültigen Host gefunden für Migration ohne Daten"
@@ -2113,14 +1926,6 @@ msgstr "Nur %d SCSI-Controller dürfen in dieser Instanz erstellt werden."
 msgid "Only administrators may list deleted instances"
 msgstr "Nur Administratoren können gelöschte Instanzen auflisten"
 
-#, python-format
-msgid ""
-"Only file-based SRs (ext/NFS) are supported by this feature.  SR %(uuid)s is "
-"of type %(type)s"
-msgstr ""
-"Nur dateibasierte SRs (ext/NFS) werden von dieser Funktion unterstützt. SR "
-"%(uuid)s weist den Typ %(type)s auf"
-
 msgid "Origin header does not match this host."
 msgstr "Ursprungsheader stimmt nicht mit diesem Host überein."
 
@@ -2161,10 +1966,6 @@ msgstr "PCI-Gerät %(id)s nicht gefunden"
 #, python-format
 msgid "PCI device request %(requests)s failed"
 msgstr "PCI-Geräteanforderung %(requests)s fehlgeschlagen"
-
-#, python-format
-msgid "PIF %s does not contain IP address"
-msgstr "PIF %s enthält keine IP-Adresse"
 
 #, python-format
 msgid "Page size %(pagesize)s forbidden against '%(against)s'"
@@ -2286,10 +2087,6 @@ msgid "Quota exceeded, too many servers in group"
 msgstr "Quote überschritten, zu viele Server in Gruppe"
 
 #, python-format
-msgid "Quota exceeded: code=%(code)s"
-msgstr "Quote überschritten: code=%(code)s"
-
-#, python-format
 msgid "Quota exists for project %(project_id)s, resource %(resource)s"
 msgstr ""
 "Für Projekt %(project_id)s, Ressource %(resource)s ist eine Quote vorhanden"
@@ -2320,18 +2117,6 @@ msgid ""
 msgstr ""
 "Quotengrenzwert %(limit)s für %(resource)s muss kleiner-gleich %(maximum)s "
 "sein."
-
-#, python-format
-msgid "Reached maximum number of retries trying to unplug VBD %s"
-msgstr "Maximale Anzahl an Wiederholungen für das Trennen von VBD %s erreicht"
-
-msgid ""
-"Realtime policy needs vCPU(s) mask configured with at least 1 RT vCPU and 1 "
-"ordinary vCPU. See hw:cpu_realtime_mask or hw_cpu_realtime_mask"
-msgstr ""
-"Die Echtzeitrichtlinie erfordert eine mit 1 RT-vCPU und 1 normalen vCPU "
-"konfigurierte vCPU(s)-Maske. Weitere Informationen finden Sie unter 'hw:"
-"cpu_realtime_mask' bzw. 'hw_cpu_realtime_mask'."
 
 msgid "Request body and URI mismatch"
 msgstr "Abweichung zwischen Anforderungshauptteil und URI"
@@ -2509,23 +2294,12 @@ msgid "Set admin password is not supported"
 msgstr "Das Setzen des Admin-Passwortes wird nicht unterstützt"
 
 #, python-format
-msgid "Shadow table with name %(name)s already exists."
-msgstr "Spiegeltabelle mit dem Namen '%(name)s' ist bereits vorhanden."
-
-#, python-format
 msgid "Share '%s' is not supported"
 msgstr "Das freigegebene Verzeichnis '%s' wird nicht unterstützt"
 
 #, python-format
 msgid "Share level '%s' cannot have share configured"
 msgstr "Geteilte Ebene '%s' kann keine geteilte Konfigration haben"
-
-msgid ""
-"Shrinking the filesystem down with resize2fs has failed, please check if you "
-"have enough free space on your disk."
-msgstr ""
-"Verkleinern des Dateisystems mit resize2fs ist fehlgeschlagen; überprüfen "
-"Sie, ob auf Ihrer Platte noch genügend freier Speicherplatz vorhanden ist."
 
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
@@ -2551,12 +2325,6 @@ msgstr "Der angegebene Sortierschlüssel war nicht gültig. "
 
 msgid "Specified fixed address not assigned to instance"
 msgstr "Angegebene statische Adresse ist nicht der Instanz zugeordnet"
-
-msgid "Specify `table_name` or `table` param"
-msgstr "Geben Sie den Parameter `table_name` oder `table` an"
-
-msgid "Specify only one param `table_name` `table`"
-msgstr "Geben Sie nur einen Parameter an, `table_name` oder `table`"
 
 msgid "Started"
 msgstr "Gestartet"
@@ -2637,9 +2405,6 @@ msgid "The number of defined ports: %(ports)d is over the limit: %(quota)d"
 msgstr ""
 "Die Anzahl der definierten Ports (%(ports)d) ist über dem Limit: %(quota)d"
 
-msgid "The only partition should be partition 1."
-msgstr "Die einzige Partition sollte Partition 1 sein."
-
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr ""
@@ -2705,49 +2470,12 @@ msgstr ""
 "Der Datenträger kann nicht zum delben Gerätenamen wir das Root Gerät %s "
 "zugewiesen werden"
 
-#, python-format
-msgid ""
-"There are %(records)d records in the '%(table_name)s' table where the uuid "
-"or instance_uuid column is NULL. Run this command again with the --delete "
-"option after you have backed up any necessary data."
-msgstr ""
-"Es gibt %(records)d Datensätze in der Tabelle '%(table_name)s', bei denen "
-"die Spalte 'uuid' oder 'instance_uuid' NULL ist. Führen Sie diesen Befehl "
-"erneut mit der Option --delete aus, nachdem Sie alle erforderlichen Daten "
-"gesichert haben."
-
-#, python-format
-msgid ""
-"There are %(records)d records in the '%(table_name)s' table where the uuid "
-"or instance_uuid column is NULL. These must be manually cleaned up before "
-"the migration will pass. Consider running the 'nova-manage db "
-"null_instance_uuid_scan' command."
-msgstr ""
-"Es gibt %(records)d Datensätze in der Tabelle '%(table_name)s', bei denen "
-"die Spalte 'uuid' oder' instance_uuid' NULL ist. Diese müssen manuell "
-"bereinigt werden, bevor die Migration übergeben wird. Möglicherweise sollten "
-"Sie den Befehl 'nova-manage db null_instance_uuid_scan' ausführen."
-
 msgid "There are not enough hosts available."
 msgstr "Es sind nicht genügend Hosts verfügbar."
 
 #, python-format
-msgid ""
-"There are still %(count)i unmigrated flavor records. Migration cannot "
-"continue until all instance flavor records have been migrated to the new "
-"format. Please run `nova-manage db migrate_flavor_data' first."
-msgstr ""
-"Es gibt immer noch  %(count)i nicht migrierte Versionseinträge. Migration "
-"kann nicht fortgesetzt werden, solange nicht alle Instanz-Versionseinträge "
-"zum neuen Format migriert sind.  Bitte starten Sie zuerst `nova-manage db "
-"migrate_flavor_data'."
-
-#, python-format
 msgid "There is no such action: %s"
 msgstr "Aktion existiert nicht: %s"
-
-msgid "There were no records found where instance_uuid was NULL."
-msgstr "Es wurden keine Datensätze gefunden, in denen instance_uuid  NULL war."
 
 #, python-format
 msgid ""
@@ -2756,11 +2484,6 @@ msgid ""
 msgstr ""
 "Die Hypervisorversion des Compute-Knotens ist älter als die Version, die für "
 "die Mindestunterstützung erforderlich ist: %(version)s."
-
-msgid "This domU must be running on the host specified by connection_url"
-msgstr ""
-"Diese domU muss auf dem von 'connection_url' angegebenen Host ausgeführt "
-"werden"
 
 msgid ""
 "This method needs to be called with either networks=None and port_ids=None "
@@ -2781,10 +2504,6 @@ msgid ""
 msgstr ""
 "Dieser Dienst ist älter (v%(thisver)i) als die Mindestversion (v%(minver)i) "
 "der übrigen Implementierung. Fortfahren nicht möglich. "
-
-#, python-format
-msgid "Timeout waiting for device %s to be created"
-msgstr "Zeitüberschreitung bei der Erstellung des Gerätes: %s"
 
 msgid "Timeout waiting for response from cell"
 msgstr "Zeitüberschreitung beim Warten auf Antwort von der Zelle"
@@ -2828,12 +2547,6 @@ msgid "Unable to authenticate Ironic client."
 msgstr "Ironic-Client kann nicht authentifiziert werden. "
 
 #, python-format
-msgid "Unable to contact guest agent. The following call timed out: %(method)s"
-msgstr ""
-"Gastagent konnte nicht kontaktiert werden. Der folgende Aufruf ist "
-"abgelaufen: %(method)s"
-
-#, python-format
 msgid "Unable to convert image to %(format)s: %(exp)s"
 msgstr "Abbild kann nicht konvertiert werden in %(format)s: %(exp)s"
 
@@ -2842,43 +2555,12 @@ msgid "Unable to convert image to raw: %(exp)s"
 msgstr "Abbild kann nicht in ein Rohformat konvertiert werden: %(exp)s"
 
 #, python-format
-msgid "Unable to destroy VBD %s"
-msgstr "VBD %s kann nicht gelöscht werden"
-
-#, python-format
-msgid "Unable to destroy VDI %s"
-msgstr "VDI %s kann nicht gelöscht werden"
-
-#, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr "Plattenbus für '%s' kann nicht bestimmt werden"
 
 #, python-format
 msgid "Unable to determine disk prefix for %s"
 msgstr "Plattenpräfix für %s kann nicht bestimmt werden"
-
-#, python-format
-msgid "Unable to eject %s from the pool; No master found"
-msgstr ""
-"%s kann nicht aus Pool entnommen werden; keine übergeordnete Einheit gefunden"
-
-#, python-format
-msgid "Unable to eject %s from the pool; pool not empty"
-msgstr "%s kann nicht aus Pool entnommen werden; Pool ist nicht leer"
-
-msgid "Unable to find SR from VBD"
-msgstr "Konnte kein SR finden für VBD"
-
-#, python-format
-msgid "Unable to find SR from VBD %s"
-msgstr "SR kann nicht ausgehend von VBD '%s' gefunden werden"
-
-msgid "Unable to find SR from VDI"
-msgstr "Konnte kein SR finden für VDI"
-
-#, python-format
-msgid "Unable to find SR from VDI %s"
-msgstr "SR von VDI %s kann nicht gefunden werden"
 
 #, python-format
 msgid "Unable to find ca_file : %s"
@@ -2899,9 +2581,6 @@ msgstr "iSCSI-Ziel konnte nicht gefunden worden"
 msgid "Unable to find key_file : %s"
 msgstr "'key_file' konnte nicht gefunden werden: %s"
 
-msgid "Unable to find root VBD/VDI for VM"
-msgstr "Root-VBD/VDI für VM kann nicht gefunden werden"
-
 msgid "Unable to find volume"
 msgstr "Datenträger kann nicht gefunden werden"
 
@@ -2910,31 +2589,6 @@ msgstr "Host UUID kann nicht abgerufen werden: /etc/machine-id existiert nicht"
 
 msgid "Unable to get host UUID: /etc/machine-id is empty"
 msgstr "Host UUID kann nicht abgerufen werden: /etc/machine-id ist leer"
-
-msgid "Unable to get record of VDI"
-msgstr "Konnte keinen EIntrag für VDI beziehen"
-
-#, python-format
-msgid "Unable to get record of VDI %s on"
-msgstr "Datensatz von VDI %s kann nicht abgerufen werden auf"
-
-msgid "Unable to introduce VDI for SR"
-msgstr "Bekanntmachung VDI an SR nicht möglich"
-
-#, python-format
-msgid "Unable to introduce VDI for SR %s"
-msgstr "VDI kann für SR %s nicht eingeführt werden"
-
-msgid "Unable to introduce VDI on SR"
-msgstr "Bekanntmachung VDI an SR nicht möglich"
-
-#, python-format
-msgid "Unable to introduce VDI on SR %s"
-msgstr "VDI kann nicht in SR '%s' eingeführt werden"
-
-#, python-format
-msgid "Unable to join %s in the pool"
-msgstr "Verknüpfung von %s im Pool nicht möglich"
 
 msgid ""
 "Unable to launch multiple instances with a single configured port ID. Please "
@@ -2967,10 +2621,6 @@ msgstr ""
 "Instanz (%(instance_id)s) kann nicht auf aktuellen Host (%(host)s) migriert "
 "werden."
 
-#, python-format
-msgid "Unable to obtain target information %s"
-msgstr "Zielinformationen zu %s können nicht abgerufen werden"
-
 msgid "Unable to resize disk down."
 msgstr "Größe der inaktiven Platte kann nicht geändert werden."
 
@@ -2979,13 +2629,6 @@ msgstr "Es kann kein Kennwort für die Instanz festgelegt werden"
 
 msgid "Unable to shrink disk."
 msgstr "Platte kann nicht verkleinert werden."
-
-msgid "Unable to terminate instance."
-msgstr "Instanz kann nicht beendet werden."
-
-#, python-format
-msgid "Unable to unplug VBD %s"
-msgstr "Verbindung zu VBD %s kann nicht getrennt werden"
 
 #, python-format
 msgid "Unacceptable CPU info: %(reason)s"
@@ -3004,16 +2647,6 @@ msgid ""
 msgstr ""
 "Nicht definiertes Stammverzeichnis für Blockgerätezuordnung: "
 "BlockDeviceMappingList enthält Blockgerätezuordnungen aus mehreren Instanzen."
-
-#, python-format
-msgid ""
-"Unexpected API Error. Please report this at http://bugs.launchpad.net/nova/ "
-"and attach the Nova API log if possible.\n"
-"%s"
-msgstr ""
-"Unerwarteter API-Fehler. Melden Sie ihn unter http://bugs.launchpad.net/"
-"nova/ und hängen Sie das Nova-API-Protokoll an, falls möglich.\n"
-"%s"
 
 #, python-format
 msgid "Unexpected aggregate action %s"
@@ -3081,11 +2714,6 @@ msgstr "Aufnahme wurde versucht, aber das Image %s kann nicht gefunden werden."
 msgid "Unsupported Content-Type"
 msgstr "Nicht unterstützter Inhaltstyp"
 
-msgid "Upgrade DB using Essex release first."
-msgstr ""
-"Führen Sie zuerst ein Upgrade für die Datenbank unter Verwendung des Essex-"
-"Release durch."
-
 #, python-format
 msgid "User %(username)s not found in password file."
 msgstr "Benutzer %(username)s in Kennwortdatei nicht gefunden."
@@ -3106,25 +2734,6 @@ msgid ""
 msgstr ""
 "Benutzung unterschiedlicher Block_Geräte_Zuordnung-Schreibweisen ist nicht "
 "erlaubt in der selben Anfrage."
-
-#, python-format
-msgid ""
-"VDI %(vdi_ref)s is %(virtual_size)d bytes which is larger than flavor size "
-"of %(new_disk_size)d bytes."
-msgstr ""
-"VDI %(vdi_ref)s hat eine Größe von %(virtual_size)d Bytes und ist damit "
-"größer als die Versionsgröße von %(new_disk_size)d Bytes."
-
-#, python-format
-msgid ""
-"VDI not found on SR %(sr)s (vdi_uuid %(vdi_uuid)s, target_lun %(target_lun)s)"
-msgstr ""
-"VDI nicht gefunden auf SR %(sr)s (vdi_uuid %(vdi_uuid)s, target_lun "
-"'%(target_lun)s')"
-
-#, python-format
-msgid "VHD coalesce attempts exceeded (%d), giving up..."
-msgstr "Mehr als (%d) VHD-Verbindungsversuche unternommen, Abbruch ..."
 
 #, python-format
 msgid "Value must match %s"
@@ -3213,13 +2822,6 @@ msgstr ""
 msgid "Volume type %(id_or_name)s could not be found."
 msgstr "Datenträgertyp %(id_or_name)s wurde nicht gefunden."
 
-#, python-format
-msgid ""
-"We do not support scheme '%s' under Python < 2.7.4, please use http or https"
-msgstr ""
-"Wir unterstützen Schema '%s' unter Python bis Version 2.7.4 nicht, verwenden "
-"Sie bitte HTTP oder HTTPS"
-
 msgid "When resizing, instances must change flavor!"
 msgstr "Beim Ändern der Größe muss die Version der Instanzen geändert werden!"
 
@@ -3235,10 +2837,6 @@ msgstr ""
 msgid "Wrong quota method %(method)s used on resource %(res)s"
 msgstr "Falsche Quotenmethode %(method)s für Ressource %(res)s verwendet"
 
-msgid "Wrong type of hook method. Only 'pre' and 'post' type allowed"
-msgstr ""
-"Falscher Typ von Hookmethode. Nur die Typen 'pre' und 'post' sind zulässig"
-
 msgid "X-Forwarded-For is missing from request."
 msgstr "X-Forwarded-For wird in der Anfrage vermisst."
 
@@ -3253,9 +2851,6 @@ msgstr "X-Metadata-Provider wird in der Anfrage vermisst."
 
 msgid "X-Tenant-ID header is missing from request."
 msgstr "X-Tenant-ID-Header fehlt in Anforderung."
-
-msgid "XAPI supporting relax-xsm-sr-check=true required"
-msgstr "XAPI mit Unterstützung für 'relax-xsm-sr-check=true' erforderlich"
 
 msgid "You are not allowed to delete the image."
 msgstr "Sie sind nicht berechtigt, dieses Image zu löschen."
@@ -3286,20 +2881,6 @@ msgstr ""
 "Das Administrator Passwort kann nicht auf der bestehenden Festplatte "
 "geändert werden"
 
-msgid "aggregate deleted"
-msgstr "Aggregat gelöscht"
-
-msgid "aggregate in error"
-msgstr "Aggregat fehlerhaft"
-
-#, python-format
-msgid "assert_can_migrate failed because: %s"
-msgstr "assert_can_migrate fehlgeschlagen. Ursache: %s"
-
-#, python-format
-msgid "attach network interface %s failed."
-msgstr "Anhängen von Netzwerkschnittstelle %s fehlgeschlagen."
-
 msgid "cannot understand JSON"
 msgstr "kann JSON nicht verstehen"
 
@@ -3313,10 +2894,6 @@ msgstr "Verbindungsinfo: %s"
 #, python-format
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "verbinden mit: %(host)s:%(port)s"
-
-#, python-format
-msgid "detach network interface %s failed."
-msgstr "Abtrennen von Netzwerkschnittstelle %s fehlgeschlagen."
 
 msgid "direct_snapshot() is not implemented"
 msgstr "direct_snapshot() ist nicht implementiert"
@@ -3366,9 +2943,6 @@ msgstr "Abbild bereits eingehängt"
 #, python-format
 msgid "instance %s is not running"
 msgstr "Instanz %s wird nicht ausgeführt"
-
-msgid "instance has a kernel or ramdisk but not both"
-msgstr "Instanz weist Kernel oder RAM-Platte auf, aber nicht beides"
 
 msgid "instance is a required argument to use @refresh_cache"
 msgstr ""
@@ -3426,9 +3000,6 @@ msgstr "NBD-Einheit %s wurde nicht angezeigt"
 
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd nicht verfügbar: Modul nicht geladen"
-
-msgid "no hosts to remove"
-msgstr "Keine Hosts zum Entfernen vorhanden"
 
 #, python-format
 msgid "no match found for %s"
@@ -3505,9 +3076,6 @@ msgstr ""
 "'set_admin_password' wird von diesem Treiber oder dieser Gastinstanz nicht "
 "implementiert"
 
-msgid "setup in progress"
-msgstr "Konfiguration in Bearbeitung"
-
 #, python-format
 msgid "snapshot for %s"
 msgstr "Momentaufnahme für %s"
@@ -3523,9 +3091,6 @@ msgstr "zu viele Textschlüssel"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "'unpause' nicht unterstützt für 'vmwareapi'"
-
-msgid "version should be an integer"
-msgstr "Version sollte eine Ganzzahl sein"
 
 #, python-format
 msgid "vg %s must be LVM volume group"
@@ -3553,15 +3118,3 @@ msgid ""
 msgstr ""
 "Status von Datenträger '%(vol)s' muss 'in-use' lauten. Weist derzeit den "
 "Status '%(status)s' auf"
-
-#, python-format
-msgid "xenapi.fake does not have an implementation for %s"
-msgstr "xenapi.fake hat keine Implementierung für %s"
-
-#, python-format
-msgid ""
-"xenapi.fake does not have an implementation for %s or it has been called "
-"with the wrong number of arguments"
-msgstr ""
-"xenapi.fake weist keine Implementierung für %s auf oder wurde mit einer "
-"falschen Anzahl von Argumenten aufgerufen"
