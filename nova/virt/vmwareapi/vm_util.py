@@ -110,7 +110,8 @@ class ExtraSpecs(object):
                  storage_policy=None, cores_per_socket=None,
                  memory_limits=None, disk_io_limits=None,
                  vif_limits=None, hv_enabled=None, firmware=None,
-                 hw_video_ram=None, numa_prefer_ht=None):
+                 hw_video_ram=None, numa_prefer_ht=None,
+                 migration_data_timeout=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         self.cpu_limits = cpu_limits or Limits()
         self.memory_limits = memory_limits or Limits()
@@ -123,6 +124,7 @@ class ExtraSpecs(object):
         self.firmware = firmware
         self.hw_video_ram = hw_video_ram
         self.numa_prefer_ht = numa_prefer_ht
+        self.migration_data_timeout = migration_data_timeout
 
 
 class HistoryCollectorItems:
@@ -435,6 +437,14 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
         opt.value = extra_specs.numa_prefer_ht
         extra_config.append(opt)
 
+    # big VMs need more time to settle to make reconfigures possible after they
+    # ran for some time
+    if extra_specs.migration_data_timeout is not None:
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'migration.dataTimeout'
+        opt.value = extra_specs.migration_data_timeout
+        extra_config.append(opt)
+
     config_spec.extraConfig = extra_config
 
     append_vif_infos_to_config_spec(client_factory, config_spec,
@@ -536,6 +546,14 @@ def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
         opt = client_factory.create('ns0:OptionValue')
         opt.key = 'numa.vcpu.preferHT'
         opt.value = extra_specs.numa_prefer_ht
+        extra_config.append(opt)
+
+    # big VMs need more time to settle to make reconfigures possible after they
+    # ran for some time
+    if extra_specs.migration_data_timeout is not None:
+        opt = client_factory.create('ns0:OptionValue')
+        opt.key = 'migration.dataTimeout'
+        opt.value = extra_specs.migration_data_timeout
         extra_config.append(opt)
 
     resize_spec.extraConfig = extra_config

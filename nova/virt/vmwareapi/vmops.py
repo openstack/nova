@@ -431,9 +431,11 @@ class VMwareVMOps(object):
         extra_specs.hw_version = hw_version
         if utils.is_big_vm(int(flavor.memory_mb), flavor):
             extra_specs.numa_prefer_ht = 'TRUE'
+            extra_specs.migration_data_timeout = '900'
         else:
             # empty value should delete the option. we need that for resizes.
             extra_specs.numa_prefer_ht = ''
+            extra_specs.migration_data_timeout = ''
 
         video_ram = image_meta.properties.get('hw_video_ram', 0)
         max_vram = int(flavor.extra_specs.get('hw_video:ram_max_mb', 0))
