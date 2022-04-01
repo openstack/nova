@@ -478,17 +478,6 @@ class VIF(Model):
                     'ips': ips}
         return []
 
-    def has_bind_time_event(self, migration):
-        """Returns whether this VIF's network-vif-plugged external event will
-        be sent by Neutron at "bind-time" - in other words, as soon as the port
-        binding is updated. This is in the context of updating the port binding
-        to a host that already has the instance in a shutoff state - in
-        practice, this means reverting either a cold migration or a
-        non-same-host resize.
-        """
-        return (self.is_hybrid_plug_enabled() and not
-                migration.is_same_host())
-
     @property
     def has_live_migration_plug_time_event(self):
         """Returns whether this VIF's network-vif-plugged external event will
@@ -557,26 +546,12 @@ class NetworkInfo(list):
     def json(self):
         return jsonutils.dumps(self)
 
-    def get_bind_time_events(self, migration):
-        """Returns a list of external events for any VIFs that have
-        "bind-time" events during cold migration.
-        """
-        return [('network-vif-plugged', vif['id'])
-                for vif in self if vif.has_bind_time_event(migration)]
-
     def get_live_migration_plug_time_events(self):
         """Returns a list of external events for any VIFs that have
         "plug-time" events during live migration.
         """
         return [('network-vif-plugged', vif['id'])
                 for vif in self if vif.has_live_migration_plug_time_event]
-
-    def get_plug_time_events(self, migration):
-        """Returns a list of external events for any VIFs that have
-        "plug-time" events during cold migration.
-        """
-        return [('network-vif-plugged', vif['id'])
-                for vif in self if not vif.has_bind_time_event(migration)]
 
     def has_port_with_allocation(self):
         return any(vif.has_allocation() for vif in self)
