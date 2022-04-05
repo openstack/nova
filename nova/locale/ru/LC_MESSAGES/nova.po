@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2020-04-25 15:32+0000\n"
+"POT-Creation-Date: 2022-03-30 00:54+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -148,18 +148,6 @@ msgid "Affinity instance group policy was violated."
 msgstr "Нарушена стратегия группы экземпляров привязки."
 
 #, python-format
-msgid "Agent does not support the call: %(method)s"
-msgstr "Агент не поддерживает вызов: %(method)s"
-
-#, python-format
-msgid ""
-"Agent-build with hypervisor %(hypervisor)s os %(os)s architecture "
-"%(architecture)s exists."
-msgstr ""
-"Agent-build с гипервизором %(hypervisor)s, операционная система %(os)s, "
-"архитектура %(architecture)s, существует."
-
-#, python-format
 msgid "Aggregate %(aggregate_id)s already has host %(host)s."
 msgstr "Множество %(aggregate_id)s уже имеет хост %(host)s."
 
@@ -177,22 +165,12 @@ msgstr ""
 "Множество %(aggregate_id)s не имеет метаданных с ключом %(metadata_key)s."
 
 #, python-format
-msgid ""
-"Aggregate %(aggregate_id)s: action '%(action)s' caused an error: %(reason)s."
-msgstr ""
-"Множество %(aggregate_id)s: действие '%(action)s' вызвало ошибку: %(reason)s."
-
-#, python-format
 msgid "Aggregate %(aggregate_name)s already exists."
 msgstr "Множество %(aggregate_name)s уже существует."
 
 #, python-format
 msgid "Aggregate %s does not support empty named availability zone"
 msgstr "Совокупный ресурс %s не поддерживает зону доступности с пустым именем"
-
-#, python-format
-msgid "Aggregate for host %(host)s count not be found."
-msgstr "Не найдено множество для числа хостов %(host)s."
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -377,12 +355,6 @@ msgid "Can not handle authentication request for %d credentials"
 msgstr ""
 "Невозможно обработать запрос идентификации для идентификационных данных %d"
 
-msgid "Can't resize a disk to 0 GB."
-msgstr "Не удается изменить размер диска на 0 ГБ."
-
-msgid "Can't resize down ephemeral disks."
-msgstr "Не удается изменить размер временных дисков на меньший."
-
 msgid "Can't retrieve root device path from instance libvirt configuration"
 msgstr ""
 "Невозможно извлечь корневой путь к устройству из конфигурации libvirt "
@@ -427,12 +399,6 @@ msgid ""
 msgstr ""
 "Неизвестен родительский пул памяти для %s. Не удается определить "
 "расположение для сохранения образов"
-
-msgid "Cannot find SR of content-type ISO"
-msgstr "Невозможно найти SR типа содержимого ISO"
-
-msgid "Cannot find SR to read/write VDI."
-msgstr "Невозможно найти SR для чтения/записи VDI."
 
 msgid "Cannot find image for rebuild"
 msgstr "Невозможно найти образ для перекомпоновки"
@@ -561,10 +527,6 @@ msgid "Connection to libvirt lost: %s"
 msgstr "Соединение с libvirt потеряно: %s"
 
 #, python-format
-msgid "Connection to the hypervisor is broken on host: %(host)s"
-msgstr "Соединение с гипервизором разорвано на хосте: %(host)s"
-
-#, python-format
 msgid ""
 "Console log output could not be retrieved for instance %(instance_id)s. "
 "Reason: %(reason)s"
@@ -638,19 +600,8 @@ msgid "Default PBM policy is required if PBM is enabled."
 msgstr "Стратегия PBM по умолчанию является обязательной, если включен PBM."
 
 #, python-format
-msgid "Deleted %(records)d records from table '%(table_name)s'."
-msgstr "Из таблицы '%(table_name)s' удалены записи (%(records)d)."
-
-#, python-format
 msgid "Device '%(device)s' not found."
 msgstr "Устройство '%(device)s' не найдено."
-
-#, python-format
-msgid ""
-"Device id %(id)s specified is not supported by hypervisor version %(version)s"
-msgstr ""
-"Устройство с указанным ИД %(id)s не поддерживается в гипервизоре версии "
-"%(version)s"
 
 msgid "Device name contains spaces."
 msgstr "Имя устройства содержит пробелы."
@@ -663,31 +614,12 @@ msgid "Device type mismatch for alias '%s'"
 msgstr "Несоответствие типа устройства для псевдонима '%s'"
 
 #, python-format
-msgid ""
-"Different types in %(table)s.%(column)s and shadow table: %(c_type)s "
-"%(shadow_c_type)s"
-msgstr ""
-"Различные типы в %(table)s.%(column)s и теневой таблице: %(c_type)s "
-"%(shadow_c_type)s"
-
-#, python-format
-msgid "Disk contains a filesystem we are unable to resize: %s"
-msgstr "Диск содержит файловую систему, размер которой невозможно изменить: %s"
-
-#, python-format
 msgid "Disk format %(disk_format)s is not acceptable"
 msgstr "Форматирование диска %(disk_format)s недопустимо"
 
 #, python-format
 msgid "Disk info file is invalid: %(reason)s"
 msgstr "Недопустимый файл информации о диске: %(reason)s"
-
-msgid "Disk must have only one partition."
-msgstr "Диск должен иметь только один раздел."
-
-#, python-format
-msgid "Disk with id: %s not found attached to instance."
-msgstr "Диск с ИД %s не подключен к экземпляру."
 
 #, python-format
 msgid "Driver Error: %s"
@@ -704,10 +636,6 @@ msgid ""
 msgstr ""
 "Ошибка уничтожения экземпляра на узле %(node)s. Состояние выделения ресурсов "
 "все еще '%(state)s'."
-
-#, python-format
-msgid "Error during following call to agent: %(method)s"
-msgstr "Ошибка при вызове агента: %(method)s"
 
 #, python-format
 msgid "Error during unshelve instance %(instance_id)s: %(reason)s"
@@ -763,9 +691,6 @@ msgstr "Ошибка при монтировании %(image)s с помощью
 msgid "Error when creating resource monitor: %(monitor)s"
 msgstr "Ошибка при создании монитора ресурсов: %(monitor)s"
 
-msgid "Error: Agent is disabled"
-msgstr "Ошибка: Агент выключен"
-
 #, python-format
 msgid "Event %(event)s not found for action id %(action_id)s"
 msgstr "Событие %(event)s не найдено для ИД действия %(action_id)s"
@@ -799,10 +724,6 @@ msgstr "Превышено максимальное количество поп�
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "Ожидался uuid, а получен %(uuid)s."
 
-#, python-format
-msgid "Extra column %(table)s.%(column)s in shadow table"
-msgstr "Дополнительный столбец %(table)s.%(column)s в теневой таблице"
-
 msgid "Extracting vmdk from OVA failed."
 msgstr "Извлечение vmdk из OVA не выполнено."
 
@@ -829,10 +750,6 @@ msgstr "Не удалось выделить сеть(сети), перепла�
 #, python-format
 msgid "Failed to attach network adapter device to %(instance_uuid)s"
 msgstr "Не удалось подключить устройство сетевого адаптера к %(instance_uuid)s"
-
-#, python-format
-msgid "Failed to create vif %s"
-msgstr "Не удалось создать vif %s"
 
 #, python-format
 msgid "Failed to deploy instance: %(reason)s"
@@ -862,11 +779,6 @@ msgstr "Не удалось отобразить разделы: %s"
 msgid "Failed to mount filesystem: %s"
 msgstr "Ошибка монтирования файловой системы: %s"
 
-msgid "Failed to parse information about a pci device for passthrough"
-msgstr ""
-"Не удалось проанализировать информацию об устройстве pci на предмет "
-"удаленного входа"
-
 #, python-format
 msgid "Failed to power off instance: %(reason)s"
 msgstr "Не удалось выключить экземпляр: %(reason)s"
@@ -874,14 +786,6 @@ msgstr "Не удалось выключить экземпляр: %(reason)s"
 #, python-format
 msgid "Failed to power on instance: %(reason)s"
 msgstr "Не удалось включить экземпляр: %(reason)s"
-
-#, python-format
-msgid ""
-"Failed to prepare PCI device %(id)s for instance %(instance_uuid)s: "
-"%(reason)s"
-msgstr ""
-"Не удалось подготовить устройство PCI %(id)s для экземпляра "
-"%(instance_uuid)s: %(reason)s"
 
 #, python-format
 msgid "Failed to provision instance %(inst)s: %(reason)s"
@@ -919,9 +823,6 @@ msgstr ""
 "Не удалось установить пароль администратора в %(instance)s по причине: "
 "%(reason)s"
 
-msgid "Failed to spawn, rolling back"
-msgstr "Не удалось выполнить порождение, выполняется откат"
-
 #, python-format
 msgid "Failed to suspend instance: %(reason)s"
 msgstr "Не удалось приостановить экземпляр: %(reason)s"
@@ -930,20 +831,12 @@ msgstr "Не удалось приостановить экземпляр: %(rea
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "Не удалось завершить экземпляр: %(reason)s"
 
-#, python-format
-msgid "Failed to unplug vif %s"
-msgstr "Не удалось отсоединить vif %s"
-
 msgid "Failure prepping block device."
 msgstr "Сбой при подготовке блочного устройства."
 
 #, python-format
 msgid "File %(file_path)s could not be found."
 msgstr "Файл %(file_path)s не может быть найден."
-
-#, python-format
-msgid "File path %s not valid"
-msgstr "Путь к файлу %s не верен"
 
 #, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
@@ -1077,18 +970,6 @@ msgstr ""
 msgid "Found no disk to snapshot."
 msgstr "Не найден диск для создания моментальной копии."
 
-#, python-format
-msgid "Found no network for bridge %s"
-msgstr "Не найдена сеть для моста %s"
-
-#, python-format
-msgid "Found non-unique network for bridge %s"
-msgstr "Найдена не уникальная сеть для моста %s"
-
-#, python-format
-msgid "Found non-unique network for name_label %s"
-msgstr "Найдена не уникальная сеть для name_label %s"
-
 msgid "Guest does not have a console available."
 msgstr "Гость не имеет доступной консоли."
 
@@ -1116,9 +997,6 @@ msgstr "Хост не поддерживает гостей с топологи�
 msgid "Host does not support guests with custom memory page sizes"
 msgstr ""
 "Хост не поддерживает гостей с пользовательскими размерами страниц памяти"
-
-msgid "Host startup on XenServer is not supported."
-msgstr "Запуск узла на XenServer не поддерживается."
 
 msgid "Hypervisor driver does not support post_live_migration_at_source method"
 msgstr ""
@@ -1347,10 +1225,6 @@ msgstr "С копией не производилось изменение ра�
 msgid "Instance hostname %(hostname)s is not a valid DNS name"
 msgstr "Недопустимое имя DNS экземпляра %(hostname)s"
 
-#, python-format
-msgid "Instance is already in Rescue Mode: %s"
-msgstr "Копия в состоянии режима восстановления: %s"
-
 msgid "Instance is not a member of specified network"
 msgstr "Копия не является участником заданной сети"
 
@@ -1369,10 +1243,6 @@ msgstr ""
 #, python-format
 msgid "Insufficient compute resources: %(reason)s."
 msgstr "Недостаточно вычислительных ресурсов: %(reason)s."
-
-#, python-format
-msgid "Insufficient free memory on compute node to start %(uuid)s."
-msgstr "Недостаточно памяти на узле сети compute для запуска %(uuid)s."
 
 #, python-format
 msgid "Interface %(interface)s not found."
@@ -1567,13 +1437,6 @@ msgid ""
 "It is not allowed to create an interface on external network %(network_uuid)s"
 msgstr "Не разрешено создавать интерфейсы во внешней сети %(network_uuid)s"
 
-#, python-format
-msgid ""
-"Kernel/Ramdisk image is too large: %(vdi_size)d bytes, max %(max_size)d bytes"
-msgstr ""
-"Превышен размер ядра/Ramdisk образа: %(vdi_size)d байт, макс. %(max_size)d "
-"байт"
-
 msgid ""
 "Key Names can only contain alphanumeric characters, periods, dashes, "
 "underscores, colons and spaces."
@@ -1637,9 +1500,6 @@ msgstr "Маркер %(marker)s не найден."
 msgid "Maximum number of floating IPs exceeded"
 msgstr "Превышено максимальное число нефиксированных IP"
 
-msgid "Maximum number of key pairs exceeded"
-msgstr "Максимальное число пар ключей превышено"
-
 #, python-format
 msgid "Maximum number of metadata items exceeds %(allowed)d"
 msgstr "Максимальное число элементов метаданных превышает %(allowed)d"
@@ -1669,12 +1529,6 @@ msgid ""
 msgstr ""
 "Не удалось найти показатель %(name)s на вычислительном узле хоста %(host)s."
 "%(node)s."
-
-msgid "Migrate Receive failed"
-msgstr "Не удалось выполнить получение переноса"
-
-msgid "Migrate Send failed"
-msgstr "Не удалось выполнить отправку переноса"
 
 #, python-format
 msgid "Migration %(id)s for server %(uuid)s is not live-migration."
@@ -1721,10 +1575,6 @@ msgstr "Ошибка выбора целевых объектов перенос
 #, python-format
 msgid "Missing arguments: %s"
 msgstr "Отсутствуют аргументы: %s"
-
-#, python-format
-msgid "Missing column %(table)s.%(column)s in shadow table"
-msgstr "Отсутствует столбец %(table)s.%(column)s в теневой таблице"
 
 msgid "Missing device UUID."
 msgstr "Не указан UUID устройства."
@@ -1808,13 +1658,6 @@ msgid "Must not input both network_id and port_id"
 msgstr "Нельзя вводить и network_id, и port_id"
 
 msgid ""
-"Must specify connection_url, connection_username (optionally), and "
-"connection_password to use compute_driver=xenapi.XenAPIDriver"
-msgstr ""
-"Необходимо указать connection_url, connection_username (необязательно) и "
-"connection_password для использования compute_driver=xenapi.XenAPIDriver"
-
-msgid ""
 "Must specify host_ip, host_username and host_password to use vmwareapi."
 "VMwareVCDriver"
 msgstr ""
@@ -1866,10 +1709,6 @@ msgstr "Отсутствует связь блочного устройства 
 
 msgid "No Unique Match Found."
 msgstr "Уникальное соответствие не найдено."
-
-#, python-format
-msgid "No agent-build associated with id %(id)s."
-msgstr "С %(id)s не связан ни один agent-build."
 
 msgid "No compute host specified"
 msgstr "Хост вычислений не указан"
@@ -1937,10 +1776,6 @@ msgstr "Точки монтирования не найдены в %(root)s из
 msgid "No operating system found in %s"
 msgstr "Операционная система не найдена в %s"
 
-#, python-format
-msgid "No primary VDI found for %s"
-msgstr "Первичный VDI не найден для %s"
-
 msgid "No root disk defined."
 msgstr "Не определен корневой диск."
 
@@ -1950,9 +1785,6 @@ msgid ""
 "'%(project_id)s'."
 msgstr ""
 "Требуемая сеть не задана, и нет доступных сетей для проекта '%(project_id)s'."
-
-msgid "No suitable network for migrate"
-msgstr "Нет подходящей сети для переноса"
 
 msgid "No valid host found for cold migrate"
 msgstr "Не найден допустимый хост для холодного переноса"
@@ -2033,14 +1865,6 @@ msgstr "Один или несколько хостов уже находятс�
 msgid "Only administrators may list deleted instances"
 msgstr "Только администраторы могут выводить список удаленных экземпляров"
 
-#, python-format
-msgid ""
-"Only file-based SRs (ext/NFS) are supported by this feature.  SR %(uuid)s is "
-"of type %(type)s"
-msgstr ""
-"В этой функции поддерживаются только SR (ext/NFS) на основе файлов. SR "
-"%(uuid)s имеет тип %(type)s"
-
 msgid "Origin header does not match this host."
 msgstr "Заголовок Origin не соответствует данному хосту."
 
@@ -2081,10 +1905,6 @@ msgstr "Устройство PCI %(id)s не найдено"
 #, python-format
 msgid "PCI device request %(requests)s failed"
 msgstr "Запрос устройства PCI %(requests)s не выполнен"
-
-#, python-format
-msgid "PIF %s does not contain IP address"
-msgstr "PIF %s не содержит IP-адрес"
 
 #, python-format
 msgid "Page size %(pagesize)s forbidden against '%(against)s'"
@@ -2204,10 +2024,6 @@ msgid "Quota exceeded, too many servers in group"
 msgstr "Превышена квота, слишком много серверов в группе."
 
 #, python-format
-msgid "Quota exceeded: code=%(code)s"
-msgstr "Квота превышена: код=%(code)s"
-
-#, python-format
 msgid "Quota exists for project %(project_id)s, resource %(resource)s"
 msgstr "Квота существует для проекта %(project_id)s, ресурс %(resource)s"
 
@@ -2236,18 +2052,6 @@ msgid ""
 msgstr ""
 "Ограничение квоты %(limit)s для %(resource)s должно быть не больше "
 "%(maximum)s."
-
-#, python-format
-msgid "Reached maximum number of retries trying to unplug VBD %s"
-msgstr "Достигнуто максимальное число попыток отсоединения VBD %s"
-
-msgid ""
-"Realtime policy needs vCPU(s) mask configured with at least 1 RT vCPU and 1 "
-"ordinary vCPU. See hw:cpu_realtime_mask or hw_cpu_realtime_mask"
-msgstr ""
-"Стратегия реального времени требует, чтобы маска vCPU(s) была настроена с "
-"хотя бы одним 1 vCPU реального времени и 1 обычным vCPU. См. hw:"
-"cpu_realtime_mask или hw_cpu_realtime_mask"
 
 msgid "Request body and URI mismatch"
 msgstr "Тело запроса и URI не совпадают"
@@ -2414,23 +2218,12 @@ msgid "Set admin password is not supported"
 msgstr "Указание пароля администратора не поддерживается."
 
 #, python-format
-msgid "Shadow table with name %(name)s already exists."
-msgstr "Теневая таблица с именем %(name)s уже существует."
-
-#, python-format
 msgid "Share '%s' is not supported"
 msgstr "Общий ресурс '%s' не поддерживается"
 
 #, python-format
 msgid "Share level '%s' cannot have share configured"
 msgstr "Для уровня '%s' общего ресурса нельзя настраивать общий ресурс. "
-
-msgid ""
-"Shrinking the filesystem down with resize2fs has failed, please check if you "
-"have enough free space on your disk."
-msgstr ""
-"Сокращение размера файловой системы с resize2fs не выполнено, проверьте, "
-"достаточно ли свободного места на диске."
 
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
@@ -2455,12 +2248,6 @@ msgstr "Указанный ключ сортировки неверен."
 
 msgid "Specified fixed address not assigned to instance"
 msgstr "Указанный фиксированный адрес не назначен экземпляру"
-
-msgid "Specify `table_name` or `table` param"
-msgstr "Укажите параметр `table_name` или `table`"
-
-msgid "Specify only one param `table_name` `table`"
-msgstr "Укажите только один параметр `table_name` или `table`"
 
 msgid "Started"
 msgstr "Начато"
@@ -2531,9 +2318,6 @@ msgstr ""
 "Число определенных портов %(ports)dis превышает максимально разрешенное: "
 "%(quota)d"
 
-msgid "The only partition should be partition 1."
-msgstr "Единственный раздел должен быть разделом 1."
-
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."
 msgstr "Указанный путь к устройству RNG: (%(path)s) не существует на хосте."
@@ -2597,57 +2381,18 @@ msgid ""
 msgstr ""
 "Том нельзя назначить имени устройства, совпадающему с корневым устройством %s"
 
-#, python-format
-msgid ""
-"There are %(records)d records in the '%(table_name)s' table where the uuid "
-"or instance_uuid column is NULL. Run this command again with the --delete "
-"option after you have backed up any necessary data."
-msgstr ""
-"В таблице '%(table_name)s' существуют записи (%(records)d), для которых "
-"столбец uuid или instance_uuid равен NULL. Запустите команду повторно с "
-"опцией --delete после создания резервной копии всей нужных данных."
-
-#, python-format
-msgid ""
-"There are %(records)d records in the '%(table_name)s' table where the uuid "
-"or instance_uuid column is NULL. These must be manually cleaned up before "
-"the migration will pass. Consider running the 'nova-manage db "
-"null_instance_uuid_scan' command."
-msgstr ""
-"В таблице '%(table_name)s' существуют записи (%(records)d), для которых "
-"столбец uuid или instance_uuid равен NULL. Они должны быть очищены вручную "
-"до выполнения переноса. Запустите команду 'nova-manage db "
-"null_instance_uuid_scan'."
-
 msgid "There are not enough hosts available."
 msgstr "Нет достаточного числа доступных хостов."
 
 #, python-format
-msgid ""
-"There are still %(count)i unmigrated flavor records. Migration cannot "
-"continue until all instance flavor records have been migrated to the new "
-"format. Please run `nova-manage db migrate_flavor_data' first."
-msgstr ""
-"Осталось %(count)i записей разновидности, которые не были перенесены. "
-"Продолжение миграции невозможно, пока все записи разновидности экземпляра не "
-"будут перенесены в новый формат. Вначале необходимо выполнить команду 'nova-"
-"manage db migrate_flavor_data'."
-
-#, python-format
 msgid "There is no such action: %s"
 msgstr "Не существует такого действия: %s"
-
-msgid "There were no records found where instance_uuid was NULL."
-msgstr "Не обнаружены записи, для которых instance_uuid равен NULL."
 
 #, python-format
 msgid ""
 "This compute node's hypervisor is older than the minimum supported version: "
 "%(version)s."
 msgstr "Версия гипервизора этого узла ниже минимально допустимой: %(version)s."
-
-msgid "This domU must be running on the host specified by connection_url"
-msgstr "Этот domU должен быть запущен на хосте, указанном в connection_url"
 
 msgid ""
 "This method needs to be called with either networks=None and port_ids=None "
@@ -2667,10 +2412,6 @@ msgid ""
 msgstr ""
 "Версия этой службы (v%(thisver)i) меньше минимальной версии (v%(minver)i) "
 "остальных компонентов развертывания. Продолжение работы невозможно."
-
-#, python-format
-msgid "Timeout waiting for device %s to be created"
-msgstr "Время ожидания при создании устройства %s"
 
 msgid "Timeout waiting for response from cell"
 msgstr "Тайм-аут ожидания ответа от ячейки"
@@ -2716,12 +2457,6 @@ msgid "Unable to authenticate Ironic client."
 msgstr "Не удалось идентифицировать клиент Ironic."
 
 #, python-format
-msgid "Unable to contact guest agent. The following call timed out: %(method)s"
-msgstr ""
-"Невозможно связаться с гостевым агентом. Возник тайм-аут следующего вызова: "
-"%(method)s"
-
-#, python-format
 msgid "Unable to convert image to %(format)s: %(exp)s"
 msgstr "Не удается преобразовать образ в %(format)s: %(exp)s"
 
@@ -2730,36 +2465,12 @@ msgid "Unable to convert image to raw: %(exp)s"
 msgstr "Не удается преобразовать образ в формат raw: %(exp)s"
 
 #, python-format
-msgid "Unable to destroy VBD %s"
-msgstr "Невозможно ликвидировать VBD %s"
-
-#, python-format
-msgid "Unable to destroy VDI %s"
-msgstr "Невозможно ликвидировать VDI %s"
-
-#, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr "Невозможно определить шину диска для '%s'"
 
 #, python-format
 msgid "Unable to determine disk prefix for %s"
 msgstr "Невозможно определить префикс диска для %s"
-
-#, python-format
-msgid "Unable to eject %s from the pool; No master found"
-msgstr "Невозможно удалить %s из пула; главный узел не найден"
-
-#, python-format
-msgid "Unable to eject %s from the pool; pool not empty"
-msgstr "Невозможно удалить %s из пула; пул не пуст"
-
-#, python-format
-msgid "Unable to find SR from VBD %s"
-msgstr "Невозможно найти SR из VBD %s"
-
-#, python-format
-msgid "Unable to find SR from VDI %s"
-msgstr "Не найден SR из VDI %s"
 
 #, python-format
 msgid "Unable to find ca_file : %s"
@@ -2780,9 +2491,6 @@ msgstr "Невозможно найти назначение iSCSI"
 msgid "Unable to find key_file : %s"
 msgstr "Невозможно найти key_file: %s"
 
-msgid "Unable to find root VBD/VDI for VM"
-msgstr "Невозможно найти корневой VBD/VDI для VM"
-
 msgid "Unable to find volume"
 msgstr "Невозможно найти том"
 
@@ -2791,22 +2499,6 @@ msgstr "Не удалось получить UUID хоста: /etc/machine-id н
 
 msgid "Unable to get host UUID: /etc/machine-id is empty"
 msgstr "Не удалось получить UUID хоста: /etc/machine-id пуст"
-
-#, python-format
-msgid "Unable to get record of VDI %s on"
-msgstr "Невозможно получить запись VDI %s на"
-
-#, python-format
-msgid "Unable to introduce VDI for SR %s"
-msgstr "Невозможно внедрить VDI для SR %s"
-
-#, python-format
-msgid "Unable to introduce VDI on SR %s"
-msgstr "Невозможно внедрить VDI на SR %s"
-
-#, python-format
-msgid "Unable to join %s in the pool"
-msgstr "Невозможно подключить %s в пул"
 
 msgid ""
 "Unable to launch multiple instances with a single configured port ID. Please "
@@ -2837,10 +2529,6 @@ msgid ""
 msgstr ""
 "Невозможно переместить копию (%(instance_id)s) на текущий узел (%(host)s)."
 
-#, python-format
-msgid "Unable to obtain target information %s"
-msgstr "Невозможно получить целевую информацию %s"
-
 msgid "Unable to resize disk down."
 msgstr "Нельзя уменьшить размер диска."
 
@@ -2849,13 +2537,6 @@ msgstr "Невозможно установить пароль для экзем
 
 msgid "Unable to shrink disk."
 msgstr "Не удалось уменьшить размер диска."
-
-msgid "Unable to terminate instance."
-msgstr "Невозможно завершить экземпляр."
-
-#, python-format
-msgid "Unable to unplug VBD %s"
-msgstr "Невозможно отсоединить VBD %s"
 
 #, python-format
 msgid "Unacceptable CPU info: %(reason)s"
@@ -2875,16 +2556,6 @@ msgstr ""
 "Не определен корневой элемент связывания блочного устройства: "
 "BlockDeviceMappingList содержит связывания блочных устройств из нескольких "
 "экземпляров."
-
-#, python-format
-msgid ""
-"Unexpected API Error. Please report this at http://bugs.launchpad.net/nova/ "
-"and attach the Nova API log if possible.\n"
-"%s"
-msgstr ""
-"Неожиданная ошибка API. Сообщите об этом в http://bugs.launchpad.net/nova/ и "
-"прикрепите протокол API Nova, если возможно.\n"
-"%s"
 
 #, python-format
 msgid "Unexpected aggregate action %s"
@@ -2946,9 +2617,6 @@ msgstr ""
 msgid "Unsupported Content-Type"
 msgstr "Не поддерживаемый  тип содержимого"
 
-msgid "Upgrade DB using Essex release first."
-msgstr "Обновите сначала базу данных с помощью выпуска Essex."
-
 #, python-format
 msgid "User %(username)s not found in password file."
 msgstr "Пользователь %(username)s не найден в файле паролей."
@@ -2969,24 +2637,6 @@ msgid ""
 msgstr ""
 "Использование разных форматов block_device_mapping в одном запросе не "
 "разрешено."
-
-#, python-format
-msgid ""
-"VDI %(vdi_ref)s is %(virtual_size)d bytes which is larger than flavor size "
-"of %(new_disk_size)d bytes."
-msgstr ""
-"VDI %(vdi_ref)s %(virtual_size)d байт, что больше размера разновидности "
-"(%(new_disk_size)d байт)."
-
-#, python-format
-msgid ""
-"VDI not found on SR %(sr)s (vdi_uuid %(vdi_uuid)s, target_lun %(target_lun)s)"
-msgstr ""
-"VDI не найден в SR %(sr)s (vdi_uuid %(vdi_uuid)s, target_lun %(target_lun)s)"
-
-#, python-format
-msgid "VHD coalesce attempts exceeded (%d), giving up..."
-msgstr "Число попыток объединения VHD превысило (%d), отказ..."
 
 #, python-format
 msgid ""
@@ -3057,12 +2707,6 @@ msgstr ""
 "Том указывает размер блока, но текущий гипервизор libvirt '%s' не "
 "поддерживает нестандартный размер блока"
 
-#, python-format
-msgid ""
-"We do not support scheme '%s' under Python < 2.7.4, please use http or https"
-msgstr ""
-"Схема '%s' не поддерживается в Python < 2.7.4, используйте http или https"
-
 msgid "When resizing, instances must change flavor!"
 msgstr "При изменении размера экземпляры должны изменить разновидность!"
 
@@ -3078,9 +2722,6 @@ msgid "Wrong quota method %(method)s used on resource %(res)s"
 msgstr ""
 "Используется неверный метод контроля квоты %(method)s для ресурса %(res)s"
 
-msgid "Wrong type of hook method. Only 'pre' and 'post' type allowed"
-msgstr "Недопустимый тип метода перехватчика. Допустимые типы: 'pre' и 'post'"
-
 msgid "X-Forwarded-For is missing from request."
 msgstr "В запросе отсутствует X-Forwarded-For."
 
@@ -3095,9 +2736,6 @@ msgstr "В запросе отсутствует X-Metadata-Provider."
 
 msgid "X-Tenant-ID header is missing from request."
 msgstr "Заголовок X-Tenant-ID отсутствует в запросе."
-
-msgid "XAPI supporting relax-xsm-sr-check=true required"
-msgstr "Требуется поддержка XAPI relax-xsm-sr-check=true"
 
 msgid "You are not allowed to delete the image."
 msgstr "Вам не разрешено удалять образ."
@@ -3121,16 +2759,6 @@ msgstr "Нет доступных нефиксированных IP."
 
 msgid "admin password can't be changed on existing disk"
 msgstr "пароль администратора не может быть изменен на существующем диске"
-
-msgid "aggregate deleted"
-msgstr "составной объект удален"
-
-msgid "aggregate in error"
-msgstr "Ошибка в составном объекте"
-
-#, python-format
-msgid "assert_can_migrate failed because: %s"
-msgstr "Не удалось выполнить assert_can_migrate по причине: %s"
 
 msgid "cannot understand JSON"
 msgstr "невозможно понять JSON"
@@ -3195,9 +2823,6 @@ msgstr "образ уже присоединён"
 msgid "instance %s is not running"
 msgstr "Экземпляр %s не запущен"
 
-msgid "instance has a kernel or ramdisk but not both"
-msgstr "копия содержит ядро или ramdisk, но не оба"
-
 msgid "instance is a required argument to use @refresh_cache"
 msgstr ""
 "экземпляр является требуемым аргументом для использования @refresh_cache"
@@ -3253,9 +2878,6 @@ msgstr "Устройство nbd %s не показан"
 
 msgid "nbd unavailable: module not loaded"
 msgstr "nbd недоступен: модуль не загружен"
-
-msgid "no hosts to remove"
-msgstr "Нет хостов для удаления"
 
 #, python-format
 msgid "no match found for %s"
@@ -3332,9 +2954,6 @@ msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr ""
 "set_admin_password не реализован этим драйвером или гостевым экземпляром."
 
-msgid "setup in progress"
-msgstr "Выполняется настройка"
-
 #, python-format
 msgid "snapshot for %s"
 msgstr "моментальная копия для %s"
@@ -3350,9 +2969,6 @@ msgstr "слишком много ключей тела"
 
 msgid "unpause not supported for vmwareapi"
 msgstr "отмена остановки не поддерживается для vmwareapi"
-
-msgid "version should be an integer"
-msgstr "версия должна быть целым числом"
 
 #, python-format
 msgid "vg %s must be LVM volume group"
@@ -3378,15 +2994,3 @@ msgid ""
 "volume '%(vol)s' status must be 'in-use'. Currently in '%(status)s' status"
 msgstr ""
 "Требуемое состояние '%(vol)s' тома: 'in-use'. Текущее состояние: '%(status)s'"
-
-#, python-format
-msgid "xenapi.fake does not have an implementation for %s"
-msgstr "xenapi.fake не имеет реализации для %s"
-
-#, python-format
-msgid ""
-"xenapi.fake does not have an implementation for %s or it has been called "
-"with the wrong number of arguments"
-msgstr ""
-"xenapi.fake не имеет реализации для %s или был вызван с использованием "
-"неправильным числом аргументов"
