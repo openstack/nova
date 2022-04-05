@@ -29,6 +29,7 @@ import shutil
 import tempfile
 
 import eventlet
+from eventlet import tpool
 from keystoneauth1 import loading as ks_loading
 import netaddr
 from openstack import connection
@@ -685,7 +686,7 @@ def spawn_n(func, *args, **kwargs):
 
 def tpool_execute(func, *args, **kwargs):
     """Run func in a native thread"""
-    eventlet.tpool.execute(func, *args, **kwargs)
+    tpool.execute(func, *args, **kwargs)
 
 
 def is_none_string(val):
