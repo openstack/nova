@@ -7750,15 +7750,7 @@ class LibvirtDriver(driver.ComputeDriver):
         device_address = self._get_pci_id_from_libvirt_name(device_address)
         if not device_address:
             return
-        try:
-            return self.pgpu_type_mapping.get(device_address)
-        except KeyError:
-            LOG.warning("No mdev type was configured for PCI address: %s",
-                        device_address)
-            # We accept to return None instead of raising an exception
-            # because we prefer the callers to return the existing exceptions
-            # in case we can't find a specific pGPU
-            return
+        return self.pgpu_type_mapping.get(device_address)
 
     def _get_resource_class_for_device(self, device_address):
         """Returns the resource class for the inventory of this device.
