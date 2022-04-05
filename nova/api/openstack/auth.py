@@ -50,7 +50,7 @@ class NoAuthMiddlewareBase(base_wsgi.Middleware):
         token = req.headers['X-Auth-Token']
         user_id, _sep, project_id = token.partition(':')
         project_id = project_id or user_id
-        remote_address = getattr(req, 'remote_address', '127.0.0.1')
+        remote_address = getattr(req, 'remote_addr', '127.0.0.1')
         if CONF.api.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
         is_admin = always_admin or (user_id == 'admin')
