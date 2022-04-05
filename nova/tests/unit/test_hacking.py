@@ -1020,3 +1020,13 @@ class HackingTestCase(test.NoDBTestCase):
                     nova_utils.ReaderWriterLock()
                """
         self._assert_has_no_errors(code, checks.check_lockutils_rwlocks)
+
+    def test_check_six(self):
+        code = """
+            import six
+            from six import moves
+            from six.moves import range
+            import six.moves.urllib.parse as urlparse
+        """
+        errors = [(x + 1, 0, 'N370') for x in range(4)]
+        self._assert_has_errors(code, checks.check_six, expected_errors=errors)

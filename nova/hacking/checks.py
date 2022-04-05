@@ -140,6 +140,7 @@ mock_class_as_new_value_in_patching_re = re.compile(
 rwlock_re = re.compile(
     r"(?P<module_part>(oslo_concurrency\.)?(lockutils|fasteners))"
     r"\.ReaderWriterLock\(.*\)")
+six_re = re.compile(r"^(import six(\..*)?|from six(\..*)? import .*)$")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -1030,3 +1031,18 @@ def check_lockutils_rwlocks(logical_line):
             0,
             msg % {'module': match.group('module_part')}
         )
+
+
+@core.flake8ext
+def check_six(logical_line):
+    """Check for use of six
+
+    nova is now Python 3-only so we don't want six. However, people might use
+    it out of habit and it will likely work since six is a transitive
+    dependency.
+
+    N370
+    """
+    match = re.match(six_re, logical_line)
+    if match:
+        yield (0, "N370: Don't use or import six")
