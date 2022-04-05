@@ -2598,21 +2598,82 @@ class VMwareVMOps(object):
                     if not expired_templ_vms:
                         break
 
-        for templ_vm_ref, templ_vm_name in expired_templ_vms.values():
-            msg = "Destroying expired image-template VM {}"
-            LOG.debug(msg.format(templ_vm_name))
-            try:
-                vm_util.destroy_vm(self._session, None, templ_vm_ref)
-            except vexc.VimFaultException as e:
-                with excutils.save_and_reraise_exception() as ctx:
-                    if 'InvalidArgument' in e.fault_list \
-                            and 'ConfigSpec.files.vmPathName' \
-                                 in e.message:
-                        ctx.reraise = False
-                        # the datastore path for the template VM got lost. we
-                        # unregister instead of destroying then, because we
-                        # can't use it anymore anyways.
-                        self._unregister_template_vm(templ_vm_ref)
+        if not expired_templ_vms:
+            return
+
+        # VMs cloned from a template VM to get the image onto another datastore
+        # don't have tasks at start. Therefore, we look at the createDate to
+        # not delete them immediately again
+        expired_templ_vms_moref = [x for x, y in expired_templ_vms.values()]
+        result = self._session._call_method(vutil,
+                            "get_properties_for_a_collection_of_objects",
+                            "VirtualMachine", expired_templ_vms_moref,
+                            ["config.createDate", "config.files"])
+        with vutil.WithRetrieval(self._session.vim, result) as objects:
+            for obj in objects:
+                vm_props = vutil.propset_dict(obj.propSet)
+                # sometimes, the vCenter finds a file it thinks is a VM and it
+                # doesn't even have a config attribute ... instead of crashing
+                # with a KeyError, we assume this VM totally doesn't matter as
+                # nova also will not be able to handle it
+                if 'config.createDate' not in vm_props:
+                    continue
+
+                vm_moref_value = vutil.get_moref_value(obj.obj)
+                if not timeutils.is_older_than(vm_props['config.createDate'],
+                        CONF.image_cache.
+                            remove_unused_original_minimum_age_seconds):
+                    expired_templ_vms.pop(vm_moref_value)
+                    continue
+
+                # get the datastore from the fileName e.g.
+                # [vVOL_BB092] naa.600a0980383043367a5d4a72746b3...
+                m = re.match(r'\[(?P<ds>[^\]]+)\] ',
+                             vm_props['config.files'].vmPathName)
+                ds_name = m.group('ds') if m else ''
+
+                # we add the datastore for this expired VM here, so we can
+                # later take the lock that would use this VM for copying to the
+                # image-cache to avoid races with currently-deploying VMs
+                moref, name = expired_templ_vms[vm_moref_value]
+                expired_templ_vms[vm_moref_value] = (moref, name, ds_name)
+
+        # every VM we did not find above, we still need 3 values for the unpack
+        # in the next loop
+        for key, value in expired_templ_vms.items():
+            if len(value) == 3:
+                continue
+
+            templ_vm_ref, templ_vm_name = value
+            expired_templ_vms[key] = (templ_vm_ref, templ_vm_name, 'unknown')
+
+        for templ_vm_ref, templ_vm_name, ds_name in expired_templ_vms.values():
+            # we take the lock here on a best-effort basis to guard against us
+            # deleting an image-cache VM while it's disk is currently getting
+            # copied into the image-cache
+            # name looks like "$UUID ($ds)"
+            templ_vm_image_uuid = templ_vm_name.split(' ')[0]
+            cache_image_file_name = "{}.vmdk".format(templ_vm_image_uuid)
+            cache_image_path = ds_obj.DatastorePath(ds_name,
+                                                    self._base_folder,
+                                                    templ_vm_image_uuid,
+                                                    cache_image_file_name)
+            with lockutils.lock(str(cache_image_path),
+                                lock_file_prefix='nova-vmware-fetch_image'):
+                msg = "Destroying expired image-template VM {}"
+                LOG.debug(msg.format(templ_vm_name))
+                try:
+                    vm_util.destroy_vm(self._session, None, templ_vm_ref)
+                except vexc.VimFaultException as e:
+                    with excutils.save_and_reraise_exception() as ctx:
+                        if 'InvalidArgument' in e.fault_list \
+                                and 'ConfigSpec.files.vmPathName' \
+                                     in str(e):
+                            ctx.reraise = False
+                            # the datastore path for the template VM got lost.
+                            # we unregister instead of destroying then, because
+                            # we can't use it anymore anyways.
+                            self._unregister_template_vm(templ_vm_ref)
 
     def _get_valid_vms_from_retrieve_result(self, retrieve_result,
                                             return_properties=False):
