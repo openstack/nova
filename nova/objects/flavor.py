@@ -54,10 +54,11 @@ def _dict_with_extra_specs(flavor_model):
 # issues are resolved.
 @api_db_api.context_manager.reader
 def _get_projects_from_db(context, flavorid):
-    db_flavor = context.session.query(api_models.Flavors).\
-        filter_by(flavorid=flavorid).\
-        options(orm.joinedload('projects')).\
-        first()
+    db_flavor = context.session.query(api_models.Flavors).filter_by(
+        flavorid=flavorid
+    ).options(
+        orm.joinedload(api_models.Flavors.projects)
+    ).first()
     if not db_flavor:
         raise exception.FlavorNotFound(flavor_id=flavorid)
     return [x['project_id'] for x in db_flavor['projects']]
@@ -271,8 +272,9 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
     @staticmethod
     @api_db_api.context_manager.reader
     def _flavor_get_query_from_db(context):
-        query = context.session.query(api_models.Flavors).\
-            options(orm.joinedload('extra_specs'))
+        query = context.session.query(api_models.Flavors).options(
+            orm.joinedload(api_models.Flavors.extra_specs)
+        )
         if not context.is_admin:
             the_filter = [api_models.Flavors.is_public == sql.true()]
             the_filter.extend([

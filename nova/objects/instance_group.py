@@ -36,8 +36,8 @@ LOG = logging.getLogger(__name__)
 
 def _instance_group_get_query(context, id_field=None, id=None):
     query = context.session.query(api_models.InstanceGroup).\
-        options(orm.joinedload('_policies')).\
-        options(orm.joinedload('_members'))
+        options(orm.joinedload(api_models.InstanceGroup._policies)).\
+        options(orm.joinedload(api_models.InstanceGroup._members))
     if not context.is_admin:
         query = query.filter_by(project_id=context.project_id)
     if id and id_field:
@@ -84,16 +84,22 @@ def _instance_group_members_add(context, group, members):
 def _instance_group_members_add_by_uuid(context, group_uuid, members):
     # NOTE(melwitt): The condition on the join limits the number of members
     # returned to only those we wish to check as already existing.
-    group = context.session.query(api_models.InstanceGroup).\
-            outerjoin(api_models.InstanceGroupMember,
-            api_models.InstanceGroupMember.instance_uuid.in_(set(members))).\
-            filter(api_models.InstanceGroup.uuid == group_uuid).\
-            options(orm.contains_eager('_members')).first()
+    group = context.session.query(api_models.InstanceGroup).outerjoin(
+        api_models.InstanceGroupMember,
+        api_models.InstanceGroupMember.instance_uuid.in_(set(members))
+    ).filter(
+        api_models.InstanceGroup.uuid == group_uuid
+    ).options(orm.contains_eager(api_models.InstanceGroup._members)).first()
     if not group:
         raise exception.InstanceGroupNotFound(group_uuid=group_uuid)
-    return _instance_group_model_add(context, api_models.InstanceGroupMember,
-                                     members, group._members, 'instance_uuid',
-                                     group.id)
+    return _instance_group_model_add(
+        context,
+        api_models.InstanceGroupMember,
+        members,
+        group._members,
+        'instance_uuid',
+        group.id,
+    )
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
