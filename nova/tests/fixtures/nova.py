@@ -879,12 +879,6 @@ class WarningsFixture(fixtures.Fixture):
             message=r'The current statement is being autocommitted .*',
             category=sqla_exc.SADeprecationWarning)
 
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
-            message=r'The Column.copy\(\) method is deprecated .*',
-            category=sqla_exc.SADeprecationWarning)
-
         self.addCleanup(self._reset_warning_filters)
 
     def _reset_warning_filters(self):

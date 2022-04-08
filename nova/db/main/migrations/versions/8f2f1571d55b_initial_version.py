@@ -159,7 +159,9 @@ def _create_shadow_tables(connection):
                     column_copy = sa.Column(column.name, enum, nullable=True)
 
             if column_copy is None:
-                column_copy = column.copy()
+                # NOTE(stephenfin): Yes, this is private. Yes, this is what we
+                # were told to use. Blame zzzeek!
+                column_copy = column._copy()
 
             columns.append(column_copy)
 
