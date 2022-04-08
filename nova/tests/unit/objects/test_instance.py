@@ -2015,12 +2015,14 @@ class TestInstanceListObject(test_objects._LocalTest,
         # manually here.
         engine = db.get_engine()
         table = sql_models.Instance.__table__
-        with engine.connect() as conn:
-            update = table.insert().values(user_id=self.context.user_id,
-                                           project_id=self.context.project_id,
-                                           uuid=uuids.nullinst,
-                                           host='foo',
-                                           hidden=None)
+        with engine.connect() as conn, conn.begin():
+            update = table.insert().values(
+                user_id=self.context.user_id,
+                project_id=self.context.project_id,
+                uuid=uuids.nullinst,
+                host='foo',
+                hidden=None,
+            )
             conn.execute(update)
 
         insts = objects.InstanceList.get_by_filters(self.context,
