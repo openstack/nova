@@ -850,12 +850,6 @@ class WarningsFixture(fixtures.Fixture):
             category=UserWarning,
         )
 
-        warnings.filterwarnings(
-            'error',
-            message='Evaluating non-mapped column expression',
-            category=sqla_exc.SAWarning,
-        )
-
         # Enable deprecation warnings for nova itself to capture upcoming
         # SQLAlchemy changes
 
@@ -868,6 +862,16 @@ class WarningsFixture(fixtures.Fixture):
             'error',
             module='nova',
             category=sqla_exc.SADeprecationWarning,
+        )
+
+        # Enable general SQLAlchemy warnings also to ensure we're not doing
+        # silly stuff. It's possible that we'll need to filter things out here
+        # with future SQLAlchemy versions, but that's a good thing
+
+        warnings.filterwarnings(
+            'error',
+            module='nova',
+            category=sqla_exc.SAWarning,
         )
 
         self.addCleanup(self._reset_warning_filters)
