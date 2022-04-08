@@ -904,6 +904,16 @@ class WarningsFixture(fixtures.Fixture):
             message='Implicit coercion of SELECT and textual SELECT .*',
             category=sqla_exc.SADeprecationWarning)
 
+        # Enable general SQLAlchemy warnings also to ensure we're not doing
+        # silly stuff. It's possible that we'll need to filter things out here
+        # with future SQLAlchemy versions, but that's a good thing
+
+        warnings.filterwarnings(
+            'error',
+            module='nova',
+            category=sqla_exc.SAWarning,
+        )
+
         self.addCleanup(self._reset_warning_filters)
 
     def _reset_warning_filters(self):
