@@ -381,7 +381,6 @@
 - project:
     # Please try to keep the list of job names sorted alphabetically.
     templates:
-      - check-requirements
       - integrated-gate-compute
       - openstack-cover-jobs
       - openstack-python3-ussuri-jobs
@@ -431,14 +430,14 @@
               - ^setup.cfg$
               - ^tools/.*$
               - ^tox.ini$
-        - openstack-tox-lower-constraints:
-            voting: false
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *dsvm-irrelevant-files
+        - requirements-check:
+            nodeset: ubuntu-bionic
         - cyborg-tempest:
             irrelevant-files: *dsvm-irrelevant-files
             voting: false
@@ -451,14 +450,14 @@
         - nova-tox-validate-backport
         - tempest-integrated-compute:
             irrelevant-files: *policies-irrelevant-files
-        - openstack-tox-lower-constraints:
-            voting: false
         - nova-grenade-multinode:
             irrelevant-files: *policies-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *dsvm-irrelevant-files
+        - requirements-check:
+            nodeset: ubuntu-bionic
     experimental:
       jobs:
         - ironic-tempest-bfv:
