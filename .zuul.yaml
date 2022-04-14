@@ -452,7 +452,6 @@
       - check-requirements
       - integrated-gate-compute
       - openstack-cover-jobs
-      - openstack-lower-constraints-jobs
       - openstack-python3-wallaby-jobs
       - openstack-python3-wallaby-jobs-arm64
       - periodic-stable-jobs
