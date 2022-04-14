@@ -245,7 +245,6 @@
       - check-requirements
       - integrated-gate-py3
       - openstack-cover-jobs
-      - openstack-lower-constraints-jobs
       - openstack-python-jobs
       - openstack-python35-jobs
       - openstack-python36-jobs
