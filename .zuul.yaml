@@ -238,13 +238,6 @@
             irrelevant-files: *dsvm-irrelevant-files
         - nova-tox-functional
         - nova-tox-functional-py35
-        - openstack-tox-lower-constraints:
-            # NOTE(elod.illes): with the introduction of the new dependency
-            # resolver in pip 20.3, the lower-constraints jobs start to fail
-            # as the constraint handling is now working as it should, thus
-            # revealing issues. Setting this to non-voting until the way
-            # forward is decided.
-            voting: false
         - tempest-full-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - neutron-grenade-multinode:
@@ -350,13 +343,6 @@
             irrelevant-files: *dsvm-irrelevant-files
         - nova-tox-functional
         - nova-tox-functional-py35
-        - openstack-tox-lower-constraints:
-            # NOTE(elod.illes): with the introduction of the new dependency
-            # resolver in pip 20.3, the lower-constraints jobs start to fail
-            # as the constraint handling is now working as it should, thus
-            # revealing issues. Setting this to non-voting until the way
-            # forward is decided.
-            voting: false
         - tempest-full-py3:
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-full:
