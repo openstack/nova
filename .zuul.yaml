@@ -579,7 +579,6 @@
       - check-requirements
       - integrated-gate-compute
       - openstack-cover-jobs
-      - openstack-lower-constraints-jobs
       - openstack-python3-xena-jobs
       - openstack-python3-xena-jobs-arm64
       - periodic-stable-jobs
