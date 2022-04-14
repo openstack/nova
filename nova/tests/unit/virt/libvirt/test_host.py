@@ -1280,7 +1280,10 @@ Active:          8381604 kB
             "vendor_id": "15b3",
             "label": "label_15b3_101e",
             "dev_type": obj_fields.PciDeviceType.SRIOV_VF,
+            "parent_ifname": "ens1",
             "capabilities": {
+                "network": ["rx", "tx", "sg", "tso", "gso", "gro", "rxvlan",
+                            "txvlan", "rxhash"],
                 # Should be obtained from the parent PF in this case.
                 "vpd": {"card_serial_number": "MT2113X00000"}},
         }

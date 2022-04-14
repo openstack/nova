@@ -1336,31 +1336,11 @@ class Host(object):
 
             return {'dev_type': fields.PciDeviceType.STANDARD}
 
-        def _get_device_capabilities(
-            device_dict: dict,
-            device: 'libvirt.virNodeDevice',
-            net_devs: ty.List['libvirt.virNodeDevice']
-        ) -> ty.Dict[str, ty.Dict[str, ty.Any]]:
-            """Get PCI VF device's additional capabilities.
-
-            If a PCI device is a virtual function, this function reads the PCI
-            parent's network capabilities (must be always a NIC device) and
-            appends this information to the device's dictionary.
-            """
-            caps: ty.Dict[str, ty.Dict[str, ty.Any]] = {}
-
-            if device_dict.get('dev_type') == fields.PciDeviceType.SRIOV_VF:
-                pcinet_info = self._get_pcinet_info(device, net_devs)
-                if pcinet_info:
-                    return {'capabilities': {'network': pcinet_info}}
-
-            return caps
-
         def _get_vpd_details(
             device_dict: dict,
             device: 'libvirt.virNodeDevice',
             pci_devs: ty.List['libvirt.virNodeDevice']
-        ) -> ty.Dict[str, ty.Dict[str, ty.Any]]:
+        ) -> ty.Dict[str, ty.Any]:
             """Get information from PCI VPD (if present).
 
             PCI/PCIe devices may include the optional VPD capability. It may
@@ -1373,7 +1353,7 @@ class Host(object):
             the VPD capability or not may be controlled via a vendor-specific
             firmware setting.
             """
-            caps: ty.Dict[str, ty.Dict[str, ty.Any]] = {}
+            vpd_info: ty.Dict[str, ty.Any] = {}
             # At the time of writing only the serial number had a clear
             # use-case. However, the set of fields may be extended.
             card_serial_number = self._get_vpd_card_serial_number(device)
@@ -1388,7 +1368,7 @@ class Host(object):
                     LOG.warning("A VF device dict does not have a parent PF "
                                 "address in it which is unexpected. Skipping "
                                 "serial number retrieval")
-                    return caps
+                    return vpd_info
 
                 formatted_addr = pf_addr.replace('.', '_').replace(':', '_')
                 vpd_cap = self._get_vf_parent_pci_vpd_info(
@@ -1397,8 +1377,35 @@ class Host(object):
                     card_serial_number = vpd_cap.card_serial_number
 
             if card_serial_number:
-                caps = {'capabilities': {
-                    'vpd': {"card_serial_number": card_serial_number}}}
+                vpd_info = {'card_serial_number': card_serial_number}
+            return vpd_info
+
+        def _get_device_capabilities(
+            device_dict: dict,
+            device: 'libvirt.virNodeDevice',
+            pci_devs: ty.List['libvirt.virNodeDevice'],
+            net_devs: ty.List['libvirt.virNodeDevice']
+        ) -> ty.Dict[str, ty.Any]:
+            """Get PCI VF device's additional capabilities.
+
+            If a PCI device is a virtual function, this function reads the PCI
+            parent's network capabilities (must be always a NIC device) and
+            appends this information to the device's dictionary.
+            """
+            caps: ty.Dict[str, ty.Any] = {}
+
+            if device_dict.get('dev_type') == fields.PciDeviceType.SRIOV_VF:
+                pcinet_info = self._get_pcinet_info(device, net_devs)
+                if pcinet_info:
+                    caps['network'] = pcinet_info
+
+            vpd_info = _get_vpd_details(device_dict, device, pci_devs)
+            if vpd_info:
+                caps['vpd'] = vpd_info
+
+            if caps:
+                return {'capabilities': caps}
+
             return caps
 
         xmlstr = dev.XMLDesc(0)
@@ -1424,8 +1431,8 @@ class Host(object):
         device['label'] = 'label_%(vendor_id)s_%(product_id)s' % device
         device.update(
             _get_device_type(cfgdev, address, dev, net_devs, vdpa_devs))
-        device.update(_get_device_capabilities(device, dev, net_devs))
-        device.update(_get_vpd_details(device, dev, pci_devs))
+        device.update(_get_device_capabilities(device, dev,
+                                               pci_devs, net_devs))
         return device
 
     def get_vdpa_nodedev_by_address(

@@ -2163,6 +2163,27 @@ _fake_NodeDevXml = {
           <link validity='sta' width='0'/>
         </pci-express>
       </capability>
+    </device>""",
+    "net_enp130s0f0v0_36_33_10_a3_94_64": """
+    <device>
+      <name>net_enp130s0f0v0_36_33_10_a3_94_64</name>
+      <path>/sys/devices/pci0000:80/0000:80:03.0/0000:82:00.3/net/enp130s0f0v0</path>
+      <parent>pci_0000_82_00_3</parent>
+      <capability type='net'>
+        <interface>enp130s0f0v0</interface>
+        <address>36:33:10:a3:94:64</address>
+        <link state='down'/>
+        <feature name='rx'/>
+        <feature name='tx'/>
+        <feature name='sg'/>
+        <feature name='tso'/>
+        <feature name='gso'/>
+        <feature name='gro'/>
+        <feature name='rxvlan'/>
+        <feature name='txvlan'/>
+        <feature name='rxhash'/>
+        <capability type='80203'/>
+      </capability>
     </device>""",  # noqa:E501
 }
 
