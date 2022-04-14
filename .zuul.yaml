@@ -369,10 +369,8 @@
 - project:
     # Please try to keep the list of job names sorted alphabetically.
     templates:
-      - check-requirements
       - integrated-gate-compute
       - openstack-cover-jobs
-      - openstack-lower-constraints-jobs
       - openstack-python-jobs
       - openstack-python3-train-jobs
       - periodic-stable-jobs
@@ -414,6 +412,8 @@
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
+        - requirements-check:
+            nodeset: ubuntu-bionic
     gate:
       jobs:
         - nova-grenade-multinode
@@ -431,6 +431,8 @@
             irrelevant-files: *dsvm-irrelevant-files
         - tempest-ipv6-only:
             irrelevant-files: *dsvm-irrelevant-files
+        - requirements-check:
+            nodeset: ubuntu-bionic
     experimental:
       jobs:
         - ironic-tempest-bfv:
