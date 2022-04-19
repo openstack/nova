@@ -507,32 +507,134 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         )
         # now try to claim and allocate the PF. It should work as it is
         # available
-        # This is bug 1969496 as the claim fails with exception
-        ex = self.assertRaises(
-            exception.PciDevicePoolEmpty,
-            self.tracker.claim_instance,
-            mock.sentinel.context,
-            pci_requests_obj,
-            None
-        )
-        self.assertIn(
-            'Attempt to consume PCI device 1:0000:00:02.1 from empty pool',
-            str(ex)
-        )
+        self.tracker.claim_instance(
+            mock.sentinel.context, pci_requests_obj, None)
+        self.tracker.allocate_instance({'uuid': uuidsentinel.instance1})
+
         pf_dev = self._get_device_by_address(pf['address'])
-        self.assertEqual('available', pf_dev.status)
+        self.assertEqual('allocated', pf_dev.status)
         vf_dev = self._get_device_by_address(vf['address'])
         self.assertEqual('unavailable', vf_dev.status)
 
-        # This should work when the bug is fixed
-        # self.tracker.claim_instance(
-        #     mock.sentinel.context, pci_requests_obj, None)
-        # self.tracker.allocate_instance({'uuid': uuidsentinel.instance1})
+        self.assertIn(
+            'Some child device of parent 0000:00:01.1 is in an inconsistent '
+            'state. If you can reproduce this warning then please report a '
+            'bug at https://bugs.launchpad.net/nova/+filebug with '
+            'reproduction steps. Inconsistent children with state: '
+            '0000:00:02.1 - unavailable',
+            self.stdlog.logger.output
+        )
 
-        # pf_dev = self._get_device_by_address(pf['address'])
-        # self.assertEqual('allocated', pf_dev.status)
-        # vf_dev = self._get_device_by_address(vf['address'])
-        # self.assertEqual('unavailable', vf_dev.status)
+        # Ensure that the claim actually fixes the inconsistency so when the
+        # parent if freed the children become available too.
+        self.tracker.free_instance(
+            mock.sentinel.context, {'uuid': uuidsentinel.instance1})
+
+        pf_dev = self._get_device_by_address(pf['address'])
+        self.assertEqual('available', pf_dev.status)
+        vf_dev = self._get_device_by_address(vf['address'])
+        self.assertEqual('available', vf_dev.status)
+
+    def test_claim_available_pf_while_children_vfs_are_in_mixed_state(self):
+        # We start with a PF parent and two VF children. The PF is available
+        # and one of the VF is unavailable while the other is available.
+        pf = copy.deepcopy(fake_db_dev_3)
+        vf1 = copy.deepcopy(fake_db_dev_4)
+        vf1['status'] = fields.PciDeviceStatus.UNAVAILABLE
+        vf2 = copy.deepcopy(fake_db_dev_5)
+        vf2['status'] = fields.PciDeviceStatus.AVAILABLE
+        self._create_tracker([pf, vf1, vf2])
+
+        pf_dev = self._get_device_by_address(pf['address'])
+        self.assertEqual('available', pf_dev.status)
+        vf1_dev = self._get_device_by_address(vf1['address'])
+        self.assertEqual('unavailable', vf1_dev.status)
+        vf2_dev = self._get_device_by_address(vf2['address'])
+        self.assertEqual('available', vf2_dev.status)
+
+        pci_requests_obj = self._create_pci_requests_object(
+            [
+                {
+                    'count': 1,
+                    'spec': [{'dev_type': fields.PciDeviceType.SRIOV_PF}]
+                }
+            ],
+            instance_uuid=uuidsentinel.instance1,
+        )
+        # now try to claim and allocate the PF. It should work as it is
+        # available
+        self.tracker.claim_instance(
+            mock.sentinel.context, pci_requests_obj, None)
+        self.tracker.allocate_instance({'uuid': uuidsentinel.instance1})
+
+        pf_dev = self._get_device_by_address(pf['address'])
+        self.assertEqual('allocated', pf_dev.status)
+        vf1_dev = self._get_device_by_address(vf1['address'])
+        self.assertEqual('unavailable', vf1_dev.status)
+        vf2_dev = self._get_device_by_address(vf2['address'])
+        self.assertEqual('unavailable', vf2_dev.status)
+
+        self.assertIn(
+            'Some child device of parent 0000:00:01.1 is in an inconsistent '
+            'state. If you can reproduce this warning then please report a '
+            'bug at https://bugs.launchpad.net/nova/+filebug with '
+            'reproduction steps. Inconsistent children with state: '
+            '0000:00:02.1 - unavailable',
+            self.stdlog.logger.output
+        )
+
+        # Ensure that the claim actually fixes the inconsistency so when the
+        # parent if freed the children become available too.
+        self.tracker.free_instance(
+            mock.sentinel.context, {'uuid': uuidsentinel.instance1})
+
+        pf_dev = self._get_device_by_address(pf['address'])
+        self.assertEqual('available', pf_dev.status)
+        vf1_dev = self._get_device_by_address(vf1['address'])
+        self.assertEqual('available', vf1_dev.status)
+        vf2_dev = self._get_device_by_address(vf2['address'])
+        self.assertEqual('available', vf2_dev.status)
+
+    def test_claim_available_pf_while_a_child_is_used(self):
+        pf = copy.deepcopy(fake_db_dev_3)
+        vf1 = copy.deepcopy(fake_db_dev_4)
+        vf1['status'] = fields.PciDeviceStatus.UNAVAILABLE
+        vf2 = copy.deepcopy(fake_db_dev_5)
+        vf2['status'] = fields.PciDeviceStatus.CLAIMED
+        self._create_tracker([pf, vf1, vf2])
+
+        pf_dev = self._get_device_by_address(pf['address'])
+        self.assertEqual('available', pf_dev.status)
+        vf1_dev = self._get_device_by_address(vf1['address'])
+        self.assertEqual('unavailable', vf1_dev.status)
+        vf2_dev = self._get_device_by_address(vf2['address'])
+        self.assertEqual('claimed', vf2_dev.status)
+
+        pci_requests_obj = self._create_pci_requests_object(
+            [
+                {
+                    'count': 1,
+                    'spec': [{'dev_type': fields.PciDeviceType.SRIOV_PF}]
+                }
+            ],
+            instance_uuid=uuidsentinel.instance1,
+        )
+        # now try to claim and allocate the PF. The claim should fail as on of
+        # the child is used.
+        self.assertRaises(
+            exception.PciDeviceVFInvalidStatus,
+            self.tracker.claim_instance,
+            mock.sentinel.context,
+            pci_requests_obj,
+            None,
+        )
+
+        pf_dev = self._get_device_by_address(pf['address'])
+        self.assertEqual('available', pf_dev.status)
+        vf1_dev = self._get_device_by_address(vf1['address'])
+        self.assertEqual('unavailable', vf1_dev.status)
+        vf2_dev = self._get_device_by_address(vf2['address'])
+        self.assertEqual('claimed', vf2_dev.status)
 
     def test_update_pci_for_instance_active(self):
         pci_requests_obj = self._create_pci_requests_object(fake_pci_requests)
