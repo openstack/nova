@@ -467,6 +467,16 @@ class _TestPciDeviceObject(object):
         devobj.claim(self.inst.uuid)
         self.assertRaises(exception.PciDeviceInvalidStatus, devobj.remove)
 
+    def test_remove_device_fail_owned_with_unavailable_state(self):
+        # This test creates an PCI device in an invalid state. This should
+        # not happen in any known scenario. But we want to be save not to allow
+        # removing a device that has an owner. See bug 1969496 for more details
+        self._create_fake_instance()
+        devobj = pci_device.PciDevice.create(None, dev_dict)
+        devobj.claim(self.inst.uuid)
+        devobj.status = fields.PciDeviceStatus.UNAVAILABLE
+        self.assertRaises(exception.PciDeviceInvalidOwner, devobj.remove)
+
 
 class TestPciDeviceObject(test_objects._LocalTest,
                           _TestPciDeviceObject):
