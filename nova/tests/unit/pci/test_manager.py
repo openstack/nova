@@ -21,6 +21,7 @@ from oslo_utils.fixture import uuidsentinel
 
 from nova.compute import vm_states
 from nova import context
+from nova import exception
 from nova import objects
 from nova.objects import fields
 from nova.pci import manager
@@ -477,6 +478,61 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         dev4_vf = self._get_device_by_address(fake_db_dev_4['address'])
         self.assertEqual('allocated', dev4_vf.status)
         self.assertEqual(uuidsentinel.instance1, dev4_vf.instance_uuid)
+
+    def test_claim_available_pf_while_child_vf_is_unavailable(self):
+        # NOTE(gibi): this is bug 1969496. The state created here is
+        # inconsistent and should not happen. But it did happen in some cases
+        # where we were not able to track down the way how it happened.
+
+        # We start with a PF parent and a VF child. The PF is available and
+        # the VF is unavailable.
+        pf = copy.deepcopy(fake_db_dev_3)
+        vf = copy.deepcopy(fake_db_dev_4)
+        vf['status'] = fields.PciDeviceStatus.UNAVAILABLE
+        self._create_tracker([pf, vf])
+
+        pf_dev = self._get_device_by_address(pf['address'])
+        self.assertEqual('available', pf_dev.status)
+        vf_dev = self._get_device_by_address(vf['address'])
+        self.assertEqual('unavailable', vf_dev.status)
+
+        pci_requests_obj = self._create_pci_requests_object(
+            [
+                {
+                    'count': 1,
+                    'spec': [{'dev_type': fields.PciDeviceType.SRIOV_PF}]
+                }
+            ],
+            instance_uuid=uuidsentinel.instance1,
+        )
+        # now try to claim and allocate the PF. It should work as it is
+        # available
+        # This is bug 1969496 as the claim fails with exception
+        ex = self.assertRaises(
+            exception.PciDevicePoolEmpty,
+            self.tracker.claim_instance,
+            mock.sentinel.context,
+            pci_requests_obj,
+            None
+        )
+        self.assertIn(
+            'Attempt to consume PCI device 1:0000:00:02.1 from empty pool',
+            str(ex)
+        )
+        pf_dev = self._get_device_by_address(pf['address'])
+        self.assertEqual('available', pf_dev.status)
+        vf_dev = self._get_device_by_address(vf['address'])
+        self.assertEqual('unavailable', vf_dev.status)
+
+        # This should work when the bug is fixed
+        # self.tracker.claim_instance(
+        #     mock.sentinel.context, pci_requests_obj, None)
+        # self.tracker.allocate_instance({'uuid': uuidsentinel.instance1})
+
+        # pf_dev = self._get_device_by_address(pf['address'])
+        # self.assertEqual('allocated', pf_dev.status)
+        # vf_dev = self._get_device_by_address(vf['address'])
+        # self.assertEqual('unavailable', vf_dev.status)
 
     def test_update_pci_for_instance_active(self):
         pci_requests_obj = self._create_pci_requests_object(fake_pci_requests)
