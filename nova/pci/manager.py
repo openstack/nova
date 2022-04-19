@@ -217,10 +217,13 @@ class PciDevTracker(object):
                 # from the pci whitelist.
                 try:
                     existed.remove()
-                except exception.PciDeviceInvalidStatus as e:
-                    LOG.warning("Unable to remove device with %(status)s "
-                                "ownership %(instance_uuid)s because of "
-                                "%(pci_exception)s. "
+                except (
+                        exception.PciDeviceInvalidStatus,
+                        exception.PciDeviceInvalidOwner,
+                ) as e:
+                    LOG.warning("Unable to remove device with status "
+                                "'%(status)s' and ownership %(instance_uuid)s "
+                                "because of %(pci_exception)s. "
                                 "Check your [pci]passthrough_whitelist "
                                 "configuration to make sure this allocated "
                                 "device is whitelisted. If you have removed "
@@ -250,7 +253,10 @@ class PciDevTracker(object):
                 else:
                     # Note(yjiang5): no need to update stats if an assigned
                     # device is hot removed.
-                    self.stats.remove_device(existed)
+                    # NOTE(gibi): only remove the device from the pools if it
+                    # is not already removed
+                    if existed in self.stats.get_free_devs():
+                        self.stats.remove_device(existed)
             else:
                 # Update tracked devices.
                 new_value: ty.Dict[str, ty.Any]

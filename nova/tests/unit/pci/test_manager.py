@@ -397,6 +397,87 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(len(self.tracker.stale), 1)
         self.assertEqual(self.tracker.stale['0000:00:00.2']['vendor_id'], 'v2')
 
+    def _get_device_by_address(self, address):
+        devs = [dev for dev in self.tracker.pci_devs if dev.address == address]
+        if len(devs) == 1:
+            return devs[0]
+        if devs:
+            raise ValueError('ambiguous address', devs)
+        else:
+            raise ValueError('device not found', address)
+
+    def test_set_hvdevs_unavailable_vf_removed(self):
+        # We start with a PF parent and two VF children
+        self._create_tracker([fake_db_dev_3, fake_db_dev_4, fake_db_dev_5])
+        pci_requests_obj = self._create_pci_requests_object(
+            [
+                {
+                    'count': 1,
+                    'spec': [{'dev_type': fields.PciDeviceType.SRIOV_PF}]
+                }
+            ],
+            instance_uuid=uuidsentinel.instance1,
+        )
+        # then claim and allocate the PF that makes the VFs unavailable
+        self.tracker.claim_instance(
+            mock.sentinel.context, pci_requests_obj, None)
+        self.tracker.allocate_instance({'uuid': uuidsentinel.instance1})
+
+        dev3_pf = self._get_device_by_address(fake_db_dev_3['address'])
+        self.assertEqual('allocated', dev3_pf.status)
+        self.assertEqual(uuidsentinel.instance1, dev3_pf.instance_uuid)
+        dev4_vf = self._get_device_by_address(fake_db_dev_4['address'])
+        self.assertEqual('unavailable', dev4_vf.status)
+        dev5_vf = self._get_device_by_address(fake_db_dev_5['address'])
+        self.assertEqual('unavailable', dev5_vf.status)
+
+        # now simulate that one VF (dev_5) is removed from the hypervisor and
+        # the compute is restarted. As the VF is not claimed or allocated we
+        # are free to remove it from the tracker.
+        self.tracker._set_hvdevs(copy.deepcopy([fake_pci_3, fake_pci_4]))
+
+        dev3_pf = self._get_device_by_address(fake_db_dev_3['address'])
+        self.assertEqual('allocated', dev3_pf.status)
+        self.assertEqual(uuidsentinel.instance1, dev3_pf.instance_uuid)
+        dev4_vf = self._get_device_by_address(fake_db_dev_4['address'])
+        self.assertEqual('unavailable', dev4_vf.status)
+        dev5_vf = self._get_device_by_address(fake_db_dev_5['address'])
+        self.assertEqual('removed', dev5_vf.status)
+
+    def test_set_hvdevs_unavailable_pf_removed(self):
+        # We start with one PF parent and one child VF
+        self._create_tracker([fake_db_dev_3, fake_db_dev_4])
+        pci_requests_obj = self._create_pci_requests_object(
+            [
+                {
+                    'count': 1,
+                    'spec': [{'dev_type': fields.PciDeviceType.SRIOV_VF}]
+                }
+            ],
+            instance_uuid=uuidsentinel.instance1,
+        )
+        # Then we claim and allocate the VF that makes the PF unavailable
+        self.tracker.claim_instance(
+            mock.sentinel.context, pci_requests_obj, None)
+        self.tracker.allocate_instance({'uuid': uuidsentinel.instance1})
+
+        dev3_pf = self._get_device_by_address(fake_db_dev_3['address'])
+        self.assertEqual('unavailable', dev3_pf.status)
+        dev4_vf = self._get_device_by_address(fake_db_dev_4['address'])
+        self.assertEqual('allocated', dev4_vf.status)
+        self.assertEqual(uuidsentinel.instance1, dev4_vf.instance_uuid)
+
+        # now simulate that the parent PF is removed from the hypervisor and
+        # the compute is restarted. As the PF is not claimed or allocated we
+        # are free to remove it from the tracker.
+        self.tracker._set_hvdevs(copy.deepcopy([fake_pci_4]))
+
+        dev3_pf = self._get_device_by_address(fake_db_dev_3['address'])
+        self.assertEqual('removed', dev3_pf.status)
+        dev4_vf = self._get_device_by_address(fake_db_dev_4['address'])
+        self.assertEqual('allocated', dev4_vf.status)
+        self.assertEqual(uuidsentinel.instance1, dev4_vf.instance_uuid)
+
     def test_update_pci_for_instance_active(self):
         pci_requests_obj = self._create_pci_requests_object(fake_pci_requests)
         self.tracker.claim_instance(mock.sentinel.context,
