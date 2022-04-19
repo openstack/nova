@@ -279,8 +279,12 @@ class PciDeviceStats(object):
         if pci_dev.dev_type == fields.PciDeviceType.SRIOV_PF:
             vfs_list = pci_dev.child_devices
             if vfs_list:
+                free_devs = self.get_free_devs()
                 for vf in vfs_list:
-                    self.remove_device(vf)
+                    # NOTE(gibi): do not try to remove a device that are
+                    # already removed
+                    if vf in free_devs:
+                        self.remove_device(vf)
         elif pci_dev.dev_type in (
             fields.PciDeviceType.SRIOV_VF,
             fields.PciDeviceType.VDPA,
