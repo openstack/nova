@@ -23,12 +23,15 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 from oslo_vmware import rw_handles
 
+import nova.conf
 from nova import exception
 from nova import objects
 from nova import test
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import vm_util
+
+CONF = nova.conf.CONF
 
 
 class VMwareImagesTestCase(test.NoDBTestCase):
@@ -180,6 +183,8 @@ class VMwareImagesTestCase(test.NoDBTestCase):
                                           mock_read_class):
         """Test fetching streamOptimized disk image."""
         session = mock.MagicMock()
+        CONF.set_override('allow_pulling_images_from_url', False,
+                          'vmware')
 
         with test.nested(
              mock.patch.object(images.IMAGE_API, 'get'),

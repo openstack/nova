@@ -28,6 +28,7 @@ from oslo_utils import encodeutils
 from oslo_utils import strutils
 from oslo_utils import units
 from oslo_vmware import exceptions as vexc
+from oslo_vmware.image_transfer import image_pull_from_url
 from oslo_vmware import rw_handles
 
 from nova import exception
@@ -348,19 +349,44 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
               "as VM named '%(vm_name)s'",
               {'image_ref': image_ref, 'vm_name': vm_name},
               instance=instance)
-
-    metadata = IMAGE_API.get(context, image_ref)
+    allow_url = CONF.vmware.allow_pulling_images_from_url
+    metadata = IMAGE_API.get(context, image_ref,
+                             include_locations=allow_url)
     file_size = int(metadata['size'])
 
     vm_import_spec = _build_import_spec_for_import_vapp(
             session, vm_name, ds_name)
 
-    read_iter = IMAGE_API.download(context, image_ref)
-    read_handle = rw_handles.ImageReadHandle(read_iter)
+    url_handle = None
+    if allow_url:
+        try:
+            url_handle = rw_handles.SwiftUrlPullHandle(
+                metadata.get('direct_url', None),
+                context.get_auth_plugin().auth_token)
+        except ValueError as e:
+            LOG.debug(e)
 
-    imported_vm_ref = _import_image(session, read_handle, vm_import_spec,
-                                    vm_name, vm_folder_ref, res_pool_ref,
-                                    file_size)
+    imported_vm_ref = None
+    if url_handle:
+        try:
+            imported_vm_ref = image_pull_from_url(
+                url_handle,
+                session=session,
+                resource_pool=res_pool_ref,
+                vm_import_spec=vm_import_spec,
+                vm_folder=vm_folder_ref,
+                image_size=file_size)
+        except vexc.VimFaultException as e:
+            LOG.warning("Failed to pull the image directly from URL. Falling "
+                        "back to uploading the image to the HttpNfcLease.", e)
+
+    if not imported_vm_ref:
+        read_iter = IMAGE_API.download(context, image_ref)
+        read_handle = rw_handles.ImageReadHandle(read_iter)
+
+        imported_vm_ref = _import_image(session, read_handle, vm_import_spec,
+                                        vm_name, vm_folder_ref, res_pool_ref,
+                                        file_size)
 
     LOG.info("Downloaded image file data %(image_ref)s",
              {'image_ref': instance.image_ref}, instance=instance)

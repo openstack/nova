@@ -474,6 +474,14 @@ Possible values:
                 root disks
  * integer = -1: no limit
 """),
+    cfg.StrOpt('allow_pulling_images_from_url',
+               default=True,
+               help="""
+Allow VMware to pull images directly from Swift. By enabling this, images
+that are stored in Swift will be downloaded by VMWare from the `direct_url`,
+instead of the nova-compute service having to proxy the image between glance
+and VMware.
+"""),
 ]
 
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +
