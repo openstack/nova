@@ -888,12 +888,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'ignore',
             module='nova',
-            message=r'The Connection.connect\(\) method is considered .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
             message='Implicit coercion of SELECT and textual SELECT .*',
             category=sqla_exc.SADeprecationWarning)
 
