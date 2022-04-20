@@ -898,9 +898,9 @@ class WarningsFixture(fixtures.Fixture):
             message=r'Invoking and_\(\) without arguments is deprecated, .*',
             category=sqla_exc.SADeprecationWarning)
 
-        # TODO(stephenfin): Remove once we fix this in placement 5.0.2 or 6.0.0
         warnings.filterwarnings(
             'ignore',
+            module='nova',
             message='Implicit coercion of SELECT and textual SELECT .*',
             category=sqla_exc.SADeprecationWarning)
 
