@@ -806,7 +806,7 @@ class WarningsFixture(fixtures.Fixture):
     """Filters out warnings during test runs."""
 
     def setUp(self):
-        super(WarningsFixture, self).setUp()
+        super().setUp()
 
         self._original_warning_filters = warnings.filters[:]
 
@@ -819,15 +819,19 @@ class WarningsFixture(fixtures.Fixture):
         # forward on is_admin, the deprecation is definitely really premature.
         warnings.filterwarnings(
             'ignore',
-            message='Policy enforcement is depending on the value of is_admin.'
-                    ' This key is deprecated. Please update your policy '
-                    'file to use the standard policy values.')
+            message=(
+                'Policy enforcement is depending on the value of is_admin. '
+                'This key is deprecated. Please update your policy '
+                'file to use the standard policy values.'
+            ),
+        )
 
         # NOTE(mriedem): Ignore scope check UserWarnings from oslo.policy.
         warnings.filterwarnings(
             'ignore',
             message="Policy .* failed scope check",
-            category=UserWarning)
+            category=UserWarning,
+        )
 
         # NOTE(gibi): The UUIDFields emits a warning if the value is not a
         # valid UUID. Let's escalate that to an exception in the test to
@@ -839,25 +843,32 @@ class WarningsFixture(fixtures.Fixture):
         # how to handle (or isn't given a fallback callback).
         warnings.filterwarnings(
             'error',
-            message="Cannot convert <oslo_db.sqlalchemy.enginefacade"
-                    "._Default object at ",
-            category=UserWarning)
+            message=(
+                'Cannot convert <oslo_db.sqlalchemy.enginefacade._Default '
+                'object at '
+            ),
+            category=UserWarning,
+        )
 
         warnings.filterwarnings(
-            'error', message='Evaluating non-mapped column expression',
-            category=sqla_exc.SAWarning)
+            'error',
+            message='Evaluating non-mapped column expression',
+            category=sqla_exc.SAWarning,
+        )
 
         # Enable deprecation warnings for nova itself to capture upcoming
         # SQLAlchemy changes
 
         warnings.filterwarnings(
             'ignore',
-            category=sqla_exc.SADeprecationWarning)
+            category=sqla_exc.SADeprecationWarning,
+        )
 
         warnings.filterwarnings(
             'error',
             module='nova',
-            category=sqla_exc.SADeprecationWarning)
+            category=sqla_exc.SADeprecationWarning,
+        )
 
         # ...but filter everything out until we get around to fixing them
         # TODO(stephenfin): Fix all of these
