@@ -35,8 +35,8 @@ DEPRECATED_FIELDS = ['deleted', 'deleted_at']
 @api_db_api.context_manager.reader
 def _aggregate_get_from_db(context, aggregate_id):
     query = context.session.query(api_models.Aggregate).\
-            options(orm.joinedload('_hosts')).\
-            options(orm.joinedload('_metadata'))
+        options(orm.joinedload(api_models.Aggregate._hosts)).\
+        options(orm.joinedload(api_models.Aggregate._metadata))
     query = query.filter(api_models.Aggregate.id == aggregate_id)
 
     aggregate = query.first()
@@ -50,8 +50,8 @@ def _aggregate_get_from_db(context, aggregate_id):
 @api_db_api.context_manager.reader
 def _aggregate_get_from_db_by_uuid(context, aggregate_uuid):
     query = context.session.query(api_models.Aggregate).\
-            options(orm.joinedload('_hosts')).\
-            options(orm.joinedload('_metadata'))
+        options(orm.joinedload(api_models.Aggregate._hosts)).\
+        options(orm.joinedload(api_models.Aggregate._metadata))
     query = query.filter(api_models.Aggregate.uuid == aggregate_uuid)
 
     aggregate = query.first()
@@ -414,8 +414,8 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 @api_db_api.context_manager.reader
 def _get_all_from_db(context):
     query = context.session.query(api_models.Aggregate).\
-            options(orm.joinedload('_hosts')).\
-            options(orm.joinedload('_metadata'))
+        options(orm.joinedload(api_models.Aggregate._hosts)).\
+        options(orm.joinedload(api_models.Aggregate._metadata))
 
     return query.all()
 
@@ -423,13 +423,13 @@ def _get_all_from_db(context):
 @api_db_api.context_manager.reader
 def _get_by_host_from_db(context, host, key=None):
     query = context.session.query(api_models.Aggregate).\
-            options(orm.joinedload('_hosts')).\
-            options(orm.joinedload('_metadata'))
-    query = query.join('_hosts')
+        options(orm.joinedload(api_models.Aggregate._hosts)).\
+        options(orm.joinedload(api_models.Aggregate._metadata))
+    query = query.join(api_models.Aggregate._hosts)
     query = query.filter(api_models.AggregateHost.host == host)
 
     if key:
-        query = query.join("_metadata").filter(
+        query = query.join(api_models.Aggregate._metadata).filter(
             api_models.AggregateMetadata.key == key)
 
     return query.all()
@@ -439,13 +439,15 @@ def _get_by_host_from_db(context, host, key=None):
 def _get_by_metadata_from_db(context, key=None, value=None):
     assert(key is not None or value is not None)
     query = context.session.query(api_models.Aggregate)
-    query = query.join("_metadata")
+    query = query.join(api_models.Aggregate._metadata)
     if key is not None:
         query = query.filter(api_models.AggregateMetadata.key == key)
     if value is not None:
         query = query.filter(api_models.AggregateMetadata.value == value)
-    query = query.options(orm.contains_eager("_metadata"))
-    query = query.options(orm.joinedload("_hosts"))
+    query = query.options(
+        orm.contains_eager(api_models.Aggregate._metadata)
+    )
+    query = query.options(orm.joinedload(api_models.Aggregate._hosts))
 
     return query.all()
 
@@ -468,16 +470,19 @@ def _get_non_matching_by_metadata_keys_from_db(context, ignored_keys,
         raise ValueError(_('key_prefix mandatory field.'))
 
     query = context.session.query(api_models.Aggregate)
-    query = query.join("_metadata")
+    query = query.join(api_models.Aggregate._metadata)
     query = query.filter(api_models.AggregateMetadata.value == value)
     query = query.filter(api_models.AggregateMetadata.key.like(
         key_prefix + '%'))
     if len(ignored_keys) > 0:
-        query = query.filter(~api_models.AggregateMetadata.key.in_(
-            ignored_keys))
+        query = query.filter(
+            ~api_models.AggregateMetadata.key.in_(ignored_keys)
+        )
 
-    query = query.options(orm.contains_eager("_metadata"))
-    query = query.options(orm.joinedload("_hosts"))
+    query = query.options(
+        orm.contains_eager(api_models.Aggregate._metadata)
+    )
+    query = query.options(orm.joinedload(api_models.Aggregate._hosts))
 
     return query.all()
 

@@ -894,18 +894,6 @@ class WarningsFixture(fixtures.Fixture):
         warnings.filterwarnings(
             'ignore',
             module='nova',
-            message=r'Using strings to indicate column or relationship .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
-            message=r'Using strings to indicate relationship names .*',
-            category=sqla_exc.SADeprecationWarning)
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
             message=r'Invoking and_\(\) without arguments is deprecated, .*',
             category=sqla_exc.SADeprecationWarning)
 

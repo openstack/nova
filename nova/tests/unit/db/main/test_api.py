@@ -167,27 +167,25 @@ class DbTestCase(test.TestCase):
 class HelperTestCase(test.TestCase):
     @mock.patch('sqlalchemy.orm.joinedload')
     def test_joinedload_helper(self, mock_jl):
-        query = db._joinedload_all('foo.bar.baz')
+        query = db._joinedload_all(
+            models.SecurityGroup, 'instances.info_cache'
+        )
 
         # We call sqlalchemy.orm.joinedload() on the first element
-        mock_jl.assert_called_once_with('foo')
+        mock_jl.assert_called_once_with(models.SecurityGroup.instances)
 
         # Then first.joinedload(second)
         column2 = mock_jl.return_value
-        column2.joinedload.assert_called_once_with('bar')
+        column2.joinedload.assert_called_once_with(models.Instance.info_cache)
 
-        # Then second.joinedload(third)
-        column3 = column2.joinedload.return_value
-        column3.joinedload.assert_called_once_with('baz')
-
-        self.assertEqual(column3.joinedload.return_value, query)
+        self.assertEqual(column2.joinedload.return_value, query)
 
     @mock.patch('sqlalchemy.orm.joinedload')
     def test_joinedload_helper_single(self, mock_jl):
-        query = db._joinedload_all('foo')
+        query = db._joinedload_all(models.SecurityGroup, 'instances')
 
         # We call sqlalchemy.orm.joinedload() on the first element
-        mock_jl.assert_called_once_with('foo')
+        mock_jl.assert_called_once_with(models.SecurityGroup.instances)
 
         # We should have gotten back just the result of the joinedload()
         # call if there were no other elements
@@ -1683,28 +1681,40 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         instances = db.instance_get_all_by_filters_sort(self.ctxt, filters)
         self.assertEqual([], instances)
 
-    @mock.patch('sqlalchemy.orm.undefer')
     @mock.patch('sqlalchemy.orm.joinedload')
-    def test_instance_get_all_by_filters_extra_columns(self,
-                                                       mock_joinedload,
-                                                       mock_undefer):
+    def test_instance_get_all_by_filters_extra_columns(self, mock_joinedload):
         db.instance_get_all_by_filters_sort(
             self.ctxt, {},
-            columns_to_join=['info_cache', 'extra.pci_requests'])
-        mock_joinedload.assert_called_once_with('info_cache')
-        mock_undefer.assert_called_once_with('extra.pci_requests')
+            columns_to_join=['info_cache', 'extra.pci_requests'],
+        )
+        mock_joinedload.assert_has_calls(
+            [
+                mock.call(models.Instance.info_cache),
+                mock.ANY,
+                mock.call(models.Instance.extra),
+                mock.ANY,
+                mock.ANY,
+            ]
+        )
 
-    @mock.patch('sqlalchemy.orm.undefer')
     @mock.patch('sqlalchemy.orm.joinedload')
-    def test_instance_get_active_by_window_extra_columns(self,
-                                                         mock_joinedload,
-                                                         mock_undefer):
+    def test_instance_get_active_by_window_extra_columns(
+        self, mock_joinedload,
+    ):
         now = datetime.datetime(2013, 10, 10, 17, 16, 37, 156701)
         db.instance_get_active_by_window_joined(
             self.ctxt, now,
-            columns_to_join=['info_cache', 'extra.pci_requests'])
-        mock_joinedload.assert_called_once_with('info_cache')
-        mock_undefer.assert_called_once_with('extra.pci_requests')
+            columns_to_join=['info_cache', 'extra.pci_requests'],
+        )
+        mock_joinedload.assert_has_calls(
+            [
+                mock.call(models.Instance.info_cache),
+                mock.ANY,
+                mock.call(models.Instance.extra),
+                mock.ANY,
+                mock.ANY,
+            ]
+        )
 
     def test_instance_get_all_by_filters_with_meta(self):
         self.create_instance_with_args()

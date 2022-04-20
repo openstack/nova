@@ -89,9 +89,13 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
     @staticmethod
     @api_db_api.context_manager.reader
     def _get_by_host_from_db(context, host):
-        db_mapping = context.session.query(api_models.HostMapping)\
-            .options(orm.joinedload('cell_mapping'))\
-            .filter(api_models.HostMapping.host == host).first()
+        db_mapping = context.session.query(
+            api_models.HostMapping
+        ).options(
+            orm.joinedload(api_models.HostMapping.cell_mapping)
+        ).filter(
+            api_models.HostMapping.host == host
+        ).first()
         if not db_mapping:
             raise exception.HostMappingNotFound(name=host)
         return db_mapping
@@ -159,18 +163,19 @@ class HostMappingList(base.ObjectListBase, base.NovaObject):
     @staticmethod
     @api_db_api.context_manager.reader
     def _get_from_db(context, cell_id=None):
-        query = (context.session.query(api_models.HostMapping)
-                 .options(orm.joinedload('cell_mapping')))
+        query = context.session.query(api_models.HostMapping).options(
+            orm.joinedload(api_models.HostMapping.cell_mapping)
+        )
         if cell_id:
             query = query.filter(api_models.HostMapping.cell_id == cell_id)
         return query.all()
 
-    @base.remotable_classmethod
+    @ base.remotable_classmethod
     def get_by_cell_id(cls, context, cell_id):
         db_mappings = cls._get_from_db(context, cell_id)
         return base.obj_make_list(context, cls(), HostMapping, db_mappings)
 
-    @base.remotable_classmethod
+    @ base.remotable_classmethod
     def get_all(cls, context):
         db_mappings = cls._get_from_db(context)
         return base.obj_make_list(context, cls(), HostMapping, db_mappings)
