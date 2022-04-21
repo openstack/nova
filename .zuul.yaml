@@ -2,34 +2,6 @@
 # for job naming conventions.
 
 - job:
-    name: nova-tox-functional-centos8-py36
-    parent: openstack-tox-functional-py36
-    nodeset: devstack-single-node-centos-8-stream
-    description: |
-      Run tox-based functional tests for the OpenStack Nova project
-      under cPython version 3.6 with Nova specific irrelevant-files list.
-      Uses tox with the ``functional-py36`` environment.
-
-      This job also provides a parent for other projects to run the nova
-      functional tests on their own changes.
-    required-projects:
-      # including nova here makes this job reusable by other projects
-      - openstack/nova
-      - openstack/placement
-    irrelevant-files: &functional-irrelevant-files
-      - ^.*\.rst$
-      - ^api-.*$
-      - ^doc/(source|test)/.*$
-      - ^nova/locale/.*$
-      - ^releasenotes/.*$
-    vars:
-      # explicitly stating the work dir makes this job reusable by other
-      # projects
-      zuul_work_dir: src/opendev.org/openstack/nova
-      bindep_profile: test py36
-    timeout: 3600
-
-- job:
     name: nova-tox-functional-py38
     parent: openstack-tox-functional-py38
     description: |
@@ -43,7 +15,12 @@
       # including nova here makes this job reusable by other projects
       - openstack/nova
       - openstack/placement
-    irrelevant-files: *functional-irrelevant-files
+    irrelevant-files: &functional-irrelevant-files
+      - ^.*\.rst$
+      - ^api-.*$
+      - ^doc/(source|test)/.*$
+      - ^nova/locale/.*$
+      - ^releasenotes/.*$
     vars:
       # explicitly stating the work dir makes this job reusable by other
       # projects
@@ -660,7 +637,6 @@
         - nova-ovs-hybrid-plug
         - nova-tox-validate-backport:
             voting: false
-        - nova-tox-functional-centos8-py36
         - nova-tox-functional-py38
         - nova-tox-functional-py39
         - tempest-integrated-compute:
@@ -702,7 +678,6 @@
       jobs:
         - nova-live-migration
         - nova-live-migration-ceph
-        - nova-tox-functional-centos8-py36
         - nova-tox-functional-py38
         - nova-tox-functional-py39
         - nova-multi-cell
