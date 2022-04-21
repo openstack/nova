@@ -35,6 +35,9 @@ ATTACHMENT_ID = uuids.attachment_id
 
 
 class TestDriverBlockDevice(test.NoDBTestCase):
+    # os-brick>=5.1 now uses external file system locks instead of internal
+    # locks so we need to set up locking
+    REQUIRES_LOCKING = True
     # This is used to signal if we're dealing with a new style volume
     # attachment (Cinder v3.44 flow).
     attachment_id = None
