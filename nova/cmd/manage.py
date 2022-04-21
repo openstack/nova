@@ -3192,7 +3192,7 @@ class VolumeAttachmentCommands(object):
             return 1
 
 
-class ImagePropertyCommands():
+class ImagePropertyCommands:
 
     @action_description(_("Show the value of an instance image property."))
     @args(
