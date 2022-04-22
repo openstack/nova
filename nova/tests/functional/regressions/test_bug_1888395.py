@@ -23,14 +23,8 @@ from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import base as libvirt_base
 
 
-class TestLiveMigrationWithoutMultiplePortBindings(
+class TestLiveMigrationWithoutMultiplePortBindingsBase(
         libvirt_base.ServersTestBase):
-    """Regression test for bug 1888395.
-
-    This regression test asserts that Live migration works when
-    neutron does not support the binding-extended api extension
-    and the legacy single port binding workflow is used.
-    """
 
     ADMIN_API = True
     microversion = 'latest'
@@ -71,6 +65,16 @@ class TestLiveMigrationWithoutMultiplePortBindings(
         self.useFixture(fixtures.MonkeyPatch(
             'nova.tests.fixtures.libvirt.Domain.migrateToURI3',
             self._migrate_stub))
+
+
+class TestLiveMigrationWithoutMultiplePortBindings(
+        TestLiveMigrationWithoutMultiplePortBindingsBase):
+    """Regression test for bug 1888395.
+
+    This regression test asserts that Live migration works when
+    neutron does not support the binding-extended api extension
+    and the legacy single port binding workflow is used.
+    """
 
     def _migrate_stub(self, domain, destination, params, flags):
         """Stub out migrateToURI3."""
@@ -124,3 +128,30 @@ class TestLiveMigrationWithoutMultiplePortBindings(
             server, {'OS-EXT-SRV-ATTR:host': 'end_host', 'status': 'ACTIVE'})
         msg = "NotImplementedError: Cannot load 'vif_type' in the base class"
         self.assertNotIn(msg, self.stdlog.logger.output)
+
+
+class TestLiveMigrationRollbackWithoutMultiplePortBindings(
+        TestLiveMigrationWithoutMultiplePortBindingsBase):
+
+    def _migrate_stub(self, domain, destination, params, flags):
+        source = self.computes['start_host']
+        conn = source.driver._host.get_connection()
+        dom = conn.lookupByUUIDString(self.server['id'])
+        dom.fail_job()
+
+    def test_live_migration_rollback(self):
+        self.server = self._create_server(
+            host='start_host',
+            networks=[{'port': self.neutron.port_1['id']}])
+
+        self.assertFalse(
+            self.neutron_api.has_port_binding_extension(self.ctxt))
+        # FIXME(artom) Until bug 1969980 is fixed, this will fail with a
+        # NotImplementedError.
+        self._live_migrate(self.server, migration_expected_state='error',
+                           server_expected_state='ERROR')
+        server = self.api.get_server(self.server['id'])
+        self.assertIn(
+            "NotImplementedError: Cannot load 'vifs' in the base class",
+            server['fault']['details']
+        )
