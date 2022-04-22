@@ -581,17 +581,31 @@ def get_default_machine_type(arch: str) -> ty.Optional[str]:
 
 
 def mdev_name2uuid(mdev_name: str) -> str:
-    """Convert an mdev name (of the form mdev_<uuid_with_underscores>) to a
-    uuid (of the form 8-4-4-4-12).
+    """Convert an mdev name (of the form mdev_<uuid_with_underscores> or
+    mdev_<uuid_with_underscores>_<pciaddress>) to a uuid
+    (of the form 8-4-4-4-12).
+
+    :param mdev_name: the name of the mdev to parse the UUID from
+    :returns: string containing the uuid
     """
-    return str(uuid.UUID(mdev_name[5:].replace('_', '-')))
+    mdev_uuid = mdev_name[5:].replace('_', '-')
+    # Unconditionnally remove the PCI address from the name
+    mdev_uuid = mdev_uuid[:36]
+    return str(uuid.UUID(mdev_uuid))
 
 
-def mdev_uuid2name(mdev_uuid: str) -> str:
-    """Convert an mdev uuid (of the form 8-4-4-4-12) to a name (of the form
-    mdev_<uuid_with_underscores>).
+def mdev_uuid2name(mdev_uuid: str, parent: str = None) -> str:
+    """Convert an mdev uuid (of the form 8-4-4-4-12) and optionally its parent
+    device to a name (of the form mdev_<uuid_with_underscores>[_<pciid>]).
+
+    :param mdev_uuid: the uuid of the mediated device
+    :param parent: the parent device id for the mediated device
+    :returns: name of the mdev to reference in libvirt
     """
-    return "mdev_" + mdev_uuid.replace('-', '_')
+    name = "mdev_" + mdev_uuid.replace('-', '_')
+    if parent and parent.startswith('pci_'):
+        name = name + parent[4:]
+    return name
 
 
 def get_flags_by_flavor_specs(flavor: 'objects.Flavor') -> ty.Set[str]:
