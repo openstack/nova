@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    For the VMware ESXi, VM memory should be multiple of 4. Otherwise creating
+    instance on ESXi fails with error "VimFaultException: Memory (RAM) size is
+    invalid.". Instances will now fail to spawn if flavor memory is not a
+    multiple of 4.
