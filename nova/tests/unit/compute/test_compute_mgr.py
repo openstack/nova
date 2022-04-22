@@ -86,6 +86,10 @@ fake_host_list = [mock.sentinel.host1]
 @ddt.ddt
 class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                  fake_resource_tracker.RTMockMixin):
+    # os-brick>=5.1 now uses external file system locks instead of internal
+    # locks so we need to set up locking
+    REQUIRES_LOCKING = True
+
     def setUp(self):
         super(ComputeManagerUnitTestCase, self).setUp()
         self.compute = manager.ComputeManager()
