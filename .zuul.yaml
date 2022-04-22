@@ -51,6 +51,28 @@
     timeout: 3600
 
 - job:
+    name: nova-tox-functional-py310
+    parent: openstack-tox-functional-py310
+    description: |
+      Run tox-based functional tests for the OpenStack Nova project
+      under cPython version 3.10 with Nova specific irrelevant-files list.
+      Uses tox with the ``functional-py310`` environment.
+
+      This job also provides a parent for other projects to run the nova
+      functional tests on their own changes.
+    required-projects:
+      # including nova here makes this job reusable by other projects
+      - openstack/nova
+      - openstack/placement
+    irrelevant-files: *functional-irrelevant-files
+    vars:
+      # explicitly stating the work dir makes this job reusable by other
+      # projects
+      zuul_work_dir: src/opendev.org/openstack/nova
+      bindep_profile: test py310
+    timeout: 3600
+
+- job:
     name: nova-tox-validate-backport
     parent: openstack-tox
     description: |
@@ -639,6 +661,8 @@
             voting: false
         - nova-tox-functional-py38
         - nova-tox-functional-py39
+        - nova-tox-functional-py310:
+            voting: false
         - tempest-integrated-compute:
            # NOTE(gmann): Policies changes do not need to run all the
            # integration test jobs. Running only tempest and grenade
