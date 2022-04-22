@@ -579,7 +579,7 @@ def _compute_node_select(context, filters=None, limit=None, marker=None):
     if filters is None:
         filters = {}
 
-    cn_tbl = sa.alias(models.ComputeNode.__table__, name='cn')
+    cn_tbl = models.ComputeNode.__table__.alias('cn')
     select = sa.select(cn_tbl)
 
     if context.read_deleted == "no":
@@ -926,7 +926,7 @@ def compute_node_statistics(context):
     engine = get_engine(context=context)
     services_tbl = models.Service.__table__
 
-    inner_sel = sa.alias(_compute_node_select(context), name='inner_sel')
+    inner_sel = _compute_node_select(context).alias('inner_sel')
 
     # TODO(sbauza): Remove the service_id filter in a later release
     # once we are sure that all compute nodes report the host field
