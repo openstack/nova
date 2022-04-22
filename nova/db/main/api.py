@@ -612,9 +612,9 @@ def _compute_node_select(context, filters=None, limit=None, marker=None):
 def _compute_node_fetchall(context, filters=None, limit=None, marker=None):
     select = _compute_node_select(context, filters, limit=limit, marker=marker)
     engine = get_engine(context=context)
-    conn = engine.connect()
 
-    results = conn.execute(select).fetchall()
+    with engine.connect() as conn, conn.begin():
+        results = conn.execute(select).fetchall()
 
     # Callers expect dict-like objects, not SQLAlchemy RowProxy objects...
     results = [dict(r._mapping) for r in results]
@@ -983,9 +983,9 @@ def compute_node_statistics(context):
         ).label('disk_available_least'),
     ]
     select = sql.select(*agg_cols).select_from(j)
-    conn = engine.connect()
 
-    results = conn.execute(select).fetchone()
+    with engine.connect() as conn, conn.begin():
+        results = conn.execute(select).fetchone()
 
     # Build a dict of the info--making no assumptions about result
     fields = ('count', 'vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
@@ -993,7 +993,6 @@ def compute_node_statistics(context):
               'current_workload', 'running_vms', 'disk_available_least')
     results = {field: int(results[idx] or 0)
                for idx, field in enumerate(fields)}
-    conn.close()
     return results
 
 
@@ -4293,7 +4292,8 @@ def _get_fk_stmts(metadata, conn, table, column, records):
             select = sql.select(fk.column).where(
                 sql.and_(fk.parent == fk.column, column.in_(records))
             )
-            rows = conn.execute(select).fetchall()
+            with conn.begin():
+                rows = conn.execute(select).fetchall()
             p_records = [r[0] for r in rows]
             # Then, select rows in the child table that correspond to the
             # parent table records that were passed in.
@@ -4308,7 +4308,8 @@ def _get_fk_stmts(metadata, conn, table, column, records):
             fk_select = sql.select(fk_column).where(
                 sql.and_(fk.parent == fk.column, fk.column.in_(p_records))
             )
-            fk_rows = conn.execute(fk_select).fetchall()
+            with conn.begin():
+                fk_rows = conn.execute(fk_select).fetchall()
             fk_records = [r[0] for r in fk_rows]
             if fk_records:
                 # If we found any records in the child table, create shadow
@@ -4395,7 +4396,8 @@ def _archive_deleted_rows_for_table(
             select = select.where(table.c.updated_at < before)
 
     select = select.order_by(column).limit(max_rows)
-    rows = conn.execute(select).fetchall()
+    with conn.begin():
+        rows = conn.execute(select).fetchall()
     records = [r[0] for r in rows]
 
     # We will archive deleted rows for this table and also generate insert and
@@ -4431,7 +4433,8 @@ def _archive_deleted_rows_for_table(
             query_select = sql.select(table.c.uuid).where(
                 table.c.id.in_(records)
             )
-            rows = conn.execute(query_select).fetchall()
+            with conn.begin():
+                rows = conn.execute(query_select).fetchall()
             deleted_instance_uuids = [r[0] for r in rows]
 
         try:
@@ -4452,6 +4455,8 @@ def _archive_deleted_rows_for_table(
             LOG.warning("IntegrityError detected when archiving table "
                         "%(tablename)s: %(error)s",
                         {'tablename': tablename, 'error': str(ex)})
+
+    conn.close()
 
     return rows_archived, deleted_instance_uuids, extras
 
@@ -4575,7 +4580,8 @@ def purge_shadow_tables(context, before_date, status_fn=None):
         else:
             delete = table.delete()
 
-        deleted = conn.execute(delete)
+        with conn.begin():
+            deleted = conn.execute(delete)
         if deleted.rowcount > 0:
             status_fn(_('Deleted %(rows)i rows from %(table)s based on '
                         'timestamp column %(col)s') % {
@@ -4583,6 +4589,8 @@ def purge_shadow_tables(context, before_date, status_fn=None):
                             'table': table.name,
                             'col': col is None and '(n/a)' or col.name})
         total_deleted += deleted.rowcount
+
+    conn.close()
 
     return total_deleted
 

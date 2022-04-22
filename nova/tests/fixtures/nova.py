@@ -870,15 +870,6 @@ class WarningsFixture(fixtures.Fixture):
             category=sqla_exc.SADeprecationWarning,
         )
 
-        # ...but filter everything out until we get around to fixing them
-        # TODO(stephenfin): Fix all of these
-
-        warnings.filterwarnings(
-            'ignore',
-            module='nova',
-            message=r'The current statement is being autocommitted .*',
-            category=sqla_exc.SADeprecationWarning)
-
         self.addCleanup(self._reset_warning_filters)
 
     def _reset_warning_filters(self):
