@@ -7790,15 +7790,52 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_mediated_device_information(self, devname):
         """Returns a dict of a mediated device."""
-        virtdev = self._host.device_lookup_by_name(devname)
+        # LP #1951656 - In Libvirt 7.7, the mdev name now includes the PCI
+        # address of the parent device (e.g. mdev_<uuid>_<pci_address>) due to
+        # the mdevctl allowing for multiple mediated devs having the same UUID
+        # defined (only one can be active at a time). Since the guest
+        # information doesn't have the parent ID, try to lookup which
+        # mediated device is available that matches the UUID. If multiple
+        # devices are found that match the UUID, then this is an error
+        # condition.
+        try:
+            virtdev = self._host.device_lookup_by_name(devname)
+        except libvirt.libvirtError as ex:
+            if ex.get_error_code() != libvirt.VIR_ERR_NO_NODE_DEVICE:
+                raise
+            mdevs = [dev for dev in self._host.list_mediated_devices()
+                     if dev.startswith(devname)]
+            # If no matching devices are found, simply raise the original
+            # exception indicating that no devices are found.
+            if not mdevs:
+                raise
+            elif len(mdevs) > 1:
+                msg = ("The mediated device name %(devname)s refers to a UUID "
+                       "that is present in multiple libvirt mediated devices. "
+                       "Matching libvirt mediated devices are %(devices)s. "
+                       "Mediated device UUIDs must be unique for Nova." %
+                       {'devname': devname,
+                        'devices': ', '.join(mdevs)})
+                raise exception.InvalidLibvirtMdevConfig(reason=msg)
+
+            LOG.debug('Found requested device %s as %s. Using that.',
+                      devname, mdevs[0])
+            virtdev = self._host.device_lookup_by_name(mdevs[0])
         xmlstr = virtdev.XMLDesc(0)
         cfgdev = vconfig.LibvirtConfigNodeDevice()
         cfgdev.parse_str(xmlstr)
+        # Starting with Libvirt 7.3, the uuid information is available in the
+        # node device information. If its there, use that. Otherwise,
+        # fall back to the previous behavior of parsing the uuid from the
+        # devname.
+        if cfgdev.mdev_information.uuid:
+            mdev_uuid = cfgdev.mdev_information.uuid
+        else:
+            mdev_uuid = libvirt_utils.mdev_name2uuid(cfgdev.name)
 
         device = {
             "dev_id": cfgdev.name,
-            # name is like mdev_00ead764_fdc0_46b6_8db9_2963f5c815b4
-            "uuid": libvirt_utils.mdev_name2uuid(cfgdev.name),
+            "uuid": mdev_uuid,
             # the physical GPU PCI device
             "parent": cfgdev.parent,
             "type": cfgdev.mdev_information.type,

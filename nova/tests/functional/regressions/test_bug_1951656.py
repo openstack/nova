@@ -63,21 +63,11 @@ class VGPUTestsLibvirt7_7(test_vgpu.VGPUTestBase):
             flavor_id=self.flavor, host=self.compute1.host,
             networks='auto', expected_state='ACTIVE')
 
-        # TODO(sbauza): Modify this once bug #1851656 is fixed.
-        # mdev_name2uuid() raises a badly formed hexadecimal UUID string error
-        self.assertRaises(ValueError,
-                          self.assert_mdev_usage,
-                          self.compute1, expected_amount=1)
+        self.assert_mdev_usage(self.compute1, expected_amount=1)
 
-        # Now, the problem is that we can't create new instances with VGPUs
-        # from this host.
-        server = self._create_server(
+        self._create_server(
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=self.flavor, host=self.compute1.host,
-            networks='auto', expected_state='ERROR')
-        # The error is due to a bad mdev name parsing
-        self.assertIn('fault', server)
-        # since we only have one host, we have a RescheduledException as this
-        # service was creating an exception and we can't use another one.
-        self.assertIn('Exceeded maximum number of retries',
-                      server['fault']['message'])
+            networks='auto', expected_state='ACTIVE')
+
+        self.assert_mdev_usage(self.compute1, expected_amount=2)
