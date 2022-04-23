@@ -4362,9 +4362,11 @@ def _archive_deleted_rows_for_table(
     deleted_instance_uuids = []
     try:
         shadow_table = schema.Table(
-            shadow_tablename, metadata, autoload_with=conn)
+            shadow_tablename, metadata, autoload_with=conn,
+        )
     except sqla_exc.NoSuchTableError:
         # No corresponding shadow table; skip it.
+        conn.close()
         return rows_archived, deleted_instance_uuids, {}
 
     # TODO(stephenfin): Drop this when we drop the table
