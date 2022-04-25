@@ -146,12 +146,7 @@ class TestLiveMigrationRollbackWithoutMultiplePortBindings(
 
         self.assertFalse(
             self.neutron_api.has_port_binding_extension(self.ctxt))
-        # FIXME(artom) Until bug 1969980 is fixed, this will fail with a
-        # NotImplementedError.
-        self._live_migrate(self.server, migration_expected_state='error',
-                           server_expected_state='ERROR')
-        server = self.api.get_server(self.server['id'])
-        self.assertIn(
-            "NotImplementedError: Cannot load 'vifs' in the base class",
-            server['fault']['details']
-        )
+        # NOTE(artom) The live migration will still fail (we fail it in
+        # _migrate_stub()), but the server should correctly rollback to ACTIVE.
+        self._live_migrate(self.server, migration_expected_state='failed',
+                           server_expected_state='ACTIVE')
