@@ -672,7 +672,7 @@
         - barbican-tempest-plugin-simple-crypto:
             irrelevant-files: *nova-base-irrelevant-files
             voting: false
-        - tempest-integrated-compute-centos-8-stream:
+        - tempest-integrated-compute-centos-9-stream:
             irrelevant-files: *nova-base-irrelevant-files
     gate:
       jobs:
@@ -699,7 +699,7 @@
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
-        - tempest-integrated-compute-centos-8-stream:
+        - tempest-integrated-compute-centos-9-stream:
             irrelevant-files: *nova-base-irrelevant-files
     periodic-weekly:
       jobs:
