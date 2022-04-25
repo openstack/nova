@@ -1,0 +1,12 @@
+---
+upgrade:
+  - |
+    The default ``api-paste.ini`` file has been updated and now the Metadata
+    API pipeline includes the ``HTTPProxyToWSGI`` middleware.
+
+deprecations:
+  - |
+    The ``[api] use_forwarded_for`` parameter has been deprecated. Instead of
+    using this parameter, add the ``HTTPProxyToWSGI`` middleware to api
+    pipelines, and ``[oslo_middleware] enable_proxy_headers_parsing = True``
+    to nova.conf.

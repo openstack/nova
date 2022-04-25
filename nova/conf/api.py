@@ -42,7 +42,11 @@ Determine the strategy to use for authentication.
 """),
     cfg.BoolOpt("use_forwarded_for",
         default=False,
+        deprecated_for_removal=True,
+        deprecated_reason='This feature is duplicate of the HTTPProxyToWSGI '
+                          'middleware in oslo.middleware',
         deprecated_group="DEFAULT",
+        deprecated_since='26.0.0',
         help="""
 When True, the 'X-Forwarded-For' header is treated as the canonical remote
 address. When False (the default), the 'remote_address' header is used.
