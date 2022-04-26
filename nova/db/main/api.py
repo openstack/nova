@@ -4903,3 +4903,81 @@ def console_auth_token_destroy_expired_by_host(context, host):
         filter_by(host=host).\
         filter(models.ConsoleAuthToken.expires <= timeutils.utcnow_ts()).\
         delete()
+
+
+####################
+
+
+@require_context
+@pick_context_manager_reader
+def share_mapping_get_all(context):
+    """Get all share_mapping."""
+    return context.session.query(models.ShareMapping).all()
+
+
+@require_context
+@pick_context_manager_reader
+def share_mapping_get_by_share_id(context, share_id):
+    """Get share_mapping records for a specific share."""
+    return context.session.query(models.ShareMapping).\
+    filter_by(share_id=share_id).all()
+
+
+@require_context
+@pick_context_manager_reader
+def share_mapping_get_by_instance_uuid(context, instance_uuid):
+    """Get share_mapping records for a specific instance."""
+    return context.session.query(models.ShareMapping).\
+    filter_by(instance_uuid=instance_uuid).all()
+
+
+@require_context
+@pick_context_manager_reader
+def share_mapping_get_by_instance_uuid_and_share_id(
+        context, instance_uuid, share_id):
+    """Get share_mapping record for a specific instance and share_id."""
+    return context.session.query(models.ShareMapping).\
+    filter_by(instance_uuid=instance_uuid, share_id=share_id).first()
+
+
+@require_context
+@pick_context_manager_writer
+def share_mapping_delete_by_instance_uuid_and_share_id(
+        context, instance_uuid, share_id):
+    """Delete share_mapping record for a specific instance and share_id."""
+    context.session.query(models.ShareMapping).\
+    filter_by(instance_uuid=instance_uuid, share_id=share_id).delete()
+
+
+@require_context
+@pick_context_manager_writer
+def share_mapping_update(
+    context, uuid, instance_uuid, share_id, status, tag, export_location,
+    share_proto
+):
+    """Update share_mapping for a share
+    Creates new record if needed.
+    """
+    share_mapping = share_mapping_get_by_instance_uuid_and_share_id(
+            context, instance_uuid, share_id)
+
+    if share_mapping:
+        share_mapping.status = status
+        share_mapping.tag = tag
+        share_mapping.export_location = export_location
+        share_mapping.share_proto = share_proto
+        share_mapping.save(context.session)
+        context.session.refresh(share_mapping)
+
+    else:
+        share_mapping = models.ShareMapping()
+        share_mapping.uuid = uuid
+        share_mapping.instance_uuid = instance_uuid
+        share_mapping.share_id = share_id
+        share_mapping.status = status
+        share_mapping.tag = tag
+        share_mapping.export_location = export_location
+        share_mapping.share_proto = share_proto
+        share_mapping.save(context.session)
+
+    return share_mapping

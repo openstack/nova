@@ -39,6 +39,7 @@ from oslo_log import log as logging
 from oslotest import base
 import sqlalchemy as sa
 import sqlalchemy.exc
+from sqlalchemy import Table
 
 from nova.db.main import models
 from nova.db import migration
@@ -187,7 +188,7 @@ class NovaMigrationsWalk(
     def assertIndexExists(self, connection, table_name, index):
         self.assertTrue(
             oslodbutils.index_exists(connection, table_name, index),
-            'Index %s on table %s should not exist' % (index, table_name),
+            'Index %s on table %s should exist' % (index, table_name),
         )
 
     def assertIndexNotExists(self, connection, table_name, index):
@@ -201,6 +202,40 @@ class NovaMigrationsWalk(
             oslodbutils.column_exists(connection, table_name, column),
             'Column %s on table %s should exist' % (column, table_name),
         )
+
+    def assertColumnNotExists(self, connection, table_name, column):
+        self.assertFalse(
+            oslodbutils.column_exists(connection, table_name, column),
+            'Column %s on table %s should not exist' % (column, table_name),
+        )
+
+    def assertForeignKeyExists(self, connection, table_name, column):
+        self.assertTrue(
+            oslodbutils.get_foreign_key_constraint_name(
+                connection, table_name, column),
+            'Foreign key %s on table %s should exist' % (column, table_name),
+        )
+
+    def assertForeignKeyNotExists(self, connection, table_name, column):
+        self.assertFalse(
+            oslodbutils.get_foreign_key_constraint_name(
+                connection, table_name, column),
+            'Foreign key %s on table %s should not exist' % (
+                column, table_name),
+        )
+
+    def assertTableExists(self, connection, table_name):
+        # Use assertIsInstance to instead of assertTrue
+        # because Table.exists method that returns a boolean is deprecated.
+        self.assertIsInstance(
+            oslodbutils.get_table(connection, table_name), Table,
+            'Table %s should exist' % (table_name),
+        )
+
+    def assertTableNotExists(self, connection, table_name):
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          oslodbutils.get_table,
+                          connection, table_name)
 
     def _migrate_up(self, connection, revision):
         if revision == self.init_version:  # no tests for the initial revision
@@ -300,6 +335,34 @@ class NovaMigrationsWalk(
                     connection,
                     prefix + 'migrations',
                     'migrations_dest_compute_id_deleted_idx')
+
+    def _pre_upgrade_13863f4e1612(self, connection):
+        self.assertTableNotExists(connection, 'share_mapping')
+
+    def _check_13863f4e1612(self, connection):
+        fields = ['id',
+                  'instance_uuid',
+                  'share_id',
+                  'status',
+                  'tag',
+                  'export_location',
+                  'share_proto']
+
+        self.assertTableExists(connection, 'share_mapping')
+        for field in fields:
+            self.assertColumnExists(connection, 'share_mapping', field)
+        self.assertIndexExists(
+            connection,
+            'share_mapping',
+            'share_idx'
+        )
+        self.assertIndexExists(
+            connection,
+            'share_mapping',
+            'share_mapping_instance_uuid_share_id_idx'
+        )
+        self.assertForeignKeyExists(
+            connection, 'share_mapping', 'instance_uuid')
 
     def test_single_base_revision(self):
         """Ensure we only have a single base revision.
