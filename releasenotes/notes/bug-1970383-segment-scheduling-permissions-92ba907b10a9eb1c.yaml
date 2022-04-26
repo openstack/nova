@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    `Bug #1970383 <https://bugs.launchpad.net/nova/+bug/1970383>`_: Fixes a
+    permissions error when using the
+    'query_placement_for_routed_network_aggregates' scheduler variable, which
+    caused a traceback on instance creation for non-admin users.
