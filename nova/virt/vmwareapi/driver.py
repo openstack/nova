@@ -19,7 +19,6 @@
 A connection to the VMware vCenter platform.
 """
 import contextlib
-from operator import attrgetter
 import os
 import random
 import re
@@ -895,51 +894,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         if migrate_data.instance_already_migrated:
             return migrate_data
 
-        return self._pre_live_migration(context, instance,
+        return self._vmops.pre_live_migration(context, instance,
             block_device_info, network_info, disk_info, migrate_data)
-
-    def _pre_live_migration(self, context, instance, block_device_info,
-                            network_info, disk_info, migrate_data):
-        result = self._vmops.place_vm(context, instance)
-
-        if hasattr(result, 'drsFault'):
-            LOG.error("Placement Error: %s", nova_vim_util.serialize_object(
-                result.drsFault, typed=True), instance=instance)
-
-        if (not hasattr(result, 'recommendations') or
-                not result.recommendations):
-            raise exception.MigrationError(
-                reason="PlaceVM did not give any recommendations")
-
-        rs = sorted([r for r in result.recommendations
-                        if r.reason == "xvmotionPlacement" and
-                        r.action],
-                    key=attrgetter("rating"))
-        if not rs:
-            raise exception.MigrationError(
-                reason="Did not get any xvmotionPlacement")
-
-        relocate_spec = rs[0].action[0].relocateSpec
-
-        # Should never happen, but if it does we rather want an error
-        # here, than sometime down the line
-        if not relocate_spec.host:
-            raise exception.MigrationError(
-                reason="No host with enough resources")
-
-        # Samere here: Should never happen
-        if not relocate_spec.datastore:
-            raise exception.MigrationError(
-                reason="No datastore with enough resources")
-
-        # relocate_defaults are serialized/deserialized on put/get
-        defaults = migrate_data.relocate_defaults
-        spec = nova_vim_util.serialize_object(relocate_spec, typed=True)
-        defaults["relocate_spec"] = spec
-        # Writing the values back
-        migrate_data.relocate_defaults = defaults
-
-        return migrate_data
 
     def _get_checked_volumes(self, context, instance, required_values,
                              exc=exception.MigrationError):
@@ -993,7 +949,8 @@ class VMwareVCDriver(driver.ComputeDriver):
                 vif_model = None  # Doesn't matter as we won't change the type
                 migrate_data.vif_infos = target.get_vif_info(context,
                     vif_model=vif_model, network_info=dest_network_info)
-            self._vmops.live_migration(instance, migrate_data, volumes)
+            self._vmops.live_migration(context, instance, migrate_data,
+                                       volumes)
             LOG.info("Migration operation completed", instance=instance)
             post_method(context, instance, dest, block_migration, migrate_data)
         except Exception:

@@ -21,6 +21,7 @@ Class for VM tasks like spawn, snapshot, suspend, resume etc.
 
 import copy
 import itertools
+from operator import attrgetter
 from operator import itemgetter
 import os
 import re
@@ -2577,7 +2578,50 @@ class VMwareVMOps(object):
 
         return device_changes
 
-    def live_migration(self, instance, migrate_data, volume_mapping):
+    def pre_live_migration(self, context, instance, block_device_info,
+                            network_info, disk_info, migrate_data):
+        result = self.place_vm(context, instance)
+
+        if hasattr(result, 'drsFault'):
+            LOG.error("Placement Error: %s", vutil.serialize_object(
+                result.drsFault), instance=instance)
+
+        if (not hasattr(result, 'recommendations') or
+                not result.recommendations):
+            raise exception.MigrationError(
+                reason="PlaceVM did not give any recommendations")
+
+        rs = sorted([r for r in result.recommendations
+                        if r.reason == "xvmotionPlacement" and
+                        r.action],
+                    key=attrgetter("rating"))
+        if not rs:
+            raise exception.MigrationError(
+                reason="Did not get any xvmotionPlacement")
+
+        relocate_spec = rs[0].action[0].relocateSpec
+
+        # Should never happen, but if it does we rather want an error
+        # here, than sometime down the line
+        if not relocate_spec.host:
+            raise exception.MigrationError(
+                reason="No host with enough resources")
+
+        # Same here: Should never happen
+        if not relocate_spec.datastore:
+            raise exception.MigrationError(
+                reason="No datastore with enough resources")
+
+        # relocate_defaults are serialized/deserialized on put/get
+        defaults = migrate_data.relocate_defaults
+        spec = vutil.serialize_object(relocate_spec)
+        defaults["relocate_spec"] = spec
+        # Writing the values back
+        migrate_data.relocate_defaults = defaults
+
+        return migrate_data
+
+    def live_migration(self, context, instance, migrate_data, volume_mapping):
         defaults = migrate_data.relocate_defaults
 
         client_factory = self._session.vim.client.factory
