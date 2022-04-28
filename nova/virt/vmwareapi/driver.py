@@ -185,9 +185,11 @@ class VMwareVCDriver(driver.ComputeDriver):
         # Register the OpenStack extension
         self._register_openstack_extension()
 
+        client_factory = self._session.vim.client.factory
+
         virtapi._compute.additional_endpoints.extend([
             special_spawning._SpecialVmSpawningServer(self),
-            VmwareRpcService(self._vmops)])
+            VmwareRpcService(self._vmops, client_factory)])
 
     def _check_min_version(self):
         min_version = v_utils.convert_version_to_int(constants.MIN_VC_VERSION)
@@ -867,6 +869,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         if dest_check_data.instance_already_migrated:
             return dest_check_data
 
+        self._vmops.check_can_live_migrate_source(instance)
+
         if dest_check_data.is_same_vcenter:
             # Drop the service-credentials, no need to check the volumes,
             # as we do not need to mess around with them
@@ -924,6 +928,7 @@ class VMwareVCDriver(driver.ComputeDriver):
             post_method(context, instance, dest, block_migration, migrate_data)
             return
 
+        original_cdroms = []
         try:
             # We require the target-datastore for all volume-attachment
             required_volume_attributes = ["datastore_ref"]
@@ -949,13 +954,16 @@ class VMwareVCDriver(driver.ComputeDriver):
                 vif_model = None  # Doesn't matter as we won't change the type
                 migrate_data.vif_infos = target.get_vif_info(context,
                     vif_model=vif_model, network_info=dest_network_info)
+
             self._vmops.live_migration(context, instance, migrate_data,
-                                       volumes)
+                                       volumes, original_cdroms)
             LOG.info("Migration operation completed", instance=instance)
             post_method(context, instance, dest, block_migration, migrate_data)
         except Exception:
             LOG.exception("Failed due to an exception", instance=instance)
             with excutils.save_and_reraise_exception():
+                self._vmops.reconfigure_vm_device_change(context, instance,
+                    original_cdroms)
                 # We are still in the task-state migrating, so cannot
                 # recover the DRS settings. We rely on the sync to do that
                 LOG.debug("Calling live migration recover_method "

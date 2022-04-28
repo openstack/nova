@@ -19,18 +19,22 @@
 Class for VM tasks like spawn, snapshot, suspend, resume etc.
 """
 
+import contextlib
 import copy
 import itertools
 from operator import attrgetter
 from operator import itemgetter
 import os
 import re
+import shutil
+import threading
 import time
 
 import decorator
 
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
+import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import strutils
@@ -39,6 +43,7 @@ from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
+from oslo_vmware import rw_handles
 from oslo_vmware import vim_util as vutil
 
 from nova.api.metadata import base as instance_metadata
@@ -78,6 +83,7 @@ LOG = logging.getLogger(__name__)
 
 RESIZE_TOTAL_STEPS = 11
 HOST_IP_ADDR_SEPARATOR = "|"
+CONFIGDRIVE_NAME = "configdrive.iso"
 
 
 class VirtualMachineInstanceConfigInfo(object):
@@ -461,14 +467,15 @@ class VMwareVMOps(object):
                                           CONF.vmware.pbm_default_policy)
         return None
 
-    def _get_esx_host_and_cookies(self, datastore, dc_path, file_path):
+    def _get_esx_host_and_cookies(self, datastore, dc_path, file_path,
+                                  method='PUT'):
         hosts = datastore.get_connected_hosts(self._session)
         host = ds_obj.Datastore.choose_host(hosts)
         host_name = self._session._call_method(vutil, 'get_object_property',
                                                host, 'name')
         url = ds_obj.DatastoreURL('https', host_name, file_path, dc_path,
                                   datastore.name)
-        cookie_header = url.get_transfer_ticket(self._session, 'PUT')
+        cookie_header = url.get_transfer_ticket(self._session, method)
         return host_name, cookie_header
 
     def _fetch_vsphere_image(self, context, vi, image_ds_loc):
@@ -502,6 +509,48 @@ class VMwareVMOps(object):
                    'file_path': image_ds_loc,
                    'datastore_name': vi.datastore.name},
                   instance=vi.instance)
+
+    def _get_ds_file_handle(self, ds_path,
+            ds_ref=None, datastore=None, dc_info=None,
+            method="PUT", file_size=None, instance=None):
+        """Get a file handle to individual file to host via HTTP PUT/GET."""
+        session = self._session
+
+        LOG.debug("%(method)s to file %(ds_path)s",
+                  {'method': method, 'ds_path': ds_path}, instance=instance)
+
+        if not datastore:
+            if not ds_ref:
+                raise ValueError(
+                    "Either datastore or ds_ref needs to be passed")
+            datastore = ds_obj.get_datastore_by_ref(self._session,
+                                                    ds_ref)
+
+        # try to get esx cookie to upload
+        try:
+            dc_path = 'ha-datacenter'
+            host, cookies = self._get_esx_host_and_cookies(datastore,
+                dc_path, ds_path.rel_path)
+        except Exception as e:
+            LOG.warning("Get esx cookies failed: %s", e,
+                        instance=instance)
+            if not dc_info:
+                dc_info = ds_util.get_dc_info(session, ds_ref)
+            dc_path = vutil.get_inventory_path(session.vim, dc_info.ref)
+
+            host = self._session._host
+            cookies = session.vim.client.options.transport.cookiejar
+
+        if method == 'GET':
+            return rw_handles.FileReadHandle(host, session._port,
+                dc_path, ds_path.datastore, cookies=cookies,
+                file_path=ds_path.rel_path)
+        else:
+            if file_size is None:
+                raise ValueError("file_size needs to be set for PUT")
+            return rw_handles.FileWriteHandle(host, session._port,
+                dc_path, ds_path.datastore, cookies=cookies,
+                file_path=ds_path.rel_path, file_size=file_size)
 
     def _fetch_image_as_file(self, context, vi, image_ds_loc):
         """Download image as an individual file to host via HTTP PUT."""
@@ -1390,10 +1439,10 @@ class VMwareVMOps(object):
         try:
             with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
                 with utils.tempdir() as tmp_path:
-                    tmp_file = os.path.join(tmp_path, 'configdrive.iso')
+                    tmp_file = os.path.join(tmp_path, CONFIGDRIVE_NAME)
                     cdb.make_drive(tmp_file)
-                    upload_iso_path = "%s/configdrive.iso" % (
-                        upload_folder)
+                    upload_iso_path = "%s/%s" % (
+                        upload_folder, CONFIGDRIVE_NAME)
                     images.upload_iso_to_datastore(
                         tmp_file, instance,
                         host=self._session._host,
@@ -2327,6 +2376,25 @@ class VMwareVMOps(object):
         self._resize_create_ephemerals_and_swap(vm_ref, instance,
                                                 block_device_info)
 
+    def prepare_ds_transfer(self, ctxt, request_method=None, ds_ref=None,
+                            path=None):
+        schema = 'https'
+        ds = ds_obj.get_datastore_by_ref(self._session, ds_ref)
+        dc_info = ds_util.get_dc_info(self._session, ds_ref)
+        dc_name = 'ha-datacenter'  # When connecting directly to esxi host
+        hosts = ds.get_connected_hosts(self._session)
+        host_ref = ds.choose_host(hosts)
+        hostname = vim_util.get_entity_name(self._session, host_ref)
+
+        ds_url = ds.build_url(schema, hostname, path, datacenter_name=dc_name)
+
+        if request_method != "GET":
+            ds_path = ds.build_path(path)
+            ds_util.mkdir(self._session, ds_path.parent, dc_info.ref)
+
+        ticket = ds_url.get_transfer_ticket(self._session, request_method)
+        return {'ds_url': str(ds_url), 'ticket': ticket}
+
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info, power_on=True):
         """Finish reverting a resize."""
@@ -2621,7 +2689,8 @@ class VMwareVMOps(object):
 
         return migrate_data
 
-    def live_migration(self, context, instance, migrate_data, volume_mapping):
+    def live_migration(self, context, instance, migrate_data, volume_mapping,
+                       original_cdroms):
         defaults = migrate_data.relocate_defaults
 
         client_factory = self._session.vim.client.factory
@@ -2644,11 +2713,15 @@ class VMwareVMOps(object):
 
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
+        migration = migrate_data.migration
+        target = self.api_for_migration(migration)
+
         device_config_spec = []
         relocate_spec.deviceChange = device_config_spec
         disks = []
         relocate_spec.disk = disks
 
+        new_cdroms = []
         netdevices = []
         for device in vm_util.get_hardware_devices(self._session, vm_ref):
             class_name = device.__class__.__name__
@@ -2658,18 +2731,47 @@ class VMwareVMOps(object):
                 locator = client_factory.create(
                     "ns0:VirtualMachineRelocateSpecDiskLocator")
                 locator.diskId = device.key
-                target = volume_mapping.get(device.key)
-                if not target:  # Not a volume
+                target_mapping = volume_mapping.get(device.key)
+                if not target_mapping:  # Not a volume
                     locator.datastore = datastore
                 else:
-                    locator.datastore = target["datastore_ref"]
-                    profile_id = target.get("profile_id")
+                    locator.datastore = target_mapping["datastore_ref"]
+                    profile_id = target_mapping.get("profile_id")
                     if profile_id:
                         profile_spec = client_factory.create(
                             "ns0:VirtualMachineDefinedProfileSpec")
                         profile_spec.profileId = profile_id
                         locator.profile = [profile_spec]
                 disks.append(locator)
+            elif class_name == "VirtualCdrom":
+                # Not really nice, but it looks like CD-ROMs are not really
+                # that well supported in live-migration, especially
+                # across VCenters.
+                # So we have to
+                # - disconnect the cdrom on the source
+                # - copy the iso over to the destination
+                # - migrate the vm over
+                # - reattach the iso
+                # And no, it can't be done in the first and the last step
+                # cannot be merged into the relocate_spec
+
+                # Create a spec to recover the original state
+                original_cdroms.append(
+                    vm_util.create_virtual_cdrom_spec(client_factory, None,
+                        device.controllerKey, None,
+                        device.unitNumber, device.key, device.backing))
+
+                ds_path = self._disconnect_and_copy_cdrom(context, instance,
+                    device, target, datastore)
+
+                if not ds_path:  # Nothing to do for this CD-ROM
+                    continue
+
+                # Create a spec for the target config
+                target_spec = vm_util.create_virtual_cdrom_spec(client_factory,
+                        datastore, device.controllerKey, str(ds_path),
+                        device.unitNumber, device.key)
+                new_cdroms.append(target_spec)
 
         for vif_info in migrate_data.vif_infos:
             device = vmwarevif.get_network_device(netdevices,
@@ -2686,7 +2788,137 @@ class VMwareVMOps(object):
             config_spec.device = device
             device_config_spec.append(config_spec)
 
-        vm_util.relocate_vm(self._session, vm_ref, spec=relocate_spec)
+        try:
+            vm_util.relocate_vm(self._session, vm_ref, spec=relocate_spec)
+        except vexc.VimException as e:
+            target.delete_config_drive_files(context, instance, new_cdroms)
+            raise e
+
+        self.delete_config_drive_files(context, instance, original_cdroms)
+
+        if new_cdroms:
+            # Technically a post-live-migration task, but we have no
+            # way of passing those changes without API changes to the
+            # destination compute-host
+            try:
+                target.reconfigure_vm_device_change(context, instance,
+                                                    new_cdroms)
+            except messaging.RemoteError:
+                # Failing now would stop the instance reflecting
+                # the new host
+                LOG.exception("Failed to reconfiguring cdroms. "
+                              "Swallowing error as we can't go back now",
+                               instance=instance)
+
+    def delete_config_drive_files(self, ctxt, instance, cdroms):
+        for cdrom_spec in cdroms:
+            try:
+                datastore = getattr(cdrom_spec.device.backing, 'datastore',
+                                    None)
+                if not datastore:
+                    continue
+                file_name = getattr(cdrom_spec.device.backing, 'fileName',
+                                    None)
+                if not file_name:
+                    continue
+                if not file_name.endswith(CONFIGDRIVE_NAME):
+                    continue
+                dc_info = ds_util.get_dc_info(self._session, datastore)
+                ds_util.file_delete(self._session, file_name, dc_info.ref)
+            except vexc.VimException:
+                # No reason to error out the instance, as it is working
+                # but we need some visiblity here for the operator
+                LOG.exception("Cannot delete file %r", file_name,
+                              instance=instance)
+
+    def _disconnect_and_copy_cdrom(self, context, instance, cdrom, target,
+                                   dest_ds_ref):
+        backing = getattr(cdrom, "backing", None)
+        if not backing:
+            return None
+
+        file_name = getattr(backing, "fileName", None)
+        if not file_name:
+            return None
+
+        ds_ref = getattr(backing, "datastore", None)
+        if not ds_ref:
+            return None
+
+        get_path = ds_obj.DatastorePath.parse(file_name)
+
+        dest = target.prepare_ds_transfer(context, "PUT", dest_ds_ref,
+                                          get_path.rel_path)
+        ds_url = dest['ds_url']
+        ticket = dest['ticket']
+
+        if cdrom.connectable.connected:
+            self._force_disconnect_cdrom(instance, cdrom)
+
+        with contextlib.closing(self._get_ds_file_handle(
+                get_path, ds_ref, method='GET')) as get:
+            put = rw_handles.FileWriteHandle(ds_url,
+                    cookies=ticket,
+                    file_size=get.get_size())
+            with contextlib.closing(put):
+                shutil.copyfileobj(get, put)
+
+        ds_url = ds_obj.DatastoreURL.urlparse(ds_url)
+        ds_path = ds_obj.DatastorePath(ds_url.datastore_name, ds_url.path)
+        return ds_path
+
+    def _force_disconnect_cdrom(self, instance, cdrom):
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        cf = self._session.vim.client.factory
+
+        backing = cf.create("ns0:VirtualCdromRemoteAtapiBackingInfo")
+        backing.deviceName = ""
+        backing.useAutoDetect = True
+
+        device_change = vm_util.create_virtual_cdrom_spec(cf, None,
+                cdrom.controllerKey, None,
+                cdrom.unitNumber, cdrom.key, backing)
+
+        config_spec = cf.create('ns0:VirtualMachineConfigSpec')
+        config_spec.deviceChange = [device_change]
+
+        reconfig_task = self._session._call_method(self._session.vim,
+                                                   "ReconfigVM_Task", vm_ref,
+                                                   spec=config_spec)
+        task_completed = threading.Event()
+
+        def set_task_completed(gt):
+            task_completed.set()
+
+        wait_for_task = utils.spawn(
+                self._session.wait_for_task, reconfig_task)
+        wait_for_task.link(set_task_completed)
+
+        while not task_completed.is_set():
+            question = self._session._call_method(vutil,
+                    "get_object_property", vm_ref, "summary.runtime.question")
+            if question and any(message
+                                for message in question.message
+                                if message.id == "msg.cdromdisconnect.locked"):
+                yes = next(info
+                           for info in question.choice.choiceInfo
+                           if info.label == "button.yes")
+                LOG.warning("Forcing disconnect for cdrom", instance=instance)
+                self._session._call_method(self._session.vim, "AnswerVM",
+                                           vm_ref,
+                                           questionId=question.id,
+                                           answerChoice=yes.key)
+            task_completed.wait(1)
+
+    @compute_utils.wrap_instance_event(prefix="vmwareapi")
+    def reconfigure_vm_device_change(self, context, instance, devices):
+        if not devices:
+            return
+        serialized = [vutil.serialize_object(spec) for spec in devices]
+        LOG.debug("Reconfiguring devices %s", serialized, instance=instance)
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        return vm_util.reconfigure_vm_device_change(self._session, vm_ref,
+                                                    devices)
 
     def _detach_volumes(self, instance, block_device_info):
         disks = driver.block_device_info_get_mapping(block_device_info)
@@ -4148,3 +4380,19 @@ class VMwareVMOps(object):
                 continue
 
             vm_util.vm_ref_cache_update(vm_uuid, props['obj'])
+
+    def check_can_live_migrate_source(self, instance):
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        devices = vm_util.get_hardware_devices_by_type(self._session, vm_ref)
+        for cdrom in devices["cdroms"].values():
+            backing = getattr(cdrom, 'backing', None)
+            if not backing:
+                continue
+
+            file_name = getattr(backing, 'fileName', None)
+            if not file_name:
+                continue
+            if not file_name.endswith(CONFIGDRIVE_NAME):
+                raise exception.MigrationPreCheckError(
+                        reason=("Found non-configdrive CD-ROM. "
+                                "Can only migrate configdrive"))

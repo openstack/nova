@@ -2585,9 +2585,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
     @mock.patch.object(driver.VMwareVCDriver, '_get_volume_mappings',
                        returns=[])
     @mock.patch.object(vmops.VMwareVMOps,
+        'reconfigure_vm_device_change')
+    @mock.patch.object(vmops.VMwareVMOps,
         'live_migration', side_effect=test.TestingException)
-    def test_live_migration_failure_rollback(self, mock_live_migration,
-                    get_volume_mappings):
+    def test_live_migration_failure_rollback(self,
+                    mock_live_migration,
+                    mock_reconfigure_vm_device_change,
+                    volumes_to_devices):
         self._create_instance()
         migrate_data = self._create_live_migrate_data()
 
@@ -2607,6 +2611,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                 migrate_data=migrate_data)
 
         post_method.assert_not_called()
+        mock_reconfigure_vm_device_change.assert_called()
         recover_method.assert_called()
 
     def test_rollback_live_migration_at_destination(self):

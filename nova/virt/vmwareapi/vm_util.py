@@ -807,7 +807,8 @@ def get_cdrom_attach_config_spec(client_factory,
                                  datastore,
                                  file_path,
                                  controller_key,
-                                 cdrom_unit_number):
+                                 cdrom_unit_number,
+                                 cdrom_key=-1):
     """Builds and returns the cdrom attach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
@@ -816,7 +817,8 @@ def get_cdrom_attach_config_spec(client_factory,
                                                            datastore,
                                                            controller_key,
                                                            file_path,
-                                                           cdrom_unit_number)
+                                                           cdrom_unit_number,
+                                                           cdrom_key=cdrom_key)
 
     device_config_spec.append(virtual_device_config_spec)
 
@@ -933,7 +935,7 @@ def get_hardware_devices_by_type(session, vm_ref):
             elif backing_type == "VirtualDiskRawDiskMappingVer1BackingInfo":
                 disks[device.backing.lunUuid.lower()] = device
         elif device_type == "VirtualCdrom":
-            cdroms[device.backing.fileName] = device
+            cdroms[int(device.key)] = device
 
     return {
         "nics": nics,
@@ -1107,28 +1109,31 @@ def create_virtual_cdrom_spec(client_factory,
                               datastore,
                               controller_key,
                               file_path,
-                              cdrom_unit_number):
+                              cdrom_unit_number,
+                              cdrom_key=-1,
+                              cdrom_device_backing=None):
     """Builds spec for the creation of a new Virtual CDROM to the VM."""
     config_spec = client_factory.create(
         'ns0:VirtualDeviceConfigSpec')
-    config_spec.operation = "add"
+    config_spec.operation = "edit" if cdrom_key > -1 else "add"
 
     cdrom = client_factory.create('ns0:VirtualCdrom')
 
-    cdrom_device_backing = client_factory.create(
-        'ns0:VirtualCdromIsoBackingInfo')
-    cdrom_device_backing.datastore = datastore
-    cdrom_device_backing.fileName = file_path
+    if not cdrom_device_backing and file_path:
+        cdrom_device_backing = client_factory.create(
+            'ns0:VirtualCdromIsoBackingInfo')
+        cdrom_device_backing.datastore = datastore
+        cdrom_device_backing.fileName = file_path
 
     cdrom.backing = cdrom_device_backing
     cdrom.controllerKey = controller_key
     cdrom.unitNumber = cdrom_unit_number
-    cdrom.key = -1
+    cdrom.key = cdrom_key
 
     connectable_spec = client_factory.create('ns0:VirtualDeviceConnectInfo')
     connectable_spec.startConnected = True
     connectable_spec.allowGuestControl = False
-    connectable_spec.connected = True
+    connectable_spec.connected = cdrom_device_backing is not None
 
     cdrom.connectable = connectable_spec
 

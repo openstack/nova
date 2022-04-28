@@ -76,13 +76,33 @@ class VmwareRpcApi(object):
         return self._call('confirm_migration_destination', ctxt,
                           instance_uuid=instance.uuid)
 
+    def prepare_ds_transfer(self, ctxt, request_method=None,
+                            ds_ref=None, path=None):
+        ds_ref_value = vutil.get_moref_value(ds_ref)
+        return self._call('prepare_ds_transfer', ctxt,
+                          request_method=request_method,
+                          ds_ref_value=ds_ref_value, path=path)
+
+    def delete_config_drive_files(self, ctxt, instance=None, cdroms=None):
+        serialized = [vutil.serialize_object(spec, True) for spec in cdroms]
+        return self._call('delete_config_drive_files', ctxt,
+                          instance_uuid=instance.uuid,
+                          cdroms=serialized)
+
+    def reconfigure_vm_device_change(self, ctxt, instance=None, devices=None):
+        serialized = [vutil.serialize_object(spec, True) for spec in devices]
+        return self._call('reconfigure_vm_device_change', ctxt,
+                          instance_uuid=instance.uuid,
+                          devices=serialized)
+
 
 @profiler.trace_cls("rpc")
 class VmwareRpcService(object):
     target = messaging.Target(version=_VERSION, namespace=_NAMESPACE)
 
-    def __init__(self, vm_ops):
+    def __init__(self, vm_ops, client_factory):
         self._vm_ops = vm_ops
+        self._client_factory = client_factory
 
     def get_vif_info(self, ctxt, vif_model=None, network_info=None):
         return self._vm_ops.get_vif_info(ctxt, vif_model=vif_model,
@@ -113,3 +133,33 @@ class VmwareRpcService(object):
     def confirm_migration_destination(self, ctxt, instance_uuid=None):
         instance = Instance.get_by_uuid(ctxt, instance_uuid, expected_attrs=[])
         return self._vm_ops.confirm_migration_destination(ctxt, instance)
+
+    def prepare_ds_transfer(self, ctxt, request_method=None,
+                            ds_ref_value=None, path=None):
+        ds_ref = vutil.get_moref(ds_ref_value, 'Datastore')
+        return self._vm_ops.prepare_ds_transfer(ctxt,
+                                                request_method=request_method,
+                                                ds_ref=ds_ref,
+                                                path=path)
+
+    def delete_config_drive_files(self, ctxt, instance_uuid=None,
+                                     cdroms=None):
+        instance = Instance.get_by_uuid(ctxt, instance_uuid, expected_attrs=[])
+        cf = self._client_factory
+        deserialized = [
+            vutil.deserialize_object(cf, spec, "VirtualDeviceConfigSpec")
+            for spec in cdroms]
+
+        return self._vm_ops.delete_config_drive_files(ctxt,
+            instance=instance, cdroms=deserialized)
+
+    def reconfigure_vm_device_change(self, ctxt, instance_uuid=None,
+                                     devices=None):
+        instance = Instance.get_by_uuid(ctxt, instance_uuid, expected_attrs=[])
+        cf = self._client_factory
+        deserialized = [
+            vutil.deserialize_object(cf, spec, "VirtualDeviceConfigSpec")
+            for spec in devices]
+
+        return self._vm_ops.reconfigure_vm_device_change(ctxt,
+            instance=instance, devices=deserialized)
