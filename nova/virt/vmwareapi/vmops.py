@@ -1961,6 +1961,10 @@ class VMwareVMOps(object):
         instance.progress = progress
         instance.save()
 
+    @staticmethod
+    def _hw_version_to_int(version):
+        return int(version.split('-', 1)[1])
+
     def _resize_vm(self, context, instance, vm_ref, flavor, image_meta):
         """Resizes the VM according to the flavor."""
         client_factory = self._session.vim.client.factory
@@ -1973,6 +1977,21 @@ class VMwareVMOps(object):
                                                     extra_specs,
                                                     metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
+
+        flavor_hw_version = flavor.extra_specs.get('vmware:hw_version')
+        if flavor_hw_version:
+            current_version = self._session._call_method(vutil,
+                'get_object_property', vm_ref, 'config.version')
+            _current = self._hw_version_to_int(current_version)
+            _required = self._hw_version_to_int(flavor_hw_version)
+
+            if _current < _required:
+                LOG.debug("Upgrading vm version from %s to %s",
+                          current_version, flavor_hw_version,
+                          instance=instance)
+                upgrade_task = self._session._call_method(self._session.vim,
+                    "UpgradeVM_Task", vm_ref, version=flavor_hw_version)
+                self._session._wait_for_task(upgrade_task)
 
         old_flavor = instance.old_flavor
         old_needs_override = utils.is_big_vm(int(old_flavor.memory_mb),
@@ -2385,7 +2404,6 @@ class VMwareVMOps(object):
         self._update_instance_progress(context, instance,
                                        step=8,
                                        total_steps=RESIZE_TOTAL_STEPS)
-
         vi = self._get_instance_config_info(context, instance, image_meta)
         self._attach_volumes(instance, block_device_info, vi.ii.adapter_type)
 
@@ -2393,9 +2411,11 @@ class VMwareVMOps(object):
         self._update_instance_progress(context, instance,
                                        step=9,
                                        total_steps=RESIZE_TOTAL_STEPS)
-        config_spec = self._get_vm_networking_spec(instance, network_info)
-        vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
-        self._update_vnic_index(context, instance, network_info)
+        if network_info:
+            # Nothing to do here, if there is no nic attached
+            config_spec = self._get_vm_networking_spec(instance, network_info)
+            vm_util.reconfigure_vm(self._session, vm_ref, config_spec)
+            self._update_vnic_index(context, instance, network_info)
 
         # 9. Update DRS
         self._update_instance_progress(context, instance,

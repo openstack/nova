@@ -396,6 +396,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expected, vm_util._get_host_reservations_map(groups))
 
     def test_get_resize_spec(self):
+        hw_version = 'vmx-10'
+        self.flags(default_hw_version=hw_version, group='vmware')
         vcpus = 2
         memory_mb = 2048
         extra_specs = vm_util.ExtraSpecs()
@@ -1243,8 +1245,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual(expected, result)
 
     def test_get_vm_create_spec_with_default_hw_version(self):
-        CONF.set_override('default_hw_version', 'vmx-13',
-                          'vmware')
+        self.flags(default_hw_version='vmx-13', group='vmware')
         extra_specs = vm_util.ExtraSpecs()
         fake_factory = fake.FakeFactory()
         result = vm_util.get_vm_create_spec(fake_factory,

@@ -610,7 +610,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                   succeeds=False)
 
     def _test_finish_migration(self, power_on=True, resize_instance=False,
-                               migration=None):
+                               migration=None, no_nics=False):
         with test.nested(
                 mock.patch.object(self._vmops,
                                   '_resize_create_ephemerals_and_swap'),
@@ -657,12 +657,23 @@ class VMwareVMOpsTestCase(test.TestCase):
                                     self._instance.flavor.root_gb * units.Gi,
                                     'fake-device')
             fake_get_vmdk_info.return_value = vmdk
+            if no_nics:
+                network_info = []
+            else:
+                network_info = [{
+                    'network': {
+                        'subnets': []
+                    },
+                    'address': '127.0.0.1',
+                    }]
+                fake_get_vm_networking_spec.return_value = \
+                    mock.sentinel.network_spec
 
             self._vmops.finish_migration(context=self._context,
                                          migration=migration,
                                          instance=self._instance,
                                          disk_info=None,
-                                         network_info=None,
+                                         network_info=network_info,
                                          block_device_info=block_device_info,
                                          resize_instance=resize_instance,
                                          image_meta=None,
@@ -695,6 +706,14 @@ class VMwareVMOpsTestCase(test.TestCase):
             else:
                 fake_resize_disk.assert_not_called()
 
+            if no_nics:
+                fake_get_vm_networking_spec.assert_not_called()
+            else:
+                fake_get_vm_networking_spec.assert_called_with(self._instance,
+                                                               network_info)
+                fake_reconfigure_vm.assert_any_call(self._session, vm_ref,
+                                                    mock.sentinel.network_spec)
+
             calls = [mock.call(self._context, self._instance, step=i,
                                 total_steps=vmops.RESIZE_TOTAL_STEPS)
                         for i in range(5, vmops.RESIZE_TOTAL_STEPS)]
@@ -716,6 +735,9 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def test_finish_migration_power_on_resize(self):
         self._test_finish_migration(power_on=True, resize_instance=True)
+
+    def test_finish_migration_no_nics(self):
+        self._test_finish_migration(no_nics=True)
 
     @mock.patch.object(vmops.VMwareVMOps, '_create_swap')
     @mock.patch.object(vmops.VMwareVMOps, '_create_ephemeral')
@@ -1126,7 +1148,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
-                       return_value='fake-spec')
+                       return_value=mock.Mock(version=None))
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='vm-ref')
     def test_resize_vm(self, fake_get_vm_ref,
                        fake_resize_spec, fake_reconfigure,
@@ -1149,14 +1171,15 @@ class VMwareVMOpsTestCase(test.TestCase):
             self._session.vim.client.factory, 2, 1024, extra_specs,
             metadata=self._metadata)
         fake_reconfigure.assert_called_once_with(self._session,
-                                                 vm_ref, 'fake-spec')
+                                                 vm_ref,
+                                                 fake_resize_spec.return_value)
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
-                       return_value='fake-spec')
+                       return_value=mock.MagicMock(version=None))
     @mock.patch.object(vm_util, 'get_vm_ref',
                        return_value=mock.sentinel.vm_ref)
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
@@ -1189,7 +1212,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
-                       return_value='fake-spec')
+                       return_value=mock.MagicMock(version=None))
     @mock.patch.object(vm_util, 'get_vm_ref',
                        return_value=mock.sentinel.vm_ref)
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
@@ -1795,8 +1818,6 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                vm_ref,
                                                self._instance.flavor,
                                                self._image_meta)
-        fake_get_vm_networking_spec.assert_called_once_with(self._instance,
-            network_info)
         fake_resize_disk.assert_not_called()
         calls = [mock.call(self._context, self._instance, step=i,
                            total_steps=vmops.RESIZE_TOTAL_STEPS)
