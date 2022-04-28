@@ -1145,7 +1145,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
-                       return_value='fake-spec')
+                       return_value=mock.Mock(version=None))
     @mock.patch.object(vm_util, 'get_vm_ref', return_value='vm-ref')
     def test_resize_vm(self, fake_get_vm_ref,
                        fake_resize_spec, fake_reconfigure,
@@ -1168,14 +1168,15 @@ class VMwareVMOpsTestCase(test.TestCase):
             self._session.vim.client.factory, 2, 1024, extra_specs,
             metadata=self._metadata)
         fake_reconfigure.assert_called_once_with(self._session,
-                                                 vm_ref, 'fake-spec')
+                                                 vm_ref,
+                                                 fake_resize_spec.return_value)
 
     @mock.patch.object(vmops.VMwareVMOps, '_get_instance_metadata')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
-                       return_value='fake-spec')
+                       return_value=mock.MagicMock(version=None))
     @mock.patch.object(vm_util, 'get_vm_ref',
                        return_value=mock.sentinel.vm_ref)
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
@@ -1208,7 +1209,7 @@ class VMwareVMOpsTestCase(test.TestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_clean_up_after_special_spawning')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_vm_resize_spec',
-                       return_value='fake-spec')
+                       return_value=mock.MagicMock(version=None))
     @mock.patch.object(vm_util, 'get_vm_ref',
                        return_value=mock.sentinel.vm_ref)
     @mock.patch.object(cluster_util, 'update_cluster_drs_vm_override')
