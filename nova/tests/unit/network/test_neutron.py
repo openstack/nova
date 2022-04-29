@@ -7697,77 +7697,21 @@ class TestAPIPortbinding(TestAPIBase):
                    'address': '0000:0a:00.1',
                    'parent_addr': '0000:0a:00.0',
                    'card_serial_number': 'MT2113X00000',
+                   'sriov_cap': {
+                       'pf_mac_address': '52:54:00:1e:59:c6',
+                       'vf_num': 1,
+                   },
                    'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
                   }
         PciDevice = collections.namedtuple('PciDevice',
                                ['vendor_id', 'product_id', 'address',
-                                'card_serial_number', 'dev_type',
-                                'parent_addr'])
+                                'card_serial_number', 'sriov_cap',
+                                'dev_type', 'parent_addr'])
         mydev = PciDevice(**pci_dev)
         self.assertEqual(self.api._get_vf_pci_device_profile(mydev),
                          {'pf_mac_address': '52:54:00:1e:59:c6',
                           'vf_num': 1,
                           'card_serial_number': 'MT2113X00000'})
-
-    @mock.patch.object(
-        pci_utils, 'get_mac_by_pci_address',
-        new=mock.MagicMock(
-            side_effect=exception.PciDeviceNotFoundById(id='0000:0a:00.1'))
-    )
-    def test__get_vf_pci_device_profile_invalid_pf_address(self):
-        pci_dev = {'vendor_id': 'a2d6',
-                   'product_id': '15b3',
-                   'address': '0000:0a:00.1',
-                   'parent_addr': '0000:0a:00.0',
-                   'card_serial_number': 'MT2113X00000',
-                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
-                  }
-        PciDevice = collections.namedtuple('PciDevice',
-                               ['vendor_id', 'product_id', 'address',
-                                'card_serial_number', 'dev_type',
-                                'parent_addr'])
-        mydev = PciDevice(**pci_dev)
-        self.assertEqual(self.api._get_vf_pci_device_profile(mydev), {})
-
-    @mock.patch.object(
-        pci_utils, 'get_vf_num_by_pci_address',
-        new=mock.MagicMock(
-            side_effect=exception.PciDeviceNotFoundById(id='0000:0a:00.0'))
-    )
-    @mock.patch.object(
-        pci_utils, 'get_mac_by_pci_address',
-        new=mock.MagicMock(side_effect=(lambda vf_a: {
-            '0000:0a:00.0': '52:54:00:1e:59:c6'}.get(vf_a))))
-    def test__get_vf_pci_device_profile_invalid_vf_address(self):
-        pci_dev = {'vendor_id': 'a2d6',
-                   'product_id': '15b3',
-                   'address': '0000:0a:00.1',
-                   'parent_addr': '0000:0a:00.0',
-                   'card_serial_number': 'MT2113X00000',
-                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
-                  }
-        PciDevice = collections.namedtuple('PciDevice',
-                               ['vendor_id', 'product_id', 'address',
-                                'card_serial_number', 'dev_type',
-                                'parent_addr'])
-        mydev = PciDevice(**pci_dev)
-        vf_profile = self.api._get_vf_pci_device_profile(mydev)
-        self.assertEqual(vf_profile, {})
-
-    def test__get_vf_pci_device_profile_not_vf_address(self):
-        pci_dev = {'vendor_id': 'a2d6',
-                   'product_id': '15b3',
-                   'address': '0000:0a:00.1',
-                   'parent_addr': None,
-                   'card_serial_number': 'MT2113X00000',
-                   'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
-                  }
-        PciDevice = collections.namedtuple('PciDevice',
-                               ['vendor_id', 'product_id', 'address',
-                                'card_serial_number', 'dev_type',
-                                'parent_addr'])
-        mydev = PciDevice(**pci_dev)
-        self.assertEqual(self.api._get_vf_pci_device_profile(mydev), {})
 
     @mock.patch.object(
         neutronapi.API, '_get_vf_pci_device_profile',

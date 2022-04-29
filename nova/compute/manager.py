@@ -84,7 +84,6 @@ from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import request as pci_req_module
-from nova.pci import utils as pci_utils
 from nova.pci import whitelist
 from nova import safe_utils
 from nova.scheduler.client import query
@@ -10926,11 +10925,9 @@ class ComputeManager(manager.Manager):
                 # tagged as remote-managed have a serial in PCI VPD.
                 profile['card_serial_number'] = pci_dev.card_serial_number
             if profile.get('pf_mac_address'):
-                profile['pf_mac_address'] = pci_utils.get_mac_by_pci_address(
-                    pci_dev.parent_addr)
+                profile['pf_mac_address'] = pci_dev.sriov_cap['pf_mac_address']
             if profile.get('vf_num'):
-                profile['vf_num'] = pci_utils.get_vf_num_by_pci_address(
-                    pci_dev.address)
+                profile['vf_num'] = pci_dev.sriov_cap['vf_num']
 
             mig_vif.profile = profile
             LOG.debug("Updating migrate VIF profile for port %(port_id)s:"
