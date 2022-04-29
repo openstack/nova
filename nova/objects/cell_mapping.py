@@ -279,11 +279,15 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
         # SELECT DISTINCT cell_id FROM instance_mappings \
         #   WHERE project_id = $project_id;
         cell_ids = context.session.query(
-            api_db_models.InstanceMapping.cell_id).filter_by(
-            project_id=project_id).distinct().subquery()
+            api_db_models.InstanceMapping.cell_id
+        ).filter_by(
+            project_id=project_id
+        ).distinct()
         # SELECT cell_mappings WHERE cell_id IN ($cell_ids);
-        return context.session.query(api_db_models.CellMapping).filter(
-            api_db_models.CellMapping.id.in_(cell_ids)).all()
+        return context.session.query(
+            api_db_models.CellMapping).filter(
+            api_db_models.CellMapping.id.in_(cell_ids)
+        ).all()
 
     @classmethod
     def get_by_project_id(cls, context, project_id):
