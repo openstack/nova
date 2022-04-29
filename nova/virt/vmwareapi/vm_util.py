@@ -20,7 +20,6 @@ The VMware API VM utility module to build SOAP object specs.
 
 import collections
 import copy
-import functools
 
 from oslo_log import log as logging
 from oslo_service import loopingcall
@@ -37,6 +36,7 @@ from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
 from nova.virt.vmwareapi import constants
+from nova.virt.vmwareapi import session
 from nova.virt.vmwareapi import vim_util
 
 LOG = logging.getLogger(__name__)
@@ -129,22 +129,6 @@ def vm_ref_cache_update(id_, vm_ref):
 
 def vm_ref_cache_get(id_):
     return _VM_REFS_CACHE.get(id_)
-
-
-def _vm_ref_cache(id_, func, session, data):
-    vm_ref = vm_ref_cache_get(id_)
-    if not vm_ref:
-        vm_ref = func(session, data)
-        vm_ref_cache_update(id_, vm_ref)
-    return vm_ref
-
-
-def vm_ref_cache_from_instance(func):
-    @functools.wraps(func)
-    def wrapper(session, instance):
-        id_ = instance.uuid
-        return _vm_ref_cache(id_, func, session, instance)
-    return wrapper
 
 
 # the config key which stores the VNC port
@@ -1131,15 +1115,25 @@ def _get_vm_ref_from_extraconfig(session, instance_uuid):
                                      _get_object_for_optionvalue)
 
 
-@vm_ref_cache_from_instance
+class VmMoRefProxy(session.StableMoRefProxy):
+    def __init__(self, ref, uuid):
+        super(VmMoRefProxy, self).__init__(ref)
+        self._uuid = uuid
+
+    def fetch_moref(self, session):
+        self.moref = search_vm_ref_by_identifier(session, self._uuid)
+        if not self.moref:
+            raise exception.InstanceNotFound(instance_id=self._uuid)
+        vm_ref_cache_update(self._uuid, self.moref)
+
+
 def get_vm_ref(session, instance):
-    """Get reference to the VM through uuid or vm name."""
-    uuid = instance.uuid
-    vm_ref = (search_vm_ref_by_identifier(session, uuid) or
-              _get_vm_ref_from_name(session, instance.name))
-    if vm_ref is None:
-        raise exception.InstanceNotFound(instance_id=uuid)
-    return vm_ref
+    """Get reference to the VM through uuid."""
+    moref = vm_ref_cache_get(instance.uuid)
+    stable_ref = VmMoRefProxy(moref, instance.uuid)
+    if not moref:
+        stable_ref.fetch_moref(session)
+    return stable_ref
 
 
 def search_vm_ref_by_identifier(session, identifier):
@@ -1151,8 +1145,7 @@ def search_vm_ref_by_identifier(session, identifier):
     use get_vm_ref instead.
     """
     vm_ref = (_get_vm_ref_from_vm_uuid(session, identifier) or
-              _get_vm_ref_from_extraconfig(session, identifier) or
-              _get_vm_ref_from_name(session, identifier))
+              _get_vm_ref_from_extraconfig(session, identifier))
     return vm_ref
 
 

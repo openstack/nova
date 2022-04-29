@@ -26,10 +26,28 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.virt.vmwareapi import constants
+from nova.virt.vmwareapi import session
 from nova.virt.vmwareapi import vm_util
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
+
+
+class VolumeMoRefProxy(session.StableMoRefProxy):
+    def __init__(self, connection_info_data):
+        volume_ref_value = connection_info_data.get('volume')
+        ref = None
+        if volume_ref_value:
+            ref = vutil.get_moref(volume_ref_value, 'VirtualMachine')
+        super(VolumeMoRefProxy, self).__init__(ref)
+        self._connection_info_data = connection_info_data
+
+    def fetch_moref(self, session):
+        volume_id = self._connection_info_data.get('volume_id')
+        if not volume_id:
+            volume_id = self._connection_info_data.get('name')
+        if volume_id:
+            self.moref = vm_util._get_vm_ref_from_vm_uuid(session, volume_id)
 
 
 class VMwareVolumeOps(object):
@@ -300,9 +318,10 @@ class VMwareVolumeOps(object):
             connector['instance'] = vutil.get_moref_value(vm_ref)
         return connector
 
-    def _get_volume_ref(self, volume_ref_name):
-        """Get the volume moref from the ref name."""
-        return vutil.get_moref(volume_ref_name, 'VirtualMachine')
+    @staticmethod
+    def _get_volume_ref(connection_info_data):
+        """Get the volume moref from the "data" field in connection_info ."""
+        return VolumeMoRefProxy(connection_info_data)
 
     def _get_vmdk_base_volume_device(self, volume_ref):
         # Get the vmdk file name that the VM is pointing to
@@ -317,7 +336,7 @@ class VMwareVolumeOps(object):
         LOG.debug("_attach_volume_vmdk: %s", connection_info,
                   instance=instance)
         data = connection_info['data']
-        volume_ref = self._get_volume_ref(data['volume'])
+        volume_ref = self._get_volume_ref(data)
 
         # Get details required for adding disk device such as
         # adapter_type, disk_type
@@ -552,7 +571,7 @@ class VMwareVolumeOps(object):
         LOG.debug("_detach_volume_vmdk: %s", connection_info,
                   instance=instance)
         data = connection_info['data']
-        volume_ref = self._get_volume_ref(data['volume'])
+        volume_ref = self._get_volume_ref(data)
 
         device = self._get_vmdk_backed_disk_device(vm_ref, data)
 
@@ -645,7 +664,7 @@ class VMwareVolumeOps(object):
             vm_ref = vm_util.get_vm_ref(self._session, instance)
             data = connection_info['data']
             # Get the volume ref
-            volume_ref = self._get_volume_ref(data['volume'])
+            volume_ref = self._get_volume_ref(data)
             # Pick the resource pool on which the instance resides. Move the
             # volume to the datastore of the instance.
             res_pool = self._get_res_pool_of_vm(vm_ref)
