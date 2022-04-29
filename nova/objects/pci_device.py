@@ -447,11 +447,30 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             instance.pci_devices.objects.append(copy.copy(self))
 
     def remove(self):
-        if self.status != fields.PciDeviceStatus.AVAILABLE:
+        # We allow removal of a device is if it is unused. It can be unused
+        # either by being in available state or being in a state that shows
+        # that the parent or child device blocks the consumption of this device
+        expected_states = [
+            fields.PciDeviceStatus.AVAILABLE,
+            fields.PciDeviceStatus.UNAVAILABLE,
+            fields.PciDeviceStatus.UNCLAIMABLE,
+        ]
+        if self.status not in expected_states:
             raise exception.PciDeviceInvalidStatus(
                 compute_node_id=self.compute_node_id,
                 address=self.address, status=self.status,
-                hopestatus=[fields.PciDeviceStatus.AVAILABLE])
+                hopestatus=expected_states)
+        # Just to be on the safe side, do not allow removal of device that has
+        # an owner even if the state of the device suggests that it is not
+        # owned.
+        if 'instance_uuid' in self and self.instance_uuid is not None:
+            raise exception.PciDeviceInvalidOwner(
+                compute_node_id=self.compute_node_id,
+                address=self.address,
+                owner=self.instance_uuid,
+                hopeowner=None,
+            )
+
         self.status = fields.PciDeviceStatus.REMOVED
         self.instance_uuid = None
         self.request_id = None
