@@ -1,3 +1,7 @@
+# Requirements lower bounds listed here are our best effort to keep them up to
+# date but we do not test them so no guarantee of having them all correct. If
+# you find any incorrect lower bounds, let us know or propose a fix.
+
 pbr>=5.8.0 # Apache-2.0
 SQLAlchemy>=1.4.13 # MIT
 decorator>=4.1.0 # BSD
