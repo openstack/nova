@@ -1106,12 +1106,21 @@ class API(object):
                 context, '3.44', skip_version_check=True).attachments.delete(
                     attachment_id)
         except cinder_exception.ClientException as ex:
-            with excutils.save_and_reraise_exception():
-                LOG.error('Delete attachment failed for attachment '
-                          '%(id)s. Error: %(msg)s Code: %(code)s',
+            with excutils.save_and_reraise_exception() as ctxt:
+                code = getattr(ex, 'code', None)
+                if code == 404:
+                    # if the attachment does not exist, we ran into some
+                    # race-condition and are probably in a retry here. in any
+                    # case, we got what we came for and thus treat this 404 as
+                    # mission completed
+                    ctxt.reraise = False
+                    return
+
+                LOG.error(('Delete attachment failed for attachment '
+                           '%(id)s. Error: %(msg)s Code: %(code)s'),
                           {'id': attachment_id,
                            'msg': str(ex),
-                           'code': getattr(ex, 'code', None)})
+                           'code': code})
 
     @translate_attachment_exception
     def attachment_complete(self, context, attachment_id):

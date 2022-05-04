@@ -525,17 +525,17 @@ class CinderApiTestCase(test.NoDBTestCase):
     @mock.patch('nova.volume.cinder.LOG')
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_delete_failed(self, mock_cinderclient, mock_log):
+        """A 404 on attachment delete doesn't raise an error
+
+        A attachment being not there is exactly what the call for deletion
+        wants to achieve and thus we don't raise an error and make the call
+        idempotent from Nova side
+        """
         mock_cinderclient.return_value.attachments.delete.side_effect = (
                 cinder_exception.NotFound(404, '404'))
 
         attachment_id = uuids.attachment
-        ex = self.assertRaises(exception.VolumeAttachmentNotFound,
-                               self.api.attachment_delete,
-                               self.ctx,
-                               attachment_id)
-
-        self.assertEqual(404, ex.code)
-        self.assertIn(attachment_id, str(ex))
+        self.api.attachment_delete(self.ctx, attachment_id)
 
     @mock.patch('nova.volume.cinder.cinderclient',
                 side_effect=exception.CinderAPIVersionNotAvailable(
