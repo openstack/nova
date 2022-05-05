@@ -7026,13 +7026,17 @@ class TestAPI(TestAPIBase):
             req_lvl_params.same_subtree,
         )
 
-    def test_get_segment_ids_for_network_no_segment_ext(self):
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_segment_ids_for_network_no_segment_ext(self, mock_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_client.return_value = mocked_client
         with mock.patch.object(
             self.api, 'has_segment_extension', return_value=False,
         ):
             self.assertEqual(
                 [], self.api.get_segment_ids_for_network(self.context,
                                                          uuids.network_id))
+            mock_client.assert_called_once_with(self.context, admin=True)
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_get_segment_ids_for_network_passes(self, mock_client):
@@ -7046,6 +7050,7 @@ class TestAPI(TestAPIBase):
             res = self.api.get_segment_ids_for_network(
                 self.context, uuids.network_id)
         self.assertEqual([uuids.segment_id], res)
+        mock_client.assert_called_once_with(self.context, admin=True)
         mocked_client.list_subnets.assert_called_once_with(
             network_id=uuids.network_id, fields='segment_id')
 
@@ -7061,6 +7066,7 @@ class TestAPI(TestAPIBase):
             res = self.api.get_segment_ids_for_network(
                 self.context, uuids.network_id)
         self.assertEqual([], res)
+        mock_client.assert_called_once_with(self.context, admin=True)
         mocked_client.list_subnets.assert_called_once_with(
             network_id=uuids.network_id, fields='segment_id')
 
@@ -7076,14 +7082,19 @@ class TestAPI(TestAPIBase):
             self.assertRaises(exception.InvalidRoutedNetworkConfiguration,
                               self.api.get_segment_ids_for_network,
                               self.context, uuids.network_id)
+            mock_client.assert_called_once_with(self.context, admin=True)
 
-    def test_get_segment_id_for_subnet_no_segment_ext(self):
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_get_segment_id_for_subnet_no_segment_ext(self, mock_client):
+        mocked_client = mock.create_autospec(client.Client)
+        mock_client.return_value = mocked_client
         with mock.patch.object(
             self.api, 'has_segment_extension', return_value=False,
         ):
             self.assertIsNone(
                 self.api.get_segment_id_for_subnet(self.context,
                                                    uuids.subnet_id))
+            mock_client.assert_called_once_with(self.context, admin=True)
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_get_segment_id_for_subnet_passes(self, mock_client):
@@ -7097,6 +7108,7 @@ class TestAPI(TestAPIBase):
             res = self.api.get_segment_id_for_subnet(
                 self.context, uuids.subnet_id)
         self.assertEqual(uuids.segment_id, res)
+        mock_client.assert_called_once_with(self.context, admin=True)
         mocked_client.show_subnet.assert_called_once_with(uuids.subnet_id)
 
     @mock.patch.object(neutronapi, 'get_client')
@@ -7111,6 +7123,7 @@ class TestAPI(TestAPIBase):
             self.assertIsNone(
                 self.api.get_segment_id_for_subnet(self.context,
                                                    uuids.subnet_id))
+            mock_client.assert_called_once_with(self.context, admin=True)
 
     @mock.patch.object(neutronapi, 'get_client')
     def test_get_segment_id_for_subnet_fails(self, mock_client):
@@ -7124,6 +7137,7 @@ class TestAPI(TestAPIBase):
             self.assertRaises(exception.InvalidRoutedNetworkConfiguration,
                               self.api.get_segment_id_for_subnet,
                               self.context, uuids.subnet_id)
+            mock_client.assert_called_once_with(self.context, admin=True)
 
     @mock.patch.object(neutronapi.LOG, 'debug')
     def test_get_port_pci_dev(self, mock_debug):
