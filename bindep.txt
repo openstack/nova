@@ -39,7 +39,6 @@ postgresql
 postgresql-client [platform:dpkg]
 postgresql-devel [platform:rpm test]
 postgresql-server [platform:rpm]
-python-dev [platform:dpkg test]
 python3-all [platform:dpkg]
 python3-all-dev [platform:dpkg]
 python3 [platform:rpm test]
