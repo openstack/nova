@@ -3447,9 +3447,7 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                            file_path)
             self.assertEqual('fira-host', result[0])
             cookies = result[1]
-            self.assertEqual(1, len(cookies))
-            self.assertEqual('vmware_cgi_ticket', cookies[0].name)
-            self.assertEqual('"fira-ticket"', cookies[0].value)
+            self.assertEqual('vmware_cgi_ticket="fira-ticket"', cookies)
 
     def test_fetch_vsphere_image(self):
         vsphere_location = 'vsphere://my?dcPath=mycenter&dsName=mystore'

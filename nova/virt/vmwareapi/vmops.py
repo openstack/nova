@@ -19,7 +19,6 @@
 Class for VM tasks like spawn, snapshot, suspend, resume etc.
 """
 
-import collections
 import copy
 import itertools
 from operator import itemgetter
@@ -467,11 +466,7 @@ class VMwareVMOps(object):
         url = ds_obj.DatastoreURL('https', host_name, file_path, dc_path,
                                   datastore.name)
         cookie_header = url.get_transfer_ticket(self._session, 'PUT')
-        name, value = cookie_header.split('=')
-        # TODO(rgerganov): this is a hack to emulate cookiejar until we fix
-        # oslo.vmware to accept plain http headers
-        Cookie = collections.namedtuple('Cookie', ['name', 'value'])
-        return host_name, [Cookie(name, value)]
+        return host_name, cookie_header
 
     def _fetch_vsphere_image(self, context, vi, image_ds_loc):
         """Fetch image which is located on a vSphere datastore."""
