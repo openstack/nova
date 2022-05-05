@@ -244,7 +244,8 @@ class BigVmManager(manager.Manager):
             with nova_context.target_cell(context, cm) as cctxt:
                 vmware_hvs.update({cn.uuid: cn.host for cn in
                     ComputeNodeList.get_by_hypervisor_type(cctxt,
-                                                           VMWARE_HV_TYPE)})
+                                                           VMWARE_HV_TYPE)
+                    if not cn.deleted})
 
         host_azs = {}
         host_vcs = {}
@@ -286,14 +287,18 @@ class BigVmManager(manager.Manager):
                               'find "parent" provider.',
                               {'name': rp['name'], 'rp': rp['uuid']})
                     continue
-                elif len(aggregates) > 1:
-                    LOG.error('RP %(name)s (%(rp)s) has more than one '
-                              'aggregate: %(aggs)s. Cannot find "parent" '
-                              'provider.',
+                for agg in aggregates:
+                    if agg not in vmware_hvs:
+                        continue
+                    host_rp_uuid = agg
+                    break
+                else:
+                    LOG.error('RP %(name)s (%(rp)s) has no aggregate matching '
+                              'a compute node UUID. Cannot find "parent" '
+                              'provider in %(aggs)s',
                               {'name': rp['name'], 'rp': rp['uuid'],
                                'aggs': ', '.join(aggregates)})
                     continue
-                host_rp_uuid = aggregates[0]
                 host = vmware_hvs[host_rp_uuid]
                 cell_mapping = host_mappings[host]
                 bigvm_providers[rp['uuid']] = {'rp': rp,
@@ -764,7 +769,13 @@ class BigVmManager(manager.Manager):
                 new_rp_name)
 
             # ensure the parent resource-provider has its uuid as aggregate set
-            client.set_aggregates_for_provider(context, rp_uuid, [rp_uuid])
+            # in addition to its previous aggregates
+            agg_info = client._get_provider_aggregates(context, rp_uuid)
+            if rp_uuid not in agg_info.aggregates:
+                agg_info.aggregates.add(rp_uuid)
+                client.set_aggregates_for_provider(
+                    context, rp_uuid, agg_info.aggregates,
+                    generation=agg_info.generation)
 
             # add the newly-created resource-provider to the parent uuid's
             # aggregate
