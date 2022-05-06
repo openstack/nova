@@ -424,7 +424,7 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
             # Only log the exception traceback for non-nova exceptions.
             if not isinstance(e, exception.NovaException):
                 LOG.exception('Error gathering result from cell %s', cell_uuid)
-            result = e.__class__(e.args)
+            result = e
         # The queue is already synchronized.
         queue.put((cell_uuid, result))
 

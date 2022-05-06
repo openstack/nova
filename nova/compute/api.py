@@ -2857,9 +2857,11 @@ class API:
                 # spec has been archived is being queried.
                 raise exception.InstanceNotFound(instance_id=uuid)
         else:
+            if isinstance(result[cell_uuid], exception.NovaException):
+                LOG.exception(result[cell_uuid])
             raise exception.NovaException(
-                _("Cell %s is not responding and hence instance "
-                  "info is not available.") % cell_uuid)
+                _("Cell %s is not responding or returned an exception, "
+                  "hence instance info is not available.") % cell_uuid)
 
     def _get_instance(self, context, instance_uuid, expected_attrs,
                       cell_down_support=False):

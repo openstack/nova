@@ -6371,8 +6371,9 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(uuids.inst, result.uuid)
         mock_get_inst.assert_called_once()
 
+    @mock.patch('nova.compute.api.LOG.exception')
     @mock.patch.object(objects.Instance, 'get_by_uuid')
-    def test_get_instance_from_cell_failure(self, mock_get_inst):
+    def test_get_instance_from_cell_failure(self, mock_get_inst, mock_log_exp):
         # Make sure InstanceNotFound is bubbled up and not treated like
         # other errors
         mock_get_inst.side_effect = exception.InstanceNotFound(
@@ -6385,6 +6386,15 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api._get_instance_from_cell, self.context,
             im, [], False)
         self.assertIn('could not be found', str(exp))
+        # Make sure other unexpected NovaException are logged for debugging
+        mock_get_inst.side_effect = exception.NovaException()
+        exp = self.assertRaises(
+            exception.NovaException, self.compute_api._get_instance_from_cell,
+            self.context, im, [], False)
+        msg = (f'Cell {cell_mapping.uuid} is not responding or returned an '
+            'exception, hence instance info is not available.')
+        self.assertIn(msg, str(exp))
+        mock_log_exp.assert_called_once_with(mock_get_inst.side_effect)
 
     @mock.patch('nova.compute.api.API._save_user_id_in_instance_mapping')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
