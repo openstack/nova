@@ -133,6 +133,9 @@
           "/$NEUTRON_CORE_PLUGIN_CONF":
             securitygroup:
               firewall_driver: iptables_hybrid
+          $NEUTRON_CONF:
+            nova:
+              live_migration_events: True
     group-vars:
       subnode:
         devstack_localrc:
@@ -156,6 +159,9 @@
             "/$NEUTRON_CORE_PLUGIN_CONF":
               securitygroup:
                 firewall_driver: iptables_hybrid
+            $NEUTRON_CONF:
+              nova:
+                live_migration_events: True
     post-run: playbooks/nova-live-migration/post-run.yaml
 
 - job:
