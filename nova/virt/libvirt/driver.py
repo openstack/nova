@@ -4982,16 +4982,18 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_config = vconfig.LibvirtConfigGuest()
                 guest_config.parse_dom(xml_doc)
 
-                for hdev in [d for d in guest_config.devices
-                    if isinstance(d, vconfig.LibvirtConfigGuestHostdevPCI)]:
+                for hdev in [
+                    d for d in guest_config.devices
+                    if isinstance(d, vconfig.LibvirtConfigGuestHostdevPCI)
+                ]:
                     hdbsf = [hdev.domain, hdev.bus, hdev.slot, hdev.function]
                     dbsf = pci_utils.parse_address(dev.address)
-                    if [int(x, 16) for x in hdbsf] ==\
-                            [int(x, 16) for x in dbsf]:
-                        raise exception.PciDeviceDetachFailed(reason=
-                                                              "timeout",
-                                                              dev=dev)
-
+                    if (
+                            [int(x, 16) for x in hdbsf] ==
+                            [int(x, 16) for x in dbsf]
+                    ):
+                        raise exception.PciDeviceDetachFailed(
+                            reason="timeout", dev=dev)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
@@ -5039,32 +5041,75 @@ class LibvirtDriver(driver.ComputeDriver):
                               instance=instance)
                     guest.attach_device(cfg)
 
+    # TODO(sean-k-mooney): we should try and converge this fuction with
+    # _detach_direct_passthrough_vifs which does the same operation correctly
+    # for live migration
     def _detach_direct_passthrough_ports(self, context, instance, guest):
         network_info = instance.info_cache.network_info
         if network_info is None:
             return
 
         if self._has_direct_passthrough_port(network_info):
-            # In case of VNIC_TYPES_DIRECT_PASSTHROUGH ports we create
-            # pci request per direct passthrough port. Therefore we can trust
-            # that pci_slot value in the vif is correct.
-            direct_passthrough_pci_addresses = [
+
+            attached_via_hostdev_element = []
+            attached_via_interface_element = []
+
+            for vif in network_info:
+                if vif['profile'].get('pci_slot') is None:
+                    # this is not an sriov interface so skip it
+                    continue
+
+                if (vif['vnic_type'] not in
+                    network_model.VNIC_TYPES_DIRECT_PASSTHROUGH):
+                    continue
+
+                cfg = self.vif_driver.get_config(
+                    instance, vif, instance.image_meta, instance.flavor,
+                    CONF.libvirt.virt_type)
+                LOG.debug(f'Detaching type: {type(cfg)}, data: {cfg}')
+                if isinstance(cfg, vconfig.LibvirtConfigGuestHostdevPCI):
+                    attached_via_hostdev_element.append(vif)
+                else:
+                    attached_via_interface_element.append(vif)
+
+            pci_devs = pci_manager.get_instance_pci_devs(instance, 'all')
+            hostdev_pci_addresses = {
                 vif['profile']['pci_slot']
-                for vif in network_info
-                if (vif['vnic_type'] in
-                    network_model.VNIC_TYPES_DIRECT_PASSTHROUGH and
-                    vif['profile'].get('pci_slot') is not None)
+                for vif in attached_via_hostdev_element
+            }
+            direct_passthrough_pci_addresses = [
+                pci_dev for pci_dev in pci_devs
+                if pci_dev.address in hostdev_pci_addresses
             ]
 
-            # use detach_pci_devices to avoid failure in case of
-            # multiple guest direct passthrough ports with the same MAC
-            # (protection use-case, ports are on different physical
-            # interfaces)
-            pci_devs = pci_manager.get_instance_pci_devs(instance, 'all')
-            direct_passthrough_pci_addresses = (
-                [pci_dev for pci_dev in pci_devs
-                 if pci_dev.address in direct_passthrough_pci_addresses])
+            # FIXME(sean-k-mooney): i am using _detach_pci_devices because
+            # of the previous comment introduced by change-id:
+            # I3a45b1fb41e8e446d1f25d7a1d77991c8bf2a1ed
+            # in relation to bug 1563874 however i'm not convinced that
+            # patch was correct so we should reevaluate if we should do this.
+            # The intent of using _detach_pci_devices is
+            # to somehow cater for the use case where multiple ports have
+            # the same MAC address however _detach_pci_device can only remove
+            # device that are attached as hostdev elements, not via the
+            # interface element.
+            # So using it for all devices would break vnic-type direct when
+            # using the sriov_nic_agent ml2 driver or vif of vnic_type vdpa.
+            # Since PF ports cant have the same MAC that means that this
+            # use case was for hardware offloaded OVS? many NICs do not allow
+            # two VFs to have the same MAC on different VLANs due to the
+            # ordering of the VLAN and MAC filters in there static packet
+            # processing pipeline as such its unclear if this will work in any
+            # non ovs offload case. We should look into this more closely
+            # as from my testing in this patch we appear to use the interface
+            # element for hardware offloaded ovs too. Infiniband and vnic_type
+            # direct-physical port type do need this code path, both those cant
+            # have duplicate MACs...
             self._detach_pci_devices(guest, direct_passthrough_pci_addresses)
+
+            # for ports that are attached with interface elements we cannot use
+            # _detach_pci_devices so we use detach_interface
+            for vif in attached_via_interface_element:
+                self.detach_interface(context, instance, vif)
 
     def _update_compute_provider_status(self, context, service):
         """Calls the ComputeVirtAPI.update_compute_provider_status method

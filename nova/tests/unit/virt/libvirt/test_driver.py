@@ -16764,15 +16764,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             instance.system_metadata)
         self.assertTrue(mock_attachDevice.called)
 
-    @mock.patch.object(host.Host,
-                       'has_min_version', return_value=True)
-    def _test_detach_direct_passthrough_ports(self,
-                                 mock_has_min_version, vif_type):
+    @mock.patch.object(
+        host.Host, 'has_min_version', new=mock.Mock(return_value=True)
+    )
+    def _test_detach_direct_passthrough_ports(
+            self, vif_type, detach_device=True,
+            vnic_type=network_model.VNIC_TYPE_DIRECT):
         instance = objects.Instance(**self.test_instance)
 
         expeted_pci_slot = "0000:00:00.0"
         network_info = _fake_network_info(self)
-        network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT
+        network_info[0]['vnic_type'] = vnic_type
         # some more adjustments for the fake network_info so that
         # the correct get_config function will be executed (vif's
         # get_config_hw_veb - which is according to the real SRIOV vif)
@@ -16788,29 +16790,52 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # pci_manager.get_instance_pci_devs will not return an empty list
         # which will eventually fail the assertion for detachDeviceFlags
         expected_pci_device_obj = (
-            objects.PciDevice(address=expeted_pci_slot, request_id=None))
+            objects.PciDevice(
+                address=expeted_pci_slot, request_id=None, compute_node_id=42
+            )
+        )
         instance.pci_devices = objects.PciDeviceList()
         instance.pci_devices.objects = [expected_pci_device_obj]
 
-        domain = FakeVirtDomain()
+        domain = FakeVirtDomain(id=24601, name='Jean Valjean')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         guest = libvirt_guest.Guest(domain)
 
-        with mock.patch.object(drvr, '_detach_pci_devices') as mock_detach_pci:
+        with mock.patch.object(
+            drvr, '_detach_pci_devices'
+        ) as mock_detach_pci, mock.patch.object(
+            drvr, 'detach_interface'
+        ) as mock_detach_interface:
             drvr._detach_direct_passthrough_ports(
                 self.context, instance, guest)
-            mock_detach_pci.assert_called_once_with(
-                guest, [expected_pci_device_obj])
+            if detach_device:
+                mock_detach_pci.assert_called_once_with(
+                    guest, [expected_pci_device_obj])
+            else:
+                mock_detach_interface.assert_called_once()
 
-    def test_detach_direct_passthrough_ports_interface_interface_hostdev(self):
+    def test_detach_direct_passthrough_ports_ovs_hw_offload(self):
         # Note: test detach_direct_passthrough_ports method for vif with config
         # LibvirtConfigGuestInterface
-        self._test_detach_direct_passthrough_ports(vif_type="hw_veb")
+        self._test_detach_direct_passthrough_ports("ovs", detach_device=False)
 
-    def test_detach_direct_passthrough_ports_interface_pci_hostdev(self):
+    def test_detach_direct_passthrough_ports_sriov_nic_agent(self):
+        # Note: test detach_direct_passthrough_ports method for vif with config
+        # LibvirtConfigGuestInterface
+        self._test_detach_direct_passthrough_ports(
+            "hw_veb", detach_device=False
+        )
+
+    def test_detach_direct_physical_passthrough_ports_sriov_nic_agent(self):
+        self._test_detach_direct_passthrough_ports(
+            "hostdev_physical",
+            vnic_type=network_model.VNIC_TYPE_DIRECT_PHYSICAL
+        )
+
+    def test_detach_direct_passthrough_ports_infiniband(self):
         # Note: test detach_direct_passthrough_ports method for vif with config
         # LibvirtConfigGuestHostdevPCI
-        self._test_detach_direct_passthrough_ports(vif_type="ib_hostdev")
+        self._test_detach_direct_passthrough_ports("ib_hostdev")
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(FakeVirtDomain, 'detachDeviceFlags')
@@ -16820,9 +16845,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         network_info = _fake_network_info(self, 2)
 
+        direct_physical = network_model.VNIC_TYPE_DIRECT_PHYSICAL
         for network_info_inst in network_info:
-            network_info_inst['vnic_type'] = network_model.VNIC_TYPE_DIRECT
-            network_info_inst['type'] = "hw_veb"
+            network_info_inst['vnic_type'] = direct_physical
+            network_info_inst['type'] = "hostdev_physical"
             network_info_inst['details'] = dict(vlan="2145")
             network_info_inst['address'] = "fa:16:3e:96:2a:48"
 
