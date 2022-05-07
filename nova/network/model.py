@@ -122,20 +122,20 @@ VNIC_TYPE_REMOTE_MANAGED = "remote-managed"
 # selected compute node.
 VNIC_TYPES_SRIOV = (
     VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP, VNIC_TYPE_DIRECT_PHYSICAL,
-    VNIC_TYPE_VIRTIO_FORWARDER, VNIC_TYPE_VDPA, VNIC_TYPE_REMOTE_MANAGED)
+    VNIC_TYPE_VIRTIO_FORWARDER, VNIC_TYPE_VDPA, VNIC_TYPE_REMOTE_MANAGED
+)
 
 # Define list of ports which are passthrough to the guest
 # and need a special treatment on snapshot and suspend/resume
-VNIC_TYPES_DIRECT_PASSTHROUGH = (VNIC_TYPE_DIRECT,
-                                 VNIC_TYPE_DIRECT_PHYSICAL,
-                                 VNIC_TYPE_ACCELERATOR_DIRECT,
-                                 VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL,
-                                 VNIC_TYPE_REMOTE_MANAGED)
+VNIC_TYPES_DIRECT_PASSTHROUGH = (
+    VNIC_TYPE_DIRECT, VNIC_TYPE_DIRECT_PHYSICAL,
+    VNIC_TYPE_ACCELERATOR_DIRECT, VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL,
+    VNIC_TYPE_REMOTE_MANAGED, VNIC_TYPE_VDPA
+)
 
 # Define list of ports which contains devices managed by cyborg.
 VNIC_TYPES_ACCELERATOR = (
-                          VNIC_TYPE_ACCELERATOR_DIRECT,
-                          VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL
+    VNIC_TYPE_ACCELERATOR_DIRECT, VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL
 )
 
 # Constants for the 'vif_model' values

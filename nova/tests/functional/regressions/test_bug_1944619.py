@@ -71,6 +71,6 @@ class TestRollbackWithHWOffloadedOVS(
                 # Live migrate the instance to another host
                 self._live_migrate(self.server,
                                    migration_expected_state='failed',
-                                   server_expected_state='MIGRATING')
+                                   server_expected_state='ACTIVE')
         mlpr.assert_not_called()
         mlpp.assert_called_once()

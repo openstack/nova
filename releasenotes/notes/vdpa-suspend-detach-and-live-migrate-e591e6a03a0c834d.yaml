@@ -1,0 +1,25 @@
+---
+features:
+  - |
+    vDPA support was first introduced in the 23.0.0 (Wallaby)
+    release with limited instance lifecycle operations. Nova now supports
+    all instance lifecycle operations including suspend, attach/detach
+    and hot-plug live migration.
+
+    QEMU and the Linux kernel do not currently support transparent
+    live migration of vDPA devices at this time. Hot-plug live migration
+    unplugs the VDPA device on the source host before the VM is live migrated
+    and automatically hot-plugs the device on the destination after the
+    migration. While this can lead to packet loss it enable live migration
+    to be used when needed until transparent live migration can be added
+    in a future release.
+
+    VDPA Hot-plug live migration requires all compute services to be upgraded
+    to service level 63 to be enabled. Similarly suspend resume need service
+    level 63 and attach/detach require service level 62.
+    As such it will not be available to use during a rolling upgrade but will
+    become available when all host are upgraded to the 26.0.0 (Zed) release.
+
+    With the addition of these features, all instance lifecycle operations are
+    now valid for VMs with VDPA neutron ports.
+
