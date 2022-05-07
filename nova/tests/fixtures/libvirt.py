@@ -1434,20 +1434,28 @@ class Domain(object):
                     'Test attempts to add more than 8 PCI devices. This is '
                     'not supported by the fake libvirt implementation.')
             nic['func'] = func
-            # this branch covers most interface types with a source
-            # such as linux bridge interfaces.
-            if 'source' in nic:
+            if nic['type'] in ('ethernet',):
+                # this branch covers kernel ovs interfaces
                 nics += '''<interface type='%(type)s'>
           <mac address='%(mac)s'/>
-          <source %(type)s='%(source)s'/>
           <target dev='tap274487d1-6%(func)s'/>
           <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
                    function='0x%(func)s'/>
         </interface>''' % nic
-            elif nic['type'] in ('ethernet',):
-                # this branch covers kernel ovs interfaces
+            elif nic['type'] in ('vdpa',):
+                # this branch covers hardware offloaded ovs with vdpa
                 nics += '''<interface type='%(type)s'>
           <mac address='%(mac)s'/>
+          <source dev='%(source)s'/>
+          <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
+                   function='0x%(func)s'/>
+        </interface>''' % nic
+            # this branch covers most interface types with a source
+            # such as linux bridge interfaces.
+            elif 'source' in nic:
+                nics += '''<interface type='%(type)s'>
+          <mac address='%(mac)s'/>
+          <source %(type)s='%(source)s'/>
           <target dev='tap274487d1-6%(func)s'/>
           <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
                    function='0x%(func)s'/>

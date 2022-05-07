@@ -5,6 +5,11 @@ Using ports vnic_type='vdpa'
 
    Introduced support for vDPA.
 
+.. versionadded:: 26.0.0 (Zed)
+
+   Added support for most instance move operations (except live migration),
+   and the interface attach/detach operations.
+
 .. important::
    The functionality described below is only supported by the
    libvirt/KVM virt driver.
@@ -63,7 +68,7 @@ vDPA support depends on kernel 5.7+, Libvirt 6.9.0+ and QEMU 5.1+.
 vDPA lifecycle operations
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-At this time vDPA ports can only be added to a VM when it is first created.
+To boot a VM with vDPA ports they must first be created in neutron.
 To do this the normal SR-IOV workflow is used where by the port is first created
 in neutron and passed into nova as part of the server create request.
 
@@ -71,22 +76,3 @@ in neutron and passed into nova as part of the server create request.
 
    openstack port create --network <my network> --vnic-type vdpa vdpa-port
    openstack server create --flavor <my-flavor> --image <my-image> --port <vdpa-port uuid> vdpa-vm
-
-When vDPA support was first introduced no move operations were supported.
-As this documentation was added in the change that enabled some move operations
-The following should be interpreted both as a retrospective and future looking
-viewpoint and treated as a living document which will be updated as functionality evolves.
-
-23.0.0: initial support is added for creating a VM with vDPA ports, move operations
-are blocked in the API but implemented in code.
-26.0.0: support for all move operation except live migration is tested and api blocks are removed.
-25.x.y: (planned) api block removal backported to stable/Yoga
-24.x.y: (planned) api block removal backported to stable/Xena
-23.x.y: (planned) api block removal backported to stable/wallaby
-26.0.0: (in progress) interface attach/detach, suspend/resume and hot plug live migration
-are implemented to fully support all lifecycle operations on instances with vDPA ports.
-
-.. note::
-   The ``(planned)`` and ``(in progress)`` qualifiers will be removed when those items are
-   completed. If your current version of the document contains those qualifiers then those
-   lifecycle operations are unsupported.

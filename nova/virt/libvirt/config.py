@@ -1920,6 +1920,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                 if self.net_type == 'direct':
                     self.source_dev = c.get('dev')
                     self.source_mode = c.get('mode', 'private')
+                elif self.net_type == 'vdpa':
+                    self.source_dev = c.get('dev')
                 elif self.net_type == 'vhostuser':
                     self.vhostuser_type = c.get('type')
                     self.vhostuser_mode = c.get('mode')
