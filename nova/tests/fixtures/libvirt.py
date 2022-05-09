@@ -1391,6 +1391,8 @@ class Domain(object):
                 nics += '''<interface type='%(type)s'>
           <mac address='%(mac)s'/>
           <target dev='tap274487d1-6%(func)s'/>
+          <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
+                   function='0x%(func)s'/>
         </interface>''' % nic
             else:
                 # This branch covers the macvtap vnic-type.

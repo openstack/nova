@@ -729,19 +729,22 @@ class NeutronFixture(fixtures.Fixture):
         self._validate_port_binding(port_id, host_id)
         del self._port_bindings[port_id][host_id]
 
-    def _activate_port_binding(self, port_id, host_id):
+    def _activate_port_binding(self, port_id, host_id, modify_port=False):
         # It makes sure that only one binding is active for a port
         for host, binding in self._port_bindings[port_id].items():
             if host == host_id:
                 # NOTE(gibi): neutron returns 409 if this binding is already
                 # active but nova does not depend on this behaviour yet.
                 binding['status'] = 'ACTIVE'
+                if modify_port:
+                    # We need to ensure that port's binding:host_id is valid
+                    self._merge_in_active_binding(self._ports[port_id])
             else:
                 binding['status'] = 'INACTIVE'
 
     def activate_port_binding(self, port_id, host_id):
         self._validate_port_binding(port_id, host_id)
-        self._activate_port_binding(port_id, host_id)
+        self._activate_port_binding(port_id, host_id, modify_port=True)
 
     def show_port_binding(self, port_id, host_id):
         self._validate_port_binding(port_id, host_id)
