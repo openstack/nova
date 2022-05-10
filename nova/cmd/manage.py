@@ -2378,8 +2378,14 @@ class PlacementCommands(object):
                         unmapped_hosts.add(host)
                         continue
                     except exception.ComputeHostNotFound:
-                        # Don't fail on this now, we can dump it at the end.
-                        computes_not_found.add(host)
+                        # Don't fail on this now, we can dump it at the end. We
+                        # only need to dump it, if it's a non-ironic host
+                        # though, as for ironic there can be hosts that
+                        # currently don't have any node assigned e.g.
+                        # conductor-groups that are only used for
+                        # testing/during buildup.
+                        if 'ironic' not in host:
+                            computes_not_found.add(host)
                         continue
                     except exception.TooManyComputesForHost as e:
                         # TODO(mriedem): Should we treat this like the other
