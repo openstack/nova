@@ -2432,6 +2432,13 @@ class VMwareVMOps(object):
                 LOG.debug('Sync for server-group %s done', sg_uuid)
                 return
 
+            if not rule.enabled:
+                LOG.debug('Enabling DRS rule %s.', rule_name)
+                rule.enabled = True
+                cluster_util.update_rule(
+                    self._session, self._cluster, rule)
+                LOG.info('Enabled DRS rule %s.', rule_name)
+
             expected_moref_values = set(vutil.get_moref_value(m)
                                         for m in expected_members.values())
             existing_moref_values = set(vutil.get_moref_value(m)
