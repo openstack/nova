@@ -306,7 +306,7 @@ def get_rules_by_prefix(session, cluster_ref, rule_prefix):
     cluster_config = session._call_method(
         vutil, "get_object_property", cluster_ref, "configurationEx")
 
-    return [rule for rule in getattr(cluster_config, 'rules', [])
+    return [rule for rule in getattr(cluster_config, 'rule', [])
             if rule.name.startswith(rule_prefix)]
 
 
