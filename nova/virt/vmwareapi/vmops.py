@@ -1886,6 +1886,10 @@ class VMwareVMOps(object):
         datastores = ds_util.get_available_datastores(self._session,
                                                       self._cluster,
                                                       self._datastore_regex)
+
+        if not datastores:
+            return
+
         datastores_info = []
         for ds in datastores:
             dc_info = self.get_datacenter_ref_and_name(ds.ref)
