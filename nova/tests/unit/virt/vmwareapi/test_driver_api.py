@@ -2685,7 +2685,7 @@ class VMwareAPIVMTestCase(test.TestCase,
             recommendations=[recommendation]
         )
 
-    @mock.patch.object(vim_util, 'serialize_object')
+    @mock.patch.object(oslo_vim_util, 'serialize_object')
     @mock.patch.object(vmops.VMwareVMOps, 'place_vm')
     def test_pre_live_migration(self, mock_place_vm, mock_serialize_object):
         mock_place_vm.side_effect = self._create_placement_result
@@ -2699,7 +2699,7 @@ class VMwareAPIVMTestCase(test.TestCase,
 
     @mock.patch.object(vm_util, 'relocate_vm')
     @mock.patch.object(vm_util, 'get_hardware_devices')
-    @mock.patch.object(vim_util, 'deserialize_object')
+    @mock.patch.object(oslo_vim_util, 'deserialize_object')
     @mock.patch.object(volumeops.VMwareVolumeOps,
         'map_volumes_to_devices', returns=[])
     def test_live_migration(self, volumes_to_devices,
