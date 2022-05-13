@@ -39,7 +39,7 @@ class _Sub(object):
     def received(self, notification):
         with self._cond:
             self._notifications.append(notification)
-            self._cond.notifyAll()
+            self._cond.notify_all()
 
     def wait_n(self, n, event, timeout):
         """Wait until at least n notifications have been received, and return
