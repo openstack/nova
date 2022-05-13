@@ -2717,7 +2717,7 @@ class VMwareVMOps(object):
         defaults = migrate_data.relocate_defaults
 
         client_factory = self._session.vim.client.factory
-        relocate_spec = vim_util.deserialize_object(client_factory,
+        relocate_spec = vutil.deserialize_object(client_factory,
             defaults["relocate_spec"], "VirtualMachineRelocateSpec")
 
         if not migrate_data.is_same_vcenter:
@@ -2731,7 +2731,7 @@ class VMwareVMOps(object):
 
         service = defaults.get("service")
         if service:
-            relocate_spec.service = vim_util.deserialize_object(
+            relocate_spec.service = vutil.deserialize_object(
                 client_factory, service, "ServiceLocator")
 
         vm_ref = vm_util.get_vm_ref(self._session, instance)

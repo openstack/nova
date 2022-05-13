@@ -870,7 +870,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                 password=CONF.vmware.host_password))
 
         data.relocate_defaults = {
-            "service": nova_vim_util.serialize_object(service, typed=True),
+            "service": vim_util.serialize_object(service, typed=True),
             "target_host_ref_value": target_host_ref_value
         }
 
@@ -887,9 +887,9 @@ class VMwareVCDriver(driver.ComputeDriver):
 
         client_factory = self._session.vim.client.factory
         defaults = dest_check_data.relocate_defaults
-        service_locator = nova_vim_util.deserialize_object(client_factory,
-                                                           defaults["service"],
-                                                           "ServiceLocator")
+        service_locator = vim_util.deserialize_object(client_factory,
+                                                      defaults["service"],
+                                                      "ServiceLocator")
 
         dest_check_data.is_same_vcenter = (
             service_locator.instanceUuid == self._vcenter_uuid)

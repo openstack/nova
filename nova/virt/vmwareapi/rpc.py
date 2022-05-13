@@ -25,7 +25,6 @@ from nova.compute import rpcapi
 from nova.objects.instance import Instance
 from nova import profiler
 from nova import rpc
-from nova.virt.vmwareapi import vim_util
 
 
 _NAMESPACE = 'vmwareapi'
@@ -55,7 +54,7 @@ class VmwareRpcApi(object):
         ser = self._call('get_relocate_spec', ctxt,
                          instance_uuid=instance.uuid, flavor=flavor)
 
-        return vim_util.deserialize_object(factory, ser,
+        return vutil.deserialize_object(factory, ser,
                                            'VirtualMachineRelocateSpec')
 
     def change_vm_instance_uuid(self, ctxt, instance=None, cloned_vm_ref=None,
@@ -112,7 +111,7 @@ class VmwareRpcService(object):
         instance = Instance.get_by_uuid(ctxt, instance_uuid, expected_attrs=[])
         spec = self._vm_ops.get_relocate_spec(ctxt, instance, flavor,
                                               remote=True)
-        return vim_util.serialize_object(spec, typed=True)
+        return vutil.serialize_object(spec, typed=True)
 
     def change_vm_instance_uuid(self, ctxt, instance_uuid=None,
                                 cloned_vm_ref_value=None, uuid=None):
