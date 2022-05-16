@@ -2567,7 +2567,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # ServerRescueNegativeTestJSON.test_rescued_vm_detach_volume
             # Log a warning and let the upper layer detect that the device is
             # still attached and retry
-            LOG.error(
+            LOG.warning(
                 'Waiting for libvirt event about the detach of '
                 'device %s with device alias %s from instance %s is timed '
                 'out.', device_name, dev.alias, instance_uuid)
