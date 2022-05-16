@@ -1688,12 +1688,12 @@ def _set_hypervisor_type_and_version(stats, host_props):
 def _process_host_stats(obj, host_reservations_map):
     host_props = propset_dict(obj.propSet)
     runtime_summary = host_props["summary.runtime"]
-    hardware_summary = host_props["summary.hardware"]
-    stats_summary = host_props["summary.quickStats"]
+    hardware_summary = host_props.get("summary.hardware")
+    stats_summary = host_props.get("summary.quickStats")
     # Total vcpus is the sum of all pCPUs of individual hosts
     # The overcommitment ratio is factored in by the scheduler
-    threads = hardware_summary.numCpuThreads
-    mem_mb = hardware_summary.memorySize // units.Mi
+    threads = getattr(hardware_summary, "numCpuThreads", 0)
+    mem_mb = getattr(hardware_summary, "memorySize", 0) // units.Mi
 
     stats = {
         "available": (not runtime_summary.inMaintenanceMode and
