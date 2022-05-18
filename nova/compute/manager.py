@@ -8413,7 +8413,8 @@ class ComputeManager(manager.Manager):
         migrate_data.migration = migration
         self._rollback_live_migration(context, instance, dest,
                                       migrate_data=migrate_data,
-                                      source_bdms=source_bdms)
+                                      source_bdms=source_bdms,
+                                      pre_live_migration=True)
 
     def _do_pre_live_migration_from_source(self, context, dest, instance,
                                            block_migration, migration,
@@ -9167,7 +9168,8 @@ class ComputeManager(manager.Manager):
     def _rollback_live_migration(self, context, instance,
                                  dest, migrate_data=None,
                                  migration_status='failed',
-                                 source_bdms=None):
+                                 source_bdms=None,
+                                 pre_live_migration=False):
         """Recovers Instance/volume state from migrating -> running.
 
         :param context: security context
@@ -9217,8 +9219,14 @@ class ComputeManager(manager.Manager):
         #                  for nova-network)
         # NOTE(mriedem): This is a no-op for neutron.
         self.network_api.setup_networks_on_host(context, instance, self.host)
-        self.driver.rollback_live_migration_at_source(context, instance,
-                                                      migrate_data)
+
+        # NOTE(erlon): We should make sure that rollback_live_migration_at_src
+        # is not called in the pre_live_migration rollback as that will trigger
+        # the src host to re-attach interfaces which were not detached
+        # previously.
+        if not pre_live_migration:
+            self.driver.rollback_live_migration_at_source(context, instance,
+                                                          migrate_data)
 
         # NOTE(lyarwood): Fetch the current list of BDMs, disconnect any
         # connected volumes from the dest and delete any volume attachments
