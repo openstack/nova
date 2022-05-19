@@ -5248,7 +5248,8 @@ class TestAPI(TestAPIBase):
         self.assertEqual(['2', '3'], result, "Invalid preexisting ports")
 
     @mock.patch('nova.network.neutron.API._show_port')
-    def _test_unbind_ports_get_client(self, mock_neutron, mock_show):
+    @mock.patch('nova.network.neutron.get_client')
+    def test_unbind_ports_get_client(self, mock_neutron, mock_show):
         mock_ctx = mock.Mock(is_admin=False)
         ports = ["1", "2", "3"]
 
@@ -5264,25 +5265,18 @@ class TestAPI(TestAPIBase):
         self.assertEqual(1, mock_neutron.call_count)
         mock_neutron.assert_has_calls(get_client_calls, True)
 
-    @mock.patch('nova.network.neutron.get_client')
-    def test_unbind_ports_get_client_binding_extension(self,
-                                                       mock_neutron):
-        self._test_unbind_ports_get_client(mock_neutron)
-
-    @mock.patch('nova.network.neutron.get_client')
-    def test_unbind_ports_get_client(self, mock_neutron):
-        self._test_unbind_ports_get_client(mock_neutron)
-
     @mock.patch('nova.network.neutron.API.has_dns_extension',
                 new=mock.Mock(return_value=False))
     @mock.patch('nova.network.neutron.API._show_port')
-    def _test_unbind_ports(self, mock_neutron, mock_show):
+    @mock.patch('nova.network.neutron.get_client')
+    def test_unbind_ports(self, mock_neutron, mock_show):
         mock_client = mock.Mock()
         mock_update_port = mock.Mock()
         mock_client.update_port = mock_update_port
         mock_ctx = mock.Mock(is_admin=False)
         ports = ["1", "2", "3"]
         mock_show.side_effect = [{"id": "1"}, {"id": "2"}, {"id": "3"}]
+
         api = neutronapi.API()
         api._unbind_ports(mock_ctx, ports, mock_neutron, mock_client)
 
@@ -5295,14 +5289,6 @@ class TestAPI(TestAPIBase):
 
         self.assertEqual(3, mock_update_port.call_count)
         mock_update_port.assert_has_calls(update_port_calls)
-
-    @mock.patch('nova.network.neutron.get_client')
-    def test_unbind_ports_binding_ext(self, mock_neutron):
-        self._test_unbind_ports(mock_neutron)
-
-    @mock.patch('nova.network.neutron.get_client')
-    def test_unbind_ports(self, mock_neutron):
-        self._test_unbind_ports(mock_neutron)
 
     def test_unbind_ports_no_port_ids(self):
         # Tests that None entries in the ports list are filtered out.
@@ -6068,7 +6054,6 @@ class TestAPI(TestAPIBase):
     def test_unbind_ports_port_show_portnotfound(self, mock_log, mock_show):
         api = neutronapi.API()
         neutron_client = mock.Mock()
-        mock_show.return_value = {'id': uuids.port}
         api._unbind_ports(self.context, [uuids.port_id],
                           neutron_client, neutron_client)
         mock_show.assert_called_once_with(
@@ -6076,6 +6061,63 @@ class TestAPI(TestAPIBase):
             fields=['binding:profile', 'network_id'],
             neutron_client=mock.ANY)
         mock_log.assert_not_called()
+
+    @mock.patch(
+        'nova.network.neutron.API.has_dns_extension',
+        new=mock.Mock(return_value=False),
+    )
+    @mock.patch('nova.network.neutron.API._show_port')
+    @mock.patch.object(neutronapi, 'LOG')
+    def test_unbind_ports_port_show_portnotfound_multiple_ports(
+        self, mock_log, mock_show,
+    ):
+        """Ensure we continue unbinding ports even when one isn't found."""
+        mock_show.side_effect = [
+            exception.PortNotFound(port_id=uuids.port_a),
+            {'id': uuids.port_b},
+        ]
+        api = neutronapi.API()
+        neutron_client = mock.Mock()
+
+        api._unbind_ports(
+            self.context,
+            [uuids.port_a, uuids.port_b],
+            neutron_client,
+            neutron_client,
+        )
+
+        mock_show.assert_has_calls(
+            [
+                mock.call(
+                    self.context,
+                    uuids.port_a,
+                    fields=['binding:profile', 'network_id'],
+                    neutron_client=neutron_client,
+                ),
+                mock.call(
+                    self.context,
+                    uuids.port_b,
+                    fields=['binding:profile', 'network_id'],
+                    neutron_client=neutron_client,
+                ),
+            ]
+        )
+        # Only the port that exists should be updated
+        neutron_client.update_port.assert_called_once_with(
+            uuids.port_b,
+            {
+                'port': {
+                    'device_id': '',
+                    'device_owner': '',
+                    'binding:profile': {},
+                    'binding:host_id': None,
+                }
+            }
+        )
+        mock_log.exception.assert_not_called()
+        mock_log.debug.assert_called_with(
+            'Unable to show port %s as it no longer exists.', uuids.port_a,
+        )
 
     @mock.patch('nova.network.neutron.API.has_dns_extension',
                 new=mock.Mock(return_value=False))
@@ -6100,7 +6142,7 @@ class TestAPI(TestAPIBase):
                 new=mock.Mock(return_value=False))
     @mock.patch('nova.network.neutron.API._show_port')
     @mock.patch.object(neutronapi.LOG, 'exception')
-    def test_unbind_ports_portnotfound(self, mock_log, mock_show):
+    def test_unbind_ports_port_update_portnotfound(self, mock_log, mock_show):
         api = neutronapi.API()
         neutron_client = mock.Mock()
         neutron_client.update_port = mock.Mock(
@@ -6118,7 +6160,9 @@ class TestAPI(TestAPIBase):
                 new=mock.Mock(return_value=False))
     @mock.patch('nova.network.neutron.API._show_port')
     @mock.patch.object(neutronapi.LOG, 'exception')
-    def test_unbind_ports_unexpected_error(self, mock_log, mock_show):
+    def test_unbind_ports_port_update_unexpected_error(
+        self, mock_log, mock_show,
+    ):
         api = neutronapi.API()
         neutron_client = mock.Mock()
         neutron_client.update_port = mock.Mock(
