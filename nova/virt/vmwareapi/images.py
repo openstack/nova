@@ -369,14 +369,21 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
         except ValueError as e:
             LOG.debug(e)
 
+    imported_vm_ref = None
     if url_handle:
-        imported_vm_ref = image_pull_from_url(url_handle,
-                                              session=session,
-                                              resource_pool=res_pool_ref,
-                                              vm_import_spec=vm_import_spec,
-                                              vm_folder=vm_folder_ref,
-                                              image_size=file_size)
-    else:
+        try:
+            imported_vm_ref = image_pull_from_url(
+                url_handle,
+                session=session,
+                resource_pool=res_pool_ref,
+                vm_import_spec=vm_import_spec,
+                vm_folder=vm_folder_ref,
+                image_size=file_size)
+        except vexc.VimFaultException as e:
+            LOG.warning("Failed to pull the image directly from URL. Falling "
+                        "back to uploading the image to the HttpNfcLease.", e)
+
+    if not imported_vm_ref:
         read_iter = IMAGE_API.download(context, image_ref)
         read_handle = rw_handles.ImageReadHandle(read_iter)
 
