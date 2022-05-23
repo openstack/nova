@@ -189,12 +189,12 @@ class AttachInterfacesDeprecatedPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.network.neutron.API.list_ports')
     def test_deprecated_policy_overridden_rule_is_checked(self, mock_port,
                                                           mock_get):
-        # Test to verify if deprecatd overridden policy is working.
+        # Test to verify if deprecated overridden policy is working.
 
         # check for success as admin role. Deprecated rule
         # has been overridden with admin checks in policy.yaml
         # If admin role pass it means overridden rule is enforced by
-        # olso.policy because new default is system or project reader and the
+        # oslo.policy because new default is system or project reader and the
         # old default is admin.
         self.controller.index(self.admin_req, uuids.fake_id)
 

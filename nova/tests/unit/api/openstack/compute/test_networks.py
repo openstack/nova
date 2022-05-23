@@ -26,7 +26,7 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 
-# NOTE(stephenfin): obviously these aren't complete reponses, but this is all
+# NOTE(stephenfin): obviously these aren't complete responses, but this is all
 # we care about
 FAKE_NETWORKS = [
     {

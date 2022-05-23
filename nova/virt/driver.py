@@ -131,7 +131,7 @@ CAPABILITY_TRAITS_MAP = {
 
 
 def _check_image_type_exclude_list(capability, supported):
-    """Enforce the exclusion list on image_type capabilites.
+    """Enforce the exclusion list on image_type capabilities.
 
     :param capability: The supports_image_type_foo capability being checked
     :param supported: The flag indicating whether the virt driver *can*

@@ -1237,7 +1237,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_version_cap_all_cells_no_access(self, mock_allcells, mock_minver,
                                              mock_log_error):
         """Tests a scenario where nova-compute is configured with a connection
-        to the API database and fails trying to get the minium nova-compute
+        to the API database and fails trying to get the minimum nova-compute
         service version across all cells because nova-compute is configured to
         not allow direct database access.
         """

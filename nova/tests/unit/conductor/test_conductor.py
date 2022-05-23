@@ -2402,7 +2402,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
              '1', None, None, dp_name)
         arq_uuid = arq_in_list[0]['uuid']
 
-        # muliti device request
+        # multi device request
         mock_create.return_value = [arq_in_list[0], arq_in_list[0]]
         rp_map = {"request_group_0" + str(port_id): rp_uuid}
         request_tuples = [('123', '1.2.3.4', port_id,

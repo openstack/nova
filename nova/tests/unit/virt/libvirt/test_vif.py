@@ -899,7 +899,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     @mock.patch.object(vif.designer, 'set_vif_guest_frontend_config',
                        wraps=vif.designer.set_vif_guest_frontend_config)
-    def _test_model_sriov(self, vinc_type, mock_set):
+    def _test_model_sriov(self, vnic_type, mock_set):
         """Direct attach vNICs shouldn't retrieve info from image_meta."""
         self.flags(use_virtio_for_bridges=True,
                    virt_type='kvm',
@@ -911,7 +911,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(
             {'properties': {'hw_vif_model': 'virtio'}})
         conf = d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
-                                 None, 'kvm', vinc_type)
+                                 None, 'kvm', vnic_type)
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
                                          None, None, None, None)
         self.assertIsNone(conf.vhost_queues)

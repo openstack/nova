@@ -533,7 +533,7 @@ class Guest(object):
         :param no_metadata: Make snapshot without remembering it
         :param disk_only: Disk snapshot, no system checkpoint
         :param reuse_ext: Reuse any existing external files
-        :param quiesce: Use QGA to quiece all mounted file systems
+        :param quiesce: Use QGA to quiesce all mounted file systems
         """
         flags = no_metadata and (
             libvirt.VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA or 0)

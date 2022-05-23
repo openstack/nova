@@ -2249,7 +2249,7 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[2].cpu_usage, 1)
         self.assertEqual(hostusage.cells[2].memory_usage, 256)
 
-    def test_host_usage_culmulative_with_free(self):
+    def test_host_usage_cumulative_with_free(self):
         hosttopo = objects.NUMATopology(cells=[
             objects.NUMACell(
                 id=0,
@@ -2657,7 +2657,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                 self.host, self.instance2, self.limits)
         self.assertIsNone(fitted_instance)
 
-    def test_get_fitting_culmulative_fails_limits(self):
+    def test_get_fitting_cumulative_fails_limits(self):
         fitted_instance1 = hw.numa_fit_instance_to_host(
                 self.host, self.instance1, self.limits)
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)
@@ -2668,7 +2668,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                 self.host, self.instance2, self.limits)
         self.assertIsNone(fitted_instance2)
 
-    def test_get_fitting_culmulative_success_limits(self):
+    def test_get_fitting_cumulative_success_limits(self):
         fitted_instance1 = hw.numa_fit_instance_to_host(
                 self.host, self.instance1, self.limits)
         self.assertIsInstance(fitted_instance1, objects.InstanceNUMATopology)

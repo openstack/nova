@@ -254,7 +254,7 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
         req_get = {'tenant_id': -1}
         self._test_admin_can_fetch_used_limits_for_own_project(req_get)
 
-    def test_admin_can_fetch_used_limits_with_unkown_param(self):
+    def test_admin_can_fetch_used_limits_with_unknown_param(self):
         req_get = {'tenant_id': '123', 'unknown': 'unknown'}
         self._test_admin_can_fetch_used_limits_for_own_project(req_get)
 
@@ -462,7 +462,7 @@ class LimitsControllerTestV275(BaseLimitTestSuite):
         absolute_limits = {
             "metadata_items": 1,
         }
-        req = fakes.HTTPRequest.blank("/?unkown=fake",
+        req = fakes.HTTPRequest.blank("/?unknown=fake",
                                        version='2.74')
 
         def _get_project_quotas(context, project_id, usages=True):
@@ -475,7 +475,7 @@ class LimitsControllerTestV275(BaseLimitTestSuite):
             self.controller.index(req)
 
     def test_index_additional_query_param(self):
-        req = fakes.HTTPRequest.blank("/?unkown=fake",
+        req = fakes.HTTPRequest.blank("/?unknown=fake",
                                       version='2.75')
         self.assertRaises(
             exception.ValidationError,

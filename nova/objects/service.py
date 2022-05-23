@@ -36,7 +36,7 @@ SERVICE_VERSION = 61
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
 # time we bump the version, we will put an entry here to record the change,
-# along with any pertinent data. For things that we can programatically
+# along with any pertinent data. For things that we can programmatically
 # detect that need a bump, we put something in _collect_things() below to
 # assemble a dict of things we can check. For example, we pretty much always
 # want to consider the compute RPC API version a thing that requires a service

@@ -134,7 +134,7 @@ class MigrateServerOverridePolicyTest(
         rule_migrate = ms_policies.POLICY_ROOT % 'migrate'
         rule_live_migrate = ms_policies.POLICY_ROOT % 'migrate_live'
         # NOTE(gmann): override the rule to project member and verify it
-        # work as policy is system and projct scoped.
+        # work as policy is system and project scoped.
         self.policy.set_rules({
             rule_migrate: base_policy.PROJECT_MEMBER,
             rule_live_migrate: base_policy.PROJECT_MEMBER},

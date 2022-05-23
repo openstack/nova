@@ -5000,8 +5000,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute.reportclient,
                               'remove_provider_tree_from_instance_allocation'),
             mock.patch('nova.objects.Instance.get_by_uuid')
-        ) as (_get_intances_on_driver, destroy, migration_list, migration_save,
-              get_resources, remove_allocation, instance_get_by_uuid):
+        ) as (_get_instances_on_driver, destroy, migration_list,
+              migration_save, get_resources, remove_allocation,
+              instance_get_by_uuid):
             migration_list.return_value = [migration_1]
             instance_get_by_uuid.return_value = instance_1
             get_resources.return_value = mock.sentinel.resources
@@ -5354,7 +5355,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self, mock_rebuild_claim, mock_set_migration_status,
             mock_validate_policy, mock_image_meta, mock_notify_exists,
             mock_notify_legacy, mock_notify, mock_instance_save,
-            mock_setup_networks, mock_setup_intance_network, mock_get_bdms,
+            mock_setup_networks, mock_setup_instance_network, mock_get_bdms,
             mock_mutate_migration, mock_appy_migration, mock_drop_migration,
             mock_context_elevated):
         self.flags(api_servers=['http://localhost/image/v2'], group='glance')

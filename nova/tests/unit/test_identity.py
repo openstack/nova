@@ -29,7 +29,7 @@ class IdentityValidationTest(test.NoDBTestCase):
 
     There are times when Nova stores keystone project_id and user_id
     in our database as strings. Until the Pike release none of this
-    data was validated, so it was very easy for adminstrators to think
+    data was validated, so it was very easy for administrators to think
     they were adjusting quota for a project (by name) when instead
     they were just inserting keys in a database that would not get used.
 

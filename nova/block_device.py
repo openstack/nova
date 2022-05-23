@@ -612,7 +612,7 @@ def get_bdm_local_disk_num(block_device_mappings):
 
 def get_bdm_image_metadata(context, image_api, volume_api,
                            block_device_mapping, legacy_bdm=True):
-    """Attempt to retrive image metadata from a given block_device_mapping.
+    """Attempt to retrieve image metadata from a given block_device_mapping.
 
     If we are booting from a volume, we need to get the volume details from
     Cinder and make sure we pass the metadata back accordingly.

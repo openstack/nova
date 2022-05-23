@@ -196,7 +196,7 @@ class TestCreateFlavor(test.TestCase):
 
     def test_rxtx_factor_must_be_within_sql_float_range(self):
         # We do * 10 since this is an approximation and we need to make sure
-        # the difference is noticeble.
+        # the difference is noticeable.
         over_rxtx_factor = db_const.SQL_SP_FLOAT_MAX * 10
 
         self.assertInvalidInput('flavor1', 64, 1, 120,

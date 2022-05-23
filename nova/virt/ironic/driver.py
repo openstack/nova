@@ -742,7 +742,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             # baremetal nodes. Depending on the version of Ironic,
             # this can be as long as 2-10 seconds per every thousand
             # nodes, and this call may retrieve all nodes in a deployment,
-            # depending on if any filter paramters are applied.
+            # depending on if any filter parameters are applied.
             return self._get_node_list(fields=_NODE_FIELDS, **kwargs)
 
         # NOTE(jroll) if partition_key is set, we need to limit nodes that
@@ -2057,7 +2057,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         return None
 
     def _can_send_version(self, min_version=None, max_version=None):
-        """Validate if the suppplied version is available in the API."""
+        """Validate if the supplied version is available in the API."""
         # NOTE(TheJulia): This will effectively just be a pass if no
         # version negotiation has occured, since there is no way for
         # us to know without explicitly otherwise requesting that

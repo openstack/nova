@@ -25,7 +25,7 @@ class TestServersPerUserQuota(test.TestCase,
     tracking usages in a separate database table. As part of that change,
     per-user quota functionality was broken for server creates.
 
-    When mulitple users in the same project have per-user quota, they are meant
+    When multiple users in the same project have per-user quota, they are meant
     to be allowed to create resources such that may not exceed their
     per-user quota nor their project quota.
 

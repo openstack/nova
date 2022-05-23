@@ -623,7 +623,7 @@ class LibvirtGenericVIFDriver(object):
         #  2. libvirt driver does not change mac address for macvtap VNICs
         #     or Alternatively does not rely on recreating libvirt's nodev
         #     name from the current mac address set on the netdevice.
-        #     See: virt.libvrit.driver.LibvirtDriver._get_pcinet_info
+        #     See: virt.libvirt.driver.LibvirtDriver._get_pcinet_info
         if vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP:
             set_vf_interface_vlan(
                 vif['profile']['pci_slot'],

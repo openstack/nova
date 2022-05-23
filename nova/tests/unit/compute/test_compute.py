@@ -7379,7 +7379,7 @@ class ComputeTestCase(BaseTestCase,
             fake_instance.fake_db_instance(uuid=uuids.migration_instance_5,
                                            vm_state=vm_states.ACTIVE,
                                            task_state=None),
-            # The expceted migration result will be None instead of error
+            # The expected migration result will be None instead of error
             # since _poll_unconfirmed_resizes will not change it
             # when the instance vm state is RESIZED and task state
             # is deleting, see bug 1301696 for more detail
@@ -10493,7 +10493,7 @@ class ComputeAPITestCase(BaseTestCase):
         pci_reqs = mock_claim_pci.mock_calls[0][1][1]
         self.assertEqual([pci_req], pci_reqs.requests)
 
-        # after the pci claim we also need to allocate that pci to the instace
+        # after the pci claim we also need to allocate that pci to the instance
         mock_allocate_pci.assert_called_once_with(self.context, instance)
         # and as this changes the instance we have to save it.
         mock_save.assert_called_once_with()

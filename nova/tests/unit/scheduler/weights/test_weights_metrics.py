@@ -114,7 +114,7 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
         setting = [idle + '=-2', idle + '=1']
         self._do_test(setting, 1.0, 'host1')
 
-    def test_single_resourcenegtive_ratio(self):
+    def test_single_resourcenegative_ratio(self):
         # host1: idle=512
         # host2: idle=1024
         # host3: idle=3072

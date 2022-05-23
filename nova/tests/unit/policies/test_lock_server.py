@@ -119,7 +119,7 @@ class LockServerPolicyTest(base.BasePolicyTest):
             exc.format_message())
 
     @mock.patch('nova.compute.api.API.lock')
-    def test_lock_sevrer_overridden_policy_pass_with_same_user(
+    def test_lock_server_overridden_policy_pass_with_same_user(
         self, mock_lock):
         rule_name = ls_policies.POLICY_ROOT % 'lock'
         self.policy.set_rules({rule_name: "user_id:%(user_id)s"})

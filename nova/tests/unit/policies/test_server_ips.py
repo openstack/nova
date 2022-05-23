@@ -83,7 +83,7 @@ class ServerIpsNoLegacyNoScopePolicyTest(ServerIpsPolicyTest):
     def setUp(self):
         super(ServerIpsNoLegacyNoScopePolicyTest, self).setUp()
         # With no legacy, only project admin, member, and reader will be able
-        # to get their server IP adderesses.
+        # to get their server IP addresses.
         self.project_reader_authorized_contexts = [
             self.project_admin_context, self.project_member_context,
             self.project_reader_context,
@@ -104,7 +104,7 @@ class ServerIpsScopeTypePolicyTest(ServerIpsPolicyTest):
         super(ServerIpsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
         # With scope enabled, system users will not be able
-        # to get the server IP adderesses.
+        # to get the server IP addresses.
         self.project_reader_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
             self.project_member_context, self.project_reader_context,
@@ -121,7 +121,7 @@ class ServerIpsScopeTypeNoLegacyPolicyTest(ServerIpsScopeTypePolicyTest):
     def setUp(self):
         super(ServerIpsScopeTypeNoLegacyPolicyTest, self).setUp()
         # With no legacy and scope enable, only project admin, member,
-        # and reader will be able to get their server IP adderesses.
+        # and reader will be able to get their server IP addresses.
         self.project_reader_authorized_contexts = [
             self.project_admin_context, self.project_member_context,
             self.project_reader_context

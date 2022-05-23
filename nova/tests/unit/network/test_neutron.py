@@ -5136,7 +5136,7 @@ class TestAPI(TestAPIBase):
         self.api.has_port_binding_extension = mock.Mock(return_value=True)
         migrate_profile = {
             constants.MIGRATING_ATTR: 'new-host'}
-        # Pass a port with an migration porfile attribute.
+        # Pass a port with an migration profile attribute.
         port_id = uuids.port_id
         get_ports = {'ports': [
                         {'id': port_id,
@@ -5168,7 +5168,7 @@ class TestAPI(TestAPIBase):
         self.api.has_port_binding_extension = mock.Mock(return_value=True)
         migrate_profile = {
             constants.MIGRATING_ATTR: 'new-host'}
-        # Pass a port with an migration porfile attribute.
+        # Pass a port with an migration profile attribute.
         get_ports = {
             'ports': [
                 {'id': uuids.port1,
@@ -5208,7 +5208,7 @@ class TestAPI(TestAPIBase):
 
         instance = fake_instance.fake_instance_obj(self.context)
         self.api.has_port_binding_extension = mock.Mock(return_value=True)
-        # Pass a port without any migration porfile attribute.
+        # Pass a port without any migration profile attribute.
         get_ports = {'ports': [
                         {'id': uuids.port_id,
                          constants.BINDING_HOST_ID: instance.host}]}
@@ -8118,7 +8118,7 @@ class TestAPIPortbinding(TestAPIBase):
         self.assertEqual(1, mocked_client.create_port_binding.call_count)
         self.assertDictEqual({uuids.port: binding['binding']}, result)
 
-        # assert that that if vnic_type and profile are set in VIF object
+        # assert that if vnic_type and profile are set in VIF object
         # the provided vnic_type and profile take precedence.
 
         nwinfo = model.NetworkInfo([model.VIF(id=uuids.port,

@@ -1163,7 +1163,7 @@ class RevertResizeTask(base.TaskBase):
                 setattr(source_obj, field, getattr(target_obj, field))
 
     def _update_bdms_in_source_cell(self, source_cell_context):
-        """Update BlockDeviceMapppings in the source cell database.
+        """Update BlockDeviceMappings in the source cell database.
 
         It is possible to attach/detach volumes to/from a resized instance,
         which would create/delete BDM records in the target cell, so we have

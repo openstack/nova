@@ -79,7 +79,7 @@ class AdminActionsNoLegacyNoScopePolicyTest(AdminActionsPolicyTest):
 
     def setUp(self):
         super(AdminActionsNoLegacyNoScopePolicyTest, self).setUp()
-        # With no legacy rule and scope diable, only project admin
+        # With no legacy rule and scope disable, only project admin
         # is able to perform server admin actions.
         self.project_action_authorized_contexts = [self.project_admin_context]
 

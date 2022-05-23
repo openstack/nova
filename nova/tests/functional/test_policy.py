@@ -60,7 +60,7 @@ class HostStatusPolicyTestCase(test.TestCase,
             overwrite=False)
         # Create a server as a normal non-admin user.
         # In microversion 2.36 the /images proxy API was deprecated, so
-        # specifiy the image_uuid directly.
+        # specify the image_uuid directly.
         kwargs = {'image_uuid': self.image_uuid}
         if networks:
             # Starting with microversion 2.37 the networks field is required.

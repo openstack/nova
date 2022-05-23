@@ -8782,7 +8782,7 @@ class ComputeManager(manager.Manager):
             # must be deleted for preparing next block migration
             # must be deleted for preparing next live migration w/o shared
             # storage
-            # vpmem must be cleanped
+            # vpmem must be cleaned
             do_cleanup = not migrate_data.is_shared_instance_path or has_vpmem
             destroy_disks = not migrate_data.is_shared_block_storage
         elif isinstance(migrate_data, migrate_data_obj.HyperVLiveMigrateData):

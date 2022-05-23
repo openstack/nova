@@ -446,7 +446,7 @@ class ConsolesExtensionTestV26(test.NoDBTestCase):
                           self.req, fakes.FAKE_UUID, body=body)
         self.assertTrue(mock_handler.called)
 
-    def test_create_console_not_found(self,):
+    def test_create_console_not_found(self):
         mock_handler = mock.MagicMock()
         mock_handler.side_effect = exception.InstanceNotFound(
             instance_id='xxx')

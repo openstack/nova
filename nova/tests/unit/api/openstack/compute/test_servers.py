@@ -8023,7 +8023,7 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
             version=self.microversion)
 
     def test_get_server_list_detail_with_down_cells(self):
-        # Fake out 1 partially constructued instance and one full instance.
+        # Fake out 1 partially constructed instance and one full instance.
         self.instances = [
                 self.instance,
                 objects.Instance(
@@ -8151,7 +8151,7 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
         self.assertThat(output, matchers.DictMatches(expected))
 
     def test_get_server_list_with_down_cells(self):
-        # Fake out 1 partially constructued instance and one full instance.
+        # Fake out 1 partially constructed instance and one full instance.
         self.instances = [
                 self.instance,
                 objects.Instance(
@@ -8203,7 +8203,7 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
         self.assertThat(output, matchers.DictMatches(expected))
 
     def test_get_server_with_down_cells(self):
-        # Fake out 1 partially constructued instance.
+        # Fake out 1 partially constructed instance.
         self.instance = objects.Instance(
             context=self.ctxt,
             uuid=self.uuid,
@@ -8266,7 +8266,7 @@ class ServersViewBuilderTestV269(_ServersViewBuilderTest):
         self.assertThat(output, matchers.DictMatches(expected))
 
     def test_get_server_without_image_avz_user_id_set_from_down_cells(self):
-        # Fake out 1 partially constructued instance.
+        # Fake out 1 partially constructed instance.
         self.instance = objects.Instance(
             context=self.ctxt,
             uuid=self.uuid,

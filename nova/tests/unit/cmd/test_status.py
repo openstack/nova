@@ -18,7 +18,7 @@ Unit tests for the nova-status CLI interfaces.
 
 # NOTE(cdent): Additional tests of nova-status may be found in
 # nova/tests/functional/test_nova_status.py. Those tests use the external
-# PlacementFixture, which is only available in functioanl tests.
+# PlacementFixture, which is only available in functional tests.
 
 from io import StringIO
 

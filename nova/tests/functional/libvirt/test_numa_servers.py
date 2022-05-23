@@ -731,7 +731,7 @@ class NUMAServersTest(NUMAServersTestBase):
         for host, compute_rp_uuid in self.compute_rp_uuids.items():
             if host == original_host:
                 # the host that had the instance should no longer have
-                # alocations since the resize has been confirmed
+                # allocations since the resize has been confirmed
                 expected_usage = {'VCPU': 0, 'PCPU': 0, 'DISK_GB': 0,
                                   'MEMORY_MB': 0}
             else:

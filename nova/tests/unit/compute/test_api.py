@@ -1354,7 +1354,7 @@ class _ComputeAPIUnitTestMixIn(object):
             hard_delete=False)
 
     def _fake_do_delete(context, instance, bdms,
-                        rservations=None, local=False):
+                        reservations=None, local=False):
         pass
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
@@ -3417,7 +3417,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 raise exception.InstanceQuiesceNotSupported(
                     instance_id=instance['uuid'], reason='unsupported')
             if quiesce_fails:
-                raise oslo_exceptions.MessagingTimeout('quiece timeout')
+                raise oslo_exceptions.MessagingTimeout('quiesce timeout')
             quiesced[0] = True
 
         def fake_unquiesce_instance(context, instance, mapping=None):
@@ -3579,7 +3579,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_snapshot_volume_backed(quiesce_required=True,
                                           quiesce_unsupported=False)
 
-    def test_snaphost_volume_backed_with_quiesce_failure(self):
+    def test_snapshot_volume_backed_with_quiesce_failure(self):
         self.assertRaises(oslo_exceptions.MessagingTimeout,
                           self._test_snapshot_volume_backed,
                           quiesce_required=True,
@@ -4815,7 +4815,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_validate_vol_az_for_create_vol_az_matches_default_cpu_az(self):
         """Tests the scenario that the instance is not being created in a
         specific zone and the volume's zone matches
-        CONF.default_availabilty_zone so None is returned indicating the
+        CONF.default_availability_zone so None is returned indicating the
         RequestSpec.availability_zone does not need to be updated.
         """
         self.flags(cross_az_attach=False, group='cinder')
@@ -7155,7 +7155,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         # be no conflict.
         self.compute_api._validate_numa_rebuild(instance, image, flavor)
 
-    def test__validate_numa_rebuild_add_numa_toplogy(self):
+    def test__validate_numa_rebuild_add_numa_topology(self):
         """Assert that a rebuild of an instance with a new image
         that requests a NUMA topology when the original instance did not
         have a NUMA topology is invalid.
@@ -7178,7 +7178,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             exception.ImageNUMATopologyRebuildConflict,
             self.compute_api._validate_numa_rebuild, instance, image, flavor)
 
-    def test__validate_numa_rebuild_remove_numa_toplogy(self):
+    def test__validate_numa_rebuild_remove_numa_topology(self):
         """Assert that a rebuild of an instance with a new image
         that does not request a NUMA topology when the original image did
         is invalid if it would alter the instances topology as a result.
@@ -7209,7 +7209,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                 self.compute_api._validate_numa_rebuild, instance,
                 image, flavor)
 
-    def test__validate_numa_rebuild_alter_numa_toplogy(self):
+    def test__validate_numa_rebuild_alter_numa_topology(self):
         """Assert that a rebuild of an instance with a new image
         that requests a different NUMA topology than the original image
         is invalid.
@@ -8031,7 +8031,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     @mock.patch('nova.objects.service.get_minimum_version_all_cells',
                 return_value=54)
     def test_block_accelerators_until_service(self, mock_get_min):
-        """Support operating server with acclerators until compute service
+        """Support operating server with accelerators until compute service
         more than the version of 53.
         """
         extra_specs = {'accel:device_profile': 'mydp'}

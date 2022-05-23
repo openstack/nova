@@ -267,7 +267,7 @@ class ComputeNodeTestCase(test.TestCase):
         self.assertEqual(res, (1, 1))
 
         # the ratio is refreshed to CONF.initial_xxx_allocation_ratio
-        # beacause CONF.xxx_allocation_ratio is None
+        # because CONF.xxx_allocation_ratio is None
         cns = db.compute_node_get_all(self.context)
         # the ratio is refreshed to CONF.xxx_allocation_ratio
         for cn in cns:

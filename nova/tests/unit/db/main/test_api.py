@@ -3359,7 +3359,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualListsOfObjects(expected, actions)
 
     def test_instance_actions_get_are_in_order(self):
-        """Ensure retrived actions are in order."""
+        """Ensure retrieved actions are in order."""
         uuid1 = uuidsentinel.uuid1
 
         extra = {
@@ -3618,7 +3618,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertActionEventSaved(event, action['id'])
 
     def test_instance_action_events_get_are_in_order(self):
-        """Ensure retrived action events are in order."""
+        """Ensure retrieved action events are in order."""
         uuid1 = uuidsentinel.uuid1
 
         action = db.action_start(self.ctxt,
@@ -5690,7 +5690,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         """Ensure shadow tables are empty
 
         This method ensures that all the shadow tables in the schema,
-        except for specificially named exceptions, are empty. This
+        except for specifically named exceptions, are empty. This
         makes sure that archiving isn't moving unexpected content.
         """
         metadata = sa.MetaData()
