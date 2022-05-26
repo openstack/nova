@@ -302,8 +302,6 @@ class NovaProxyRequestHandlerTestCase(test.NoDBTestCase):
             'instance_uuid': uuids.instance,
             'host': 'node1',
             'port': '10000',
-            'host': 'node1',
-            'port': '10000',
             'internal_access_path': 'xxx',
             'console_type': 'novnc',
             'access_url_base': 'https://example.net:6080'

@@ -216,7 +216,7 @@ class SecurityGroupsPolicyTest(base.BasePolicyTest):
         body = {'security_group_rule': {
             'ip_protocol': 'test', 'group_id': uuids.fake_id,
             'parent_group_id': uuids.fake_id,
-            'from_port': 22, 'from_port': 22}}
+            'from_port': 22}}
         self.common_policy_auth(self.project_member_authorized_contexts,
                                 rule_name,
                                 self.rule_ctr.create,
