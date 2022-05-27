@@ -279,6 +279,9 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         if (target_version < (1, 10) and
                 'src_supports_numa_live_migration' in primitive):
             del primitive['src_supports_numa_live_migration']
+        if (target_version < (1, 10) and
+                'dst_supports_numa_live_migration' in primitive):
+            del primitive['dst_supports_numa_live_migration']
         if target_version < (1, 10) and 'dst_numa_info' in primitive:
             del primitive['dst_numa_info']
         if target_version < (1, 9) and 'vifs' in primitive:
