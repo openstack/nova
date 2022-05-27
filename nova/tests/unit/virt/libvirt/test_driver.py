@@ -10033,6 +10033,61 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # is called with the LUKSv1 payload offset taken into account.
         block_device.resize.assert_called_once_with(new_size_minus_offset)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    def test_extend_volume_os_brick_block(self, mock_get_encryption_metadata,
+                                          mock_get_encryptor):
+        """Test extend volume that uses an os-brick encryptor."""
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        connection_info = {
+            'serial': uuids.volume_id,
+            'driver_volume_type': 'fake',
+            'data': {
+                'device_path': mock.sentinel.device_path,
+                'access_mode': 'rw'
+            }
+        }
+
+        block_device = mock.Mock(spec=libvirt_guest.BlockDevice,
+                                 _disk=mock.sentinel.disk)
+        guest = mock.Mock(spec=libvirt_guest.Guest)
+        guest.get_block_device.return_value = block_device
+        guest.get_power_state.return_value = power_state.RUNNING
+
+        # The requested_size is provided to extend_volume in bytes.
+        new_size = 20 * units.Gi
+        # Decrypted volume size reported by os-brick will be smaller
+        new_size_minus_offset = new_size - (16384 * units.Ki)
+
+        mock_brick_extend = mock_get_encryptor.return_value.extend_volume
+        mock_brick_extend.return_value = new_size_minus_offset
+
+        drvr._host.get_guest = mock.Mock(return_value=guest)
+        drvr._extend_volume = mock.Mock(return_value=new_size)
+
+        encryption = {'provider': 'luks2', 'control_location': 'front-end'}
+        mock_get_encryption_metadata.return_value = encryption
+
+        # Extend the volume to new_size
+        drvr.extend_volume(self.context, connection_info, instance, new_size)
+
+        # Assert that the expected calls are made prior to the device resize.
+        drvr._host.get_guest.assert_called_once_with(instance)
+        guest.get_power_state.assert_called_once_with(drvr._host)
+        guest.get_block_device(mock.sentinel.device_path)
+
+        # Assert calls to the os-brick encryptor extend
+        mock_get_encryptor.assert_called_once_with(connection_info, encryption)
+        mock_brick_extend.assert_called_once_with(self.context, **encryption)
+
+        mock_get_encryption_metadata.assert_called_once_with(
+            self.context, drvr._volume_api, uuids.volume_id, connection_info)
+
+        # Assert that the Libvirt call to resize the device within the instance
+        # is called with the size reported by os-brick
+        block_device.resize.assert_called_once_with(new_size_minus_offset)
+
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
     def test_use_encryptor_connection_info_incomplete(self,

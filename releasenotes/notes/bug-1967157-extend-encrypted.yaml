@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Extending attached encrypted volumes that failed before because they were
+    not being decrypted using libvirt (any other than LUKS) now work as
+    expected and the new size will be visible within the instance. See
+    `Bug 1967157`_ for more details.
+
+    .. _Bug 1967157: https://bugs.launchpad.net/nova/+bug/1967157
