@@ -70,11 +70,11 @@ class PciAddressSpec(metaclass=abc.ABCMeta):
         try:
             v = int(a, 16)
         except ValueError:
-            raise exception.PciConfigInvalidWhitelist(
+            raise exception.PciConfigInvalidSpec(
                 reason=_("property %(property)s ('%(attr)s') does not parse "
                          "as a hex number.") % {'property': prop, 'attr': a})
         if v > maxval:
-            raise exception.PciConfigInvalidWhitelist(
+            raise exception.PciConfigInvalidSpec(
                 reason=_("property %(property)s (%(attr)s) is greater than "
                          "the maximum allowable value (%(max)X).") %
                          {'property': prop, 'attr': a, 'max': maxval})
@@ -341,7 +341,7 @@ class PciDeviceSpec(PciAddressSpec):
                     # to be a VF corresponding to the PF PCI address do not
                     # match the actual ones for this PF. This means that the
                     # whitelist is invalid.
-                    raise exception.PciConfigInvalidWhitelist(
+                    raise exception.PciConfigInvalidSpec(
                         reason=_('the specified VF vendor ID %(vendor_id)s and'
                                  ' product ID %(product_id)s do not match the'
                                  ' expected VF IDs based on the corresponding'

@@ -133,7 +133,7 @@ class PciDevTracker(object):
             try:
                 if self.dev_filter.device_assignable(dev):
                     devices.append(dev)
-            except exception.PciConfigInvalidWhitelist as e:
+            except exception.PciConfigInvalidSpec as e:
                 # The raised exception is misleading as the problem is not with
                 # the whitelist config but with the host PCI device reported by
                 # libvirt. The code that matches the host PCI device to the
@@ -164,7 +164,7 @@ class PciDevTracker(object):
                     # parse whitelist config with
                     # devspec.PciAddressSpec._set_pci_dev_info()
                     str(e).replace(
-                        'Invalid PCI devices Whitelist config:', 'The'))
+                        'Invalid [pci]device_spec config:', 'The'))
 
         self._set_hvdevs(devices)
 

@@ -51,7 +51,7 @@ class PhysicalPciAddressTestCase(test.NoDBTestCase):
         for component in invalid_val_addr:
             address = dict(self.pci_addr)
             address[component] = str(invalid_val_addr[component])
-            self.assertRaises(exception.PciConfigInvalidWhitelist,
+            self.assertRaises(exception.PciConfigInvalidSpec,
                     devspec.PhysicalPciAddress, address)
 
     def test_init_by_dict_missing_values(self):
@@ -75,7 +75,7 @@ class PhysicalPciAddressTestCase(test.NoDBTestCase):
                             "0000:0a:" + str(devspec.MAX_SLOT + 1) + ".5",
                             "0000:0a:00." + str(devspec.MAX_FUNC + 1)]
         for address in invalid_addresses:
-            self.assertRaises(exception.PciConfigInvalidWhitelist,
+            self.assertRaises(exception.PciConfigInvalidSpec,
                     devspec.PhysicalPciAddress, address)
 
     def test_init_by_string_missing_values(self):
@@ -121,7 +121,7 @@ class PciAddressGlobSpecTestCase(test.NoDBTestCase):
                             "0000:0a:" + str(devspec.MAX_SLOT + 1) + ".5",
                             "0000:0a:00." + str(devspec.MAX_FUNC + 1)]
         for address in invalid_addresses:
-            self.assertRaises(exception.PciConfigInvalidWhitelist,
+            self.assertRaises(exception.PciConfigInvalidSpec,
                     devspec.PciAddressGlobSpec, address)
 
     def test_match(self):
@@ -207,18 +207,18 @@ class PciAddressTestCase(test.NoDBTestCase):
 
     def test_address_invalid_character(self):
         pci_info = {"address": "0000:h4.12:6", "physical_network": "hr_net"}
-        exc = self.assertRaises(exception.PciConfigInvalidWhitelist,
+        exc = self.assertRaises(exception.PciConfigInvalidSpec,
             devspec.PciDeviceSpec, pci_info)
-        msg = ("Invalid PCI devices Whitelist config: property func ('12:6') "
+        msg = ("Invalid [pci]device_spec config: property func ('12:6') "
                "does not parse as a hex number.")
         self.assertEqual(msg, str(exc))
 
     def test_max_func(self):
         pci_info = {"address": "0000:0a:00.%s" % (devspec.MAX_FUNC + 1),
                     "physical_network": "hr_net"}
-        exc = self.assertRaises(exception.PciConfigInvalidWhitelist,
+        exc = self.assertRaises(exception.PciConfigInvalidSpec,
                   devspec.PciDeviceSpec, pci_info)
-        msg = ('Invalid PCI devices Whitelist config: property func (%x) is '
+        msg = ('Invalid [pci]device_spec config: property func (%x) is '
                'greater than the maximum allowable value (%x).'
                   % (devspec.MAX_FUNC + 1, devspec.MAX_FUNC))
         self.assertEqual(msg, str(exc))
@@ -226,9 +226,9 @@ class PciAddressTestCase(test.NoDBTestCase):
     def test_max_domain(self):
         pci_info = {"address": "%x:0a:00.5" % (devspec.MAX_DOMAIN + 1),
                     "physical_network": "hr_net"}
-        exc = self.assertRaises(exception.PciConfigInvalidWhitelist,
+        exc = self.assertRaises(exception.PciConfigInvalidSpec,
                   devspec.PciDeviceSpec, pci_info)
-        msg = ('Invalid PCI devices Whitelist config: property domain (%X) '
+        msg = ('Invalid [pci]device_spec config: property domain (%X) '
                'is greater than the maximum allowable value (%X).'
                % (devspec.MAX_DOMAIN + 1, devspec.MAX_DOMAIN))
         self.assertEqual(msg, str(exc))
@@ -236,9 +236,9 @@ class PciAddressTestCase(test.NoDBTestCase):
     def test_max_bus(self):
         pci_info = {"address": "0000:%x:00.5" % (devspec.MAX_BUS + 1),
                     "physical_network": "hr_net"}
-        exc = self.assertRaises(exception.PciConfigInvalidWhitelist,
+        exc = self.assertRaises(exception.PciConfigInvalidSpec,
                   devspec.PciDeviceSpec, pci_info)
-        msg = ('Invalid PCI devices Whitelist config: property bus (%X) is '
+        msg = ('Invalid [pci]device_spec config: property bus (%X) is '
                'greater than the maximum allowable value (%X).'
                % (devspec.MAX_BUS + 1, devspec.MAX_BUS))
         self.assertEqual(msg, str(exc))
@@ -246,9 +246,9 @@ class PciAddressTestCase(test.NoDBTestCase):
     def test_max_slot(self):
         pci_info = {"address": "0000:0a:%x.5" % (devspec.MAX_SLOT + 1),
                     "physical_network": "hr_net"}
-        exc = self.assertRaises(exception.PciConfigInvalidWhitelist,
+        exc = self.assertRaises(exception.PciConfigInvalidSpec,
                   devspec.PciDeviceSpec, pci_info)
-        msg = ('Invalid PCI devices Whitelist config: property slot (%X) is '
+        msg = ('Invalid [pci]device_spec config: property slot (%X) is '
                'greater than the maximum allowable value (%X).'
                % (devspec.MAX_SLOT + 1, devspec.MAX_SLOT))
         self.assertEqual(msg, str(exc))
@@ -382,10 +382,10 @@ class PciDevSpecTestCase(test.NoDBTestCase):
     def test_vendor_id_out_of_range(self):
         pci_info = {"vendor_id": "80860", "address": "*:*:*.5",
                     "product_id": "5057", "physical_network": "hr_net"}
-        exc = self.assertRaises(exception.PciConfigInvalidWhitelist,
+        exc = self.assertRaises(exception.PciConfigInvalidSpec,
                                 devspec.PciDeviceSpec, pci_info)
         self.assertEqual(
-            "Invalid PCI devices Whitelist config: property vendor_id (80860) "
+            "Invalid [pci]device_spec config: property vendor_id (80860) "
             "is greater than the maximum allowable value (FFFF).",
             str(exc))
 
@@ -398,10 +398,10 @@ class PciDevSpecTestCase(test.NoDBTestCase):
     def test_product_id_out_of_range(self):
         pci_info = {"vendor_id": "8086", "address": "*:*:*.5",
                     "product_id": "50570", "physical_network": "hr_net"}
-        exc = self.assertRaises(exception.PciConfigInvalidWhitelist,
+        exc = self.assertRaises(exception.PciConfigInvalidSpec,
                                 devspec.PciDeviceSpec, pci_info)
         self.assertEqual(
-            "Invalid PCI devices Whitelist config: property product_id "
+            "Invalid [pci]device_spec config: property product_id "
             "(50570) is greater than the maximum allowable value (FFFF).",
             str(exc))
 
@@ -553,21 +553,21 @@ class PciDevSpecRemoteManagedTestCase(test.NoDBTestCase):
         pci_info = {"vendor_id": "8080", "address": "0000:0a:00.0",
                     "product_id": "5050", "physical_network": "hr_net",
                     PCI_REMOTE_MANAGED_TAG: "true"}
-        self.assertRaises(exception.PciConfigInvalidWhitelist,
+        self.assertRaises(exception.PciConfigInvalidSpec,
                           devspec.PciDeviceSpec, pci_info)
 
         # VF device ID mismatch.
         pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
                     "product_id": "5050", "physical_network": "hr_net",
                     PCI_REMOTE_MANAGED_TAG: "true"}
-        self.assertRaises(exception.PciConfigInvalidWhitelist,
+        self.assertRaises(exception.PciConfigInvalidSpec,
                           devspec.PciDeviceSpec, pci_info)
 
         # VF vendor ID mismatch.
         pci_info = {"vendor_id": "8080", "address": "0000:0a:00.0",
                     "product_id": "5058", "physical_network": "hr_net",
                     PCI_REMOTE_MANAGED_TAG: "true"}
-        self.assertRaises(exception.PciConfigInvalidWhitelist,
+        self.assertRaises(exception.PciConfigInvalidSpec,
                           devspec.PciDeviceSpec, pci_info)
 
     @mock.patch('nova.pci.utils.is_physical_function',

@@ -1570,8 +1570,8 @@ class PciRequestAliasNotDefined(NovaException):
     msg_fmt = _("PCI alias %(alias)s is not defined")
 
 
-class PciConfigInvalidWhitelist(Invalid):
-    msg_fmt = _("Invalid PCI devices Whitelist config: %(reason)s")
+class PciConfigInvalidSpec(Invalid):
+    msg_fmt = _("Invalid [pci]device_spec config: %(reason)s")
 
 
 class PciRequestFromVIFNotFound(NotFound):
