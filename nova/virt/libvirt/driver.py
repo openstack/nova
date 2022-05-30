@@ -7961,13 +7961,27 @@ class LibvirtDriver(driver.ComputeDriver):
             dev.name(): dev for dev in
             self._host.list_all_devices(flags=dev_flags)
         }
-        net_devs = [dev for dev in devices.values() if "net" in dev.listCaps()]
+
+        # NOTE(mnaser): The listCaps() function can raise an exception if the
+        #               device disappeared while we're looping, this method
+        #               returns an empty list rather than raising an exception
+        #               which will remove the device for Nova's resource
+        #               tracker, but that is OK since the device disappeared.
+        def _safe_list_caps(dev):
+            try:
+                return dev.listCaps()
+            except libvirt.libvirtError:
+                return []
+
+        net_devs = [
+            dev for dev in devices.values() if "net" in _safe_list_caps(dev)
+        ]
         vdpa_devs = [
-            dev for dev in devices.values() if "vdpa" in dev.listCaps()
+            dev for dev in devices.values() if "vdpa" in _safe_list_caps(dev)
         ]
         pci_devs = {
             name: dev for name, dev in devices.items()
-                    if "pci" in dev.listCaps()}
+                    if "pci" in _safe_list_caps(dev)}
         pci_info = [
             self._host._get_pcidev_info(
                 name, dev, net_devs,
