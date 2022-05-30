@@ -4069,7 +4069,7 @@ class ProviderConfigTestCases(BaseTestCase):
 
         expected = ("Provider config 'test_provider_config.yaml' attempts to "
                     "define a trait that is owned by the virt driver or "
-                    "specified via the placment api. Invalid traits '" +
+                    "specified via the placement api. Invalid traits '" +
                     ex_trait + "' must be removed from "
                     "'test_provider_config.yaml'.")
 

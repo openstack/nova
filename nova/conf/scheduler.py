@@ -780,7 +780,7 @@ follows:
 
 Possible values:
 
-* An integer or float value, where the value corresponds to the multipler
+* An integer or float value, where the value corresponds to the multiplier
   ratio for this weigher.
 
 Related options:
@@ -857,7 +857,7 @@ of any actual metric value:
 
 Possible values:
 
-* An integer or float value, where the value corresponds to the multipler
+* An integer or float value, where the value corresponds to the multiplier
   ratio for this weigher.
 
 Related options:
