@@ -453,7 +453,7 @@ support built into QEMU.
 
 Prerequisite: TLS environment is configured correctly on all relevant
 Compute nodes.  This means, Certificate Authority (CA), server, client
-certificates, their corresponding keys, and their file permisssions are
+certificates, their corresponding keys, and their file permissions are
 in place, and are validated.
 
 Notes:
@@ -705,7 +705,7 @@ the source of entropy on the host.  Since libvirt 1.3.4, any path (that
 returns random numbers when read) is accepted.  The recommended source
 of entropy is ``/dev/urandom`` -- it is non-blocking, therefore
 relatively fast; and avoids the limitations of ``/dev/random``, which is
-a legacy interface.  For more details (and comparision between different
+a legacy interface.  For more details (and comparison between different
 RNG sources), refer to the "Usage" section in the Linux kernel API
 documentation for ``[u]random``:
 http://man7.org/linux/man-pages/man4/urandom.4.html and

@@ -1856,7 +1856,7 @@ class ResourceTracker(object):
                         raise ValueError(_(
                             "Provider config '%(source_file_name)s' attempts "
                             "to define a trait that is owned by the "
-                            "virt driver or specified via the placment api. "
+                            "virt driver or specified via the placement api. "
                             "Invalid traits '%(invalid)s' must be removed "
                             "from '%(source_file_name)s'.") % {
                                 'source_file_name': source_file_name,

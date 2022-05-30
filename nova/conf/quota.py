@@ -147,7 +147,7 @@ Possible values:
         deprecated_group='DEFAULT',
         deprecated_name='quota_server_groups',
         help="""
-The maxiumum number of server groups per project.
+The maximum number of server groups per project.
 
 Server groups are used to control the affinity and anti-affinity scheduling
 policy for a group of servers or instances. Reducing the quota will not affect

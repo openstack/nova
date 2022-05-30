@@ -200,7 +200,7 @@ The template will be rendered using Jinja2 template engine, and receive a
 top-level key called ``interfaces``. This key will contain a list of
 dictionaries, one for each interface.
 
-Refer to the cloudinit documentaion for more information:
+Refer to the cloudinit documentation for more information:
 
   https://cloudinit.readthedocs.io/en/latest/topics/datasources.html
 
