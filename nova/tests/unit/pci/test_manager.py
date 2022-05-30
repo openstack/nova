@@ -235,7 +235,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
             self, mock_debug):
         self.flags(
             group='pci',
-            passthrough_whitelist=[
+            device_spec=[
                 '{"product_id":"2032", "vendor_id":"8086"}'])
         # There are systems where 32 bit PCI domain is used. See bug 1897528
         # for example. While nova (and qemu) does not support assigning such

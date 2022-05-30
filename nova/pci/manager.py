@@ -69,7 +69,7 @@ class PciDevTracker(object):
         """
         self.stale: ty.Dict[str, objects.PciDevice] = {}
         self.node_id: str = compute_node.id
-        self.dev_filter = whitelist.Whitelist(CONF.pci.passthrough_whitelist)
+        self.dev_filter = whitelist.Whitelist(CONF.pci.device_spec)
         numa_topology = compute_node.numa_topology
         if numa_topology:
             # For legacy reasons, the NUMATopology is stored as a JSON blob.
@@ -224,7 +224,7 @@ class PciDevTracker(object):
                     LOG.warning("Unable to remove device with status "
                                 "'%(status)s' and ownership %(instance_uuid)s "
                                 "because of %(pci_exception)s. "
-                                "Check your [pci]passthrough_whitelist "
+                                "Check your [pci]device_spec "
                                 "configuration to make sure this allocated "
                                 "device is whitelisted. If you have removed "
                                 "the device from the whitelist intentionally "

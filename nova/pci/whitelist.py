@@ -44,7 +44,7 @@ class Whitelist(object):
 
         :param whitelist_spec: A JSON string for a dictionary or list thereof.
             Each dictionary specifies the pci device properties requirement.
-            See the definition of ``passthrough_whitelist`` in
+            See the definition of ``device_spec`` in
             ``nova.conf.pci`` for details and examples.
         """
         if whitelist_spec:

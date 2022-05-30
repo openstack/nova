@@ -77,7 +77,7 @@ class PciDeviceStats(object):
         )
         self.pools.sort(key=lambda item: len(item))
         self.dev_filter = dev_filter or whitelist.Whitelist(
-            CONF.pci.passthrough_whitelist)
+            CONF.pci.device_spec)
 
     def _equal_properties(
         self, dev: Pool, entry: Pool, matching_keys: ty.List[str],

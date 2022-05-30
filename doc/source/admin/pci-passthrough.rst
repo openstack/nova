@@ -92,15 +92,15 @@ Configure ``nova-compute``
 
 Once PCI passthrough has been configured for the host, :program:`nova-compute`
 must be configured to allow the PCI device to pass through to VMs. This is done
-using the :oslo.config:option:`pci.passthrough_whitelist` option. For example,
+using the :oslo.config:option:`pci.device_spec` option. For example,
 assuming our sample PCI device has a PCI address of ``41:00.0`` on each host:
 
 .. code-block:: ini
 
    [pci]
-   passthrough_whitelist = { "address": "0000:41:00.0" }
+   device_spec = { "address": "0000:41:00.0" }
 
-Refer to :oslo.config:option:`pci.passthrough_whitelist` for syntax information.
+Refer to :oslo.config:option:`pci.device_spec` for syntax information.
 
 Alternatively, to enable passthrough of all devices with the same product and
 vendor ID:
@@ -108,7 +108,7 @@ vendor ID:
 .. code-block:: ini
 
    [pci]
-   passthrough_whitelist = { "vendor_id": "8086", "product_id": "154d" }
+   device_spec = { "vendor_id": "8086", "product_id": "154d" }
 
 If using vendor and product IDs, all PCI devices matching the ``vendor_id`` and
 ``product_id`` are added to the pool of PCI devices available for passthrough
@@ -159,7 +159,7 @@ Once configured, restart the :program:`nova-compute` service.
 Special Tags
 ^^^^^^^^^^^^
 
-When specified in :oslo.config:option:`pci.passthrough_whitelist` some tags
+When specified in :oslo.config:option:`pci.device_spec` some tags
 have special meaning:
 
 ``physical_network``

@@ -936,7 +936,7 @@ class FakeDriverWithPciResources(SmallFakeDriver):
         def setUp(self):
             super(FakeDriverWithPciResources.
                   FakeDriverWithPciResourcesConfigFixture, self).setUp()
-            # Set passthrough_whitelist before the compute node starts to match
+            # Set device_spec before the compute node starts to match
             # with the PCI devices reported by this fake driver.
 
             # NOTE(gibi): 0000:01:00 is tagged to physnet1 and therefore not a
@@ -951,7 +951,7 @@ class FakeDriverWithPciResources(SmallFakeDriver):
             # Having two PFs on the same physnet will allow us to test the
             # placement allocation - physical allocation matching based on the
             # bandwidth allocation in the future.
-            CONF.set_override('passthrough_whitelist', override=[
+            CONF.set_override('device_spec', override=[
                 jsonutils.dumps(
                     {
                         "address": {

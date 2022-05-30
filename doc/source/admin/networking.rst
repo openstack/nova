@@ -46,7 +46,7 @@ A full guide on configuring and using SR-IOV is provided in the
    **Limitations**
 
    * Only VFs are supported and they must be tagged in the Nova Compute
-     configuration in the ``passthrough_whitelist`` option as
+     configuration in the :oslo.config:option:`pci.device_spec` option as
      ``remote_managed: "true"``. There is no auto-discovery of this based
      on vendor and product IDs;
    * Either VF or its respective PF must expose a PCI VPD capability with a

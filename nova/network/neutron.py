@@ -300,7 +300,7 @@ class API:
         self.last_neutron_extension_sync = None
         self.extensions = {}
         self.pci_whitelist = pci_whitelist.Whitelist(
-            CONF.pci.passthrough_whitelist)
+            CONF.pci.device_spec)
 
     def _update_port_with_migration_profile(
             self, instance, port_id, port_profile, admin_client):
@@ -1638,7 +1638,7 @@ class API:
                 # through the logs since it is generated per request.
                 LOG.error('Unable to find PCI device using PCI request ID in '
                           'list of claimed instance PCI devices: %s. Is the '
-                          '[pci]/passthrough_whitelist configuration correct?',
+                          '[pci]device_spec configuration correct?',
                           # Convert to a primitive list to stringify it.
                           list(instance.pci_devices), instance=instance)
                 raise exception.PciDeviceNotFound(

@@ -459,7 +459,7 @@ class PortResourceRequestBasedSchedulingTestBase(
 
     def _create_sriov_networking_rp_tree(self, hostname, compute_rp_uuid):
         # Create a matching RP tree in placement for the PCI devices added to
-        # the passthrough_whitelist config during setUp() and PCI devices
+        # the device_spec config during setUp() and PCI devices
         # present in the FakeDriverWithPciResources virt driver.
         #
         # * PF1 represents the PCI device 0000:01:00, it will be mapped to
@@ -1362,7 +1362,7 @@ class PortResourceRequestBasedSchedulingTest(
         does not have resource request can be allocated to PF2 or PF3.
 
         For the detailed compute host config see the FakeDriverWithPciResources
-        class. For the necessary passthrough_whitelist config see the setUp of
+        class. For the necessary device_spec config see the setUp of
         the PortResourceRequestBasedSchedulingTestBase class.
         """
 

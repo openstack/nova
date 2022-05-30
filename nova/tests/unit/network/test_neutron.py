@@ -8091,13 +8091,21 @@ class TestAPIPortbinding(TestAPIBase):
     )
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
     def test_pci_parse_whitelist_called_once(
-        self, mock_get_instance_pci_devs):
-        white_list = [
-            '{"address":"0000:0a:00.1","physical_network":"default"}']
-        cfg.CONF.set_override('passthrough_whitelist', white_list, 'pci')
+        self, mock_get_instance_pci_devs
+    ):
+        device_spec = [
+            jsonutils.dumps(
+                {
+                    "address": "0000:0a:00.1",
+                    "physical_network": "default",
+                }
+            )
+        ]
+        cfg.CONF.set_override(
+            'device_spec', device_spec, 'pci')
 
         # NOTE(takashin): neutronapi.API must be initialized
-        # after the 'passthrough_whitelist' is set in this test case.
+        # after the 'device_spec' is set in this test case.
         api = neutronapi.API()
         host_id = 'my_host_id'
         instance = {'host': host_id}
@@ -8110,7 +8118,7 @@ class TestAPIPortbinding(TestAPIBase):
                    'dev_type': obj_fields.PciDeviceType.SRIOV_VF,
                   }
 
-        whitelist = pci_whitelist.Whitelist(CONF.pci.passthrough_whitelist)
+        whitelist = pci_whitelist.Whitelist(CONF.pci.device_spec)
         with mock.patch.object(pci_whitelist.Whitelist,
                 '_parse_white_list_from_config',
                 wraps=whitelist._parse_white_list_from_config

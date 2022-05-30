@@ -1475,15 +1475,15 @@ class ComputeManager(manager.Manager):
     def init_host(self):
         """Initialization for a standalone compute service."""
 
-        if CONF.pci.passthrough_whitelist:
-            # Simply loading the PCI passthrough whitelist will do a bunch of
+        if CONF.pci.device_spec:
+            # Simply loading the PCI passthrough spec will do a bunch of
             # validation that would otherwise wait until the PciDevTracker is
             # constructed when updating available resources for the compute
             # node(s) in the resource tracker, effectively killing that task.
-            # So load up the whitelist when starting the compute service to
-            # flush any invalid configuration early so we can kill the service
+            # So load up the spec when starting the compute service to
+            # flush any invalid configuration early, so we can kill the service
             # if the configuration is wrong.
-            whitelist.Whitelist(CONF.pci.passthrough_whitelist)
+            whitelist.Whitelist(CONF.pci.device_spec)
 
         nova.conf.neutron.register_dynamic_opts(CONF)
         # Even if only libvirt uses them, make it available for all drivers

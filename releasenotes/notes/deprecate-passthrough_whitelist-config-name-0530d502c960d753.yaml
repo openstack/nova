@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The [pci]passthrough_whitelist config option is renamed to
+    [pci]device_spec. The old name is deprecated and aliased to the new one.
+    The old name will be removed in a future release.

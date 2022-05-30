@@ -41,7 +41,7 @@ PCISpecAddressType = ty.Union[ty.Dict[str, str], str]
 class PciAddressSpec(metaclass=abc.ABCMeta):
     """Abstract class for all PCI address spec styles
 
-    This class checks the address fields of the pci.passthrough_whitelist
+    This class checks the address fields of the pci.device_spec
     """
 
     def __init__(self, pci_addr: str) -> None:
@@ -195,19 +195,19 @@ class PciAddressRegexSpec(PciAddressSpec):
 class WhitelistPciAddress(object):
     """Manages the address fields of the whitelist.
 
-    This class checks the address fields of the pci.passthrough_whitelist
+    This class checks the address fields of the pci.device_spec
     configuration option, validating the address fields.
     Example configs:
 
         | [pci]
-        | passthrough_whitelist = {"address":"*:0a:00.*",
-        |                          "physical_network":"physnet1"}
-        | passthrough_whitelist = {"address": {"domain": ".*",
-                                               "bus": "02",
-                                               "slot": "01",
-                                               "function": "[0-2]"},
-                                    "physical_network":"net1"}
-        | passthrough_whitelist = {"vendor_id":"1137","product_id":"0071"}
+        | device_spec = {"address":"*:0a:00.*",
+        |                "physical_network":"physnet1"}
+        | device_spec = {"address": {"domain": ".*",
+                                     "bus": "02",
+                                     "slot": "01",
+                                     "function": "[0-2]"},
+                         "physical_network":"net1"}
+        | device_spec = {"vendor_id":"1137","product_id":"0071"}
 
     """
 
@@ -254,7 +254,7 @@ class WhitelistPciAddress(object):
         # Try to match on the parent PCI address if the PciDeviceSpec is a
         # PF (sriov is available) and the device to match is a VF.  This
         # makes it possible to specify the PCI address of a PF in the
-        # pci.passthrough_whitelist to match any of its VFs' PCI addresses.
+        # pci.device_spec to match any of its VFs' PCI addresses.
         if self.is_physical_function and pci_phys_addr:
             pci_phys_addr_obj = PhysicalPciAddress(pci_phys_addr)
             if self.pci_address_spec.match(pci_phys_addr_obj):

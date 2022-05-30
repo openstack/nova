@@ -16,6 +16,7 @@
 from unittest import mock
 
 from oslo_config import cfg
+from oslo_serialization import jsonutils
 
 from nova import exception
 from nova import objects
@@ -444,9 +445,9 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     @mock.patch(
         'nova.pci.whitelist.Whitelist._parse_white_list_from_config')
-    def test_white_list_parsing(self, mock_whitelist_parse):
-        white_list = '{"product_id":"0001", "vendor_id":"8086"}'
-        CONF.set_override('passthrough_whitelist', white_list, 'pci')
+    def test_device_spec_parsing(self, mock_whitelist_parse):
+        device_spec = {"product_id": "0001", "vendor_id": "8086"}
+        CONF.set_override('device_spec', jsonutils.dumps(device_spec), 'pci')
         pci_stats = stats.PciDeviceStats(objects.NUMATopology())
         pci_stats.add_device(self.fake_dev_2)
         pci_stats.remove_device(self.fake_dev_2)
@@ -457,16 +458,34 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(PciDeviceStatsWithTagsTestCase, self).setUp()
-        white_list = ['{"vendor_id":"1137","product_id":"0071",'
-                        '"address":"*:0a:00.*","physical_network":"physnet1"}',
-                      '{"vendor_id":"1137","product_id":"0072"}',
-                      '{"vendor_id":"15b3","product_id":"101e", '
-                      '"remote_managed": "true"}',
-                      '{"vendor_id":"15b3","product_id":"101c"}',
-                      '{"vendor_id":"15b3","product_id":"1018", '
-                      '"remote_managed": "false"}']
-        self.flags(passthrough_whitelist=white_list, group='pci')
-        dev_filter = whitelist.Whitelist(white_list)
+        device_spec = [
+            jsonutils.dumps(
+                {
+                    "vendor_id": "1137",
+                    "product_id": "0071",
+                    "address": "*:0a:00.*",
+                    "physical_network": "physnet1",
+                }
+            ),
+            jsonutils.dumps({"vendor_id": "1137", "product_id": "0072"}),
+            jsonutils.dumps(
+                {
+                    "vendor_id": "15b3",
+                    "product_id": "101e",
+                    "remote_managed": "true",
+                }
+            ),
+            jsonutils.dumps({"vendor_id": "15b3", "product_id": "101c"}),
+            jsonutils.dumps(
+                {
+                    "vendor_id": "15b3",
+                    "product_id": "1018",
+                    "remote_managed": "false",
+                }
+            ),
+        ]
+        self.flags(device_spec=device_spec, group="pci")
+        dev_filter = whitelist.Whitelist(device_spec)
         self.pci_stats = stats.PciDeviceStats(
             objects.NUMATopology(),
             dev_filter=dev_filter)
@@ -704,13 +723,25 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(PciDeviceVFPFStatsTestCase, self).setUp()
-        white_list = ['{"vendor_id":"8086","product_id":"1528"}',
-                      '{"vendor_id":"8086","product_id":"1515"}',
-                      '{"vendor_id":"15b3","product_id":"a2d6", '
-                      '"remote_managed": "false"}',
-                      '{"vendor_id":"15b3","product_id":"101e", '
-                      '"remote_managed": "true"}']
-        self.flags(passthrough_whitelist=white_list, group='pci')
+        device_spec = [
+            jsonutils.dumps({"vendor_id": "8086", "product_id": "1528"}),
+            jsonutils.dumps({"vendor_id": "8086", "product_id": "1515"}),
+            jsonutils.dumps(
+                {
+                    "vendor_id": "15b3",
+                    "product_id": "a2d6",
+                    "remote_managed": "false",
+                }
+            ),
+            jsonutils.dumps(
+                {
+                    "vendor_id": "15b3",
+                    "product_id": "101e",
+                    "remote_managed": "true",
+                }
+            ),
+        ]
+        self.flags(device_spec=device_spec, group='pci')
         self.pci_stats = stats.PciDeviceStats(objects.NUMATopology())
 
     def _create_pci_devices(self, vf_product_id=1515, pf_product_id=1528):

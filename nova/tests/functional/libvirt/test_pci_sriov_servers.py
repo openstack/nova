@@ -47,9 +47,11 @@ class _PCIServersTestBase(base.ServersTestBase):
 
     def setUp(self):
         self.ctxt = context.get_admin_context()
-        self.flags(passthrough_whitelist=self.PCI_PASSTHROUGH_WHITELIST,
-                   alias=self.PCI_ALIAS,
-                   group='pci')
+        self.flags(
+            device_spec=self.PCI_PASSTHROUGH_WHITELIST,
+            alias=self.PCI_ALIAS,
+            group='pci'
+        )
 
         super(_PCIServersTestBase, self).setUp()
 
@@ -1652,9 +1654,11 @@ class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
             }
         )]
 
-        self.flags(passthrough_whitelist=self.PCI_PASSTHROUGH_WHITELIST,
-                   alias=alias,
-                   group='pci')
+        self.flags(
+            device_spec=self.PCI_PASSTHROUGH_WHITELIST,
+            alias=alias,
+            group='pci'
+        )
 
         self._test_policy(pci_numa_node, status, 'required')
 
@@ -1870,9 +1874,11 @@ class PCIServersWithPortNUMAPoliciesTest(_PCIServersTestBase):
             }
         )]
 
-        self.flags(passthrough_whitelist=self.PCI_PASSTHROUGH_WHITELIST,
-                   alias=alias,
-                   group='pci')
+        self.flags(
+            device_spec=self.PCI_PASSTHROUGH_WHITELIST,
+            alias=alias,
+            group='pci'
+        )
 
         self._test_policy(pci_numa_node, status, 'required')
 

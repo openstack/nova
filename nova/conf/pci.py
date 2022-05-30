@@ -85,16 +85,18 @@ Possible Values:
       "numa_policy": "required"
     }
 """),
-    cfg.MultiStrOpt('passthrough_whitelist',
+    cfg.MultiStrOpt('device_spec',
         default=[],
-        deprecated_name='pci_passthrough_whitelist',
-        deprecated_group='DEFAULT',
+        deprecated_opts=[
+            cfg.DeprecatedOpt('passthrough_whitelist', group='pci'),
+            cfg.DeprecatedOpt('pci_passthrough_whitelist', group='DEFAULT'),
+        ],
         help="""
-White list of PCI devices available to VMs.
+Specify the PCI devices available to VMs.
 
 Possible values:
 
-* A JSON dictionary which describe a whitelisted PCI device. It should take
+* A JSON dictionary which describe a PCI device. It should take
   the following format::
 
     ["vendor_id": "<id>",] ["product_id": "<id>",]
@@ -146,57 +148,57 @@ Possible values:
 
   Valid examples are::
 
-    passthrough_whitelist = {"devname":"eth0",
-                             "physical_network":"physnet"}
-    passthrough_whitelist = {"address":"*:0a:00.*"}
-    passthrough_whitelist = {"address":":0a:00.",
-                             "physical_network":"physnet1"}
-    passthrough_whitelist = {"vendor_id":"1137",
-                             "product_id":"0071"}
-    passthrough_whitelist = {"vendor_id":"1137",
-                             "product_id":"0071",
-                             "address": "0000:0a:00.1",
-                             "physical_network":"physnet1"}
-    passthrough_whitelist = {"address":{"domain": ".*",
-                                        "bus": "02", "slot": "01",
-                                        "function": "[2-7]"},
-                             "physical_network":"physnet1"}
-    passthrough_whitelist = {"address":{"domain": ".*",
-                                        "bus": "02", "slot": "0[1-2]",
-                                        "function": ".*"},
-                             "physical_network":"physnet1"}
-    passthrough_whitelist = {"devname": "eth0", "physical_network":"physnet1",
-                             "trusted": "true"}
-    passthrough_whitelist = {"vendor_id":"a2d6",
-                             "product_id":"15b3",
-                             "remote_managed": "true"}
-    passthrough_whitelist = {"vendor_id":"a2d6",
-                             "product_id":"15b3",
-                             "address": "0000:82:00.0",
-                             "physical_network":"physnet1",
-                             "remote_managed": "true"}
+    device_spec = {"devname":"eth0",
+                   "physical_network":"physnet"}
+    device_spec = {"address":"*:0a:00.*"}
+    device_spec = {"address":":0a:00.",
+                   "physical_network":"physnet1"}
+    device_spec = {"vendor_id":"1137",
+                   "product_id":"0071"}
+    device_spec = {"vendor_id":"1137",
+                   "product_id":"0071",
+                   "address": "0000:0a:00.1",
+                   "physical_network":"physnet1"}
+    device_spec = {"address":{"domain": ".*",
+                              "bus": "02", "slot": "01",
+                              "function": "[2-7]"},
+                   "physical_network":"physnet1"}
+    device_spec = {"address":{"domain": ".*",
+                              "bus": "02", "slot": "0[1-2]",
+                              "function": ".*"},
+                   "physical_network":"physnet1"}
+    device_spec = {"devname": "eth0", "physical_network":"physnet1",
+                   "trusted": "true"}
+    device_spec = {"vendor_id":"a2d6",
+                   "product_id":"15b3",
+                   "remote_managed": "true"}
+    device_spec = {"vendor_id":"a2d6",
+                   "product_id":"15b3",
+                   "address": "0000:82:00.0",
+                   "physical_network":"physnet1",
+                   "remote_managed": "true"}
 
   The following are invalid, as they specify mutually exclusive options::
 
-    passthrough_whitelist = {"devname":"eth0",
-                             "physical_network":"physnet",
-                             "address":"*:0a:00.*"}
+    device_spec = {"devname":"eth0",
+                   "physical_network":"physnet",
+                   "address":"*:0a:00.*"}
 
   The following example is invalid because it specifies the ``remote_managed``
   tag for a PF - it will result in an error during config validation at the
   Nova Compute service startup::
 
-    passthrough_whitelist = {"address": "0000:82:00.0",
-                             "product_id": "a2d6",
-                             "vendor_id": "15b3",
-                             "physical_network": null,
-                             "remote_managed": "true"}
+    device_spec = {"address": "0000:82:00.0",
+                   "product_id": "a2d6",
+                   "vendor_id": "15b3",
+                   "physical_network": null,
+                   "remote_managed": "true"}
 
 * A JSON list of JSON dictionaries corresponding to the above format. For
   example::
 
-    passthrough_whitelist = [{"product_id":"0001", "vendor_id":"8086"},
-                             {"product_id":"0002", "vendor_id":"8086"}]
+    device_spec = [{"product_id":"0001", "vendor_id":"8086"},
+                   {"product_id":"0002", "vendor_id":"8086"}]
 """)
 ]
 
