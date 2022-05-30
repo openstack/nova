@@ -22,7 +22,7 @@ from nova.tests.functional.libvirt import test_pci_sriov_servers
 class TestPciResize(test_pci_sriov_servers._PCIServersTestBase):
     # these tests use multiple different configs so the whitelist is set by
     # each testcase individually
-    PCI_PASSTHROUGH_WHITELIST = []
+    PCI_DEVICE_SPEC = []
     PCI_ALIAS = [
         jsonutils.dumps(x)
         for x in [

@@ -48,7 +48,7 @@ class _PCIServersTestBase(base.ServersTestBase):
     def setUp(self):
         self.ctxt = context.get_admin_context()
         self.flags(
-            device_spec=self.PCI_PASSTHROUGH_WHITELIST,
+            device_spec=self.PCI_DEVICE_SPEC,
             alias=self.PCI_ALIAS,
             group='pci'
         )
@@ -125,7 +125,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
     VFS_ALIAS_NAME = 'vfs'
     PFS_ALIAS_NAME = 'pfs'
 
-    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+    PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
         {
             'vendor_id': fakelibvirt.PCI_VEND_ID,
             'product_id': fakelibvirt.PF_PROD_ID,
@@ -952,7 +952,7 @@ class SRIOVAttachDetachTest(_PCIServersTestBase):
     # no need for aliases as these test will request SRIOV via neutron
     PCI_ALIAS = []
 
-    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+    PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
         {
             'vendor_id': fakelibvirt.PCI_VEND_ID,
             'product_id': fakelibvirt.PF_PROD_ID,
@@ -1071,7 +1071,7 @@ class VDPAServersTest(_PCIServersTestBase):
     # Whitelist both the PF and VF; in reality, you probably wouldn't do this
     # but we want to make sure that the PF is correctly taken off the table
     # once any VF is used
-    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+    PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
         {
             'vendor_id': '15b3',
             'product_id': '101d',
@@ -1284,7 +1284,7 @@ class PCIServersTest(_PCIServersTestBase):
     microversion = 'latest'
 
     ALIAS_NAME = 'a1'
-    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(
+    PCI_DEVICE_SPEC = [jsonutils.dumps(
         {
             'vendor_id': fakelibvirt.PCI_VEND_ID,
             'product_id': fakelibvirt.PCI_PROD_ID,
@@ -1485,7 +1485,7 @@ class PCIServersTest(_PCIServersTestBase):
 class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
 
     ALIAS_NAME = 'a1'
-    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(
+    PCI_DEVICE_SPEC = [jsonutils.dumps(
         {
             'vendor_id': fakelibvirt.PCI_VEND_ID,
             'product_id': fakelibvirt.PCI_PROD_ID,
@@ -1549,7 +1549,7 @@ class PCIServersWithRequiredNUMATest(PCIServersWithPreferredNUMATest):
 class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
 
     ALIAS_NAME = 'a1'
-    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(
+    PCI_DEVICE_SPEC = [jsonutils.dumps(
         {
             'vendor_id': fakelibvirt.PCI_VEND_ID,
             'product_id': fakelibvirt.PCI_PROD_ID,
@@ -1655,7 +1655,7 @@ class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
         )]
 
         self.flags(
-            device_spec=self.PCI_PASSTHROUGH_WHITELIST,
+            device_spec=self.PCI_DEVICE_SPEC,
             alias=alias,
             group='pci'
         )
@@ -1736,7 +1736,7 @@ class PCIServersWithSRIOVAffinityPoliciesTest(_PCIServersTestBase):
 class PCIServersWithPortNUMAPoliciesTest(_PCIServersTestBase):
 
     ALIAS_NAME = 'a1'
-    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+    PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
         {
             'vendor_id': fakelibvirt.PCI_VEND_ID,
             'product_id': fakelibvirt.PF_PROD_ID,
@@ -1875,7 +1875,7 @@ class PCIServersWithPortNUMAPoliciesTest(_PCIServersTestBase):
         )]
 
         self.flags(
-            device_spec=self.PCI_PASSTHROUGH_WHITELIST,
+            device_spec=self.PCI_DEVICE_SPEC,
             alias=alias,
             group='pci'
         )
@@ -1974,7 +1974,7 @@ class RemoteManagedServersTest(_PCIServersWithMigrationTestBase):
     ADMIN_API = True
     microversion = 'latest'
 
-    PCI_PASSTHROUGH_WHITELIST = [jsonutils.dumps(x) for x in (
+    PCI_DEVICE_SPEC = [jsonutils.dumps(x) for x in (
         # A PF with access to physnet4.
         {
             'vendor_id': '15b3',
