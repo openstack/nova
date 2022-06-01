@@ -191,7 +191,7 @@ class InstanceActionsDeprecatedPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_deprecated_policy_overridden_rule_is_checked(
             self, mock_instance_get, mock_actions_get):
-        # Test to verify if deprecatd overridden policy is working.
+        # Test to verify if deprecated overridden policy is working.
 
         instance = fake_instance.fake_instance_obj(
             self.admin_or_owner_req.environ['nova.context'])
@@ -199,7 +199,7 @@ class InstanceActionsDeprecatedPolicyTest(base.BasePolicyTest):
         # Check for success as admin_or_owner role. Deprecated rule
         # has been overridden with admin checks in policy.yaml
         # If admin role pass it means overridden rule is enforced by
-        # olso.policy because new default is system reader and the old
+        # oslo.policy because new default is system reader and the old
         # default is admin.
         self.controller.index(self.admin_or_owner_req, instance['uuid'])
 

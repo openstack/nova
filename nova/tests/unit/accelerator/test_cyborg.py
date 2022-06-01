@@ -190,7 +190,7 @@ class CyborgTestCase(test.NoDBTestCase):
             },
             "attach_handle_type": "PCI",
             "state": "Bound",
-            # Devic eprofile name is common to all bound ARQs
+            # Device profile name is common to all bound ARQs
             "device_profile_name": arqs[0]["device_profile_name"],
             **common
         }
@@ -367,7 +367,7 @@ class CyborgTestCase(test.NoDBTestCase):
         # If only some ARQs are resolved, return just the resolved ones
         unbound_arqs, _ = self._get_arqs_and_request_groups()
         _, bound_arqs = self._get_bound_arqs()
-        # Create a amixture of unbound and bound ARQs
+        # Create a mixture of unbound and bound ARQs
         arqs = [unbound_arqs[0], bound_arqs[0]]
         instance_uuid = bound_arqs[0]['instance_uuid']
 
@@ -487,7 +487,7 @@ class CyborgTestCase(test.NoDBTestCase):
         self.assertEqual(bound_arqs, ret_arqs)
 
     def test_get_arq_pci_device_profile(self):
-        """Test extractin arq pci device info"""
+        """Test extracting arq pci device info"""
         arq = {'uuid': uuids.arq_uuid,
                     'device_profile_name': "smart_nic",
                     'device_profile_group_id': '5',

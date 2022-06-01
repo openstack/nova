@@ -64,7 +64,7 @@ ephemeral_bdm = [block_device.BlockDeviceDict(
 
 class ImageCacheManagerTests(test.NoDBTestCase):
 
-    def test_configurationi_defaults(self):
+    def test_configuration_defaults(self):
         self.assertEqual(2400, CONF.image_cache.manager_interval)
         self.assertEqual('_base', CONF.image_cache.subdirectory_name)
         self.assertTrue(CONF.image_cache.remove_unused_base_images)

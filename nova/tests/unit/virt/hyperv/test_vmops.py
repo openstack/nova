@@ -1830,7 +1830,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual(fake_local_disks, ret_val)
 
     def test_get_scoped_flavor_extra_specs(self):
-        # The flavor extra spect dict contains only string values.
+        # The flavor extra specs dict contains only string values.
         fake_total_bytes_sec = '8'
 
         mock_instance = fake_instance.fake_instance_obj(self.context)

@@ -193,7 +193,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self.admin_api.delete_migration(server['id'], migrations[0]['id'])
         self._wait_for_notification('instance.live_migration_abort.start')
         self._wait_for_state_change(server, 'ACTIVE')
-        # NOTE(gibi): the intance.live_migration_rollback notification emitted
+        # NOTE(gibi): the instance.live_migration_rollback notification emitted
         # after the instance.live_migration_abort notification so we have to
         # wait for the rollback to ensure we can assert both notifications
         # below
@@ -1500,8 +1500,8 @@ class TestInstanceNotificationSample(
         self.api.delete_server_volume(server['id'], volume_id)
         self._wait_for_notification('instance.volume_detach.end')
 
-    def _volume_swap_server(self, server, attachement_id, volume_id):
-        self.api.put_server_volume(server['id'], attachement_id, volume_id)
+    def _volume_swap_server(self, server, attachment_id, volume_id):
+        self.api.put_server_volume(server['id'], attachment_id, volume_id)
 
     def test_volume_swap_server(self):
         server = self._boot_a_server(

@@ -168,7 +168,7 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase, test.TestCase):
                 self.fail("Couldn't load driver %s - %s" % (cls, e))
 
             self.assertEqual(cm.driver.__class__.__name__, driver,
-                             "Could't load driver %s" % cls)
+                             "Couldn't load driver %s" % cls)
 
     @mock.patch.object(sys, 'exit', side_effect=test.TestingException())
     def test_fail_to_load_new_drivers(self, mock_exit):
@@ -746,13 +746,13 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.flags(cpu_allocation_ratio=16.1)
         self.flags(ram_allocation_ratio=1.6)
         self.flags(disk_allocation_ratio=1.1)
-        expeced_ratios = {
+        expected_ratios = {
             orc.VCPU: CONF.cpu_allocation_ratio,
             orc.MEMORY_MB: CONF.ram_allocation_ratio,
             orc.DISK_GB: CONF.disk_allocation_ratio
         }
         # If conf is set, return conf
-        self.assertEqual(expeced_ratios,
+        self.assertEqual(expected_ratios,
                          self.connection._get_allocation_ratios(inv))
 
         self.flags(cpu_allocation_ratio=None)
@@ -761,25 +761,25 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.flags(initial_cpu_allocation_ratio=15.9)
         self.flags(initial_ram_allocation_ratio=1.4)
         self.flags(initial_disk_allocation_ratio=0.9)
-        expeced_ratios = {
+        expected_ratios = {
             orc.VCPU: CONF.initial_cpu_allocation_ratio,
             orc.MEMORY_MB: CONF.initial_ram_allocation_ratio,
             orc.DISK_GB: CONF.initial_disk_allocation_ratio
         }
         # if conf is unset and inv doesn't exists, return init conf
-        self.assertEqual(expeced_ratios,
+        self.assertEqual(expected_ratios,
                          self.connection._get_allocation_ratios(inv))
 
         inv = {orc.VCPU: {'allocation_ratio': 3.0},
                orc.MEMORY_MB: {'allocation_ratio': 3.1},
                orc.DISK_GB: {'allocation_ratio': 3.2}}
-        expeced_ratios = {
+        expected_ratios = {
             orc.VCPU: inv[orc.VCPU]['allocation_ratio'],
             orc.MEMORY_MB: inv[orc.MEMORY_MB]['allocation_ratio'],
             orc.DISK_GB: inv[orc.DISK_GB]['allocation_ratio']
         }
         # if conf is unset and inv exists, return inv
-        self.assertEqual(expeced_ratios,
+        self.assertEqual(expected_ratios,
                          self.connection._get_allocation_ratios(inv))
 
 

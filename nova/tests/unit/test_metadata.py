@@ -1200,7 +1200,7 @@ class MetadataHandlerTestCase(test.TestCase):
 
     def _fake_x_get_metadata(self, self_app, instance_id, remote_address):
         if remote_address is None:
-            raise Exception('Expected X-Forwared-For header')
+            raise Exception('Expected X-Forwarded-For header')
 
         if encodeutils.to_utf8(instance_id) == self.expected_instance_id:
             return self.mdinst

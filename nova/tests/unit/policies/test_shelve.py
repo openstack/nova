@@ -100,7 +100,7 @@ class ShelveServerPolicyTest(base.BasePolicyTest):
             exc.format_message())
 
     @mock.patch('nova.compute.api.API.shelve')
-    def test_shelve_sevrer_overridden_policy_pass_with_same_user(
+    def test_shelve_server_overridden_policy_pass_with_same_user(
         self, mock_shelve):
         rule_name = policies.POLICY_ROOT % 'shelve'
         self.policy.set_rules({rule_name: "user_id:%(user_id)s"})

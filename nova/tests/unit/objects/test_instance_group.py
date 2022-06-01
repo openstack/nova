@@ -317,7 +317,7 @@ class _TestInstanceGroupObject(object):
             obj_primitive = obj.obj_to_primitive()
             self.assertIn('policy', data(obj_primitive))
             self.assertIn('policies', data(obj_primitive))
-            # Before 1.10, only has polices which is the list of policy name
+            # Before 1.10, only has policies which is the list of policy name
             obj_primitive = obj.obj_to_primitive('1.10')
             self.assertNotIn('policy', data(obj_primitive))
             self.assertIn('policies', data(obj_primitive))

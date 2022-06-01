@@ -131,7 +131,7 @@ class Hypervisor(object):
     def guest_get_console_output(self, name):
         """get console out put of the given instance
 
-        :returns: The output of the console of the instace, in string format.
+        :returns: The output of the console of the instance, in string format.
         """
         return self._reqh.call('guest_get_console_output', name)
 

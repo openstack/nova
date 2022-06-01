@@ -2931,7 +2931,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         # NOTE(artom) This is a
         # (cpu_set, guest_cpu_tune, guest_cpu_numa, guest_numa_tune)
-        # tuple. See _get_guest_numa_config() docstring for full documenation.
+        # tuple. See _get_guest_numa_config() docstring for full documentation.
         # _get_live_migrate_numa_info() only cares about guest_cpu_tune for CPU
         # pinning and emulator thread pinning, and guest_numa_tune for cell
         # pinning; so only include those 2 in the tuple.
@@ -11429,7 +11429,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 '_check_shared_storage_test_file')
     def _test_check_can_live_migrate_source_block_migration_none(
             self, block_migrate, is_shared_instance_path, is_share_block,
-            mock_check, mock_shared_block, mock_enough, mock_verson):
+            mock_check, mock_shared_block, mock_enough, mock_version):
 
         mock_check.return_value = is_shared_instance_path
         mock_shared_block.return_value = is_share_block
@@ -14766,7 +14766,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('os.path.getsize')
     def test_get_instance_disk_info_no_bdinfo_passed(self, mock_get_size,
                                                      mock_stat):
-        # NOTE(ndipanov): _get_disk_overcomitted_size_total calls this method
+        # NOTE(ndipanov): _get_disk_overcommitted_size_total calls this method
         # without access to Nova's block device information. We want to make
         # sure that we guess volumes mostly correctly in that case as well
         instance = objects.Instance(**self.test_instance)
@@ -24154,7 +24154,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     def test__detach_with_retry_timeout_retry_succeeds(
         self, state, mock_event_wait
     ):
-        """Test that that a live detach times out while waiting for the libvirt
+        """Test that a live detach times out while waiting for the libvirt
         event but then the retry succeeds.
         """
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -24209,7 +24209,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     def test__detach_with_retry_timeout_retry_unplug_in_progress(
         self, mock_event_wait
     ):
-        """Test that that a live detach times out while waiting for the libvirt
+        """Test that a live detach times out while waiting for the libvirt
         event but then the retry gets a unplug already in progress error from
         libvirt, which it ignores, then the detach finishes and the event is
         received.
@@ -24289,10 +24289,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
     def test__detach_with_retry_timeout_run_out_of_retries(
         self, state, mock_event_wait
     ):
-        """Test that that a live detach times out while waiting for the libvirt
+        """Test that a live detach times out while waiting for the libvirt
         event at every attempt so the driver runs out of retry attempts.
         """
-        # decreased the number to simplyfy the test
+        # decreased the number to simplify the test
         self.flags(group='libvirt', device_detach_attempts=2)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

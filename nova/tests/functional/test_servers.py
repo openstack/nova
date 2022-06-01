@@ -764,7 +764,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         LOG.info('Attaching volume %s to server %s', volume_id, server_id)
 
         # The fake driver doesn't implement get_device_name_for_instance, so
-        # we'll just raise the exception directly here, instead of simuluating
+        # we'll just raise the exception directly here, instead of simulating
         # an instance with 26 disk devices already attached.
         with mock.patch.object(self.compute.driver,
                                'get_device_name_for_instance') as mock_get:

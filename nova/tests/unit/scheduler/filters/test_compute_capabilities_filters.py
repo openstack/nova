@@ -48,7 +48,7 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
             flavor=objects.Flavor(memory_mb=1024, extra_specs=especs))
         self.assertFalse(self.filt_cls.host_passes(None, spec_obj))
 
-    def test_compute_filter_fails_without_capabilites(self):
+    def test_compute_filter_fails_without_capabilities(self):
         cpu_info = """ { } """
 
         cpu_info = str(cpu_info)

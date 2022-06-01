@@ -4059,7 +4059,7 @@ class ProviderConfigTestCases(BaseTestCase):
 
         # add the same trait in p_tree and provider config
         # for testing ignoring CUSTOM trait code logic.
-        # If a programmer accidently forgets to ignore (substract)
+        # If a programmer accidentally forgets to ignore (subtract)
         # existing custom traits, this test case will fail as we only expect
         # "EXCEPTION_TRAIT" showed in ValueError exception rather than
         # "EXCEPTION_TRAIT,CUSTOM_IGNORE_TRAIT"

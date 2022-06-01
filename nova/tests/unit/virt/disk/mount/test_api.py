@@ -202,7 +202,7 @@ class MountTestCase(test.NoDBTestCase):
                                                device)
         self.assertIsInstance(inst, block.BlockMount)
 
-    def test_instance_for_device_block_partiton(self,):
+    def test_instance_for_device_block_partiton(self):
         image = mock.MagicMock()
         mount_dir = '/mount/dir'
         partition = 1

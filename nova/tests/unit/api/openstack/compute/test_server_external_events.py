@@ -192,7 +192,7 @@ class ServerExternalEventsTestV21(test.NoDBTestCase):
                           self.api.create, self.req, body=body)
 
     def test_create_unknown_events(self):
-        self.event_1['name'] = 'unkown_event'
+        self.event_1['name'] = 'unknown_event'
         body = {'events': self.event_1}
         self.assertRaises(self.invalid_error,
                           self.api.create, self.req, body=body)

@@ -65,7 +65,7 @@ class RealPolicyFixture(fixtures.Fixture):
     def add_missing_default_rules(self, rules):
         """Adds default rules and their values to the given rules dict.
 
-        The given rulen dict may have an incomplete set of policy rules.
+        The given rules dict may have an incomplete set of policy rules.
         This method will add the default policy rules and their values to
         the dict. It will not override the existing rules.
         """
@@ -141,7 +141,7 @@ class OverridePolicyFixture(RealPolicyFixture):
     not used. One example is when policy rules are deprecated. In that case
     tests can use this fixture and verify if deprecated rules are overridden
     then does nova code enforce the overridden rules not only defaults.
-    As per oslo.policy deprecattion feature, if deprecated rule is overridden
+    As per oslo.policy deprecation feature, if deprecated rule is overridden
     in policy file then, overridden check is used to verify the policy.
     Example of usage:
 

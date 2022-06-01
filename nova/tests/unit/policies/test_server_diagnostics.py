@@ -116,7 +116,7 @@ class ServerDiagnosticsOverridePolicyTest(
         super(ServerDiagnosticsOverridePolicyTest, self).setUp()
         rule = policies.BASE_POLICY_NAME
         # NOTE(gmann): override the rule to project member and verify it
-        # work as policy is projct scoped.
+        # work as policy is project scoped.
         self.policy.set_rules({
             rule: base_policy.PROJECT_MEMBER},
             overwrite=False)

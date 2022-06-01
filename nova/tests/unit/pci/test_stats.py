@@ -886,7 +886,7 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
                                     'dev_type': 'type-PF'}])]
         self.assertIsNone(self.pci_stats.consume_requests(pci_requests))
 
-    def test_consume_VF_and_PF_same_prodict_id_failed(self):
+    def test_consume_VF_and_PF_same_product_id_failed(self):
         self._create_pci_devices(pf_product_id=1515)
         pci_requests = [objects.InstancePCIRequest(count=9,
                             spec=[{'product_id': '1515'}])]

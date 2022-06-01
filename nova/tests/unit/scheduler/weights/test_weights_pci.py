@@ -127,7 +127,7 @@ class PCIWeigherTestCase(test.NoDBTestCase):
         """Test weigher with a PCI device instance and huge hosts.
 
         Ensure that the weigher gracefully degrades when the number of PCI
-        devices on the host exceeeds MAX_DEVS.
+        devices on the host exceeds MAX_DEVS.
         """
         hosts = [
             ('host1', 'node1', [500]),  # 500 devs

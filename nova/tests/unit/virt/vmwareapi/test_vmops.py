@@ -580,7 +580,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   vmware_tools_status="toolsOk",
                                   succeeds=False)
 
-    def test_clean_shutdown_no_vwaretools(self):
+    def test_clean_shutdown_no_vmwaretools(self):
         self._test_clean_shutdown(timeout=10,
                                   retry_interval=3,
                                   returns_on=1,
