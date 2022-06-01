@@ -1353,10 +1353,6 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, instance_uuid, constraint='constraint',
             hard_delete=False)
 
-    def _fake_do_delete(context, instance, bdms,
-                        reservations=None, local=False):
-        pass
-
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
     @mock.patch.object(cinder.API, 'detach')
@@ -1378,9 +1374,11 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_elevated.return_value = self.context
         mock_detach.side_effect = exception.VolumeNotFound('volume_id')
 
+        # lambda function is used to run no op call as a delete function
+        # called by compute_api._local_delete
         self.compute_api._local_delete(self.context, inst, bdms,
                                        'delete',
-                                       self._fake_do_delete)
+                                       lambda *args, **kwargs: None)
 
         mock_notify_legacy.assert_has_calls([
             mock.call(self.compute_api.notifier, self.context,
@@ -1416,8 +1414,11 @@ class _ComputeAPIUnitTestMixIn(object):
         inst._context = self.context
         mock_elevated.return_value = self.context
         bdms = []
+        # lambda function is used to run no op call as a delete function
+        # called by compute_api._local_delete
         self.compute_api._local_delete(self.context, inst, bdms,
-                                       'delete', self._fake_do_delete)
+                                       'delete',
+                                       lambda *args, **kwargs: None)
         mock_del_arqs.assert_called_once_with(self.context, inst)
 
     @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
