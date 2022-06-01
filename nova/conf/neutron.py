@@ -46,7 +46,7 @@ Default name for the floating IP pool.
 
 Specifies the name of floating IP pool used for allocating floating IPs. This
 option is only used if Neutron does not specify the floating IP pool name in
-port binding reponses.
+port binding responses.
 """),
     cfg.IntOpt('extension_sync_interval',
          default=600,

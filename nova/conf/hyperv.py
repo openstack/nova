@@ -320,7 +320,7 @@ configured to claim such devices.
     cfg.ListOpt('iscsi_initiator_list',
                 default=[],
                 help="""
-List of iSCSI initiators that will be used for estabilishing iSCSI sessions.
+List of iSCSI initiators that will be used for establishing iSCSI sessions.
 
 If none are specified, the Microsoft iSCSI initiator service will choose the
 initiator.
