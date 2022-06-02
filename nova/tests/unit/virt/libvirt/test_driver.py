@@ -961,9 +961,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_storage_bus_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_video_model_traits')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_vif_model_traits')
+    @mock.patch.object(host.Host, "has_min_version")
     def test_static_traits(
-        self, mock_vif_traits, mock_video_traits, mock_storage_traits,
-        mock_cpu_traits,
+        self, mock_version, mock_vif_traits, mock_video_traits,
+        mock_storage_traits, mock_cpu_traits,
     ):
         """Ensure driver capabilities are correctly retrieved and cached."""
 
@@ -974,14 +975,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_video_traits.return_value = {'COMPUTE_GRAPHICS_MODEL_VGA': True}
         mock_vif_traits.return_value = {'COMPUTE_NET_VIF_MODEL_VIRTIO': True}
 
+        # for support COMPUTE_VIOMMU_MODEL_VIRTIO
+        mock_version.return_value = True
+
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         expected = {
-            'HW_CPU_HYPERTHREADING': True,
-            'COMPUTE_STORAGE_BUS_VIRTIO': True,
             'COMPUTE_GRAPHICS_MODEL_VGA': True,
             'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
             'COMPUTE_SECURITY_TPM_1_2': False,
             'COMPUTE_SECURITY_TPM_2_0': False,
+            'COMPUTE_STORAGE_BUS_VIRTIO': True,
+            'COMPUTE_VIOMMU_MODEL_AUTO': True,
+            'COMPUTE_VIOMMU_MODEL_INTEL': True,
+            'COMPUTE_VIOMMU_MODEL_SMMUV3': True,
+            'COMPUTE_VIOMMU_MODEL_VIRTIO': True,
+            'HW_CPU_HYPERTHREADING': True
         }
 
         static_traits = drvr.static_traits
@@ -1027,6 +1035,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             'COMPUTE_NET_VIF_MODEL_VIRTIO': True,
             'COMPUTE_SECURITY_TPM_1_2': False,
             'COMPUTE_SECURITY_TPM_2_0': False,
+            'COMPUTE_VIOMMU_MODEL_AUTO': True,
+            'COMPUTE_VIOMMU_MODEL_INTEL': True,
+            'COMPUTE_VIOMMU_MODEL_SMMUV3': True,
+            'COMPUTE_VIOMMU_MODEL_VIRTIO': False
         }
 
         static_traits = drvr.static_traits
