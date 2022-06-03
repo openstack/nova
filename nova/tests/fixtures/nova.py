@@ -1739,3 +1739,62 @@ class ReaderWriterLock(lockutils.ReaderWriterLock):
             'threading.current_thread', eventlet.getcurrent)
         with mpatch if eventlet_patched else contextlib.ExitStack():
             super().__init__(*a, **kw)
+
+
+class SysFsPoisonFixture(fixtures.Fixture):
+
+    def inject_poison(self, module_name, function_name):
+        import importlib
+        mod = importlib.import_module(module_name)
+        orig_f = getattr(mod, function_name)
+        if (
+            isinstance(orig_f, mock.Mock) or
+            # FIXME(gibi): Is this a bug in unittest.mock? If I remove this
+            # then LibvirtReportSevTraitsTests fails as builtins.open is mocked
+            # there at import time via @test.patch_open. That injects a
+            # MagicMock instance to builtins.open which we check here against
+            # Mock (or even MagicMock) via isinstance and that check says it is
+            # not a mock. More interestingly I cannot reproduce the same
+            # issue with @test.patch_open and isinstance in a simple python
+            # interpreter. So to make progress I'm checking the class name
+            # here instead as that works.
+            orig_f.__class__.__name__ == "MagicMock"
+        ):
+            # the target is already mocked, probably via a decorator run at
+            # import time, so we don't need to inject our poison
+            return
+
+        full_name = module_name + "." + function_name
+
+        def toxic_wrapper(*args, **kwargs):
+            path = args[0]
+            if isinstance(path, bytes):
+                pattern = b'/sys'
+            elif isinstance(path, str):
+                pattern = '/sys'
+            else:
+                # we ignore the rest of the potential pathlike types for now
+                pattern = None
+
+            if pattern and path.startswith(pattern):
+                raise Exception(
+                    'This test invokes %s on %s. It is bad, you '
+                    'should mock it.'
+                    % (full_name, path)
+                )
+            else:
+                return orig_f(*args, **kwargs)
+
+        self.useFixture(fixtures.MonkeyPatch(full_name, toxic_wrapper))
+
+    def setUp(self):
+        super().setUp()
+        self.inject_poison("os.path", "isdir")
+        self.inject_poison("builtins", "open")
+        self.inject_poison("glob", "iglob")
+        self.inject_poison("os", "listdir")
+        self.inject_poison("glob", "glob")
+        # TODO(gibi): Would be good to poison these too but that makes
+        # a bunch of test to fail
+        # self.inject_poison("os.path", "exists")
+        # self.inject_poison("os", "stat")

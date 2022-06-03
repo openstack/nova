@@ -31,6 +31,7 @@ from nova.objects import fields as obj_fields
 from nova.tests.fixtures import libvirt_data as fake_libvirt_data
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
+from nova.virt.libvirt import host
 
 
 # Allow passing None to the various connect methods
@@ -2266,6 +2267,15 @@ class LibvirtFixture(fixtures.Fixture):
             'Linux', '', '5.4.0-0-generic', '', obj_fields.Architecture.X86_64)
         self.mock_uname = self.useFixture(
             fixtures.MockPatch('os.uname', return_value=fake_uname)).mock
+
+        real_exists = os.path.exists
+
+        def fake_exists(path):
+            if path == host.SEV_KERNEL_PARAM_FILE:
+                return False
+            return real_exists(path)
+
+        self.useFixture(fixtures.MonkeyPatch('os.path.exists', fake_exists))
 
         # ...and on all machine types
         fake_loaders = [

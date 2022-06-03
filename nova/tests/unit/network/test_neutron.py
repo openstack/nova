@@ -8076,6 +8076,10 @@ class TestAPIPortbinding(TestAPIBase):
             instance, pci_req_id)
 
     @mock.patch.object(
+        pci_utils, 'is_physical_function',
+        new=mock.Mock(return_value=False)
+    )
+    @mock.patch.object(
         pci_utils, 'get_vf_num_by_pci_address',
         new=mock.MagicMock(
             side_effect=(lambda vf_a: {'0000:0a:00.1': 1}.get(vf_a)))

@@ -644,6 +644,10 @@ class PciDevSpecRemoteManagedTestCase(test.NoDBTestCase):
         pci = devspec.PciDeviceSpec(pci_info)
         self.assertTrue(pci.match(self.test_dev))
 
+    @mock.patch(
+        'nova.pci.utils.is_physical_function',
+        new=mock.Mock(return_value=False)
+    )
     def test_remote_managed_vf_match_by_pci_obj(self):
         pci_info = {"vendor_id": "8086", "address": "0000:0a:00.2",
                     "product_id": "5057", "physical_network": "hr_net",
@@ -663,6 +667,10 @@ class PciDevSpecRemoteManagedTestCase(test.NoDBTestCase):
         pci_obj = objects.PciDevice.create(None, pci_dev)
         self.assertTrue(pci.match_pci_obj(pci_obj))
 
+    @mock.patch(
+        'nova.pci.utils.is_physical_function',
+        new=mock.Mock(return_value=False)
+    )
     def test_remote_managed_vf_no_match_by_pci_obj(self):
         pci_info = {"vendor_id": "8086", "address": "0000:0a:00.0",
                     "product_id": "5057", "physical_network": "hr_net",

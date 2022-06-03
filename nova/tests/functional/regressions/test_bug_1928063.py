@@ -30,7 +30,6 @@ class TestSEVInstanceReboot(base.ServersTestBase):
     """
     microversion = 'latest'
 
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, True)
     @test.patch_open(SEV_KERNEL_PARAM_FILE, "1\n")
     @mock.patch.object(
         fakelibvirt.virConnect, '_domain_capability_features',
@@ -40,7 +39,8 @@ class TestSEVInstanceReboot(base.ServersTestBase):
 
         # Configure the compute to allow SEV based instances and then start
         self.flags(num_memory_encrypted_guests=16, group='libvirt')
-        self.start_compute()
+        with test.patch_exists(SEV_KERNEL_PARAM_FILE, True):
+            self.start_compute()
 
         # Create a SEV enabled image for the test
         sev_image = copy.deepcopy(self.glance.image1)
