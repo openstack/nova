@@ -761,14 +761,24 @@ def compute_node_update(context, compute_id, values):
 
 
 @pick_context_manager_writer
-def compute_node_delete(context, compute_id):
+def compute_node_delete(context, compute_id, constraint=None):
     """Delete a ComputeNode record."""
-    result = model_query(context, models.ComputeNode).\
-             filter_by(id=compute_id).\
-             soft_delete(synchronize_session=False)
+    query = model_query(context, models.ComputeNode).filter_by(id=compute_id)
+
+    if constraint is not None:
+        query = constraint.apply(models.ComputeNode, query)
+
+    result = query.soft_delete(synchronize_session=False)
 
     if not result:
-        raise exception.ComputeHostNotFound(host=compute_id)
+        # The soft_delete could fail for one of two reasons:
+        # 1) The compute node no longer exists
+        # 2) The constraint, if specified, was not met
+        # Try to read the compute node and let it raise ComputeHostNotFound if
+        # 1) happened.
+        compute_node_get(context, compute_id)
+        # Else, raise ConstraintNotMet if 2) happened.
+        raise exception.ConstraintNotMet()
 
 
 @pick_context_manager_reader

@@ -10014,17 +10014,30 @@ class ComputeManager(manager.Manager):
                          "nodes are %(nodes)s",
                          {'id': cn.id, 'hh': cn.hypervisor_hostname,
                           'nodes': nodenames})
-                cn.destroy()
-                self.rt.remove_node(cn.hypervisor_hostname)
-                # Delete the corresponding resource provider in placement,
-                # along with any associated allocations.
                 try:
-                    self.reportclient.delete_resource_provider(context, cn,
-                                                               cascade=True)
-                except keystone_exception.ClientException as e:
-                    LOG.error(
-                        "Failed to delete compute node resource provider "
-                        "for compute node %s: %s", cn.uuid, str(e))
+                    cn.destroy()
+                except exception.ObjectActionError:
+                    # NOTE(mgoddard): it's possible that another compute
+                    # service took ownership of this compute node since we
+                    # queried it due to a rebalance, and this will cause the
+                    # deletion to fail. Ignore the error in that case.
+                    LOG.info("Ignoring failure to delete orphan compute node "
+                             "%(id)s on hypervisor host %(hh)s due to "
+                             "possible node rebalance",
+                             {'id': cn.id, 'hh': cn.hypervisor_hostname})
+                    self.rt.remove_node(cn.hypervisor_hostname)
+                    self.reportclient.invalidate_resource_provider(cn.uuid)
+                else:
+                    self.rt.remove_node(cn.hypervisor_hostname)
+                    # Delete the corresponding resource provider in placement,
+                    # along with any associated allocations.
+                    try:
+                        self.reportclient.delete_resource_provider(
+                            context, cn, cascade=True)
+                    except keystone_exception.ClientException as e:
+                        LOG.error(
+                            "Failed to delete compute node resource provider "
+                            "for compute node %s: %s", cn.uuid, str(e))
 
         for nodename in nodenames:
             self._update_available_resource_for_node(context, nodename,
