@@ -869,7 +869,8 @@ class VMwareVMOps(object):
             # block_device_mapping (i.e. disk_bus) is valid
             self._is_bdm_valid(block_device_mapping)
 
-            for disk in block_device_mapping:
+            for disk in sorted(block_device_mapping,
+                               key=lambda x: x.get('boot_index') != 0):
                 connection_info = disk['connection_info']
                 adapter_type = disk.get('disk_bus') or vi.ii.adapter_type
 
