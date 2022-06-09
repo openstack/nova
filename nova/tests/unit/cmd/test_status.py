@@ -474,7 +474,7 @@ class TestUpgradeCheckOldCompute(test.NoDBTestCase):
                 "nova.objects.service.get_minimum_version_all_cells",
                 return_value=too_old):
             result = self.cmd._check_old_computes()
-            self.assertEqual(upgradecheck.Code.WARNING, result.code)
+            self.assertEqual(upgradecheck.Code.FAILURE, result.code)
 
 
 class TestCheckMachineTypeUnset(test.NoDBTestCase):

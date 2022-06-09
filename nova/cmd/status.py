@@ -319,7 +319,7 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
         try:
             utils.raise_if_old_compute()
         except exception.TooOldComputeService as e:
-            return upgradecheck.Result(upgradecheck.Code.WARNING, str(e))
+            return upgradecheck.Result(upgradecheck.Code.FAILURE, str(e))
 
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 

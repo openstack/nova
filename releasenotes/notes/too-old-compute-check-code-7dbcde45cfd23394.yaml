@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The upgrade check tooling now returns a non-zero exit code in the presence
+    of compute node services that are too old. This is to avoid situations in
+    which Nova control services fail to start after an upgrade.
