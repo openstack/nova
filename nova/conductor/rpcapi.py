@@ -473,4 +473,4 @@ class ComputeTaskAPI(object):
             raise exception.ServiceTooOld(_('nova-conductor too old'))
         kw = {'instance': instance, 'migration': migration}
         cctxt = self.client.prepare(version=version)
-        return cctxt.cast(ctxt, 'revert_snapshot_based_resize', **kw)
+        cctxt.cast(ctxt, 'revert_snapshot_based_resize', **kw)
