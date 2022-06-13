@@ -140,7 +140,9 @@ class UnshelveServerControllerTestV277(test.NoDBTestCase):
                                'unshelve') as mock_unshelve:
             self.controller._unshelve(self.req, fakes.FAKE_UUID, body=body)
         mock_unshelve.assert_called_once_with(
-            self.req.environ['nova.context'], instance, new_az=None)
+            self.req.environ['nova.context'],
+            instance,
+        )
 
     @mock.patch('nova.compute.api.API.unshelve')
     @mock.patch('nova.api.openstack.common.get_instance')
@@ -158,7 +160,9 @@ class UnshelveServerControllerTestV277(test.NoDBTestCase):
                 APIVersionRequest('2.76'))
         self.controller._unshelve(self.req, fakes.FAKE_UUID, body=body)
         mock_unshelve.assert_called_once_with(
-            self.req.environ['nova.context'], instance, new_az=None)
+            self.req.environ['nova.context'],
+            instance,
+        )
 
     @mock.patch('nova.compute.api.API.unshelve')
     @mock.patch('nova.api.openstack.common.get_instance')

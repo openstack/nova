@@ -380,6 +380,8 @@ def block_extended_resource_request(function):
 class API:
     """API for interacting with the compute manager."""
 
+    _sentinel = object()
+
     def __init__(self, image_api=None, network_api=None, volume_api=None):
         self.image_api = image_api or glance.API()
         self.network_api = network_api or neutron.API()
@@ -4391,31 +4393,45 @@ class API:
             context, instance=instance,
             clean_shutdown=clean_shutdown, accel_uuids=accel_uuids)
 
-    def _validate_unshelve_az(self, context, instance, availability_zone):
-        """Verify the specified availability_zone during unshelve.
-
-        Verifies that the server is shelved offloaded, the AZ exists and
-        if [cinder]/cross_az_attach=False, that any attached volumes are in
-        the same AZ.
-
-        :param context: nova auth RequestContext for the unshelve action
-        :param instance: Instance object for the server being unshelved
-        :param availability_zone: The user-requested availability zone in
-            which to unshelve the server.
-        :raises: UnshelveInstanceInvalidState if the server is not shelved
-            offloaded
-        :raises: InvalidRequest if the requested AZ does not exist
-        :raises: MismatchVolumeAZException if [cinder]/cross_az_attach=False
-            and any attached volumes are not in the requested AZ
+    def _check_offloaded(self, context, instance):
+        """Check if the status of an instance is SHELVE_OFFLOADED,
+        if not raise an exception.
         """
         if instance.vm_state != vm_states.SHELVED_OFFLOADED:
             # NOTE(brinzhang): If the server status is 'SHELVED', it still
-            # belongs to a host, the availability_zone has not changed.
+            # belongs to a host, the availability_zone should not change.
             # Unshelving a shelved offloaded server will go through the
             # scheduler to find a new host.
             raise exception.UnshelveInstanceInvalidState(
                 state=instance.vm_state, instance_uuid=instance.uuid)
 
+    def _ensure_host_in_az(self, context, host, availability_zone):
+        """Ensure the host provided belongs to the availability zone,
+        if not raise an exception.
+        """
+        if availability_zone is not None:
+            host_az = availability_zones.get_host_availability_zone(
+                context,
+                host
+            )
+            if host_az != availability_zone:
+                raise exception.UnshelveHostNotInAZ(
+                    host=host, availability_zone=availability_zone)
+
+    def _validate_unshelve_az(self, context, instance, availability_zone):
+        """Verify the specified availability_zone during unshelve.
+
+        Verifies the AZ exists and if [cinder]/cross_az_attach=False, that
+        any attached volumes are in the same AZ.
+
+        :param context: nova auth RequestContext for the unshelve action
+        :param instance: Instance object for the server being unshelved
+        :param availability_zone: The user-requested availability zone in
+            which to unshelve the server.
+        :raises: InvalidRequest if the requested AZ does not exist
+        :raises: MismatchVolumeAZException if [cinder]/cross_az_attach=False
+            and any attached volumes are not in the requested AZ
+        """
         available_zones = availability_zones.get_availability_zones(
             context, self.host_api, get_only_available=True)
         if availability_zone not in available_zones:
@@ -4443,31 +4459,88 @@ class API:
 
     @block_extended_resource_request
     @check_instance_lock
-    @check_instance_state(vm_state=[vm_states.SHELVED,
-        vm_states.SHELVED_OFFLOADED])
-    def unshelve(self, context, instance, new_az=None):
-        """Restore a shelved instance."""
+    @check_instance_state(
+            vm_state=[vm_states.SHELVED, vm_states.SHELVED_OFFLOADED])
+    def unshelve(
+            self, context, instance, new_az=_sentinel, host=None):
+        """Restore a shelved instance.
+
+        :param context: the nova request context
+        :param instance: nova.objects.instance.Instance object
+        :param new_az: (optional) target AZ.
+                       If None is provided then the current AZ restriction
+                       will be removed from the instance.
+                       If the parameter is not provided then the current
+                       AZ restriction will not be changed.
+        :param host: (optional) a host to target
+        """
+        # Unshelving a shelved offloaded server will go through the
+        # scheduler to pick a new host, so we update the
+        # RequestSpec.availability_zone here. Note that if scheduling
+        # fails the RequestSpec will remain updated, which is not great.
+        # Bug open to track this https://bugs.launchpad.net/nova/+bug/1978573
+
+        az_passed = new_az is not self._sentinel
+
         request_spec = objects.RequestSpec.get_by_instance_uuid(
             context, instance.uuid)
 
-        if new_az:
+        # We need to check a list of preconditions and validate inputs first
+
+        # Ensure instance is shelve offloaded
+        if az_passed or host:
+            self._check_offloaded(context, instance)
+
+        if az_passed and new_az:
+            # we have to ensure that new AZ is valid
             self._validate_unshelve_az(context, instance, new_az)
-            LOG.debug("Replace the old AZ %(old_az)s in RequestSpec "
-                      "with a new AZ %(new_az)s of the instance.",
-                      {"old_az": request_spec.availability_zone,
-                       "new_az": new_az}, instance=instance)
-            # Unshelving a shelved offloaded server will go through the
-            # scheduler to pick a new host, so we update the
-            # RequestSpec.availability_zone here. Note that if scheduling
-            # fails the RequestSpec will remain updated, which is not great,
-            # but if we want to change that we need to defer updating the
-            # RequestSpec until conductor which probably means RPC changes to
-            # pass the new_az variable to conductor. This is likely low
-            # priority since the RequestSpec.availability_zone on a shelved
-            # offloaded server does not mean much anyway and clearly the user
-            # is trying to put the server in the target AZ.
-            request_spec.availability_zone = new_az
-            request_spec.save()
+        # This will be the AZ of the instance after the unshelve. It can be
+        # None indicating that the instance is not pinned to any AZ after the
+        # unshelve
+        expected_az_after_unshelve = (
+            request_spec.availability_zone
+            if not az_passed else new_az
+        )
+        # host is requested, so we have to see if it exists and does not
+        # contradict with the AZ of the instance
+        if host:
+            # Ensure that the requested host exists otherwise raise
+            # a ComputeHostNotFound exception
+            objects.ComputeNode.get_first_node_by_host_for_old_compat(
+                context, host, use_slave=True)
+            # A specific host is requested so we need to make sure that it is
+            # not contradicts with the AZ of the instance
+            self._ensure_host_in_az(
+                context, host, expected_az_after_unshelve)
+
+        if new_az is None:
+            LOG.debug(
+                'Unpin instance from AZ "%(old_az)s".',
+                {'old_az': request_spec.availability_zone},
+                instance=instance
+            )
+
+        LOG.debug(
+            'Unshelving instance with old availability_zone "%(old_az)s" to '
+            'new availability_zone "%(new_az)s" and host "%(host)s".',
+            {
+                'old_az': request_spec.availability_zone,
+                'new_az': '%s' %
+                          new_az if az_passed
+                                 else 'not provided',
+                'host': host,
+             },
+            instance=instance,
+        )
+        # OK every precondition checks out, we just need to tell the scheduler
+        # where to put the instance
+        # We have the expected AZ already calculated. So we just need to
+        # set it in the request_spec to drive the scheduling
+        request_spec.availability_zone = expected_az_after_unshelve
+        # if host is requested we also need to tell the scheduler that
+        if host:
+            request_spec.requested_destination = objects.Destination(host=host)
+        request_spec.save()
 
         instance.task_state = task_states.UNSHELVING
         instance.save(expected_task_state=[None])

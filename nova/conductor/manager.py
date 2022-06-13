@@ -1022,6 +1022,12 @@ class ComputeTaskManager:
                     scheduler_utils.populate_filter_properties(
                             filter_properties, selection)
                     (host, node) = (selection.service_host, selection.nodename)
+                    LOG.debug(
+                        "Scheduler selected host: %s, node:%s",
+                        host,
+                        node,
+                        instance=instance
+                    )
                     instance.availability_zone = (
                         availability_zones.get_host_availability_zone(
                             context, host))

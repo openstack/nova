@@ -1676,9 +1676,15 @@ class MismatchVolumeAZException(Invalid):
 
 
 class UnshelveInstanceInvalidState(InstanceInvalidState):
-    msg_fmt = _('Specifying an availability zone when unshelving server '
-                '%(instance_uuid)s with status "%(state)s" is not supported. '
-                'The server status must be SHELVED_OFFLOADED.')
+    msg_fmt = _('Specifying an availability zone or a host when unshelving '
+                'server "%(instance_uuid)s" with status "%(state)s" is not '
+                'supported. The server status must be SHELVED_OFFLOADED.')
+    code = 409
+
+
+class UnshelveHostNotInAZ(Invalid):
+    msg_fmt = _('Host "%(host)s" is not in the availability zone '
+                '"%(availability_zone)s".')
     code = 409
 
 

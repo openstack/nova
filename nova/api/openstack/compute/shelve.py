@@ -95,14 +95,15 @@ class ShelveController(wsgi.Controller):
         context.can(shelve_policies.POLICY_ROOT % 'unshelve',
                     target={'project_id': instance.project_id})
 
-        new_az = None
+        unshelve_args = {}
+
         unshelve_dict = body['unshelve']
         support_az = api_version_request.is_supported(req, '2.77')
         if support_az and unshelve_dict:
-            new_az = unshelve_dict['availability_zone']
+            unshelve_args['new_az'] = unshelve_dict['availability_zone']
 
         try:
-            self.compute_api.unshelve(context, instance, new_az=new_az)
+            self.compute_api.unshelve(context, instance, **unshelve_args)
         except (exception.InstanceIsLocked,
                 exception.UnshelveInstanceInvalidState,
                 exception.MismatchVolumeAZException) as e:
