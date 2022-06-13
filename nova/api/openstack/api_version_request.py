@@ -247,6 +247,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              updating or rebuilding an instance. The
              ``OS-EXT-SRV-ATTR:hostname`` attribute is now returned in various
              server responses regardless of policy configuration.
+    * 2.91 - Add support to unshelve instance to a specific host and
+             to pin/unpin AZ.
 """
 
 # The minimum and maximum versions of the API supported
@@ -255,7 +257,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = '2.1'
-_MAX_API_VERSION = '2.90'
+_MAX_API_VERSION = '2.91'
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

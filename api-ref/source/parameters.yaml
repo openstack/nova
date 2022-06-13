@@ -1858,8 +1858,11 @@ availability_zone_state:
 availability_zone_unshelve:
   description: |
     The availability zone name. Specifying an availability zone is only
-    allowed when the server status is ``SHELVED_OFFLOADED`` otherwise a
-    409 HTTPConflict response is returned.
+    allowed when the server status is ``SHELVED_OFFLOADED`` otherwise
+    HTTP 409 conflict response is returned.
+
+    Since microversion 2.91 ``"availability_zone":null`` allows unpinning the
+    instance from any availability_zone it is pinned to.
   in: body
   required: false
   type: string
@@ -3690,6 +3693,15 @@ host_status_update_rebuild:
   required: false
   type: string
   min_version: 2.75
+host_unshelve:
+  description: |
+    The destination host name. Specifying a destination host is by default only
+    allowed to project_admin, if it not the case HTTP 403 forbidden response
+    is returned.
+  in: body
+  required: false
+  type: string
+  min_version: 2.91
 host_zone:
   description: |
     The available zone of the host.

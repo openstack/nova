@@ -45,6 +45,18 @@ shelve_policies = [
         ],
         scope_types=['project']),
     policy.DocumentedRuleDefault(
+        name=POLICY_ROOT % 'unshelve_to_host',
+        check_str=base.PROJECT_ADMIN,
+        description="Unshelve (restore) shelve offloaded server to a "
+                    "specific host",
+        operations=[
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/action (unshelve)'
+            }
+        ],
+        scope_types=['project']),
+    policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'shelve_offload',
         check_str=base.PROJECT_ADMIN,
         description="Shelf-offload (remove) server",

@@ -68,7 +68,6 @@ class ShelveController(wsgi.Controller):
         context.can(shelve_policies.POLICY_ROOT % 'shelve_offload',
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
-
         try:
             self.compute_api.shelve_offload(context, instance)
         except exception.InstanceIsLocked as e:
@@ -87,33 +86,59 @@ class ShelveController(wsgi.Controller):
     # In microversion 2.77 we support specifying 'availability_zone' to
     # unshelve a server. But before 2.77 there is no request body
     # schema validation (because of body=null).
-    @validation.schema(shelve_schemas.unshelve_v277, min_version='2.77')
+    @validation.schema(
+        shelve_schemas.unshelve_v277,
+        min_version='2.77',
+        max_version='2.90'
+    )
+    # In microversion 2.91 we support specifying 'host' to
+    # unshelve an instance to a specific hostself.
+    # 'availability_zone' = None is supported as well to unpin the
+    # availability zone of an instance bonded to this availability_zone
+    @validation.schema(shelve_schemas.unshelve_v291, min_version='2.91')
     def _unshelve(self, req, id, body):
         """Restore an instance from shelved mode."""
         context = req.environ["nova.context"]
         instance = common.get_instance(self.compute_api, context, id)
-        context.can(shelve_policies.POLICY_ROOT % 'unshelve',
-                    target={'project_id': instance.project_id})
+        context.can(
+            shelve_policies.POLICY_ROOT % 'unshelve',
+            target={'project_id': instance.project_id}
+        )
 
         unshelve_args = {}
 
-        unshelve_dict = body['unshelve']
-        support_az = api_version_request.is_supported(req, '2.77')
-        if support_az and unshelve_dict:
-            unshelve_args['new_az'] = unshelve_dict['availability_zone']
+        unshelve_dict = body.get('unshelve')
+        support_az = api_version_request.is_supported(
+            req, '2.77')
+        support_host = api_version_request.is_supported(
+            req, '2.91')
+        if unshelve_dict:
+            if support_az and 'availability_zone' in unshelve_dict:
+                unshelve_args['new_az'] = (
+                    unshelve_dict['availability_zone']
+                )
+            if support_host:
+                unshelve_args['host'] = unshelve_dict.get('host')
 
         try:
-            self.compute_api.unshelve(context, instance, **unshelve_args)
-        except (exception.InstanceIsLocked,
-                exception.UnshelveInstanceInvalidState,
-                exception.MismatchVolumeAZException) as e:
+            self.compute_api.unshelve(
+                context,
+                instance,
+                **unshelve_args,
+            )
+        except (
+            exception.InstanceIsLocked,
+            exception.UnshelveInstanceInvalidState,
+            exception.UnshelveHostNotInAZ,
+            exception.MismatchVolumeAZException,
+        ) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                                                                  'unshelve',
-                                                                  id)
+            common.raise_http_conflict_for_instance_invalid_state(
+                state_error, 'unshelve', id)
         except (
             exception.InvalidRequest,
             exception.ExtendedResourceRequestOldCompute,
+            exception.ComputeHostNotFound,
         ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())

@@ -358,6 +358,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-services:update",
 "os_compute_api:os-services:delete",
 "os_compute_api:os-shelve:shelve_offload",
+"os_compute_api:os-shelve:unshelve_to_host",
 "os_compute_api:os-availability-zone:detail",
 "os_compute_api:os-assisted-volume-snapshots:create",
 "os_compute_api:os-assisted-volume-snapshots:delete",

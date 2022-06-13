@@ -2519,6 +2519,57 @@ class ServerMovingTests(integrated_helpers.ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
+    def test_shelve_unshelve_to_host(self):
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = \
+            self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_then_shelve_and_check_allocations(
+            source_hostname, source_rp_uuid)
+
+        self._shelve_offload_and_check_allocations(server, source_rp_uuid)
+
+        req = {
+            'unshelve': {'host': dest_hostname}
+        }
+
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_server_parameter(
+            server, {'OS-EXT-SRV-ATTR:host': dest_hostname, 'status': 'ACTIVE'}
+        )
+
+        self.assertFlavorMatchesUsage(dest_rp_uuid, self.flavor1)
+
+        # the server has an allocation on only the dest node
+        self.assertFlavorMatchesAllocation(
+                self.flavor1, server['id'], dest_rp_uuid)
+
+        self._delete_and_check_allocations(server)
+
+    def test_shelve_unshelve_to_host_instance_not_offloaded(self):
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+
+        server = self._boot_then_shelve_and_check_allocations(
+            source_hostname, source_rp_uuid)
+
+        req = {
+            'unshelve': {'host': dest_hostname}
+        }
+
+        ex = self.assertRaises(
+                client.OpenStackApiException,
+                self.api.post_server_action,
+                server['id'], req
+                )
+        self.assertEqual(409, ex.response.status_code)
+        self.assertIn(
+                "The server status must be SHELVED_OFFLOADED",
+                ex.response.text)
+
     def _shelve_offload_and_check_allocations(self, server, source_rp_uuid):
         req = {
             'shelveOffload': {}

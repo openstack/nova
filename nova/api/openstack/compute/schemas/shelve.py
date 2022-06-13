@@ -15,7 +15,7 @@
 from nova.api.validation import parameter_types
 
 # NOTE(brinzhang): For older microversion there will be no change as
-# schema is applied only for >2.77 with unshelve a server API.
+# schema is applied only for version < 2.91 with unshelve a server API.
 # Anything working in old version keep working as it is.
 unshelve_v277 = {
     'type': 'object',
@@ -34,4 +34,56 @@ unshelve_v277 = {
     },
     'required': ['unshelve'],
     'additionalProperties': False,
+}
+
+# NOTE(rribaud):
+# schema is applied only for version >= 2.91 with unshelve a server API.
+# Add host parameter to specify to unshelve to this specific host.
+#
+# Schema has been redefined for better clarity instead of extend 2.77.
+#
+# API can be called with the following body:
+#
+# - {"unshelve": null}   (Keep compatibility with previous microversions)
+#
+# or
+#
+# - {"unshelve": {"availability_zone": <string>}}
+# - {"unshelve": {"availability_zone": null}}   (Unpin availability zone)
+# - {"unshelve": {"host": <fqdn>}}
+# - {"unshelve": {"availability_zone": <string>, "host": <fqdn>}}
+# - {"unshelve": {"availability_zone": null, "host": <fqdn>}}
+#
+#
+# Everything else is not allowed, examples:
+#
+# - {"unshelve": {}}
+# - {"unshelve": {"host": <fqdn>, "host": <fqdn>}}
+# - {"unshelve": {"foo": <string>}}
+
+unshelve_v291 = {
+    "type": "object",
+    "properties": {
+        "unshelve": {
+            "oneOf": [
+                {
+                    "type": ["object"],
+                    "properties": {
+                        "availability_zone": {
+                            "oneOf": [
+                                {"type": ["null"]},
+                                {"type": "string"}]
+                        },
+                        "host": {
+                            "type": "string"
+                        }
+                    },
+                    "additionalProperties": False
+                },
+                {"type": ["null"]}
+            ]
+        }
+    },
+    "required": ["unshelve"],
+    "additionalProperties": False
 }

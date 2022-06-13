@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Microversion 2.91 adds the optional parameter ``host`` to
+    the ``unshelve`` server action API.
+    Specifying a destination host is only
+    allowed to admin users and server status must be ``SHELVED_OFFLOADED``
+    otherwise a HTTP 400 (bad request) response is returned.
+    It also allows to set ``availability_zone`` to None to unpin a server
+    from an availability_zone.

@@ -1202,3 +1202,12 @@ hostname based on the display name.
 
 In addition, the ``OS-EXT-SRV-ATTR:hostname`` field for all server
 responses is now visible to all users. Previously this was an admin-only field.
+
+.. _microversion 2.91:
+
+2.91
+----
+
+Add support to unshelve instance to a specific host.
+
+Add support to pin a server to an availability zone or unpin a server from any availability zone.

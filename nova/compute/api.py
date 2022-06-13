@@ -75,6 +75,7 @@ from nova.objects import quotas as quotas_obj
 from nova.objects import service as service_obj
 from nova.pci import request as pci_request
 from nova.policies import servers as servers_policies
+from nova.policies import shelve as shelve_policies
 import nova.policy
 from nova import profiler
 from nova import rpc
@@ -4504,6 +4505,14 @@ class API:
         # host is requested, so we have to see if it exists and does not
         # contradict with the AZ of the instance
         if host:
+            # Make sure only admin can unshelve to a specific host.
+            context.can(
+                shelve_policies.POLICY_ROOT % 'unshelve_to_host',
+                target={
+                    'user_id': instance.user_id,
+                    'project_id': instance.project_id
+                }
+            )
             # Ensure that the requested host exists otherwise raise
             # a ComputeHostNotFound exception
             objects.ComputeNode.get_first_node_by_host_for_old_compat(

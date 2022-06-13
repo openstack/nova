@@ -121,9 +121,65 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 **Preconditions**
 
-The server status must be ``SHELVED`` or ``SHELVED_OFFLOADED``.
+Unshelving a server without parameters requires its status to be ``SHELVED`` or ``SHELVED_OFFLOADED``.
 
-If the server is locked, you must have administrator privileges to unshelve the server.
+Unshelving a server with availability_zone and/or host parameters requires its status to be only ``SHELVED_OFFLOADED`` otherwise HTTP 409 conflict response is returned.
+
+If a server is locked, you must have administrator privileges to unshelve the server.
+
+As of ``microversion 2.91``, you can unshelve to a specific compute node if you have PROJECT_ADMIN privileges.
+This microversion also gives the ability to pin a server to an availability_zone and to unpin a server
+from any availability_zone.
+
+When a server is pinned to an availability_zone, the server move operations will keep the server in that
+availability_zone. However, when the server is not pinned to any availability_zone, the move operations can
+move the server to nodes in different availability_zones.
+
+The behavior according to unshelve parameters will follow the below table.
+
++----------+---------------------------+----------+--------------------------------+
+| Boot     | AZ (1)                    | Host (1) | Result                         |
++==========+===========================+==========+================================+
+|  No AZ   | No AZ or AZ=null          | No       | Free scheduling (2)            |
++----------+---------------------------+----------+--------------------------------+
+|  No AZ   | No AZ or AZ=null          | Host1    | Schedule to Host1.             |
+|          |                           |          | Server remains unpinned.       |
++----------+---------------------------+----------+--------------------------------+
+|  No AZ   | AZ="AZ1"                  | No       | Schedule to any host in "AZ1". |
+|          |                           |          | Server is pined to "AZ1".      |
++----------+---------------------------+----------+--------------------------------+
+|  No AZ   | AZ="AZ1"                  | Host1    | Verify Host1 is in "AZ1",      |
+|          |                           |          | then schedule to Host1,        |
+|          |                           |          | otherwise reject the request.  |
+|          |                           |          | Server is pined to "AZ1".      |
++----------+---------------------------+----------+--------------------------------+
+|  AZ1     | No AZ                     | No       | Schedule to any host in "AZ1". |
+|          |                           |          | Server remains pined to "AZ1". |
++----------+---------------------------+----------+--------------------------------+
+|  AZ1     | AZ=null                   | No       | Free scheduling (2).           |
+|          |                           |          | Server is unpinned.            |
++----------+---------------------------+----------+--------------------------------+
+|  AZ1     | No AZ                     | Host1    | Verify Host1 is in "AZ1",      |
+|          |                           |          | then schedule to Host1,        |
+|          |                           |          | otherwise reject the request.  |
+|          |                           |          | Server remains pined to "AZ1". |
++----------+---------------------------+----------+--------------------------------+
+|  AZ1     | AZ=null                   | Host1    | Schedule to Host1.             |
+|          |                           |          | Server is unpinned.            |
++----------+---------------------------+----------+--------------------------------+
+|  AZ1     | AZ="AZ2"                  | No       | Schedule to any host in "AZ2". |
+|          |                           |          | Server is pined to "AZ2".      |
++----------+---------------------------+----------+--------------------------------+
+|  AZ1     | AZ="AZ2"                  | Host1    | Verify Host1 is in "AZ2" then  |
+|          |                           |          | schedule to Host1,             |
+|          |                           |          | otherwise reject the request.  |
+|          |                           |          | Server is pined to "AZ2".      |
++----------+---------------------------+----------+--------------------------------+
+
+(1) Unshelve body parameters
+(2) Schedule to any host available.
+
+
 
 **Asynchronous Postconditions**
 
@@ -147,11 +203,30 @@ Request
           {"unshelve": null} or {"unshelve": {"availability_zone": <string>}}.
           A request body of {"unshelve": {}} is not allowed.
 
+.. note:: Since microversion 2.91, allowed request body schema are
+
+  - {"unshelve": null}   (Keep compatibility with previous microversions)
+
+  or
+
+  - {"unshelve": {"availability_zone": <string>}} (Unshelve and pin server to availability_zone)
+  - {"unshelve": {"availability_zone": null}}   (Unshelve and unpin server from any availability zone)
+  - {"unshelve": {"host": <fqdn>}}
+  - {"unshelve": {"availability_zone": <string>, "host": <fqdn>}}
+  - {"unshelve": {"availability_zone": null, "host": <fqdn>}}
+
+  Everything else is not allowed, examples:
+
+  - {"unshelve": {}}
+  - {"unshelve": {"host": <fqdn>, "host": <fqdn>}}
+  - {"unshelve": {"foo": <string>}}
+
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
   - unshelve: unshelve
   - availability_zone: availability_zone_unshelve
+  - host: host_unshelve
 
 |
 
@@ -162,9 +237,22 @@ Request
 
 **Example Unshelve server (unshelve Action) (v2.77)**
 
-.. literalinclude:: ../../doc/api_samples/os-shelve/v2.77/os-unshelve.json
+.. literalinclude:: ../../doc/api_samples/os-shelve/v2.77/os-unshelve-az.json
    :language: javascript
 
+**Examples Unshelve server (unshelve Action) (v2.91)**
+
+.. literalinclude:: ../../doc/api_samples/os-shelve/v2.91/os-unshelve-host.json
+   :language: javascript
+
+.. literalinclude:: ../../doc/api_samples/os-shelve/v2.91/os-unshelve-az-host.json
+   :language: javascript
+
+.. literalinclude:: ../../doc/api_samples/os-shelve/v2.91/os-unshelve-host-and-unpin-az.json
+   :language: javascript
+
+.. literalinclude:: ../../doc/api_samples/os-shelve/v2.91/os-unshelve-unpin-az.json
+   :language: javascript
 
 Response
 --------
