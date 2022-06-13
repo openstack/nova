@@ -364,31 +364,66 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
                                           expect_fail=False):
         # The purpose here is to force an observable PCI slot update when
         # moving from source to dest. This is accomplished by having a single
-        # PCI device on the source, 2 PCI devices on the test, and relying on
-        # the fact that our fake HostPCIDevicesInfo creates predictable PCI
-        # addresses. The PCI device on source and the first PCI device on dest
-        # will have identical PCI addresses. By sticking a "placeholder"
-        # instance on that first PCI device on the dest, the incoming instance
-        # from source will be forced to consume the second dest PCI device,
-        # with a different PCI address.
+        # PCI VF device on the source, 2 PCI VF devices on the dest, and
+        # relying on the fact that our fake HostPCIDevicesInfo creates
+        # predictable PCI addresses. The PCI VF device on source and the first
+        # PCI VF device on dest will have identical PCI addresses. By sticking
+        # a "placeholder" instance on that first PCI VF device on the dest, the
+        # incoming instance from source will be forced to consume the second
+        # dest PCI VF device, with a different PCI address.
+        # We want to test server operations with SRIOV VFs and SRIOV PFs so
+        # the config of the compute hosts also have one extra PCI PF devices
+        # without any VF children. But the two compute has different PCI PF
+        # addresses and MAC so that the test can observe the slot update as
+        # well as the MAC updated during migration and after revert.
+        source_pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
+        # add an extra PF without VF to be used by direct-physical ports
+        source_pci_info.add_device(
+            dev_type='PF',
+            bus=0x82,  # the HostPCIDevicesInfo use the 0x81 by default
+            slot=0x0,
+            function=0,
+            iommu_group=42,
+            numa_node=0,
+            vf_ratio=0,
+            mac_address='b4:96:91:34:f4:aa',
+        )
         self.start_compute(
             hostname='source',
-            pci_info=fakelibvirt.HostPCIDevicesInfo(
-                num_pfs=1, num_vfs=1))
+            pci_info=source_pci_info)
+
+        dest_pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=2)
+        # add an extra PF without VF to be used by direct-physical ports
+        dest_pci_info.add_device(
+            dev_type='PF',
+            bus=0x82,  # the HostPCIDevicesInfo use the 0x81 by default
+            slot=0x6,  # make it different from the source host
+            function=0,
+            iommu_group=42,
+            numa_node=0,
+            vf_ratio=0,
+            mac_address='b4:96:91:34:f4:bb',
+        )
         self.start_compute(
             hostname='dest',
-            pci_info=fakelibvirt.HostPCIDevicesInfo(
-                num_pfs=1, num_vfs=2))
+            pci_info=dest_pci_info)
 
         source_port = self.neutron.create_port(
             {'port': self.neutron.network_4_port_1})
+        source_pf_port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_pf})
         dest_port1 = self.neutron.create_port(
             {'port': self.neutron.network_4_port_2})
         dest_port2 = self.neutron.create_port(
             {'port': self.neutron.network_4_port_3})
 
         source_server = self._create_server(
-            networks=[{'port': source_port['port']['id']}], host='source')
+            networks=[
+                {'port': source_port['port']['id']},
+                {'port': source_pf_port['port']['id']}
+            ],
+            host='source',
+        )
         dest_server1 = self._create_server(
             networks=[{'port': dest_port1['port']['id']}], host='dest')
         dest_server2 = self._create_server(
@@ -396,6 +431,7 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
 
         # Refresh the ports.
         source_port = self.neutron.show_port(source_port['port']['id'])
+        source_pf_port = self.neutron.show_port(source_pf_port['port']['id'])
         dest_port1 = self.neutron.show_port(dest_port1['port']['id'])
         dest_port2 = self.neutron.show_port(dest_port2['port']['id'])
 
@@ -411,10 +447,23 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             same_slot_port = dest_port2
             self._delete_server(dest_server1)
 
-        # Before moving, explictly assert that the servers on source and dest
+        # Before moving, explicitly assert that the servers on source and dest
         # have the same pci_slot in their port's binding profile
         self.assertEqual(source_port['port']['binding:profile']['pci_slot'],
                          same_slot_port['port']['binding:profile']['pci_slot'])
+
+        # Assert that the direct-physical port got the pci_slot information
+        # according to the source host PF PCI device.
+        self.assertEqual(
+            '0000:82:00.0',  # which is in sync with the source host pci_info
+            source_pf_port['port']['binding:profile']['pci_slot']
+        )
+        # Assert that the direct-physical port is updated with the MAC address
+        # of the PF device from the source host
+        self.assertEqual(
+            'b4:96:91:34:f4:aa',
+            source_pf_port['port']['binding:profile']['device_mac_address']
+        )
 
         # Before moving, assert that the servers on source and dest have the
         # same PCI source address in their XML for their SRIOV nic.
@@ -432,13 +481,27 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         move_operation(source_server)
 
         # Refresh the ports again, keeping in mind the source_port is now bound
-        # on the dest after unshelving.
+        # on the dest after the move.
         source_port = self.neutron.show_port(source_port['port']['id'])
         same_slot_port = self.neutron.show_port(same_slot_port['port']['id'])
+        source_pf_port = self.neutron.show_port(source_pf_port['port']['id'])
 
         self.assertNotEqual(
             source_port['port']['binding:profile']['pci_slot'],
             same_slot_port['port']['binding:profile']['pci_slot'])
+
+        # Assert that the direct-physical port got the pci_slot information
+        # according to the dest host PF PCI device.
+        self.assertEqual(
+            '0000:82:06.0',  # which is in sync with the dest host pci_info
+            source_pf_port['port']['binding:profile']['pci_slot']
+        )
+        # Assert that the direct-physical port is updated with the MAC address
+        # of the PF device from the dest host
+        self.assertEqual(
+            'b4:96:91:34:f4:bb',
+            source_pf_port['port']['binding:profile']['device_mac_address']
+        )
 
         conn = self.computes['dest'].driver._host.get_connection()
         vms = [vm._def for vm in conn._vms.values()]
@@ -467,6 +530,169 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             self._confirm_resize(source_server)
         self._test_move_operation_with_neutron(move_operation)
 
+    def test_cold_migrate_and_rever_server_with_neutron(self):
+        # The purpose here is to force an observable PCI slot update when
+        # moving from source to dest and the from dest to source after the
+        # revert. This is accomplished by having a single
+        # PCI VF device on the source, 2 PCI VF devices on the dest, and
+        # relying on the fact that our fake HostPCIDevicesInfo creates
+        # predictable PCI addresses. The PCI VF device on source and the first
+        # PCI VF device on dest will have identical PCI addresses. By sticking
+        # a "placeholder" instance on that first PCI VF device on the dest, the
+        # incoming instance from source will be forced to consume the second
+        # dest PCI VF device, with a different PCI address.
+        # We want to test server operations with SRIOV VFs and SRIOV PFs so
+        # the config of the compute hosts also have one extra PCI PF devices
+        # without any VF children. But the two compute has different PCI PF
+        # addresses and MAC so that the test can observe the slot update as
+        # well as the MAC updated during migration and after revert.
+        source_pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
+        # add an extra PF without VF to be used by direct-physical ports
+        source_pci_info.add_device(
+            dev_type='PF',
+            bus=0x82,  # the HostPCIDevicesInfo use the 0x81 by default
+            slot=0x0,
+            function=0,
+            iommu_group=42,
+            numa_node=0,
+            vf_ratio=0,
+            mac_address='b4:96:91:34:f4:aa',
+        )
+        self.start_compute(
+            hostname='source',
+            pci_info=source_pci_info)
+        dest_pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=2)
+        # add an extra PF without VF to be used by direct-physical ports
+        dest_pci_info.add_device(
+            dev_type='PF',
+            bus=0x82,  # the HostPCIDevicesInfo use the 0x81 by default
+            slot=0x6,  # make it different from the source host
+            function=0,
+            iommu_group=42,
+            numa_node=0,
+            vf_ratio=0,
+            mac_address='b4:96:91:34:f4:bb',
+        )
+        self.start_compute(
+            hostname='dest',
+            pci_info=dest_pci_info)
+        source_port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_1})
+        source_pf_port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_pf})
+        dest_port1 = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_2})
+        dest_port2 = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_3})
+        source_server = self._create_server(
+            networks=[
+                {'port': source_port['port']['id']},
+                {'port': source_pf_port['port']['id']}
+            ],
+            host='source',
+        )
+        dest_server1 = self._create_server(
+            networks=[{'port': dest_port1['port']['id']}], host='dest')
+        dest_server2 = self._create_server(
+            networks=[{'port': dest_port2['port']['id']}], host='dest')
+        # Refresh the ports.
+        source_port = self.neutron.show_port(source_port['port']['id'])
+        source_pf_port = self.neutron.show_port(source_pf_port['port']['id'])
+        dest_port1 = self.neutron.show_port(dest_port1['port']['id'])
+        dest_port2 = self.neutron.show_port(dest_port2['port']['id'])
+        # Find the server on the dest compute that's using the same pci_slot as
+        # the server on the source compute, and delete the other one to make
+        # room for the incoming server from the source.
+        source_pci_slot = source_port['port']['binding:profile']['pci_slot']
+        dest_pci_slot1 = dest_port1['port']['binding:profile']['pci_slot']
+        if dest_pci_slot1 == source_pci_slot:
+            same_slot_port = dest_port1
+            self._delete_server(dest_server2)
+        else:
+            same_slot_port = dest_port2
+            self._delete_server(dest_server1)
+        # Before moving, explicitly assert that the servers on source and dest
+        # have the same pci_slot in their port's binding profile
+        self.assertEqual(source_port['port']['binding:profile']['pci_slot'],
+                         same_slot_port['port']['binding:profile']['pci_slot'])
+        # Assert that the direct-physical port got the pci_slot information
+        # according to the source host PF PCI device.
+        self.assertEqual(
+            '0000:82:00.0',  # which is in sync with the source host pci_info
+            source_pf_port['port']['binding:profile']['pci_slot']
+        )
+        # Assert that the direct-physical port is updated with the MAC address
+        # of the PF device from the source host
+        self.assertEqual(
+            'b4:96:91:34:f4:aa',
+            source_pf_port['port']['binding:profile']['device_mac_address']
+        )
+        # Before moving, assert that the servers on source and dest have the
+        # same PCI source address in their XML for their SRIOV nic.
+        source_conn = self.computes['source'].driver._host.get_connection()
+        dest_conn = self.computes['source'].driver._host.get_connection()
+        source_vms = [vm._def for vm in source_conn._vms.values()]
+        dest_vms = [vm._def for vm in dest_conn._vms.values()]
+        self.assertEqual(1, len(source_vms))
+        self.assertEqual(1, len(dest_vms))
+        self.assertEqual(1, len(source_vms[0]['devices']['nics']))
+        self.assertEqual(1, len(dest_vms[0]['devices']['nics']))
+        self.assertEqual(source_vms[0]['devices']['nics'][0]['source'],
+                         dest_vms[0]['devices']['nics'][0]['source'])
+
+        # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
+        # probably be less...dumb
+        with mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                        '.migrate_disk_and_power_off', return_value='{}'):
+            self._migrate_server(source_server)
+
+        # Refresh the ports again, keeping in mind the ports are now bound
+        # on the dest after migrating.
+        source_port = self.neutron.show_port(source_port['port']['id'])
+        same_slot_port = self.neutron.show_port(same_slot_port['port']['id'])
+        source_pf_port = self.neutron.show_port(source_pf_port['port']['id'])
+        self.assertNotEqual(
+            source_port['port']['binding:profile']['pci_slot'],
+            same_slot_port['port']['binding:profile']['pci_slot'])
+        # Assert that the direct-physical port got the pci_slot information
+        # according to the dest host PF PCI device.
+        self.assertEqual(
+            '0000:82:06.0',  # which is in sync with the dest host pci_info
+            source_pf_port['port']['binding:profile']['pci_slot']
+        )
+        # Assert that the direct-physical port is updated with the MAC address
+        # of the PF device from the dest host
+        self.assertEqual(
+            'b4:96:91:34:f4:bb',
+            source_pf_port['port']['binding:profile']['device_mac_address']
+        )
+        conn = self.computes['dest'].driver._host.get_connection()
+        vms = [vm._def for vm in conn._vms.values()]
+        self.assertEqual(2, len(vms))
+        for vm in vms:
+            self.assertEqual(1, len(vm['devices']['nics']))
+        self.assertNotEqual(vms[0]['devices']['nics'][0]['source'],
+                            vms[1]['devices']['nics'][0]['source'])
+
+        self._revert_resize(source_server)
+
+        # Refresh the ports again, keeping in mind the ports are now bound
+        # on the source as the migration is reverted
+        source_pf_port = self.neutron.show_port(source_pf_port['port']['id'])
+
+        # Assert that the direct-physical port got the pci_slot information
+        # according to the source host PF PCI device.
+        self.assertEqual(
+            '0000:82:00.0',  # which is in sync with the source host pci_info
+            source_pf_port['port']['binding:profile']['pci_slot']
+        )
+        # Assert that the direct-physical port is updated with the MAC address
+        # of the PF device from the source host
+        self.assertEqual(
+            'b4:96:91:34:f4:aa',
+            source_pf_port['port']['binding:profile']['device_mac_address']
+        )
+
     def test_evacuate_server_with_neutron(self):
         def move_operation(source_server):
             # Down the source compute to enable the evacuation
@@ -484,17 +710,44 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         """
 
         # start two compute services with differing PCI device inventory
-        self.start_compute(
-            hostname='test_compute0',
-            pci_info=fakelibvirt.HostPCIDevicesInfo(
-                num_pfs=2, num_vfs=8, numa_node=0))
-        self.start_compute(
-            hostname='test_compute1',
-            pci_info=fakelibvirt.HostPCIDevicesInfo(
-                num_pfs=1, num_vfs=2, numa_node=1))
+        source_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=2, num_vfs=8, numa_node=0)
+        # add an extra PF without VF to be used by direct-physical ports
+        source_pci_info.add_device(
+            dev_type='PF',
+            bus=0x82,  # the HostPCIDevicesInfo use the 0x81 by default
+            slot=0x0,
+            function=0,
+            iommu_group=42,
+            numa_node=0,
+            vf_ratio=0,
+            mac_address='b4:96:91:34:f4:aa',
+        )
+        self.start_compute(hostname='test_compute0', pci_info=source_pci_info)
 
-        # create the port
-        self.neutron.create_port({'port': self.neutron.network_4_port_1})
+        dest_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pfs=1, num_vfs=2, numa_node=1)
+        # add an extra PF without VF to be used by direct-physical ports
+        dest_pci_info.add_device(
+            dev_type='PF',
+            bus=0x82,  # the HostPCIDevicesInfo use the 0x81 by default
+            slot=0x6,  # make it different from the source host
+            function=0,
+            iommu_group=42,
+            # numa node needs to be aligned with the other pci devices in this
+            # host as the instance needs to fit into a single host numa node
+            numa_node=1,
+            vf_ratio=0,
+            mac_address='b4:96:91:34:f4:bb',
+        )
+
+        self.start_compute(hostname='test_compute1', pci_info=dest_pci_info)
+
+        # create the ports
+        port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_1})['port']
+        pf_port = self.neutron.create_port(
+            {'port': self.neutron.network_4_port_pf})['port']
 
         # create a server using the VF via neutron
         extra_spec = {'hw:cpu_policy': 'dedicated'}
@@ -502,7 +755,8 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         server = self._create_server(
             flavor_id=flavor_id,
             networks=[
-                {'port': base.LibvirtNeutronFixture.network_4_port_1['id']},
+                {'port': port['id']},
+                {'port': pf_port['id']},
             ],
             host='test_compute0',
         )
@@ -510,8 +764,8 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         # our source host should have marked two PCI devices as used, the VF
         # and the parent PF, while the future destination is currently unused
         self.assertEqual('test_compute0', server['OS-EXT-SRV-ATTR:host'])
-        self.assertPCIDeviceCounts('test_compute0', total=10, free=8)
-        self.assertPCIDeviceCounts('test_compute1', total=3, free=3)
+        self.assertPCIDeviceCounts('test_compute0', total=11, free=8)
+        self.assertPCIDeviceCounts('test_compute1', total=4, free=4)
 
         # the instance should be on host NUMA node 0, since that's where our
         # PCI devices are
@@ -540,13 +794,26 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             port['binding:profile'],
         )
 
+        # ensure the binding details sent to "neutron" are correct
+        pf_port = self.neutron.show_port(pf_port['id'],)['port']
+        self.assertIn('binding:profile', pf_port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '8086:1528',
+                'pci_slot': '0000:82:00.0',
+                'physical_network': 'physnet4',
+                'device_mac_address': 'b4:96:91:34:f4:aa',
+            },
+            pf_port['binding:profile'],
+        )
+
         # now live migrate that server
         self._live_migrate(server, 'completed')
 
         # we should now have transitioned our usage to the destination, freeing
         # up the source in the process
-        self.assertPCIDeviceCounts('test_compute0', total=10, free=10)
-        self.assertPCIDeviceCounts('test_compute1', total=3, free=1)
+        self.assertPCIDeviceCounts('test_compute0', total=11, free=11)
+        self.assertPCIDeviceCounts('test_compute1', total=4, free=1)
 
         # the instance should now be on host NUMA node 1, since that's where
         # our PCI devices are for this second host
@@ -570,6 +837,18 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
                 'physical_network': 'physnet4',
             },
             port['binding:profile'],
+        )
+        # ensure the binding details sent to "neutron" are correct
+        pf_port = self.neutron.show_port(pf_port['id'],)['port']
+        self.assertIn('binding:profile', pf_port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '8086:1528',
+                'pci_slot': '0000:82:06.0',
+                'physical_network': 'physnet4',
+                'device_mac_address': 'b4:96:91:34:f4:bb',
+            },
+            pf_port['binding:profile'],
         )
 
     def test_get_server_diagnostics_server_with_VF(self):

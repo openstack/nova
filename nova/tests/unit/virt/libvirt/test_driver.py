@@ -17669,7 +17669,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 "vendor_id": '8086',
                 "dev_type": fields.PciDeviceType.SRIOV_PF,
                 "phys_function": None,
-                "numa_node": None},
+                "numa_node": None,
+                # value defined in the LibvirtFixture
+                "mac_address": "52:54:00:1e:59:c6",
+            },
             {
                 "dev_id": "pci_0000_04_10_7",
                 "domain": 0,

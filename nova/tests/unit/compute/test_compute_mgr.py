@@ -8988,10 +8988,12 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
             self._mock_rt()
             old_devs = objects.PciDeviceList(
                 objects=[objects.PciDevice(
+                    compute_node_id=1,
                     address='0000:04:00.2',
                     request_id=uuids.pcidev1)])
             new_devs = objects.PciDeviceList(
                 objects=[objects.PciDevice(
+                    compute_node_id=2,
                     address='0000:05:00.3',
                     request_id=uuids.pcidev1)])
             self.instance.migration_context = objects.MigrationContext(
@@ -10962,40 +10964,94 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         _test()
 
     def test__update_migrate_vifs_profile_with_pci(self):
-        # Define two migrate vifs with only one pci that is required
-        # to be updated. Make sure method under test updated the correct one
+        # Define three migrate vifs with two pci devs that are required
+        # to be updated, one VF and on PF.
+        # Make sure method under test updated the correct devs with the correct
+        # values.
         nw_vifs = network_model.NetworkInfo(
-            [network_model.VIF(
-                id=uuids.port0,
-                vnic_type='direct',
-                type=network_model.VIF_TYPE_HW_VEB,
-                profile={'pci_slot': '0000:04:00.3',
-                         'pci_vendor_info': '15b3:1018',
-                         'physical_network': 'default'}),
-            network_model.VIF(
-                id=uuids.port1,
-                vnic_type='normal',
-                type=network_model.VIF_TYPE_OVS,
-                profile={'some': 'attribute'})])
-        pci_dev = objects.PciDevice(request_id=uuids.pci_req,
-                                    address='0000:05:00.4',
-                                    vendor_id='15b3',
-                                    product_id='1018')
-        port_id_to_pci_dev = {uuids.port0: pci_dev}
-        mig_vifs = migrate_data_obj.VIFMigrateData.\
-            create_skeleton_migrate_vifs(nw_vifs)
-        self.compute._update_migrate_vifs_profile_with_pci(mig_vifs,
-                                                           port_id_to_pci_dev)
+            [
+                network_model.VIF(
+                    id=uuids.port0,
+                    vnic_type='direct',
+                    type=network_model.VIF_TYPE_HW_VEB,
+                    profile={
+                        'pci_slot': '0000:04:00.3',
+                        'pci_vendor_info': '15b3:1018',
+                        'physical_network': 'default',
+                    },
+                ),
+                network_model.VIF(
+                    id=uuids.port1,
+                    vnic_type='normal',
+                    type=network_model.VIF_TYPE_OVS,
+                    profile={'some': 'attribute'},
+                ),
+                network_model.VIF(
+                    id=uuids.port2,
+                    vnic_type='direct-physical',
+                    type=network_model.VIF_TYPE_HOSTDEV,
+                    profile={
+                        'pci_slot': '0000:01:00',
+                        'pci_vendor_info': '8086:154d',
+                        'physical_network': 'physnet2',
+                    },
+                ),
+            ]
+        )
+
+        pci_vf_dev = objects.PciDevice(
+            request_id=uuids.pci_req,
+            address='0000:05:00.4',
+            parent_addr='0000:05:00',
+            vendor_id='15b3',
+            product_id='1018',
+            compute_node_id=13,
+            dev_type=fields.PciDeviceType.SRIOV_VF,
+        )
+        pci_pf_dev = objects.PciDevice(
+            request_id=uuids.pci_req2,
+            address='0000:01:00',
+            parent_addr='0000:02:00',
+            vendor_id='8086',
+            product_id='154d',
+            compute_node_id=13,
+            dev_type=fields.PciDeviceType.SRIOV_PF,
+            extra_info={'mac_address': 'b4:96:91:34:f4:36'},
+        )
+        port_id_to_pci_dev = {
+            uuids.port0: pci_vf_dev,
+            uuids.port2: pci_pf_dev,
+        }
+        mig_vifs = (
+            migrate_data_obj.VIFMigrateData.create_skeleton_migrate_vifs(
+                nw_vifs)
+        )
+
+        self.compute._update_migrate_vifs_profile_with_pci(
+            mig_vifs, port_id_to_pci_dev)
+
         # Make sure method under test updated the correct one.
-        changed_mig_vif = mig_vifs[0]
+        changed_vf_mig_vif = mig_vifs[0]
         unchanged_mig_vif = mig_vifs[1]
+        changed_pf_mig_vif = mig_vifs[2]
         # Migrate vifs profile was updated with pci_dev.address
         # for port ID uuids.port0.
-        self.assertEqual(changed_mig_vif.profile['pci_slot'],
-                         pci_dev.address)
+        self.assertEqual(changed_vf_mig_vif.profile['pci_slot'],
+                         pci_vf_dev.address)
+        # MAC is not added as this is a VF
+        self.assertNotIn('device_mac_address', changed_vf_mig_vif.profile)
         # Migrate vifs profile was unchanged for port ID uuids.port1.
         # i.e 'profile' attribute does not exist.
         self.assertNotIn('profile', unchanged_mig_vif)
+        # Migrate vifs profile was updated with pci_dev.address
+        # for port ID uuids.port2.
+        self.assertEqual(changed_pf_mig_vif.profile['pci_slot'],
+                         pci_pf_dev.address)
+        # MAC is updated as this is a PF
+        self.assertEqual(
+            'b4:96:91:34:f4:36',
+            changed_pf_mig_vif.profile['device_mac_address']
+        )
 
     def test_get_updated_nw_info_with_pci_mapping(self):
         old_dev = objects.PciDevice(address='0000:04:00.2')
