@@ -261,7 +261,13 @@ class Service(service.Service):
         # up before it allows the service to be created. The
         # raise_if_old_compute() depends on the RPC to be up and does not
         # implement its own retry mechanism to connect to the conductor.
-        utils.raise_if_old_compute()
+        try:
+            utils.raise_if_old_compute()
+        except exception.TooOldComputeService as e:
+            if CONF.workarounds.disable_compute_service_check_for_ffu:
+                LOG.warning(str(e))
+            else:
+                raise
 
         return service_obj
 

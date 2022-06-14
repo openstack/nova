@@ -44,7 +44,13 @@ def _get_config_files(env=None):
 
 
 def _setup_service(host, name):
-    utils.raise_if_old_compute()
+    try:
+        utils.raise_if_old_compute()
+    except exception.TooOldComputeService as e:
+        if CONF.workarounds.disable_compute_service_check_for_ffu:
+            LOG.warning(str(e))
+        else:
+            raise
 
     binary = name if name.startswith('nova-') else "nova-%s" % name
 
