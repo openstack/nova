@@ -4802,10 +4802,24 @@ class API:
         This method is separated to make it possible for cells version
         to override it.
         """
-        volume_bdm = self._create_volume_bdm(
-            context, instance, device, volume, disk_bus=disk_bus,
-            device_type=device_type, tag=tag,
-            delete_on_termination=delete_on_termination)
+        try:
+            volume_bdm = self._create_volume_bdm(
+                context, instance, device, volume, disk_bus=disk_bus,
+                device_type=device_type, tag=tag,
+                delete_on_termination=delete_on_termination)
+        except oslo_exceptions.MessagingTimeout:
+            # The compute node might have already created the attachment but
+            # we never received the answer. In this case it is safe to delete
+            # the attachment as nobody will ever pick it up again.
+            with excutils.save_and_reraise_exception():
+                try:
+                    objects.BlockDeviceMapping.get_by_volume_and_instance(
+                        context, volume['id'], instance.uuid).destroy()
+                    LOG.debug("Delete BDM after compute did not respond to "
+                              f"attachment request for volume {volume['id']}")
+                except exception.VolumeBDMNotFound:
+                    LOG.debug("BDM not found, ignoring removal. "
+                              f"Error attaching volume {volume['id']}")
         try:
             self._check_attach_and_reserve_volume(context, volume, instance,
                                                   volume_bdm,

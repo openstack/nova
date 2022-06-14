@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    The `bug 1960401`_  is fixed which can cause invalid `BlockDeviceMappings`
+    to accumulate in the database. This prevented the respective volumes from
+    being attached again to the instance.
+
+    .. _bug 1960401: https://bugs.launchpad.net/nova/+bug/1960401
