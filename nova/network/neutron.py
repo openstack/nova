@@ -3874,7 +3874,7 @@ class API:
             either Segment extension isn't enabled in Neutron or if the network
             isn't configured for routing.
         """
-        client = get_client(context)
+        client = get_client(context, admin=True)
 
         if not self.has_segment_extension(client=client):
             return []
@@ -3905,7 +3905,7 @@ class API:
             extension isn't enabled in Neutron or the provided subnet doesn't
             have segments (if the related network isn't configured for routing)
         """
-        client = get_client(context)
+        client = get_client(context, admin=True)
 
         if not self.has_segment_extension(client=client):
             return None
