@@ -42,6 +42,8 @@ fake_pci_1 = dict(fake_pci, address='0000:00:00.2',
                   product_id='p1', vendor_id='v1')
 fake_pci_2 = dict(fake_pci, address='0000:00:00.3')
 
+fake_pci_devs = [fake_pci, fake_pci_1, fake_pci_2]
+
 fake_pci_3 = dict(fake_pci, address='0000:00:01.1',
                   dev_type=fields.PciDeviceType.SRIOV_PF,
                   vendor_id='v2', product_id='p2', numa_node=None)
@@ -53,6 +55,7 @@ fake_pci_5 = dict(fake_pci, address='0000:00:02.2',
                   dev_type=fields.PciDeviceType.SRIOV_VF,
                   parent_addr='0000:00:01.1',
                   vendor_id='v2', product_id='p2', numa_node=None)
+fake_pci_devs_tree = [fake_pci_3, fake_pci_4, fake_pci_5]
 
 fake_db_dev = {
     'created_at': None,
@@ -142,14 +145,14 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
                 requests=pci_reqs)
 
     def _create_tracker(self, fake_devs):
-        self.fake_devs = fake_devs
+        self.fake_devs = copy.deepcopy(fake_devs)
         self.tracker = manager.PciDevTracker(
             self.fake_context, objects.ComputeNode(id=1, numa_topology=None))
 
     def setUp(self):
         super(PciDevTrackerTestCase, self).setUp()
         self.fake_context = context.get_admin_context()
-        self.fake_devs = fake_db_devs[:]
+        self.fake_devs = copy.deepcopy(fake_db_devs)
         self.stub_out('nova.db.main.api.pci_device_get_all_by_node',
             self._fake_get_pci_devices)
         # The fake_pci_whitelist must be called before creating the fake
@@ -157,7 +160,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         patcher = pci_fakes.fake_pci_whitelist()
         self.addCleanup(patcher.stop)
         self._create_fake_instance()
-        self._create_tracker(fake_db_devs[:])
+        self._create_tracker(fake_db_devs)
 
     def test_pcidev_tracker_create(self):
         self.assertEqual(len(self.tracker.pci_devs), 3)
@@ -266,9 +269,8 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
 
     def test_set_hvdev_new_dev(self):
         fake_pci_3 = dict(fake_pci, address='0000:00:00.4', vendor_id='v2')
-        fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_1),
-                         copy.deepcopy(fake_pci_2), copy.deepcopy(fake_pci_3)]
-        self.tracker._set_hvdevs(fake_pci_devs)
+        fake_pci_devs = [fake_pci, fake_pci_1, fake_pci_2, fake_pci_3]
+        self.tracker._set_hvdevs(copy.deepcopy(fake_pci_devs))
         self.assertEqual(len(self.tracker.pci_devs), 4)
         self.assertEqual(set([dev.address for
                               dev in self.tracker.pci_devs]),
@@ -284,11 +286,8 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self._create_tracker(fake_db_devs_tree)
 
         fake_new_device = dict(fake_pci_5, id=12, address='0000:00:02.3')
-        fake_pci_devs = [copy.deepcopy(fake_pci_3),
-                         copy.deepcopy(fake_pci_4),
-                         copy.deepcopy(fake_pci_5),
-                         copy.deepcopy(fake_new_device)]
-        self.tracker._set_hvdevs(fake_pci_devs)
+        fake_pci_devs = [fake_pci_3, fake_pci_4, fake_pci_5, fake_new_device]
+        self.tracker._set_hvdevs(copy.deepcopy(fake_pci_devs))
         self.assertEqual(len(self.tracker.pci_devs), 4)
 
         pf = [dev for dev in self.tracker.pci_devs
@@ -304,15 +303,14 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
 
     def test_set_hvdev_changed(self):
         fake_pci_v2 = dict(fake_pci, address='0000:00:00.2', vendor_id='v1')
-        fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_2),
-                         copy.deepcopy(fake_pci_v2)]
-        self.tracker._set_hvdevs(fake_pci_devs)
+        fake_pci_devs = [fake_pci, fake_pci_2, fake_pci_v2]
+        self.tracker._set_hvdevs(copy.deepcopy(fake_pci_devs))
         self.assertEqual(set([dev.vendor_id for
                              dev in self.tracker.pci_devs]),
                          set(['v', 'v1']))
 
     def test_set_hvdev_remove(self):
-        self.tracker._set_hvdevs([fake_pci])
+        self.tracker._set_hvdevs(copy.deepcopy([fake_pci]))
         self.assertEqual(
             len([dev for dev in self.tracker.pci_devs
                  if dev.status == fields.PciDeviceStatus.REMOVED]),
@@ -324,8 +322,8 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         # from previous scans)
         self._create_tracker(fake_db_devs_tree)
 
-        fake_pci_devs = [copy.deepcopy(fake_pci_3), copy.deepcopy(fake_pci_4)]
-        self.tracker._set_hvdevs(fake_pci_devs)
+        fake_pci_devs = [fake_pci_3, fake_pci_4]
+        self.tracker._set_hvdevs(copy.deepcopy(fake_pci_devs))
         self.assertEqual(
             2,
             len([dev for dev in self.tracker.pci_devs
@@ -344,8 +342,9 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         # Make sure the device tree is properly maintained when there are
         # devices removed from the system that are allocated to vms.
 
-        all_devs = fake_db_devs_tree[:]
-        self._create_tracker(all_devs)
+        all_db_devs = fake_db_devs_tree
+        all_pci_devs = fake_pci_devs_tree
+        self._create_tracker(all_db_devs)
         # we start with 3 devices
         self.assertEqual(
             3,
@@ -358,7 +357,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         claimed_dev = self.tracker.claim_instance(
             mock.sentinel.context, pci_requests_obj, None)[0]
 
-        self.tracker._set_hvdevs(all_devs)
+        self.tracker._set_hvdevs(copy.deepcopy(all_pci_devs))
         # and assert that no devices were removed
         self.assertEqual(
             0,
@@ -366,10 +365,10 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
                  if dev.status == fields.PciDeviceStatus.REMOVED]))
         # we then try to remove the allocated device from the set reported
         # by the driver.
-        fake_pci_devs = [dev for dev in all_devs
+        fake_pci_devs = [dev for dev in all_pci_devs
                          if dev['address'] != claimed_dev.address]
         with mock.patch("nova.pci.manager.LOG.warning") as log:
-            self.tracker._set_hvdevs(fake_pci_devs)
+            self.tracker._set_hvdevs(copy.deepcopy(fake_pci_devs))
             log.assert_called_once()
             args = log.call_args_list[0][0]  # args of first call
             self.assertIn('Unable to remove device with', args[0])
@@ -380,7 +379,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
                  if dev.status == fields.PciDeviceStatus.REMOVED]))
         # free the device that was allocated and update tracker again
         self.tracker._free_device(claimed_dev)
-        self.tracker._set_hvdevs(fake_pci_devs)
+        self.tracker._set_hvdevs(copy.deepcopy(fake_pci_devs))
         # and assert that one device is removed from the tracker
         self.assertEqual(
             1,
@@ -393,9 +392,8 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.tracker.claim_instance(mock.sentinel.context,
                                     pci_requests_obj, None)
         fake_pci_3 = dict(fake_pci, address='0000:00:00.2', vendor_id='v2')
-        fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_2),
-                         copy.deepcopy(fake_pci_3)]
-        self.tracker._set_hvdevs(fake_pci_devs)
+        fake_pci_devs = [fake_pci, fake_pci_2, fake_pci_3]
+        self.tracker._set_hvdevs(copy.deepcopy(fake_pci_devs))
         self.assertEqual(len(self.tracker.stale), 1)
         self.assertEqual(self.tracker.stale['0000:00:00.2']['vendor_id'], 'v2')
 
@@ -424,13 +422,13 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertIsNone(devs)
 
     def test_pci_claim_instance_with_numa(self):
-        fake_db_dev_3 = dict(fake_db_dev_1, id=4, address='0000:00:00.4')
-        fake_devs_numa = copy.deepcopy(fake_db_devs)
-        fake_devs_numa.append(fake_db_dev_3)
+        fake_pci_3 = dict(fake_pci_1, address='0000:00:00.4')
+        fake_devs_numa = copy.deepcopy(fake_pci_devs)
+        fake_devs_numa.append(fake_pci_3)
         self.tracker = manager.PciDevTracker(
             mock.sentinel.context,
             objects.ComputeNode(id=1, numa_topology=None))
-        self.tracker._set_hvdevs(fake_devs_numa)
+        self.tracker._set_hvdevs(copy.deepcopy(fake_devs_numa))
         pci_requests = copy.deepcopy(fake_pci_requests)[:1]
         pci_requests[0]['count'] = 2
         pci_requests_obj = self._create_pci_requests_object(pci_requests)
@@ -477,9 +475,8 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
                 'nova.db.main.api.pci_device_update',
                 self._fake_pci_device_update)
         fake_pci_v3 = dict(fake_pci, address='0000:00:00.2', vendor_id='v3')
-        fake_pci_devs = [copy.deepcopy(fake_pci), copy.deepcopy(fake_pci_2),
-                         copy.deepcopy(fake_pci_v3)]
-        self.tracker._set_hvdevs(fake_pci_devs)
+        fake_pci_devs = [fake_pci, fake_pci_2, fake_pci_v3]
+        self.tracker._set_hvdevs(copy.deepcopy(fake_pci_devs))
         self.update_called = 0
         self.tracker.save(self.fake_context)
         self.assertEqual(self.update_called, 3)
