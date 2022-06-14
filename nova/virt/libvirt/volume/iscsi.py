@@ -38,7 +38,8 @@ class LibvirtISCSIVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
             initiator.ISCSI, utils.get_root_helper(),
             use_multipath=CONF.libvirt.volume_use_multipath,
             device_scan_attempts=CONF.libvirt.num_volume_scan_tries,
-            transport=self._get_transport())
+            transport=self._get_transport(),
+            enforce_multipath=CONF.libvirt.volume_enforce_multipath)
 
     def _get_transport(self):
         if CONF.libvirt.iscsi_iface:

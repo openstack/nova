@@ -1661,6 +1661,59 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_which.assert_not_called()
 
+    def test__check_multipath_misconfiguration(self):
+        self.flags(volume_use_multipath=False, volume_enforce_multipath=True,
+                   group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        exc = self.assertRaises(
+            exception.InvalidConfiguration,
+            drvr._check_multipath)
+
+        self.assertIn(
+            "The 'volume_use_multipath' option should be 'True' when "
+            "the 'volume_enforce_multipath' option is 'True'.",
+            str(exc),
+        )
+
+    @mock.patch('os_brick.initiator.linuxscsi.LinuxSCSI.is_multipath_running')
+    def test__check_multipath_disabled(self, is_multipath_running):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._check_multipath()
+        is_multipath_running.assert_not_called()
+
+    @mock.patch('os_brick.initiator.linuxscsi.LinuxSCSI.is_multipath_running')
+    def test__check_multipath_optional(self, is_multipath_running):
+        self.flags(volume_use_multipath=True, group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._check_multipath()
+        is_multipath_running.assert_not_called()
+
+    @mock.patch('os_brick.initiator.linuxscsi.LinuxSCSI.is_multipath_running')
+    def test__check_multipath_enforced(self, is_multipath_running):
+        is_multipath_running.return_value = True
+        self.flags(volume_use_multipath=True, volume_enforce_multipath=True,
+                   group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._check_multipath()
+        is_multipath_running.assert_called_once_with(root_helper=mock.ANY)
+
+    @mock.patch('os_brick.initiator.linuxscsi.LinuxSCSI.is_multipath_running')
+    def test__check_multipath_enforced_missing(self, is_multipath_running):
+        is_multipath_running.return_value = False
+        self.flags(volume_use_multipath=True, volume_enforce_multipath=True,
+                   group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        exc = self.assertRaises(
+            exception.InvalidConfiguration,
+            drvr._check_multipath)
+
+        self.assertIn(
+            "The 'volume_enforce_multipath' option is 'True' but "
+            "multipathd is not running.",
+            str(exc),
+        )
+        is_multipath_running.assert_called_once_with(root_helper=mock.ANY)
+
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_check_cpu_set_configuration__no_configuration(self, mock_log):
         """Test that configuring no CPU option results no errors or logs.

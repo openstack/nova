@@ -30,7 +30,7 @@ class LibvirtNVMEVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         nvme.LibvirtNVMEVolumeDriver(self.fake_host)
         mock_factory.assert_called_once_with(
             initiator.NVME, 'sudo', use_multipath=False,
-            device_scan_attempts=3)
+            device_scan_attempts=3, enforce_multipath=False)
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.get_root_helper')
@@ -44,7 +44,21 @@ class LibvirtNVMEVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         nvme.LibvirtNVMEVolumeDriver(self.fake_host)
         mock_factory.assert_called_once_with(
             initiator.NVME, 'sudo', use_multipath=True,
-            device_scan_attempts=3)
+            device_scan_attempts=3, enforce_multipath=False)
+
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.get_root_helper')
+    @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory')
+    def test_libvirt_nvme_driver_multipath_enforced(self, mock_factory,
+                                                    mock_helper, exists):
+        self.flags(num_nvme_discover_tries=3, volume_use_multipath=True,
+                   volume_enforce_multipath=True, group='libvirt')
+        mock_helper.return_value = 'sudo'
+
+        nvme.LibvirtNVMEVolumeDriver(self.fake_host)
+        mock_factory.assert_called_once_with(
+            initiator.NVME, 'sudo', use_multipath=True,
+            device_scan_attempts=3, enforce_multipath=True)
 
     @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory',
         new=mock.Mock(return_value=mock.Mock()))

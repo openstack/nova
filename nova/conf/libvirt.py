@@ -1113,6 +1113,22 @@ Use multipath connection of the iSCSI or FC volume
 Volumes can be connected in the LibVirt as multipath devices. This will
 provide high availability and fault tolerance.
 """),
+    cfg.BoolOpt('volume_enforce_multipath',
+                default=False,
+                help="""
+Require multipathd when attaching a volume to an instance.
+
+When enabled, attachment of volumes will be aborted when multipathd is not
+running. Otherwise, it will fallback to single path without error.
+
+When enabled, the libvirt driver checks availability of mulitpathd when it is
+initialized, and the compute service fails to start if multipathd is not
+running.
+
+Related options:
+
+* volume_use_multipath must be True when this is True
+"""),
     cfg.IntOpt('num_volume_scan_tries',
                deprecated_name='num_iscsi_scan_tries',
                default=5,
