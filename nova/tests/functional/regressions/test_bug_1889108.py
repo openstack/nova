@@ -41,8 +41,8 @@ class TestVolAttachmentsDuringPreLiveMigration(
         self.addCleanup(fake_notifier.reset)
 
     def _setup_compute_service(self):
-        self.start_service('compute', host='src', cell=None)
-        self.start_service('compute', host='dest', cell=None)
+        self._start_compute('src')
+        self._start_compute('dest')
 
     @mock.patch('nova.virt.fake.FakeDriver.pre_live_migration',
                 side_effect=test.TestingException)
