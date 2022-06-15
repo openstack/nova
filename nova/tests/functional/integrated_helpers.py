@@ -363,12 +363,24 @@ class InstanceHelperMixin(object):
         """
         # if forcing the server onto a host, we have to use the admin API
         if not api:
-            api = self.api if not az else getattr(self, 'admin_api', self.api)
+            api = self.api if not az and not host else getattr(
+                self, 'admin_api', self.api)
+
+        microversion = api.microversion
+        if host and not api.microversion:
+            api.microversion = '2.74'
+            # with 2.74 networks param needs to use 'none' instead of None
+            # if no network is needed
+            if networks is None:
+                networks = 'none'
 
         body = self._build_server(
             name, image_uuid, flavor_id, networks, az, host)
 
         server = api.post_server({'server': body})
+
+        # Reset API microversion to original state
+        api.microversion = microversion
 
         return self._wait_for_state_change(server, expected_state)
 

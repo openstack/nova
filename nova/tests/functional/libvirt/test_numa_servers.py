@@ -755,6 +755,96 @@ class NUMAServersTest(NUMAServersTestBase):
 
         server = self._wait_for_state_change(server, 'ACTIVE')
 
+    def test_resize_dedicated_policy_race_on_dest_bug_1953359(self):
+
+        # Using newer API version for forced host instance creation
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
+        self.admin_api = api_fixture.admin_api
+
+        self.flags(cpu_dedicated_set='0-2', cpu_shared_set=None,
+                   group='compute')
+        self.flags(vcpu_pin_set=None)
+
+        host_info = fakelibvirt.HostInfo(cpu_nodes=1, cpu_sockets=1,
+                                         cpu_cores=2, cpu_threads=1,
+                                         kB_mem=15740000)
+        fake_connection = self._get_connection(host_info=host_info)
+        self.mock_conn.return_value = fake_connection
+
+        self.start_computes({'compute1': host_info})
+
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+        }
+        flavor_id = self._create_flavor(vcpu=1, extra_spec=extra_spec)
+        expected_usage = {'DISK_GB': 20, 'MEMORY_MB': 2048, 'PCPU': 1}
+
+        server = self._run_build_test(flavor_id, expected_usage=expected_usage)
+
+        inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
+        self.assertEqual(1, len(inst.numa_topology.cells))
+        # assert that the pcpu 0 is used on compute1
+        self.assertEqual({'0': 0}, inst.numa_topology.cells[0].cpu_pinning_raw)
+
+        # start another compute with the same config
+        self.start_computes({'compute2': host_info})
+
+        # boot another instance but now on compute2 so that it occupies the
+        # pcpu 0 on compute2
+        # NOTE(gibi): _run_build_test cannot be used here as it assumes only
+        # compute1 exists
+        server2 = self._create_server(
+            flavor_id=flavor_id,
+            host='compute2',
+        )
+        inst2 = objects.Instance.get_by_uuid(self.ctxt, server2['id'])
+        self.assertEqual(1, len(inst2.numa_topology.cells))
+        # assert that the pcpu 0 is used
+        self.assertEqual(
+            {'0': 0}, inst2.numa_topology.cells[0].cpu_pinning_raw)
+
+        # migrate the first instance from compute1 to compute2 but stop
+        # migrating at the start of finish_resize. Then start a racing periodic
+        # update_available_resources.
+
+        def fake_finish_resize(*args, **kwargs):
+            # start a racing update_available_resource periodic
+            self._run_periodics()
+            # we expect it that CPU pinning fails on the destination node
+            # as the resource_tracker will use the source node numa_topology
+            # and that does not fit to the dest node as pcpu 0 in the dest
+            # is already occupied.
+
+        # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
+        # probably be less...dumb
+        with mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                        '.migrate_disk_and_power_off', return_value='{}'):
+            with mock.patch(
+                    'nova.compute.manager.ComputeManager.finish_resize'
+            ) as mock_finish_resize:
+                mock_finish_resize.side_effect = fake_finish_resize
+                post = {'migrate': None}
+                self.admin_api.post_server_action(server['id'], post)
+
+        log = self.stdlog.logger.output
+        # The resize_claim correctly calculates that the inst1 should be pinned
+        # to pcpu id 1 instead of 0
+        self.assertIn(
+            'Computed NUMA topology CPU pinning: usable pCPUs: [[1]], '
+            'vCPUs mapping: [(0, 1)]',
+            log,
+        )
+        # But the periodic fails as it tries to apply the source topology on
+        # the dest. This is bug 1953359.
+        log = self.stdlog.logger.output
+        self.assertIn('Error updating resources for node compute2', log)
+        self.assertIn(
+            'nova.exception.CPUPinningInvalid: CPU set to pin [0] must be '
+            'a subset of free CPU set [1]',
+            log,
+        )
+
 
 class NUMAServerTestWithCountingQuotaFromPlacement(NUMAServersTest):
 
