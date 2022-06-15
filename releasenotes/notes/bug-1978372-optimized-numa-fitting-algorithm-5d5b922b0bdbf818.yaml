@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    The algorithm that is used to see if a multi NUMA guest fits to
+    a multi NUMA host has been optimized to speed up the decision
+    on hosts with high number of NUMA nodes ( > 8). For details see
+    `bug 1978372`_
+
+    .. _bug 1978372: https://bugs.launchpad.net/nova/+bug/1978372
