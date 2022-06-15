@@ -346,10 +346,40 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             # Update PF status to CLAIMED if all of it dependants are free
             # and set their status to UNCLAIMABLE
             vfs_list = self.child_devices
-            if not all([vf.is_available() for vf in vfs_list]):
-                raise exception.PciDeviceVFInvalidStatus(
-                    compute_node_id=self.compute_node_id,
-                    address=self.address)
+            non_free_dependants = [
+                vf for vf in vfs_list if not vf.is_available()]
+            if non_free_dependants:
+                # NOTE(gibi): There should not be any dependent devices that
+                # are UNCLAIMABLE or UNAVAILABLE as the parent is AVAILABLE,
+                # but we got reports in bug 1969496 that this inconsistency
+                # can happen. So check if the only non-free devices are in
+                # state UNCLAIMABLE or UNAVAILABLE then we log a warning but
+                # allow to claim the parent.
+                actual_statuses = {
+                    child.status for child in non_free_dependants}
+                allowed_non_free_statues = {
+                    fields.PciDeviceStatus.UNCLAIMABLE,
+                    fields.PciDeviceStatus.UNAVAILABLE,
+                }
+                if actual_statuses - allowed_non_free_statues == set():
+                    LOG.warning(
+                        "Some child device of parent %s is in an inconsistent "
+                        "state. If you can reproduce this warning then please "
+                        "report a bug at "
+                        "https://bugs.launchpad.net/nova/+filebug with "
+                        "reproduction steps. Inconsistent children with "
+                        "state: %s",
+                        self.address,
+                        ",".join(
+                            "%s - %s" % (child.address, child.status)
+                            for child in non_free_dependants
+                        ),
+                    )
+
+                else:
+                    raise exception.PciDeviceVFInvalidStatus(
+                        compute_node_id=self.compute_node_id,
+                        address=self.address)
             self._bulk_update_status(vfs_list,
                                            fields.PciDeviceStatus.UNCLAIMABLE)
 
