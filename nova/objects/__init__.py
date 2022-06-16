@@ -69,3 +69,4 @@ def register_all():
     __import__('nova.objects.virt_cpu_topology')
     __import__('nova.objects.virtual_interface')
     __import__('nova.objects.volume_usage')
+    __import__('nova.objects.share_mapping')

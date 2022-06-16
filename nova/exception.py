@@ -700,6 +700,22 @@ class VolumeNotFound(NotFound):
     msg_fmt = _("Volume %(volume_id)s could not be found.")
 
 
+class ShareNotFound(NotFound):
+    msg_fmt = _("Share %(share_id)s could not be found.")
+
+
+class ShareUmountError(NovaException):
+    msg_fmt = _("Share id %(share_id)s umount error "
+                "from server %(server_id)s.\n"
+                "Reason: %(reason)s.")
+
+
+class ShareMountError(NovaException):
+    msg_fmt = _("Share id %(share_id)s mount error "
+                "from server %(server_id)s.\n"
+                "Reason: %(reason)s.")
+
+
 class VolumeTypeNotFound(NotFound):
     msg_fmt = _("Volume type %(id_or_name)s could not be found.")
 
