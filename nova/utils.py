@@ -965,7 +965,9 @@ def get_ksa_adapter(service_type, ksa_auth=None, ksa_session=None,
         min_version=min_version, max_version=max_version, raise_exc=False)
 
 
-def get_sdk_adapter(service_type, check_service=False, conf_group=None):
+def get_sdk_adapter(
+        service_type, check_service=False, conf_group=None, **kwargs
+):
     """Construct an openstacksdk-brokered Adapter for a given service type.
 
     We expect to find a conf group whose name corresponds to the service_type's
@@ -978,6 +980,9 @@ def get_sdk_adapter(service_type, check_service=False, conf_group=None):
             service is alive, raising ServiceUnavailable if it is not.
     :param conf_group: String name of the conf group to use, otherwise the name
             of the service_type will be used.
+    :param kwargs: Additional arguments to pass to the Adapter constructor.
+                   Mainly used to pass microversion to a specific service,
+                   e.g. shared_file_system_api_version="2.82".
     :return: An openstack.proxy.Proxy object for the specified service_type.
     :raise: ConfGroupForServiceTypeNotFound If no conf group name could be
             found for the specified service_type.
@@ -988,12 +993,16 @@ def get_sdk_adapter(service_type, check_service=False, conf_group=None):
     try:
         conn = connection.Connection(
             session=sess, oslo_conf=CONF, service_types={service_type},
-            strict_proxies=check_service)
+            strict_proxies=check_service, **kwargs)
     except sdk_exc.ServiceDiscoveryException as e:
         raise exception.ServiceUnavailable(
             _("The %(service_type)s service is unavailable: %(error)s") %
             {'service_type': service_type, 'error': str(e)})
-    return getattr(conn, service_type)
+    # The replace('-', '_') below is to handle service names that use
+    # hyphens and SDK attributes that use underscores.
+    # e.g. service name --> sdk attribute
+    #      'shared-file-system' --> 'shared_file_system'
+    return getattr(conn, service_type.replace('-', '_'))
 
 
 def get_endpoint(ksa_adapter):

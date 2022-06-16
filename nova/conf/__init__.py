@@ -40,6 +40,7 @@ from nova.conf import ironic
 from nova.conf import key_manager
 from nova.conf import keystone
 from nova.conf import libvirt
+from nova.conf import manila
 from nova.conf import mks
 from nova.conf import netconf
 from nova.conf import neutron
@@ -82,6 +83,7 @@ devices.register_opts(CONF)
 ephemeral_storage.register_opts(CONF)
 glance.register_opts(CONF)
 guestfs.register_opts(CONF)
+manila.register_opts(CONF)
 mks.register_opts(CONF)
 imagecache.register_opts(CONF)
 ironic.register_opts(CONF)

@@ -22,6 +22,7 @@ from .glance import GlanceFixture  # noqa: F401, H304
 from .libvirt import LibvirtFixture  # noqa: F401, H304
 from .libvirt_imagebackend import \
     LibvirtImageBackendFixture  # noqa: F401, H304
+from .manila import ManilaFixture  # noqa: F401, H304
 from .neutron import NeutronFixture  # noqa: F401, H304
 from .notifications import NotificationFixture  # noqa: F401, H304
 from .nova import *  # noqa: F401, F403, H303, H304
