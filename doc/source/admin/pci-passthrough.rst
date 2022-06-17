@@ -347,3 +347,20 @@ policy for any neutron SR-IOV interfaces attached by the user:
 You can also configure this for PCI passthrough devices by specifying the
 policy in the alias configuration via :oslo.config:option:`pci.alias`. For more
 information, refer to :oslo.config:option:`the documentation <pci.alias>`.
+
+
+PCI tracking in Placement
+-------------------------
+Since nova 26.0.0 (Zed) PCI passthrough device inventories are tracked in
+Placement. If a PCI device exists on the hypervisor and
+matches one of the device specifications configured via
+:oslo.config:option:`pci.device_spec` then Placement will have a representation
+of the device. Each PCI device of type ``type-PCI`` and ``type-PF`` will be
+modeled as a Placement resource provider (RP) with the name
+``<hypervisor_hostname>_<pci_address>``. A devices with type ``type-VF`` is
+represented by its parent PCI device, the PF, as resource provider.
+
+By default nova will use ``CUSTOM_PCI_<vendor_id>_<product_id>`` as the
+resource class in PCI inventories in Placement.
+
+For deeper technical details please read the `nova specification. <https://specs.openstack.org/openstack/nova-specs/specs/zed/approved/pci-device-tracking-in-placement.html>`_

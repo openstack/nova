@@ -534,7 +534,7 @@ class HostPCIDevicesInfo(object):
         """
         self.devices = {}
 
-        if not (num_vfs or num_pfs) and not num_mdevcap:
+        if not (num_vfs or num_pfs or num_pci) and not num_mdevcap:
             return
 
         if num_vfs and not num_pfs:

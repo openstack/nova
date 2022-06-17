@@ -652,12 +652,16 @@ class PlacementHelperMixin:
             '/resource_providers', version='1.14'
         ).body['resource_providers']
 
-    def _get_all_rp_uuids_in_a_tree(self, in_tree_rp_uuid):
+    def _get_all_rps_in_a_tree(self, in_tree_rp_uuid):
         rps = self.placement.get(
             '/resource_providers?in_tree=%s' % in_tree_rp_uuid,
             version='1.20',
         ).body['resource_providers']
-        return [rp['uuid'] for rp in rps]
+        return rps
+
+    def _get_all_rp_uuids_in_a_tree(self, in_tree_rp_uuid):
+        return [
+            rp['uuid'] for rp in self._get_all_rps_in_a_tree(in_tree_rp_uuid)]
 
     def _post_resource_provider(self, rp_name):
         return self.placement.post(

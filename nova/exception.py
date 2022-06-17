@@ -2427,3 +2427,8 @@ class ProviderConfigException(NovaException):
     """
     msg_fmt = _("An error occurred while processing "
                 "a provider config file: %(error)s")
+
+
+class PlacementPciException(NovaException):
+    msg_fmt = _(
+        "Failed to gather or report PCI resources to Placement: %(error)s")

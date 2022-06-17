@@ -1,4 +1,5 @@
 nova/compute/manager.py
+nova/compute/pci_placement_translator.py
 nova/crypto.py
 nova/limit/local.py
 nova/limit/placement.py

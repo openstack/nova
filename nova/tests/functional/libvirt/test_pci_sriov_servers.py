@@ -74,6 +74,50 @@ class _PCIServersTestBase(base.ServersTestBase):
         self.assertEqual(total, len(devices))
         self.assertEqual(free, len([d for d in devices if d.is_available()]))
 
+    def _get_rp_by_name(self, name, rps):
+        for rp in rps:
+            if rp["name"] == name:
+                return rp
+        self.fail(f'RP {name} is not found in Placement {rps}')
+
+    def assert_placement_pci_view(self, hostname, inventories, traits):
+        compute_rp_uuid = self.compute_rp_uuids[hostname]
+        rps = self._get_all_rps_in_a_tree(compute_rp_uuid)
+
+        # rps also contains the root provider so we subtract 1
+        self.assertEqual(
+            len(inventories),
+            len(rps) - 1,
+            f"Number of RPs on {hostname} doesn't match. "
+            f"Expected {list(inventories)} actual {[rp['name'] for rp in rps]}"
+        )
+
+        for rp_name, inv in inventories.items():
+            real_rp_name = f'{hostname}_{rp_name}'
+            rp = self._get_rp_by_name(real_rp_name, rps)
+            rp_inv = self._get_provider_inventory(rp['uuid'])
+
+            self.assertEqual(
+                len(inv),
+                len(rp_inv),
+                f"Number of inventories on {real_rp_name} are not as "
+                f"expected. Expected {inv}, actual {rp_inv}"
+            )
+            for rc, total in inv.items():
+                self.assertEqual(
+                    total,
+                    rp_inv[rc]["total"])
+                self.assertEqual(
+                    total,
+                    rp_inv[rc]["max_unit"])
+
+            rp_traits = self._get_provider_traits(rp['uuid'])
+            self.assertEqual(
+                set(traits[rp_name]),
+                set(rp_traits),
+                f"Traits on RP {real_rp_name} does not match with expectation"
+            )
+
 
 class _PCIServersWithMigrationTestBase(_PCIServersTestBase):
 
@@ -1643,6 +1687,17 @@ class PCIServersTest(_PCIServersTestBase):
             'name': ALIAS_NAME,
         }
     )]
+    PCI_RC = f"CUSTOM_PCI_{fakelibvirt.PCI_VEND_ID}_{fakelibvirt.PCI_PROD_ID}"
+
+    def setUp(self):
+        super().setUp()
+        patcher = mock.patch(
+            "nova.compute.pci_placement_translator."
+            "_is_placement_tracking_enabled",
+            return_value=True
+        )
+        self.addCleanup(patcher.stop)
+        patcher.start()
 
     def test_create_server_with_pci_dev_and_numa(self):
         """Verifies that an instance can be booted with cpu pinning and with an
@@ -1653,6 +1708,12 @@ class PCIServersTest(_PCIServersTestBase):
 
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=1)
         self.start_compute(pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={"0000:81:00.0": {self.PCI_RC: 1}},
+            traits={"0000:81:00.0": []},
+        )
 
         # create a flavor
         extra_spec = {
@@ -1672,6 +1733,12 @@ class PCIServersTest(_PCIServersTestBase):
 
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=0)
         self.start_compute(pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={"0000:81:00.0": {self.PCI_RC: 1}},
+            traits={"0000:81:00.0": []},
+        )
 
         # boot one instance with no PCI device to "fill up" NUMA node 0
         extra_spec = {'hw:cpu_policy': 'dedicated'}
@@ -1695,9 +1762,22 @@ class PCIServersTest(_PCIServersTestBase):
         self.start_compute(
             hostname='test_compute0',
             pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=1))
+
+        self.assert_placement_pci_view(
+            "test_compute0",
+            inventories={"0000:81:00.0": {self.PCI_RC: 1}},
+            traits={"0000:81:00.0": []},
+        )
+
         self.start_compute(
             hostname='test_compute1',
             pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=1))
+
+        self.assert_placement_pci_view(
+            "test_compute1",
+            inventories={"0000:81:00.0": {self.PCI_RC: 1}},
+            traits={"0000:81:00.0": []},
+        )
 
         # create a server
         extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:1'}
@@ -1720,7 +1800,17 @@ class PCIServersTest(_PCIServersTestBase):
         self.start_compute(
             hostname='test_compute0',
             pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=1))
+        self.assert_placement_pci_view(
+            "test_compute0",
+            inventories={"0000:81:00.0": {self.PCI_RC: 1}},
+            traits={"0000:81:00.0": []},
+        )
         self.start_compute(hostname='test_compute1')
+        self.assert_placement_pci_view(
+            "test_compute1",
+            inventories={},
+            traits={},
+        )
 
         # Boot a server with a single PCI device.
         extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:1'}
@@ -1782,6 +1872,17 @@ class PCIServersTest(_PCIServersTestBase):
         for hostname in ('test_compute0', 'test_compute1'):
             pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=2)
             self.start_compute(hostname=hostname, pci_info=pci_info)
+            self.assert_placement_pci_view(
+                hostname,
+                inventories={
+                    "0000:81:00.0": {self.PCI_RC: 1},
+                    "0000:81:01.0": {self.PCI_RC: 1},
+                },
+                traits={
+                    "0000:81:00.0": [],
+                    "0000:81:01.0": [],
+                },
+            )
 
         # boot an instance with a PCI device on each host
         extra_spec = {
