@@ -15,6 +15,8 @@ import ddt
 from unittest import mock
 
 from nova.compute import pci_placement_translator as ppt
+from nova import exception
+from nova.objects import fields
 from nova.objects import pci_device
 from nova import test
 
@@ -100,4 +102,64 @@ class TestTranslator(test.NoDBTestCase):
         self.assertEqual(
             expected_rc,
             ppt._get_rc_for_dev(pci_dev, {"resource_class": rc_name})
+        )
+
+    def test_dependent_device_pf_then_vf(self):
+        pv = ppt.PlacementView("fake-node")
+        pf = pci_device.PciDevice(
+            address="0000:81:00.0",
+            dev_type=fields.PciDeviceType.SRIOV_PF
+        )
+        vf = pci_device.PciDevice(
+            address="0000:81:00.1",
+            parent_addr=pf.address,
+            dev_type=fields.PciDeviceType.SRIOV_VF
+        )
+
+        pv.add_dev(pf, {"resource_class": "foo"})
+        ex = self.assertRaises(
+            exception.PlacementPciDependentDeviceException,
+            pv.add_dev,
+            vf,
+            {"resource_class": "bar"}
+        )
+
+        self.assertEqual(
+            "Configuring both 0000:81:00.1 and 0000:81:00.0 in "
+            "[pci]device_spec is not supported. Either the parent PF or its "
+            "children VFs can be configured.",
+            str(ex),
+        )
+
+    def test_dependent_device_vf_then_pf(self):
+        pv = ppt.PlacementView("fake-node")
+        pf = pci_device.PciDevice(
+            address="0000:81:00.0",
+            dev_type=fields.PciDeviceType.SRIOV_PF
+        )
+        vf = pci_device.PciDevice(
+            address="0000:81:00.1",
+            parent_addr=pf.address,
+            dev_type=fields.PciDeviceType.SRIOV_VF
+        )
+        vf2 = pci_device.PciDevice(
+            address="0000:81:00.2",
+            parent_addr=pf.address,
+            dev_type=fields.PciDeviceType.SRIOV_VF
+        )
+
+        pv.add_dev(vf, {"resource_class": "foo"})
+        pv.add_dev(vf2, {"resource_class": "foo"})
+        ex = self.assertRaises(
+            exception.PlacementPciDependentDeviceException,
+            pv.add_dev,
+            pf,
+            {"resource_class": "bar"}
+        )
+
+        self.assertEqual(
+            "Configuring both 0000:81:00.0 and 0000:81:00.1,0000:81:00.2 in "
+            "[pci]device_spec is not supported. Either the parent PF or its "
+            "children VFs can be configured.",
+            str(ex),
         )

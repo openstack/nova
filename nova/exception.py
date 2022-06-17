@@ -2432,3 +2432,11 @@ class ProviderConfigException(NovaException):
 class PlacementPciException(NovaException):
     msg_fmt = _(
         "Failed to gather or report PCI resources to Placement: %(error)s")
+
+
+class PlacementPciDependentDeviceException(PlacementPciException):
+    msg_fmt = _(
+        "Configuring both %(parent_dev)s and %(children_devs)s in "
+        "[pci]device_spec is not supported. Either the parent PF or its "
+        "children VFs can be configured."
+    )

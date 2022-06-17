@@ -348,6 +348,46 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.context, mock.sentinel.node, startup=True)
         log_mock.exception.assert_called_once()
 
+    def test_update_available_resource_for_node_pci_placement_failed_startup(
+        self
+    ):
+        """If the PCI placement translation failed during startup then the
+        exception is raised up to kill the service
+        """
+        rt = self._mock_rt(spec_set=['update_available_resource'])
+        rt.update_available_resource.side_effect = (
+            exception.PlacementPciException(error='error'))
+
+        self.assertRaises(
+            exception.PlacementPciException,
+            self.compute._update_available_resource_for_node,
+            self.context,
+            mock.sentinel.node,
+            startup=True,
+        )
+        rt.update_available_resource.assert_called_once_with(
+            self.context, mock.sentinel.node, startup=True)
+
+    @mock.patch('nova.compute.manager.LOG')
+    def test_update_available_resource_for_node_pci_placement_failed_later(
+        self, mock_log
+    ):
+        """If the PCI placement translation failed later (not at startup)
+        during a periodic then the  exception is just logged
+        """
+        rt = self._mock_rt(spec_set=['update_available_resource'])
+        rt.update_available_resource.side_effect = (
+            exception.PlacementPciException(error='error'))
+
+        self.compute._update_available_resource_for_node(
+            self.context, mock.sentinel.node, startup=False)
+        rt.update_available_resource.assert_called_once_with(
+            self.context, mock.sentinel.node, startup=False)
+        mock_log.exception.assert_called_once_with(
+            'Error updating PCI resources for node %(node)s.',
+            {'node': mock.sentinel.node}
+        )
+
     @mock.patch.object(manager, 'LOG')
     @mock.patch.object(manager.ComputeManager,
                        '_update_available_resource_for_node')
