@@ -701,6 +701,9 @@
             voting: false
         - tempest-integrated-compute-centos-9-stream:
             irrelevant-files: *nova-base-irrelevant-files
+            # NOTE(sbauza): This job is temporarly non-voting until
+            # bug #1979047 is resolved as it holds our CI.
+            voting: false
     gate:
       jobs:
         - nova-live-migration
@@ -728,6 +731,9 @@
             irrelevant-files: *nova-base-irrelevant-files
         - tempest-integrated-compute-centos-9-stream:
             irrelevant-files: *nova-base-irrelevant-files
+            # NOTE(sbauza): This job is temporarly non-voting until
+            # bug #1979047 is resolved as it holds our CI.
+            voting: false
     periodic-weekly:
       jobs:
         # Runs emulation feature functionality test less frequently due
