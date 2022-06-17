@@ -131,7 +131,25 @@ class PciResourceProvider:
             )
 
         rc = _get_rc_for_dev(dev, dev_spec_tags)
+        if self.resource_class and rc != self.resource_class:
+            raise exception.PlacementPciMixedResourceClassException(
+                new_rc=rc,
+                new_dev=dev.address,
+                current_rc=self.resource_class,
+                current_devs=",".join(
+                    dev.address for dev in self.children_devs)
+            )
+
         traits = _get_traits_for_dev(dev_spec_tags)
+        if self.traits is not None and self.traits != traits:
+            raise exception.PlacementPciMixedTraitsException(
+                new_traits=",".join(sorted(traits)),
+                new_dev=dev.address,
+                current_traits=",".join(sorted(self.traits)),
+                current_devs=",".join(
+                    dev.address for dev in self.children_devs),
+            )
+
         self.children_devs.append(dev)
         self.resource_class = rc
         self.traits = traits

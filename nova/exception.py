@@ -2440,3 +2440,19 @@ class PlacementPciDependentDeviceException(PlacementPciException):
         "[pci]device_spec is not supported. Either the parent PF or its "
         "children VFs can be configured."
     )
+
+
+class PlacementPciMixedResourceClassException(PlacementPciException):
+    msg_fmt = _(
+        "VFs from the same PF cannot be configured with different "
+        "'resource_class' values in [pci]device_spec. We got %(new_rc)s "
+        "for %(new_dev)s and %(current_rc)s for %(current_devs)s."
+    )
+
+
+class PlacementPciMixedTraitsException(PlacementPciException):
+    msg_fmt = _(
+        "VFs from the same PF cannot be configured with different set "
+        "of 'traits' in [pci]device_spec. We got %(new_traits)s for "
+        "%(new_dev)s and %(current_traits)s for %(current_devs)s."
+    )

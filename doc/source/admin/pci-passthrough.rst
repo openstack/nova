@@ -367,6 +367,11 @@ resource class can be customized via the ``resource_class`` tag in the
 tag in that configuration that allows specifying a list of placement traits to
 be added to the resource provider representing the matching PCI devices.
 
+.. note::
+   Having different resource class or traits configuration for VFs under the
+   same parent PF is not supported and the nova-compute service will refuse to
+   start with such configuration.
+
 .. important::
    While nova supported configuring both the PF and its children VFs for PCI
    passthrough in the past, it only allowed consuming either the parent PF or
