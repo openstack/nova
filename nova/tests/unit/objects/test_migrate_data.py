@@ -94,8 +94,8 @@ class _TestLibvirtLiveMigrateData(object):
             target_connect_addr='127.0.0.1',
             dst_wants_file_backed_memory=False,
             file_backed_memory_discard=False,
-            src_supports_numa_live_migraton=True,
-            dst_supports_numa_live_migraton=True,
+            src_supports_numa_live_migration=True,
+            dst_supports_numa_live_migration=True,
             dst_numa_info=migrate_data.LibvirtLiveMigrateNUMAInfo())
         manifest = ovo_base.obj_tree_get_versions(obj.obj_name())
 
