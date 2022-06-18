@@ -13338,9 +13338,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(fakelibvirt.Connection, "_mark_running")
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_live_migration_copy_disk_paths")
-    def test_live_migration_main(self, mock_copy_disk_path, mock_running,
-                                 mock_guest, mock_monitor, mock_thread,
-                                 mock_conn):
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "live_migration_abort")
+    def _test_live_migration_main(self, mock_abort, mock_copy_disk_path,
+                                  mock_running, mock_guest, mock_monitor,
+                                  mock_thread, mock_conn,
+                                  mon_side_effect=None):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
 
@@ -13353,6 +13355,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_copy_disk_path.return_value = disks_to_copy
 
         mock_guest.return_value = guest
+        mock_monitor.side_effect = mon_side_effect
 
         def fake_post():
             pass
@@ -13360,9 +13363,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         def fake_recover():
             pass
 
-        drvr._live_migration(self.context, instance, "fakehost",
-                             fake_post, fake_recover, True,
-                             migrate_data)
+        if mon_side_effect:
+            self.assertRaises(mon_side_effect, drvr._live_migration,
+                              self.context, instance, "fakehost", fake_post,
+                              fake_recover, True, migrate_data)
+            mock_abort.assert_called_once_with(instance)
+        else:
+            drvr._live_migration(self.context, instance, "fakehost", fake_post,
+                                 fake_recover, True, migrate_data)
+
         mock_copy_disk_path.assert_called_once_with(self.context, instance,
                                                     guest)
 
@@ -13378,6 +13387,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.context, instance, guest, "fakehost",
             fake_post, fake_recover, True,
             migrate_data, AnyEventletEvent(), disks_to_copy[0])
+
+    def test_live_migration_main(self):
+        self._test_live_migration_main()
+
+    def test_live_migration_main_monitoring_failed(self):
+        self._test_live_migration_main(mon_side_effect=Exception)
 
     @mock.patch('os.path.exists', return_value=False)
     @mock.patch('nova.virt.libvirt.utils.create_image')
