@@ -386,4 +386,12 @@ be added to the resource provider representing the matching PCI devices.
    enforce the same rule for the configuration as well and will refuse to
    start if both the parent PF and its VFs are configured.
 
+.. important::
+   While nova supported configuring PCI devices by device name via the
+   ``devname`` parameter in :oslo.config:option:`pci.device_spec` in the past,
+   this proved to be problematic as the netdev name of a PCI device could
+   change for multiple reasons during hypervisor reboot. So since nova 26.0.0
+   (Zed) the nova-compute service will refuse to start with such configuration.
+   It is suggested to use the PCI address of the device instead.
+
 For deeper technical details please read the `nova specification. <https://specs.openstack.org/openstack/nova-specs/specs/zed/approved/pci-device-tracking-in-placement.html>`_

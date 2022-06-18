@@ -12,6 +12,7 @@
 #    under the License.
 
 import abc
+import copy
 import re
 import string
 import typing as ty
@@ -267,6 +268,10 @@ class WhitelistPciAddress(object):
 
 class PciDeviceSpec(PciAddressSpec):
     def __init__(self, dev_spec: ty.Dict[str, str]) -> None:
+        # stored for better error reporting
+        self.dev_spec_conf = copy.deepcopy(dev_spec)
+        # the non tag fields (i.e. address, devname) will be removed by
+        # _init_dev_details
         self.tags = dev_spec
         self._init_dev_details()
 

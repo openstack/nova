@@ -22,6 +22,7 @@ from nova import exception
 from nova.i18n import _
 from nova.objects import fields
 from nova.objects import pci_device
+from nova.pci import devspec
 from nova.pci import manager as pci_manager
 
 
@@ -278,6 +279,18 @@ class PlacementView:
             rp.update_provider_tree(provider_tree)
 
 
+def ensure_no_dev_spec_with_devname(dev_specs: ty.List[devspec.PciDeviceSpec]):
+    for dev_spec in dev_specs:
+        if dev_spec.dev_spec_conf.get("devname"):
+            msg = _(
+                "Invalid [pci]device_spec configuration. PCI Placement "
+                "reporting does not support 'devname' based device "
+                "specification but we got %(dev_spec)s. "
+                "Please use PCI address in the configuration instead."
+            ) % {"dev_spec": dev_spec.dev_spec_conf}
+            raise exception.PlacementPciException(error=msg)
+
+
 def update_provider_tree_for_pci(
     provider_tree: provider_tree.ProviderTree,
     nodename: str,
@@ -316,6 +329,8 @@ def update_provider_tree_for_pci(
     if not _is_placement_tracking_enabled():
         # If tracking is not enabled we just return without touching anything
         return False
+
+    ensure_no_dev_spec_with_devname(pci_tracker.dev_filter.specs)
 
     LOG.debug(
         'Collecting PCI inventories and allocations to track them in Placement'

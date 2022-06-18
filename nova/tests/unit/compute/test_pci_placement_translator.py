@@ -50,6 +50,7 @@ class TestTranslator(test.NoDBTestCase):
         )
         # So we have a device but there is no spec for it
         pci_tracker.dev_filter.get_devspec = mock.Mock(return_value=None)
+        pci_tracker.dev_filter.specs = []
         # we expect that the provider_tree is not touched as the device without
         # spec is skipped, we assert that with the NonCallableMock
         provider_tree = mock.NonCallableMock()
