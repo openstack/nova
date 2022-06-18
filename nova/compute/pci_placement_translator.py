@@ -231,6 +231,13 @@ class PlacementView:
     def add_dev(
         self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
     ) -> None:
+        if dev_spec_tags.get("physical_network"):
+            # NOTE(gibi): We ignore devices that has physnet configured as
+            # those are there for Neutron based SRIOV and that is out of scope
+            # for now. Later these devices will be tracked as PCI_NETDEV
+            # devices in placement.
+            return
+
         if dev.dev_type in PARENT_TYPES:
             self._add_parent(dev, dev_spec_tags)
         elif dev.dev_type in CHILD_TYPES:
