@@ -1,0 +1,13 @@
+---
+fixes:
+  - |
+    When the server group policy validation upcall is enabled
+    nova will assert that the policy is not violated on move operations
+    and initial instance creation. As noted in `bug 1890244`_, if a
+    server was created in a server group and that group was later deleted
+    the validation upcall would fail due to an uncaught excpetion if the
+    server group was deleted. This prevented evacuate and other move
+    operations form functioning. This has now been fixed and nova will
+    ignore deleted server groups.
+
+    .. _bug 1890244: https://bugs.launchpad.net/nova/+bug/1890244
