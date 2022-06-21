@@ -7615,6 +7615,24 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                                      instance, hints)
         mock_get.assert_called_once_with(self.context, uuids.group_hint)
 
+    @mock.patch('nova.objects.InstanceGroup.get_by_hint')
+    def test_validate_instance_group_policy_deleted_group(self, mock_get):
+        """Tests that _validate_instance_group_policy handles the case
+        where the scheduler hint has a group but that group has been deleted.
+        This tests is a reproducer for bug: #1890244
+        """
+        instance = objects.Instance(uuid=uuids.instance)
+        hints = {'group': [uuids.group_hint]}
+        mock_get.side_effect = exception.InstanceGroupNotFound(
+            group_uuid=uuids.group_hint
+        )
+        # FIXME(sean-k-mooney): this should not leak the exception
+        self.assertRaises(
+            exception.InstanceGroupNotFound,
+            self.compute._validate_instance_group_policy, self.context,
+            instance, hints)
+        mock_get.assert_called_once_with(self.context, uuids.group_hint)
+
     @mock.patch('nova.objects.InstanceGroup.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     @mock.patch('nova.objects.InstanceGroup.get_by_hint')
