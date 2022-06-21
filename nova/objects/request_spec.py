@@ -645,6 +645,7 @@ class RequestSpec(base.NovaObject):
             except exception.InstanceGroupNotFound:
                 # NOTE(danms): Instance group may have been deleted
                 spec.instance_group = None
+                spec.scheduler_hints.pop('group', None)
 
         if data_migrated:
             spec.save()

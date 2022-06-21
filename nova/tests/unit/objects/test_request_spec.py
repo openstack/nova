@@ -615,6 +615,30 @@ class _TestRequestSpecObject(object):
         self.assertIsInstance(req_obj.instance_group, objects.InstanceGroup)
         self.assertEqual('fresh', req_obj.instance_group.name)
 
+    @mock.patch.object(
+        request_spec.RequestSpec, '_get_by_instance_uuid_from_db'
+    )
+    @mock.patch('nova.objects.InstanceGroup.get_by_uuid')
+    def test_get_by_instance_uuid_deleted_group(
+            self, mock_get_ig, get_by_uuid
+    ):
+        fake_spec_obj = fake_request_spec.fake_spec_obj()
+        fake_spec_obj.scheduler_hints['group'] = ['fresh']
+        fake_spec = fake_request_spec.fake_db_spec(fake_spec_obj)
+        get_by_uuid.return_value = fake_spec
+        mock_get_ig.side_effect = exception.InstanceGroupNotFound(
+            group_uuid=uuids.instgroup
+        )
+
+        req_obj = request_spec.RequestSpec.get_by_instance_uuid(
+            self.context, fake_spec['instance_uuid']
+        )
+        # assert that both the instance_group object and scheduler hint
+        # are cleared if the instance_group was deleted since the request
+        # spec was last saved to the db.
+        self.assertIsNone(req_obj.instance_group, objects.InstanceGroup)
+        self.assertEqual({'hint': ['over-there']}, req_obj.scheduler_hints)
+
     @mock.patch('nova.objects.request_spec.RequestSpec.save')
     @mock.patch.object(
         request_spec.RequestSpec, '_get_by_instance_uuid_from_db')
