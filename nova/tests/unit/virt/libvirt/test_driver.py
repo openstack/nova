@@ -2677,6 +2677,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(33550336,
                          cfg.metadata[0].flavor.swap)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_q35(self):
         self.flags(virt_type="kvm",
                    group='libvirt')
@@ -2711,6 +2712,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.assertEqual(TEST_AMOUNT_OF_PCIE_SLOTS, num_ports)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_pcie_i440fx(self):
         self.flags(virt_type="kvm",
                    group='libvirt')
@@ -2746,6 +2748,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # i440fx is not pcie machine so there should be no pcie ports
         self.assertEqual(0, num_ports)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch('nova.virt.libvirt.utils.get_default_machine_type',
                 new=mock.Mock(return_value='config-machine_type'))
     def test_get_guest_config_records_machine_type_in_instance(self):
@@ -2957,6 +2960,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     'fake-instance-numa-topology',
                     'fake-flavor', 'fake-image-meta').obj_to_primitive())
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_fits(self, is_able):
@@ -2994,6 +2998,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch('nova.privsep.utils.supports_direct_io',
                 new=mock.Mock(return_value=True))
     @mock.patch.object(
@@ -3389,6 +3394,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           self._test_get_guest_memory_backing_config,
                           host_topology, inst_topology, numa_tune)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_pci_no_numa_info(
@@ -3439,11 +3445,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch('nova.privsep.utils.supports_direct_io',
                 new=mock.Mock(return_value=True))
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
-    def test_get_guest_config_numa_host_instance_2pci_no_fit(self, is_able):
+    def test_get_guest_config_numa_host_instance_2pci_no_fit(
+            self, is_able):
         self.flags(cpu_shared_set='3', cpu_dedicated_set=None,
                    group='compute')
         instance_ref = objects.Instance(**self.test_instance)
@@ -3551,6 +3559,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             exception.NUMATopologyUnsupported,
             None)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_numa_host_instance_fit_w_cpu_pinset(
@@ -3592,9 +3601,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(0, len(cfg.cputune.vcpupin))
             self.assertIsNone(cfg.cpu.numa)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
-    def test_get_guest_config_non_numa_host_instance_topo(self, is_able):
+    def test_get_guest_config_non_numa_host_instance_topo(
+            self, is_able):
         instance_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
                 id=0, cpuset=set([0]), pcpuset=set(), memory=1024),
@@ -3641,9 +3652,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual(instance_cell.memory * units.Ki,
                                  numa_cfg_cell.memory)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
-    def test_get_guest_config_numa_host_instance_topo(self, is_able):
+    def test_get_guest_config_numa_host_instance_topo(
+            self, is_able):
         self.flags(cpu_shared_set='0-5', cpu_dedicated_set=None,
                    group='compute')
 
@@ -3724,6 +3737,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual([instance_cell.id], memnode.nodeset)
                 self.assertEqual("strict", memnode.mode)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_numa_host_instance_topo_reordered(self):
         instance_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
@@ -3799,6 +3813,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual([instance_cell.id], memnode.nodeset)
                 self.assertEqual("strict", memnode.mode)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_numa_host_instance_topo_cpu_pinning(self):
         instance_topology = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
@@ -3877,6 +3892,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual([instance_cell.id], memnode.nodeset)
                 self.assertEqual("strict", memnode.mode)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_numa_host_instance_cpu_mixed(self):
         """Test to create mixed instance libvirt configuration which has a
         default emulator thread policy and verify the NUMA topology related
@@ -3994,7 +4010,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual(i, memnode.cellid)
                 self.assertEqual([instance_cell.id], memnode.nodeset)
 
-    def test_get_guest_config_numa_host_instance_cpu_mixed_isolated_emu(self):
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
+    def test_get_guest_config_numa_host_instance_cpu_mixed_isolated_emu(
+            self):
         """Test to create mixed instance libvirt configuration which has an
         ISOLATED emulator thread policy and verify the NUMA topology related
         settings.
@@ -4081,6 +4099,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 self.assertEqual(i, memnode.cellid)
                 self.assertEqual([instance_cell.id], memnode.nodeset)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_numa_host_instance_cpu_mixed_realtime(self):
         """Test of creating mixed instance libvirt configuration. which is
         created through 'hw:cpu_realtime_mask' and 'hw:cpu_realtime' extra
@@ -4206,6 +4225,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual("fifo", cfg.cputune.vcpusched[0].scheduler)
             self.assertEqual(set([0, 1, 4, 5]), cfg.cputune.vcpusched[0].vcpus)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_numa_host_mempages_shared(self):
         self.flags(cpu_shared_set='2-5', cpu_dedicated_set=None,
                    group='compute')
@@ -4279,7 +4299,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(0, len(cfg.cputune.vcpusched))
             self.assertEqual(set([2, 3, 4, 5]), cfg.cputune.emulatorpin.cpuset)
 
-    def test_get_guest_config_numa_host_instance_cpu_pinning_realtime(self):
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
+    def test_get_guest_config_numa_host_instance_cpu_pinning_realtime(
+            self):
         self.flags(cpu_shared_set=None, cpu_dedicated_set='4-7',
                    group='compute')
 
@@ -4374,6 +4396,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # which are 6, 7
             self.assertEqual(set([2, 3]), cfg.cputune.vcpusched[0].vcpus)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_numa_host_instance_isolated_emulthreads(self):
         self.flags(cpu_shared_set=None, cpu_dedicated_set='4-8',
                    group='compute')
@@ -4480,8 +4503,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertRaises(exception.Invalid, drvr._get_guest_config,
                               instance_ref, [], image_meta, disk_info)
 
-    def test_get_guest_config_numa_host_instance_shared_emulator_threads(
-            self):
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
+    def test_get_guest_config_numa_host_instance_shared_emulator_threads(self):
         self.flags(cpu_shared_set='0,1', cpu_dedicated_set='2-7',
                    group='compute')
         instance_topology = objects.InstanceNUMATopology(
@@ -4687,6 +4710,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(drvr._wants_hugepages(host_topology,
                                               instance_topology))
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_clock(self):
         self.flags(virt_type='kvm', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -4730,6 +4754,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             else:
                 self.assertEqual(2, len(cfg.clock.timers))
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_clock_hpet_false(self):
         self.flags(virt_type='kvm', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -4775,6 +4800,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             else:
                 self.assertEqual(2, len(cfg.clock.timers))
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_clock_hpet_true(self):
         self.flags(virt_type='kvm', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -4821,6 +4847,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             else:
                 self.assertEqual(2, len(cfg.clock.timers))
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_clock_hpet_invalid(self):
         self.flags(virt_type='kvm', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -5314,6 +5341,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(cfg.devices[2].target_dev, 'vdd')
             mock_save.assert_called_with()
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_with_configdrive(self):
         # It's necessary to check if the architecture is power, because
         # power doesn't have support to ide, and so libvirt translate
@@ -5700,6 +5728,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertIsNone(cfg.devices[3].keymap)
         self.assertEqual(cfg.devices[5].type, 'tablet')
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_with_spice_and_agent(self):
         self.flags(enabled=False, group='vnc')
         self.flags(virt_type='kvm', group='libvirt')
@@ -6175,6 +6204,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         i = drvr._get_scsi_controller_next_unit(guest)
         self.assertEqual(expect_num, i)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_with_type_kvm_on_s390(self):
         self.flags(enabled=False, group='vnc')
         self.flags(virt_type='kvm', group='libvirt')
@@ -7674,16 +7704,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         return drvr._get_guest_config(
             instance_ref, _fake_network_info(self), image_meta, disk_info)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_machine_type_through_image_meta(self):
         cfg = self._get_guest_config_machine_type_through_image_meta(
             "fake_machine_type")
         self.assertEqual(cfg.os_mach_type, "fake_machine_type")
 
-    def test_get_guest_config_machine_type_through_image_meta_sev(self):
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
+    def test_get_guest_config_machine_type_through_image_meta_sev(
+            self):
         fake_q35 = "fake-q35-2.11"
         cfg = self._get_guest_config_machine_type_through_image_meta(fake_q35)
         self.assertEqual(cfg.os_mach_type, fake_q35)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_machine_type_from_config(self):
         self.flags(virt_type='kvm', group='libvirt')
         self.flags(hw_machine_type=['x86_64=fake_machine_type'],
@@ -7812,11 +7846,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 cfg.devices[device_index], vconfig.LibvirtConfigGuestVideo)
             self.assertEqual(cfg.devices[device_index].type, 'vga')
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_config_ppc64_through_image_meta_vnc_enabled(self):
         self.flags(enabled=True, group='vnc')
         self._test_get_guest_config_ppc64(4)
 
-    def test_get_guest_config_ppc64_through_image_meta_spice_enabled(self):
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
+    def test_get_guest_config_ppc64_through_image_meta_spice_enabled(
+        self):
         self.flags(enabled=True,
                    agent_enabled=True,
                    group='spice')
@@ -7904,6 +7941,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       image_meta, disk_info)
         self.assertIsNone(conf.cpu)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_cpu_config_automatic(self):
         expected = {
             fields.Architecture.X86_64: "host-model",
@@ -8481,6 +8519,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 break
         self.assertTrue(no_exist)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_get_guest_usb_controller(self):
         self.flags(enabled=True, group='vnc')
 
@@ -8633,6 +8672,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                      None,
                                      (("disk", "virtio", "vda"),))
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_xml_disk_bus_ide(self):
         # It's necessary to check if the architecture is power, because
         # power doesn't have support to ide, and so libvirt translate
@@ -8668,6 +8708,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                      block_device_info,
                                      (expected,))
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_xml_disk_bus_ide_and_virtio(self):
         expected = {
             fields.Architecture.X86_64: ("cdrom", "ide", "hda"),
@@ -14809,6 +14850,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_stat.assert_called_once_with(path)
         mock_get_size.assert_called_once_with(path)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_register_undefined_instance_details',
                        new=mock.Mock())
@@ -14946,6 +14988,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_build_device_metadata.assert_called_once_with(self.context,
                                                                instance)
 
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     def test_spawn_power_on_false(self):
         self.test_spawn_with_network_info(power_on=False)
 

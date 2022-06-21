@@ -31,6 +31,7 @@ from collections import defaultdict
 import fnmatch
 import glob
 import inspect
+from lxml import etree
 import operator
 import os
 import queue
@@ -1197,6 +1198,25 @@ class Host(object):
         # No. 3 is the expected CPU frequency.
         stats["frequency"] = self._get_hardware_info()[3]
         return stats
+
+    def _check_machine_type(self, caps, mach_type):
+        """Validate if hw machine type is in capabilities of the host
+
+        :param caps: host capabilities
+        :param mach_type: machine type
+        """
+        possible_machine_types = []
+
+        caps_tree = etree.fromstring(str(caps))
+        for guest in caps_tree.findall('guest'):
+            for machine in guest.xpath('arch/machine'):
+                possible_machine_types.append(machine.text)
+
+        if mach_type not in possible_machine_types:
+            raise exception.InvalidMachineType(
+                message="'%s' is not valid/supported machine type, "
+                    "Supported machine types are: %s" % (
+                        mach_type, possible_machine_types))
 
     def write_instance_config(self, xml):
         """Defines a domain, but does not start it.

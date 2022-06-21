@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Added validation for image machine type property. Different APIs which
+    uses machine type for server creation, resize or rebuild will raise
+    InvalidMachineType exception with message "provided machine type is not
+    supported by host" and suggest possible/valid machine types in compute logs.
+
+    .. _bug 1933097: https://bugs.launchpad.net/nova/+bug/1933097
