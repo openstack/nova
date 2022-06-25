@@ -1,0 +1,21 @@
+---
+features:
+  - |
+    The following enlightenments are now added by default to the libvirt XML for Windows guests:
+
+    * vpindex
+    * runtime
+    * synic
+    * reset
+    * frequencies
+    * reenlightenment
+    * tlbflush
+    * ipi
+    * evmc
+
+    This adds to the list of already existing enlightenments, namely:
+
+    * relaxed
+    * vapic
+    * spinlocks retries
+    * vendor_id spoofing

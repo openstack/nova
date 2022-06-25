@@ -2732,6 +2732,15 @@ class LibvirtConfigGuestFeatureHyperV(LibvirtConfigGuestFeature):
         self.vapic = False
         self.spinlocks = False
         self.spinlock_retries = self.MIN_SPINLOCK_RETRIES
+        self.vpindex = False
+        self.runtime = False
+        self.synic = False
+        self.reset = False
+        self.frequencies = False
+        self.reenlightenment = False
+        self.tlbflush = False
+        self.ipi = False
+        self.evmcs = False
         self.vendorid_spoof = False
         self.vendorid = self.SPOOFED_VENDOR_ID
 
@@ -2748,6 +2757,24 @@ class LibvirtConfigGuestFeatureHyperV(LibvirtConfigGuestFeature):
         if self.vendorid_spoof:
             root.append(etree.Element("vendor_id", state="on",
                                       value=self.vendorid))
+        if self.vpindex:
+            root.append(etree.Element('vpindex', state='on'))
+        if self.runtime:
+            root.append(etree.Element('runtime', state='on'))
+        if self.synic:
+            root.append(etree.Element('synic', state='on'))
+        if self.reset:
+            root.append(etree.Element('reset', state='on'))
+        if self.frequencies:
+            root.append(etree.Element('frequencies', state='on'))
+        if self.reenlightenment:
+            root.append(etree.Element('reenlightenment', state='on'))
+        if self.tlbflush:
+            root.append(etree.Element('tlbflush', state='on'))
+        if self.ipi:
+            root.append(etree.Element('ipi', state='on'))
+        if self.evmcs:
+            root.append(etree.Element('evmcs', state='on'))
 
         return root
 
