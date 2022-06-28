@@ -43,13 +43,13 @@ class BaremetalNodesPolicyTest(base.BasePolicyTest):
                       lambda *_: FAKE_IRONIC_CLIENT)
         # With legacy rule and scope check disabled by default, system admin,
         # legacy admin, and project admin will be able to get baremetal nodes.
-        self.system_admin_authorized_contexts = [
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
 
     def test_index_nodes_policy(self):
         rule_name = "os_compute_api:os-baremetal-nodes:list"
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.index,
                                 self.req)
 
@@ -62,7 +62,7 @@ class BaremetalNodesPolicyTest(base.BasePolicyTest):
         mock_get.return_value = node
         mock_port.return_value = []
 
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller.show,
                                 self.req, uuids.fake_id)
@@ -95,9 +95,10 @@ class BaremetalNodesScopeTypePolicyTest(BaremetalNodesPolicyTest):
         super(BaremetalNodesScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # With scope checks enable, only system admin is able to get
-        # baremetal nodes.
-        self.system_admin_authorized_contexts = [self.system_admin_context]
+        # With scope checks enable, only project-scoped admins are
+        # able to get baremetal nodes.
+        self.project_admin_authorized_contexts = [self.legacy_admin_context,
+                                                 self.project_admin_context]
 
 
 class BNScopeTypeNoLegacyPolicyTest(BaremetalNodesScopeTypePolicyTest):

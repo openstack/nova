@@ -35,21 +35,21 @@ class ServicesPolicyTest(base.BasePolicyTest):
         # With legacy rule and scope check disabled by default, system admin,
         # legacy admin, and project admin will be able to perform Services
         # Operations.
-        self.system_admin_authorized_contexts = [
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
 
     def test_delete_service_policy(self):
         rule_name = "os_compute_api:os-services:delete"
         with mock.patch('nova.compute.api.HostAPI.service_get_by_id'):
-            self.common_policy_auth(self.system_admin_authorized_contexts,
+            self.common_policy_auth(self.project_admin_authorized_contexts,
                                     rule_name, self.controller.delete,
                                     self.req, 1)
 
     def test_index_service_policy(self):
         rule_name = "os_compute_api:os-services:list"
         with mock.patch('nova.compute.api.HostAPI.service_get_all'):
-            self.common_policy_auth(self.system_admin_authorized_contexts,
+            self.common_policy_auth(self.project_admin_authorized_contexts,
                                     rule_name, self.controller.index,
                                     self.req)
 
@@ -58,7 +58,7 @@ class ServicesPolicyTest(base.BasePolicyTest):
         body = {'host': 'host1', 'binary': 'nova-compute'}
         update = 'nova.compute.api.HostAPI.service_update_by_host_and_binary'
         with mock.patch(update):
-            self.common_policy_auth(self.system_admin_authorized_contexts,
+            self.common_policy_auth(self.project_admin_authorized_contexts,
                                     rule_name, self.controller.update,
                                     self.req, 'enable', body=body)
 
@@ -69,7 +69,7 @@ class ServicesPolicyTest(base.BasePolicyTest):
         service = self.start_service(
             'compute', 'fake-compute-host').service_ref
         with mock.patch('nova.compute.api.HostAPI.service_update'):
-            self.common_policy_auth(self.system_admin_authorized_contexts,
+            self.common_policy_auth(self.project_admin_authorized_contexts,
                                     rule_name, self.controller.update,
                                     req, service.uuid,
                                     body={'status': 'enabled'})
@@ -107,7 +107,8 @@ class ServicesScopeTypePolicyTest(ServicesPolicyTest):
 
         # With scope checks enable, only system admin is able to perform
         # Service Operations.
-        self.system_admin_authorized_contexts = [self.system_admin_context]
+        self.project_admin_authorized_contexts = [self.legacy_admin_context,
+                                                  self.project_admin_context]
 
 
 class ServicesScopeTypeNoLegacyPolicyTest(ServicesScopeTypePolicyTest):

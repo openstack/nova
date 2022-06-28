@@ -43,7 +43,7 @@ quota_sets_policies = [
                 'path': '/os-quota-sets/{tenant_id}/defaults'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
         # TODO(gmann): Until we have domain admin or so to get other project's

@@ -32,7 +32,7 @@ floating_ip_pools_policies = [
                 'path': '/os-floating-ip-pools'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 

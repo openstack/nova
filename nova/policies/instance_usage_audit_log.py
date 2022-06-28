@@ -44,7 +44,7 @@ instance_usage_audit_log_policies = [
                 'path': '/os-instance_usage_audit_log'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
@@ -59,7 +59,7 @@ instance_usage_audit_log_policies = [
                 'path': '/os-instance_usage_audit_log/{before_timestamp}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
 ]
 

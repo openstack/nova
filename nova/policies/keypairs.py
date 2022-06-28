@@ -31,7 +31,7 @@ keypairs_policies = [
                 'method': 'GET'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
         check_str='(' + base.ADMIN + ') or user_id:%(user_id)s',
@@ -42,7 +42,7 @@ keypairs_policies = [
                 'method': 'POST'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
         check_str='(' + base.ADMIN + ') or user_id:%(user_id)s',
@@ -53,7 +53,7 @@ keypairs_policies = [
                 'method': 'DELETE'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
         check_str='(' + base.ADMIN + ') or user_id:%(user_id)s',
@@ -64,7 +64,7 @@ keypairs_policies = [
                 'method': 'GET'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 

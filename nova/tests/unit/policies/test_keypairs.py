@@ -35,7 +35,7 @@ class KeypairsPolicyTest(base.BasePolicyTest):
 
         # Check that everyone is able to create, delete and get
         # their keypairs.
-        self.everyone_authorized_contexts = [
+        self.everyone_authorized_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context,
             self.system_member_context, self.system_reader_context,
@@ -43,13 +43,13 @@ class KeypairsPolicyTest(base.BasePolicyTest):
             self.project_reader_context, self.project_foo_context,
             self.other_project_member_context,
             self.other_project_reader_context,
-        ]
+        ])
 
         # Check that admin is able to create, delete and get
         # other users keypairs.
-        self.admin_authorized_contexts = [
+        self.admin_authorized_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context]
+            self.project_admin_context])
 
     @mock.patch('nova.compute.api.KeypairAPI.get_key_pairs')
     def test_index_keypairs_policy(self, mock_get):
@@ -151,6 +151,12 @@ class KeypairsScopeTypePolicyTest(KeypairsPolicyTest):
     def setUp(self):
         super(KeypairsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
+
+        # With scope checking, only project-scoped users are allowed
+        self.reduce_set('everyone_authorized', self.all_project_contexts)
+        self.admin_authorized_contexts = [
+            self.legacy_admin_context,
+            self.project_admin_context]
 
 
 class KeypairsNoLegacyPolicyTest(KeypairsScopeTypePolicyTest):

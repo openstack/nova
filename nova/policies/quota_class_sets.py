@@ -32,7 +32,7 @@ quota_class_sets_policies = [
                 'path': '/os-quota-class-sets/{quota_class}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
         check_str=base.ADMIN,
@@ -43,7 +43,7 @@ quota_class_sets_policies = [
                 'path': '/os-quota-class-sets/{quota_class}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
 ]
 
 

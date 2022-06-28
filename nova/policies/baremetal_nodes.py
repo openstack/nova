@@ -49,7 +49,7 @@ These APIs are proxy calls to the Ironic service and are deprecated.
                 'path': '/os-baremetal-nodes'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_BAREMETAL_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
@@ -61,7 +61,7 @@ These APIs are proxy calls to the Ironic service and are deprecated.
                 'path': '/os-baremetal-nodes/{node_id}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_BAREMETAL_POLICY)
 ]
 

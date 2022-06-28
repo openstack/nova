@@ -35,14 +35,14 @@ class AggregatesPolicyTest(base.BasePolicyTest):
         # With legacy rule and scope check disabled by default, system admin,
         # legacy admin, and project admin will be able to perform Aggregate
         # Operations.
-        self.system_admin_authorized_contexts = [
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
 
     @mock.patch('nova.compute.api.AggregateAPI.get_aggregate_list')
     def test_list_aggregate_policy(self, mock_list):
         rule_name = "os_compute_api:os-aggregates:index"
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.index,
                                 self.req)
 
@@ -55,7 +55,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
                                    "hosts": ["host1", "host2"]})
         body = {"aggregate": {"name": "test",
                               "availability_zone": "nova1"}}
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller.create,
                                 self.req, body=body)
@@ -63,7 +63,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.update_aggregate')
     def test_update_aggregate_policy(self, mock_update):
         rule_name = "os_compute_api:os-aggregates:update"
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.update,
                                 self.req, 1,
                                 body={"aggregate": {"name": "new_name"}})
@@ -71,7 +71,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.delete_aggregate')
     def test_delete_aggregate_policy(self, mock_delete):
         rule_name = "os_compute_api:os-aggregates:delete"
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller.delete,
                                 self.req, 1)
@@ -79,7 +79,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.get_aggregate')
     def test_show_aggregate_policy(self, mock_show):
         rule_name = "os_compute_api:os-aggregates:show"
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.show,
                                 self.req, 1)
 
@@ -87,7 +87,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     def test_set_metadata_aggregate_policy(self, mock_metadata):
         rule_name = "os_compute_api:os-aggregates:set_metadata"
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller._set_metadata,
                                 self.req, 1, body=body)
@@ -95,7 +95,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.add_host_to_aggregate')
     def test_add_host_aggregate_policy(self, mock_add):
         rule_name = "os_compute_api:os-aggregates:add_host"
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller._add_host,
                                 self.req, 1,
                                 body={"add_host": {"host": "host1"}})
@@ -103,7 +103,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.AggregateAPI.remove_host_from_aggregate')
     def test_remove_host_aggregate_policy(self, mock_remove):
         rule_name = "os_compute_api:os-aggregates:remove_host"
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller._remove_host,
                                 self.req, 1,
@@ -118,7 +118,7 @@ class AggregatesPolicyTest(base.BasePolicyTest):
         body = {'cache': [{'id': uuids.fake_id}]}
         req = fakes.HTTPRequest.blank('', version='2.81')
         with mock.patch('nova.conductor.api.ComputeTaskAPI.cache_images'):
-            self.common_policy_auth(self.system_admin_authorized_contexts,
+            self.common_policy_auth(self.project_admin_authorized_contexts,
                                     rule_name, self.controller.images,
                                     req, 1, body=body)
 
@@ -149,9 +149,10 @@ class AggregatesScopeTypePolicyTest(AggregatesPolicyTest):
         super(AggregatesScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # With scope checks enable, only system admin is able to perform
-        # Aggregate Operations.
-        self.system_admin_authorized_contexts = [self.system_admin_context]
+        # With scope checks enabled, only project-scoped admins are
+        # able to perform Aggregate Operations.
+        self.project_admin_authorized_contexts = [self.legacy_admin_context,
+                                                  self.project_admin_context]
 
 
 class AggregatesScopeTypeNoLegacyPolicyTest(AggregatesScopeTypePolicyTest):

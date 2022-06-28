@@ -33,7 +33,7 @@ availability_zone_policies = [
                 'path': '/os-availability-zone'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'detail',
         check_str=base.ADMIN,
@@ -45,7 +45,7 @@ availability_zone_policies = [
                 'path': '/os-availability-zone/detail'
             }
         ],
-        scope_types=['system'])
+        scope_types=['project'])
 ]
 
 

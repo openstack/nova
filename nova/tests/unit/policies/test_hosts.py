@@ -35,14 +35,14 @@ class HostsPolicyTest(base.BasePolicyTest):
         # With legacy rule and scope check disabled by default, system admin,
         # legacy admin, and project admin will be able to perform hosts
         # Operations.
-        self.system_admin_authorized_contexts = [
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
 
     @mock.patch('nova.compute.api.HostAPI.service_get_all')
     def test_list_hosts_policy(self, mock_get):
         rule_name = policies.POLICY_NAME % 'list'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.index,
                                 self.req)
 
@@ -53,34 +53,34 @@ class HostsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.HostAPI.instance_get_all_by_host')
     def test_show_host_policy(self, mock_get, mock_node, mock_map, mock_set):
         rule_name = policies.POLICY_NAME % 'show'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.show,
                                 self.req, 11111)
 
     def test_update_host_policy(self):
         rule_name = policies.POLICY_NAME % 'update'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.update,
                                 self.req, 11111, body={})
 
     @mock.patch('nova.compute.api.HostAPI.host_power_action')
     def test_reboot_host_policy(self, mock_action):
         rule_name = policies.POLICY_NAME % 'reboot'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.reboot,
                                 self.req, 11111)
 
     @mock.patch('nova.compute.api.HostAPI.host_power_action')
     def test_shutdown_host_policy(self, mock_action):
         rule_name = policies.POLICY_NAME % 'shutdown'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.shutdown,
                                 self.req, 11111)
 
     @mock.patch('nova.compute.api.HostAPI.host_power_action')
     def test_startup_host_policy(self, mock_action):
         rule_name = policies.POLICY_NAME % 'start'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.startup,
                                 self.req, 11111)
 
@@ -113,7 +113,8 @@ class HostsScopeTypePolicyTest(HostsPolicyTest):
 
         # With scope checks enable, only system admin is able to perform
         # hosts Operations.
-        self.system_admin_authorized_contexts = [self.system_admin_context]
+        self.project_admin_authorized_contexts = [self.legacy_admin_context,
+                                                  self.project_admin_context]
 
 
 class HostsScopeTypeNoLegacyPolicyTest(HostsScopeTypePolicyTest):

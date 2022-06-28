@@ -36,27 +36,27 @@ class QuotaSetsPolicyTest(base.BasePolicyTest):
 
         # With legacy rule all admin is able to update or revert their quota
         # to default or get other project quota.
-        self.project_admin_authorized_contexts = [
+        self.project_admin_authorized_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
-            self.project_admin_context]
+            self.project_admin_context])
         # With legacy rule, everyone is able to get their own quota.
-        self.project_reader_authorized_contexts = [
+        self.project_reader_authorized_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
             self.other_project_member_context,
-            self.other_project_reader_context]
+            self.other_project_reader_context])
         # Everyone is able to get the default quota
-        self.everyone_authorized_contexts = [
+        self.everyone_authorized_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context,
             self.system_member_context, self.system_reader_context,
             self.system_foo_context, self.project_member_context,
             self.project_reader_context, self.project_foo_context,
             self.other_project_member_context,
-            self.other_project_reader_context]
+            self.other_project_reader_context])
 
     @mock.patch('nova.quota.QUOTAS.get_project_quotas')
     @mock.patch('nova.quota.QUOTAS.get_settable_quotas')
@@ -176,16 +176,13 @@ class QuotaSetsScopeTypePolicyTest(QuotaSetsPolicyTest):
         super(QuotaSetsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # With scope enable, system users will be disallowed.
-        self.project_admin_authorized_contexts = [
+        # With scope enabled, system users will be disallowed.
+        self.reduce_set('project_admin_authorized', set([
             self.legacy_admin_context,
-            self.project_admin_context]
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context,
-            self.project_foo_context,
-            self.other_project_member_context,
-            self.other_project_reader_context]
+            self.project_admin_context]))
+        self.reduce_set('project_reader_authorized',
+                        self.all_project_contexts)
+        self.everyone_authorized_contexts = self.all_project_contexts
 
 
 class QuotaSetsScopeTypeNoLegacyPolicyTest(QuotaSetsScopeTypePolicyTest):
@@ -197,6 +194,8 @@ class QuotaSetsScopeTypeNoLegacyPolicyTest(QuotaSetsScopeTypePolicyTest):
 
     def setUp(self):
         super(QuotaSetsScopeTypeNoLegacyPolicyTest, self).setUp()
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context]
+        # With scope enabled and no legacy, system and
+        # non-reader/member users are disallowed.
+        self.reduce_set('project_reader_authorized',
+                        self.all_project_contexts -
+                        set([self.project_foo_context]))

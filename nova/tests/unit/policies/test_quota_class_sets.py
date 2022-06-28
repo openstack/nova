@@ -34,7 +34,7 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
         # With legacy rule and scope check disabled by default, system admin,
         # legacy admin, and project admin will be able to get, update quota
         # class.
-        self.system_admin_authorized_contexts = [
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
 
@@ -46,7 +46,7 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
                         'ram': 51200, 'floating_ips': -1,
                         'fixed_ips': -1, 'instances': 10,
                         'injected_files': 5, 'cores': 20}}
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller.update,
                                 self.req, 'test_class',
@@ -55,7 +55,7 @@ class QuotaClassSetsPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.quota.QUOTAS.get_class_quotas')
     def test_show_quota_class_sets_policy(self, mock_get):
         rule_name = policies.POLICY_ROOT % 'show'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name,
                                 self.controller.show,
                                 self.req, 'test_class')
@@ -86,9 +86,10 @@ class QuotaClassSetsScopeTypePolicyTest(QuotaClassSetsPolicyTest):
         super(QuotaClassSetsScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # With scope checks enable, only system admin is able to update
-        # and get quota class.
-        self.system_admin_authorized_contexts = [self.system_admin_context]
+        # With scope checks enable, only project admins are able to
+        # update and get quota class.
+        self.project_admin_authorized_contexts = [self.legacy_admin_context,
+                                                  self.project_admin_context]
 
 
 class QuotaClassScopeTypeNoLegacyPolicyTest(QuotaClassSetsScopeTypePolicyTest):

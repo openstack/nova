@@ -53,7 +53,7 @@ flavor_access_policies = [
                 'path': '/flavors/{flavor_id}/action (addTenantAccess)'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'remove_tenant_access',
         check_str=base.ADMIN,
@@ -64,7 +64,7 @@ flavor_access_policies = [
                 'path': '/flavors/{flavor_id}/action (removeTenantAccess)'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
         check_str=base.ADMIN,
@@ -79,7 +79,7 @@ to a flavor via an os-flavor-access API.
                 'path': '/flavors/{flavor_id}/os-flavor-access'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_FLAVOR_ACCESS_POLICY),
 ]
 

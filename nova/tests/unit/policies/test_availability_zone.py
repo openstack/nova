@@ -34,20 +34,21 @@ class AvailabilityZonePolicyTest(base.BasePolicyTest):
         # With legacy rule and scope check disabled by default, system admin,
         # legacy admin, and project admin will be able to get AZ with host
         # information.
-        self.system_admin_authorized_contexts = [
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
+        self.project_authorized_contexts = self.all_contexts
 
     @mock.patch('nova.objects.Instance.save')
     def test_availability_zone_list_policy(self, mock_save):
         rule_name = "os_compute_api:os-availability-zone:list"
-        self.common_policy_auth(self.all_contexts,
+        self.common_policy_auth(self.project_authorized_contexts,
                                 rule_name, self.controller.index,
                                 self.req)
 
     def test_availability_zone_detail_policy(self):
         rule_name = "os_compute_api:os-availability-zone:detail"
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.detail,
                                 self.req)
 
@@ -79,9 +80,11 @@ class AvailabilityZoneScopeTypePolicyTest(AvailabilityZonePolicyTest):
         super(AvailabilityZoneScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
 
-        # With scope checks enable, only system admin is able to get
-        # AZ with host information.
-        self.system_admin_authorized_contexts = [self.system_admin_context]
+        # With scope checks enable, only project-scoped admins are
+        # able to get AZ with host information.
+        self.project_admin_authorized_contexts = [self.legacy_admin_context,
+                                                  self.project_admin_context]
+        self.project_authorized_contexts = self.all_project_contexts
 
 
 class AZScopeTypeNoLegacyPolicyTest(AvailabilityZoneScopeTypePolicyTest):

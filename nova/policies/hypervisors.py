@@ -45,7 +45,7 @@ hypervisors_policies = [
                 'method': 'GET'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'list-detail',
@@ -57,7 +57,7 @@ hypervisors_policies = [
                 'method': 'GET'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'statistics',
@@ -70,7 +70,7 @@ hypervisors_policies = [
                 'method': 'GET'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
@@ -82,7 +82,7 @@ hypervisors_policies = [
                 'method': 'GET'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'uptime',
@@ -94,7 +94,7 @@ hypervisors_policies = [
                 'method': 'GET'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'search',
@@ -106,7 +106,7 @@ hypervisors_policies = [
                 'method': 'GET'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'servers',
@@ -120,7 +120,7 @@ hypervisors_policies = [
                 'method': 'GET'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY
     ),
 ]

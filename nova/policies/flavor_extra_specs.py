@@ -31,7 +31,7 @@ flavor_extra_specs_policies = [
                 'method': 'GET'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
@@ -43,7 +43,7 @@ flavor_extra_specs_policies = [
                 'method': 'POST'
             }
         ],
-        scope_types=['system']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
@@ -56,7 +56,7 @@ flavor_extra_specs_policies = [
                 'method': 'PUT'
             }
         ],
-        scope_types=['system']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
@@ -69,7 +69,7 @@ flavor_extra_specs_policies = [
                 'method': 'DELETE'
             }
         ],
-        scope_types=['system']
+        scope_types=['project']
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
@@ -100,7 +100,7 @@ flavor_extra_specs_policies = [
                 'method': 'PUT'
             }
         ],
-        scope_types=['system', 'project']
+        scope_types=['project']
     ),
 ]
 

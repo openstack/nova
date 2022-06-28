@@ -45,7 +45,7 @@ services_policies = [
                 'path': '/os-services'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_SERVICE_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'update',
@@ -58,7 +58,7 @@ services_policies = [
                 'path': '/os-services/{service_id}'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_SERVICE_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'delete',
@@ -70,7 +70,7 @@ services_policies = [
                 'path': '/os-services/{service_id}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_SERVICE_POLICY),
 ]
 

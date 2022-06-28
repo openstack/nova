@@ -85,7 +85,8 @@ class InstanceUsageScopeTypePolicyTest(InstanceUsageAuditLogPolicyTest):
 
         # Scope checks remove project users power.
         self.admin_authorized_contexts = [
-            self.system_admin_context]
+            self.legacy_admin_context,
+            self.project_admin_context]
 
 
 class InstanceUsageScopeTypeNoLegacyPolicyTest(

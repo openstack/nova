@@ -48,7 +48,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
                 'path': '/os-hosts'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'show',
@@ -62,7 +62,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
                 'path': '/os-hosts/{host_name}'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'update',
@@ -76,7 +76,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
                 'path': '/os-hosts/{host_name}'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'reboot',
@@ -90,7 +90,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
                 'path': '/os-hosts/{host_name}/reboot'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'shutdown',
@@ -104,7 +104,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
                 'path': '/os-hosts/{host_name}/shutdown'
             },
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'start',
@@ -118,7 +118,7 @@ This API is deprecated in favor of os-hypervisors and os-services.""",
                 'path': '/os-hosts/{host_name}/startup'
             }
         ],
-        scope_types=['system'],
+        scope_types=['project'],
         deprecated_rule=DEPRECATED_POLICY),
 ]
 

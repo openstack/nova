@@ -33,7 +33,7 @@ flavor_manage_policies = [
                 'path': '/flavors'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'update',
         check_str=base.ADMIN,
@@ -44,7 +44,7 @@ flavor_manage_policies = [
                 'path': '/flavors/{flavor_id}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
         check_str=base.ADMIN,
@@ -55,7 +55,7 @@ flavor_manage_policies = [
                 'path': '/flavors/{flavor_id}'
             }
         ],
-        scope_types=['system']),
+        scope_types=['project']),
 ]
 
 

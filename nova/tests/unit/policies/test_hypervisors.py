@@ -39,51 +39,51 @@ class HypervisorsPolicyTest(base.BasePolicyTest):
         # With legacy rule and scope check disabled by default, system admin,
         # legacy admin, and project admin will be able to perform hypervisors
         # Operations.
-        self.system_admin_authorized_contexts = [
+        self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.system_admin_context,
             self.project_admin_context]
 
     def test_list_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'list'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.index,
                                 self.req)
 
     def test_list_details_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'list-detail'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.detail,
                                 self.req)
 
     def test_show_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'show'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.show,
                                 self.req, 11111)
 
     @mock.patch('nova.compute.api.HostAPI.get_host_uptime')
     def test_uptime_hypervisors_policy(self, mock_uptime):
         rule_name = hv_policies.BASE_POLICY_NAME % 'uptime'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.uptime,
                                 self.req, 11111)
 
     def test_search_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'search'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.search,
                                 self.req, 11111)
 
     def test_servers_hypervisors_policy(self):
         rule_name = hv_policies.BASE_POLICY_NAME % 'servers'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.servers,
                                 self.req, 11111)
 
     @mock.patch('nova.compute.api.HostAPI.compute_node_statistics')
     def test_statistics_hypervisors_policy(self, mock_statistics):
         rule_name = hv_policies.BASE_POLICY_NAME % 'statistics'
-        self.common_policy_auth(self.system_admin_authorized_contexts,
+        self.common_policy_auth(self.project_admin_authorized_contexts,
                                 rule_name, self.controller.statistics,
                                 self.req)
 
@@ -115,7 +115,8 @@ class HypervisorsScopeTypePolicyTest(HypervisorsPolicyTest):
 
         # With scope checks enable, only system admin is able to perform
         # hypervisors Operations.
-        self.system_admin_authorized_contexts = [self.system_admin_context]
+        self.project_admin_authorized_contexts = [self.legacy_admin_context,
+                                                  self.project_admin_context]
 
 
 class HypervisorsScopeTypeNoLegacyPolicyTest(HypervisorsScopeTypePolicyTest):

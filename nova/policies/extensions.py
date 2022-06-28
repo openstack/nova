@@ -37,7 +37,7 @@ extensions_policies = [
                 'path': '/extensions/{alias}'
             }
         ],
-        scope_types=['system', 'project']),
+        scope_types=['project']),
 ]
 
 
