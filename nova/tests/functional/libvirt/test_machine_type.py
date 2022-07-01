@@ -103,7 +103,7 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
         self.computes['compute1'].stop()
         self._unset_machine_type(server_without['id'])
 
-        self.flags(hw_machine_type='x86_64=pc-q35-1.2.3', group='libvirt')
+        self.flags(hw_machine_type='x86_64=pc-q35-2.4', group='libvirt')
 
         # Restart the compute
         self.computes['compute1'].start()
@@ -115,9 +115,9 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
         # is able to pass. This just keeps the tests clean.
         self._reboot_server(server_without, hard=True)
 
-        # Assert server_without now has a machine type of pc-q35-1.2.3 picked
+        # Assert server_without now has a machine type of pc-q35-2.4 picked
         # up from [libvirt]hw_machine_type during init_host
-        self._assert_machine_type(server_without['id'], 'pc-q35-1.2.3')
+        self._assert_machine_type(server_without['id'], 'pc-q35-2.4')
 
     def test_machine_type_after_config_change(self):
         """Assert new instances pick up a new default machine type after the
@@ -129,11 +129,11 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
         self._assert_machine_type(server_with['id'], 'q35')
         self._assert_machine_type(server_without['id'], 'pc')
 
-        self.flags(hw_machine_type='x86_64=pc-q35-1.2.3', group='libvirt')
+        self.flags(hw_machine_type='x86_64=pc-q35-2.4', group='libvirt')
 
         server_with_new, server_without_new = self._create_servers()
         self._assert_machine_type(server_with_new['id'], 'q35')
-        self._assert_machine_type(server_without_new['id'], 'pc-q35-1.2.3')
+        self._assert_machine_type(server_without_new['id'], 'pc-q35-2.4')
 
     def test_machine_type_after_server_rebuild(self):
         """Assert that the machine type of an instance changes with a full
@@ -202,26 +202,26 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
         )
 
     def test_machine_type_update_stopped(self):
-        self.flags(hw_machine_type='x86_64=pc-1.2.3', group='libvirt')
+        self.flags(hw_machine_type='x86_64=pc-1.2', group='libvirt')
 
         server = self._create_server(networks='none')
-        self._assert_machine_type(server['id'], 'pc-1.2.3')
+        self._assert_machine_type(server['id'], 'pc-1.2')
 
         self._stop_server(server)
         machine_type_utils.update_machine_type(
             self.context,
             server['id'],
-            'pc-1.2.4'
+            'pc-1.2'
         )
 
         self._start_server(server)
-        self._assert_machine_type(server['id'], 'pc-1.2.4')
+        self._assert_machine_type(server['id'], 'pc-1.2')
 
     def test_machine_type_update_blocked_active(self):
-        self.flags(hw_machine_type='x86_64=pc-1.2.3', group='libvirt')
+        self.flags(hw_machine_type='x86_64=pc-1.2', group='libvirt')
 
         server = self._create_server(networks='none')
-        self._assert_machine_type(server['id'], 'pc-1.2.3')
+        self._assert_machine_type(server['id'], 'pc-1.2')
 
         self.assertRaises(
             exception.InstanceInvalidState,
@@ -247,10 +247,10 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
         )
 
     def test_machine_type_update_blocked_between_versioned_and_alias(self):
-        self.flags(hw_machine_type='x86_64=pc-1.2.3', group='libvirt')
+        self.flags(hw_machine_type='x86_64=pc-1.2', group='libvirt')
 
         server = self._create_server(networks='none')
-        self._assert_machine_type(server['id'], 'pc-1.2.3')
+        self._assert_machine_type(server['id'], 'pc-1.2')
         self._stop_server(server)
 
         self.assertRaises(
@@ -372,7 +372,7 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
         )
 
         # Change the actual config on the compute
-        self.flags(hw_machine_type='x86_64=pc-q35-1.2', group='libvirt')
+        self.flags(hw_machine_type='x86_64=pc-q35-2.4', group='libvirt')
 
         # Assert the existing instances remain the same after being rebooted or
         # unshelved, rebuilding their domain configs
@@ -389,4 +389,4 @@ class LibvirtMachineTypeTest(base.ServersTestBase):
         # Assert that new instances are spawned with the expected machine types
         server_with_new, server_without_new = self._create_servers()
         self._assert_machine_type(server_with_new['id'], 'q35')
-        self._assert_machine_type(server_without_new['id'], 'pc-q35-1.2')
+        self._assert_machine_type(server_without_new['id'], 'pc-q35-2.4')

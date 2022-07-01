@@ -1096,6 +1096,48 @@ Active:          8381604 kB
             guest = self.host.write_instance_config(fake_dom_xml)
             self.assertIsInstance(guest, libvirt_guest.Guest)
 
+    def test_check_machine_type_invalid(self):
+        fake_dom_xml = u"""
+            <capabilities>
+                <guest>
+                    <os_type>hvm</os_type>
+                    <arch name="alpha">
+                        <emulator>/usr/bin/qemu-system-alpha</emulator>
+                        <machine maxCpus="4">q35</machine>
+                        <machine maxCpus="1">integratorcp</machine>
+                        <machine maxCpus="1">versatileab</machine>
+                        <domain type="qemu"/>
+                    </arch>
+                </guest>
+            </capabilities>
+            """
+
+        self.assertRaises(
+                exception.InvalidMachineType,
+                self.host._check_machine_type, fake_dom_xml, 'Q35'
+            )
+
+    def test_check_machine_type_valid(self):
+        fake_dom_xml = u"""
+            <capabilities>
+                <guest>
+                    <os_type>hvm</os_type>
+                    <arch name="alpha">
+                        <emulator>/usr/bin/qemu-system-alpha</emulator>
+                        <machine maxCpus="4">q35</machine>
+                        <machine maxCpus="1">integratorcp</machine>
+                        <machine maxCpus="1">versatileab</machine>
+                        <domain type="qemu"/>
+                    </arch>
+                </guest>
+            </capabilities>
+            """
+
+        self.assertIsNone(
+                self.host._check_machine_type(fake_dom_xml, 'q35'),
+                "None msg"
+            )
+
     @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
     def test_device_lookup_by_name(self, mock_nodeDeviceLookupByName):
         self.host.device_lookup_by_name("foo")

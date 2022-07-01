@@ -6446,6 +6446,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
 
             mach_type = libvirt_utils.get_machine_type(image_meta)
+            self._host._check_machine_type(caps, mach_type)
+
             guest.os_mach_type = mach_type
 
             hw_firmware_type = image_meta.properties.get('hw_firmware_type')
