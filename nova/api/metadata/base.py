@@ -71,6 +71,7 @@ NEWTON_TWO = '2016-10-06'
 OCATA = '2017-02-22'
 ROCKY = '2018-08-27'
 VICTORIA = '2020-10-14'
+EPOXY = '2025-04-04'
 
 OPENSTACK_VERSIONS = [
     FOLSOM,
@@ -82,6 +83,7 @@ OPENSTACK_VERSIONS = [
     OCATA,
     ROCKY,
     VICTORIA,
+    EPOXY,
 ]
 
 VERSION = "version"
@@ -426,6 +428,12 @@ class InstanceMetadata(object):
                         device_metadata['serial'] = device.serial
                     if 'path' in device:
                         device_metadata['path'] = device.path
+                elif self._check_os_version(EPOXY, version) and isinstance(
+                    device, metadata_obj.ShareMetadata
+                ):
+                    device_metadata['type'] = 'share'
+                    device_metadata['share_id'] = device.share_id
+                    device_metadata['tag'] = device.tag
                 else:
                     LOG.debug('Metadata for device of unknown type %s has not '
                               'been included in the '
