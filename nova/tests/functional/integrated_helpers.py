@@ -73,6 +73,12 @@ def generate_new_element(items, prefix, numeric=False):
         LOG.debug("Random collision on %s", candidate)
 
 
+# placeholder used as a default parameter value to distinguish between the case
+# when the parameter is specified by the caller with None from the case when it
+# was not specified
+NOT_SPECIFIED = object()
+
+
 class _IntegratedTestBase(test.TestCase):
     REQUIRES_LOCKING = True
     ADMIN_API = False
@@ -383,6 +389,43 @@ class InstanceHelperMixin(object):
                                 'block_migration': 'auto'}})
         self._wait_for_state_change(self.api, server, 'ACTIVE')
         self._wait_for_migration_status(server, [migration_final_status])
+
+    def _evacuate_server(
+            self, server, extra_post_args=None, expected_host=None,
+            expected_state='ACTIVE', expected_task_state=NOT_SPECIFIED,
+            expected_migration_status='done'):
+        """Evacuate a server."""
+        api = getattr(self, 'admin_api', self.api)
+
+        post = {'evacuate': {}}
+        if extra_post_args:
+            post['evacuate'].update(extra_post_args)
+
+        expected_result = {'status': expected_state}
+        if expected_host:
+            expected_result['OS-EXT-SRV-ATTR:host'] = expected_host
+        if expected_task_state is not NOT_SPECIFIED:
+            expected_result['OS-EXT-STS:task_state'] = expected_task_state
+
+        api.post_server_action(server['id'], post)
+
+        # NOTE(gibi): The order of waiting for the migration and returning
+        # a fresh server from _wait_for_server_parameter is important as
+        # the compute manager sets status of the instance before sets the
+        # host and finally sets the migration status. So waiting for the
+        # migration first makes the returned server object more consistent.
+        self._wait_for_migration_status(server, [expected_migration_status])
+        return self._wait_for_server_parameter(api, server, expected_result)
+
+    def _start_server(self, server):
+        self.api.post_server_action(server['id'], {'os-start': None})
+        return self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+    def _stop_server(self, server, wait_for_stop=True):
+        self.api.post_server_action(server['id'], {'os-stop': None})
+        if wait_for_stop:
+            return self._wait_for_state_change(self.api, server, 'SHUTOFF')
+        return server
 
 
 class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
