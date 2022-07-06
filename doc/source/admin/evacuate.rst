@@ -97,3 +97,17 @@ instances up and running.
    using a pattern you might want to use the ``--strict`` flag which got introduced
    in version 10.2.0 to make sure nova matches the ``FAILED_HOST``
    exactly.
+
+.. note::
+   .. code-block:: bash
+
+      +------+--------+--------------+
+      | Name | Status | Task State   |
+      +------+--------+--------------+
+      | vm_1 | ACTIVE | powering-off |
+      +------------------------------+
+
+   If the instance task state is not None, evacuation will be possible. However,
+   depending on the ongoing operation, there may be clean up required in other
+   services which the instance was using, such as neutron, cinder, glance, or
+   the storage backend.
