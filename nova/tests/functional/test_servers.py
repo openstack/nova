@@ -8181,7 +8181,8 @@ class AcceleratorServerOpsTest(AcceleratorServerBase):
         arqs = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
         compute_to_stop, compute_to_evacuate = self._test_evacuate(
             self.server, self.NUM_HOSTS)
-        self._evacuate_server(self.server, compute_to_evacuate.host)
+        self._evacuate_server(self.server,
+            expected_host=compute_to_evacuate.host)
         compute_to_stop.start()
         self.server = self.api.get_server(self.server['id'])
         arqs_new = self.cyborg.fake_get_arqs_for_instance(self.server['id'])
