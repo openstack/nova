@@ -13,10 +13,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake
@@ -64,24 +62,19 @@ class EvacuateServerWithTaskState(
                 networks='none')))
 
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
-        self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])
+        self.assertEqual(self.src.host, server['OS-EXT-SRV-ATTR:host'])
 
         # stop host1 compute service
         self.src.stop()
+        self.api.put_service_force_down(self.src.service_ref.uuid, True)
 
         # poweroff instance
         self._stop_server(server, wait_for_stop=False)
         server = self._wait_for_server_parameter(self.admin_api,
             server, {'OS-EXT-STS:task_state': 'powering-off'})
 
-        # FIXME(auniyal): As compute service is down in source node
-        # instance is stuck at powering-off, evacuation fails with
-        # msg: Cannot 'evacuate' instance <instance-id> while it is in
-        # task_state powering-off (HTTP 409)
-
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self._evacuate_server,
-            server,
-            expected_host=self.dest.host)
-        self.assertEqual(409, ex.response.status_code)
+        # evacuate instance
+        server = self._evacuate_server(
+            server, expected_host=self.dest.host
+        )
+        self.assertEqual(self.dest.host, server['OS-EXT-SRV-ATTR:host'])

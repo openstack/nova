@@ -4770,7 +4770,7 @@ class API(base.Base):
                 instance, migration.id)
 
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
-                                    vm_states.ERROR])
+                                    vm_states.ERROR], task_state=None)
     def evacuate(self, context, instance, host, on_shared_storage,
                  admin_password=None, force=None):
         """Running evacuate to target host.
@@ -4797,7 +4797,7 @@ class API(base.Base):
             context, instance.uuid)
 
         instance.task_state = task_states.REBUILDING
-        instance.save(expected_task_state=[None])
+        instance.save(expected_task_state=None)
         self._record_action_start(context, instance, instance_actions.EVACUATE)
 
         # NOTE(danms): Create this as a tombstone for the source compute
