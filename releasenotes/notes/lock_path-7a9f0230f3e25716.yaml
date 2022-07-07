@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    On HCI deployments where Nova is collocated with the Cinder service or the
+    Glance using Cinder backend service, an os-brick shared location can be
+    configured using the ``lock_path`` in the ``[os_brick]`` configuration
+    section.

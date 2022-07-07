@@ -19,6 +19,7 @@
 import shlex
 import sys
 
+import os_brick
 import os_vif
 from oslo_log import log as logging
 from oslo_privsep import priv_context
@@ -47,6 +48,7 @@ def main():
     priv_context.init(root_helper=shlex.split(utils.get_root_helper()))
     objects.register_all()
     gmr_opts.set_defaults(CONF)
+    os_brick.setup(CONF)
     # Ensure os-vif objects are registered and plugins loaded
     os_vif.initialize()
 
