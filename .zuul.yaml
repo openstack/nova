@@ -135,7 +135,7 @@
       devstack_localrc:
         Q_AGENT: openvswitch
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
-        Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch,linuxbridge
+        Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
         ML2_L3_PLUGIN: router
       devstack_services:
         # Disable OVN services
@@ -162,7 +162,7 @@
         devstack_localrc:
           Q_AGENT: openvswitch
           Q_ML2_TENANT_NETWORK_TYPE: vxlan
-          Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch,linuxbridge
+          Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
           ML2_L3_PLUGIN: router
         devstack_services:
           # Disable OVN services
@@ -391,7 +391,7 @@
       devstack_localrc:
         Q_AGENT: openvswitch
         Q_ML2_TENANT_NETWORK_TYPE: vxlan
-        Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch,linuxbridge
+        Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
         ML2_L3_PLUGIN: router
         # Enable TLS between the noVNC proxy & compute nodes; this requires
         # the tls-proxy service to be enabled. Added in Queens.
@@ -430,7 +430,7 @@
         devstack_localrc:
           Q_AGENT: openvswitch
           Q_ML2_TENANT_NETWORK_TYPE: vxlan
-          Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch,linuxbridge
+          Q_ML2_PLUGIN_MECHANISM_DRIVERS: openvswitch
           ML2_L3_PLUGIN: router
           NOVA_CONSOLE_PROXY_COMPUTE_TLS: True
           FORCE_CONFIG_DRIVE: True
