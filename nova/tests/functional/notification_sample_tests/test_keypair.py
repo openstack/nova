@@ -16,7 +16,12 @@ from nova.tests.functional.notification_sample_tests \
 class TestKeypairNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
 
+    api_major_version = 'v2.1'
+    microversion = 'latest'
+
     def test_keypair_create_delete(self):
+        # Keypair generation is no longer supported with 2.92 microversion.
+        self.api.microversion = '2.91'
         keypair_req = {
             "keypair": {
                 "name": "my-key",

@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    The 2.92 microversion makes the following changes:
+
+    * Make public_key a mandatory parameter for keypair creation. This means
+      that by this microversion, Nova will stop to support automatic keypair
+      generations. Only imports will be possible.
+    * Allow 2 new special characters: '@' and '.' (dot),
+      in addition to the existing constraints of ``[a-z][A-Z][0-9][_- ]``

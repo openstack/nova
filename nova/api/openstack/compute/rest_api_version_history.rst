@@ -1211,3 +1211,11 @@ responses is now visible to all users. Previously this was an admin-only field.
 Add support to unshelve instance to a specific host.
 
 Add support to pin a server to an availability zone or unpin a server from any availability zone.
+
+.. _microversion 2.92:
+
+2.92
+----
+
+The ``POST /os-keypairs`` API now forbids to generate a keypair and allows new
+safe characters, specifically '@' and '.' (dot character).

@@ -319,3 +319,66 @@ class KeyPairsV235SampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                                 % keypairs_user2[1])
         subs = {'keypair_name': keypairs_user2[2]}
         self._verify_response('keypairs-list-user2-resp', subs, response, 200)
+
+
+class KeyPairsV292SampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
+    ADMIN_API = True
+    sample_dir = 'os-keypairs'
+    microversion = '2.92'
+    expected_post_status_code = 201
+    scenarios = [('v2_92', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(KeyPairsV292SampleJsonTest, self).setUp()
+        self.api.microversion = self.microversion
+
+    # NOTE(sbauza): This method is stupidly needed for _verify_response().
+    # See the TODO(sdague) above.
+    def generalize_subs(self, subs, vanilla_regexes):
+        subs['keypair_name'] = '[0-9a-zA-Z-_.@ ]+'
+        return subs
+
+    def test_keypairs_post_no_longer_supported(self):
+        subs = {
+            'keypair_name': 'foo',
+            'keypair_type': keypair_obj.KEYPAIR_TYPE_SSH,
+            'user_id': 'fake'
+        }
+        response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
+        self.assertEqual(400, response.status_code)
+
+    def test_keypairs_import_key_invalid_name(self):
+        public_key = fake_crypto.get_ssh_public_key()
+        subs = {
+            'keypair_name': '!nvalid=name|',
+            'keypair_type': keypair_obj.KEYPAIR_TYPE_SSH,
+            'user_id': 'fake',
+            'public_key': public_key,
+        }
+        response = self._do_post('os-keypairs', 'keypairs-import-post-req',
+                                 subs)
+        self.assertEqual(400, response.status_code)
+
+    def _test_keypairs_import_key_post(self, name=None):
+        if not name:
+            name = 'keypair-' + uuids.fake
+        public_key = fake_crypto.get_ssh_public_key()
+        params = {
+            'keypair_name': name,
+            'keypair_type': keypair_obj.KEYPAIR_TYPE_SSH,
+            'user_id': 'fake',
+            'public_key': public_key,
+        }
+        response = self._do_post('os-keypairs', 'keypairs-import-post-req',
+                                 params)
+        # NOTE(sbauza): We do some crazy regexp change in _verify_response() so
+        # we only need to pass the keypair name.
+        subs = {'keypair_name': name}
+        self._verify_response('keypairs-import-post-resp', subs, response,
+                              self.expected_post_status_code)
+
+    def test_keypairs_import_key_post(self):
+        self._test_keypairs_import_key_post()
+
+    def test_keypairs_import_key_special_characters(self):
+        self._test_keypairs_import_key_post(name='my-key@ my.host')

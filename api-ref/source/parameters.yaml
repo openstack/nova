@@ -4414,7 +4414,19 @@ keypair_name:
   required: true
   type: string
   description: |
+    The name for the keypair.
+keypair_name_in:
+  in: body
+  required: true
+  type: string
+  description: |
     A name for the keypair which will be used to reference it later.
+
+    .. note::
+
+      Since microversion 2.92, allowed characters are ASCII letters
+      ``[a-zA-Z]``, digits ``[0-9]`` and the following special
+      characters: ``[@._- ]``.
 keypair_private_key:
   description: |
     If you do not provide a public key on create, a new keypair will
@@ -4424,6 +4436,7 @@ keypair_private_key:
   in: body
   required: false
   type: string
+  max_version: 2.91
 keypair_public_key:
   description: |
     The keypair public key.
@@ -4432,10 +4445,11 @@ keypair_public_key:
   type: string
 keypair_public_key_in:
   description: |
-    The public ssh key to import. If you omit this value, a keypair is
-    generated for you.
+    The public ssh key to import.
+    Was optional before microversion 2.92 : if you were omitting this value, a
+    keypair was generated for you.
   in: body
-  required: false
+  required: true
   type: string
 keypair_type:
   in: body
