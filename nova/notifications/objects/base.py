@@ -73,7 +73,9 @@ class EventType(NotificationObject):
     #               enum
     # Version 1.20: IMAGE_CACHE is added to the NotificationActionField enum
     # Version 1.21: PROGRESS added to NotificationPhase enum
-    VERSION = '1.21'
+    # Version 1.22: SHARE_ATTACH SHARE_DETACH are added to the
+    #               NotificationActionField enum
+    VERSION = '1.22'
 
     fields = {
         'object': fields.StringField(nullable=False),

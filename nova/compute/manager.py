@@ -4731,7 +4731,25 @@ class ComputeManager(manager.Manager):
                 LOG.error(e)
                 raise
 
+        compute_utils.notify_about_share_attach_detach(
+            context,
+            instance,
+            instance.host,
+            action=fields.NotificationAction.SHARE_ATTACH,
+            phase=fields.NotificationPhase.START,
+            share_id=share_mapping.share_id
+        )
+
         _allow_share(context, instance, share_mapping)
+
+        compute_utils.notify_about_share_attach_detach(
+            context,
+            instance,
+            instance.host,
+            action=fields.NotificationAction.SHARE_ATTACH,
+            phase=fields.NotificationPhase.END,
+            share_id=share_mapping.share_id
+        )
 
     @messaging.expected_exceptions(NotImplementedError)
     @wrap_exception()

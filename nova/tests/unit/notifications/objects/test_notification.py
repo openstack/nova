@@ -375,7 +375,7 @@ notification_object_data = {
     'ComputeTaskNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ComputeTaskPayload': '1.0-59a9b78b6199470a83c8d07bffd13f5e',
     'DestinationPayload': '1.0-d8faf610201bf5f460892243f6632a37',
-    'EventType': '1.21-6a5f57fafe478f354f66b81b4cb537ea',
+    'EventType': '1.22-fab37f98c6e7513edece32ad5420f549',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ExceptionPayload': '1.1-34f006107693b8c9eaf4b104157d21b4',
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
@@ -396,6 +396,8 @@ notification_object_data = {
     'InstanceActionResizePrepNotification':
         '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionResizePrepPayload': '1.3-8969438a48c496569c2add19b170dca1',
+    'InstanceActionShareNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
+    'InstanceActionSharePayload': '1.0-024003b187136ba4db3b958e8d22d540',
     'InstanceActionVolumeNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionVolumePayload': '1.6-b5fd2b23dbafe33b72cdbbb7b937bf18',
     'InstanceActionVolumeSwapNotification':
