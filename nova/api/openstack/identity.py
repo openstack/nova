@@ -27,24 +27,27 @@ def verify_project_id(context, project_id):
     """verify that a project_id exists.
 
     This attempts to verify that a project id exists. If it does not,
-    an HTTPBadRequest is emitted.
+    an HTTPBadRequest is emitted. Also HTTPBadRequest is emitted
+    if Keystone identity service version 3.0 is not found.
 
     """
     adap = utils.get_ksa_adapter(
         'identity', ksa_auth=context.get_auth_plugin(),
         min_version=(3, 0), max_version=(3, 'latest'))
 
-    failure = webob.exc.HTTPBadRequest(
-            explanation=_("Project ID %s is not a valid project.") %
-            project_id)
     try:
         resp = adap.get('/projects/%s' % project_id)
     except kse.EndpointNotFound:
         LOG.error(
-            "Keystone identity service version 3.0 was not found. This might "
-            "be because your endpoint points to the v2.0 versioned endpoint "
-            "which is not supported. Please fix this.")
-        raise failure
+            "Keystone identity service version 3.0 was not found. This "
+            "might be caused by Nova misconfiguration or Keystone "
+            "problems.")
+        msg = _("Nova was unable to find Keystone service endpoint.")
+        # TODO(astupnik). It may be reasonable to switch to HTTP 503
+        # (HTTP Service Unavailable) instead of HTTP Bad Request here.
+        # If proper Keystone servie is inaccessible, then technially
+        # this is a server side error and not an error in Nova.
+        raise webob.exc.HTTPBadRequest(explanation=msg)
     except kse.ClientException:
         # something is wrong, like there isn't a keystone v3 endpoint,
         # or nova isn't configured for the interface to talk to it;
@@ -57,7 +60,8 @@ def verify_project_id(context, project_id):
         return True
     elif resp.status_code == 404:
         # we got access, and we know this project is not there
-        raise failure
+        msg = _("Project ID %s is not a valid project.") % project_id
+        raise webob.exc.HTTPBadRequest(explanation=msg)
     elif resp.status_code == 403:
         # we don't have enough permission to verify this, so default
         # to "it's ok".
