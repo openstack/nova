@@ -353,14 +353,37 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         mock_verify.assert_called_once_with(
             req.environ['nova.context'], 'proj2')
 
+    @mock.patch('nova.objects.Flavor.remove_access')
     @mock.patch('nova.api.openstack.identity.verify_project_id',
                 side_effect=exc.HTTPBadRequest(
                     explanation="Project ID proj2 is not a valid project."))
-    def test_remove_tenant_access_with_invalid_tenant(self, mock_verify):
+    def test_remove_tenant_access_with_invalid_tenant(self,
+                                                      mock_verify,
+                                                      mock_remove_access):
         """Tests the case that the tenant does not exist in Keystone."""
         req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
                                       use_admin_context=True)
         body = {'removeTenantAccess': {'tenant': 'proj2'}}
+
+        self.flavor_action_controller._remove_tenant_access(
+            req, '2', body=body)
+        mock_verify.assert_called_once_with(
+            req.environ['nova.context'], 'proj2')
+        mock_remove_access.assert_called_once_with('proj2')
+
+    @mock.patch('nova.api.openstack.identity.verify_project_id',
+                side_effect=exc.HTTPBadRequest(
+                    explanation="Nova was unable to find Keystone "
+                                "service endpoint."))
+    def test_remove_tenant_access_missing_keystone_endpoint(self,
+                                                            mock_verify):
+        """Tests the case that Keystone identity service endpoint
+        version 3.0 was not found.
+        """
+        req = fakes.HTTPRequest.blank(self._prefix + '/flavors/2/action',
+                                      use_admin_context=True)
+        body = {'removeTenantAccess': {'tenant': 'proj2'}}
+
         self.assertRaises(exc.HTTPBadRequest,
                           self.flavor_action_controller._remove_tenant_access,
                           req, '2', body=body)
