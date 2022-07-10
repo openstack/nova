@@ -171,15 +171,15 @@ class SchedulerAPI(object):
 
     def update_instance_info(self, ctxt, host_name, instance_info):
         cctxt = self.client.prepare(version='4.2', fanout=True)
-        return cctxt.cast(ctxt, 'update_instance_info', host_name=host_name,
-                          instance_info=instance_info)
+        cctxt.cast(ctxt, 'update_instance_info', host_name=host_name,
+                   instance_info=instance_info)
 
     def delete_instance_info(self, ctxt, host_name, instance_uuid):
         cctxt = self.client.prepare(version='4.2', fanout=True)
-        return cctxt.cast(ctxt, 'delete_instance_info', host_name=host_name,
-                          instance_uuid=instance_uuid)
+        cctxt.cast(ctxt, 'delete_instance_info', host_name=host_name,
+                   instance_uuid=instance_uuid)
 
     def sync_instance_info(self, ctxt, host_name, instance_uuids):
         cctxt = self.client.prepare(version='4.2', fanout=True)
-        return cctxt.cast(ctxt, 'sync_instance_info', host_name=host_name,
-                          instance_uuids=instance_uuids)
+        cctxt.cast(ctxt, 'sync_instance_info', host_name=host_name,
+                   instance_uuids=instance_uuids)

@@ -1503,7 +1503,7 @@ class ComputeAPI(object):
         client = self.router.client(ctxt)
         cctxt = client.prepare(server=_compute_host(None, instance),
                 version=version)
-        return cctxt.cast(ctxt, "trigger_crash_dump", instance=instance)
+        cctxt.cast(ctxt, "trigger_crash_dump", instance=instance)
 
     def cache_images(self, ctxt, host, image_ids):
         version = self._ver(ctxt, '5.4')
