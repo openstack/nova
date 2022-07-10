@@ -72,9 +72,9 @@ class TenantNetworksNoLegacyNoScopePolicyTest(TenantNetworksPolicyTest):
     without_deprecated_rules = True
     rules_without_deprecation = {
         policies.POLICY_NAME % 'list':
-            base_policy.PROJECT_READER,
+            base_policy.PROJECT_READER_OR_ADMIN,
         policies.POLICY_NAME % 'show':
-            base_policy.PROJECT_READER}
+            base_policy.PROJECT_READER_OR_ADMIN}
 
     def setUp(self):
         super(TenantNetworksNoLegacyNoScopePolicyTest, self).setUp()
@@ -120,9 +120,9 @@ class TenantNetworksScopeTypeNoLegacyPolicyTest(
     without_deprecated_rules = True
     rules_without_deprecation = {
         policies.POLICY_NAME % 'list':
-            base_policy.PROJECT_READER,
+            base_policy.PROJECT_READER_OR_ADMIN,
         policies.POLICY_NAME % 'show':
-            base_policy.PROJECT_READER}
+            base_policy.PROJECT_READER_OR_ADMIN}
 
     def setUp(self):
         super(TenantNetworksScopeTypeNoLegacyPolicyTest, self).setUp()

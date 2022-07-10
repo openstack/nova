@@ -38,7 +38,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 networks_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'list',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="""List networks for the project.
 
 This API is proxy calls to the Network service. This is deprecated.""",
@@ -52,7 +52,7 @@ This API is proxy calls to the Network service. This is deprecated.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="""Show network details.
 
 This API is proxy calls to the Network service. This is deprecated.""",

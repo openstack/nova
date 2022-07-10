@@ -73,9 +73,9 @@ class NetworksNoLegacyNoScopePolicyTest(NetworksPolicyTest):
     without_deprecated_rules = True
     rules_without_deprecation = {
         policies.POLICY_ROOT % 'list':
-            base_policy.PROJECT_READER,
+            base_policy.PROJECT_READER_OR_ADMIN,
         policies.POLICY_ROOT % 'show':
-            base_policy.PROJECT_READER}
+            base_policy.PROJECT_READER_OR_ADMIN}
 
     def setUp(self):
         super(NetworksNoLegacyNoScopePolicyTest, self).setUp()
@@ -120,9 +120,9 @@ class NetworksScopeTypeNoLegacyPolicyTest(NetworksScopeTypePolicyTest):
     without_deprecated_rules = True
     rules_without_deprecation = {
         policies.POLICY_ROOT % 'list':
-            base_policy.PROJECT_READER,
+            base_policy.PROJECT_READER_OR_ADMIN,
         policies.POLICY_ROOT % 'show':
-            base_policy.PROJECT_READER}
+            base_policy.PROJECT_READER_OR_ADMIN}
 
     def setUp(self):
         super(NetworksScopeTypeNoLegacyPolicyTest, self).setUp()

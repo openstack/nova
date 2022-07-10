@@ -37,7 +37,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 rescue_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Rescue a server",
         operations=[
             {
@@ -48,7 +48,7 @@ rescue_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=UNRESCUE_POLICY_NAME,
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Unrescue a server",
         operations=[
             {

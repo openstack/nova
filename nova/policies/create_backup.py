@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-create-backup'
 create_backup_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description='Create a back up of a server',
         operations=[
             {

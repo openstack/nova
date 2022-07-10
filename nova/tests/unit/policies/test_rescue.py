@@ -108,16 +108,16 @@ class RescueServerNoLegacyNoScopePolicyTest(RescueServerPolicyTest):
     without_deprecated_rules = True
     rules_without_deprecation = {
         rs_policies.UNRESCUE_POLICY_NAME:
-            base_policy.PROJECT_MEMBER,
+            base_policy.PROJECT_MEMBER_OR_ADMIN,
         rs_policies.BASE_POLICY_NAME:
-            base_policy.PROJECT_MEMBER}
+            base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
         super(RescueServerNoLegacyNoScopePolicyTest, self).setUp()
         # With no legacy rule, only project admin or member will be
         # able to rescue/unrescue the server.
-        self.project_action_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
+        self.project_action_authorized_contexts = (
+            self.project_member_or_admin_with_no_scope_no_legacy)
 
 
 class RescueServerScopeTypePolicyTest(RescueServerPolicyTest):
@@ -135,10 +135,8 @@ class RescueServerScopeTypePolicyTest(RescueServerPolicyTest):
         self.flags(enforce_scope=True, group="oslo_policy")
         # Scope enable will not allow system admin to rescue/unrescue the
         # server.
-        self.project_action_authorized_contexts = [
-            self.legacy_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+        self.project_action_authorized_contexts = (
+            self.project_m_r_or_admin_with_scope_and_legacy)
 
 
 class RescueServerScopeTypeNoLegacyPolicyTest(RescueServerScopeTypePolicyTest):
@@ -149,13 +147,13 @@ class RescueServerScopeTypeNoLegacyPolicyTest(RescueServerScopeTypePolicyTest):
     without_deprecated_rules = True
     rules_without_deprecation = {
         rs_policies.UNRESCUE_POLICY_NAME:
-            base_policy.PROJECT_MEMBER,
+            base_policy.PROJECT_MEMBER_OR_ADMIN,
         rs_policies.BASE_POLICY_NAME:
-            base_policy.PROJECT_MEMBER}
+            base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
         super(RescueServerScopeTypeNoLegacyPolicyTest, self).setUp()
         # With scope enable and no legacy rule, only project admin/member
         # will be able to rescue/unrescue the server.
-        self.project_action_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
+        self.project_action_authorized_contexts = (
+            self.project_member_or_admin_with_scope_no_legacy)

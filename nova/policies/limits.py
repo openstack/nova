@@ -49,7 +49,7 @@ limits_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=OTHER_PROJECT_LIMIT_POLICY_NAME,
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="""Show rate and absolute limits of other project.
 
 This policy only checks if the user has access to the requested

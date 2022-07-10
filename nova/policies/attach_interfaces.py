@@ -37,7 +37,7 @@ DEPRECATED_INTERFACES_POLICY = policy.DeprecatedRule(
 attach_interfaces_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'list',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="List port interfaces attached to a server",
         operations=[
             {
@@ -49,7 +49,7 @@ attach_interfaces_policies = [
         deprecated_rule=DEPRECATED_INTERFACES_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="Show details of a port interface attached to a server",
         operations=[
             {
@@ -61,7 +61,7 @@ attach_interfaces_policies = [
         deprecated_rule=DEPRECATED_INTERFACES_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Attach an interface to a server",
         operations=[
             {
@@ -73,7 +73,7 @@ attach_interfaces_policies = [
         deprecated_rule=DEPRECATED_INTERFACES_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Detach an interface from a server",
         operations=[
             {

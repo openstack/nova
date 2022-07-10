@@ -38,7 +38,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 volumes_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'list',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="""List volumes.
 
 This API is a proxy call to the Volume service. It is deprecated.""",
@@ -52,7 +52,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'create',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="""Create volume.
 
 This API is a proxy call to the Volume service. It is deprecated.""",
@@ -66,7 +66,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'detail',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="""List volumes detail.
 
 This API is a proxy call to the Volume service. It is deprecated.""",
@@ -80,7 +80,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="""Show volume.
 
 This API is a proxy call to the Volume service. It is deprecated.""",
@@ -94,7 +94,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'delete',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="""Delete volume.
 
 This API is a proxy call to the Volume service. It is deprecated.""",
@@ -108,7 +108,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'snapshots:list',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="""List snapshots.
 
 This API is a proxy call to the Volume service. It is deprecated.""",
@@ -122,7 +122,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'snapshots:create',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="""Create snapshots.
 
 This API is a proxy call to the Volume service. It is deprecated.""",
@@ -136,7 +136,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
             name=POLICY_NAME % 'snapshots:detail',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="""List snapshots details.
 
 This API is a proxy call to the Volume service. It is deprecated.""",
@@ -150,7 +150,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'snapshots:show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="""Show snapshot.
 
 This API is a proxy call to the Volume service. It is deprecated.""",
@@ -164,7 +164,7 @@ This API is a proxy call to the Volume service. It is deprecated.""",
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'snapshots:delete',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="""Delete snapshot.
 
 This API is a proxy call to the Volume service. It is deprecated.""",

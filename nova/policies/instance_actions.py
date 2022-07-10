@@ -38,7 +38,7 @@ DEPRECATED_INSTANCE_ACTION_POLICY = policy.DeprecatedRule(
 instance_actions_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'events:details',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="""Add "details" key in action events for a server.
 
 This check is performed only after the check
@@ -59,7 +59,7 @@ but in the other hand it might leak information about the deployment
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'events',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="""Add events details in action details for a server.
 This check is performed only after the check
 os_compute_api:os-instance-actions:show passes. Beginning with Microversion
@@ -76,7 +76,7 @@ passes, the name of the host.""",
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'list',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="""List actions for a server.""",
         operations=[
             {
@@ -88,7 +88,7 @@ passes, the name of the host.""",
         deprecated_rule=DEPRECATED_INSTANCE_ACTION_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="""Show action details for a server.""",
         operations=[
             {

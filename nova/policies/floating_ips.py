@@ -38,7 +38,7 @@ DEPRECATED_FIP_POLICY = policy.DeprecatedRule(
 floating_ips_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'add',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Associate floating IPs to server. "
         " This API is deprecated.",
         operations=[
@@ -51,7 +51,7 @@ floating_ips_policies = [
         deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'remove',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Disassociate floating IPs to server. "
         " This API is deprecated.",
         operations=[
@@ -64,7 +64,7 @@ floating_ips_policies = [
         deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'list',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="List floating IPs. This API is deprecated.",
         operations=[
             {
@@ -76,7 +76,7 @@ floating_ips_policies = [
         deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'create',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Create floating IPs. This API is deprecated.",
         operations=[
             {
@@ -88,7 +88,7 @@ floating_ips_policies = [
         deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="Show floating IPs. This API is deprecated.",
         operations=[
             {
@@ -100,7 +100,7 @@ floating_ips_policies = [
         deprecated_rule=DEPRECATED_FIP_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'delete',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Delete floating IPs. This API is deprecated.",
         operations=[
             {

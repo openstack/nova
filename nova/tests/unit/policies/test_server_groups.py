@@ -163,12 +163,10 @@ class ServerGroupNoLegacyNoScopePolicyTest(ServerGroupPolicyTest):
         super(ServerGroupNoLegacyNoScopePolicyTest, self).setUp()
         # With no legacy, only project admin, member will be able to delete
         # the SG and also reader will be able to get the SG.
-        self.project_member_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
-
-        self.project_reader_authorized_contexts = [
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context]
+        self.project_member_authorized_contexts = (
+            self.project_member_or_admin_with_no_scope_no_legacy)
+        self.project_reader_authorized_contexts = (
+            self.project_reader_or_admin_with_no_scope_no_legacy)
 
         # Even with no legacy rule, legacy admin is allowed to create SG
         # use requesting context's project_id. Same for list SG.
@@ -205,16 +203,10 @@ class ServerGroupScopeTypePolicyTest(ServerGroupPolicyTest):
         self.flags(enforce_scope=True, group="oslo_policy")
 
         # With scope enable, it disallow system users.
-        self.project_member_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context,
-            self.project_foo_context,
-        ]
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context, self.project_admin_context,
-            self.project_member_context, self.project_reader_context,
-            self.project_foo_context,
-        ]
+        self.project_member_authorized_contexts = (
+            self.project_m_r_or_admin_with_scope_and_legacy)
+        self.project_reader_authorized_contexts = (
+            self.project_m_r_or_admin_with_scope_and_legacy)
 
         self.project_create_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
@@ -244,17 +236,16 @@ class ServerGroupScopeTypeNoLegacyPolicyTest(ServerGroupScopeTypePolicyTest):
     def setUp(self):
         super(ServerGroupScopeTypeNoLegacyPolicyTest, self).setUp()
 
-        self.project_member_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
+        self.project_member_authorized_contexts = (
+            self.project_member_or_admin_with_scope_no_legacy)
 
         self.project_create_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context,
             self.project_member_context,
             self.other_project_member_context]
 
-        self.project_reader_authorized_contexts = [
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context]
+        self.project_reader_authorized_contexts = (
+            self.project_reader_or_admin_with_scope_no_legacy)
 
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context]

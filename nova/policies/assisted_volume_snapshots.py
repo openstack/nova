@@ -29,7 +29,7 @@ assisted_volume_snapshots_policies = [
         # can call it with user having 'service' role (not having
         # correct project_id). That is for phase-2 of RBAC goal and until
         # then, we keep it open for all admin in any project. We cannot
-        # default it to PROJECT_ADMIN which has the project_id in
+        # default it to ADMIN which has the project_id in
         # check_str and will fail if cinder call it with other project_id.
         check_str=base.ADMIN,
         description="Create an assisted volume snapshot",
@@ -47,7 +47,7 @@ assisted_volume_snapshots_policies = [
         # can call it with user having 'service' role (not having
         # correct project_id). That is for phase-2 of RBAC goal and until
         # then, we keep it open for all admin in any project. We cannot
-        # default it to PROJECT_ADMIN which has the project_id in
+        # default it to ADMIN which has the project_id in
         # check_str and will fail if cinder call it with other project_id.
         check_str=base.ADMIN,
         description="Delete an assisted volume snapshot",

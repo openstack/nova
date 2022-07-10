@@ -554,7 +554,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         special_rules = ('admin_api', 'admin_or_owner', 'context_is_admin',
                          'os_compute_api:os-quota-class-sets:show',
                          'project_admin_api', 'project_member_api',
-                         'project_reader_api', 'project_reader_or_admin')
+                         'project_reader_api', 'project_member_or_admin',
+                         'project_reader_or_admin')
         result = set(rules.keys()) - set(self.admin_only_rules +
             self.admin_or_owner_rules +
             self.allow_all_rules +

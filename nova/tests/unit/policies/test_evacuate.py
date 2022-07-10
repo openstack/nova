@@ -114,12 +114,6 @@ class EvacuateNoLegacyNoScopePolicyTest(EvacuatePolicyTest):
 
     without_deprecated_rules = True
 
-    def setUp(self):
-        super(EvacuateNoLegacyNoScopePolicyTest, self).setUp()
-        # With no legacy rule and scope disable, only project admin
-        # will be able to evacuate server.
-        self.project_action_authorized_contexts = [self.project_admin_context]
-
 
 class EvacuateScopeTypePolicyTest(EvacuatePolicyTest):
     """Test Evacuate APIs policies with system scope enabled.
@@ -146,10 +140,3 @@ class EvacuateScopeTypeNoLegacyPolicyTest(EvacuateScopeTypePolicyTest):
     and no more deprecated rules which means scope + new defaults.
     """
     without_deprecated_rules = True
-
-    def setUp(self):
-        super(EvacuateScopeTypeNoLegacyPolicyTest, self).setUp()
-        # This is how our RBAC will looks like. With no legacy rule
-        # and scope enable, only project admin is able to evacuate
-        # server.
-        self.project_action_authorized_contexts = [self.project_admin_context]

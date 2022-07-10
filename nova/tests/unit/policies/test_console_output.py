@@ -73,8 +73,8 @@ class ConsoleOutputNoLegacyNoScopePolicyTest(ConsoleOutputPolicyTest):
         super(ConsoleOutputNoLegacyNoScopePolicyTest, self).setUp()
         # With no legacy rule, only project admin or member is able to
         # get the server console.
-        self.project_member_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
+        self.project_member_authorized_contexts = (
+            self.project_member_or_admin_with_no_scope_no_legacy)
 
 
 class ConsoleOutputScopeTypePolicyTest(ConsoleOutputPolicyTest):
@@ -92,10 +92,8 @@ class ConsoleOutputScopeTypePolicyTest(ConsoleOutputPolicyTest):
         super(ConsoleOutputScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
         # Scope enable will not allow system admin.
-        self.project_member_authorized_contexts = [
-            self.legacy_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+        self.project_member_authorized_contexts = (
+            self.project_m_r_or_admin_with_scope_and_legacy)
 
 
 class ConsoleOutputScopeTypeNoLegacyPolicyTest(
@@ -110,5 +108,5 @@ class ConsoleOutputScopeTypeNoLegacyPolicyTest(
 
         # With scope enable and no legacy rule, only project admin/member can
         # get the server console.
-        self.project_member_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
+        self.project_member_authorized_contexts = (
+            self.project_member_or_admin_with_scope_no_legacy)

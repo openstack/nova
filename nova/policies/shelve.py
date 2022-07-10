@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-shelve:%s'
 shelve_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'shelve',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Shelve server",
         operations=[
             {
@@ -35,7 +35,7 @@ shelve_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'unshelve',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Unshelve (restore) shelved server",
         operations=[
             {
@@ -46,7 +46,7 @@ shelve_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'unshelve_to_host',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="Unshelve (restore) shelve offloaded server to a "
                     "specific host",
         operations=[
@@ -58,7 +58,7 @@ shelve_policies = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'shelve_offload',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="Shelf-offload (remove) server",
         operations=[
             {
