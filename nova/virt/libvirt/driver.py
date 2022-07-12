@@ -4016,7 +4016,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         LOG.debug("Shutting down instance from state %s", state,
                   instance=instance)
-        guest.shutdown()
+        try:
+            guest.shutdown()
+        except libvirt.libvirtError as e:
+            LOG.debug("Ignoring libvirt exception from shutdown request: %s",
+                      encodeutils.exception_to_unicode(e),
+                      instance=instance)
         retry_countdown = retry_interval
 
         for sec in range(timeout):
