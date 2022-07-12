@@ -699,11 +699,6 @@
         - barbican-tempest-plugin-simple-crypto:
             irrelevant-files: *nova-base-irrelevant-files
             voting: false
-        - tempest-integrated-compute-centos-9-stream:
-            irrelevant-files: *nova-base-irrelevant-files
-            # NOTE(sbauza): This job is temporarly non-voting until
-            # bug #1979047 is resolved as it holds our CI.
-            voting: false
     gate:
       jobs:
         - nova-live-migration
@@ -729,16 +724,13 @@
             irrelevant-files: *nova-base-irrelevant-files
         - openstacksdk-functional-devstack:
             irrelevant-files: *nova-base-irrelevant-files
-        - tempest-integrated-compute-centos-9-stream:
-            irrelevant-files: *nova-base-irrelevant-files
-            # NOTE(sbauza): This job is temporarly non-voting until
-            # bug #1979047 is resolved as it holds our CI.
-            voting: false
     periodic-weekly:
       jobs:
         # Runs emulation feature functionality test less frequently due
         # to being the initial release and experimental in nature.
         - nova-emulation
+        - tempest-integrated-compute-centos-9-stream:
+            irrelevant-files: *nova-base-irrelevant-files
     experimental:
       jobs:
         - ironic-tempest-bfv:
@@ -771,6 +763,8 @@
         - tempest-centos8-stream-fips:
             irrelevant-files: *nova-base-irrelevant-files
         - nova-emulation
+        - tempest-integrated-compute-centos-9-stream:
+            irrelevant-files: *nova-base-irrelevant-files
     periodic:
       jobs:
         - tempest-centos8-stream-fips:
