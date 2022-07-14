@@ -31,7 +31,7 @@ property__source_file_present_value:
       schema_version: '1.0'
     __source_file: "present"
   expected_messages:
-    - "{} is not allowed for"
+    - "should not be valid under {}"
     - "validating 'not' in schema['properties']['__source_file']"
 property__source_file_present_null:
   config:
@@ -39,7 +39,7 @@ property__source_file_present_null:
       schema_version: '1.0'
     __source_file: null
   expected_messages:
-    - "{} is not allowed for"
+    - "should not be valid under {}"
     - "validating 'not' in schema['properties']['__source_file']"
 provider_invalid_uuid:
   config:

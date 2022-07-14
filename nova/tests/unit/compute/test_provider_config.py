@@ -13,13 +13,14 @@
 import copy
 import ddt
 import fixtures
+import importlib.metadata
 import microversion_parse
 import os
-
 from unittest import mock
 
 from oslo_utils.fixture import uuidsentinel
 from oslotest import base
+from packaging import version
 
 from nova.compute import provider_config
 from nova import exception as nova_exc
@@ -118,6 +119,17 @@ class SchemaValidationTestCasesV1(SchemaValidationMixin):
     @ddt.unpack
     @ddt.file_data('provider_config_data/v1/validation_error_test_data.yaml')
     def test_validation_errors(self, config, expected_messages):
+        # TODO(stephenfin): Drop this once we no longer support jsonschema 3.x
+        jsonschema_version = importlib.metadata.version('jsonschema')
+        if version.parse(jsonschema_version) < version.parse('4.0.0'):
+            if expected_messages == [
+                "should not be valid under {}",
+                "validating 'not' in schema['properties']['__source_file']",
+            ]:
+                expected_messages = [
+                    "{} is not allowed for",
+                    "validating 'not' in schema['properties']['__source_file']",  # noqa: E501
+                ]
         self.run_test_validation_errors(config, expected_messages)
 
     @ddt.unpack
