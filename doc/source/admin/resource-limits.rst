@@ -38,7 +38,8 @@ CPU limits
 Libvirt enforces CPU limits in terms of *shares* and *quotas*, configured
 via :nova:extra-spec:`quota:cpu_shares` and :nova:extra-spec:`quota:cpu_period`
 / :nova:extra-spec:`quota:cpu_quota`, respectively. Both are implemented using
-the `cgroups v1 cpu controller`__.
+the `cgroups cpu controller`__. Note that allowed values for *shares* are
+platform dependant.
 
 CPU shares are a proportional weighted share of total CPU resources relative to
 other instances. It does not limit CPU usage if CPUs are not busy. There is no

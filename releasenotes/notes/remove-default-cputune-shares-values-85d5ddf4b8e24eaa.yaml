@@ -1,0 +1,15 @@
+upgrade:
+  - |
+    In the libvirt driver, the default value of the ``<cputune><shares>``
+    element has been removed, and is now left to libvirt to decide. This is
+    because allowed values are platform dependant, and the previous code was
+    not guaranteed to be supported on all platforms. If any of your flavors are
+    using the quota:cpu_shares extra spec, you may need to resize to a
+    supported value before upgrading.
+
+    To facilitate the transition to no Nova default for ``<cputune><shares>``,
+    its value will be removed during live migration unless a value is set in
+    the ``quota:cpu_shares`` extra spec. This can cause temporary CPU
+    starvation for the live migrated instance if other instances on the
+    destination host still have the old default ``<cputune><shares>`` value. To
+    fix this, hard reboot, cold migrate, or live migrate the other instances.
