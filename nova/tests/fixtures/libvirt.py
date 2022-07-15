@@ -2185,9 +2185,12 @@ class LibvirtFixture(fixtures.Fixture):
 
         # libvirt driver needs to call out to the filesystem to get the
         # parent_ifname for the SRIOV VFs.
-        self.useFixture(fixtures.MockPatch(
-            'nova.pci.utils.get_ifname_by_pci_address',
-            return_value='fake_pf_interface_name'))
+        self.mock_get_ifname_by_pci_address = self.useFixture(
+            fixtures.MockPatch(
+                "nova.pci.utils.get_ifname_by_pci_address",
+                return_value="fake_pf_interface_name",
+            )
+        ).mock
 
         self.useFixture(fixtures.MockPatch(
             'nova.pci.utils.get_mac_by_pci_address',
