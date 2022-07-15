@@ -28,6 +28,7 @@ from oslo_utils import units
 
 import nova
 from nova import context
+from nova import exception
 from nova.network import constants
 from nova import objects
 from nova.objects import fields
@@ -1040,6 +1041,77 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             networks=[
                 {'port': base.LibvirtNeutronFixture.network_4_port_1['id']},
             ],
+        )
+
+    def test_change_bound_port_vnic_type_kills_compute_at_restart(self):
+        """Create a server with a direct port and change the vnic_type of the
+        bound port to macvtap. Then restart the compute service.
+
+        As the vnic_type is changed on the port but the vif_type is hwveb
+        instead of macvtap the vif plug logic will try to look up the netdev
+        of the parent VF. Howvere that VF consumed by the instance so the
+        netdev does not exists. This causes that the compute service will fail
+        with an exception during startup
+        """
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=2)
+        self.start_compute(pci_info=pci_info)
+
+        # create a direct port
+        port = self.neutron.network_4_port_1
+        self.neutron.create_port({'port': port})
+
+        # create a server using the VF via neutron
+        server = self._create_server(networks=[{'port': port['id']}])
+
+        # update the vnic_type of the port in neutron
+        port = copy.deepcopy(port)
+        port['binding:vnic_type'] = 'macvtap'
+        self.neutron.update_port(port['id'], {"port": port})
+
+        compute = self.computes['compute1']
+
+        # Force an update on the instance info cache to ensure nova gets the
+        # information about the updated port
+        with context.target_cell(
+            context.get_admin_context(),
+            self.host_mappings['compute1'].cell_mapping
+        ) as cctxt:
+            compute.manager._heal_instance_info_cache(cctxt)
+
+        def fake_get_ifname_by_pci_address(pci_addr: str, pf_interface=False):
+            # we want to fail the netdev lookup only if the pci_address is
+            # already consumed by our instance. So we look into the instance
+            # definition to see if the device is attached to the instance as VF
+            conn = compute.manager.driver._host.get_connection()
+            dom = conn.lookupByUUIDString(server['id'])
+            dev = dom._def['devices']['nics'][0]
+            lookup_addr = pci_addr.replace(':', '_').replace('.', '_')
+            if (
+                dev['type'] == 'hostdev' and
+                dev['source'] == 'pci_' + lookup_addr
+            ):
+                # nova tried to look up the netdev of an already consumed VF.
+                # So we have to fail
+                raise exception.PciDeviceNotFoundById(id=pci_addr)
+
+        # We need to simulate the actual failure manually as in our functional
+        # environment all the PCI lookup is mocked. In reality nova tries to
+        # look up the netdev of the pci device on the host used by the port as
+        # the parent of the macvtap. However, as the originally direct port is
+        # bound to the instance, the VF pci device is already consumed by the
+        # instance and therefore there is no netdev for the VF.
+        self.libvirt.mock_get_ifname_by_pci_address.side_effect = (
+            fake_get_ifname_by_pci_address
+        )
+        # This is bug 1981813 as the compute service fails to start with an
+        # exception.
+        # Nova cannot prevent the vnic_type change on a bound port. Neutron
+        # should prevent that instead. But the nova-compute should still
+        # be able to start up and only log an ERROR for this instance in
+        # inconsistent state.
+        self.assertRaises(
+            exception.PciDeviceNotFoundById,
+            self.restart_compute_service, 'compute1'
         )
 
 
