@@ -1350,6 +1350,36 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.compute._init_instance(self.context, instance)
             set_error_state.assert_called_once_with(instance)
 
+    def test_init_instance_vif_plug_fails_missing_pci(self):
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.instance,
+                info_cache=None,
+                power_state=power_state.RUNNING,
+                vm_state=vm_states.ACTIVE,
+                task_state=None,
+                host=self.compute.host,
+                expected_attrs=['info_cache'])
+
+        with test.nested(
+            mock.patch.object(context, 'get_admin_context',
+                return_value=self.context),
+            mock.patch.object(objects.Instance, 'get_network_info',
+                return_value=network_model.NetworkInfo()),
+            mock.patch.object(self.compute.driver, 'plug_vifs',
+                side_effect=exception.PciDeviceNotFoundById("pci-addr")),
+            mock.patch("nova.compute.manager.LOG.exception"),
+        ) as (get_admin_context, get_nw_info, plug_vifs, log_exception):
+            # as this does not raise, we are sure that the compute service
+            # continues initializing the rest of the instances
+            self.compute._init_instance(self.context, instance)
+            log_exception.assert_called_once_with(
+                "Virtual interface plugging failed for instance. Probably the "
+                "vnic_type of the bound port has been changed. Nova does not "
+                "support such change.",
+                instance=instance
+            )
+
     def _test__validate_pinning_configuration(self, supports_pcpus=True):
         instance_1 = fake_instance.fake_instance_obj(
             self.context, uuid=uuids.instance_1)
