@@ -65,5 +65,4 @@ taskflow>=3.8.0 # Apache-2.0
 python-dateutil>=2.7.0 # BSD
 futurist>=1.8.0 # Apache-2.0
 openstacksdk>=0.35.0 # Apache-2.0
-dataclasses>=0.7;python_version=='3.6'  # Apache 2.0 License
 PyYAML>=5.1 # MIT
