@@ -986,6 +986,14 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             self.host_mappings['compute1'].cell_mapping
         ) as cctxt:
             compute.manager._heal_instance_info_cache(cctxt)
+            self.assertIn(
+                'The vnic_type of the bound port %s has been changed in '
+                'neutron from "direct" to "macvtap". Changing vnic_type of a '
+                'bound port is not supported by Nova. To avoid breaking the '
+                'connectivity of the instance please change the port '
+                'vnic_type back to "direct".' % port['id'],
+                self.stdlog.logger.output,
+            )
 
         def fake_get_ifname_by_pci_address(pci_addr: str, pf_interface=False):
             # we want to fail the netdev lookup only if the pci_address is
@@ -1013,17 +1021,18 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
             'nova.pci.utils.get_ifname_by_pci_address',
             side_effect=fake_get_ifname_by_pci_address,
         ):
-            # This is bug 1981813 as the compute service fails to start with an
-            # exception.
             # Nova cannot prevent the vnic_type change on a bound port. Neutron
             # should prevent that instead. But the nova-compute should still
             # be able to start up and only log an ERROR for this instance in
             # inconsistent state.
-            self.assertRaises(
-                exception.PciDeviceNotFoundById,
-                self.restart_compute_service,
-                'compute1',
-            )
+            self.restart_compute_service('compute1')
+
+        self.assertIn(
+            'Virtual interface plugging failed for instance. Probably the '
+            'vnic_type of the bound port has been changed. Nova does not '
+            'support such change.',
+            self.stdlog.logger.output,
+        )
 
 
 class SRIOVAttachDetachTest(_PCIServersTestBase):
