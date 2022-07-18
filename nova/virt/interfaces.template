@@ -9,6 +9,7 @@ iface lo inet loopback
 {% for ifc in interfaces %}
 
 auto {{ ifc.name }}
+{% if ifc.address %}
 iface {{ ifc.name }} inet static
     hwaddress ether {{ ifc.hwaddress }}
     address {{ ifc.address }}
@@ -20,11 +21,11 @@ iface {{ ifc.name }} inet static
 {% if ifc.dns %}
     dns-nameservers {{ ifc.dns }}
 {% endif %}
-{% if use_ipv6 %}
-{% if libvirt_virt_type == 'lxc' %}
-{% if ifc.address_v6 %}
-    post-up ip -6 addr add {{ ifc.address_v6 }}/{{ifc.netmask_v6 }} dev ${IFACE}
 {% endif %}
+{% if use_ipv6 %}
+{% if ifc.address_v6 %}
+{% if libvirt_virt_type == 'lxc' %}
+    post-up ip -6 addr add {{ ifc.address_v6 }}/{{ifc.netmask_v6 }} dev ${IFACE}
 {% if ifc.gateway_v6 %}
     post-up ip -6 route add default via {{ ifc.gateway_v6 }} dev ${IFACE}
 {% endif %}
@@ -38,6 +39,7 @@ iface {{ ifc.name }} inet6 static
 {% endif %}
 {% if ifc.dns_v6 %}
     dns-nameservers {{ ifc.dns_v6 }}
+{% endif %}
 {% endif %}
 {% endif %}
 {% endif %}
