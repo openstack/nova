@@ -7295,7 +7295,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 if not types or cap['type'] in types:
                     device["types"].update({cap['type']: {
                         'availableInstances': cap['availableInstances'],
-                        'name': cap['name'],
+                        # This attribute is optional
+                        'name': cap.get('name'),
                         'deviceAPI': cap['deviceAPI']}})
         return device
 
