@@ -29,7 +29,6 @@ import warnings
 import eventlet
 import fixtures
 import futurist
-import mock as mock_the_lib
 from openstack import service_description
 from oslo_concurrency import lockutils
 from oslo_config import cfg
@@ -1609,13 +1608,10 @@ class GenericPoisonFixture(fixtures.Fixture):
                 for component in components[1:]:
                     current = getattr(current, component)
 
-                # TODO(stephenfin): Remove mock_the_lib check once pypowervm is
-                # no longer using mock and we no longer have mock in
-                # requirements
-                if not isinstance(
-                    getattr(current, attribute),
-                    (mock.Mock, mock_the_lib.Mock),
-                ):
+                # NOTE(stephenfin): There are a couple of mock libraries in use
+                # (including mocked versions of mock from oslotest) so we can't
+                # use isinstance checks here
+                if 'mock' not in str(type(getattr(current, attribute))):
                     self.useFixture(fixtures.MonkeyPatch(
                         meth, poison_configure(meth, why)))
             except ImportError:

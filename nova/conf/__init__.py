@@ -49,7 +49,6 @@ from nova.conf import novnc
 from nova.conf import paths
 from nova.conf import pci
 from nova.conf import placement
-from nova.conf import powervm
 from nova.conf import quota
 from nova.conf import rdp
 from nova.conf import rpc
@@ -99,7 +98,6 @@ novnc.register_opts(CONF)
 paths.register_opts(CONF)
 pci.register_opts(CONF)
 placement.register_opts(CONF)
-powervm.register_opts(CONF)
 quota.register_opts(CONF)
 rdp.register_opts(CONF)
 rpc.register_opts(CONF)

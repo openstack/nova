@@ -2140,11 +2140,6 @@ class InvalidPCINUMAAffinity(Invalid):
     msg_fmt = _("Invalid PCI NUMA affinity configured: %(policy)s")
 
 
-class PowerVMAPIFailed(NovaException):
-    msg_fmt = _("PowerVM API failed to complete for instance=%(inst_name)s.  "
-                "%(reason)s")
-
-
 class TraitRetrievalFailed(NovaException):
     msg_fmt = _("Failed to retrieve traits from the placement API: %(error)s")
 

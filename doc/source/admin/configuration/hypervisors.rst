@@ -11,7 +11,6 @@ Hypervisors
    hypervisor-vmware
    hypervisor-hyper-v
    hypervisor-virtuozzo
-   hypervisor-powervm
    hypervisor-zvm
    hypervisor-ironic
 
@@ -44,9 +43,6 @@ The following hypervisors are supported:
 * `Virtuozzo`_ 7.0.0 and newer - OS Containers and Kernel-based Virtual
   Machines supported. The supported formats include ploop and qcow2 images.
 
-* `PowerVM`_ - Server virtualization with IBM PowerVM for AIX, IBM i, and Linux
-  workloads on the Power Systems platform.
-
 * `zVM`_ - Server virtualization on z Systems and IBM LinuxONE, it can run Linux,
   z/OS and more.
 
@@ -68,8 +64,6 @@ virt drivers:
 
 * :oslo.config:option:`compute_driver` = ``hyperv.HyperVDriver``
 
-* :oslo.config:option:`compute_driver` = ``powervm.PowerVMDriver``
-
 * :oslo.config:option:`compute_driver` = ``zvm.ZVMDriver``
 
 * :oslo.config:option:`compute_driver` = ``fake.FakeDriver``
@@ -83,6 +77,5 @@ virt drivers:
 .. _VMware vSphere: https://www.vmware.com/support/vsphere-hypervisor.html
 .. _Hyper-V: https://docs.microsoft.com/en-us/windows-server/virtualization/hyper-v/hyper-v-technology-overview
 .. _Virtuozzo: https://www.virtuozzo.com/products/vz7.html
-.. _PowerVM: https://www.ibm.com/us-en/marketplace/ibm-powervm
 .. _zVM: https://www.ibm.com/it-infrastructure/z/zvm
 .. _Ironic: https://docs.openstack.org/ironic/latest/
