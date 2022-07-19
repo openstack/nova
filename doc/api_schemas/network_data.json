@@ -1,5 +1,5 @@
 {
-  "$schema": "http://openstack.org/nova/network_data.json#",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "id": "http://openstack.org/nova/network_data.json",
   "type": "object",
   "title": "OpenStack Nova network metadata schema",
