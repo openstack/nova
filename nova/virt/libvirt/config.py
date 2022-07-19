@@ -45,9 +45,12 @@ class LibvirtConfigObject(object):
     def __init__(self, **kwargs):
         super(LibvirtConfigObject, self).__init__()
 
-        self.root_name = kwargs.get("root_name")
-        self.ns_prefix = kwargs.get('ns_prefix')
-        self.ns_uri = kwargs.get('ns_uri')
+        self.root_name = kwargs.pop("root_name")
+        self.ns_prefix = kwargs.pop("ns_prefix", None)
+        self.ns_uri = kwargs.pop("ns_uri", None)
+
+        # handle programmer error
+        assert not kwargs
 
     def _new_node(self, node_name, **kwargs):
         if self.ns_uri is None:
@@ -1532,7 +1535,8 @@ class LibvirtConfigGuestFilesys(LibvirtConfigGuestDevice):
 
 class LibvirtConfigGuestDiskEncryptionSecret(LibvirtConfigObject):
     def __init__(self, **kwargs):
-        super(LibvirtConfigGuestDiskEncryptionSecret, self).__init__(**kwargs)
+        super(LibvirtConfigGuestDiskEncryptionSecret, self).__init__(
+            root_name='diskencryptionsecret', **kwargs)
         self.type = None
         self.uuid = None
 
@@ -1552,7 +1556,8 @@ class LibvirtConfigGuestDiskEncryption(LibvirtConfigObject):
     """
 
     def __init__(self, **kwargs):
-        super(LibvirtConfigGuestDiskEncryption, self).__init__(**kwargs)
+        super(LibvirtConfigGuestDiskEncryption, self).__init__(
+            root_name='diskencryption', **kwargs)
         self.format = None
         self.secret = None
 
@@ -1575,7 +1580,8 @@ class LibvirtConfigGuestDiskEncryption(LibvirtConfigObject):
 class LibvirtConfigGuestDiskMirror(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
-        super(LibvirtConfigGuestDiskMirror, self).__init__(**kwargs)
+        super(LibvirtConfigGuestDiskMirror, self).__init__(
+            root_name='diskmirror', **kwargs)
         self.ready = None
 
     def parse_dom(self, xmldoc):
@@ -1585,6 +1591,8 @@ class LibvirtConfigGuestDiskMirror(LibvirtConfigObject):
 class LibvirtConfigGuestIDMap(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
+        if 'root_name' not in kwargs:
+            kwargs['root_name'] = 'id'
         super(LibvirtConfigGuestIDMap, self).__init__(**kwargs)
         self.start = 0
         self.target = 0
@@ -2168,13 +2176,14 @@ class LibvirtConfigGuestPCIeRootPortController(LibvirtConfigGuestController):
 
 class LibvirtConfigGuestHostdev(LibvirtConfigGuestDevice):
     def __init__(self, **kwargs):
-        super(LibvirtConfigGuestHostdev, self).\
-                __init__(root_name="hostdev", **kwargs)
-        self.mode = kwargs.get('mode')
-        self.type = kwargs.get('type')
+        super(LibvirtConfigGuestHostdev, self).__init__(
+            root_name="hostdev", **kwargs,
+        )
+        self.mode = None
+        self.type = None
         # managed attribute is only used by PCI devices but mediated devices
         # need to say managed=no
-        self.managed = kwargs.get('managed', 'yes')
+        self.managed = "yes"
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestHostdev, self).format_dom()
@@ -2194,8 +2203,11 @@ class LibvirtConfigGuestHostdev(LibvirtConfigGuestDevice):
 class LibvirtConfigGuestHostdevPCI(LibvirtConfigGuestHostdev):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestHostdevPCI, self).\
-                __init__(mode='subsystem', type='pci',
-                         **kwargs)
+                __init__(**kwargs)
+
+        self.mode = 'subsystem'
+        self.type = 'pci'
+
         # These are returned from libvirt as hexadecimal strings with 0x prefix
         # even if they have a different meaningful range: domain 16 bit,
         # bus 8 bit, slot 5 bit, and function 3 bit
@@ -2252,10 +2264,14 @@ class LibvirtConfigGuestHostdevPCI(LibvirtConfigGuestHostdev):
 
 class LibvirtConfigGuestHostdevMDEV(LibvirtConfigGuestHostdev):
     def __init__(self, **kwargs):
-        super(LibvirtConfigGuestHostdevMDEV, self).__init__(
-            mode='subsystem', type='mdev', managed='no', **kwargs)
+        super(LibvirtConfigGuestHostdevMDEV, self).__init__(**kwargs)
+
+        self.mode = 'subsystem'
+        self.type = 'mdev'
+        self.managed = 'no'
+
         # model attribute is only supported by mediated devices
-        self.model = kwargs.get('model', 'vfio-pci')
+        self.model = 'vfio-pci'
         self.uuid = None
 
     def format_dom(self):
@@ -3585,11 +3601,11 @@ class LibvirtConfigGuestVPMEM(LibvirtConfigGuestDevice):
 
         self.model = "nvdimm"
         self.access = "shared"
-        self.source_path = kwargs.get("devpath", "")
-        self.align_size = kwargs.get("align_kb", 0)
+        self.source_path = ""
+        self.align_size = 0
         self.pmem = True
 
-        self.target_size = kwargs.get("size_kb", 0)
+        self.target_size = 0
         self.target_node = 0
         self.label_size = 2 * units.Ki
 

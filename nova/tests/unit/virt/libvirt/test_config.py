@@ -1535,7 +1535,10 @@ class LibvirtConfigGuestGraphicsTest(LibvirtConfigBaseTest):
 class LibvirtConfigGuestHostdev(LibvirtConfigBaseTest):
 
     def test_config_pci_guest_host_dev(self):
-        obj = config.LibvirtConfigGuestHostdev(mode='subsystem', type='pci')
+        obj = config.LibvirtConfigGuestHostdev()
+        obj.mode = 'subsystem'
+        obj.type = 'pci'
+
         xml = obj.to_xml()
         expected = """
             <hostdev mode="subsystem" type="pci" managed="yes"/>
@@ -3949,8 +3952,10 @@ class LibvirtConfigSecretTest(LibvirtConfigBaseTest):
 
 class LibvirtConfigGuestVPMEMTest(LibvirtConfigBaseTest):
     def test_config_vpmem(self):
-        obj = config.LibvirtConfigGuestVPMEM(
-                devpath='/dev/dax0.0', size_kb=4096 * units.Ki, align_kb=2048)
+        obj = config.LibvirtConfigGuestVPMEM()
+        obj.source_path = '/dev/dax0.0'
+        obj.target_size = 4096 * units.Ki
+        obj.align_size = 2048
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """

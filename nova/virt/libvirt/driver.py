@@ -7013,8 +7013,10 @@ class LibvirtDriver(driver.ComputeDriver):
             size_kb = vpmem.size // units.Ki
             align_kb = vpmem.align // units.Ki
 
-            vpmem_config = vconfig.LibvirtConfigGuestVPMEM(
-                devpath=vpmem.devpath, size_kb=size_kb, align_kb=align_kb)
+            vpmem_config = vconfig.LibvirtConfigGuestVPMEM()
+            vpmem_config.source_path = vpmem.devpath
+            vpmem_config.target_size = size_kb
+            vpmem_config.align_size = align_kb
 
             # max memory size needs contain vpmem size
             guest.max_memory_size += size_kb
