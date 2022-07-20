@@ -72,11 +72,11 @@ class VGPUReshapeTests(base.ServersTestBase):
         # ignore the content of the above HostMdevDeviceInfo
         self.flags(enabled_mdev_types='', group='devices')
 
-        hostname = self.start_compute(
+        self.hostname = self.start_compute(
             hostname='compute1',
             mdev_info=fakelibvirt.HostMdevDevicesInfo(devices=mdevs),
         )
-        self.compute = self.computes[hostname]
+        self.compute = self.computes[self.hostname]
 
         # create the VGPU resource in placement manually
         compute_rp_uuid = self.placement.get(
@@ -158,7 +158,7 @@ class VGPUReshapeTests(base.ServersTestBase):
                 allocations[compute_rp_uuid]['resources'])
 
         # restart compute which will trigger a reshape
-        self.compute = self.restart_compute_service(self.compute)
+        self.compute = self.restart_compute_service(self.hostname)
 
         # verify that the inventory, usages and allocation are correct after
         # the reshape

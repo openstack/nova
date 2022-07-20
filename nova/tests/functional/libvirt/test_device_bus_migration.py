@@ -51,7 +51,7 @@ class LibvirtDeviceBusMigration(base.ServersTestBase):
 
     def _assert_stashed_image_properties_persist(self, server, properties):
         # Assert the stashed properties persist across a host reboot
-        self.restart_compute_service(self.compute)
+        self.restart_compute_service(self.compute_hostname)
         self._assert_stashed_image_properties(server['id'], properties)
 
         # Assert the stashed properties persist across a guest reboot
@@ -173,7 +173,7 @@ class LibvirtDeviceBusMigration(base.ServersTestBase):
         self.flags(pointer_model='ps2mouse')
         # Restart compute to pick up ps2 setting, which means the guest will
         # not get a prescribed pointer device
-        self.restart_compute_service(self.compute)
+        self.restart_compute_service(self.compute_hostname)
 
         # Create a server with default image properties
         default_image_properties1 = {
@@ -187,7 +187,7 @@ class LibvirtDeviceBusMigration(base.ServersTestBase):
         # Assert the defaults persist across a host flag change
         self.flags(pointer_model='usbtablet')
         # Restart compute to pick up usb setting
-        self.restart_compute_service(self.compute)
+        self.restart_compute_service(self.compute_hostname)
         self._assert_stashed_image_properties(
             server1['id'], default_image_properties1)
 
@@ -216,7 +216,7 @@ class LibvirtDeviceBusMigration(base.ServersTestBase):
         # https://bugs.launchpad.net/nova/+bug/1866106
         self.flags(pointer_model=None)
         # Restart compute to pick up None setting
-        self.restart_compute_service(self.compute)
+        self.restart_compute_service(self.compute_hostname)
         self._assert_stashed_image_properties(
             server1['id'], default_image_properties1)
         self._assert_stashed_image_properties(

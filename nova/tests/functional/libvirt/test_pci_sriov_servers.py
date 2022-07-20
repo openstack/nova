@@ -914,11 +914,8 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         # Disable SRIOV capabilties in PF and delete the VFs
         self._disable_sriov_in_pf(pci_info_no_sriov)
 
-        fake_connection = self._get_connection(pci_info=pci_info_no_sriov,
-                                               hostname='test_compute0')
-        self.mock_conn.return_value = fake_connection
-
-        self.compute = self.start_service('compute', host='test_compute0')
+        self.start_compute('test_compute0', pci_info=pci_info_no_sriov)
+        self.compute = self.computes['test_compute0']
 
         ctxt = context.get_admin_context()
         pci_devices = objects.PciDeviceList.get_by_compute_node(
@@ -930,13 +927,9 @@ class SRIOVServersTest(_PCIServersWithMigrationTestBase):
         self.assertEqual(1, len(pci_devices))
         self.assertEqual('type-PCI', pci_devices[0].dev_type)
 
-        # Update connection with original pci info with sriov PFs
-        fake_connection = self._get_connection(pci_info=pci_info,
-                                               hostname='test_compute0')
-        self.mock_conn.return_value = fake_connection
-
-        # Restart the compute service
-        self.restart_compute_service(self.compute)
+        # Restart the compute service with sriov PFs
+        self.restart_compute_service(
+            self.compute.host, pci_info=pci_info, keep_hypervisor_state=False)
 
         # Verify if PCI devices are of type type-PF or type-VF
         pci_devices = objects.PciDeviceList.get_by_compute_node(
@@ -1021,10 +1014,9 @@ class SRIOVAttachDetachTest(_PCIServersTestBase):
         host_info = fakelibvirt.HostInfo(cpu_nodes=2, cpu_sockets=1,
                                          cpu_cores=2, cpu_threads=2)
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pfs=1, num_vfs=1)
-        fake_connection = self._get_connection(host_info, pci_info)
-        self.mock_conn.return_value = fake_connection
-
-        self.compute = self.start_service('compute', host='test_compute0')
+        self.start_compute(
+            'test_compute0', host_info=host_info, pci_info=pci_info)
+        self.compute = self.computes['test_compute0']
 
         # Create server with a port
         server = self._create_server(networks=[{'port': first_port_id}])
