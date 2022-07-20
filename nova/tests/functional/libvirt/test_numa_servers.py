@@ -1187,10 +1187,8 @@ class ReshapeForPCPUsTest(NUMAServersTestBase):
         self.flags(cpu_dedicated_set='0-7', group='compute')
         self.flags(vcpu_pin_set=None)
 
-        computes = {}
-        for host, compute in self.computes.items():
-            computes[host] = self.restart_compute_service(compute)
-        self.computes = computes
+        for host in list(self.computes.keys()):
+            self.restart_compute_service(host)
 
         # verify that the inventory, usages and allocation are correct after
         # the reshape
