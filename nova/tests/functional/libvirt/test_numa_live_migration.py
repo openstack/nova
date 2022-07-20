@@ -206,10 +206,8 @@ class NUMALiveMigrationPositiveTests(NUMALiveMigrationPositiveBase):
         # Increase cpu_dedicated_set to 0-3, expecting the live migrated server
         # to end up on 2,3.
         self.flags(cpu_dedicated_set='0-3', group='compute')
-        self.computes['host_a'] = self.restart_compute_service(
-            self.computes['host_a'])
-        self.computes['host_b'] = self.restart_compute_service(
-            self.computes['host_b'])
+        self.restart_compute_service('host_a')
+        self.restart_compute_service('host_b')
 
         # Live migrate, RPC-pinning the destination host if asked
         if pin_dest:
@@ -333,10 +331,8 @@ class NUMALiveMigrationRollbackTests(NUMALiveMigrationPositiveBase):
         # Increase cpu_dedicated_set to 0-3, expecting the live migrated server
         # to end up on 2,3.
         self.flags(cpu_dedicated_set='0-3', group='compute')
-        self.computes['host_a'] = self.restart_compute_service(
-            self.computes['host_a'])
-        self.computes['host_b'] = self.restart_compute_service(
-            self.computes['host_b'])
+        self.restart_compute_service('host_a')
+        self.restart_compute_service('host_b')
 
         # Live migrate, RPC-pinning the destination host if asked. This is a
         # rollback test, so server_a is expected to remain on host_a.
