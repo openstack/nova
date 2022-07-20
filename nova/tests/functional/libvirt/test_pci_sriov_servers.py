@@ -1742,13 +1742,7 @@ class PCIServersTest(_PCIServersTestBase):
 
     def setUp(self):
         super().setUp()
-        patcher = mock.patch(
-            "nova.compute.pci_placement_translator."
-            "_is_placement_tracking_enabled",
-            return_value=True
-        )
-        self.addCleanup(patcher.stop)
-        patcher.start()
+        self.flags(group="pci", report_in_placement=True)
 
     def test_create_server_with_pci_dev_and_numa(self):
         """Verifies that an instance can be booted with cpu pinning and with an

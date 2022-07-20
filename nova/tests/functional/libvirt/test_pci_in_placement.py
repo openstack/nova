@@ -61,13 +61,7 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
 
     def setUp(self):
         super().setUp()
-        patcher = mock.patch(
-            "nova.compute.pci_placement_translator."
-            "_is_placement_tracking_enabled",
-            return_value=True
-        )
-        self.addCleanup(patcher.stop)
-        self.mock_pci_report_in_placement = patcher.start()
+        self.flags(group="pci", report_in_placement=True)
 
         # These tests should not depend on the host's sysfs
         self.useFixture(
@@ -718,7 +712,7 @@ class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
             ]
         )
         self.flags(group='pci', device_spec=device_spec)
-        self.mock_pci_report_in_placement.return_value = True
+        self.flags(group="pci", report_in_placement=True)
         self.start_compute(hostname="compute1", pci_info=pci_info)
 
         self.assertPCIDeviceCounts("compute1", total=1, free=1)
@@ -893,7 +887,7 @@ class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
         # Disable placement reporting so even if there are PCI devices on the
         # hypervisor matching the [pci]device_spec config they are not reported
         # to Placement
-        self.mock_pci_report_in_placement.return_value = False
+        self.flags(group="pci", report_in_placement=False)
         self.start_compute(hostname="compute1", pci_info=pci_info)
 
         self.assert_placement_pci_view(
@@ -931,7 +925,7 @@ class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
 
         # Try to disable placement reporting. The compute will refuse to start
         # as there are already PCI device RPs in placement.
-        self.mock_pci_report_in_placement.return_value = False
+        self.flags(group="pci", report_in_placement=False)
         ex = self.assertRaises(
             exception.PlacementPciException,
             self.restart_compute_service,
@@ -988,7 +982,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         self.flags(group='pci', device_spec=device_spec)
 
         # Start a compute *without* PCI tracking in placement
-        self.mock_pci_report_in_placement.return_value = False
+        self.flags(group="pci", report_in_placement=False)
         self.start_compute(hostname="compute1", pci_info=pci_info)
         self.assertPCIDeviceCounts("compute1", total=1, free=1)
 
@@ -999,7 +993,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         self.assertPCIDeviceCounts("compute1", total=1, free=0)
 
         # Restart the compute but now with PCI tracking enabled
-        self.mock_pci_report_in_placement.return_value = True
+        self.flags(group="pci", report_in_placement=True)
         self.restart_compute_service("compute1")
         # Assert that the PCI allocation is healed in placement
         self.assertPCIDeviceCounts("compute1", total=1, free=0)
@@ -1057,7 +1051,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         self.flags(group='pci', device_spec=device_spec)
 
         # Start a compute *without* PCI tracking in placement
-        self.mock_pci_report_in_placement.return_value = False
+        self.flags(group="pci", report_in_placement=False)
         self.start_compute(hostname="compute1", pci_info=pci_info)
         # 2 PCI + 1 PF + 4 VFs
         self.assertPCIDeviceCounts("compute1", total=7, free=7)
@@ -1082,7 +1076,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         self.assertPCIDeviceCounts("compute1", total=7, free=1)
 
         # Restart the compute but now with PCI tracking enabled
-        self.mock_pci_report_in_placement.return_value = True
+        self.flags(group="pci", report_in_placement=True)
         self.restart_compute_service("compute1")
         # Assert that the PCI allocation is healed in placement
         self.assertPCIDeviceCounts("compute1", total=7, free=1)
@@ -1157,7 +1151,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         self.flags(group='pci', device_spec=device_spec)
 
         # Start a compute with PCI tracking in placement
-        self.mock_pci_report_in_placement.return_value = True
+        self.flags(group="pci", report_in_placement=True)
         self.start_compute(hostname="compute1", pci_info=pci_info)
         # 2 PCI + 1 PF + 4 VFs
         self.assertPCIDeviceCounts("compute1", total=7, free=7)
@@ -1234,7 +1228,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         self.flags(group='pci', device_spec=compute1_device_spec)
 
         # Start a compute with PCI tracking in placement
-        self.mock_pci_report_in_placement.return_value = True
+        self.flags(group="pci", report_in_placement=True)
         self.start_compute(hostname="compute1", pci_info=compute1_pci_info)
         self.assertPCIDeviceCounts("compute1", total=2, free=2)
         compute1_expected_placement_view = {
@@ -1395,7 +1389,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         self.flags(group='pci', device_spec=compute1_device_spec)
 
         # Start a compute with PCI tracking in placement
-        self.mock_pci_report_in_placement.return_value = True
+        self.flags(group="pci", report_in_placement=True)
         self.start_compute(hostname="compute1", pci_info=compute1_pci_info)
         self.assertPCIDeviceCounts("compute1", total=1, free=1)
         compute1_expected_placement_view = {
@@ -1458,7 +1452,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         self.flags(group='pci', device_spec=compute2_device_spec)
 
         # Start a compute with PCI tracking in placement
-        self.mock_pci_report_in_placement.return_value = True
+        self.flags(group="pci", report_in_placement=True)
         self.start_compute(hostname="compute2", pci_info=compute2_pci_info)
         self.assertPCIDeviceCounts("compute2", total=3, free=3)
         compute2_expected_placement_view = {
@@ -1533,7 +1527,7 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         )
         self.flags(group='pci', device_spec=compute1_device_spec)
         # Start a compute with PCI tracking in placement
-        self.mock_pci_report_in_placement.return_value = True
+        self.flags(group="pci", report_in_placement=True)
         self.start_compute(hostname="compute1", pci_info=compute1_pci_info)
         self.assertPCIDeviceCounts("compute1", total=3, free=3)
         compute1_expected_placement_view = {

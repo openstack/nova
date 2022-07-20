@@ -351,6 +351,14 @@ information, refer to :oslo.config:option:`the documentation <pci.alias>`.
 
 PCI tracking in Placement
 -------------------------
+.. note::
+   The feature described below are optional and disabled by default in nova
+   26.0.0. (Zed). The legacy PCI tracker code path is still supported and
+   enabled. The Placement PCI tracking can be enabled via the
+   :oslo.config:option:`pci.report_in_placement` configuration. But please note
+   that once it is enabled on a given compute host it cannot be disabled there
+   any more.
+
 Since nova 26.0.0 (Zed) PCI passthrough device inventories are tracked in
 Placement. If a PCI device exists on the hypervisor and
 matches one of the device specifications configured via
