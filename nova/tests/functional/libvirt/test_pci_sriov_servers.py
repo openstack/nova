@@ -113,7 +113,9 @@ class _PCIServersTestBase(base.ServersTestBase):
 
             rp_traits = self._get_provider_traits(rp['uuid'])
             self.assertEqual(
-                set(traits[rp_name]),
+                # COMPUTE_MANAGED_PCI_DEVICE is automatically reported on
+                # PCI device RPs by nova
+                set(traits[rp_name]) | {"COMPUTE_MANAGED_PCI_DEVICE"},
                 set(rp_traits),
                 f"Traits on RP {real_rp_name} does not match with expectation"
             )

@@ -46,7 +46,7 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
             return_value=True
         )
         self.addCleanup(patcher.stop)
-        patcher.start()
+        self.mock_pci_report_in_placement = patcher.start()
 
         # These tests should not depend on the host's sysfs
         self.useFixture(
@@ -286,8 +286,9 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
         )
         self.assertIn(
             "VFs from the same PF cannot be configured with different set of "
-            "'traits' in [pci]device_spec. We got CUSTOM_BAR for 0000:81:00.2 "
-            "and CUSTOM_FOO for 0000:81:00.1.",
+            "'traits' in [pci]device_spec. We got "
+            "COMPUTE_MANAGED_PCI_DEVICE,CUSTOM_BAR for 0000:81:00.2 and "
+            "COMPUTE_MANAGED_PCI_DEVICE,CUSTOM_FOO for 0000:81:00.1.",
             str(ex)
         )
 
@@ -675,4 +676,75 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
                     "CUSTOM_FOOBAR",
                 ],
             },
+        )
+
+    def test_reporting_disabled_nothing_is_reported(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PCI in slot 0
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, num_pfs=0, num_vfs=0)
+        # the config matches the PCI dev
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PCI_PROD_ID,
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        # Disable placement reporting so even if there are PCI devices on the
+        # hypervisor matching the [pci]device_spec config they are not reported
+        # to Placement
+        self.mock_pci_report_in_placement.return_value = False
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={},
+            traits={},
+        )
+
+    def test_reporting_cannot_be_disable_once_it_is_enabled(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PCI in slot 0
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, num_pfs=0, num_vfs=0)
+        # the config matches the PCI dev
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PCI_PROD_ID,
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {self.PCI_RC: 1},
+            },
+            traits={
+                "0000:81:00.0": [],
+            },
+        )
+
+        # Try to disable placement reporting. The compute will refuse to start
+        # as there are already PCI device RPs in placement.
+        self.mock_pci_report_in_placement.return_value = False
+        ex = self.assertRaises(
+            exception.PlacementPciException,
+            self.restart_compute_service,
+            hostname="compute1",
+            pci_info=pci_info,
+            keep_hypervisor_state=False,
+        )
+        self.assertIn(
+            "The [pci]report_in_placement is False but it was enabled before "
+            "on this compute. Nova does not support disabling it after it is "
+            "enabled.",
+            str(ex)
         )
