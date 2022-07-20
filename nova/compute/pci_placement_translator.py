@@ -166,9 +166,29 @@ class PciResourceProvider:
         self.resource_class = _get_rc_for_dev(dev, dev_spec_tags)
         self.traits = _get_traits_for_dev(dev_spec_tags)
 
+    def remove_child(self, dev: pci_device.PciDevice) -> None:
+        # Nothing to do here. The update_provider_tree will handle the
+        # inventory decrease or the full RP removal
+        pass
+
+    def remove_parent(self, dev: pci_device.PciDevice) -> None:
+        # Nothing to do here. The update_provider_tree we handle full RP
+        pass
+
     def update_provider_tree(
         self, provider_tree: provider_tree.ProviderTree
     ) -> None:
+
+        if not self.parent_dev and not self.children_devs:
+            # This means we need to delete the RP from placement if exists
+            if provider_tree.exists(self.name):
+                # NOTE(gibi): If there are allocations on this RP then
+                # Placement will reject the update the provider_tree is
+                # synced up.
+                provider_tree.remove(self.name)
+
+            return
+
         provider_tree.update_inventory(
             self.name,
             # NOTE(gibi): The rest of the inventory fields (reserved,
@@ -188,10 +208,13 @@ class PciResourceProvider:
         provider_tree.update_traits(self.name, self.traits)
 
     def __str__(self) -> str:
-        return (
-            f"RP({self.name}, {self.resource_class}={len(self.devs)}, "
-            f"traits={','.join(self.traits or set())})"
-        )
+        if self.devs:
+            return (
+                f"RP({self.name}, {self.resource_class}={len(self.devs)}, "
+                f"traits={','.join(self.traits or set())})"
+            )
+        else:
+            return f"RP({self.name}, <EMPTY>)"
 
 
 class PlacementView:
@@ -207,9 +230,7 @@ class PlacementView:
     def _ensure_rp(self, rp_name: str) -> PciResourceProvider:
         return self.rps.setdefault(rp_name, PciResourceProvider(rp_name))
 
-    def _add_child(
-        self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
-    ) -> None:
+    def _get_rp_name_for_child(self, dev: pci_device.PciDevice) -> str:
         if not dev.parent_addr:
             msg = _(
                 "Missing parent address for PCI device s(dev)% with "
@@ -220,7 +241,12 @@ class PlacementView:
             }
             raise exception.PlacementPciException(error=msg)
 
-        rp_name = self._get_rp_name_for_address(dev.parent_addr)
+        return self._get_rp_name_for_address(dev.parent_addr)
+
+    def _add_child(
+        self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
+    ) -> None:
+        rp_name = self._get_rp_name_for_child(dev)
         self._ensure_rp(rp_name).add_child(dev, dev_spec_tags)
 
     def _add_parent(
@@ -229,7 +255,7 @@ class PlacementView:
         rp_name = self._get_rp_name_for_address(dev.address)
         self._ensure_rp(rp_name).add_parent(dev, dev_spec_tags)
 
-    def add_dev(
+    def _add_dev(
         self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
     ) -> None:
         if dev_spec_tags.get("physical_network"):
@@ -262,6 +288,46 @@ class PlacementView:
             # instance_uuid both on the source and the dest. So we need to
             # check for running migrations.
             pass
+
+    def _remove_child(self, dev: pci_device.PciDevice) -> None:
+        rp_name = self._get_rp_name_for_child(dev)
+        self._ensure_rp(rp_name).remove_child(dev)
+
+    def _remove_parent(self, dev: pci_device.PciDevice) -> None:
+        rp_name = self._get_rp_name_for_address(dev.address)
+        self._ensure_rp(rp_name).remove_parent(dev)
+
+    def _remove_dev(self, dev: pci_device.PciDevice) -> None:
+        """Remove PCI devices from Placement that existed before but now
+        deleted from the hypervisor or unlisted from [pci]device_spec
+        """
+        if dev.dev_type in PARENT_TYPES:
+            self._remove_parent(dev)
+        elif dev.dev_type in CHILD_TYPES:
+            self._remove_child(dev)
+
+    def process_dev(
+        self,
+        dev: pci_device.PciDevice,
+        dev_spec: ty.Optional[devspec.PciDeviceSpec],
+    ) -> None:
+
+        if dev.status in (
+            fields.PciDeviceStatus.DELETED,
+            fields.PciDeviceStatus.REMOVED,
+        ):
+            self._remove_dev(dev)
+        else:
+            if not dev_spec:
+                LOG.warning(
+                    "Device spec is not found for device %s in "
+                    "[pci]device_spec. Ignoring device in Placement resource "
+                    "view. This should not happen. Please file a bug.",
+                    dev.address
+                )
+                return
+
+            self._add_dev(dev, dev_spec.get_tags())
 
     def __str__(self) -> str:
         return (
@@ -341,14 +407,7 @@ def update_provider_tree_for_pci(
         # match the PCI device with the [pci]dev_spec config to access
         # the configuration metadata tags
         dev_spec = pci_tracker.dev_filter.get_devspec(dev)
-        if not dev_spec:
-            LOG.warning(
-                "Device spec is not found for device %s in [pci]device_spec. "
-                "Ignoring device in Placement resource view. "
-                "This should not happen. Please file a bug.", dev.address)
-            continue
-
-        pv.add_dev(dev, dev_spec.get_tags())
+        pv.process_dev(dev, dev_spec)
 
     LOG.info("Placement PCI resource view: %s", pv)
 

@@ -338,3 +338,341 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
             "instead.",
             str(ex)
         )
+
+    def test_remove_pci(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PCI
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, num_pfs=0, num_vfs=0)
+        # the config matches that PCI dev
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PCI_PROD_ID,
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {self.PCI_RC: 1},
+            },
+            traits={
+                "0000:81:00.0": [],
+            },
+        )
+
+        # now un-configure the PCI device and restart the compute
+        self.flags(group='pci', device_spec=self._to_device_spec_conf([]))
+        self.restart_compute_service(hostname="compute1")
+
+        # the RP had no allocation so nova could remove it
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={},
+            traits={},
+        )
+
+    def test_remove_one_vf(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PFs in slot 0 with two type-VFs 00.1, 00.2
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=2)
+        # then the config matching the VFs
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {self.VF_RC: 2},
+            },
+            traits={
+                "0000:81:00.0": [],
+            },
+        )
+
+        # remove one of the VFs from the hypervisor and then restart the
+        # compute
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=1)
+        self.restart_compute_service(
+            hostname="compute1",
+            pci_info=pci_info,
+            keep_hypervisor_state=False
+        )
+
+        # total value is expected to decrease to 1
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {self.VF_RC: 1},
+            },
+            traits={
+                "0000:81:00.0": [],
+            },
+        )
+
+    def test_remove_all_vfs(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PFs in slot 0 with two type-VFs 00.1, 00.2
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=2)
+        # then the config patches the VFs
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {self.VF_RC: 2},
+            },
+            traits={
+                "0000:81:00.0": [],
+            },
+        )
+
+        # remove both VFs from the hypervisor and restart the compute
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=0)
+        self.restart_compute_service(
+            hostname="compute1",
+            pci_info=pci_info,
+            keep_hypervisor_state=False
+        )
+
+        # we expect that the RP is deleted
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={},
+            traits={},
+        )
+
+    def test_remove_all_vfs_add_pf(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PFs in slot 0 with two type-VFs 00.1, 00.2
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=2)
+        # then the config matches both VFs
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {self.VF_RC: 2},
+            },
+            traits={
+                "0000:81:00.0": [],
+            },
+        )
+
+        # change the config to match the PF but do not match the VFs and
+        # restart the compute
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PF_PROD_ID,
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.restart_compute_service(
+            hostname="compute1",
+            pci_info=pci_info,
+            keep_hypervisor_state=False
+        )
+
+        # we expect that VF inventory is removed and the PF inventory is added
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {self.PF_RC: 1},
+            },
+            traits={
+                "0000:81:00.0": [],
+            },
+        )
+
+    def test_remove_pf_add_vfs(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PFs in slot 0 with two type-VFs 00.1, 00.2
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=2)
+        # then the config only matches the PF
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PF_PROD_ID,
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {self.PF_RC: 1},
+            },
+            traits={
+                "0000:81:00.0": [],
+            },
+        )
+
+        # remove the PF from the config and add the VFs instead then restart
+        # the compute
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.restart_compute_service(
+            hostname="compute1",
+            pci_info=pci_info,
+            keep_hypervisor_state=False
+        )
+
+        # we expect that PF inventory is removed and the VF inventory is added
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {self.VF_RC: 2},
+            },
+            traits={
+                "0000:81:00.0": [],
+            },
+        )
+
+    def test_device_reconfiguration(self):
+        # The fake libvirt will emulate on the host:
+        # * two type-PFs in slot 0, 1 with two type-VFs each
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=2, num_vfs=4)
+        # from slot 0 we match the PF only and ignore the VFs
+        # from slot 1 we match the VFs but ignore the parent PF
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PF_PROD_ID,
+                    "address": "0000:81:00.0",
+                    "traits": ",".join(
+                        [os_traits.HW_NIC_SRIOV, "CUSTOM_PF", "pf-white"]
+                    ),
+                },
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                    "address": "0000:81:01.*",
+                    "traits": ",".join(
+                        [os_traits.HW_NIC_SRIOV_TRUSTED, "CUSTOM_VF", "vf-red"]
+                    ),
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {self.PF_RC: 1},
+                "0000:81:01.0": {self.VF_RC: 2},
+            },
+            traits={
+                "0000:81:00.0": [
+                    "HW_NIC_SRIOV",
+                    "CUSTOM_PF",
+                    "CUSTOM_PF_WHITE",
+                ],
+                "0000:81:01.0": [
+                    "HW_NIC_SRIOV_TRUSTED",
+                    "CUSTOM_VF",
+                    "CUSTOM_VF_RED",
+                ],
+            },
+        )
+
+        # change the resource class and traits configuration and restart the
+        # compute
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "product_id": fakelibvirt.PF_PROD_ID,
+                    "resource_class": "CUSTOM_PF",
+                    "address": "0000:81:00.0",
+                    "traits": ",".join(
+                        [os_traits.HW_NIC_SRIOV, "pf-black"]
+                    ),
+                },
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                    "resource_class": "CUSTOM_VF",
+                    "address": "0000:81:01.*",
+                    "traits": ",".join(
+                        [os_traits.HW_NIC_SRIOV_TRUSTED, "vf-blue", "foobar"]
+                    ),
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.restart_compute_service(
+            hostname="compute1",
+            pci_info=pci_info,
+            keep_hypervisor_state=False
+        )
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {"CUSTOM_PF": 1},
+                "0000:81:01.0": {"CUSTOM_VF": 2},
+            },
+            traits={
+                "0000:81:00.0": [
+                    "HW_NIC_SRIOV",
+                    "CUSTOM_PF_BLACK",
+                ],
+                "0000:81:01.0": [
+                    "HW_NIC_SRIOV_TRUSTED",
+                    "CUSTOM_VF_BLUE",
+                    "CUSTOM_FOOBAR",
+                ],
+            },
+        )
