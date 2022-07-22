@@ -626,6 +626,8 @@ class InstanceActionVolumeNotification(base.NotificationBase):
 
 @base.notification_sample('instance-share_attach-start.json')
 @base.notification_sample('instance-share_attach-end.json')
+@base.notification_sample('instance-share_detach-start.json')
+@base.notification_sample('instance-share_detach-end.json')
 @nova_base.NovaObjectRegistry.register_notification
 class InstanceActionShareNotification(base.NotificationBase):
     # Version 1.0: Initial version
