@@ -172,3 +172,44 @@ class TestBlockDevicePayload(test.NoDBTestCase):
         bmds = instance_notification.BlockDevicePayload.from_instance(
             instance)
         self.assertIsNone(bmds)
+
+
+class TestSharePayload(test.NoDBTestCase):
+    @mock.patch('nova.objects.instance.Instance.get_shares')
+    def test_payload_contains_shares_if_requested(self, mock_get_shares):
+        self.flags(include_share_mapping='True', group='notifications')
+        context = mock.Mock()
+        instance = objects.Instance(uuid=uuids.instance_uuid)
+
+        share_mapping = objects.ShareMapping(context)
+        share_mapping.uuid = uuids.share_mapping
+        share_mapping.instance_uuid = uuids.instance
+        share_mapping.share_id = uuids.share
+        share_mapping.status = 'inactive'
+        share_mapping.tag = 'fake_tag'
+        share_mapping.export_location = '192.168.122.152:/manila/share'
+        share_mapping.share_proto = 'NFS'
+
+        mock_get_shares.return_value = [share_mapping]
+
+        shares = instance_notification.SharePayload.from_instance(
+            instance)
+
+        self.assertEqual(1, len(shares))
+        share = shares[0]
+        self.assertIsInstance(share, instance_notification.SharePayload)
+        self.assertEqual(uuids.share_mapping, share.share_mapping_uuid)
+        self.assertEqual(uuids.share, share.share_id)
+        self.assertEqual('inactive', share.status)
+        self.assertEqual('fake_tag', share.tag)
+        # self.assertEqual('192.168.122.152:/manila/share',
+        #                  share.export_location)
+        self.assertNotIn('export_location', share)
+
+    @mock.patch('nova.objects.instance.Instance.get_shares',
+                return_value=mock.NonCallableMock())
+    def test_shares_are_skipped_by_default(self, mock_get_shares):
+        instance = objects.Instance(uuid=uuids.instance_uuid)
+        shares = instance_notification.SharePayload.from_instance(
+            instance)
+        self.assertIsNone(shares)

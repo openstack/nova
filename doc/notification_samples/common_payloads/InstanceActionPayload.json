@@ -5,5 +5,5 @@
     },
     "nova_object.name":"InstanceActionPayload",
     "nova_object.namespace":"nova",
-    "nova_object.version":"1.8"
+    "nova_object.version":"1.9"
 }

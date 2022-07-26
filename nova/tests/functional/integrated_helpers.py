@@ -550,7 +550,9 @@ class InstanceHelperMixin:
         self.notifier.wait_for_versioned_notifications(
             'instance.interface_detach.end')
 
-    def _get_share(self, server, share_id):
+    def _get_share(self, server, share_id, admin=False):
+        if admin:
+            return (self.admin_api.get_server_share(server['id'], share_id))
         return (self.api.get_server_share(server['id'], share_id))
 
     def _attach_share(self, server, share_id, tag=None):

@@ -1,0 +1,9 @@
+{
+  "$ref": "InstancePayloadShareInactive.json",
+  "nova_object.data": {
+    "fault": null
+  },
+  "nova_object.name": "InstanceActionPayload",
+  "nova_object.namespace": "nova",
+  "nova_object.version": "1.9"
+}

@@ -1,0 +1,13 @@
+{
+  "event_type": "instance.power_on.start",
+  "payload": {
+    "$ref": "common_payloads/InstanceActionPayloadShareInactive.json#",
+    "nova_object.data": {
+      "task_state": "powering-on",
+      "state": "stopped",
+      "power_state": "shutdown"
+    }
+  },
+  "priority": "INFO",
+  "publisher_id": "nova-compute:compute"
+}
