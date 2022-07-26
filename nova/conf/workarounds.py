@@ -410,6 +410,13 @@ with the destination host. When using QEMU >= 2.9 and libvirt >=
 4.4.0, libvirt will do the correct thing with respect to checking CPU
 compatibility on the destination host during live migration.
 """),
+    cfg.BoolOpt(
+        'skip_hypervisor_version_check_on_lm',
+        default=False,
+        help="""
+When this is enabled, it will skip version-checking of hypervisors
+during live migration.
+"""),
 ]
 
 
