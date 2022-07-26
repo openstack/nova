@@ -347,8 +347,9 @@ class LiveMigrationTask(base.TaskBase):
 
         source_version = source_info.hypervisor_version
         destination_version = destination_info.hypervisor_version
-        if source_version > destination_version:
-            raise exception.DestinationHypervisorTooOld()
+        if not CONF.workarounds.skip_hypervisor_version_check_on_lm:
+            if source_version > destination_version:
+                raise exception.DestinationHypervisorTooOld()
         return source_info, destination_info
 
     def _call_livem_checks_on_host(self, destination, provider_mapping):

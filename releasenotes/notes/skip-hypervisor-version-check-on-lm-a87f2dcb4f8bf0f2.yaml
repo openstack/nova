@@ -1,0 +1,13 @@
+---
+feature:
+  - |
+    Adds a workaround that allows one to disable hypervisor
+    version-check on live migration.  This workaround option can be
+    useful in certain scenarios when upgrading.  E.g. if you want to
+    relocate all instances off a compute node due to an emergency
+    hardware issue, and you only have another old compute node ready at
+    the time.
+
+    To enable this, use the config attribute
+    ``[workarounds]skip_hypervisor_version_check_on_lm=True`` in
+    ``nova.conf``.  The option defaults to ``False``.

@@ -345,6 +345,36 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                           mock.call(self.destination)],
                          mock_get_info.call_args_list)
 
+    @mock.patch.object(live_migrate.LiveMigrationTask, '_get_compute_info')
+    def test_skip_hypervisor_version_check_on_lm_raise_ex(self, mock_get_info):
+        host1 = {'hypervisor_type': 'a', 'hypervisor_version': 7}
+        host2 = {'hypervisor_type': 'a', 'hypervisor_version': 6}
+        self.flags(group='workarounds',
+                   skip_hypervisor_version_check_on_lm=False)
+        mock_get_info.side_effect = [objects.ComputeNode(**host1),
+                                     objects.ComputeNode(**host2)]
+        self.assertRaises(exception.DestinationHypervisorTooOld,
+                          self.task._check_compatible_with_source_hypervisor,
+                          self.destination)
+        self.assertEqual([mock.call(self.instance_host),
+                          mock.call(self.destination)],
+                         mock_get_info.call_args_list)
+
+    @mock.patch.object(live_migrate.LiveMigrationTask, '_get_compute_info')
+    def test_skip_hypervisor_version_check_on_lm_do_not_raise_ex(
+        self, mock_get_info
+    ):
+        host1 = {'hypervisor_type': 'a', 'hypervisor_version': 7}
+        host2 = {'hypervisor_type': 'a', 'hypervisor_version': 6}
+        self.flags(group='workarounds',
+                   skip_hypervisor_version_check_on_lm=True)
+        mock_get_info.side_effect = [objects.ComputeNode(**host1),
+                                     objects.ComputeNode(**host2)]
+        self.task._check_compatible_with_source_hypervisor(self.destination)
+        self.assertEqual([mock.call(self.instance_host),
+                          mock.call(self.destination)],
+                         mock_get_info.call_args_list)
+
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'check_can_live_migrate_destination')
     def test_check_requested_destination(self, mock_check):
