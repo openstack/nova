@@ -98,16 +98,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(PciDeviceStatsTestCase, self).setUp()
-        self._setup_pci_stats()
-
-    def _setup_pci_stats(self, numa_topology=None):
-        """Exists for tests that need to setup pci_stats with a specific NUMA
-        topology, while still allowing tests that don't care to get the default
-        "empty" one.
-        """
-        if not numa_topology:
-            numa_topology = objects.NUMATopology()
-        self.pci_stats = stats.PciDeviceStats(numa_topology)
+        self.pci_stats = stats.PciDeviceStats(objects.NUMATopology())
         # The following two calls need to be made before adding the devices.
         patcher = fakes.fake_pci_whitelist()
         self.addCleanup(patcher.stop)
@@ -240,18 +231,18 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertFalse(self.pci_stats.support_requests(pci_requests, cells))
 
     def test_filter_pools_for_socket_affinity_no_socket(self):
-        self._setup_pci_stats(
-            objects.NUMATopology(
-                cells=[objects.NUMACell(socket=None)]))
+        self.pci_stats.numa_topology = objects.NUMATopology(
+                cells=[objects.NUMACell(socket=None)])
+
         self.assertEqual(
             [],
             self.pci_stats._filter_pools_for_socket_affinity(
                 self.pci_stats.pools, [objects.InstanceNUMACell()]))
 
     def test_filter_pools_for_socket_affinity(self):
-        self._setup_pci_stats(
-            objects.NUMATopology(
-                cells=[objects.NUMACell(id=1, socket=1)]))
+        self.pci_stats.numa_topology = objects.NUMATopology(
+                cells=[objects.NUMACell(id=1, socket=1)])
+
         pools = self.pci_stats._filter_pools_for_socket_affinity(
             self.pci_stats.pools, [objects.InstanceNUMACell(id=1)])
         self.assertEqual(1, len(pools))

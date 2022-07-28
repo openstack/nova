@@ -30,7 +30,7 @@ class LibvirtLightVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
             device_scan_attempts=5)
 
     @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory',
-        new=mock.Mock(return_value=mock.Mock()))
+        new=mock.Mock())
     def test_libvirt_lightos_driver_connect(self):
         lightos_driver = lightos.LibvirtLightOSVolumeDriver(
             self.fake_host)
@@ -40,15 +40,16 @@ class LibvirtLightVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
             'name': 'aLightVolume',
             'conf': config}
         connection_info = {'data': disk_info}
-        with mock.patch.object(lightos_driver.connector,
-                            'connect_volume',
-                            return_value={'path': '/dev/dms1234567'}):
-            lightos_driver.connect_volume(connection_info, None)
-            (lightos_driver.connector.connect_volume.
-                assert_called_once_with(
-                connection_info['data']))
-            self.assertEqual('/dev/dms1234567',
-                            connection_info['data']['device_path'])
+        lightos_driver.connector.connect_volume.return_value = (
+            {'path': '/dev/dms1234567'})
+
+        lightos_driver.connect_volume(connection_info, None)
+
+        lightos_driver.connector.connect_volume.assert_called_once_with(
+            connection_info['data'])
+        self.assertEqual(
+            '/dev/dms1234567',
+            connection_info['data']['device_path'])
 
     @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory',
         new=mock.Mock(return_value=mock.Mock()))

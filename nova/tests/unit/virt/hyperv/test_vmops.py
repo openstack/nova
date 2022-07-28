@@ -1374,12 +1374,10 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
     def test_get_vm_state(self):
         summary_info = {'EnabledState': os_win_const.HYPERV_VM_STATE_DISABLED}
 
-        with mock.patch.object(self._vmops._vmutils,
-                               'get_vm_summary_info') as mock_get_summary_info:
-            mock_get_summary_info.return_value = summary_info
+        self._vmops._vmutils.get_vm_summary_info.return_value = summary_info
 
-            response = self._vmops._get_vm_state(mock.sentinel.FAKE_VM_NAME)
-            self.assertEqual(response, os_win_const.HYPERV_VM_STATE_DISABLED)
+        response = self._vmops._get_vm_state(mock.sentinel.FAKE_VM_NAME)
+        self.assertEqual(response, os_win_const.HYPERV_VM_STATE_DISABLED)
 
     @mock.patch.object(vmops.VMOps, '_get_vm_state')
     def test_wait_for_power_off_true(self, mock_get_state):
@@ -1418,12 +1416,11 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
 
     def test_list_instance_uuids(self):
         fake_uuid = '4f54fb69-d3a2-45b7-bb9b-b6e6b3d893b3'
-        with mock.patch.object(self._vmops._vmutils,
-                               'list_instance_notes') as mock_list_notes:
-            mock_list_notes.return_value = [('fake_name', [fake_uuid])]
+        self._vmops._vmutils.list_instance_notes.return_value = (
+            [('fake_name', [fake_uuid])])
 
-            response = self._vmops.list_instance_uuids()
-            mock_list_notes.assert_called_once_with()
+        response = self._vmops.list_instance_uuids()
+        self._vmops._vmutils.list_instance_notes.assert_called_once_with()
 
         self.assertEqual(response, [fake_uuid])
 

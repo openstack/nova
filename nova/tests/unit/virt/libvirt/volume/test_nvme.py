@@ -56,14 +56,15 @@ class LibvirtNVMEVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
             'name': 'aNVMEVolume',
             'conf': config}
         connection_info = {'data': disk_info}
-        with mock.patch.object(nvme_driver.connector,
-                               'connect_volume',
-                               return_value={'path': '/dev/dms1234567'}):
-            nvme_driver.connect_volume(connection_info, None)
-            nvme_driver.connector.connect_volume.assert_called_once_with(
-                connection_info['data'])
-            self.assertEqual('/dev/dms1234567',
-                             connection_info['data']['device_path'])
+        nvme_driver.connector.connect_volume.return_value = (
+            {'path': '/dev/dms1234567'})
+
+        nvme_driver.connect_volume(connection_info, None)
+
+        nvme_driver.connector.connect_volume.assert_called_once_with(
+            connection_info['data'])
+        self.assertEqual(
+            '/dev/dms1234567', connection_info['data']['device_path'])
 
     @mock.patch('os_brick.initiator.connector.InitiatorConnector.factory',
         new=mock.Mock(return_value=mock.Mock()))

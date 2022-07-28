@@ -10,7 +10,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import fixtures
 import mock
 from oslo_db import exception as oslo_db_exc
 
@@ -67,11 +66,11 @@ class RescheduleBuildAvailabilityZoneUpCall(
         def wrap_bari(*args, **kwargs):
             # Poison the AZ query to blow up as if the cell conductor does not
             # have access to the API DB.
-            self.useFixture(
-                fixtures.MockPatch(
-                    'nova.objects.AggregateList.get_by_host',
-                    side_effect=oslo_db_exc.CantStartEngineError))
-            return original_bari(*args, **kwargs)
+            with mock.patch(
+                'nova.objects.AggregateList.get_by_host',
+                side_effect=oslo_db_exc.CantStartEngineError
+            ):
+                return original_bari(*args, **kwargs)
 
         self.stub_out('nova.compute.manager.ComputeManager.'
                       'build_and_run_instance', wrap_bari)
@@ -81,10 +80,6 @@ class RescheduleBuildAvailabilityZoneUpCall(
         # compute service we have to wait for the notification that the build
         # is complete and then stop the mock so we can use the API again.
         self.notifier.wait_for_versioned_notifications('instance.create.end')
-        # Note that we use stopall here because we actually called
-        # build_and_run_instance twice so we have more than one instance of
-        # the mock that needs to be stopped.
-        mock.patch.stopall()
         server = self._wait_for_state_change(server, 'ACTIVE')
         # We should have rescheduled and the instance AZ should be set from the
         # Selection object. Since neither compute host is in an AZ, the server
@@ -128,19 +123,20 @@ class RescheduleMigrateAvailabilityZoneUpCall(
         self.rescheduled = None
 
         def wrap_prep_resize(_self, *args, **kwargs):
-            # Poison the AZ query to blow up as if the cell conductor does not
-            # have access to the API DB.
-            self.agg_mock = self.useFixture(
-                fixtures.MockPatch(
-                    'nova.objects.AggregateList.get_by_host',
-                    side_effect=oslo_db_exc.CantStartEngineError)).mock
             if self.rescheduled is None:
                 # Track the first host that we rescheduled from.
                 self.rescheduled = _self.host
                 # Trigger a reschedule.
                 raise exception.ComputeResourcesUnavailable(
                     reason='test_migrate_reschedule_blocked_az_up_call')
-            return original_prep_resize(_self, *args, **kwargs)
+            # Poison the AZ query to blow up as if the cell conductor does not
+            # have access to the API DB.
+            with mock.patch(
+                'nova.objects.AggregateList.get_by_host',
+                side_effect=oslo_db_exc.CantStartEngineError,
+            ) as agg_mock:
+                self.agg_mock = agg_mock
+                return original_prep_resize(_self, *args, **kwargs)
 
         self.stub_out('nova.compute.manager.ComputeManager._prep_resize',
                       wrap_prep_resize)

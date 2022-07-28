@@ -279,33 +279,21 @@ class DecoratorTestCase(test.TestCase):
             'No DB access allowed in ',
             mock_log.error.call_args[0][0])
 
-    @mock.patch.object(db, 'LOG')
-    @mock.patch.object(db, 'DISABLE_DB_ACCESS', return_value=True)
-    def test_pick_context_manager_writer_disable_db_access(
-        self, mock_DISABLE_DB_ACCESS, mock_log,
-    ):
+    def test_pick_context_manager_writer_disable_db_access(self):
         @db.pick_context_manager_writer
         def func(context, value):
             pass
 
         self._test_pick_context_manager_disable_db_access(func)
 
-    @mock.patch.object(db, 'LOG')
-    @mock.patch.object(db, 'DISABLE_DB_ACCESS', return_value=True)
-    def test_pick_context_manager_reader_disable_db_access(
-        self, mock_DISABLE_DB_ACCESS, mock_log,
-    ):
+    def test_pick_context_manager_reader_disable_db_access(self):
         @db.pick_context_manager_reader
         def func(context, value):
             pass
 
         self._test_pick_context_manager_disable_db_access(func)
 
-    @mock.patch.object(db, 'LOG')
-    @mock.patch.object(db, 'DISABLE_DB_ACCESS', return_value=True)
-    def test_pick_context_manager_reader_allow_async_disable_db_access(
-        self, mock_DISABLE_DB_ACCESS, mock_log,
-    ):
+    def test_pick_context_manager_reader_allow_async_disable_db_access(self):
         @db.pick_context_manager_reader_allow_async
         def func(context, value):
             pass
