@@ -8589,11 +8589,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
         @mock.patch.object(self.compute.network_api, 'migrate_instance_start')
         @mock.patch.object(compute_utils, 'notify_usage_exists')
-        @mock.patch.object(self.migration, 'save')
         @mock.patch.object(objects.BlockDeviceMappingList,
                            'get_by_instance_uuid')
         def do_test(get_by_instance_uuid,
-                    migration_save,
                     notify_usage_exists,
                     migrate_instance_start,
                     setup_networks_on_host,
@@ -8665,7 +8663,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(self.compute.network_api, 'migrate_instance_finish',
                            side_effect=_migrate_instance_finish)
         @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
-        @mock.patch.object(self.migration, 'save')
         @mock.patch.object(self.instance, 'save')
         @mock.patch.object(self.compute, '_set_instance_info')
         @mock.patch.object(db, 'instance_fault_create')
@@ -8679,7 +8676,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                     fault_create,
                     set_instance_info,
                     instance_save,
-                    migration_save,
                     setup_networks_on_host,
                     migrate_instance_finish,
                     get_instance_nw_info,
@@ -8723,11 +8719,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(self.compute.network_api, 'migrate_instance_start')
         @mock.patch.object(compute_utils, 'notify_usage_exists')
         @mock.patch.object(db, 'instance_extra_update_by_uuid')
-        @mock.patch.object(self.migration, 'save')
         @mock.patch.object(objects.BlockDeviceMappingList,
                            'get_by_instance_uuid')
         def do_revert_resize(mock_get_by_instance_uuid,
-                             mock_migration_save,
                              mock_extra_update,
                              mock_notify_usage_exists,
                              mock_migrate_instance_start,
@@ -8774,7 +8768,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(compute_utils, 'notify_about_instance_action')
         @mock.patch.object(self.compute, "_set_instance_info")
         @mock.patch.object(self.instance, 'save')
-        @mock.patch.object(self.migration, 'save')
         @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
         @mock.patch.object(db, 'instance_fault_create')
         @mock.patch.object(db, 'instance_extra_update_by_uuid')
@@ -8798,7 +8791,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                                     mock_extra_update,
                                     mock_fault_create,
                                     mock_fault_from_exc,
-                                    mock_mig_save,
                                     mock_inst_save,
                                     mock_set,
                                     mock_notify_about_instance_action,
@@ -8892,7 +8884,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(self.compute, '_delete_scheduler_instance_info')
         @mock.patch('nova.objects.Instance.get_by_uuid')
         @mock.patch('nova.objects.Migration.get_by_id')
-        @mock.patch.object(self.migration, 'save')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(self.compute, 'network_api')
         @mock.patch.object(self.compute.driver, 'confirm_migration')
@@ -8901,7 +8892,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         @mock.patch.object(self.instance, 'save')
         def do_confirm_resize(mock_save, mock_drop, mock_delete,
                               mock_confirm, mock_nwapi, mock_notify,
-                              mock_mig_save, mock_mig_get, mock_inst_get,
+                              mock_mig_get, mock_inst_get,
                               mock_delete_scheduler_info):
 
             self._mock_rt()
@@ -8984,16 +8975,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
         instance_get_by_uuid.assert_called_once()
 
     def test_confirm_resize_calls_virt_driver_with_old_pci(self):
-        @mock.patch.object(self.migration, 'save')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(self.compute, 'network_api')
         @mock.patch.object(self.compute.driver, 'confirm_migration')
         @mock.patch.object(self.compute, '_delete_allocation_after_move')
         @mock.patch.object(self.instance, 'drop_migration_context')
         @mock.patch.object(self.instance, 'save')
-        def do_confirm_resize(mock_save, mock_drop, mock_delete,
-                              mock_confirm, mock_nwapi, mock_notify,
-                              mock_mig_save):
+        def do_confirm_resize(
+            mock_save, mock_drop, mock_delete, mock_confirm, mock_nwapi,
+            mock_notify
+        ):
             # Mock virt driver confirm_resize() to save the provided
             # network_info, we will check it later.
             updated_nw_info = []
