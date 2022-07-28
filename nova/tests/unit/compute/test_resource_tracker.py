@@ -1710,12 +1710,18 @@ class TestUpdateComputeNode(BaseTestCase):
         self.assertEqual(exp_inv, ptree.data(new_compute.uuid).inventory)
         mock_sync_disabled.assert_called_once()
 
+    @ddt.data(
+        exc.ResourceProviderUpdateConflict(
+            uuid='uuid', generation=42, error='error'),
+        exc.PlacementReshapeConflict(error='error'),
+    )
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_sync_compute_service_disabled_trait')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_resource_change', return_value=False)
-    def test_update_retry_success(self, mock_resource_change,
-                                  mock_sync_disabled):
+    def test_update_retry_success(
+        self, exc, mock_resource_change, mock_sync_disabled
+    ):
         self._setup_rt()
         orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self.rt.compute_nodes[_NODENAME] = orig_compute
@@ -1729,9 +1735,7 @@ class TestUpdateComputeNode(BaseTestCase):
         self.driver_mock.update_provider_tree.side_effect = lambda *a: None
 
         ufpt_mock = self.rt.reportclient.update_from_provider_tree
-        ufpt_mock.side_effect = (
-            exc.ResourceProviderUpdateConflict(
-                uuid='uuid', generation=42, error='error'), None)
+        ufpt_mock.side_effect = (exc, None)
 
         self.rt._update(mock.sentinel.ctx, new_compute)
 
