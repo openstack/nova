@@ -23,7 +23,7 @@ create = {
         'keypair': {
             'type': 'object',
             'properties': {
-                'name': parameter_types.name,
+                'name': parameter_types.keypair_name_special_chars,
                 'public_key': {'type': 'string'},
             },
             'required': ['name'],
@@ -46,7 +46,7 @@ create_v22 = {
         'keypair': {
             'type': 'object',
             'properties': {
-                'name': parameter_types.name,
+                'name': parameter_types.keypair_name_special_chars,
                 'type': {
                     'type': 'string',
                     'enum': ['ssh', 'x509']
@@ -67,7 +67,7 @@ create_v210 = {
         'keypair': {
             'type': 'object',
             'properties': {
-                'name': parameter_types.name,
+                'name': parameter_types.keypair_name_special_chars,
                 'type': {
                     'type': 'string',
                     'enum': ['ssh', 'x509']
@@ -82,6 +82,11 @@ create_v210 = {
     'required': ['keypair'],
     'additionalProperties': False,
 }
+
+create_v292 = copy.deepcopy(create_v210)
+create_v292['properties']['keypair']['properties']['name'] = (parameter_types.
+    keypair_name_special_chars_292)
+create_v292['properties']['keypair']['required'] = ['name', 'public_key']
 
 index_query_schema_v20 = {
     'type': 'object',

@@ -22,7 +22,6 @@ networking and storage of VMs, and compute hosts on which they run)."""
 import collections
 import functools
 import re
-import string
 import typing as ty
 
 from castellan import key_manager
@@ -6694,19 +6693,7 @@ class KeypairAPI:
         }
         self.notifier.info(context, 'keypair.%s' % event_suffix, payload)
 
-    def _validate_new_key_pair(self, context, user_id, key_name, key_type):
-        safe_chars = "_- " + string.digits + string.ascii_letters
-        clean_value = "".join(x for x in key_name if x in safe_chars)
-        if clean_value != key_name:
-            raise exception.InvalidKeypair(
-                reason=_("Keypair name contains unsafe characters"))
-
-        try:
-            utils.check_string_length(key_name, min_length=1, max_length=255)
-        except exception.InvalidInput:
-            raise exception.InvalidKeypair(
-                reason=_('Keypair name must be string and between '
-                         '1 and 255 characters long'))
+    def _check_key_pair_quotas(self, context, user_id, key_name, key_type):
         try:
             objects.Quotas.check_deltas(context, {'key_pairs': 1}, user_id)
             local_limit.enforce_db_limit(context, local_limit.KEY_PAIRS,
@@ -6720,7 +6707,7 @@ class KeypairAPI:
     def import_key_pair(self, context, user_id, key_name, public_key,
                         key_type=keypair_obj.KEYPAIR_TYPE_SSH):
         """Import a key pair using an existing public key."""
-        self._validate_new_key_pair(context, user_id, key_name, key_type)
+        self._check_key_pair_quotas(context, user_id, key_name, key_type)
 
         self._notify(context, 'import.start', key_name)
 
@@ -6755,7 +6742,7 @@ class KeypairAPI:
     def create_key_pair(self, context, user_id, key_name,
                         key_type=keypair_obj.KEYPAIR_TYPE_SSH):
         """Create a new key pair."""
-        self._validate_new_key_pair(context, user_id, key_name, key_type)
+        self._check_key_pair_quotas(context, user_id, key_name, key_type)
 
         keypair = objects.KeyPair(context)
         keypair.user_id = user_id

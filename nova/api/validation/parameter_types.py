@@ -290,7 +290,7 @@ fqdn = {
 
 name = {
     # NOTE: Nova v2.1 API contains some 'name' parameters such
-    # as keypair, server, flavor, aggregate and so on. They are
+    # as server, flavor, aggregate and so on. They are
     # stored in the DB and Nova specific parameters.
     # This definition is used for all their parameters.
     'type': 'string', 'minLength': 1, 'maxLength': 255,
@@ -302,6 +302,18 @@ az_name = {
     'type': 'string', 'minLength': 1, 'maxLength': 255,
     'format': 'az_name'
 }
+
+
+keypair_name_special_chars = {'allOf': [name, {
+    'type': 'string', 'minLength': 1, 'maxLength': 255,
+    'format': 'keypair_name_20'
+}]}
+
+
+keypair_name_special_chars_292 = {'allOf': [name, {
+    'type': 'string', 'minLength': 1, 'maxLength': 255,
+    'format': 'keypair_name_292'
+}]}
 
 
 az_name_with_leading_trailing_spaces = {

@@ -44,12 +44,16 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-keypairs/v2.35/keypairs-list-resp.json
    :language: javascript
 
-Create Or Import Keypair
-========================
+Import (or create) Keypair
+==========================
 
 .. rest_method:: POST /os-keypairs
 
-Generates or imports a keypair.
+Imports (or generates) a keypair.
+
+.. warning::
+
+   Generating a keypair is no longer possible starting from version 2.92.
 
 Normal response codes: 200, 201
 
@@ -65,7 +69,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - keypair: keypair
-  - name: keypair_name
+  - name: keypair_name_in
   - public_key: keypair_public_key_in
   - type: keypair_type_in
   - user_id: keypair_userid_in
@@ -73,6 +77,11 @@ Request
 **Example Create Or Import Keypair (v2.10): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-keypairs/v2.10/keypairs-import-post-req.json
+   :language: javascript
+
+**Example Import Keypair (v2.92): JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-keypairs/v2.92/keypairs-import-post-req.json
    :language: javascript
 
 Response
@@ -91,6 +100,11 @@ Response
 **Example Create Or Import Keypair (v2.10): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-keypairs/v2.10/keypairs-import-post-resp.json
+   :language: javascript
+
+**Example Import Keypair (v2.92): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-keypairs/v2.92/keypairs-import-post-resp.json
    :language: javascript
 
 Show Keypair Details

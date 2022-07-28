@@ -37,6 +37,8 @@ keypair_data = {
 
 FAKE_UUID = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
 
+keypair_name_2_92_compatible = 'my-key@ my.host'
+
 
 def fake_keypair(name):
     return dict(test_keypair.fake_keypair,
@@ -110,16 +112,22 @@ class KeypairsTestV21(test.TestCase):
         self.assertGreater(len(res_dict['keypair']['private_key']), 0)
         self._assert_keypair_type(res_dict)
 
-    def _test_keypair_create_bad_request_case(self,
-                                              body,
-                                              exception):
-        self.assertRaises(exception,
-                          self.controller.create, self.req, body=body)
+    def _test_keypair_create_bad_request_case(
+        self, body, exception, error_msg=None
+    ):
+        if error_msg:
+            self.assertRaisesRegex(exception, error_msg,
+                                   self.controller.create,
+                                   self.req, body=body)
+        else:
+            self.assertRaises(exception,
+                              self.controller.create, self.req, body=body)
 
     def test_keypair_create_with_empty_name(self):
         body = {'keypair': {'name': ''}}
         self._test_keypair_create_bad_request_case(body,
-                                                   self.validation_error)
+                                                   self.validation_error,
+                                                   'is too short')
 
     def test_keypair_create_with_name_too_long(self):
         body = {
@@ -128,7 +136,8 @@ class KeypairsTestV21(test.TestCase):
             }
         }
         self._test_keypair_create_bad_request_case(body,
-                                                   self.validation_error)
+                                                   self.validation_error,
+                                                   'is too long')
 
     def test_keypair_create_with_name_leading_trailing_spaces(self):
         body = {
@@ -136,8 +145,10 @@ class KeypairsTestV21(test.TestCase):
                 'name': '  test  '
             }
         }
+        expected_msg = 'Can not start or end with whitespace.'
         self._test_keypair_create_bad_request_case(body,
-                                                   self.validation_error)
+                                                   self.validation_error,
+                                                   expected_msg)
 
     def test_keypair_create_with_name_leading_trailing_spaces_compat_mode(
             self):
@@ -152,8 +163,21 @@ class KeypairsTestV21(test.TestCase):
                 'name': 'test/keypair'
             }
         }
+        expected_msg = 'Only expected characters'
         self._test_keypair_create_bad_request_case(body,
-                                                   webob.exc.HTTPBadRequest)
+                                                   self.validation_error,
+                                                   expected_msg)
+
+    def test_keypair_create_with_special_characters(self):
+        body = {
+            'keypair': {
+                'name': keypair_name_2_92_compatible
+            }
+        }
+        expected_msg = 'Only expected characters'
+        self._test_keypair_create_bad_request_case(body,
+                                                   self.validation_error,
+                                                   expected_msg)
 
     def test_keypair_import_bad_key(self):
         body = {
@@ -167,8 +191,10 @@ class KeypairsTestV21(test.TestCase):
 
     def test_keypair_create_with_invalid_keypair_body(self):
         body = {'alpha': {'name': 'create_test'}}
+        expected_msg = "'keypair' is a required property"
         self._test_keypair_create_bad_request_case(body,
-                                                   self.validation_error)
+                                                   self.validation_error,
+                                                   expected_msg)
 
     def test_keypair_import(self):
         body = {
@@ -470,3 +496,82 @@ class KeypairsTestV275(test.TestCase):
             version='2.75', use_admin_context=True)
         self.assertRaises(exception.ValidationError, self.controller.delete,
                           req, 1)
+
+
+class KeypairsTestV292(test.TestCase):
+    wsgi_api_version = '2.92'
+    wsgi_old_api_version = '2.91'
+
+    def setUp(self):
+        super(KeypairsTestV292, self).setUp()
+        self.controller = keypairs_v21.KeypairController()
+        self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+        self.old_req = fakes.HTTPRequest.blank(
+            '', version=self.wsgi_old_api_version)
+
+    def test_keypair_create_no_longer_supported(self):
+        body = {
+            'keypair': {
+                'name': keypair_name_2_92_compatible,
+            }
+        }
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          self.req, body=body)
+
+    def test_keypair_create_works_with_old_version(self):
+        body = {
+            'keypair': {
+                'name': 'fake',
+            }
+        }
+        res_dict = self.controller.create(self.old_req, body=body)
+        self.assertEqual('fake', res_dict['keypair']['name'])
+        self.assertGreater(len(res_dict['keypair']['private_key']), 0)
+
+    def test_keypair_import_works_with_new_version(self):
+        body = {
+            'keypair': {
+                'name': 'fake',
+                'public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBYIznA'
+                              'x9D7118Q1VKGpXy2HDiKyUTM8XcUuhQpo0srqb9rboUp4'
+                              'a9NmCwpWpeElDLuva707GOUnfaBAvHBwsRXyxHJjRaI6Y'
+                              'Qj2oLJwqvaSaWUbyT1vtryRqy6J3TecN0WINY71f4uymi'
+                              'MZP0wby4bKBcYnac8KiCIlvkEl0ETjkOGUq8OyWRmn7lj'
+                              'j5SESEUdBP0JnuTFKddWTU/wD6wydeJaUhBTqOlHn0kX1'
+                              'GyqoNTE1UEhcM5ZRWgfUZfTjVyDF2kGj3vJLCJtJ8LoGc'
+                              'j7YaN4uPg1rBle+izwE/tLonRrds+cev8p6krSSrxWOwB'
+                              'bHkXa6OciiJDvkRzJXzf',
+            }
+        }
+        res_dict = self.controller.create(self.req, body=body)
+        self.assertEqual('fake', res_dict['keypair']['name'])
+        self.assertNotIn('private_key', res_dict['keypair'])
+
+    def test_keypair_create_refuses_special_chars_with_old_version(self):
+        body = {
+            'keypair': {
+                'name': keypair_name_2_92_compatible,
+            }
+        }
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          self.old_req, body=body)
+
+    def test_keypair_import_with_special_characters(self):
+        body = {
+            'keypair': {
+                'name': keypair_name_2_92_compatible,
+                'public_key': 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDBYIznA'
+                              'x9D7118Q1VKGpXy2HDiKyUTM8XcUuhQpo0srqb9rboUp4'
+                              'a9NmCwpWpeElDLuva707GOUnfaBAvHBwsRXyxHJjRaI6Y'
+                              'Qj2oLJwqvaSaWUbyT1vtryRqy6J3TecN0WINY71f4uymi'
+                              'MZP0wby4bKBcYnac8KiCIlvkEl0ETjkOGUq8OyWRmn7lj'
+                              'j5SESEUdBP0JnuTFKddWTU/wD6wydeJaUhBTqOlHn0kX1'
+                              'GyqoNTE1UEhcM5ZRWgfUZfTjVyDF2kGj3vJLCJtJ8LoGc'
+                              'j7YaN4uPg1rBle+izwE/tLonRrds+cev8p6krSSrxWOwB'
+                              'bHkXa6OciiJDvkRzJXzf',
+            }
+        }
+
+        res_dict = self.controller.create(self.req, body=body)
+        self.assertEqual(keypair_name_2_92_compatible,
+                         res_dict['keypair']['name'])
