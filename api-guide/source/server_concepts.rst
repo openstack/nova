@@ -518,12 +518,12 @@ Server actions
 
 -  **Suspend**, **Resume**
 
-   Administrative users might want to suspend a server if it is
-   infrequently used or to perform system maintenance. When you suspend
-   a server, its VM state is stored on disk, all memory is written to
-   disk, and the virtual machine is stopped. Suspending a server is
-   similar to placing a device in hibernation; memory and vCPUs become
-   available to create other servers.
+   Users might want to suspend a server if it is infrequently used or
+   to perform system maintenance. When you suspend a server, its VM state
+   is stored on disk, all memory is written to disk, and the virtual machine
+   is stopped. Suspending a server is similar to placing a device in
+   hibernation and its occupied resource will not be freed but rather kept
+   for when the server is resumed.
 
    Resume will resume a suspended server to an active state.
 
