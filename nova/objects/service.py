@@ -189,9 +189,9 @@ SERVICE_VERSION_HISTORY = (
 
 # This is used to raise an error at service startup if older than N-1 computes
 # are detected. Update this at the beginning of every release cycle
-OLDEST_SUPPORTED_SERVICE_VERSION = 'Ussuri'
+OLDEST_SUPPORTED_SERVICE_VERSION = 'Train'
 SERVICE_VERSION_ALIASES = {
-    'Ussuri': 41
+    'Train': 38
 }
 
 
