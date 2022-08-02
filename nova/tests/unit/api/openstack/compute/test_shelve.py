@@ -378,10 +378,9 @@ class UnshelveServerControllerTestV291(test.NoDBTestCase):
         self.req.body = jsonutils.dump_as_bytes(body)
         self.req.api_version_request = (
                 api_version_request.APIVersionRequest('2.91'))
-        with mock.patch.object(
-                self.controller.compute_api, 'unshelve') as mock_unshelve:
-            self.controller._unshelve(self.req, fakes.FAKE_UUID, body=body)
-        mock_unshelve.assert_called_once_with(
+
+        self.controller._unshelve(self.req, fakes.FAKE_UUID, body=body)
+        self.controller.compute_api.unshelve.assert_called_once_with(
             self.req.environ['nova.context'],
             instance,
             new_az='us-east',
