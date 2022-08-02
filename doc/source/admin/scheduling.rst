@@ -108,8 +108,8 @@ The Filter Scheduler
 
 .. versionchanged:: 23.0.0 (Wallaby)
 
-    Support for custom filters was removed. Only the filter scheduler is now
-    supported by nova.
+    Support for custom scheduler drivers was removed. Only the filter scheduler
+    is now supported by nova.
 
 Nova's scheduler, known as the *filter scheduler*, supports filtering and
 weighting to make informed decisions on where a new instance should be created.
