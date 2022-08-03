@@ -2498,7 +2498,7 @@ class API:
                 if request.port_id:
                     port = self._show_port(context, request.port_id,
                                            neutron_client=neutron)
-                    if port.get('device_id', None):
+                    if port.get('device_id'):
                         raise exception.PortInUse(port_id=request.port_id)
 
                     deferred_ip = port.get('ip_allocation') == 'deferred'
