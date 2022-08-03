@@ -8,7 +8,6 @@ types-paramiko>=0.1.3 # Apache-2.0
 coverage!=4.4,>=4.0 # Apache-2.0
 ddt>=1.2.1 # MIT
 fixtures>=3.0.0 # Apache-2.0/BSD
-mock>=3.0.0 # BSD
 psycopg2-binary>=2.8 # LGPL/ZPL
 PyMySQL>=0.8.0 # MIT License
 python-barbicanclient>=4.5.2 # Apache-2.0

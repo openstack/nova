@@ -183,16 +183,6 @@ They are only supported by the HyperV virt driver.
 
 .. extra-specs:: os
 
-``powervm``
-~~~~~~~~~~~
-
-The following extra specs are used to configure various attributes of
-instances when using the PowerVM virt driver.
-
-They are only supported by the PowerVM virt driver.
-
-.. extra-specs:: powervm
-
 ``vmware``
 ~~~~~~~~~~
 

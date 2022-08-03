@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The powervm virt driver has been removed. The driver was not tested by
+    the OpenStack project nor did it have clear maintainers and thus its
+    quality could not be ensured.

@@ -39,9 +39,8 @@ compute host and image.
 
 .. rubric:: Compute host requirements
 
-The following virt drivers support the config drive: libvirt,
-Hyper-V, VMware, and (since 17.0.0 Queens) PowerVM. The Bare Metal service also
-supports the config drive.
+The following virt drivers support the config drive: libvirt, Hyper-V and
+VMware. The Bare Metal service also supports the config drive.
 
 - To use config drives with libvirt or VMware, you must first
   install the :command:`genisoimage` package on each compute host. Use the
@@ -56,8 +55,8 @@ supports the config drive.
   :oslo.config:option:`hyperv.qemu_img_cmd` config option to the full path to an
   :command:`qemu-img` command installation.
 
-- To use config drives with PowerVM or the Bare Metal service, you do not need
-  to prepare anything.
+- To use config drives with the Bare Metal service, you do not need to prepare
+  anything.
 
 .. rubric:: Image requirements
 

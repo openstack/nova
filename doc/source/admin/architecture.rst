@@ -84,8 +84,6 @@ availability zones. Nova supports the following hypervisors:
 
 - `Linux Containers (LXC) <https://linuxcontainers.org>`__
 
-- `PowerVM <https://www.ibm.com/us-en/marketplace/ibm-powervm>`__
-
 - `Quick Emulator (QEMU) <https://wiki.qemu.org/Manual>`__
 
 - `Virtuozzo <https://www.virtuozzo.com/products/vz7.html>`__

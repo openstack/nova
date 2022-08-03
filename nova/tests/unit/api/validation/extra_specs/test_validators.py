@@ -28,7 +28,7 @@ class TestValidators(test.NoDBTestCase):
         """
         namespaces = {
             'accel', 'aggregate_instance_extra_specs', 'capabilities', 'hw',
-            'hw_rng', 'hw_video', 'os', 'pci_passthrough', 'powervm', 'quota',
+            'hw_rng', 'hw_video', 'os', 'pci_passthrough', 'quota',
             'resources(?P<group>([a-zA-Z0-9_-]{1,64})?)',
             'trait(?P<group>([a-zA-Z0-9_-]{1,64})?)', 'vmware',
         }
@@ -101,9 +101,7 @@ class TestValidators(test.NoDBTestCase):
         valid_specs = (
             ('hw:numa_nodes', '1'),
             ('os:monitors', '1'),
-            ('powervm:shared_weight', '1'),
             ('os:monitors', '8'),
-            ('powervm:shared_weight', '255'),
         )
         for key, value in valid_specs:
             validators.validate(key, value)
@@ -113,9 +111,7 @@ class TestValidators(test.NoDBTestCase):
             ('hw:serial_port_count', '!'),  # NaN
             ('hw:numa_nodes', '0'),  # has min
             ('os:monitors', '0'),  # has min
-            ('powervm:shared_weight', '-1'),  # has min
             ('os:monitors', '9'),  # has max
-            ('powervm:shared_weight', '256'),  # has max
         )
         for key, value in invalid_specs:
             with testtools.ExpectedException(exception.ValidationError):
