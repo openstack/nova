@@ -42,8 +42,14 @@ class SafeConnectedTestCase(test.NoDBTestCase):
         super(SafeConnectedTestCase, self).setUp()
         self.context = context.get_admin_context()
 
-        with mock.patch('keystoneauth1.loading.load_auth_from_conf_options'):
-            self.client = report.SchedulerReportClient()
+        # need to mock this globally as SchedulerReportClient._create_client
+        # is called again when EndpointNotFound is raised
+        self.useFixture(
+            fixtures.MonkeyPatch(
+                'keystoneauth1.loading.load_auth_from_conf_options',
+                mock.MagicMock()))
+
+        self.client = report.SchedulerReportClient()
 
     @mock.patch('keystoneauth1.session.Session.request')
     def test_missing_endpoint(self, req):
