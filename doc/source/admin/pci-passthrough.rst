@@ -173,6 +173,13 @@ have special meaning:
   this tag can be used for remote-managed devices in conjunction with the
   ``remote_managed`` tag.
 
+.. note::
+
+   The use of ``"physical_network": null`` is only supported in single segment
+   networks. This is due to Nova not supporting multisegment networks for
+   SR-IOV ports. See
+   `bug 1983570 <https://bugs.launchpad.net/nova/+bug/1983570>`_ for details.
+
 ``remote_managed``
   Used to specify whether a PCI device is managed remotely or not. By default,
   devices are implicitly tagged as ``"remote_managed": "false"`` but and they
