@@ -29,7 +29,7 @@ from nova.db.main import api as main_db_api
 from nova import exception
 
 MIGRATE_INIT_VERSION = {
-    'main': 393,
+    'main': 389,
     'api': 66,
 }
 ALEMBIC_INIT_VERSION = {

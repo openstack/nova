@@ -236,7 +236,6 @@ def upgrade(migrate_engine):
         Column('tag', String(255)),
         Column('attachment_id', String(36), nullable=True),
         Column('uuid', String(36), nullable=True),
-        Column('volume_type', String(255), nullable=True),
         UniqueConstraint('uuid', name='uniq_block_device_mapping0uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
