@@ -187,6 +187,9 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
 
         do_test()
 
+    @mock.patch(
+        'oslo_utils.timeutils.StopWatch.elapsed',
+        new=mock.Mock(return_value=1.23))
     def test_wait_for_instance_event_timeout(self):
         instance = mock.Mock()
         instance.vm_state = mock.sentinel.vm_state
@@ -212,11 +215,14 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
                 'vm_state': mock.sentinel.vm_state,
                 'task_state': mock.sentinel.task_state,
                 'event_states':
-                    'foo-bar: timed out after 0.00 seconds',
+                    'foo-bar: timed out after 1.23 seconds',
             },
             instance=instance
         )
 
+    @mock.patch(
+        'oslo_utils.timeutils.StopWatch.elapsed',
+        new=mock.Mock(return_value=1.23))
     def test_wait_for_instance_event_one_received_one_timed_out(self):
         instance = mock.Mock()
         instance.vm_state = mock.sentinel.vm_state
@@ -252,12 +258,15 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
                 'vm_state': mock.sentinel.vm_state,
                 'task_state': mock.sentinel.task_state,
                 'event_states':
-                    'foo-bar: received after waiting 0.00 seconds, '
-                    'missing-event: timed out after 0.00 seconds',
+                    'foo-bar: received after waiting 1.23 seconds, '
+                    'missing-event: timed out after 1.23 seconds',
             },
             instance=instance
         )
 
+    @mock.patch(
+        'oslo_utils.timeutils.StopWatch.elapsed',
+        new=mock.Mock(return_value=1.23))
     def test_wait_for_instance_event_multiple_events(self):
         instance = mock.Mock()
         instance.vm_state = mock.sentinel.vm_state
@@ -282,7 +291,6 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
             m.tag = tag
             m.event_name = '%s-%s' % (name, tag)
             m.wait.side_effect = fake_event_waiter
-            print(name, tag)
             if name == 'received-but-not-waited':
                 m.ready.return_value = True
             if name == 'missing-but-not-waited':
@@ -323,9 +331,9 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
                 'vm_state': mock.sentinel.vm_state,
                 'task_state': mock.sentinel.task_state,
                 'event_states':
-                    'received-event: received after waiting 0.00 seconds, '
+                    'received-event: received after waiting 1.23 seconds, '
                     'early-event: received early, '
-                    'missing-event: timed out after 0.00 seconds, '
+                    'missing-event: timed out after 1.23 seconds, '
                     'received-but-not-waited-event: received but not '
                     'processed, '
                     'missing-but-not-waited-event: expected but not received'
