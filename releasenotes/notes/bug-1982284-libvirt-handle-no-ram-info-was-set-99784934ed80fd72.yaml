@@ -1,0 +1,11 @@
+---
+other:
+  - |
+    A workaround has been added to the libvirt driver to catch and pass
+    migrations that were previously failing with the error:
+
+    ``libvirt.libvirtError: internal error: migration was active, but no RAM info was set``
+
+    See `bug 1982284`_ for more details.
+
+    .. _bug 1982284: https://bugs.launchpad.net/nova/+bug/1982284
