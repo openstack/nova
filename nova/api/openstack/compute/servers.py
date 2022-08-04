@@ -1353,6 +1353,8 @@ class ServersController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                         'createImage', id)
+        except exception.InstanceQuiesceFailed as err:
+            raise exc.HTTPConflict(explanation=err.format_message())
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=err.format_message())
         except exception.OverQuota as e:
