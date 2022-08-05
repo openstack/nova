@@ -234,6 +234,17 @@ information about the format of the files and subdirectories within these
 directories.
 
 
+Setting in image
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: console
+
+    $ openstack image set IMG-UUID --property img_config_drive=mandatory
+
+The img_config_drive image metadata property can be used to force enable the config drive.
+Setting img_config_drive specifies whether the image needs a config drive.
+
+
 Nova metadata
 -------------
 
