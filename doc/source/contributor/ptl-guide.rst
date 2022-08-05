@@ -257,10 +257,6 @@ Immediately after RC
 
   * https://wiki.openstack.org/wiki/Nova/ReleaseChecklist
 
-  * Add database migration placeholders
-
-    * Example: https://review.opendev.org/650964
-
   * Drop old RPC compat code (if there was a RPC major version bump)
 
     * Example: https://review.opendev.org/543580
