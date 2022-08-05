@@ -30,7 +30,7 @@ from nova import exception
 
 MIGRATE_INIT_VERSION = {
     'main': 389,
-    'api': 66,
+    'api': 61,
 }
 ALEMBIC_INIT_VERSION = {
     'main': '8f2f1571d55b',
