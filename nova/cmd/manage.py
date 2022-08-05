@@ -752,15 +752,7 @@ class CellV2Commands(object):
             # worry about parsing and splitting a URL which could have special
             # characters in the password, which makes parsing a nightmare.
             url = sqla_url.make_url(connection)
-
-            # TODO(gibi): remove hasattr() conditional in favor of "url.set()"
-            # when SQLAlchemy 1.4 is the minimum version in requirements
-            if hasattr(url, "set"):
-                url = url.set(database=url.database + '_cell0')
-            else:
-                # TODO(zzzeek): remove when SQLAlchemy 1.4
-                # is the minimum version in requirements
-                url.database = url.database + '_cell0'
+            url = url.set(database=url.database + '_cell0')
 
             return urlparse.unquote(str(url))
 
