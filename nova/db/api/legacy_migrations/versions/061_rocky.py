@@ -86,14 +86,10 @@ def upgrade(migrate_engine):
         Column(
             'queued_for_delete', Boolean(create_constraint=False),
             default=False),
-        Column('user_id', String(length=255), nullable=True),
         UniqueConstraint(
             'instance_uuid', name='uniq_instance_mappings0instance_uuid'),
         Index('instance_uuid_idx', 'instance_uuid'),
         Index('project_id_idx', 'project_id'),
-        Index(
-            'instance_mappings_user_id_project_id_idx', 'user_id',
-            'project_id'),
         ForeignKeyConstraint(
             columns=['cell_id'], refcolumns=[cell_mappings.c.id]),
         mysql_engine='InnoDB',
