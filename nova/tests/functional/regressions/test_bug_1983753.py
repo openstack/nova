@@ -16,7 +16,6 @@ import fixtures
 from oslo_serialization import jsonutils
 
 from nova.tests.fixtures import libvirt as fakelibvirt
-from nova.tests.functional.api import client
 from nova.tests.functional.libvirt import test_pci_sriov_servers
 
 
@@ -119,19 +118,10 @@ class TestPciResize(test_pci_sriov_servers._PCIServersTestBase):
             "compute2", total=num_pci_on_dest, free=num_pci_on_dest - 1)
 
     def test_resize_from_two_devs_to_one_dev_dest_has_two_devs(self):
-        # this works
         self._test_resize_from_two_devs_to_one_dev(num_pci_on_dest=2)
 
     def test_resize_from_two_devs_to_one_dev_dest_has_one_dev(self):
-        # This is bug 1983753 as nova uses the old InstancePciRequest during
-        # the scheduling and therefore tries to find a compute with two PCI
-        # devs even though the flavor only requests one.
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self._test_resize_from_two_devs_to_one_dev,
-            num_pci_on_dest=1
-        )
-        self.assertIn('nova.exception.NoValidHost', str(ex))
+        self._test_resize_from_two_devs_to_one_dev(num_pci_on_dest=1)
 
     def test_resize_from_vf_to_pf(self):
         # The fake libvirt will emulate on the host:
@@ -181,13 +171,7 @@ class TestPciResize(test_pci_sriov_servers._PCIServersTestBase):
         # dev. This should fit to compute2 having exactly one PF dev.
         extra_spec = {"pci_passthrough:alias": "a-pf:1"}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-        # This is bug 1983753 as nova uses the old InstancePciRequest during
-        # the scheduling and therefore tries to find a compute with a VF dev
-        # even though the flavor only requests a PF dev.
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self._resize_server,
-            server,
-            flavor_id=flavor_id,
-        )
-        self.assertIn('nova.exception.NoValidHost', str(ex))
+        self._resize_server(server, flavor_id=flavor_id)
+        self._confirm_resize(server)
+        self.assertPCIDeviceCounts("compute1", total=1, free=1)
+        self.assertPCIDeviceCounts("compute2", total=1, free=0)
