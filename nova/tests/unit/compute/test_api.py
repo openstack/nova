@@ -967,6 +967,31 @@ class _ComputeAPIUnitTestMixIn(object):
 
         return snapshot_id
 
+    def _test_delete(self, delete_type, **attrs):
+        delete_time = datetime.datetime(
+            1955, 11, 5, 9, 30, tzinfo=iso8601.UTC)
+        timeutils.set_time_override(delete_time)
+        self.addCleanup(timeutils.clear_time_override)
+
+        with test.nested(
+            mock.patch.object(
+                self.compute_api.compute_rpcapi, 'confirm_resize'),
+            mock.patch.object(
+                self.compute_api.compute_rpcapi, 'terminate_instance'),
+            mock.patch.object(
+                self.compute_api.compute_rpcapi, 'soft_delete_instance'),
+        ) as (
+            mock_confirm, mock_terminate, mock_soft_delete
+        ):
+            self._do_delete(
+                delete_type,
+                mock_confirm,
+                mock_terminate,
+                mock_soft_delete,
+                delete_time,
+                **attrs
+            )
+
     @mock.patch.object(compute_utils,
                        'notify_about_instance_action')
     @mock.patch.object(objects.Migration, 'get_by_instance_and_status')
@@ -986,12 +1011,13 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(objects.BlockDeviceMappingList,
                        'get_by_instance_uuid', return_value=[])
     @mock.patch.object(objects.Instance, 'save')
-    def _test_delete(self, delete_type, mock_save, mock_bdm_get, mock_elevated,
-                     mock_get_cn, mock_up, mock_record, mock_inst_update,
-                     mock_deallocate, mock_inst_meta, mock_inst_destroy,
-                     mock_notify_legacy, mock_get_inst,
-                     mock_save_im, mock_image_delete, mock_mig_get,
-                     mock_notify, **attrs):
+    def _do_delete(
+        self, delete_type, mock_confirm, mock_terminate, mock_soft_delete,
+        delete_time, mock_save, mock_bdm_get, mock_elevated, mock_get_cn,
+        mock_up, mock_record, mock_inst_update, mock_deallocate,
+        mock_inst_meta, mock_inst_destroy, mock_notify_legacy, mock_get_inst,
+        mock_save_im, mock_image_delete, mock_mig_get, mock_notify, **attrs
+    ):
         expected_save_calls = [mock.call()]
         expected_record_calls = []
         expected_elevated_calls = []
@@ -1001,17 +1027,11 @@ class _ComputeAPIUnitTestMixIn(object):
         deltas = {'instances': -1,
                   'cores': -inst.flavor.vcpus,
                   'ram': -inst.flavor.memory_mb}
-        delete_time = datetime.datetime(1955, 11, 5, 9, 30,
-                                        tzinfo=iso8601.UTC)
-        self.useFixture(utils_fixture.TimeFixture(delete_time))
         task_state = (delete_type == 'soft_delete' and
                       task_states.SOFT_DELETING or task_states.DELETING)
         updates = {'progress': 0, 'task_state': task_state}
         if delete_type == 'soft_delete':
             updates['deleted_at'] = delete_time
-        rpcapi = self.compute_api.compute_rpcapi
-        mock_confirm = self.useFixture(
-            fixtures.MockPatchObject(rpcapi, 'confirm_resize')).mock
 
         def _reset_task_state(context, instance, migration, src_host,
                               cast=False):
@@ -1025,11 +1045,6 @@ class _ComputeAPIUnitTestMixIn(object):
         if is_shelved:
             snapshot_id = self._set_delete_shelved_part(inst,
                                                         mock_image_delete)
-
-        mock_terminate = self.useFixture(
-            fixtures.MockPatchObject(rpcapi, 'terminate_instance')).mock
-        mock_soft_delete = self.useFixture(
-            fixtures.MockPatchObject(rpcapi, 'soft_delete_instance')).mock
 
         if inst.task_state == task_states.RESIZE_FINISH:
             self._test_delete_resizing_part(inst, deltas)
@@ -2635,9 +2650,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertIsNone(instance.task_state)
 
         rpcapi = self.compute_api.compute_rpcapi
-
-        mock_pause = self.useFixture(
-            fixtures.MockPatchObject(rpcapi, 'pause_instance')).mock
 
         with mock.patch.object(rpcapi, 'pause_instance') as mock_pause:
             self.compute_api.pause(self.context, instance)

@@ -882,7 +882,8 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
                      local_limit.KEY_PAIRS: 100,
                      local_limit.SERVER_GROUPS: 12,
                      local_limit.SERVER_GROUP_MEMBERS: 10}
-        self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
+        self.limit_fixture = self.useFixture(
+            limit_fixture.LimitFixture(reglimits, {}))
 
     @mock.patch.object(placement_limit, "get_legacy_project_limits")
     def test_show_v21(self, mock_proj):
@@ -1098,7 +1099,7 @@ class UnifiedLimitsQuotaSetsTest(NoopQuotaSetsTest):
                      local_limit.KEY_PAIRS: 1,
                      local_limit.SERVER_GROUPS: 3,
                      local_limit.SERVER_GROUP_MEMBERS: 2}
-        self.useFixture(limit_fixture.LimitFixture(reglimits, {}))
+        self.limit_fixture.reglimits = reglimits
 
         req = fakes.HTTPRequest.blank("")
         response = self.controller.defaults(req, uuids.project_id)

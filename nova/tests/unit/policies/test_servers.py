@@ -1229,10 +1229,9 @@ class ServersPolicyTest(base.BasePolicyTest):
     @mock.patch('nova.compute.api.API._allow_resize_to_same_host')
     @mock.patch('nova.objects.RequestSpec.get_by_instance_uuid')
     @mock.patch('nova.objects.Instance.save')
-    @mock.patch('nova.api.openstack.common.get_instance')
     @mock.patch('nova.conductor.ComputeTaskAPI.resize_instance')
     def test_cross_cell_resize_server_policy(
-        self, mock_resize, mock_get, mock_save, mock_rs, mock_allow, m_net
+        self, mock_resize, mock_save, mock_rs, mock_allow, m_net
     ):
 
         # 'migrate' policy is checked before 'resize:cross_cell' so
@@ -1262,7 +1261,7 @@ class ServersPolicyTest(base.BasePolicyTest):
             )
             return inst
 
-        mock_get.side_effect = fake_get
+        self.mock_get.side_effect = fake_get
 
         def fake_validate(context, instance,
             host_name, allow_cross_cell_resize):

@@ -209,7 +209,8 @@ class ServerGroupQuotasUnifiedLimitsTestV21(ServerGroupQuotasTestV21):
         self.flags(driver='nova.quota.UnifiedLimitsDriver', group='quota')
         self.req = fakes.HTTPRequest.blank('')
         self.controller = sg_v21.ServerGroupController()
-        self.useFixture(limit_fixture.LimitFixture({'server_groups': 10}, {}))
+        self.limit_fixture = self.useFixture(
+            limit_fixture.LimitFixture({'server_groups': 10}, {}))
 
     @mock.patch('nova.limit.local.enforce_db_limit')
     def test_create_server_group_during_recheck(self, mock_enforce):
@@ -236,7 +237,7 @@ class ServerGroupQuotasUnifiedLimitsTestV21(ServerGroupQuotasTestV21):
                                              delta=1)
 
     def test_create_group_fails_with_zero_quota(self):
-        self.useFixture(limit_fixture.LimitFixture({'server_groups': 0}, {}))
+        self.limit_fixture.reglimits = {'server_groups': 0}
         sgroup = {'name': 'test', 'policies': ['anti-affinity']}
         exc = self.assertRaises(webob.exc.HTTPForbidden,
                                 self.controller.create,
@@ -245,7 +246,7 @@ class ServerGroupQuotasUnifiedLimitsTestV21(ServerGroupQuotasTestV21):
         self.assertIn(msg, str(exc))
 
     def test_create_only_one_group_when_limit_is_one(self):
-        self.useFixture(limit_fixture.LimitFixture({'server_groups': 1}, {}))
+        self.limit_fixture.reglimits = {'server_groups': 1}
         policies = ['anti-affinity']
         sgroup = {'name': 'test', 'policies': policies}
         res_dict = self.controller.create(

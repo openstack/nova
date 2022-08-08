@@ -51,12 +51,12 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
             return_value={'total': 128, 'used': 44, 'free': 84}))
-        self.useFixture(fixtures.MockPatch(
+        self.mock_is_valid_hostname = self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
-            return_value=True))
-        self.useFixture(fixtures.MockPatch(
+            return_value=True)).mock
+        self.mock_file_open = self.useFixture(fixtures.MockPatch(
             'nova.virt.libvirt.driver.libvirt_utils.file_open',
-            side_effect=lambda *a, **k: io.BytesIO(b'')))
+            side_effect=lambda *a, **k: io.BytesIO(b''))).mock
         self.useFixture(fixtures.MockPatch(
             'nova.privsep.utils.supports_direct_io',
             return_value=True))

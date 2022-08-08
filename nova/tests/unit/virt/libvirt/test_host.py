@@ -71,11 +71,10 @@ class HostTestCase(test.NoDBTestCase):
         self.useFixture(nova_fixtures.LibvirtFixture())
         self.host = host.Host("qemu:///system")
 
-    @mock.patch("nova.virt.libvirt.host.Host._init_events")
-    def test_repeat_initialization(self, mock_init_events):
+    def test_repeat_initialization(self):
         for i in range(3):
             self.host.initialize()
-        mock_init_events.assert_called_once_with()
+        self.host._init_events.assert_called_once_with()
 
     @mock.patch.object(fakelibvirt.virConnect, "registerCloseCallback")
     def test_close_callback(self, mock_close):
@@ -1113,8 +1112,9 @@ Active:          8381604 kB
         expect_vf = ["rx", "tx", "sg", "tso", "gso", "gro", "rxvlan", "txvlan"]
         self.assertEqual(expect_vf, actualvf)
 
-    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address')
-    def test_get_pcidev_info_non_nic(self, mock_get_ifname):
+    def test_get_pcidev_info_non_nic(self):
+        pci_utils.get_mac_by_pci_address.side_effect = (
+            exception.PciDeviceNotFoundById('0000:04:00.3'))
         dev_name = "pci_0000_04_11_7"
         pci_dev = fakelibvirt.NodeDevice(
             self.host._get_connection(),
@@ -1128,11 +1128,10 @@ Active:          8381604 kB
             'parent_addr': '0000:04:00.3',
         }
         self.assertEqual(expect_vf, actual_vf)
-        mock_get_ifname.assert_not_called()
+        pci_utils.get_ifname_by_pci_address.assert_not_called()
 
-    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
-                return_value='ens1')
-    def test_get_pcidev_info(self, mock_get_ifname):
+    def test_get_pcidev_info(self):
+        pci_utils.get_ifname_by_pci_address.return_value = 'ens1'
         devs = {
             "pci_0000_04_00_3", "pci_0000_04_10_7", "pci_0000_04_11_7",
             "pci_0000_04_00_1", "pci_0000_03_00_0", "pci_0000_03_00_1",

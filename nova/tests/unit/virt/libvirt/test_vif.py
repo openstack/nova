@@ -517,18 +517,17 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtVifTestCase, self).setUp()
 
-        self.useFixture(nova_fixtures.LibvirtFixture(stub_os_vif=False))
+        self.libvirt = self.useFixture(
+            nova_fixtures.LibvirtFixture(stub_os_vif=False))
 
         # os_vif.initialize is typically done in nova-compute startup
         os_vif.initialize()
         self.setup_os_vif_objects()
 
         # multiqueue configuration is host OS specific
-        _a = mock.patch('os.uname')
-        self.mock_uname = _a.start()
+        self.mock_uname = self.libvirt.mock_uname
         self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '5.10.13-200-generic', '', 'x86_64')
-        self.addCleanup(_a.stop)
 
     def _get_node(self, xml):
         doc = etree.fromstring(xml)
@@ -983,14 +982,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   self.vif_bridge,
                                   self.vif_bridge['network']['bridge'])
 
-    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address')
-    @mock.patch.object(pci_utils, 'get_vf_num_by_pci_address', return_value=1)
-    @mock.patch('nova.privsep.linux_net.set_device_macaddr')
-    @mock.patch('nova.privsep.linux_net.set_device_macaddr_and_vlan')
-    def _test_hw_veb_op(self, op, vlan, mock_set_macaddr_and_vlan,
-                        mock_set_macaddr, mock_get_vf_num,
-                        mock_get_ifname):
-        mock_get_ifname.side_effect = ['eth1', 'eth13']
+    def _test_hw_veb_op(self, op, vlan):
+        self.libvirt.mock_get_vf_num_by_pci_address.return_value = 1
+        pci_utils.get_ifname_by_pci_address.side_effect = ['eth1', 'eth13']
         vlan_id = int(vlan)
         port_state = 'up' if vlan_id > 0 else 'down'
         mac = ('00:00:00:00:00:00' if op.__name__ == 'unplug'
@@ -1005,10 +999,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             'set_macaddr': [mock.call('eth13', mac, port_state=port_state)]
         }
         op(self.instance, self.vif_hw_veb_macvtap)
-        mock_get_ifname.assert_has_calls(calls['get_ifname'])
-        mock_get_vf_num.assert_has_calls(calls['get_vf_num'])
-        mock_set_macaddr.assert_has_calls(calls['set_macaddr'])
-        mock_set_macaddr_and_vlan.assert_called_once_with(
+        pci_utils.get_ifname_by_pci_address.assert_has_calls(
+            calls['get_ifname'])
+        self.libvirt.mock_get_vf_num_by_pci_address.assert_has_calls(
+            calls['get_vf_num'])
+        self.libvirt.mock_set_device_macaddr.assert_has_calls(
+            calls['set_macaddr'])
+        self.libvirt.mock_set_device_macaddr_and_vlan.assert_called_once_with(
             'eth1', 1, mock.ANY, vlan_id)
 
     def test_plug_hw_veb(self):
@@ -1218,9 +1215,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(node))
         self._assertPciEqual(node, self.vif_hostdev_physical)
 
-    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
-                       return_value='eth1')
-    def test_hw_veb_driver_macvtap(self, mock_get_ifname):
+    def test_hw_veb_driver_macvtap(self):
+        pci_utils.get_ifname_by_pci_address.return_value = 'eth1'
         d = vif.LibvirtGenericVIFDriver()
         xml = self._get_instance_xml(d, self.vif_hw_veb_macvtap)
         node = self._get_node(xml)

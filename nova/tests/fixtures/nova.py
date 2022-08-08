@@ -1032,7 +1032,13 @@ class OSAPIFixture(fixtures.Fixture):
         self.api = client.TestOpenStackClient(
             'fake', base_url, project_id=self.project_id,
             roles=['reader', 'member'])
+        self.alternative_api = client.TestOpenStackClient(
+            'fake', base_url, project_id=self.project_id,
+            roles=['reader', 'member'])
         self.admin_api = client.TestOpenStackClient(
+            'admin', base_url, project_id=self.project_id,
+            roles=['reader', 'member', 'admin'])
+        self.alternative_admin_api = client.TestOpenStackClient(
             'admin', base_url, project_id=self.project_id,
             roles=['reader', 'member', 'admin'])
         self.reader_api = client.TestOpenStackClient(
@@ -1130,9 +1136,9 @@ class PoisonFunctions(fixtures.Fixture):
         # Don't poison the function if it's already mocked
         import nova.virt.libvirt.host
         if not isinstance(nova.virt.libvirt.host.Host._init_events, mock.Mock):
-            self.useFixture(fixtures.MockPatch(
+            self.useFixture(fixtures.MonkeyPatch(
                 'nova.virt.libvirt.host.Host._init_events',
-                side_effect=evloop))
+                evloop))
 
 
 class IndirectionAPIFixture(fixtures.Fixture):

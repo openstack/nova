@@ -935,11 +935,11 @@ class TestAggregateMultiTenancyIsolationFilter(
 
         # Start nova services.
         self.start_service('conductor')
-        self.admin_api = self.useFixture(
-            nova_fixtures.OSAPIFixture(api_version='v2.1')).admin_api
-        self.api = self.useFixture(
-            nova_fixtures.OSAPIFixture(api_version='v2.1',
-                                       project_id=uuids.non_admin)).api
+        api_fixture = self.useFixture(
+            nova_fixtures.OSAPIFixture(api_version='v2.1'))
+        self.admin_api = api_fixture.admin_api
+        self.api = api_fixture.api
+        self.api.project_id = uuids.non_admin
         # Add the AggregateMultiTenancyIsolation to the list of enabled
         # filters since it is not enabled by default.
         enabled_filters = CONF.filter_scheduler.enabled_filters
@@ -1037,15 +1037,15 @@ class AggregateMultiTenancyIsolationColdMigrateTest(
         self.glance = self.useFixture(nova_fixtures.GlanceFixture(self))
         self.useFixture(nova_fixtures.NeutronFixture(self))
         self.useFixture(func_fixtures.PlacementFixture())
-        # Intentionally keep these separate since we want to create the
-        # server with the non-admin user in a different project.
-        admin_api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+        # Intentionally define different project id for the two client since
+        # we want to create the server with the non-admin user in a different
+        # project.
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1', project_id=uuids.admin_project))
-        self.admin_api = admin_api_fixture.admin_api
+        self.admin_api = api_fixture.admin_api
         self.admin_api.microversion = 'latest'
-        user_api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-            api_version='v2.1', project_id=uuids.user_project))
-        self.api = user_api_fixture.api
+        self.api = api_fixture.api
+        self.api.project_id = uuids.user_project
         self.api.microversion = 'latest'
 
         self.start_service('conductor')
