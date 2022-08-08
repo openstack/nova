@@ -80,7 +80,15 @@ class _PCIServersTestBase(base.ServersTestBase):
                 return rp
         self.fail(f'RP {name} is not found in Placement {rps}')
 
-    def assert_placement_pci_view(self, hostname, inventories, traits):
+    def assert_placement_pci_view(
+        self, hostname, inventories, traits, usages=None, allocations=None
+    ):
+        if not usages:
+            usages = {}
+
+        if not allocations:
+            allocations = {}
+
         compute_rp_uuid = self.compute_rp_uuids[hostname]
         rps = self._get_all_rps_in_a_tree(compute_rp_uuid)
 
@@ -119,6 +127,47 @@ class _PCIServersTestBase(base.ServersTestBase):
                 set(rp_traits),
                 f"Traits on RP {real_rp_name} does not match with expectation"
             )
+
+        for rp_name, usage in usages.items():
+            real_rp_name = f'{hostname}_{rp_name}'
+            rp = self._get_rp_by_name(real_rp_name, rps)
+            rp_usage = self._get_provider_usages(rp['uuid'])
+            self.assertEqual(
+                usage,
+                rp_usage,
+                f"Usage on RP {real_rp_name} does not match with expectation"
+            )
+
+        for consumer, expected_allocations in allocations.items():
+            actual_allocations = self._get_allocations_by_server_uuid(consumer)
+            self.assertEqual(
+                len(expected_allocations),
+                # actual_allocations also contains allocations against the
+                # root provider for VCPU, MEMORY_MB, and DISK_GB so subtract
+                # one
+                len(actual_allocations) - 1,
+                f"The consumer {consumer} allocates from different number of "
+                f"RPs than expected. Expected: {expected_allocations}, "
+                f"Actual: {actual_allocations}"
+            )
+            for rp_name, expected_rp_allocs in expected_allocations.items():
+                real_rp_name = f'{hostname}_{rp_name}'
+                rp = self._get_rp_by_name(real_rp_name, rps)
+                self.assertIn(
+                    rp['uuid'],
+                    actual_allocations,
+                    f"The consumer {consumer} expected to allocate from "
+                    f"{rp['uuid']}. Expected: {expected_allocations}, "
+                    f"Actual: {actual_allocations}"
+                )
+                actual_rp_allocs = actual_allocations[rp['uuid']]['resources']
+                self.assertEqual(
+                    expected_rp_allocs,
+                    actual_rp_allocs,
+                    f"The consumer {consumer} expected to have allocation "
+                    f"{expected_rp_allocs} on {rp_name} but it has "
+                    f"{actual_rp_allocs} instead."
+                )
 
 
 class _PCIServersWithMigrationTestBase(_PCIServersTestBase):
