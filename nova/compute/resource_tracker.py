@@ -1295,14 +1295,22 @@ class ResourceTracker(object):
         # This merges in changes from the provider config files loaded in init
         self._merge_provider_configs(self.provider_configs, prov_tree)
 
-        # Flush any changes. If we either processed ReshapeNeeded above or
-        # update_provider_tree_for_pci did reshape, then we need to pass allocs
-        # to update_from_provider_tree to hit placement's POST /reshaper route.
-        self.reportclient.update_from_provider_tree(
-            context,
-            prov_tree,
-            allocations=allocs if driver_reshaped or pci_reshaped else None
-        )
+        try:
+            # Flush any changes. If we either processed ReshapeNeeded above or
+            # update_provider_tree_for_pci did reshape, then we need to pass
+            # allocs to update_from_provider_tree to hit placement's POST
+            # /reshaper route.
+            self.reportclient.update_from_provider_tree(
+                context,
+                prov_tree,
+                allocations=allocs if driver_reshaped or pci_reshaped else None
+            )
+        except exception.InventoryInUse as e:
+            # This means an inventory reconfiguration (e.g.: removing a parent
+            # PF and adding a VF under that parent) was not possible due to
+            # existing allocations. Translate the exception to prevent the
+            # compute service to start
+            raise exception.PlacementPciException(error=str(e))
 
     def _update(self, context, compute_node, startup=False):
         """Update partial stats locally and populate them to Scheduler."""

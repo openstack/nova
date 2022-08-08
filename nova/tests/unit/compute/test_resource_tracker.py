@@ -1960,6 +1960,35 @@ class TestUpdateComputeNode(BaseTestCase):
         upt = self.rt.reportclient.update_from_provider_tree
         upt.assert_called_once_with(mock.sentinel.ctx, ptree, allocations=None)
 
+    @mock.patch(
+        'nova.compute.resource_tracker.ResourceTracker.'
+        '_sync_compute_service_disabled_trait',
+        new=mock.Mock()
+    )
+    @mock.patch(
+        'nova.compute.resource_tracker.ResourceTracker._resource_change',
+        new=mock.Mock(return_value=False)
+    )
+    def test_update_pci_reporting_allocation_in_use_error_propagated(self):
+        """Assert that if the pci placement reporting code tries to remove
+        inventory with allocation from placement due to invalid hypervisor
+        or [pci]device_spec reconfiguration then the InventoryInUse error from
+        placement is propagated and makes the compute startup to fail.
+        """
+        compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self._setup_rt()
+        self.rt.reportclient.update_from_provider_tree.side_effect = (
+            exc.InventoryInUse(
+                resource_class="FOO", resource_provider="bar"))
+
+        self.assertRaises(
+            exc.PlacementPciException,
+            self.rt._update,
+            mock.sentinel.ctx,
+            compute_obj,
+            startup=True,
+        )
+
     @mock.patch('nova.objects.Service.get_by_compute_host',
                 return_value=objects.Service(disabled=True))
     def test_sync_compute_service_disabled_trait_add(self, mock_get_by_host):

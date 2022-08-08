@@ -36,7 +36,28 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
     # Just placeholders to satisfy the base class. The real value will be
     # redefined by the tests
     PCI_DEVICE_SPEC = []
-    PCI_ALIAS = None
+    PCI_ALIAS = [
+        jsonutils.dumps(x)
+        for x in (
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.PCI_PROD_ID,
+                "name": "a-pci-dev",
+            },
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.PF_PROD_ID,
+                "device_type": "type-PF",
+                "name": "a-pf",
+            },
+            {
+                "vendor_id": fakelibvirt.PCI_VEND_ID,
+                "product_id": fakelibvirt.VF_PROD_ID,
+                "device_type": "type-VF",
+                "name": "a-vf",
+            },
+        )
+    ]
 
     def setUp(self):
         super().setUp()
@@ -681,6 +702,179 @@ class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
             },
         )
 
+    def _create_one_compute_with_a_pf_consumed_by_an_instance(self):
+        # The fake libvirt will emulate on the host:
+        # * two type-PFs in slot 0, with one type-VF
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=1)
+        # we match the PF only and ignore the VF
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PF_PROD_ID,
+                    "address": "0000:81:00.0",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.mock_pci_report_in_placement.return_value = True
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assertPCIDeviceCounts("compute1", total=1, free=1)
+        compute1_expected_placement_view = {
+            "inventories": {
+                "0000:81:00.0": {self.PF_RC: 1},
+            },
+            "traits": {
+                "0000:81:00.0": [],
+            },
+            "usages": {
+                "0000:81:00.0": {self.PF_RC: 0},
+            },
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+
+        # Create an instance consuming the PF
+        extra_spec = {"pci_passthrough:alias": "a-pf:1"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(flavor_id=flavor_id, networks=[])
+
+        self.assertPCIDeviceCounts("compute1", total=1, free=0)
+        compute1_expected_placement_view["usages"] = {
+            "0000:81:00.0": {self.PF_RC: 1},
+        }
+        compute1_expected_placement_view["allocations"][server["id"]] = {
+            "0000:81:00.0": {self.PF_RC: 1},
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self._run_periodics()
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+
+        return server, compute1_expected_placement_view
+
+    def test_device_reconfiguration_with_allocations_config_change_warn(self):
+        server, compute1_expected_placement_view = (
+            self._create_one_compute_with_a_pf_consumed_by_an_instance())
+
+        # remove 0000:81:00.0 from the device spec and restart the compute
+        device_spec = self._to_device_spec_conf([])
+        self.flags(group='pci', device_spec=device_spec)
+        # The PF is used but removed from the config. The PciTracker warns
+        # but keeps the device so the placement logic mimic this and only warns
+        # but keeps the RP and the allocation in placement intact.
+        self.restart_compute_service(hostname="compute1")
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self._run_periodics()
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        # the warning from the PciTracker
+        self.assertIn(
+            "WARNING [nova.pci.manager] Unable to remove device with status "
+            "'allocated' and ownership %s because of PCI device "
+            "1:0000:81:00.0 is allocated instead of ['available', "
+            "'unavailable', 'unclaimable']. Check your [pci]device_spec "
+            "configuration to make sure this allocated device is whitelisted. "
+            "If you have removed the device from the whitelist intentionally "
+            "or the device is no longer available on the host you will need "
+            "to delete the server or migrate it to another host to silence "
+            "this warning."
+            % server['id'],
+            self.stdlog.logger.output,
+        )
+        # the warning from the placement PCI tracking logic
+        self.assertIn(
+            "WARNING [nova.compute.pci_placement_translator] Device spec is "
+            "not found for device 0000:81:00.0 in [pci]device_spec. We are "
+            "skipping this devices during Placement update. The device is "
+            "allocated by %s. You should not remove an allocated device from "
+            "the configuration. Please restore the configuration or cold "
+            "migrate the instance to resolve the inconsistency."
+            % server['id'],
+            self.stdlog.logger.output,
+        )
+
+    def test_device_reconfiguration_with_allocations_config_change_stop(self):
+        self._create_one_compute_with_a_pf_consumed_by_an_instance()
+
+        # switch 0000:81:00.0 PF to 0000:81:00.1 VF
+        # in the config, then restart the compute service
+
+        # only match the VF now
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                    "address": "0000:81:00.1",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        # The compute fails to start as the new config would mean that the PF
+        # inventory is removed from the 0000:81:00.0 RP and the PF inventory is
+        # added instead there, but the VF inventory has allocations. Keeping
+        # the old inventory as in
+        # test_device_reconfiguration_with_allocations_config_change_warn is
+        # not an option as it would result in two resource class on the same RP
+        # one for the PF and one for the VF. That would allow consuming
+        # the same physical device twice. Such dependent device configuration
+        # is intentionally not supported so we are stopping the compute
+        # service.
+        ex = self.assertRaises(
+            exception.PlacementPciException,
+            self.restart_compute_service,
+            hostname="compute1"
+        )
+        self.assertRegex(
+            str(ex),
+            "Failed to gather or report PCI resources to Placement: There was "
+            "a conflict when trying to complete your request.\n\n "
+            "update conflict: Inventory for 'CUSTOM_PCI_8086_1528' on "
+            "resource provider '.*' in use.",
+        )
+
+    def test_device_reconfiguration_with_allocations_hyp_change(self):
+        server, compute1_expected_placement_view = (
+            self._create_one_compute_with_a_pf_consumed_by_an_instance())
+
+        # restart the compute but simulate that the device 0000:81:00.0 is
+        # removed from the hypervisor while the device spec config left
+        # intact. The PciTracker will notice this and log a warning. The
+        # placement tracking logic simply keeps the allocation intact in
+        # placement as both the PciDevice and the DeviceSpec is available.
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=0, num_vfs=0)
+        self.restart_compute_service(
+            hostname="compute1",
+            pci_info=pci_info,
+            keep_hypervisor_state=False
+        )
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self._run_periodics()
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        # the warning from the PciTracker
+        self.assertIn(
+            "WARNING [nova.pci.manager] Unable to remove device with status "
+            "'allocated' and ownership %s because of PCI device "
+            "1:0000:81:00.0 is allocated instead of ['available', "
+            "'unavailable', 'unclaimable']. Check your [pci]device_spec "
+            "configuration to make sure this allocated device is whitelisted. "
+            "If you have removed the device from the whitelist intentionally "
+            "or the device is no longer available on the host you will need "
+            "to delete the server or migrate it to another host to silence "
+            "this warning."
+            % server['id'],
+            self.stdlog.logger.output,
+        )
+
     def test_reporting_disabled_nothing_is_reported(self):
         # The fake libvirt will emulate on the host:
         # * one type-PCI in slot 0
@@ -764,32 +958,6 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
                 new=mock.Mock(return_value='{}'),
             )
         )
-
-        # Pre-configure a PCI alias to consume our devs
-        alias_pci = {
-            "vendor_id": fakelibvirt.PCI_VEND_ID,
-            "product_id": fakelibvirt.PCI_PROD_ID,
-            "name": "a-pci-dev",
-        }
-        alias_pf = {
-            "vendor_id": fakelibvirt.PCI_VEND_ID,
-            "product_id": fakelibvirt.PF_PROD_ID,
-            "device_type": "type-PF",
-            "name": "a-pf",
-        }
-        alias_vf = {
-            "vendor_id": fakelibvirt.PCI_VEND_ID,
-            "product_id": fakelibvirt.VF_PROD_ID,
-            "device_type": "type-VF",
-            "name": "a-vf",
-        }
-        self.flags(
-            group='pci',
-            alias=self._to_pci_alias_conf([alias_pci, alias_pf, alias_vf]))
-
-    @staticmethod
-    def _to_pci_alias_conf(alias_list):
-        return [jsonutils.dumps(x) for x in alias_list]
 
     @staticmethod
     def _move_allocation(allocations, from_uuid, to_uuid):

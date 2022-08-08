@@ -443,15 +443,33 @@ class PlacementView:
             fields.PciDeviceStatus.DELETED,
             fields.PciDeviceStatus.REMOVED,
         ):
+            # If the PCI tracker marked the device DELETED or REMOVED then
+            # such device is not allocated, so we are free to drop it from
+            # placement too.
             self._remove_dev(dev)
         else:
             if not dev_spec:
-                LOG.warning(
-                    "Device spec is not found for device %s in "
-                    "[pci]device_spec. Ignoring device in Placement resource "
-                    "view. This should not happen. Please file a bug.",
-                    dev.address
-                )
+                if dev.instance_uuid:
+                    LOG.warning(
+                        "Device spec is not found for device %s in "
+                        "[pci]device_spec. We are skipping this devices "
+                        "during Placement update. The device is allocated by "
+                        "%s. You should not remove an allocated device from "
+                        "the configuration. Please restore the configuration "
+                        "or cold migrate the instance to resolve the "
+                        "inconsistency.",
+                        dev.address,
+                        dev.instance_uuid
+                    )
+                else:
+                    LOG.warning(
+                        "Device spec is not found for device %s in "
+                        "[pci]device_spec. Ignoring device in Placement "
+                        "resource view. This should not happen. Please file a "
+                        "bug.",
+                        dev.address
+                    )
+
                 return
 
             self._add_dev(dev, dev_spec.get_tags())

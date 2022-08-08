@@ -1373,7 +1373,6 @@ class SchedulerReportClient(object):
             # can inherit.
             helper_exceptions = (
                 exception.InvalidResourceClass,
-                exception.InventoryInUse,
                 exception.ResourceProviderAggregateRetrievalFailed,
                 exception.ResourceProviderDeletionFailed,
                 exception.ResourceProviderInUse,
