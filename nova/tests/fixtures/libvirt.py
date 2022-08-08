@@ -2220,8 +2220,8 @@ class LibvirtFixture(fixtures.Fixture):
 
         self.useFixture(
             fixtures.MockPatch('nova.virt.libvirt.utils.get_fs_info'))
-        self.useFixture(
-            fixtures.MockPatch('nova.compute.utils.get_machine_ips'))
+        self.mock_get_machine_ips = self.useFixture(
+            fixtures.MockPatch('nova.compute.utils.get_machine_ips')).mock
 
         # libvirt driver needs to call out to the filesystem to get the
         # parent_ifname for the SRIOV VFs.
@@ -2231,20 +2231,25 @@ class LibvirtFixture(fixtures.Fixture):
 
         self.useFixture(fixtures.MockPatch(
             'nova.pci.utils.get_mac_by_pci_address',
-            new=self.fake_get_mac_by_pci_address))
+            side_effect=self.fake_get_mac_by_pci_address))
 
         # libvirt calls out to sysfs to get the vfs ID during macvtap plug
-        self.useFixture(fixtures.MockPatch(
-            'nova.pci.utils.get_vf_num_by_pci_address', return_value=1))
+        self.mock_get_vf_num_by_pci_address = self.useFixture(
+            fixtures.MockPatch(
+                'nova.pci.utils.get_vf_num_by_pci_address', return_value=1
+            )
+        ).mock
 
         # libvirt calls out to privsep to set the mac and vlan of a macvtap
-        self.useFixture(fixtures.MockPatch(
-            'nova.privsep.linux_net.set_device_macaddr_and_vlan'))
+        self.mock_set_device_macaddr_and_vlan = self.useFixture(
+            fixtures.MockPatch(
+                'nova.privsep.linux_net.set_device_macaddr_and_vlan')).mock
 
         # libvirt calls out to privsep to set the port state during macvtap
         # plug
-        self.useFixture(fixtures.MockPatch(
-            'nova.privsep.linux_net.set_device_macaddr'))
+        self.mock_set_device_macaddr = self.useFixture(
+            fixtures.MockPatch(
+                'nova.privsep.linux_net.set_device_macaddr')).mock
 
         # Don't assume that the system running tests has a valid machine-id
         self.useFixture(fixtures.MockPatch(
@@ -2259,8 +2264,8 @@ class LibvirtFixture(fixtures.Fixture):
         # Ensure tests perform the same on all host architectures
         fake_uname = os_uname(
             'Linux', '', '5.4.0-0-generic', '', obj_fields.Architecture.X86_64)
-        self.useFixture(
-            fixtures.MockPatch('os.uname', return_value=fake_uname))
+        self.mock_uname = self.useFixture(
+            fixtures.MockPatch('os.uname', return_value=fake_uname)).mock
 
         # ...and on all machine types
         fake_loaders = [

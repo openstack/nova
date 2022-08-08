@@ -30,17 +30,7 @@ LOG = logging.getLogger(__name__)
 
 class VGPUReshapeTests(base.ServersTestBase):
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
-                return_value={'total': 128,
-                              'used': 44,
-                              'free': 84})
-    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.is_valid_hostname',
-                return_value=True)
-    @mock.patch('nova.virt.libvirt.driver.libvirt_utils.file_open',
-                side_effect=[io.BytesIO(b''), io.BytesIO(b''),
-                             io.BytesIO(b'')])
-    def test_create_servers_with_vgpu(
-            self, mock_file_open, mock_valid_hostname, mock_get_fs_info):
+    def test_create_servers_with_vgpu(self):
         """Verify that vgpu reshape works with libvirt driver
 
         1) create two servers with an old tree where the VGPU resource is on
@@ -49,7 +39,8 @@ class VGPUReshapeTests(base.ServersTestBase):
         3) check that the allocations of the servers are still valid
         4) create another server now against the new tree
         """
-
+        self.mock_file_open.side_effect = [
+            io.BytesIO(b''), io.BytesIO(b''), io.BytesIO(b'')]
         # NOTE(gibi): We cannot simply ask the virt driver to create an old
         # RP tree with vgpu on the root RP as that code path does not exist
         # any more. So we have to hack a "bit". We will create a compute
