@@ -40,10 +40,6 @@ class CreateBackupTestsV21(admin_only_action_common.CommonMixin,
         self.controller = getattr(self.create_backup, self.controller_name)()
         self.compute_api = self.controller.compute_api
 
-        patch_get = mock.patch.object(self.compute_api, 'get')
-        self.mock_get = patch_get.start()
-        self.addCleanup(patch_get.stop)
-
     @mock.patch.object(common, 'check_img_metadata_properties_quota')
     @mock.patch.object(api.API, 'backup')
     def test_create_backup_with_metadata(self, mock_backup, mock_check_image):

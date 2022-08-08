@@ -49,11 +49,11 @@ class VGPUTestBase(base.ServersTestBase):
 
     def setUp(self):
         super(VGPUTestBase, self).setUp()
-        self.useFixture(fixtures.MockPatch(
-            'nova.virt.libvirt.LibvirtDriver._get_local_gb_info',
-            return_value={'total': 128,
-                          'used': 44,
-                          'free': 84}))
+        libvirt_driver.LibvirtDriver._get_local_gb_info.return_value = {
+            'total': 128,
+            'used': 44,
+            'free': 84,
+        }
         self.useFixture(fixtures.MockPatch(
             'nova.privsep.libvirt.create_mdev',
             side_effect=self._create_mdev))

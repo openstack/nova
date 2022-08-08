@@ -2087,10 +2087,10 @@ class ServersControllerTestV216(_ServersControllerTest):
 
         return server_dict
 
-    @mock.patch('nova.compute.api.API.get_instance_host_status')
-    def _verify_host_status_policy_behavior(self, func, mock_get_host_status):
+    def _verify_host_status_policy_behavior(self, func):
         # Set policy to disallow both host_status cases and verify we don't
         # call the get_instance_host_status compute RPC API.
+        self.mock_get_instance_host_status.reset_mock()
         rules = {
             'os_compute_api:servers:show:host_status': '!',
             'os_compute_api:servers:show:host_status:unknown-only': '!',
@@ -2098,7 +2098,7 @@ class ServersControllerTestV216(_ServersControllerTest):
         orig_rules = policy.get_rules()
         policy.set_rules(oslo_policy.Rules.from_dict(rules), overwrite=False)
         func()
-        mock_get_host_status.assert_not_called()
+        self.mock_get_instance_host_status.assert_not_called()
         # Restore the original rules.
         policy.set_rules(orig_rules)
 
@@ -2638,15 +2638,13 @@ class ServersControllerTestV275(ControllerTest):
 
     microversion = '2.75'
 
-    @mock.patch('nova.compute.api.API.get_all')
-    def test_get_servers_additional_query_param_old_version(self, mock_get):
+    def test_get_servers_additional_query_param_old_version(self):
         req = fakes.HTTPRequest.blank(self.path_with_query % 'unknown=1',
                                       use_admin_context=True,
                                       version='2.74')
         self.controller.index(req)
 
-    @mock.patch('nova.compute.api.API.get_all')
-    def test_get_servers_ignore_sort_key_old_version(self, mock_get):
+    def test_get_servers_ignore_sort_key_old_version(self):
         req = fakes.HTTPRequest.blank(
                 self.path_with_query % 'sort_key=deleted',
                 use_admin_context=True, version='2.74')
@@ -3584,13 +3582,13 @@ class ServersControllerRebuildTestV263(ControllerTest):
             },
         }
 
-    @mock.patch('nova.compute.api.API.get')
-    def _rebuild_server(self, mock_get, certs=None,
-                        conf_enabled=True, conf_certs=None):
+    def _rebuild_server(self, certs=None, conf_enabled=True, conf_certs=None):
         ctx = self.req.environ['nova.context']
-        mock_get.return_value = fakes.stub_instance_obj(ctx,
-            vm_state=vm_states.ACTIVE, trusted_certs=certs,
-            project_id=self.req_project_id, user_id=self.req_user_id)
+        self.mock_get.side_effect = None
+        self.mock_get.return_value = fakes.stub_instance_obj(
+            ctx, vm_state=vm_states.ACTIVE, trusted_certs=certs,
+            project_id=self.req_project_id, user_id=self.req_user_id
+        )
 
         self.flags(default_trusted_certificate_ids=conf_certs, group='glance')
 
@@ -3743,10 +3741,10 @@ class ServersControllerRebuildTestV271(ControllerTest):
             }
         }
 
-    @mock.patch('nova.compute.api.API.get')
-    def _rebuild_server(self, mock_get):
+    def _rebuild_server(self):
         ctx = self.req.environ['nova.context']
-        mock_get.return_value = fakes.stub_instance_obj(ctx,
+        self.mock_get.side_effect = None
+        self.mock_get.return_value = fakes.stub_instance_obj(ctx,
             vm_state=vm_states.ACTIVE, project_id=self.req_project_id,
             user_id=self.req_user_id)
         server = self.controller._action_rebuild(

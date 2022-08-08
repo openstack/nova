@@ -2597,9 +2597,6 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         # that the thread completes.
         self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
 
-        self.mock_conn = self.useFixture(
-            fixtures.MockPatchObject(self.driver, '_ironic_connection')).mock
-
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
     def test_rescue(self, mock_sps, mock_looping):
