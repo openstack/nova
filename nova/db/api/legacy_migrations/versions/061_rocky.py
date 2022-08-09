@@ -28,7 +28,7 @@ from sqlalchemy import Text
 from sqlalchemy import text
 from sqlalchemy import Unicode
 
-from nova.db.sqlalchemy.api_models import MediumText
+from nova.db import types
 from nova.objects import keypair
 
 
@@ -153,7 +153,7 @@ def upgrade(migrate_engine):
         Column('updated_at', DateTime),
         Column('id', Integer, primary_key=True, nullable=False),
         Column('instance_uuid', String(36), nullable=False),
-        Column('spec', MediumText(), nullable=False),
+        Column('spec', types.MediumText(), nullable=False),
         UniqueConstraint(
             'instance_uuid', name='uniq_request_specs0instance_uuid'),
         Index('request_spec_instance_uuid_idx', 'instance_uuid'),
@@ -184,8 +184,8 @@ def upgrade(migrate_engine):
             'locked_by',
             Enum('owner', 'admin', name='build_requests0locked_by')),
         Column('instance_uuid', String(length=36)),
-        Column('instance', MediumText()),
-        Column('block_device_mappings', MediumText()),
+        Column('instance', types.MediumText()),
+        Column('block_device_mappings', types.MediumText()),
         Column('tags', Text()),
         UniqueConstraint(
             'instance_uuid', name='uniq_build_requests0instance_uuid'),

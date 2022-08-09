@@ -22,7 +22,7 @@ from sqlalchemy import Text
 from sqlalchemy.types import NullType
 from sqlalchemy import Unicode
 
-from nova.db.sqlalchemy import types
+from nova.db import types
 from nova.objects import keypair
 
 LOG = logging.getLogger(__name__)
