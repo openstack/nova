@@ -36,6 +36,8 @@ ATTACHMENT_ID = uuids.attachment_id
 
 
 class TestDriverBlockDevice(test.NoDBTestCase):
+    REQUIRES_LOCKING = True
+
     # This is used to signal if we're dealing with a new style volume
     # attachment (Cinder v3.44 flow).
     attachment_id = None
