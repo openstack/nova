@@ -519,7 +519,7 @@ def upgrade():
         sa.Column('console_type', sa.String(255), nullable=False),
         sa.Column('host', sa.String(255), nullable=False),
         sa.Column('port', sa.Integer, nullable=False),
-        sa.Column('internal_access_path', sa.String(255)),
+        sa.Column('internal_access_path', sa.Text()),
         sa.Column('instance_uuid', sa.String(36), nullable=False),
         sa.Column('expires', sa.Integer, nullable=False),
         sa.Column('access_url_base', sa.String(255), nullable=True),
