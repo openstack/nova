@@ -2321,6 +2321,15 @@ class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
         obj.vapic = True
         obj.spinlocks = True
         obj.vendorid_spoof = True
+        obj.vpindex = True
+        obj.runtime = True
+        obj.synic = True
+        obj.reset = True
+        obj.frequencies = True
+        obj.reenlightenment = True
+        obj.tlbflush = True
+        obj.ipi = True
+        obj.evmcs = True
 
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
@@ -2329,6 +2338,15 @@ class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
             <vapic state="on"/>
             <spinlocks state="on" retries="4095"/>
             <vendor_id state="on" value="1234567890ab"/>
+            <vpindex state='on'/>
+            <runtime state='on'/>
+            <synic state='on'/>
+            <reset state='on'/>
+            <frequencies state='on'/>
+            <reenlightenment state='on'/>
+            <tlbflush state='on'/>
+            <ipi state='on'/>
+            <evmcs state='on'/>
           </hyperv>""")
 
     def test_feature_pmu(self):

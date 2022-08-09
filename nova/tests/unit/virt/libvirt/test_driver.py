@@ -27178,6 +27178,35 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_get_guest.return_value.assert_not_called()
         self.assertIsNone(mock_find.call_args.args[3])
 
+    def test_set_features_windows(self):
+        self.flags(virt_type='kvm', group='libvirt')
+        guest = vconfig.LibvirtConfigGuest()
+        self.drvr._set_features(
+            guest, 'windows',
+            objects.ImageMeta(
+                properties=objects.ImageMetaProps()
+            ),
+            objects.Flavor(extra_specs={})
+        )
+        features = guest.features
+        hv = None
+        for feature in features:
+            if feature.root_name == 'hyperv':
+                hv = feature
+        self.assertTrue(hv.relaxed)
+        self.assertTrue(hv.vapic)
+        self.assertTrue(hv.spinlocks)
+        self.assertEqual(8191, hv.spinlock_retries)
+        self.assertTrue(hv.vpindex)
+        self.assertTrue(hv.runtime)
+        self.assertTrue(hv.synic)
+        self.assertTrue(hv.reset)
+        self.assertTrue(hv.frequencies)
+        self.assertTrue(hv.reenlightenment)
+        self.assertTrue(hv.tlbflush)
+        self.assertTrue(hv.ipi)
+        self.assertTrue(hv.evmcs)
+
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""
