@@ -51,14 +51,6 @@ class TestEvacuateResourceTrackerRace(
         self.api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 
-        self.useFixture(fixtures.MockPatch(
-            'nova.pci.utils.get_mac_by_pci_address',
-            return_value='52:54:00:1e:59:c6'))
-
-        self.useFixture(fixtures.MockPatch(
-            'nova.pci.utils.get_vf_num_by_pci_address',
-            return_value=1))
-
         self.admin_api = self.api_fixture.admin_api
         self.admin_api.microversion = 'latest'
         self.api = self.admin_api

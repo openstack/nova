@@ -740,16 +740,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                       'resolve_driver_format',
                       imagebackend.Image._get_driver_format)
 
-        self.useFixture(nova_fixtures.LibvirtFixture())
+        self.libvirt = self.useFixture(nova_fixtures.LibvirtFixture())
 
         # ensure tests perform the same on all host architectures; this is
         # already done by the fakelibvirt fixture but we want to change the
         # architecture in some tests
-        _p = mock.patch('os.uname')
-        self.mock_uname = _p.start()
+        self.mock_uname = self.libvirt.mock_uname
         self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '5.4.0-0-generic', '', fields.Architecture.X86_64)
-        self.addCleanup(_p.stop)
 
         self.test_instance = _create_test_instance()
         network_info = objects.InstanceInfoCache(
@@ -2260,6 +2258,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance_ref.info_cache = objects.InstanceInfoCache(
             network_info=network_info)
 
+        pci_utils.get_mac_by_pci_address.side_effect = None
+        pci_utils.get_mac_by_pci_address.return_value = 'da:d1:f2:91:95:c1'
         with test.nested(
             mock.patch('nova.objects.VirtualInterfaceList'
                        '.get_by_instance_uuid', return_value=vifs),
@@ -2269,8 +2269,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                        return_value=guest),
             mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc',
                               return_value=xml),
-            mock.patch.object(pci_utils, 'get_mac_by_pci_address',
-                              return_value='da:d1:f2:91:95:c1')):
+        ):
             metadata_obj = drvr._build_device_metadata(self.context,
                                                        instance_ref)
             metadata = metadata_obj.devices
@@ -16075,9 +16074,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(ip, CONF.my_ip)
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
-    @mock.patch('nova.compute.utils.get_machine_ips')
-    def test_check_my_ip(self, mock_ips, mock_log):
-        mock_ips.return_value = ['8.8.8.8', '75.75.75.75']
+    def test_check_my_ip(self, mock_log):
+
+        self.libvirt.mock_get_machine_ips.return_value = [
+            '8.8.8.8', '75.75.75.75']
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._check_my_ip()
         mock_log.assert_called_once_with(u'my_ip address (%(my_ip)s) was '
@@ -16099,6 +16099,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         service_mock = mock.MagicMock()
         service_mock.disabled.return_value = False
+        drvr._host._init_events.return_value = None
         with test.nested(
             mock.patch.object(drvr._host, "_connect",
                               side_effect=fakelibvirt.make_libvirtError(
@@ -16106,8 +16107,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   "Failed to connect to host",
                                   error_code=
                                   fakelibvirt.VIR_ERR_INTERNAL_ERROR)),
-            mock.patch.object(drvr._host, "_init_events",
-                              return_value=None),
             mock.patch.object(objects.Service, "get_by_compute_host",
                               return_value=service_mock)):
 
@@ -16122,6 +16121,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         service_mock = mock.MagicMock()
         service_mock.disabled.return_value = False
+        drvr._host._init_events.return_value = None
         with test.nested(
             mock.patch.object(drvr._host, "_connect",
                               side_effect=fakelibvirt.make_libvirtError(
@@ -16129,8 +16129,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                   "Failed to connect to host",
                                   error_code=
                                   fakelibvirt.VIR_ERR_INTERNAL_ERROR)),
-            mock.patch.object(drvr._host, "_init_events",
-                              return_value=None),
             mock.patch.object(host.Host, "has_min_version",
                               return_value=True),
             mock.patch.object(drvr, "_do_quality_warnings",
@@ -16150,11 +16148,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         service_mock = mock.MagicMock()
         service_mock.disabled.return_value = True
+        drvr._host._init_events.return_value = None
         with test.nested(
             mock.patch.object(drvr._host, "_connect",
                               return_value=mock.MagicMock()),
-            mock.patch.object(drvr._host, "_init_events",
-                              return_value=None),
             mock.patch.object(host.Host, "has_min_version",
                               return_value=True),
             mock.patch.object(drvr, "_do_quality_warnings",
@@ -17642,12 +17639,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         got = drvr._get_cpu_info()
         self.assertEqual(want, got)
 
-    @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
-                return_value='ens1')
     @mock.patch.object(host.Host, 'list_pci_devices',
                        return_value=['pci_0000_04_00_3', 'pci_0000_04_10_7',
                                      'pci_0000_04_11_7'])
-    def test_get_pci_passthrough_devices(self, mock_list, mock_get_ifname):
+    def test_get_pci_passthrough_devices(self, mock_list):
+        pci_utils.get_ifname_by_pci_address.return_value = 'ens1'
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -17720,7 +17716,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         # The first call for every VF is to determine parent_ifname and
         # the second call to determine the MAC address.
-        mock_get_ifname.assert_has_calls([
+        pci_utils.get_ifname_by_pci_address.assert_has_calls([
             mock.call('0000:04:10.7', pf_interface=True),
             mock.call('0000:04:11.7', pf_interface=True),
         ])

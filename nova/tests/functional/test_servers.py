@@ -1253,9 +1253,7 @@ class ServerTestV269(integrated_helpers._IntegratedTestBase):
     def test_get_servers_detail_filters(self):
         # We get the results only from the up cells, this ignoring the down
         # cells if list_records_by_skipping_down_cells config option is True.
-        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-            api_version='v2.1'))
-        self.admin_api = api_fixture.admin_api
+        self.admin_api = self.api_fixture.admin_api
         self.admin_api.microversion = '2.69'
         servers = self.admin_api.get_servers(
             search_opts={'hostname': "cell3-inst0"})
@@ -1263,9 +1261,7 @@ class ServerTestV269(integrated_helpers._IntegratedTestBase):
         self.assertEqual(self.up_cell_insts[2], servers[0]['id'])
 
     def test_get_servers_detail_all_tenants_with_down_cells(self):
-        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-            api_version='v2.1'))
-        self.admin_api = api_fixture.admin_api
+        self.admin_api = self.api_fixture.admin_api
         self.admin_api.microversion = '2.69'
         servers = self.admin_api.get_servers(search_opts={'all_tenants': True})
         # 4 servers from the up cells and 4 servers from the down cells
@@ -1523,10 +1519,8 @@ class ServersTestV280(integrated_helpers._IntegratedTestBase):
 
     def setUp(self):
         super(ServersTestV280, self).setUp()
-        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-            api_version='v2.1'))
-        self.api = api_fixture.api
-        self.admin_api = api_fixture.admin_api
+        self.api = self.api_fixture.api
+        self.admin_api = self.api_fixture.admin_api
 
         self.api.microversion = '2.80'
         self.admin_api.microversion = '2.80'
@@ -1585,9 +1579,8 @@ class ServersTestV280(integrated_helpers._IntegratedTestBase):
 
         project_id_1 = '4906260553374bf0a5d566543b320516'
         project_id_2 = 'c850298c1b6b4796a8f197ac310b2469'
-        new_api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-            api_version=self.api_major_version, project_id=project_id_1))
-        new_admin_api = new_api_fixture.admin_api
+        new_admin_api = self.api_fixture.alternative_admin_api
+        new_admin_api.project_id = project_id_1
         new_admin_api.microversion = '2.80'
 
         post = {
