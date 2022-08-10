@@ -17,7 +17,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2022-03-30 00:54+0000\n"
+"POT-Creation-Date: 2022-08-09 17:12+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1502,14 +1502,6 @@ msgstr "Schlüsselpaar %(name)s für Benutzer %(user_id)s nicht gefunden"
 #, python-format
 msgid "Keypair data is invalid: %(reason)s"
 msgstr "Schlüsselpaardaten ungültig: %(reason)s"
-
-msgid "Keypair name contains unsafe characters"
-msgstr "Name von Schlüsselpaar enthält unsichere Zeichen"
-
-msgid "Keypair name must be string and between 1 and 255 characters long"
-msgstr ""
-"Name des Schlüsselpares muss eine Zeichenkette und zwischen 1 und 255 "
-"Zeichen lang sein."
 
 msgid "Limits only supported from vCenter 6.0 and above"
 msgstr "Grenzwerte werden nur von vCenter ab Version 6.0 unterstützt."

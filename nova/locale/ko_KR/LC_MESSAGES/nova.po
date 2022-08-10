@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2022-03-30 00:54+0000\n"
+"POT-Creation-Date: 2022-08-09 17:12+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1446,12 +1446,6 @@ msgstr "%(user_id)s 사용자에 대한 키 쌍 %(name)s을(를) 찾을 수 없�
 #, python-format
 msgid "Keypair data is invalid: %(reason)s"
 msgstr "키 쌍 데이터가 올바르지 않습니다: %(reason)s"
-
-msgid "Keypair name contains unsafe characters"
-msgstr "키 쌍 이름에 안전하지 않은 문자가 들어있음"
-
-msgid "Keypair name must be string and between 1 and 255 characters long"
-msgstr "키 쌍 이름은 문자열이고 길이가 1 - 255자 범위에 속해야 함"
 
 msgid "Libguestfs does not have permission to read host kernel."
 msgstr "Libguestfs에게는 커널 호스트를 읽어올 수 있는 권한이 없습니다"
