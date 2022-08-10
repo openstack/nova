@@ -4470,6 +4470,7 @@ class API:
                allow_bfv_rescue=False):
         """Rescue the given instance."""
 
+        image_meta = None
         if rescue_image_ref:
             try:
                 image_meta = image_meta_obj.ImageMeta.from_image_ref(
@@ -4490,6 +4491,8 @@ class API:
                             "image properties set")
                 raise exception.UnsupportedRescueImage(
                     image=rescue_image_ref)
+        else:
+            image_meta = instance.image_meta
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
@@ -4497,6 +4500,9 @@ class API:
 
         volume_backed = compute_utils.is_volume_backed_instance(
             context, instance, bdms)
+
+        allow_bfv_rescue &= 'hw_rescue_bus' in image_meta.properties and \
+            'hw_rescue_device' in image_meta.properties
 
         if volume_backed and allow_bfv_rescue:
             cn = objects.ComputeNode.get_by_host_and_nodename(
