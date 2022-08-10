@@ -306,7 +306,7 @@ class _HostMountState(object):
 
                 try:
                     nova.privsep.fs.mount(fstype, export, mountpoint, options)
-                except processutils.ProcessExecutionError():
+                except processutils.ProcessExecutionError:
                     # Check to see if mountpoint is mounted despite the error
                     # eg it was already mounted
                     if os.path.ismount(mountpoint):
