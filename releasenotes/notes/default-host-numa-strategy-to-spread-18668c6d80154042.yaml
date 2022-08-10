@@ -1,0 +1,12 @@
+---
+upgrade:
+  - |
+    During the triage of https://bugs.launchpad.net/nova/+bug/1978372
+    we compared the performance of nova's numa allocations strategies
+    as it applied to the large numbers of host and guest numa nodes.
+    Prior to ``Xena`` nova only supported a linear packing strategy.
+    In ``Xena`` ``[compute]/packing_host_numa_cells_allocation_strategy``
+    was introduced maintaining the previous packing behavior by default.
+    The numa allocation strategy has now been defaulted to spread.
+    The old behavior can be restored by defining:
+    ``[compute]/packing_host_numa_cells_allocation_strategy=true``
