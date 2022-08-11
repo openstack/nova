@@ -2357,12 +2357,37 @@ def numa_fit_instance_to_host(
                     host_cells,
                     key=lambda cell: total_pci_in_cell.get(cell.id, 0))
 
+    # a set of host_cell.id, instance_cell.id pairs where we already checked
+    # that the instance cell does not fit
+    not_fit_cache = set()
+    # a set of host_cell.id, instance_cell.id pairs where we already checked
+    # that the instance cell does fit
+    fit_cache = set()
     for host_cell_perm in itertools.permutations(
             host_cells, len(instance_topology)):
         chosen_instance_cells: ty.List['objects.InstanceNUMACell'] = []
         chosen_host_cells: ty.List['objects.NUMACell'] = []
         for host_cell, instance_cell in zip(
                 host_cell_perm, instance_topology.cells):
+
+            cell_pair = (host_cell.id, instance_cell.id)
+
+            # if we already checked this pair, and they did not fit then no
+            # need to check again just move to the next permutation
+            if cell_pair in not_fit_cache:
+                break
+
+            # if we already checked this pair, and they fit before that they
+            # will fit now too. So no need to check again. Just continue with
+            # the next cell pair in the permutation
+            if cell_pair in fit_cache:
+                chosen_host_cells.append(host_cell)
+                # Normally this would have done by _numa_fit_instance_cell
+                # but we optimized that out here based on the cache
+                instance_cell.id = host_cell.id
+                chosen_instance_cells.append(instance_cell)
+                continue
+
             try:
                 cpuset_reserved = 0
                 if (instance_topology.emulator_threads_isolated and
@@ -2379,11 +2404,18 @@ def numa_fit_instance_to_host(
                 # This exception will been raised if instance cell's
                 # custom pagesize is not supported with host cell in
                 # _numa_cell_supports_pagesize_request function.
+
+                # cache the result
+                not_fit_cache.add(cell_pair)
                 break
             if got_cell is None:
+                # cache the result
+                not_fit_cache.add(cell_pair)
                 break
             chosen_host_cells.append(host_cell)
             chosen_instance_cells.append(got_cell)
+            # cache the result
+            fit_cache.add(cell_pair)
 
         if len(chosen_instance_cells) != len(host_cell_perm):
             continue
