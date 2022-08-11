@@ -11560,12 +11560,60 @@ class ComputeAPITestCase(BaseTestCase):
                                                 instance.uuid, None)
 
     @mock.patch.object(context.RequestContext, 'elevated')
+    @mock.patch.object(cinder.API, 'detach')
+    @mock.patch.object(cinder.API, 'terminate_connection')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    @mock.patch('nova.virt.fake.FakeDriver.get_volume_connector')
+    def test_shutdown_with_legacy_volume_detach(
+        self, mock_get_connector, mock_info, mock_terminate, mock_detach,
+        mock_elevated,
+    ):
+        # test _shutdown_instance with legacy BDMs without a volume
+        # attachment ID
+        admin = context.get_admin_context()
+        mock_elevated.return_value = admin
+        instance = self._create_fake_instance_obj()
+        connector = 'fake-connector'
+        mock_get_connector.return_value = connector
+
+        vol_a_bdm = block_device_obj.BlockDeviceMapping(
+            instance_uuid=instance['uuid'],
+            source_type='volume', destination_type='volume',
+            delete_on_termination=False,
+            volume_id=uuids.volume_a_id,
+            attachment_id=None)
+        vol_b_bdm = block_device_obj.BlockDeviceMapping(
+            instance_uuid=instance['uuid'],
+            source_type='volume', destination_type='volume',
+            delete_on_termination=False,
+            volume_id=uuids.volume_b_id,
+            attachment_id=None)
+        bdms = [vol_a_bdm, vol_b_bdm]
+
+        self.compute._shutdown_instance(admin, instance, bdms)
+
+        # we should only got the connector once, regardless of the number of
+        # volumes
+        mock_get_connector.assert_called_once_with(instance)
+        # but we should have separate terminate and detach calls
+        mock_terminate.assert_has_calls([
+            mock.call(admin, uuids.volume_a_id, connector),
+            mock.call(admin, uuids.volume_b_id, connector),
+        ])
+        mock_detach.assert_has_calls([
+            mock.call(admin, uuids.volume_a_id, instance.uuid),
+            mock.call(admin, uuids.volume_b_id, instance.uuid),
+        ])
+
+    @mock.patch.object(context.RequestContext, 'elevated')
     @mock.patch.object(cinder.API, 'attachment_delete')
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instance_block_device_info')
-    def test_shutdown_with_attachment_delete(self, mock_info,
-                                             mock_attach_delete,
-                                             mock_elevated):
+    @mock.patch('nova.virt.fake.FakeDriver.get_volume_connector')
+    def test_shutdown_with_attachment_delete(
+        self, mock_get_connector, mock_info, mock_attach_delete, mock_elevated,
+    ):
         # test _shutdown_instance with volume bdm containing an
         # attachment id. This should use the v3 cinder api.
         admin = context.get_admin_context()
@@ -11585,14 +11633,18 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute._shutdown_instance(admin, instance, bdms)
 
         mock_attach_delete.assert_called_once_with(admin, attachment_id)
+        # we shouldn't try to get a connector for a cinder v3-style attachment
+        mock_get_connector.assert_not_called()
 
     @mock.patch.object(compute_manager.LOG, 'debug')
     @mock.patch.object(cinder.API, 'attachment_delete')
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instance_block_device_info')
-    def test_shutdown_with_attachment_not_found(self, mock_info,
-                                                mock_attach_delete,
-                                                mock_debug_log):
+    @mock.patch('nova.virt.fake.FakeDriver.get_volume_connector')
+    def test_shutdown_with_attachment_not_found(
+        self, mock_get_connector, mock_info, mock_attach_delete,
+        mock_debug_log,
+    ):
         # test _shutdown_instance with attachment_delete throwing
         # a VolumeAttachmentNotFound exception. This should not
         # cause _shutdown_instance to fail. Only a debug log
@@ -11618,6 +11670,8 @@ class ComputeAPITestCase(BaseTestCase):
         # get last call to LOG.debug and verify correct exception is in there
         self.assertIsInstance(mock_debug_log.call_args[0][1],
                               exception.VolumeAttachmentNotFound)
+        # we shouldn't try to get a connector for a cinder v3-style attachment
+        mock_get_connector.assert_not_called()
 
     def test_terminate_with_volumes(self):
         # Make sure that volumes get detached during instance termination.

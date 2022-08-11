@@ -3009,6 +3009,7 @@ class ComputeManager(manager.Manager):
             self._try_deallocate_network(context, instance, requested_networks)
 
         timer.restart()
+        connector = None
         for bdm in vol_bdms:
             try:
                 if bdm.attachment_id:
@@ -3017,7 +3018,8 @@ class ComputeManager(manager.Manager):
                 else:
                     # NOTE(vish): actual driver detach done in driver.destroy,
                     #             so just tell cinder that we are done with it.
-                    connector = self.driver.get_volume_connector(instance)
+                    if connector is None:
+                        connector = self.driver.get_volume_connector(instance)
                     self.volume_api.terminate_connection(context,
                                                          bdm.volume_id,
                                                          connector)
@@ -8270,7 +8272,7 @@ class ComputeManager(manager.Manager):
             action=fields.NotificationAction.LIVE_MIGRATION_PRE,
             phase=fields.NotificationPhase.START, bdms=bdms)
 
-        connector = self.driver.get_volume_connector(instance)
+        connector = None
         try:
             for bdm in bdms:
                 if bdm.is_volume and bdm.attachment_id is not None:
@@ -8284,6 +8286,8 @@ class ComputeManager(manager.Manager):
                     #
                     # Also note that attachment_update is not needed as we
                     # are providing the connector in the create call.
+                    if connector is None:
+                        connector = self.driver.get_volume_connector(instance)
                     attach_ref = self.volume_api.attachment_create(
                         context, bdm.volume_id, bdm.instance_uuid,
                         connector=connector, mountpoint=bdm.device_name)
@@ -8808,7 +8812,7 @@ class ComputeManager(manager.Manager):
             volumes with connection_info set for the source host
         """
         # Detaching volumes.
-        connector = self.driver.get_volume_connector(instance)
+        connector = None
         for bdm in source_bdms:
             if bdm.is_volume:
                 # Detaching volumes is a call to an external API that can fail.
@@ -8828,6 +8832,9 @@ class ComputeManager(manager.Manager):
                         # remove the volume connection without detaching from
                         # hypervisor because the instance is not running
                         # anymore on the current host
+                        if connector is None:
+                            connector = self.driver.get_volume_connector(
+                                instance)
                         self.volume_api.terminate_connection(context,
                                                              bdm.volume_id,
                                                              connector)
