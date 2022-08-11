@@ -21,6 +21,7 @@ import eventlet
 import functools
 import sys
 
+from keystoneauth1 import exceptions as ks_exc
 from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
@@ -241,10 +242,41 @@ class ComputeTaskManager:
         self.network_api = neutron.API()
         self.servicegroup_api = servicegroup.API()
         self.query_client = query.SchedulerQueryClient()
-        self.report_client = report.report_client_singleton()
         self.notifier = rpc.get_notifier('compute')
         # Help us to record host in EventReporter
         self.host = CONF.host
+
+        try:
+            # Test our placement client during initialization
+            self.report_client
+        except (ks_exc.EndpointNotFound,
+                ks_exc.DiscoveryFailure,
+                ks_exc.RequestTimeout,
+                ks_exc.GatewayTimeout,
+                ks_exc.ConnectFailure) as e:
+            # Non-fatal, likely transient (although not definitely);
+            # continue startup but log the warning so that when things
+            # fail later, it will be clear why we can not do certain
+            # things.
+            LOG.warning('Unable to initialize placement client (%s); '
+                        'Continuing with startup, but some operations '
+                        'will not be possible.', e)
+        except (ks_exc.MissingAuthPlugin,
+                ks_exc.Unauthorized) as e:
+            # This is almost definitely fatal mis-configuration. The
+            # Unauthorized error might be transient, but it is
+            # probably reasonable to consider it fatal.
+            LOG.error('Fatal error initializing placement client; '
+                      'config is incorrect or incomplete: %s', e)
+            raise
+        except Exception as e:
+            # Unknown/unexpected errors here are fatal
+            LOG.error('Fatal error initializing placement client: %s', e)
+            raise
+
+    @property
+    def report_client(self):
+        return report.report_client_singleton()
 
     def reset(self):
         LOG.info('Reloading compute RPC API')
