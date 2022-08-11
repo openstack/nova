@@ -1,0 +1,8 @@
+export DEBIAN_FRONTEND=noninteractive && \
+apt-get update && \
+apt-get install -y build-essential python3-pip python3-dev git libpcre++-dev gettext libpq-dev && \
+pip install -U pip && \
+pip install tox && \
+cd source && \
+export UPPER_CONSTRAINTS_FILE=https://raw.githubusercontent.com/sapcc/requirements/stable/xena-m3/upper-constraints.txt && \
+tox -e pep8,py
