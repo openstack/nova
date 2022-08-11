@@ -43,10 +43,8 @@ LEGACY_LIMITS = {
 def _get_placement_usages(
     context: 'nova.context.RequestContext', project_id: str
 ) -> ty.Dict[str, int]:
-    global PLACEMENT_CLIENT
-    if not PLACEMENT_CLIENT:
-        PLACEMENT_CLIENT = report.SchedulerReportClient()
-    return PLACEMENT_CLIENT.get_usages_counts_for_limits(context, project_id)
+    return report.report_client_singleton().get_usages_counts_for_limits(
+        context, project_id)
 
 
 def _get_usage(

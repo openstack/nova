@@ -1348,11 +1348,8 @@ def _instances_cores_ram_count_legacy(context, project_id, user_id=None):
 
 
 def _cores_ram_count_placement(context, project_id, user_id=None):
-    global PLACEMENT_CLIENT
-    if not PLACEMENT_CLIENT:
-        PLACEMENT_CLIENT = report.SchedulerReportClient()
-    return PLACEMENT_CLIENT.get_usages_counts_for_quota(context, project_id,
-                                                        user_id=user_id)
+    return report.report_client_singleton().get_usages_counts_for_quota(
+        context, project_id, user_id=user_id)
 
 
 def _instances_cores_ram_count_api_db_placement(context, project_id,
