@@ -185,6 +185,25 @@ class TestSingleton(test.NoDBTestCase):
             self.assertRaises(exc, report.report_client_singleton)
         mock_log.error.assert_called_once()
 
+    def test_error_then_success(self):
+        # Simulate an error
+        self._test_error(ks_exc.ConnectFailure)
+
+        # Ensure we did not set the global client
+        self.assertIsNone(report.PLACEMENTCLIENT)
+
+        # Call again, with no error
+        client = report.report_client_singleton()
+
+        # Make sure we got a client and that it was set as the global
+        # one
+        self.assertIsNotNone(client)
+        self.assertEqual(client, report.PLACEMENTCLIENT)
+
+        # Make sure we keep getting the same one
+        client2 = report.report_client_singleton()
+        self.assertEqual(client, client2)
+
 
 class TestConstructor(test.NoDBTestCase):
     def setUp(self):

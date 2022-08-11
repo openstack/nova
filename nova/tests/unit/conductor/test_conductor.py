@@ -17,6 +17,8 @@
 
 import copy
 
+import ddt
+from keystoneauth1 import exceptions as ks_exc
 import mock
 from oslo_db import exception as db_exc
 from oslo_limit import exception as limit_exceptions
@@ -52,6 +54,7 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import fields
 from nova.objects import request_spec
 from nova.scheduler.client import query
+from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
@@ -4869,3 +4872,35 @@ class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             logtext)
         self.assertIn('host3\' because it is not up', logtext)
         self.assertIn('image1 failed 1 times', logtext)
+
+
+@ddt.ddt
+class TestConductorTaskManager(test.NoDBTestCase):
+    def test_placement_client_startup(self):
+        self.assertIsNone(report.PLACEMENTCLIENT)
+        conductor_manager.ComputeTaskManager()
+        self.assertIsNotNone(report.PLACEMENTCLIENT)
+
+    @ddt.data(ks_exc.MissingAuthPlugin,
+              ks_exc.Unauthorized,
+              test.TestingException)
+    def test_placement_client_startup_fatals(self, exc):
+        self.assertRaises(exc,
+                          self._test_placement_client_startup_exception, exc)
+
+    @ddt.data(ks_exc.EndpointNotFound,
+              ks_exc.DiscoveryFailure,
+              ks_exc.RequestTimeout,
+              ks_exc.GatewayTimeout,
+              ks_exc.ConnectFailure)
+    def test_placement_client_startup_non_fatal(self, exc):
+        self._test_placement_client_startup_exception(exc)
+
+    @mock.patch.object(report, 'LOG')
+    def _test_placement_client_startup_exception(self, exc, mock_log):
+        with mock.patch.object(report.SchedulerReportClient, '_create_client',
+                               side_effect=exc):
+            try:
+                conductor_manager.ComputeTaskManager()
+            finally:
+                mock_log.error.assert_called_once()
