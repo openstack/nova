@@ -20,13 +20,13 @@ bare metal resources.
 """
 
 import base64
-from distutils import version
 import gzip
 import shutil
 import tempfile
 import time
 from urllib import parse as urlparse
 
+import microversion_parse
 from openstack import exceptions as sdk_exc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -2067,13 +2067,17 @@ class IronicDriver(virt_driver.ComputeDriver):
         if self.ironicclient.is_api_version_negotiated:
             current_api_version = self.ironicclient.current_api_version
             if (min_version and
-                    version.StrictVersion(current_api_version) <
-                    version.StrictVersion(min_version)):
+                    microversion_parse.parse_version_string(
+                        current_api_version) <
+                    microversion_parse.parse_version_string(
+                        min_version)):
                 raise exception.IronicAPIVersionNotAvailable(
                     version=min_version)
             if (max_version and
-                    version.StrictVersion(current_api_version) >
-                    version.StrictVersion(max_version)):
+                    microversion_parse.parse_version_string(
+                        current_api_version) >
+                    microversion_parse.parse_version_string(
+                        max_version)):
                 raise exception.IronicAPIVersionNotAvailable(
                     version=max_version)
 
