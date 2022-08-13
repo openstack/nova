@@ -71,6 +71,11 @@ Nova Specific Commandments
 - [N367] Disallow aliasing the mock.Mock and similar classes in tests.
 - [N368] Reject if the mock.Mock class is used as a replacement value instead of and
   instance of a mock.Mock during patching in tests.
+- [N369] oslo_concurrency.lockutils.ReaderWriterLock() or
+  fasteners.ReaderWriterLock() does not function correctly
+  with eventlet patched code. Use nova.utils.ReaderWriterLock() instead.
+- [N370] Don't use or import six
+- [N371] You must explicitly import python's mock: ``from unittest import mock``
 
 Creating Unit Tests
 -------------------
