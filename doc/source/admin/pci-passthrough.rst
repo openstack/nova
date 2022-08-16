@@ -442,6 +442,21 @@ removed and VFs from the same PF is configured (or vice versa) then
 nova-compute will refuse to start as it would create a situation where both
 the PF and its VFs are made available for consumption.
 
+If a flavor requests multiple ``type-VF`` devices via
+:nova:extra-spec:`pci_passthrough:alias` then it is important to consider the
+value of :nova:extra-spec:`group_policy` as well. The value ``none``
+allows nova to select VFs from the same parent PF to fulfill the request. The
+value ``isolate`` restricts nova to select each VF from a different parent PF
+to fulfill the request. If :nova:extra-spec:`group_policy` is not provided in
+such flavor then it will defaulted to ``none``.
+
+Symmetrically with the ``resource_class`` and ``traits`` fields of
+:oslo.config:option:`pci.device_spec` the :oslo.config:option:`pci.alias`
+configuration option supports requesting devices by Placement resource class
+name via the ``resource_class`` field and also support requesting traits to
+be present on the selected devices via the ``traits`` field in the alias. If
+the ``resource_class`` field is not specified in the alias then it is defaulted
+by nova to ``CUSTOM_PCI_<vendor_id>_<product_id>``.
 
 For deeper technical details please read the `nova specification. <https://specs.openstack.org/openstack/nova-specs/specs/zed/approved/pci-device-tracking-in-placement.html>`_
 

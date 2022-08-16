@@ -187,6 +187,21 @@ class PciRequestTestCase(test.NoDBTestCase):
             self.assertIn("xxx", aliases)
             self.assertEqual(policy, aliases["xxx"][0])
 
+    def test_get_alias_from_config_valid_rc_and_traits(self):
+        fake_alias = jsonutils.dumps({
+            "name": "xxx",
+            "resource_class": "foo",
+            "traits": "bar,baz",
+        })
+        self.flags(alias=[fake_alias], group='pci')
+        aliases = request._get_alias_from_config()
+        self.assertIsNotNone(aliases)
+        self.assertIn("xxx", aliases)
+        self.assertEqual(
+            ("legacy", [{"resource_class": "foo", "traits": "bar,baz"}]),
+            aliases["xxx"],
+        )
+
     def test_get_alias_from_config_conflicting_device_type(self):
         """Check behavior when device_type conflicts occur."""
         fake_alias_a = jsonutils.dumps({

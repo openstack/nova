@@ -64,6 +64,11 @@ class PciDeviceStats(object):
     """
 
     pool_keys = ['product_id', 'vendor_id', 'numa_node', 'dev_type']
+    # these can be specified in the [pci]device_spec and can be requested via
+    # the PCI alias, but they are matched by the placement
+    # allocation_candidates query, so we can ignore them during pool creation
+    # and during filtering here
+    ignored_tags = ['resource_class', 'traits']
 
     def __init__(
         self,
@@ -135,7 +140,9 @@ class PciDeviceStats(object):
         tags = devspec.get_tags()
         pool = {k: getattr(dev, k) for k in self.pool_keys}
         if tags:
-            pool.update(tags)
+            pool.update(
+                {k: v for k, v in tags.items() if k not in self.ignored_tags}
+            )
         # NOTE(gibi): parent_ifname acts like a tag during pci claim but
         # not provided as part of the whitelist spec as it is auto detected
         # by the virt driver.
@@ -313,7 +320,13 @@ class PciDeviceStats(object):
         :returns: A list of pools that can be used to support the request if
             this is possible.
         """
-        request_specs = request.spec
+
+        def ignore_keys(spec):
+            return {
+                k: v for k, v in spec.items() if k not in self.ignored_tags
+            }
+
+        request_specs = [ignore_keys(spec) for spec in request.spec]
         return [
             pool for pool in pools
             if utils.pci_device_prop_match(pool, request_specs)

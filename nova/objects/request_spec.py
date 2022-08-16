@@ -14,12 +14,14 @@
 
 import copy
 import itertools
+import typing as ty
 
 import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
+from nova.compute import pci_placement_translator
 from nova.db.api import api as api_db_api
 from nova.db.api import models as api_models
 from nova import exception
@@ -474,14 +476,16 @@ class RequestSpec(base.NovaObject):
         return filt_props
 
     @staticmethod
-    def _rc_from_request(pci_request: 'objects.InstancePCIRequest') -> str:
-        # FIXME(gibi): refactor this and the copy of the logic from the
-        #  translator to a common function
-        # FIXME(gibi): handle directly requested resource_class
-        # ??? can there be more than one spec???
-        spec = pci_request.spec[0]
-        rc = f"CUSTOM_PCI_{spec['vendor_id']}_{spec['product_id']}".upper()
-        return rc
+    def _rc_from_request(spec: ty.Dict[str, ty.Any]) -> str:
+        return pci_placement_translator.get_resource_class(
+            spec.get("resource_class"),
+            spec.get("vendor_id"),
+            spec.get("product_id"),
+        )
+
+    @staticmethod
+    def _traits_from_request(spec: ty.Dict[str, ty.Any]) -> ty.Set[str]:
+        return pci_placement_translator.get_traits(spec.get("traits", ""))
 
     # This is here temporarily until the PCI placement scheduling is under
     # implementation. When that is done there will be a config option
@@ -500,6 +504,34 @@ class RequestSpec(base.NovaObject):
                 # TODO(gibi): Handle neutron based PCI requests here in a later
                 # cycle.
                 continue
+
+            if len(pci_request.spec) != 1:
+                # We are instantiating InstancePCIRequest objects with spec in
+                # two cases:
+                # 1) when a neutron port is translated to InstancePCIRequest
+                #    object in
+                #    nova.network.neutron.API.create_resource_requests
+                # 2) when the pci_passthrough:alias flavor extra_spec is
+                #    translated to InstancePCIRequest objects in
+                #    nova.pci.request._get_alias_from_config which enforces the
+                #    json schema defined in nova.pci.request.
+                #
+                # In both cases only a single dict is added to the spec list.
+                # If we ever want to add support for multiple specs per request
+                # then we have to solve the issue that each spec can request a
+                # different resource class from placement. The only place in
+                # nova that currently handles multiple specs per request is
+                # nova.pci.utils.pci_device_prop_match() and it considers them
+                # as alternatives. So specs with different resource classes
+                # would mean alternative resource_class requests. This cannot
+                # be expressed today in the allocation_candidate query towards
+                # placement.
+                raise ValueError(
+                    "PCI tracking in placement does not support multiple "
+                    "specs per PCI request"
+                )
+
+            spec = pci_request.spec[0]
 
             # The goal is to translate InstancePCIRequest to RequestGroup. Each
             # InstancePCIRequest can be fulfilled from the whole RP tree. And
@@ -533,9 +565,13 @@ class RequestSpec(base.NovaObject):
             # per requested device. So for InstancePCIRequest(count=2) we need
             # to generate two separate RequestGroup(RC:1) objects.
 
-            # FIXME(gibi): make sure that if we have count=2 requests then
-            #  group_policy=none is in the request as group_policy=isolate
-            #  would prevent allocating two VFs from the same PF.
+            # NOTE(gibi): If we have count=2 requests then the multiple
+            # RequestGroup split below only works if group_policy is set to
+            # none as group_policy=isolate would prevent allocating two VFs
+            # from the same PF. Fortunately
+            # nova.scheduler.utils.resources_from_request_spec() already
+            # defaults group_policy to none if it is not specified in the
+            # flavor and there are multiple RequestGroups in the RequestSpec.
 
             for i in range(pci_request.count):
                 rg = objects.RequestGroup(
@@ -546,8 +582,11 @@ class RequestSpec(base.NovaObject):
                     # as we split count >= 2 requests to independent groups
                     # each group will have a resource request of one
                     resources={
-                        self._rc_from_request(pci_request): 1}
-                    # FIXME(gibi): handle traits requested from alias
+                        self._rc_from_request(spec): 1
+                    },
+                    required_traits=self._traits_from_request(spec),
+                    # TODO(gibi): later we can add support for complex trait
+                    # queries here including forbidden_traits.
                 )
                 self.requested_resources.append(rg)
 
