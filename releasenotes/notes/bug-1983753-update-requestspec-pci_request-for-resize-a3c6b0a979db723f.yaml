@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    `Bug #1941005 <https://bugs.launchpad.net/nova/+bug/1941005>`_ is fixed.
+    During resize Nova now uses the PCI requests from the new flavor to select
+    the destination host.
