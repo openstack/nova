@@ -627,12 +627,12 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.wh.server.top_new_client(conn, address)
         self.assertIsNone(self.wh._compute_rpcapi)
 
-    def test_reject_open_redirect(self):
+    def test_reject_open_redirect(self, url='//example.com/%2F..'):
         # This will test the behavior when an attempt is made to cause an open
         # redirect. It should be rejected.
         mock_req = mock.MagicMock()
         mock_req.makefile().readline.side_effect = [
-            b'GET //example.com/%2F.. HTTP/1.1\r\n',
+            ('GET %s HTTP/1.1\r\n' % url).encode('utf-8'),
             b''
         ]
 
@@ -657,39 +657,32 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         result = output.readlines()
 
         # Verify no redirect happens and instead a 400 Bad Request is returned.
-        self.assertIn('400 URI must not start with //', result[0].decode())
+        # NOTE: As of python 3.10.6 there is a fix for this vulnerability,
+        # which will cause a 301 Moved Permanently error to be returned
+        # instead that redirects to a sanitized version of the URL with extra
+        # leading '/' characters removed.
+        # See https://github.com/python/cpython/issues/87389 for details.
+        # We will consider either response to be valid for this test. This will
+        # also help if and when the above fix gets backported to older versions
+        # of python.
+        errmsg = result[0].decode()
+        expected_nova = '400 URI must not start with //'
+        expected_cpython = '301 Moved Permanently'
+
+        self.assertTrue(expected_nova in errmsg or expected_cpython in errmsg)
+
+        # If we detect the cpython fix, verify that the redirect location is
+        # now the same url but with extra leading '/' characters removed.
+        if expected_cpython in errmsg:
+            location = result[3].decode()
+            location = location.removeprefix('Location: ').rstrip('\r\n')
+            self.assertTrue(
+                location.startswith('/example.com/%2F..'),
+                msg='Redirect location is not the expected sanitized URL',
+            )
 
     def test_reject_open_redirect_3_slashes(self):
-        # This will test the behavior when an attempt is made to cause an open
-        # redirect. It should be rejected.
-        mock_req = mock.MagicMock()
-        mock_req.makefile().readline.side_effect = [
-            b'GET ///example.com/%2F.. HTTP/1.1\r\n',
-            b''
-        ]
-
-        client_addr = ('8.8.8.8', 54321)
-        mock_server = mock.MagicMock()
-        # This specifies that the server will be able to handle requests other
-        # than only websockets.
-        mock_server.only_upgrade = False
-
-        # Constructing a handler will process the mock_req request passed in.
-        handler = websocketproxy.NovaProxyRequestHandler(
-            mock_req, client_addr, mock_server)
-
-        # Collect the response data to verify at the end. The
-        # SimpleHTTPRequestHandler writes the response data to a 'wfile'
-        # attribute.
-        output = io.BytesIO()
-        handler.wfile = output
-        # Process the mock_req again to do the capture.
-        handler.do_GET()
-        output.seek(0)
-        result = output.readlines()
-
-        # Verify no redirect happens and instead a 400 Bad Request is returned.
-        self.assertIn('400 URI must not start with //', result[0].decode())
+        self.test_reject_open_redirect(url='///example.com/%2F..')
 
 
 class NovaWebsocketSecurityProxyTestCase(test.NoDBTestCase):
