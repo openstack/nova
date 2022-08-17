@@ -90,7 +90,7 @@
     description: |
       Run tempest live migration tests against local qcow2 ephemeral storage
       and shared LVM/iSCSI cinder volumes.
-    irrelevant-files: &nova-base-irrelevant-files
+    irrelevant-files:
       - ^api-.*$
       - ^(test-|)requirements.txt$
       - ^.*\.rst$
@@ -101,6 +101,7 @@
       - ^nova/policies/.*$
       - ^nova/tests/.*$
       - ^nova/test.py$
+      - ^nova/virt/ironic/.*$
       - ^releasenotes/.*$
       - ^setup.cfg$
       - ^tools/.*$
@@ -130,7 +131,21 @@
       the "iptables_hybrid" securitygroup firewall driver, aka "hybrid plug".
       The external events interactions between Nova and Neutron in these
       situations has historically been fragile. This job exercises them.
-    irrelevant-files: *nova-base-irrelevant-files
+    irrelevant-files: &nova-base-irrelevant-files
+      - ^api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/policies/.*$
+      - ^nova/tests/.*$
+      - ^nova/test.py$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tools/.*$
+      - ^tox.ini$
     vars:
       tox_envlist: all
       tempest_test_regex: (^tempest\..*compute\..*(migration|resize|reboot).*)
