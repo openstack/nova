@@ -26,6 +26,7 @@ from oslo_utils.fixture import uuidsentinel as uuids
 from nova import context
 from nova import exception
 from nova import objects
+from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova.scheduler import manager
 from nova.scheduler import utils as scheduler_utils
@@ -396,9 +397,16 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         # assertion at the end of the test.
         spec_obj.obj_reset_changes(recursive=True)
 
-        host_state = mock.Mock(spec=host_manager.HostState, host="fake_host",
-                uuid=uuids.cn1, cell_uuid=uuids.cell, nodename="fake_node",
-                limits={}, aggregates=[])
+        host_state = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host",
+            uuid=uuids.cn1,
+            cell_uuid=uuids.cell,
+            nodename="fake_node",
+            limits={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
 
@@ -459,20 +467,29 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                   is_public=True,
                                   name="small_flavor"),
             project_id=uuids.project_id,
-            instance_group=group)
+            instance_group=group,
+            requested_resources=[],
+        )
 
-        host_state = mock.Mock(spec=host_manager.HostState,
-                host="fake_host", nodename="fake_node", uuid=uuids.cn1,
-                limits={}, cell_uuid=uuids.cell, instances={}, aggregates=[])
+        host_state = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host",
+            nodename="fake_node",
+            uuid=uuids.cn1,
+            limits={},
+            cell_uuid=uuids.cell,
+            instances={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
-        mock_get_hosts.return_value = all_host_states
+        mock_get_hosts.side_effect = lambda spec_obj, hosts, num: list(hosts)
 
         instance_uuids = None
         ctx = mock.Mock()
         selected_hosts = self.manager._schedule(ctx, spec_obj,
-            instance_uuids, mock.sentinel.alloc_reqs_by_rp_uuid,
-            mock.sentinel.provider_summaries)
+            instance_uuids, None, mock.sentinel.provider_summaries)
 
         mock_get_all_states.assert_called_once_with(
             ctx.elevated.return_value, spec_obj,
@@ -510,14 +527,24 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                   is_public=True,
                                   name="small_flavor"),
             project_id=uuids.project_id,
-            instance_group=None)
+            instance_group=None,
+            requested_resources=[],
+        )
 
-        host_state = mock.Mock(spec=host_manager.HostState,
-                host="fake_host", nodename="fake_node", uuid=uuids.cn1,
-                cell_uuid=uuids.cell1, limits={}, aggregates=[])
+        host_state = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host",
+            nodename="fake_node",
+            uuid=uuids.cn1,
+            cell_uuid=uuids.cell1,
+            limits={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
-        mock_get_hosts.return_value = all_host_states
+        # simulate that every host passes the filtering
+        mock_get_hosts.side_effect = lambda spec_obj, hosts, num: list(hosts)
         mock_claim.return_value = True
 
         instance_uuids = [uuids.instance]
@@ -583,11 +610,16 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             project_id=uuids.project_id,
             instance_group=None)
 
-        host_state = mock.Mock(spec=host_manager.HostState,
-            host=mock.sentinel.host, uuid=uuids.cn1, cell_uuid=uuids.cell1)
+        host_state = mock.Mock(
+            spec=host_manager.HostState,
+            host=mock.sentinel.host,
+            uuid=uuids.cn1,
+            cell_uuid=uuids.cell1,
+            allocations_candidates=[],
+        )
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
-        mock_get_hosts.return_value = all_host_states
+        mock_get_hosts.side_effect = lambda spec_obj, hosts, num: list(hosts)
         mock_claim.return_value = False
 
         instance_uuids = [uuids.instance]
@@ -604,7 +636,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         mock_get_all_states.assert_called_once_with(
             ctx.elevated.return_value, spec_obj,
             mock.sentinel.provider_summaries)
-        mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
+        mock_get_hosts.assert_called_once_with(spec_obj, mock.ANY, 0)
         mock_claim.assert_called_once_with(ctx.elevated.return_value,
                 self.manager.placement_client, spec_obj, uuids.instance,
                 alloc_reqs_by_rp_uuid[uuids.cn1][0],
@@ -635,18 +667,41 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                   is_public=True,
                                   name="small_flavor"),
             project_id=uuids.project_id,
-            instance_group=None)
+            instance_group=None,
+            requested_resources=[],
+        )
 
-        host_state = mock.Mock(spec=host_manager.HostState,
-                host="fake_host", nodename="fake_node", uuid=uuids.cn1,
-                cell_uuid=uuids.cell1, limits={}, updated='fake')
+        host_state = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host",
+            nodename="fake_node",
+            uuid=uuids.cn1,
+            cell_uuid=uuids.cell1,
+            limits={},
+            updated="fake",
+            allocation_candidates=[],
+        )
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
-        mock_get_hosts.side_effect = [
-            all_host_states,  # first instance: return all the hosts (only one)
-            [],  # second: act as if no more hosts that meet criteria
-            all_host_states,  # the final call when creating alternates
-        ]
+
+        calls = []
+
+        def fake_get_sorted_hosts(spec_obj, hosts, num):
+            c = len(calls)
+            calls.append(1)
+            # first instance: return all the hosts (only one)
+            if c == 0:
+                return hosts
+            # second: act as if no more hosts that meet criteria
+            elif c == 1:
+                return []
+            # the final call when creating alternates
+            elif c == 2:
+                return hosts
+            else:
+                raise StopIteration()
+
+        mock_get_hosts.side_effect = fake_get_sorted_hosts
         mock_claim.return_value = True
 
         instance_uuids = [uuids.instance1, uuids.instance2]
@@ -679,20 +734,44 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                   swap=0,
                                   vcpus=1),
             project_id=uuids.project_id,
-            instance_group=None)
+            instance_group=None,
+            requested_resources=[],
+        )
 
-        host_state0 = mock.Mock(spec=host_manager.HostState,
-                host="fake_host0", nodename="fake_node0", uuid=uuids.cn0,
-                cell_uuid=uuids.cell, limits={}, aggregates=[])
-        host_state1 = mock.Mock(spec=host_manager.HostState,
-                host="fake_host1", nodename="fake_node1", uuid=uuids.cn1,
-                cell_uuid=uuids.cell, limits={}, aggregates=[])
-        host_state2 = mock.Mock(spec=host_manager.HostState,
-                host="fake_host2", nodename="fake_node2", uuid=uuids.cn2,
-                cell_uuid=uuids.cell, limits={}, aggregates=[])
+        host_state0 = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host0",
+            nodename="fake_node0",
+            uuid=uuids.cn0,
+            cell_uuid=uuids.cell,
+            limits={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
+        host_state1 = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host1",
+            nodename="fake_node1",
+            uuid=uuids.cn1,
+            cell_uuid=uuids.cell,
+            limits={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
+        host_state2 = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host2",
+            nodename="fake_node2",
+            uuid=uuids.cn2,
+            cell_uuid=uuids.cell,
+            limits={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
         all_host_states = [host_state0, host_state1, host_state2]
         mock_get_all_states.return_value = all_host_states
-        mock_get_hosts.return_value = all_host_states
+        # simulate that every host passes the filtering
+        mock_get_hosts.side_effect = lambda spec_obj, hosts, num: list(hosts)
         mock_claim.return_value = True
 
         instance_uuids = [uuids.instance0]
@@ -744,20 +823,44 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                   swap=0,
                                   vcpus=1),
             project_id=uuids.project_id,
-            instance_group=None)
+            instance_group=None,
+            requested_resources=[],
+        )
 
-        host_state0 = mock.Mock(spec=host_manager.HostState,
-                host="fake_host0", nodename="fake_node0", uuid=uuids.cn0,
-                cell_uuid=uuids.cell, limits={}, aggregates=[])
-        host_state1 = mock.Mock(spec=host_manager.HostState,
-                host="fake_host1", nodename="fake_node1", uuid=uuids.cn1,
-                cell_uuid=uuids.cell, limits={}, aggregates=[])
-        host_state2 = mock.Mock(spec=host_manager.HostState,
-                host="fake_host2", nodename="fake_node2", uuid=uuids.cn2,
-                cell_uuid=uuids.cell, limits={}, aggregates=[])
+        host_state0 = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host0",
+            nodename="fake_node0",
+            uuid=uuids.cn0,
+            cell_uuid=uuids.cell,
+            limits={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
+        host_state1 = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host1",
+            nodename="fake_node1",
+            uuid=uuids.cn1,
+            cell_uuid=uuids.cell,
+            limits={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
+        host_state2 = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host2",
+            nodename="fake_node2",
+            uuid=uuids.cn2,
+            cell_uuid=uuids.cell,
+            limits={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
         all_host_states = [host_state0, host_state1, host_state2]
         mock_get_all_states.return_value = all_host_states
-        mock_get_hosts.return_value = all_host_states
+        # simulate that every host passes the filtering
+        mock_get_hosts.side_effect = lambda spec_obj, hosts, num: list(hosts)
         mock_claim.return_value = True
 
         instance_uuids = [uuids.instance0]
@@ -814,17 +917,36 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                   is_public=True,
                                   name="small_flavor"),
             project_id=uuids.project_id,
-            instance_group=ig, instance_uuid=uuids.instance0)
+            instance_group=ig,
+            instance_uuid=uuids.instance0,
+            requested_resources=[],
+        )
         # Reset the RequestSpec changes so they don't interfere with the
         # assertion at the end of the test.
         spec_obj.obj_reset_changes(recursive=True)
 
-        hs1 = mock.Mock(spec=host_manager.HostState, host='host1',
-                nodename="node1", limits={}, uuid=uuids.cn1,
-                cell_uuid=uuids.cell1, instances={}, aggregates=[])
-        hs2 = mock.Mock(spec=host_manager.HostState, host='host2',
-                nodename="node2", limits={}, uuid=uuids.cn2,
-                cell_uuid=uuids.cell2, instances={}, aggregates=[])
+        hs1 = mock.Mock(
+            spec=host_manager.HostState,
+            host="host1",
+            nodename="node1",
+            limits={},
+            uuid=uuids.cn1,
+            cell_uuid=uuids.cell1,
+            instances={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
+        hs2 = mock.Mock(
+            spec=host_manager.HostState,
+            host="host2",
+            nodename="node2",
+            limits={},
+            uuid=uuids.cn2,
+            cell_uuid=uuids.cell2,
+            instances={},
+            aggregates=[],
+            allocation_candidates=[],
+        )
         all_host_states = [hs1, hs2]
         mock_get_all_states.return_value = all_host_states
         mock_claim.return_value = True
@@ -838,13 +960,18 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         # _get_sorted_hosts() in the two iterations for each instance in
         # num_instances
         visited_instances = set([])
+        get_sorted_hosts_called_with_host_states = []
 
         def fake_get_sorted_hosts(_spec_obj, host_states, index):
             # Keep track of which instances are passed to the filters.
             visited_instances.add(_spec_obj.instance_uuid)
             if index % 2:
-                return [hs1, hs2]
-            return [hs2, hs1]
+                s = list(host_states)
+                get_sorted_hosts_called_with_host_states.append(s)
+                return s
+            s = list(host_states)
+            get_sorted_hosts_called_with_host_states.append(s)
+            return reversed(s)
         mock_get_hosts.side_effect = fake_get_sorted_hosts
         instance_uuids = [
             getattr(uuids, 'instance%d' % x) for x in range(num_instances)
@@ -871,10 +998,14 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         # second time, we pass it the hosts that were returned from
         # _get_sorted_hosts() the first time
         sorted_host_calls = [
-            mock.call(spec_obj, all_host_states, 0),
-            mock.call(spec_obj, [hs2, hs1], 1),
+            mock.call(spec_obj, mock.ANY, 0),
+            mock.call(spec_obj, mock.ANY, 1),
         ]
         mock_get_hosts.assert_has_calls(sorted_host_calls)
+        self.assertEqual(
+            all_host_states, get_sorted_hosts_called_with_host_states[0])
+        self.assertEqual(
+            [hs1], get_sorted_hosts_called_with_host_states[1])
 
         # The instance group object should have both host1 and host2 in its
         # instance group hosts list and there should not be any "changes" to
@@ -1168,14 +1299,36 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                   name="small_flavor"),
             project_id=uuids.project_id,
             instance_uuid=uuids.instance_id,
-            instance_group=None)
+            instance_group=None,
+            requested_resources=[],
+        )
 
-        host_state = mock.Mock(spec=host_manager.HostState, host="fake_host",
-                uuid=uuids.cn1, cell_uuid=uuids.cell, nodename="fake_node",
-                limits={}, updated="Not None")
+        host_state = mock.Mock(
+            spec=host_manager.HostState,
+            host="fake_host",
+            uuid=uuids.cn1,
+            cell_uuid=uuids.cell,
+            nodename="fake_node",
+            limits={},
+            updated="Not None",
+            allocation_candidates=[],
+        )
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
-        mock_get_hosts.side_effect = [all_host_states, []]
+
+        calls = []
+
+        def fake_get_sorted_hosts(spec_obj, hosts, num):
+            c = len(calls)
+            calls.append(1)
+            if c == 0:
+                return list(hosts)
+            elif c == 1:
+                return []
+            else:
+                raise StopIteration
+
+        mock_get_hosts.side_effect = fake_get_sorted_hosts
 
         instance_uuids = [uuids.inst1, uuids.inst2]
         fake_allocs_by_rp = {uuids.cn1: [{}]}
@@ -1204,7 +1357,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             alloc_reqs[hs.uuid] = [{}]
 
         mock_get_all_hosts.return_value = all_host_states
-        mock_sorted.return_value = all_host_states
+        mock_sorted.side_effect = lambda spec_obj, hosts, num: list(hosts)
         mock_claim.return_value = True
         total_returned = num_alternates + 1
         self.flags(max_attempts=total_returned, group="scheduler")
@@ -1212,14 +1365,14 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                 for num in range(num_instances)]
 
         spec_obj = objects.RequestSpec(
-                num_instances=num_instances,
-                flavor=objects.Flavor(memory_mb=512,
-                                      root_gb=512,
-                                      ephemeral_gb=0,
-                                      swap=0,
-                                      vcpus=1),
-                project_id=uuids.project_id,
-                instance_group=None)
+            num_instances=num_instances,
+            flavor=objects.Flavor(
+                memory_mb=512, root_gb=512, ephemeral_gb=0, swap=0, vcpus=1
+            ),
+            project_id=uuids.project_id,
+            instance_group=None,
+            requested_resources=[],
+        )
 
         dests = self.manager._schedule(self.context, spec_obj,
                 instance_uuids, alloc_reqs, None, return_alternates=True)
@@ -1270,11 +1423,24 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             alloc_reqs[hs.uuid] = [{}]
 
         mock_get_all_hosts.return_value = all_host_states
+
         # There are two instances so _get_sorted_hosts is called once per
         # instance and then once again before picking alternates.
-        mock_sorted.side_effect = [all_host_states,
-                                   list(reversed(all_host_states)),
-                                   all_host_states]
+        calls = []
+
+        def fake_get_sorted_hosts(spec_obj, hosts, num):
+            c = len(calls)
+            calls.append(1)
+            if c == 0:
+                return list(hosts)
+            elif c == 1:
+                return list(reversed(all_host_states))
+            elif c == 2:
+                return list(hosts)
+            else:
+                raise StopIteration()
+
+        mock_sorted.side_effect = fake_get_sorted_hosts
         mock_claim.return_value = True
         total_returned = 3
         self.flags(max_attempts=total_returned, group="scheduler")
@@ -1282,14 +1448,14 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         num_instances = len(instance_uuids)
 
         spec_obj = objects.RequestSpec(
-                num_instances=num_instances,
-                flavor=objects.Flavor(memory_mb=512,
-                                      root_gb=512,
-                                      ephemeral_gb=0,
-                                      swap=0,
-                                      vcpus=1),
-                project_id=uuids.project_id,
-                instance_group=None)
+            num_instances=num_instances,
+            flavor=objects.Flavor(
+                memory_mb=512, root_gb=512, ephemeral_gb=0, swap=0, vcpus=1
+            ),
+            project_id=uuids.project_id,
+            instance_group=None,
+            requested_resources=[],
+        )
 
         dests = self.manager._schedule(self.context, spec_obj,
                 instance_uuids, alloc_reqs, None, return_alternates=True)
@@ -1323,7 +1489,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
             alloc_reqs[hs.uuid] = [{}]
 
         mock_get_all_hosts.return_value = all_host_states
-        mock_sorted.return_value = all_host_states
+        mock_sorted.side_effect = lambda spec_obj, hosts, num: list(hosts)
         mock_claim.return_value = True
         # Set the total returned to more than the number of available hosts
         self.flags(max_attempts=max_attempts, group="scheduler")
@@ -1331,14 +1497,14 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         num_instances = len(instance_uuids)
 
         spec_obj = objects.RequestSpec(
-                num_instances=num_instances,
-                flavor=objects.Flavor(memory_mb=512,
-                                      root_gb=512,
-                                      ephemeral_gb=0,
-                                      swap=0,
-                                      vcpus=1),
-                project_id=uuids.project_id,
-                instance_group=None)
+            num_instances=num_instances,
+            flavor=objects.Flavor(
+                memory_mb=512, root_gb=512, ephemeral_gb=0, swap=0, vcpus=1
+            ),
+            project_id=uuids.project_id,
+            instance_group=None,
+            requested_resources=[],
+        )
 
         dests = self.manager._schedule(self.context, spec_obj,
                 instance_uuids, alloc_reqs, None, return_alternates=True)
@@ -1521,3 +1687,503 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.manager._discover_hosts_in_cells(mock.sentinel.context)
         mock_log_warning.assert_not_called()
         mock_log_debug.assert_called_once_with(msg)
+
+
+class SchedulerManagerAllocationCandidateTestCase(test.NoDBTestCase):
+
+    class ACRecorderFilter(filters.BaseHostFilter):
+        """A filter that records what allocation candidates it saw on each host
+        """
+
+        def __init__(self):
+            super().__init__()
+            self.seen_candidates = []
+
+        def host_passes(self, host_state, filter_properties):
+            # record what candidate the filter saw for each host
+            self.seen_candidates.append(list(host_state.allocation_candidates))
+            return True
+
+    class DropFirstFilter(filters.BaseHostFilter):
+        """A filter that removes one candidate and keeps the rest on each
+        host
+        """
+
+        def host_passes(self, host_state, filter_properties):
+            host_state.allocation_candidates.pop(0)
+            return bool(host_state.allocation_candidates)
+
+    @mock.patch.object(
+        host_manager.HostManager, '_init_instance_info', new=mock.Mock())
+    @mock.patch.object(
+        host_manager.HostManager, '_init_aggregates', new=mock.Mock())
+    def setUp(self):
+        super().setUp()
+        self.context = context.RequestContext('fake_user', 'fake_project')
+        self.manager = manager.SchedulerManager()
+        self.manager.host_manager.weighers = []
+        self.request_spec = objects.RequestSpec(
+            ignore_hosts=[],
+            force_hosts=[],
+            force_nodes=[],
+            requested_resources=[],
+        )
+
+    @mock.patch("nova.objects.selection.Selection.from_host_state")
+    @mock.patch(
+        "nova.scheduler.manager.SchedulerManager._consume_selected_host",
+    )
+    @mock.patch(
+        "nova.scheduler.utils.claim_resources",
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch("nova.scheduler.manager.SchedulerManager._get_all_host_states")
+    def test_filters_see_allocation_candidates_for_each_host(
+        self,
+        mock_get_all_host_states,
+        mock_consume,
+        mock_selection_from_host_state,
+    ):
+        # have a single filter configured where we can assert that the filter
+        # see the allocation_candidates of each host
+        filter = self.ACRecorderFilter()
+        self.manager.host_manager.enabled_filters = [filter]
+
+        instance_uuids = [uuids.inst1]
+
+        alloc_reqs_by_rp_uuid = {}
+        # have two hosts with different candidates
+        host1 = host_manager.HostState("host1", "node1", uuids.cell1)
+        host1.uuid = uuids.host1
+        alloc_reqs_by_rp_uuid[uuids.host1] = [
+            mock.sentinel.host1_a_c_1,
+            mock.sentinel.host1_a_c_2,
+        ]
+        host2 = host_manager.HostState("host2", "node2", uuids.cell1)
+        host2.uuid = uuids.host2
+        alloc_reqs_by_rp_uuid[uuids.host2] = [
+            mock.sentinel.host2_a_c_1,
+        ]
+        mock_get_all_host_states.return_value = iter([host1, host2])
+
+        self.manager._schedule(
+            self.context,
+            self.request_spec,
+            instance_uuids,
+            alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries,
+            mock.sentinel.allocation_request_version,
+        )
+
+        # we expect that our filter seen the allocation candidate list of
+        # each host respectively
+        self.assertEqual(
+            [
+                alloc_reqs_by_rp_uuid[uuids.host1],
+                alloc_reqs_by_rp_uuid[uuids.host2],
+            ],
+            filter.seen_candidates,
+        )
+
+    @mock.patch(
+        "nova.scheduler.manager.SchedulerManager._consume_selected_host",
+    )
+    @mock.patch(
+        "nova.scheduler.utils.claim_resources",
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch("nova.scheduler.manager.SchedulerManager._get_all_host_states")
+    def test_scheduler_selects_filtered_a_c_from_hosts_state(
+        self,
+        mock_get_all_host_states,
+        mock_consume,
+    ):
+        """Assert that if a filter removes an allocation candidate from a host
+        then even if that host is selected the removed allocation candidate
+        is not used by the scheduler.
+        """
+
+        self.manager.host_manager.enabled_filters = [self.DropFirstFilter()]
+
+        instance_uuids = [uuids.inst1]
+        alloc_reqs_by_rp_uuid = {}
+        # have a host with two candidates
+        host1 = host_manager.HostState("host1", "node1", uuids.cell1)
+        host1.uuid = uuids.host1
+        alloc_reqs_by_rp_uuid[uuids.host1] = [
+            "host1-candidate1",
+            "host1-candidate2",
+        ]
+        mock_get_all_host_states.return_value = iter([host1])
+
+        result = self.manager._schedule(
+            self.context,
+            self.request_spec,
+            instance_uuids,
+            alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries,
+            'fake-alloc-req-version',
+        )
+        # we have requested one instance to be scheduled so expect on set
+        # of selections
+        self.assertEqual(1, len(result))
+        selections = result[0]
+        # we did not ask for alternatives so a single selection is expected
+        self.assertEqual(1, len(selections))
+        selection = selections[0]
+        # we expect that candidate2 is used as candidate1 is dropped by
+        # the filter
+        self.assertEqual(
+            "host1-candidate2",
+            jsonutils.loads(selection.allocation_request)
+        )
+
+    @mock.patch("nova.objects.selection.Selection.from_host_state")
+    @mock.patch(
+        "nova.scheduler.manager.SchedulerManager._consume_selected_host",
+    )
+    @mock.patch(
+        "nova.scheduler.utils.claim_resources",
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch("nova.scheduler.manager.SchedulerManager._get_all_host_states")
+    def test_consecutive_filter_sees_filtered_a_c_list(
+        self,
+        mock_get_all_host_states,
+        mock_consume,
+        mock_selection_from_host_state,
+    ):
+        # create two filters
+        # 1) DropFirstFilter runs first and drops the first candidate from each
+        #    host
+        # 2) ACRecorderFilter runs next and records what candidates it saw
+        recorder_filter = self.ACRecorderFilter()
+        self.manager.host_manager.enabled_filters = [
+            self.DropFirstFilter(),
+            recorder_filter,
+        ]
+
+        instance_uuids = [uuids.inst1]
+        alloc_reqs_by_rp_uuid = {}
+        # have a host with two candidates
+        host1 = host_manager.HostState("host1", "node1", uuids.cell1)
+        host1.uuid = uuids.host1
+        alloc_reqs_by_rp_uuid[uuids.host1] = [
+            "host1-candidate1",
+            "host1-candidate2",
+        ]
+        mock_get_all_host_states.return_value = iter([host1])
+
+        self.manager._schedule(
+            self.context,
+            self.request_spec,
+            instance_uuids,
+            alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries,
+            'fake-alloc-req-version',
+        )
+
+        # we expect that the second filter saw one host with one candidate and
+        # as candidate1 was already filtered out by the run of the first filter
+        self.assertEqual(
+            [["host1-candidate2"]],
+            recorder_filter.seen_candidates
+        )
+
+    @mock.patch(
+        "nova.scheduler.manager.SchedulerManager._consume_selected_host",
+    )
+    @mock.patch(
+        "nova.scheduler.utils.claim_resources",
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch("nova.scheduler.manager.SchedulerManager._get_all_host_states")
+    def test_filters_removes_all_a_c_host_is_not_selected(
+        self,
+        mock_get_all_host_states,
+        mock_consume,
+    ):
+        # use the filter that always drops the first candidate on each host
+        self.manager.host_manager.enabled_filters = [self.DropFirstFilter()]
+
+        instance_uuids = [uuids.inst1]
+        alloc_reqs_by_rp_uuid = {}
+        # have two hosts
+        # first with a single candidate
+        host1 = host_manager.HostState("host1", "node1", uuids.cell1)
+        host1.uuid = uuids.host1
+        alloc_reqs_by_rp_uuid[uuids.host1] = [
+            "host1-candidate1",
+        ]
+        # second with two candidates
+        host2 = host_manager.HostState("host2", "node2", uuids.cell1)
+        host2.uuid = uuids.host2
+        alloc_reqs_by_rp_uuid[uuids.host2] = [
+            "host2-candidate1",
+            "host2-candidate2",
+        ]
+        mock_get_all_host_states.return_value = iter([host1, host2])
+
+        result = self.manager._schedule(
+            self.context,
+            self.request_spec,
+            instance_uuids,
+            alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries,
+            'fake-alloc-req-version',
+        )
+        # we expect that the first host is not selected as the filter
+        # removed every candidate from the host
+        # also we expect that on the second host only candidate2 could have
+        # been selected
+        # we asked for one instance, so we expect one set of selections
+        self.assertEqual(1, len(result))
+        selections = result[0]
+        # we did not ask for alternatives so a single selection is expected
+        self.assertEqual(1, len(selections))
+        selection = selections[0]
+        # we expect that candidate2 is used as candidate1 is dropped by
+        # the filter
+        self.assertEqual(uuids.host2, selection.compute_node_uuid)
+        self.assertEqual(
+            "host2-candidate2",
+            jsonutils.loads(selection.allocation_request)
+        )
+
+    @mock.patch(
+        "nova.scheduler.manager.SchedulerManager._consume_selected_host",
+    )
+    @mock.patch(
+        "nova.scheduler.utils.claim_resources",
+        new=mock.Mock(return_value=True),
+    )
+    @mock.patch("nova.scheduler.manager.SchedulerManager._get_all_host_states")
+    def test_consume_selected_host_sees_updated_request_spec(
+        self,
+        mock_get_all_host_states,
+        mock_consume,
+    ):
+        # simulate that nothing is filtered out, by not having any filters
+        self.manager.host_manager.enabled_filters = []
+
+        # set up the request spec with a request group to be updated
+        # by the selected candidate
+        self.request_spec.requested_resources = [
+            objects.RequestGroup(
+                requester_id=uuids.group_req1, provider_uuids=[]
+            )
+        ]
+
+        instance_uuids = [uuids.inst1]
+        alloc_reqs_by_rp_uuid = {}
+        # have single host with a single candidate
+        # first with a single candidate
+        host1 = host_manager.HostState("host1", "node1", uuids.cell1)
+        host1.uuid = uuids.host1
+        # simulate that placement fulfilled the above RequestGroup from
+        # a certain child RP of the host.
+        alloc_reqs_by_rp_uuid[uuids.host1] = [
+            {
+                "mappings": {
+                    "": [uuids.host1],
+                    uuids.group_req1: [uuids.host1_child_rp],
+                }
+            }
+        ]
+        mock_get_all_host_states.return_value = iter([host1])
+
+        # make asserts on the request_spec passed to consume
+        def assert_request_spec_updated_with_selected_candidate(
+            selected_host, spec_obj, instance_uuid=None
+        ):
+            # we expect that the scheduler updated the request_spec based
+            # the selected candidate before called consume
+            self.assertEqual(
+                [uuids.host1_child_rp],
+                spec_obj.requested_resources[0].provider_uuids,
+            )
+
+        mock_consume.side_effect = (
+            assert_request_spec_updated_with_selected_candidate)
+
+        self.manager._schedule(
+            self.context,
+            self.request_spec,
+            instance_uuids,
+            alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries,
+            'fake-alloc-req-version',
+        )
+
+        mock_consume.assert_called_once()
+
+    @mock.patch(
+        "nova.scheduler.manager.SchedulerManager._consume_selected_host",
+    )
+    @mock.patch(
+        "nova.scheduler.utils.claim_resources",
+        return_value=True,
+    )
+    @mock.patch("nova.scheduler.manager.SchedulerManager._get_all_host_states")
+    def test_get_alternate_hosts_returns_main_selection_with_claimed_a_c(
+        self,
+        mock_get_all_host_states,
+        mock_claim,
+        mock_consume,
+    ):
+        """Assert that the first (a.k.a main) selection returned for an
+        instance always maps to the allocation candidate, that was claimed by
+        the scheduler in placement.
+        """
+        # use the filter that always drops the first candidate on each host
+        self.manager.host_manager.enabled_filters = [self.DropFirstFilter()]
+
+        instance_uuids = [uuids.inst1]
+        alloc_reqs_by_rp_uuid = {}
+        # have one host with 3 candidates each fulfilling a request group
+        # from different child RP
+        host1 = host_manager.HostState("host1", "node1", uuids.cell1)
+        host1.uuid = uuids.host1
+        alloc_reqs_by_rp_uuid[uuids.host1] = [
+            {
+                "mappings": {
+                    "": [uuids.host1],
+                    uuids.group_req1: [getattr(uuids, f"host1_child{i}")],
+                }
+            } for i in [1, 2, 3]
+        ]
+        mock_get_all_host_states.return_value = iter([host1])
+
+        result = self.manager._schedule(
+            self.context,
+            self.request_spec,
+            instance_uuids,
+            alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries,
+            'fake-alloc-req-version',
+            return_alternates=True,
+        )
+
+        # we scheduled one instance
+        self.assertEqual(1, len(result))
+        selections = result[0]
+        # we did not ask for alternatives
+        self.assertEqual(1, len(selections))
+        selection = selections[0]
+        self.assertEqual(uuids.host1, selection.compute_node_uuid)
+        # we expect that host1_child2 candidate is selected
+        expected_a_c = {
+            "mappings": {
+                "": [uuids.host1],
+                uuids.group_req1: [uuids.host1_child2],
+            }
+        }
+        self.assertEqual(
+            expected_a_c,
+            jsonutils.loads(selection.allocation_request),
+        )
+        # and we expect that the same candidate was claimed in placement
+        mock_claim.assert_called_once_with(
+            mock.ANY,
+            self.manager.placement_client,
+            self.request_spec,
+            uuids.inst1,
+            expected_a_c,
+            allocation_request_version="fake-alloc-req-version",
+        )
+
+    @mock.patch(
+        "nova.scheduler.manager.SchedulerManager._consume_selected_host",
+    )
+    @mock.patch(
+        "nova.scheduler.utils.claim_resources",
+        return_value=True,
+    )
+    @mock.patch("nova.scheduler.manager.SchedulerManager._get_all_host_states")
+    def test_get_alternate_hosts_returns_alts_with_filtered_a_c(
+        self,
+        mock_get_all_host_states,
+        mock_claim,
+        mock_consume,
+    ):
+        """Assert that alternate generation also works based on filtered
+        candidates.
+        """
+
+        class RPFilter(filters.BaseHostFilter):
+            """A filter that only allows candidates with specific RPs"""
+
+            def __init__(self, allowed_rp_uuids):
+                self.allowed_rp_uuids = allowed_rp_uuids
+
+            def host_passes(self, host_state, filter_properties):
+                host_state.allocation_candidates = [
+                    a_c
+                    for a_c in host_state.allocation_candidates
+                    if a_c["mappings"][uuids.group_req1][0]
+                    in self.allowed_rp_uuids
+                ]
+                return True
+
+        instance_uuids = [uuids.inst1]
+        alloc_reqs_by_rp_uuid = {}
+        # have 3 hosts each with 2 allocation candidates fulfilling a request
+        # group from a different child RP
+        hosts = []
+        for i in [1, 2, 3]:
+            host = host_manager.HostState(f"host{i}", f"node{i}", uuids.cell1)
+            host.uuid = getattr(uuids, f"host{i}")
+            alloc_reqs_by_rp_uuid[host.uuid] = [
+                {
+                    "mappings": {
+                        "": [host.uuid],
+                        uuids.group_req1: [
+                            getattr(uuids, f"host{i}_child{j}")
+                        ],
+                    }
+                }
+                for j in [1, 2]
+            ]
+            hosts.append(host)
+        mock_get_all_host_states.return_value = iter(hosts)
+
+        # configure a filter that only "likes" host1_child2 and host3_child2
+        # RPs. This means host2 is totally out and host1 and host3 only have
+        # one viable candidate
+        self.manager.host_manager.enabled_filters = [
+            RPFilter(allowed_rp_uuids=[uuids.host1_child2, uuids.host3_child2])
+        ]
+
+        result = self.manager._schedule(
+            self.context,
+            self.request_spec,
+            instance_uuids,
+            alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries,
+            'fake-alloc-req-version',
+            return_alternates=True,
+        )
+        # we scheduled one instance
+        self.assertEqual(1, len(result))
+        selections = result[0]
+        # we expect a main selection and a single alternative
+        # (host1, and host3) on both selection we expect child2 as selected
+        # candidate
+        self.assertEqual(2, len(selections))
+        main_selection = selections[0]
+        self.assertEqual(uuids.host1, main_selection.compute_node_uuid)
+        self.assertEqual(
+            [uuids.host1_child2],
+            jsonutils.loads(main_selection.allocation_request)["mappings"][
+                uuids.group_req1
+            ],
+        )
+
+        alt_selection = selections[1]
+        self.assertEqual(uuids.host3, alt_selection.compute_node_uuid)
+        self.assertEqual(
+            [uuids.host3_child2],
+            jsonutils.loads(alt_selection.allocation_request)["mappings"][
+                uuids.group_req1
+            ],
+        )
