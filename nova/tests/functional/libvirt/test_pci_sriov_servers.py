@@ -1827,6 +1827,68 @@ class PCIServersTest(_PCIServersTestBase):
         self.assertPCIDeviceCounts('test_compute0', total=2, free=2)
         self.assertPCIDeviceCounts('test_compute1', total=2, free=0)
 
+    def test_request_two_pci_but_host_has_one(self):
+        # simulate a single dev-PCI device on the host
+        self.start_compute(pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=1))
+        self.assertPCIDeviceCounts('compute1', total=1, free=1)
+
+        alias = [jsonutils.dumps(x) for x in (
+            {
+                'vendor_id': fakelibvirt.PCI_VEND_ID,
+                'product_id': fakelibvirt.PCI_PROD_ID,
+                'name': 'a1',
+            },
+            {
+                'vendor_id': fakelibvirt.PCI_VEND_ID,
+                'product_id': fakelibvirt.PCI_PROD_ID,
+                'name': 'a2',
+            },
+        )]
+        self.flags(group='pci', alias=alias)
+        # request two PCI devices both are individually matching with the
+        # single available device on the host
+        extra_spec = {'pci_passthrough:alias': 'a1:1,a2:1'}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        # so we expect that the boot fails with no valid host erro as only
+        # one of the requested PCI device can be allocated
+        # server = self._create_server(
+        #     flavor_id=flavor_id, expected_state='ERROR')
+        # self.assertIn('fault', server)
+        # self.assertIn('No valid host', server['fault']['message'])
+
+        # This is bug 1986838
+        # The boot succeeds and none of the requested devices will be allocated
+        # to the instance.
+        server = self._create_server(flavor_id=flavor_id, networks='none')
+        self.assertPCIDeviceCounts('compute1', total=1, free=1)
+        devices = objects.PciDeviceList.get_by_instance_uuid(
+            self.ctxt, server['id'])
+        self.assertEqual(0, len(devices))
+        # the scheduler fails to consume the pci request from the host
+        # but the scheduler also simply ignore this "small" problem by
+        # pointing to compute that during the pci_claim the compute service
+        # will do the right thing and fail loudly and trigger a re-schedule.
+        # See
+        # https://github.com/openstack/nova/blob/69bc4c38d1c5b98fcbbe8b16a7dfeb654e3b8173/nova/scheduler/host_manager.py#L81-L87
+        self.assertIn(
+            'WARNING [nova.scheduler.host_manager] Selected host: compute1 '
+            'failed to consume from instance. Error: PCI device request',
+            self.stdlog.logger.output
+        )
+        # And yes, the compute service detects the failure but states that this
+        # should not happen as the scheduler needed to choose the host
+        # properly. Then it simply cleans up all the instance PCI allocations
+        # and ignores the fault, so the instance boots with the requested PCI
+        # devs.
+        self.assertIn(
+            'ERROR [nova.pci.stats] Failed to allocate PCI devices for '
+            'instance. Unassigning devices back to pools. This should not '
+            'happen, since the scheduler should have accurate information, '
+            'and allocation during claims is controlled via a hold on the '
+            'compute node semaphore.',
+            self.stdlog.logger.output
+        )
+
 
 class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
 
