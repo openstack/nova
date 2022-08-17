@@ -684,8 +684,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         https://bugs.launchpad.net/nova/+bug/1934094
         """
         instance = self._create_fake_instance_obj()
-        # TODO(pslestang) to uncomment when bug 1934094 is fixed
-        # initial_image_ref = instance.image_ref
+        initial_image_ref = instance.image_ref
 
         fake_spec = objects.RequestSpec()
         shelved_image = {'id': uuids.image_id}
@@ -696,10 +695,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                     self.compute.unshelve_instance, self.context, instance,
                     image=shelved_image, filter_properties={},
                     node='fake-node', request_spec=fake_spec, accel_uuids=[])
-        # FIXME(pslestang) Until bug 1934094 is fixed
-        # The instance.image_ref is set to shelved_image.id but should be
-        # equal to initial_image_ref
-        self.assertEqual(instance.image_ref, shelved_image['id'])
+        self.assertEqual(instance.image_ref, initial_image_ref)
 
     @mock.patch.object(objects.InstanceList, 'get_by_filters')
     def test_shelved_poll_none_offloaded(self, mock_get_by_filters):
