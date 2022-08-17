@@ -869,6 +869,20 @@ class PlacementHelperMixin:
             'Test expected a single migration but found %i' % len(migrations))
         return migrations[0].uuid
 
+    def _reserve_placement_resource(self, rp_name, rc_name, reserved):
+        rp_uuid = self._get_provider_uuid_by_name(rp_name)
+        inv = self.placement.get(
+            '/resource_providers/%s/inventories/%s' % (rp_uuid, rc_name),
+            version='1.26'
+        ).body
+        inv["reserved"] = reserved
+        result = self.placement.put(
+            '/resource_providers/%s/inventories/%s' % (rp_uuid, rc_name),
+            version='1.26', body=inv
+        ).body
+        self.assertEqual(reserved, result["reserved"])
+        return result
+
 
 class PlacementInstanceHelperMixin(InstanceHelperMixin, PlacementHelperMixin):
     """A placement-aware variant of InstanceHelperMixin."""

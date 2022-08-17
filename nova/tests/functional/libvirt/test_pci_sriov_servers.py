@@ -95,6 +95,8 @@ class _PCIServersTestBase(base.ServersTestBase):
 
     ADDITIONAL_FILTERS = ['NUMATopologyFilter', 'PciPassthroughFilter']
 
+    PCI_RC = f"CUSTOM_PCI_{fakelibvirt.PCI_VEND_ID}_{fakelibvirt.PCI_PROD_ID}"
+
     def setUp(self):
         self.ctxt = context.get_admin_context()
         self.flags(
@@ -239,6 +241,10 @@ class _PCIServersTestBase(base.ServersTestBase):
                     f"{expected_rp_allocs} on {rp_name} but it has "
                     f"{actual_rp_allocs} instead."
                 )
+
+    @staticmethod
+    def _to_device_spec_conf(spec_list):
+        return [jsonutils.dumps(x) for x in spec_list]
 
 
 class _PCIServersWithMigrationTestBase(_PCIServersTestBase):
@@ -1889,7 +1895,6 @@ class PCIServersTest(_PCIServersTestBase):
             'name': ALIAS_NAME,
         }
     )]
-    PCI_RC = f"CUSTOM_PCI_{fakelibvirt.PCI_VEND_ID}_{fakelibvirt.PCI_PROD_ID}"
 
     def setUp(self):
         super().setUp()
@@ -2317,6 +2322,19 @@ class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
     )]
     expected_state = 'ACTIVE'
 
+    def setUp(self):
+        super().setUp()
+        self.flags(group="pci", report_in_placement=True)
+        # TODO(gibi): replace this with setting the [scheduler]pci_in_placement
+        # confing to True once that config is added
+        self.mock_pci_in_placement_enabled = self.useFixture(
+            fixtures.MockPatch(
+                'nova.objects.request_spec.RequestSpec.'
+                '_pci_in_placement_enabled',
+                return_value=True
+            )
+        ).mock
+
     def test_create_server_with_pci_dev_and_numa(self):
         """Validate behavior of 'preferred' PCI NUMA policy.
 
@@ -2329,6 +2347,20 @@ class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
 
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=1, numa_node=0)
         self.start_compute(pci_info=pci_info)
+        compute1_placement_pci_view = {
+            "inventories": {
+                "0000:81:00.0": {self.PCI_RC: 1},
+            },
+            "traits": {
+                "0000:81:00.0": [],
+            },
+            "usages": {
+                "0000:81:00.0": {self.PCI_RC: 0},
+            },
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_placement_pci_view)
 
         # boot one instance with no PCI device to "fill up" NUMA node 0
         extra_spec = {
@@ -2337,12 +2369,25 @@ class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
         flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
         self._create_server(flavor_id=flavor_id)
 
+        self.assert_placement_pci_view(
+            "compute1", **compute1_placement_pci_view)
+
         # now boot one with a PCI device, which should succeed thanks to the
         # use of the PCI policy
         extra_spec['pci_passthrough:alias'] = '%s:1' % self.ALIAS_NAME
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-        self._create_server(
+        server_with_pci = self._create_server(
             flavor_id=flavor_id, expected_state=self.expected_state)
+
+        if self.expected_state == 'ACTIVE':
+            compute1_placement_pci_view["usages"][
+                "0000:81:00.0"][self.PCI_RC] = 1
+            compute1_placement_pci_view["allocations"][
+                server_with_pci['id']] = {"0000:81:00.0": {self.PCI_RC: 1}}
+
+        self.assert_placement_pci_view(
+            "compute1", **compute1_placement_pci_view)
+        self.assert_no_pci_healing("compute1")
 
 
 class PCIServersWithRequiredNUMATest(PCIServersWithPreferredNUMATest):
@@ -2358,6 +2403,101 @@ class PCIServersWithRequiredNUMATest(PCIServersWithPreferredNUMATest):
         }
     )]
     expected_state = 'ERROR'
+
+    def setUp(self):
+        super().setUp()
+        self.useFixture(
+            fixtures.MockPatch(
+                'nova.pci.utils.is_physical_function', return_value=False
+            )
+        )
+
+    def test_create_server_with_pci_dev_and_numa_placement_conflict(self):
+        # fakelibvirt will simulate the devices:
+        # * one type-PCI in 81.00 on numa 0
+        # * one type-PCI in 81.01 on numa 1
+        pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=2)
+        # the device_spec will assign different traits to 81.00 than 81.01
+        # so the two devices become different from placement perspective
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    'vendor_id': fakelibvirt.PCI_VEND_ID,
+                    'product_id': fakelibvirt.PCI_PROD_ID,
+                    "address": "0000:81:00.0",
+                    "traits": "green",
+                },
+                {
+                    'vendor_id': fakelibvirt.PCI_VEND_ID,
+                    'product_id': fakelibvirt.PCI_PROD_ID,
+                    "address": "0000:81:01.0",
+                    "traits": "red",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        # both numa 0 and numa 1 has 4 PCPUs
+        self.flags(cpu_dedicated_set='0-7', group='compute')
+        self.start_compute(pci_info=pci_info)
+        compute1_placement_pci_view = {
+            "inventories": {
+                "0000:81:00.0": {self.PCI_RC: 1},
+                "0000:81:01.0": {self.PCI_RC: 1},
+            },
+            "traits": {
+                "0000:81:00.0": ["CUSTOM_GREEN"],
+                "0000:81:01.0": ["CUSTOM_RED"],
+            },
+            "usages": {
+                "0000:81:00.0": {self.PCI_RC: 0},
+                "0000:81:01.0": {self.PCI_RC: 0},
+            },
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_placement_pci_view)
+
+        # boot one instance with no PCI device to "fill up" NUMA node 0
+        # so we will have PCPUs on numa 0 and we have PCI on both nodes
+        extra_spec = {
+            'hw:cpu_policy': 'dedicated',
+        }
+        flavor_id = self._create_flavor(vcpu=4, extra_spec=extra_spec)
+        self._create_server(flavor_id=flavor_id)
+
+        pci_alias = {
+            "resource_class": self.PCI_RC,
+            # this means only 81.00 will match in placement which is on numa 0
+            "traits": "green",
+            "name": "pci-dev",
+            # this forces the scheduler to only accept a solution where the
+            # PCI device is on the same numa node as the pinned CPUs
+            'numa_policy': fields.PCINUMAAffinityPolicy.REQUIRED,
+        }
+        self.flags(
+            group="pci",
+            # FIXME(gibi): make _to_device_spec_conf a general util for both
+            # device spec and pci alias
+            alias=self._to_device_spec_conf([pci_alias]),
+        )
+
+        # Ask for dedicated CPUs, that can only be fulfilled on numa 1.
+        # And ask for a PCI alias that can only be fulfilled on numa 0 due to
+        # trait request.
+        # We expect that this makes the scheduling fail.
+        extra_spec = {
+            "hw:cpu_policy": "dedicated",
+            "pci_passthrough:alias": "pci-dev:1",
+        }
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(
+            flavor_id=flavor_id, expected_state="ERROR")
+
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
+        self.assert_placement_pci_view(
+            "compute1", **compute1_placement_pci_view)
+        self.assert_no_pci_healing("compute1")
 
 
 @ddt.ddt
