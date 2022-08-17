@@ -651,8 +651,13 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         pci_requests = copy.deepcopy(fake_pci_requests)
         pci_requests[0]['count'] = 4
         pci_requests_obj = self._create_pci_requests_object(pci_requests)
-        self.tracker.claim_instance(mock.sentinel.context,
-                                    pci_requests_obj, None)
+        self.assertRaises(
+            exception.PciDeviceRequestFailed,
+            self.tracker.claim_instance,
+            mock.sentinel.context,
+            pci_requests_obj,
+            None
+        )
         self.assertEqual(len(self.tracker.claims[self.inst['uuid']]), 0)
         devs = self.tracker.update_pci_for_instance(None,
                                                     self.inst,
@@ -687,11 +692,13 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.inst.numa_topology = objects.InstanceNUMATopology(
                     cells=[objects.InstanceNUMACell(
                         id=1, cpuset=set([1, 2]), memory=512)])
-        claims = self.tracker.claim_instance(
+        self.assertRaises(
+            exception.PciDeviceRequestFailed,
+            self.tracker.claim_instance,
             mock.sentinel.context,
             pci_requests_obj,
-            self.inst.numa_topology)
-        self.assertEqual([], claims)
+            self.inst.numa_topology
+        )
 
     def test_update_pci_for_instance_deleted(self):
         pci_requests_obj = self._create_pci_requests_object(fake_pci_requests)

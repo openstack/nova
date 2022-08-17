@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    `Bug #1986838 <https://bugs.launchpad.net/nova/+bug/1986838>`_: Nova now
+    correctly schedules an instance that requests multiple PCI devices via
+    multiple PCI aliases in the flavor extra_spec when multiple similar devices
+    are requested but the compute host has only one such device matching with
+    each request individually.

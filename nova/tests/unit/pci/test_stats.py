@@ -262,8 +262,11 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.assertEqual(0, len(devs))
 
     def test_consume_requests_failed(self):
-        self.assertIsNone(self.pci_stats.consume_requests(
-                          pci_requests_multiple))
+        self.assertRaises(
+            exception.PciDeviceRequestFailed,
+            self.pci_stats.consume_requests,
+            pci_requests_multiple,
+        )
 
     def test_consume_requests_numa(self):
         cells = [
@@ -282,7 +285,12 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
             objects.InstanceNUMACell(
                 id=0, cpuset=set(), pcpuset=set(), memory=0),
         ]
-        self.assertIsNone(self.pci_stats.consume_requests(pci_requests, cells))
+        self.assertRaises(
+            exception.PciDeviceRequestFailed,
+            self.pci_stats.consume_requests,
+            pci_requests,
+            cells,
+        )
 
     def test_consume_requests_no_numa_info(self):
         cells = [
@@ -314,11 +322,16 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
         pci_requests = self._get_fake_requests(vendor_ids=[vendor_id],
             numa_policy=policy, count=count)
-        devs = self.pci_stats.consume_requests(pci_requests, cells)
 
         if expected is None:
-            self.assertIsNone(devs)
+            self.assertRaises(
+                exception.PciDeviceRequestFailed,
+                self.pci_stats.consume_requests,
+                pci_requests,
+                cells,
+            )
         else:
+            devs = self.pci_stats.consume_requests(pci_requests, cells)
             self.assertEqual(set(expected),
                              set([dev.product_id for dev in devs]))
 
@@ -907,13 +920,21 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
                         objects.InstancePCIRequest(count=1,
                             spec=[{'product_id': '1528',
                                     'dev_type': 'type-PF'}])]
-        self.assertIsNone(self.pci_stats.consume_requests(pci_requests))
+        self.assertRaises(
+            exception.PciDeviceRequestFailed,
+            self.pci_stats.consume_requests,
+            pci_requests,
+        )
 
     def test_consume_VF_and_PF_same_product_id_failed(self):
         self._create_pci_devices(pf_product_id=1515)
         pci_requests = [objects.InstancePCIRequest(count=9,
                             spec=[{'product_id': '1515'}])]
-        self.assertIsNone(self.pci_stats.consume_requests(pci_requests))
+        self.assertRaises(
+            exception.PciDeviceRequestFailed,
+            self.pci_stats.consume_requests,
+            pci_requests,
+        )
 
     def test_consume_PF_not_remote_managed(self):
         self._create_pci_devices()
@@ -955,8 +976,11 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
                         objects.InstancePCIRequest(count=1,
                             spec=[{'product_id': '101e'}])]
         free_devs_before = self.pci_stats.get_free_devs()
-        devs = self.pci_stats.consume_requests(pci_requests)
-        self.assertIsNone(devs)
+        self.assertRaises(
+            exception.PciDeviceRequestFailed,
+            self.pci_stats.consume_requests,
+            pci_requests,
+        )
         free_devs_after = self.pci_stats.get_free_devs()
         self.assertEqual(free_devs_before, free_devs_after)
 

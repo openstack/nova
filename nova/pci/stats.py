@@ -249,7 +249,7 @@ class PciDeviceStats(object):
                           "on the compute node semaphore.")
                 for d in range(len(alloc_devices)):
                     self.add_device(alloc_devices.pop())
-                return None
+                raise exception.PciDeviceRequestFailed(requests=pci_requests)
 
             for pool in pools:
                 if pool['count'] >= count:
@@ -639,11 +639,22 @@ class PciDeviceStats(object):
             corresponds to the ``id`` of host NUMACells, or None.
         :returns: Whether this compute node can satisfy the given request.
         """
-        # NOTE(yjiang5): this function has high possibility to fail,
-        # so no exception should be triggered for performance reason.
-        return all(
-            self._filter_pools(self.pools, r, numa_cells) for r in requests
-        )
+
+        # try to apply the requests on the copy of the stats if it applies
+        # cleanly then we know that the requests is supported. We call apply
+        # only on a copy as we don't want to actually consume resources from
+        # the pool as at this point this is just a test during host filtering.
+        # Later the scheduler will call apply_request to consume on the
+        # selected host. The compute will call consume_request during PCI claim
+        # to consume not just from the pools but also consume PciDevice
+        # objects.
+        stats = copy.deepcopy(self)
+        try:
+            stats.apply_requests(requests, numa_cells)
+        except exception.PciDeviceRequestFailed:
+            return False
+
+        return True
 
     def _apply_request(
         self,

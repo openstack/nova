@@ -18,6 +18,7 @@ from keystoneauth1 import exceptions as ks_exc
 import os_resource_classes as orc
 import os_traits
 from oslo_config import cfg
+from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import timeutils
 from oslo_utils import units
@@ -2124,26 +2125,45 @@ class TestInstanceClaim(BaseTestCase):
         # PCI devices on the host and sends an updated pci_device_pools
         # attribute of the ComputeNode object.
 
+        self.flags(
+            group="pci",
+            device_spec=[
+                jsonutils.dumps({"vendor_id": "0001", "product_id": "0002"})
+            ],
+        )
+        pci_dev = pci_device.PciDevice.create(
+            None,
+            dev_dict={
+                "compute_node_id": 1,
+                "address": "0000:81:00.0",
+                "product_id": "0002",
+                "vendor_id": "0001",
+                "numa_node": 0,
+                "dev_type": obj_fields.PciDeviceType.STANDARD,
+                "status": obj_fields.PciDeviceStatus.AVAILABLE,
+                "parent_addr": None,
+            },
+        )
+
+        pci_dev.instance_uuid = None
+        pci_devs = [pci_dev]
+
         # TODO(jaypipes): Remove once the PCI tracker is always created
         # upon the resource tracker being initialized...
         with mock.patch.object(
             objects.PciDeviceList, 'get_by_compute_node',
-            return_value=objects.PciDeviceList()
+            return_value=objects.PciDeviceList(objects=pci_devs)
         ):
             self.rt.pci_tracker = pci_manager.PciDevTracker(
                 mock.sentinel.ctx, _COMPUTE_NODE_FIXTURES[0])
 
-        pci_dev = pci_device.PciDevice.create(
-            None, fake_pci_device.dev_dict)
-        pci_devs = [pci_dev]
-        self.rt.pci_tracker.pci_devs = objects.PciDeviceList(objects=pci_devs)
-
         request = objects.InstancePCIRequest(count=1,
-            spec=[{'vendor_id': 'v', 'product_id': 'p'}])
+            spec=[{'vendor_id': '0001', 'product_id': '0002'}])
         pci_requests = objects.InstancePCIRequests(
                 requests=[request],
                 instance_uuid=self.instance.uuid)
         self.instance.pci_requests = pci_requests
+        self.instance.pci_devices = objects.PciDeviceList()
         check_bfv_mock.return_value = False
 
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
@@ -2155,7 +2175,17 @@ class TestInstanceClaim(BaseTestCase):
             "free_ram_mb": expected.memory_mb - self.instance.memory_mb,
             'running_vms': 1,
             'vcpus_used': 1,
-            'pci_device_pools': objects.PciDevicePoolList(),
+            'pci_device_pools': objects.PciDevicePoolList(
+                objects=[
+                    objects.PciDevicePool(
+                        vendor_id='0001',
+                        product_id='0002',
+                        numa_node=0,
+                        tags={'dev_type': 'type-PCI'},
+                        count=0
+                    )
+                ]
+            ),
             'stats': {
                 'io_workload': 0,
                 'num_instances': 1,
