@@ -276,6 +276,11 @@ class _TestBlockDeviceMappingObject(object):
         mock_inst_get_by_uuid.assert_called_once_with(
             self.context, bdm.instance_uuid)
 
+    def test_obj_load_attr_encrypted(self):
+        bdm = objects.BlockDeviceMapping(self.context, **self.fake_bdm())
+        del bdm.encrypted
+        self.assertEqual(bdm.fields['encrypted'].default, bdm.encrypted)
+
     def test_obj_make_compatible_pre_1_17(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',

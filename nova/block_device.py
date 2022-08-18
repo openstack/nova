@@ -52,7 +52,9 @@ bdm_new_fields = set(['source_type', 'destination_type',
                      'guest_format', 'device_type', 'disk_bus', 'boot_index',
                      'device_name', 'delete_on_termination', 'snapshot_id',
                      'volume_id', 'volume_size', 'image_id', 'no_device',
-                     'connection_info', 'tag', 'volume_type'])
+                     'connection_info', 'tag', 'volume_type', 'encrypted',
+                     'encryption_secret_uuid', 'encryption_format',
+                     'encryption_options'])
 
 
 bdm_db_only_fields = set(['id', 'instance_uuid', 'attachment_id', 'uuid'])
