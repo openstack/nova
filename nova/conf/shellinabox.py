@@ -74,7 +74,6 @@ Interdependencies to other options:
 
 proxyclient_url_opt = cfg.StrOpt('proxyclient_url',
                                  default='http://127.0.0.1',
-                                 positional=True,
                                  help="""
 The url to which proxy clients (like ``nova-shellinaboxproxy``) should
 connect to get the serial console of an instance.
