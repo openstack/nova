@@ -13,31 +13,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.compute import rpcapi as compute_rpcapi
 from nova import config
-from nova.console.websocketproxy import NovaProxyRequestHandlerBase
+from nova.console.websocketproxy import NovaProxyRequestHandler
 from nova import context
 from nova import exception
 
 STATIC_FILES_EXT = ('.js', '.css', '.html', '.ico', '.png', '.gif')
 
 
-class NovaShellInaBoxProxy(NovaProxyRequestHandlerBase):
+class NovaShellInaBoxProxy(NovaProxyRequestHandler):
     """Class that injects token validation routine into proxy logic."""
 
     def __init__(self):
         self._compute_rpcapi = None
-
-    @property
-    def compute_rpcapi(self):
-        # This is copied from NovaProxyRequestHandler, just to avoid
-        # extending that class (because it inherits
-        # websockify.ProxyRequestHandler in addition and we don't need that).
-        # For upgrades we should have a look again if anything changed there,
-        # that we might need to also include here.
-        if not self._compute_rpcapi:
-            self._compute_rpcapi = compute_rpcapi.ComputeAPI()
-        return self._compute_rpcapi
+        # NOTE(jkulik): we're explicitly not calling our superclass here,
+        # because that class extends from websockify.ProxyRequestHandler and we
+        # don't need that. We should check on upgrades, if this function still
+        # fullfills its purpose.
 
     def path_includes_static_files(self):
         """Returns True if requested path includes static files.
