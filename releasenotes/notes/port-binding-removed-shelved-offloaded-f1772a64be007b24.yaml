@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    [`bug 1983471 <https://bugs.launchpad.net/nova/+bug/1983471>`_]
+    When offloading a shelved instance, the compute will now remove the
+    binding so instance ports will appear as "unbound" in neutron.

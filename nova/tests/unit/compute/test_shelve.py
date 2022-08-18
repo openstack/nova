@@ -209,6 +209,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         instance = self._shelve_offload(clean_shutdown=False)
         mock_power_off.assert_called_once_with(instance, 0, 0)
 
+    @mock.patch.object(neutron_api.API, 'unbind_ports')
     @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(nova.compute.manager.ComputeManager,
@@ -225,7 +226,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def _shelve_offload(self, mock_notify, mock_notify_instance_usage,
                         mock_get_power_state, mock_update_resource_tracker,
                         mock_delete_alloc, mock_terminate, mock_get_bdms,
-                        mock_event, clean_shutdown=True):
+                        mock_event, mock_unbind_ports, clean_shutdown=True):
         host = 'fake-mini'
         instance = self._create_fake_instance_obj(params={'host': host})
         instance.task_state = task_states.SHELVING
@@ -277,6 +278,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                                            CONF.host,
                                            instance.uuid,
                                            graceful_exit=False)
+
+        mock_unbind_ports.assert_called_once_with(
+            self.context, mock.ANY, detach=False)
 
         return instance
 
