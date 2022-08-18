@@ -5930,6 +5930,41 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'volume_id': 'volume_id'}]
         self._test_check_and_transform_bdm(block_device_mapping)
 
+    def test_update_ephemeral_encryption_bdms(self):
+        flavor = self._create_flavor(
+            extra_specs={
+                'hw:ephemeral_encryption': True,
+                'hw:ephemeral_encryption_format': 'luks',
+            }
+        )
+        block_device_mapping = [
+                {'device_name': '/dev/sda1',
+                 'source_type': 'snapshot', 'destination_type': 'volume',
+                 'snapshot_id': uuids.snapshot_id,
+                 'delete_on_termination': False,
+                 'boot_index': 0},
+                {'device_name': '/dev/sdb2',
+                 'source_type': 'image', 'destination_type': 'local',
+                 'image_id': uuids.image_id, 'delete_on_termination': False},
+                {'device_name': '/dev/sdb3',
+                 'source_type': 'blank', 'destination_type': 'local',
+                 'guest_format': 'ext3', 'delete_on_termination': False}]
+
+        block_device_mapping = (
+                block_device_obj.block_device_make_list_from_dicts(
+                    self.context,
+                    map(fake_block_device.AnonFakeDbBlockDeviceDict,
+                        block_device_mapping)))
+
+        self.compute_api._update_ephemeral_encryption_bdms(
+            flavor, {}, block_device_mapping)
+
+        for bdm in block_device_mapping:
+            if bdm.is_local:
+                self.assertTrue(bdm.encrypted)
+            else:
+                self.assertFalse(bdm.encrypted)
+
     def test_bdm_validate_set_size_and_instance(self):
         swap_size = 42
         ephemeral_size = 24

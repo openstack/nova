@@ -2598,3 +2598,73 @@ def check_hw_rescue_props(image_meta):
     """
     hw_rescue_props = ['hw_rescue_device', 'hw_rescue_bus']
     return any(key in image_meta.properties for key in hw_rescue_props)
+
+
+def get_ephemeral_encryption_constraint(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> bool:
+    """Get the ephemeral encryption constrants based on the flavor and image.
+
+    :param flavor: an objects.Flavor object
+    :param image_meta: an objects.ImageMeta object
+    :raises: nova.exception.FlavorImageConflict
+    :returns: boolean indicating whether encryption of guest ephemeral storage
+              was requested
+    """
+    flavor_eph_encryption_str, image_eph_encryption = _get_flavor_image_meta(
+        'ephemeral_encryption', flavor, image_meta)
+
+    flavor_eph_encryption = None
+    if flavor_eph_encryption_str is not None:
+        flavor_eph_encryption = strutils.bool_from_string(
+            flavor_eph_encryption_str)
+
+    # Check for conflicts between explicit requirements regarding
+    # ephemeral encryption.
+    # TODO(layrwood): make _check_for_mem_encryption_requirement_conflicts
+    # generic and reuse here
+    if (
+        flavor_eph_encryption is not None and
+        image_eph_encryption is not None and
+        flavor_eph_encryption != image_eph_encryption
+    ):
+        emsg = _(
+            "Flavor %(flavor_name)s has hw:ephemeral_encryption extra spec "
+            "explicitly set to %(flavor_val)s, conflicting with "
+            "image %(image_name)s which has hw_eph_encryption property "
+            "explicitly set to %(image_val)s"
+        )
+        data = {
+            'flavor_name': flavor.name,
+            'flavor_val': flavor_eph_encryption_str,
+            'image_name': image_meta.name,
+            'image_val': image_eph_encryption,
+        }
+        raise exception.FlavorImageConflict(emsg % data)
+
+    return flavor_eph_encryption or image_eph_encryption
+
+
+def get_ephemeral_encryption_format(
+    flavor: 'objects.Flavor',
+    image_meta: 'objects.ImageMeta',
+) -> ty.Optional[str]:
+    """Get the ephemeral encryption format.
+
+    :param flavor: an objects.Flavor object
+    :param image_meta: an objects.ImageMeta object
+    :raises: nova.exception.FlavorImageConflict or nova.exception.Invalid
+    :returns: BlockDeviceEncryptionFormatType or None
+    """
+    eph_format = _get_unique_flavor_image_meta(
+        'ephemeral_encryption_format', flavor, image_meta)
+    if eph_format:
+        if eph_format not in fields.BlockDeviceEncryptionFormatType.ALL:
+            allowed = fields.BlockDeviceEncryptionFormatType.ALL
+            raise exception.Invalid(
+                f"Invalid ephemeral encryption format {eph_format}. "
+                f"Allowed values: {', '.join(allowed)}"
+            )
+        return eph_format
+    return None
