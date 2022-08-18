@@ -6526,3 +6526,41 @@ class PortAndFlavorAccelsServerCreateTest(AcceleratorServerBase):
         binding_profile = neutronapi.get_binding_profile(updated_port)
         self.assertNotIn('arq_uuid', binding_profile)
         self.assertNotIn('pci_slot', binding_profile)
+
+
+class PortBindingShelvedServerTest(integrated_helpers._IntegratedTestBase):
+    """Tests for servers with ports."""
+
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(PortBindingShelvedServerTest, self).setUp()
+        self.flavor_id = self._create_flavor(
+            disk=10, ephemeral=20, swap=5 * 1024)
+
+    def test_shelve_offload_with_port(self):
+        # Do not wait before offloading
+        self.flags(shelved_offload_time=0)
+
+        server = self._create_server(
+            flavor_id=self.flavor_id,
+            networks=[{'port': self.neutron.port_1['id']}])
+
+        port = self.neutron.show_port(self.neutron.port_1['id'])['port']
+
+        # Assert that the port is actually associated to the instance
+        self.assertEqual(port['device_id'], server['id'])
+        self.assertEqual(port['binding:host_id'], 'compute')
+        self.assertEqual(port['binding:status'], 'ACTIVE')
+
+        # Do shelve
+        server = self._shelve_server(server, 'SHELVED_OFFLOADED')
+
+        # Retrieve the updated port
+        port = self.neutron.show_port(self.neutron.port_1['id'])['port']
+
+        # Assert that the port is still associated to the instance
+        # but the binding is not on the compute anymore
+        self.assertEqual(port['device_id'], server['id'])
+        self.assertIsNone(port['binding:host_id'])
+        self.assertNotIn('binding:status', port)
