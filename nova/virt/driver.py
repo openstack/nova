@@ -125,6 +125,11 @@ CAPABILITY_TRAITS_MAP = {
     "supports_socket_pci_numa_affinity":
         os_traits.COMPUTE_SOCKET_PCI_NUMA_AFFINITY,
     "supports_remote_managed_ports": os_traits.COMPUTE_REMOTE_MANAGED_PORTS,
+    "supports_ephemeral_encryption": os_traits.COMPUTE_EPHEMERAL_ENCRYPTION,
+    "supports_ephemeral_encryption_luks":
+        os_traits.COMPUTE_EPHEMERAL_ENCRYPTION_LUKS,
+    "supports_ephemeral_encryption_plain":
+        os_traits.COMPUTE_EPHEMERAL_ENCRYPTION_PLAIN,
 }
 
 
@@ -194,6 +199,11 @@ class ComputeDriver(object):
         "supports_secure_boot": False,
         "supports_socket_pci_numa_affinity": False,
         "supports_remote_managed_ports": False,
+
+        # Ephemeral encryption support flags
+        "supports_ephemeral_encryption": False,
+        "supports_ephemeral_encryption_luks": False,
+        "supports_ephemeral_encryption_plain": False,
 
         # Image type support flags
         "supports_image_type_aki": False,
