@@ -4657,7 +4657,7 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug("Creating instance directory", instance=instance)
             fileutils.ensure_tree(libvirt_utils.get_instance_path(instance))
 
-        LOG.info('Creating image', instance=instance)
+        LOG.info('Creating image(s)', instance=instance)
 
         flavor = instance.get_flavor()
         swap_mb = 0
