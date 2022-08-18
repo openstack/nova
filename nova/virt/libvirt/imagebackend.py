@@ -1311,6 +1311,10 @@ class Backend(object):
         :return: An Image object for the disk with given name and instance.
         :rtype: Image
         """
+        # NOTE(artom) To pass functional tests, wherein the code here is loaded
+        # *before* any config with self.flags() is done, we need to have the
+        # default inline in the method, and not in the kwarg declaration.
+        image_type = image_type or CONF.libvirt.images_type
         backend = self.backend(image_type)
         return backend(instance=instance, disk_name=name)
 
