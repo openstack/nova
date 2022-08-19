@@ -3279,7 +3279,11 @@ class ComputeTestCase(BaseTestCase,
             'delete_on_termination': True,
             'guest_format': None,
             'volume_size': 2,
-            'boot_index': -1
+            'boot_index': -1,
+            'encrypted': True,
+            'encryption_secret_uuid': uuids.secret,
+            'encryption_format': 'luks',
+            'encryption_options': None,
         })
         swap = fake_block_device.FakeDbBlockDeviceDict({
             'id': 3,
@@ -3314,14 +3318,22 @@ class ComputeTestCase(BaseTestCase,
                         'device_type': 'disk',
                         'disk_bus': 'virtio',
                         'guest_format': None,
-                        'size': 1
+                        'size': 1,
+                        'encrypted': False,
+                        'encryption_secret_uuid': None,
+                        'encryption_format': None,
+                        'encryption_options': None,
                     },
                     {
                         'device_name': '/dev/vdc',
                         'device_type': 'disk',
                         'disk_bus': 'virtio',
                         'guest_format': None,
-                        'size': 2
+                        'size': 2,
+                        'encrypted': True,
+                        'encryption_secret_uuid': uuids.secret,
+                        'encryption_format': 'luks',
+                        'encryption_options': None,
                     }
                 ],
                 'image': [],
