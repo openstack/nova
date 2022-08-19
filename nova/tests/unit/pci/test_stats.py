@@ -17,6 +17,7 @@ from unittest import mock
 
 from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 
 from nova import exception
 from nova import objects
@@ -895,6 +896,120 @@ class PciDeviceStatsPlacementSupportTestCase(test.NoDBTestCase):
         )
 
         self.assertEqual(pools, matching_pools)
+
+    def test_populate_pools_metadata_from_assigned_devices(self):
+        device_spec = [
+            jsonutils.dumps(
+                {
+                    "address": "0000:81:00.*",
+                }
+            ),
+        ]
+        self.flags(device_spec=device_spec, group="pci")
+        dev_filter = whitelist.Whitelist(device_spec)
+        pci_stats = stats.PciDeviceStats(
+            objects.NUMATopology(),
+            dev_filter=dev_filter)
+        pci_dev1 = objects.PciDevice(
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:00.1",
+            parent_addr="0000:81:00.0",
+            numa_node=0,
+            dev_type="type-VF",
+        )
+        pci_dev2 = objects.PciDevice(
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:00.2",
+            parent_addr="0000:81:00.0",
+            numa_node=0,
+            dev_type="type-VF",
+        )
+        pci_stats.add_device(pci_dev1)
+        pci_dev1.extra_info = {'rp_uuid': uuids.rp1}
+        pci_stats.add_device(pci_dev2)
+        pci_dev2.extra_info = {'rp_uuid': uuids.rp1}
+
+        self.assertEqual(1, len(pci_stats.pools))
+
+        pci_stats.populate_pools_metadata_from_assigned_devices()
+
+        self.assertEqual(uuids.rp1, pci_stats.pools[0]['rp_uuid'])
+
+    def test_populate_pools_metadata_from_assigned_devices_device_without_rp(
+        self
+    ):
+        device_spec = [
+            jsonutils.dumps(
+                {
+                    "address": "0000:81:00.*",
+                }
+            ),
+        ]
+        self.flags(device_spec=device_spec, group="pci")
+        dev_filter = whitelist.Whitelist(device_spec)
+        pci_stats = stats.PciDeviceStats(
+            objects.NUMATopology(),
+            dev_filter=dev_filter)
+        pci_dev1 = objects.PciDevice(
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:00.1",
+            parent_addr="0000:81:00.0",
+            numa_node=0,
+            dev_type="type-VF",
+        )
+        pci_stats.add_device(pci_dev1)
+
+        self.assertEqual(1, len(pci_stats.pools))
+
+        pci_stats.populate_pools_metadata_from_assigned_devices()
+
+        self.assertNotIn('rp_uuid', pci_stats.pools[0])
+
+    def test_populate_pools_metadata_from_assigned_devices_multiple_rp(self):
+        device_spec = [
+            jsonutils.dumps(
+                {
+                    "address": "0000:81:00.*",
+                }
+            ),
+        ]
+        self.flags(device_spec=device_spec, group="pci")
+        dev_filter = whitelist.Whitelist(device_spec)
+        pci_stats = stats.PciDeviceStats(
+            objects.NUMATopology(),
+            dev_filter=dev_filter)
+        pci_dev1 = objects.PciDevice(
+            compute_node_id=1,
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:00.1",
+            parent_addr="0000:81:00.0",
+            numa_node=0,
+            dev_type="type-VF",
+        )
+        pci_dev2 = objects.PciDevice(
+            compute_node_id=1,
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:00.2",
+            parent_addr="0000:81:00.0",
+            numa_node=0,
+            dev_type="type-VF",
+        )
+        pci_stats.add_device(pci_dev1)
+        pci_dev1.extra_info = {'rp_uuid': uuids.rp1}
+        pci_stats.add_device(pci_dev2)
+        pci_dev2.extra_info = {'rp_uuid': uuids.rp2}
+
+        self.assertEqual(1, len(pci_stats.pools))
+
+        self.assertRaises(
+            ValueError,
+            pci_stats.populate_pools_metadata_from_assigned_devices,
+        )
 
 
 class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):

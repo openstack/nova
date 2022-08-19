@@ -261,6 +261,12 @@ class PciResourceProvider:
         )
         provider_tree.update_traits(self.name, self.traits)
 
+        # Here we are sure the RP exists in the provider_tree. So, we can
+        # record the RP UUID in each PciDevice this RP represents
+        rp_uuid = provider_tree.data(self.name).uuid
+        for dev in self.devs:
+            dev.extra_info['rp_uuid'] = rp_uuid
+
     def update_allocations(
         self,
         allocations: dict,
@@ -598,6 +604,11 @@ def update_provider_tree_for_pci(
 
     pv.update_provider_tree(provider_tree)
     old_alloc = copy.deepcopy(allocations)
+    # update_provider_tree correlated the PciDevice objects with RPs in
+    # placement and recorded the RP UUID in the PciDevice object. We need to
+    # trigger an update on the device pools in the tracker to get the device
+    # RP UUID mapped to the device pools
+    pci_tracker.stats.populate_pools_metadata_from_assigned_devices()
     updated = pv.update_allocations(allocations, provider_tree)
 
     if updated:

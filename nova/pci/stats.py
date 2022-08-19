@@ -96,6 +96,8 @@ class PciDeviceStats(object):
             pool_keys = pool.copy()
             del pool_keys['count']
             del pool_keys['devices']
+            # FIXME(gibi): do we need this?
+            pool_keys.pop('rp_uuid', None)
             if (len(pool_keys.keys()) == len(dev_pool.keys()) and
                 self._equal_properties(dev_pool, pool_keys, list(dev_pool))):
                 return pool
@@ -779,3 +781,40 @@ class PciDeviceStats(object):
         )
         pools = self._filter_pools_for_spec(self.pools, dummy_req)
         return bool(pools)
+
+    def populate_pools_metadata_from_assigned_devices(self):
+        """Populate the rp_uuid of each pool based on the rp_uuid of the
+        devices assigned to the pool. This can only be called from the compute
+        where devices are assigned to each pool. This should not be called from
+        the scheduler as there device - pool assignment is not known.
+        """
+        # PciDevices are tracked in placement and flavor based PCI requests
+        # are scheduled and allocated in placement. To be able to correlate
+        # what is allocated in placement and what is consumed in nova we
+        # need to map device pools to RPs. We can do that as the PciDevice
+        # contains the RP UUID that represents it in placement.
+        # NOTE(gibi): We cannot do this when the device is originally added to
+        # the pool as the device -> placement translation, that creates the
+        # RPs, runs after all the device is created and assigned to pools.
+        for pool in self.pools:
+            pool_rps = {
+                dev.extra_info.get("rp_uuid")
+                for dev in pool["devices"]
+                if "rp_uuid" in dev.extra_info
+            }
+            if len(pool_rps) >= 2:
+                # FIXME(gibi): Do we have a 1:1 pool - RP mapping even
+                #  if two PFs providing very similar VFs?
+                raise ValueError(
+                    "We have a pool %s connected to more than one RPs %s in "
+                    "placement via devs %s" % (pool, pool_rps, pool["devices"])
+                )
+
+            if not pool_rps:
+                # this can happen if the nova-compute is upgraded to have the
+                # PCI in placement inventory handling code but
+                # [pci]report_in_placement is not turned on yet.
+                continue
+
+            if pool_rps:  # now we know that it is a single RP
+                pool['rp_uuid'] = next(iter(pool_rps))

@@ -1580,6 +1580,7 @@ class TestUpdateComputeNode(BaseTestCase):
         self.rt._update(mock.sentinel.ctx, new_compute)
         save_mock.assert_called_once_with()
 
+    @mock.patch('nova.objects.ComputeNode.save', new=mock.Mock())
     @mock.patch(
         'nova.pci.stats.PciDeviceStats.has_remote_managed_device_pools',
         return_value=True)
@@ -1773,7 +1774,7 @@ class TestUpdateComputeNode(BaseTestCase):
         self.assertEqual(4, ufpt_mock.call_count)
         self.assertEqual(4, mock_sync_disabled.call_count)
         # The retry is restricted to _update_to_placement
-        self.assertEqual(1, mock_resource_change.call_count)
+        self.assertEqual(0, mock_resource_change.call_count)
 
     @mock.patch(
         'nova.compute.resource_tracker.ResourceTracker.'
@@ -2041,6 +2042,10 @@ class TestUpdateComputeNode(BaseTestCase):
         self.assertIn('Unable to find services table record for nova-compute',
                       mock_log_error.call_args[0][0])
 
+    @mock.patch(
+        'nova.compute.resource_tracker.ResourceTracker.'
+        '_update_to_placement',
+        new=mock.Mock())
     def test_update_compute_node_save_fails_restores_old_resources(self):
         """Tests the scenario that compute_node.save() fails and the
         old_resources value for the node is restored to its previous value
