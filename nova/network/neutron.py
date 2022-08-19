@@ -43,7 +43,6 @@ from nova.network import constants
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import fields as obj_fields
-from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
@@ -1631,8 +1630,7 @@ class API:
             pci_request_id cannot be found on the instance.
         """
         if pci_request_id:
-            pci_devices = pci_manager.get_instance_pci_devs(
-                instance, pci_request_id)
+            pci_devices = instance.get_pci_devices(request_id=pci_request_id)
             if not pci_devices:
                 # The pci_request_id likely won't mean much except for tracing
                 # through the logs since it is generated per request.
@@ -1662,8 +1660,7 @@ class API:
         Currently this is done only for PF passthrough.
         """
         if pci_request_id is not None:
-            pci_devs = pci_manager.get_instance_pci_devs(
-                instance, pci_request_id)
+            pci_devs = instance.get_pci_devices(request_id=pci_request_id)
             if len(pci_devs) != 1:
                 # NOTE(ndipanov): We shouldn't ever get here since
                 # InstancePCIRequest instances built from network requests

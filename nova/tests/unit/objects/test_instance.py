@@ -25,6 +25,7 @@ from oslo_versionedobjects import base as ovo_base
 
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import context
 from nova.db.main import api as db
 from nova.db.main import models as sql_models
 from nova import exception
@@ -2073,3 +2074,164 @@ class TestInstanceObjectMisc(test.NoDBTestCase):
         self.assertEqual(['metadata', 'system_metadata', 'info_cache',
                          'security_groups', 'pci_devices', 'tags', 'extra',
                          'extra.flavor'], result_list)
+
+
+class TestInstanceObjectGetPciDevices(test.NoDBTestCase):
+    def test_lazy_loading_pci_devices(self):
+        user_id = "fake-user"
+        project_id = "fake-project"
+        ctxt = context.RequestContext(user_id, project_id)
+
+        inst = instance.Instance(ctxt, uuid=uuids.instance)
+        with mock.patch(
+            "nova.objects.PciDeviceList.get_by_instance_uuid",
+            return_value=objects.PciDeviceList(),
+        ) as mock_get_pci:
+            self.assertEqual([], inst.get_pci_devices())
+
+        mock_get_pci.assert_called_once_with(ctxt, uuids.instance)
+
+    def test_lazy_loading_pci_requests(self):
+        user_id = "fake-user"
+        project_id = "fake-project"
+        ctxt = context.RequestContext(user_id, project_id)
+
+        devs = [objects.PciDevice(request_id=uuids.req1)]
+        inst = instance.Instance(
+            ctxt,
+            uuid=uuids.instance,
+            pci_devices=objects.PciDeviceList(
+                objects=devs
+            ),
+        )
+
+        with mock.patch(
+            "nova.objects.InstancePCIRequests.get_by_instance_uuid",
+            return_value=objects.InstancePCIRequests(
+                requests=[
+                    objects.InstancePCIRequest(
+                        request_id=uuids.req1,
+                        alias_name="pci-alias-1",
+                    ),
+                ]
+            ),
+        ) as mock_get_pci_req:
+            self.assertEqual(
+                devs,
+                inst.get_pci_devices(
+                    source=objects.InstancePCIRequest.FLAVOR_ALIAS
+                ),
+            )
+
+        mock_get_pci_req.assert_called_once_with(ctxt, uuids.instance)
+
+    def test_no_filter(self):
+        devs = [objects.PciDevice()]
+
+        inst = instance.Instance(
+            pci_devices=objects.PciDeviceList(objects=devs)
+        )
+
+        self.assertEqual(devs, inst.get_pci_devices())
+
+    def test_no_filter_by_request_id(self):
+        expected_devs = [objects.PciDevice(request_id=uuids.req1)]
+        all_devs = expected_devs + [objects.PciDevice(request_id=uuids.req2)]
+
+        inst = instance.Instance(
+            pci_devices=objects.PciDeviceList(objects=all_devs)
+        )
+
+        self.assertEqual(
+            expected_devs, inst.get_pci_devices(request_id=uuids.req1)
+        )
+
+    def test_no_filter_by_source(self):
+        expected_devs = [
+            objects.PciDevice(request_id=uuids.req1),
+            objects.PciDevice(request_id=uuids.req1),
+        ]
+        all_devs = expected_devs + [objects.PciDevice(request_id=uuids.req2)]
+
+        inst = instance.Instance(
+            pci_devices=objects.PciDeviceList(objects=all_devs),
+            pci_requests=objects.InstancePCIRequests(
+                requests=[
+                    objects.InstancePCIRequest(
+                        request_id=uuids.req1,
+                        alias_name="pci-alias-1",
+                    ),
+                    objects.InstancePCIRequest(
+                        request_id=uuids.req2,
+                    ),
+                ]
+            ),
+        )
+
+        self.assertEqual(
+            expected_devs,
+            inst.get_pci_devices(
+                source=objects.InstancePCIRequest.FLAVOR_ALIAS
+            ),
+        )
+
+    def test_no_filter_by_request_id_and_source(self):
+        expected_devs = []
+        all_devs = expected_devs + [
+            objects.PciDevice(request_id=uuids.req1),
+            objects.PciDevice(request_id=uuids.req2),
+            objects.PciDevice(request_id=uuids.req1),
+        ]
+
+        inst = instance.Instance(
+            pci_devices=objects.PciDeviceList(objects=all_devs),
+            pci_requests=objects.InstancePCIRequests(
+                requests=[
+                    objects.InstancePCIRequest(
+                        request_id=uuids.req1,
+                        alias_name="pci-alias-1",
+                    ),
+                    objects.InstancePCIRequest(
+                        request_id=uuids.req2,
+                    ),
+                ]
+            ),
+        )
+
+        self.assertEqual(
+            expected_devs,
+            inst.get_pci_devices(
+                request_id=uuids.req1,
+                source=objects.InstancePCIRequest.NEUTRON_PORT,
+            ),
+        )
+
+    def test_old_pci_dev_and_req(self):
+        """This tests the case when the system has old InstancePCIRequest
+        objects without the request_id being filled. And therefore have
+        PciDevice object where the request_id is None too. These requests and
+        devices are always flavor based.
+        """
+        devs = [
+            objects.PciDevice(request_id=None),
+            objects.PciDevice(request_id=None),
+        ]
+
+        inst = instance.Instance(
+            pci_devices=objects.PciDeviceList(objects=devs),
+            pci_requests=objects.InstancePCIRequests(
+                requests=[
+                    objects.InstancePCIRequest(
+                        request_id=None,
+                        alias_name="pci-alias-1",
+                    ),
+                ]
+            ),
+        )
+
+        self.assertEqual(
+            devs,
+            inst.get_pci_devices(
+                source=objects.InstancePCIRequest.FLAVOR_ALIAS,
+            ),
+        )

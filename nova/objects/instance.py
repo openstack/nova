@@ -13,6 +13,7 @@
 #    under the License.
 
 import contextlib
+import typing as ty
 
 from oslo_config import cfg
 from oslo_db import exception as db_exc
@@ -1225,6 +1226,46 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self.pci_requests.requests = [
             pci_req for pci_req in self.pci_requests.requests
             if pci_req.request_id != pci_device.request_id]
+
+    def get_pci_devices(
+        self,
+        source: ty.Optional[int] = None,
+        request_id: ty.Optional[str] = None,
+    ) -> ty.List["objects.PciDevice"]:
+        """Return the PCI devices allocated to the instance
+
+        :param source: Filter by source. It can be
+            InstancePCIRequest.FLAVOR_ALIAS or InstancePCIRequest.NEUTRON_PORT
+            or None. None means returns devices from both type of requests.
+        :param request_id: Filter by PciDevice.request_id. None means do not
+            filter by request_id.
+        :return: a list of matching PciDevice objects
+        """
+        if not self.pci_devices:
+            # return early to avoid an extra lazy load on self.pci_requests
+            # if there are no devices allocated to be filtered
+            return []
+        else:
+            devs = self.pci_devices.objects
+
+        if request_id is not None:
+            devs = [dev for dev in devs if dev.request_id == request_id]
+
+        if source is not None:
+            # NOTE(gibi): this happens to work for the old requests when the
+            # request has request_id None and therefore the device allocated
+            # due to that request has request_id None too, so they will be
+            # mapped via the None key.
+            req_id_to_req = {
+                req.request_id: req for req in self.pci_requests.requests
+            }
+            devs = [
+                dev
+                for dev in devs
+                if (req_id_to_req[dev.request_id].source == source)
+            ]
+
+        return devs
 
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):

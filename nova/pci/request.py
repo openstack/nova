@@ -43,6 +43,7 @@ import typing as ty
 import jsonschema
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import uuidutils
 
 import nova.conf
 from nova import context as ctx
@@ -183,7 +184,9 @@ def _translate_alias_to_requests(
             count=int(count),
             spec=spec,
             alias_name=name,
-            numa_policy=policy))
+            numa_policy=policy,
+            request_id=uuidutils.generate_uuid(),
+        ))
     return pci_requests
 
 

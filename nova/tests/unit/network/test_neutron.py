@@ -42,7 +42,6 @@ from nova import objects
 from nova.objects import fields as obj_fields
 from nova.objects import network_request as net_req_obj
 from nova.objects import virtual_interface as obj_vif
-from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
@@ -7738,11 +7737,11 @@ class TestAPIPortbinding(TestAPIBase):
             'vf_num': 1,
         }))
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    @mock.patch('nova.objects.Instance.get_pci_devices')
     def test_populate_neutron_extension_values_binding_sriov(
         self, mock_get_instance_pci_devs, mock_get_pci_device_devspec):
         host_id = 'my_host_id'
-        instance = {'host': host_id}
+        instance = objects.Instance(host=host_id)
         port_req_body = {'port': {}}
         pci_req_id = 'my_req_id'
         pci_dev = {'vendor_id': '1377',
@@ -7783,11 +7782,11 @@ class TestAPIPortbinding(TestAPIBase):
         })
     )
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    @mock.patch('nova.objects.Instance.get_pci_devices')
     def test_populate_neutron_extension_values_binding_sriov_card_serial(
         self, mock_get_instance_pci_devs, mock_get_pci_device_devspec):
         host_id = 'my_host_id'
-        instance = {'host': host_id}
+        instance = objects.Instance(host=host_id)
         port_req_body = {'port': {}}
         pci_req_id = 'my_req_id'
         pci_dev = {'vendor_id': 'a2d6',
@@ -7867,11 +7866,11 @@ class TestAPIPortbinding(TestAPIBase):
         })
     )
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    @mock.patch('nova.objects.Instance.get_pci_devices')
     def test_populate_neutron_extension_values_binding_sriov_with_cap(
         self, mock_get_instance_pci_devs, mock_get_pci_device_devspec):
         host_id = 'my_host_id'
-        instance = {'host': host_id}
+        instance = objects.Instance(host=host_id)
         port_req_body = {'port': {
                              constants.BINDING_PROFILE: {
                                 'capabilities': ['switchdev']}}}
@@ -7907,12 +7906,12 @@ class TestAPIPortbinding(TestAPIBase):
                              constants.BINDING_PROFILE])
 
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    @mock.patch('nova.objects.Instance.get_pci_devices')
     def test_populate_neutron_extension_values_binding_sriov_pf(
         self, mock_get_instance_pci_devs, mock_get_devspec
     ):
         host_id = 'my_host_id'
-        instance = {'host': host_id}
+        instance = objects.Instance(host=host_id)
         port_req_body = {'port': {}}
 
         pci_dev = objects.PciDevice(
@@ -8041,11 +8040,11 @@ class TestAPIPortbinding(TestAPIBase):
         )
 
     @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    @mock.patch('nova.objects.Instance.get_pci_devices')
     def test_populate_neutron_extension_values_binding_sriov_fail(
         self, mock_get_instance_pci_devs, mock_get_pci_device_devspec):
         host_id = 'my_host_id'
-        instance = {'host': host_id}
+        instance = objects.Instance(host=host_id)
         port_req_body = {'port': {}}
         pci_req_id = 'my_req_id'
         pci_objs = [objects.PciDevice(vendor_id='1377',
@@ -8062,7 +8061,7 @@ class TestAPIPortbinding(TestAPIBase):
             self.api._populate_neutron_binding_profile,
             instance, pci_req_id, port_req_body, None)
 
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs', return_value=[])
+    @mock.patch('nova.objects.Instance.get_pci_devices', return_value=[])
     def test_populate_neutron_binding_profile_pci_dev_not_found(
             self, mock_get_instance_pci_devs):
         api = neutronapi.API()
@@ -8073,7 +8072,7 @@ class TestAPIPortbinding(TestAPIBase):
                           api._populate_neutron_binding_profile,
                           instance, pci_req_id, port_req_body, None)
         mock_get_instance_pci_devs.assert_called_once_with(
-            instance, pci_req_id)
+            request_id=pci_req_id)
 
     @mock.patch.object(
         pci_utils, 'is_physical_function',
@@ -8089,7 +8088,7 @@ class TestAPIPortbinding(TestAPIBase):
         new=mock.MagicMock(side_effect=(lambda vf_a: {
             '0000:0a:00.0': '52:54:00:1e:59:c6'}.get(vf_a)))
     )
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    @mock.patch('nova.objects.Instance.get_pci_devices')
     def test_pci_parse_whitelist_called_once(
         self, mock_get_instance_pci_devs
     ):
@@ -8108,7 +8107,7 @@ class TestAPIPortbinding(TestAPIBase):
         # after the 'device_spec' is set in this test case.
         api = neutronapi.API()
         host_id = 'my_host_id'
-        instance = {'host': host_id}
+        instance = objects.Instance(host=host_id)
         pci_req_id = 'my_req_id'
         port_req_body = {'port': {}}
         pci_dev = {'vendor_id': '1377',
@@ -8144,7 +8143,7 @@ class TestAPIPortbinding(TestAPIBase):
         vf.update_device(pci_dev)
         return instance, pf, vf
 
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    @mock.patch('nova.objects.Instance.get_pci_devices')
     @mock.patch.object(pci_utils, 'get_mac_by_pci_address')
     def test_populate_pci_mac_address_pf(self, mock_get_mac_by_pci_address,
                                          mock_get_instance_pci_devs):
@@ -8158,7 +8157,7 @@ class TestAPIPortbinding(TestAPIBase):
         self.api._populate_pci_mac_address(instance, 0, req)
         self.assertEqual(expected_port_req_body, req)
 
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    @mock.patch('nova.objects.Instance.get_pci_devices')
     @mock.patch.object(pci_utils, 'get_mac_by_pci_address')
     def test_populate_pci_mac_address_vf(self, mock_get_mac_by_pci_address,
                                          mock_get_instance_pci_devs):
@@ -8170,7 +8169,7 @@ class TestAPIPortbinding(TestAPIBase):
         self.api._populate_pci_mac_address(instance, 42, port_req_body)
         self.assertEqual(port_req_body, req)
 
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    @mock.patch('nova.objects.Instance.get_pci_devices')
     @mock.patch.object(pci_utils, 'get_mac_by_pci_address')
     def test_populate_pci_mac_address_vf_fail(self,
                                               mock_get_mac_by_pci_address,
@@ -8185,7 +8184,7 @@ class TestAPIPortbinding(TestAPIBase):
         self.api._populate_pci_mac_address(instance, 42, port_req_body)
         self.assertEqual(port_req_body, req)
 
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    @mock.patch('nova.objects.Instance.get_pci_devices')
     @mock.patch('nova.network.neutron.LOG.error')
     def test_populate_pci_mac_address_no_device(self, mock_log_error,
                                                 mock_get_instance_pci_devs):

@@ -96,7 +96,6 @@ from nova import objects
 from nova.objects import diagnostics as diagnostics_obj
 from nova.objects import fields
 from nova.objects import migrate_data as migrate_data_obj
-from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 import nova.privsep.libvirt
 import nova.privsep.path
@@ -3165,7 +3164,11 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.launch(pause=current_power_state == power_state.PAUSED)
 
         self._attach_pci_devices(
-            guest, pci_manager.get_instance_pci_devs(instance))
+            guest,
+            instance.get_pci_devices(
+                source=objects.InstancePCIRequest.FLAVOR_ALIAS
+            ),
+        )
         self._attach_direct_passthrough_ports(context, instance, guest)
 
     def _can_set_admin_password(self, image_meta):
@@ -4101,8 +4104,12 @@ class LibvirtDriver(driver.ComputeDriver):
         """Suspend the specified instance."""
         guest = self._host.get_guest(instance)
 
-        self._detach_pci_devices(guest,
-            pci_manager.get_instance_pci_devs(instance))
+        self._detach_pci_devices(
+            guest,
+            instance.get_pci_devices(
+                source=objects.InstancePCIRequest.FLAVOR_ALIAS
+            ),
+        )
         self._detach_direct_passthrough_ports(context, instance, guest)
         self._detach_mediated_devices(guest)
         guest.save_memory_state()
@@ -4120,8 +4127,12 @@ class LibvirtDriver(driver.ComputeDriver):
         guest = self._create_guest_with_network(
             context, xml, instance, network_info, block_device_info,
             vifs_already_plugged=True)
-        self._attach_pci_devices(guest,
-            pci_manager.get_instance_pci_devs(instance))
+        self._attach_pci_devices(
+            guest,
+            instance.get_pci_devices(
+                source=objects.InstancePCIRequest.FLAVOR_ALIAS
+            ),
+        )
         self._attach_direct_passthrough_ports(
             context, instance, guest, network_info)
         self._attach_mediated_devices(guest, mdevs)
@@ -5072,7 +5083,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     attached_via_interface_element.append(vif)
 
-            pci_devs = pci_manager.get_instance_pci_devs(instance, 'all')
+            pci_devs = instance.get_pci_devices()
             hostdev_pci_addresses = {
                 vif['profile']['pci_slot']
                 for vif in attached_via_hostdev_element
@@ -7200,11 +7211,13 @@ class LibvirtDriver(driver.ComputeDriver):
     def _guest_add_pci_devices(self, guest, instance):
         if CONF.libvirt.virt_type in ('qemu', 'kvm'):
             # Get all generic PCI devices (non-SR-IOV).
-            for pci_dev in pci_manager.get_instance_pci_devs(instance):
+            for pci_dev in instance.get_pci_devices(
+                source=objects.InstancePCIRequest.FLAVOR_ALIAS
+            ):
                 guest.add_device(self._get_guest_pci_device(pci_dev))
         else:
             # PCI devices is only supported for QEMU/KVM hypervisor
-            if pci_manager.get_instance_pci_devs(instance, 'all'):
+            if instance.get_pci_devices():
                 raise exception.PciDeviceUnsupportedHypervisor(
                     type=CONF.libvirt.virt_type
                 )
