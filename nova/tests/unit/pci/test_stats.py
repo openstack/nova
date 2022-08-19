@@ -1349,6 +1349,75 @@ class PciDeviceStatsProviderMappingTestCase(test.NoDBTestCase):
             {pool['rp_uuid'] for pool in self.pci_stats.pools},
         )
 
+    def test_apply_gets_requested_uuids_from_pci_req(self):
+        pf_req = objects.InstancePCIRequest(
+            count=1,
+            alias_name='a-dev',
+            request_id=uuids.req1,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-PF",
+                    # Simulate that the scheduler already allocate a candidate
+                    # and the mapping is stored in the request.
+                    # The allocation restricts that we can only consume from
+                    # PF3
+                    "rp_uuids": ",".join([uuids.pf3])
+                }
+            ],
+        )
+
+        # call apply with None mapping signalling that the allocation is
+        # already done and the resulted mapping is stored in the request
+        self.pci_stats.apply_requests([pf_req], provider_mapping=None)
+
+        # assert that the right device is consumed
+        self.assertEqual(self.num_pools - 1, len(self.pci_stats.pools))
+        self.assertEqual(
+            self.num_devs - 1,
+            sum(pool["count"] for pool in self.pci_stats.pools),
+        )
+        # pf3 is not available in the pools anymore
+        self.assertEqual(
+            {uuids.pf1, uuids.pf2, uuids.pci1},
+            {pool['rp_uuid'] for pool in self.pci_stats.pools},
+        )
+
+    def test_consume_restricted_by_allocation(self):
+        pf_req = objects.InstancePCIRequest(
+            count=1,
+            alias_name='a-dev',
+            request_id=uuids.req1,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-PF",
+                    # Simulate that the scheduler already allocate a candidate
+                    # and the mapping is stored in the request.
+                    # The allocation restricts that we can only consume from
+                    # PF3
+                    "rp_uuids": ",".join([uuids.pf3])
+                }
+            ],
+        )
+
+        # Call consume. It always expects the allocated mapping to be stores
+        # the in PCI request as it is always called from the compute side.
+        consumed_devs = self.pci_stats.consume_requests([pf_req])
+        # assert that the right device is consumed
+        self.assertEqual([self.pf3], consumed_devs)
+        # pf3 is not available in the pools anymore
+        self.assertEqual(
+            {uuids.pf1, uuids.pf2, uuids.pci1},
+            {
+                pool["rp_uuid"]
+                for pool in self.pci_stats.pools
+                if pool["count"] > 0
+            },
+        )
+
 
 class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
 

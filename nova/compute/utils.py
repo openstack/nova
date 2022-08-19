@@ -1491,7 +1491,7 @@ def notify_about_instance_delete(notifier, context, instance,
                 phase=fields.NotificationPhase.END)
 
 
-def update_pci_request_spec_with_allocated_interface_name(
+def update_pci_request_with_placement_allocations(
         context, report_client, pci_requests, provider_mapping):
     """Update the instance's PCI request based on the request group -
     resource provider mapping and the device RP name from placement.
@@ -1512,12 +1512,33 @@ def update_pci_request_spec_with_allocated_interface_name(
     if not pci_requests:
         return
 
-    def needs_update(pci_request, mapping):
+    def needs_update_due_to_qos(pci_request, mapping):
         return (pci_request.requester_id and
                 pci_request.requester_id in mapping)
 
+    def get_group_mapping_for_flavor_based_pci_request(pci_request, mapping):
+        # NOTE(gibi): for flavor based PCI requests nova generates RequestGroup
+        # suffixes from InstancePCIRequests in the form of
+        # {request_id}-{count_index}
+        # NOTE(gibi): a suffixed request group always fulfilled from a single
+        # RP
+        return {
+            group_id: rp_uuids[0]
+            for group_id, rp_uuids in mapping.items()
+            if group_id.startswith(pci_request.request_id)
+        }
+
     for pci_request in pci_requests:
-        if needs_update(pci_request, provider_mapping):
+        mapping = get_group_mapping_for_flavor_based_pci_request(
+            pci_request, provider_mapping)
+
+        if mapping:
+            for spec in pci_request.spec:
+                # FIXME(gibi): this is baaad but spec is a dict of strings so
+                #  we need to serialize
+                spec['rp_uuids'] = ','.join(set(mapping.values()))
+
+        elif needs_update_due_to_qos(pci_request, provider_mapping):
 
             provider_uuids = provider_mapping[pci_request.requester_id]
             if len(provider_uuids) != 1:

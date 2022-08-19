@@ -8487,11 +8487,17 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         # resource request and therefore no matching request group exists in
         # the request spec.
         self.instance.pci_requests = objects.InstancePCIRequests(requests=[
-            objects.InstancePCIRequest(),
             objects.InstancePCIRequest(
+                request_id=uuids.req0,
+            ),
+            objects.InstancePCIRequest(
+                request_id=uuids.req1,
                 requester_id=uuids.port1,
                 spec=[{'vendor_id': '1377', 'product_id': '0047'}]),
-            objects.InstancePCIRequest(requester_id=uuids.port2),
+            objects.InstancePCIRequest(
+                request_id=uuids.req2,
+                requester_id=uuids.port2,
+            ),
         ])
         with test.nested(
                 mock.patch.object(self.compute.driver, 'spawn'),
@@ -8536,8 +8542,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     requester_id=uuids.port1,
                     provider_uuids=[uuids.rp1])])
 
-        self.instance.pci_requests = objects.InstancePCIRequests(requests=[
-            objects.InstancePCIRequest(requester_id=uuids.port1)])
+        self.instance.pci_requests = objects.InstancePCIRequests(
+            requests=[
+                objects.InstancePCIRequest(
+                    requester_id=uuids.port1, request_id=uuids.req1
+                )
+            ]
+        )
         with mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                          '_get_resource_provider') as (mock_get_rp):
             mock_get_rp.return_value = None
@@ -8559,8 +8570,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     requester_id=uuids.port1,
                     provider_uuids=[uuids.rp1])])
 
-        self.instance.pci_requests = objects.InstancePCIRequests(requests=[
-            objects.InstancePCIRequest(requester_id=uuids.port1)])
+        self.instance.pci_requests = objects.InstancePCIRequests(
+            requests=[
+                objects.InstancePCIRequest(
+                    requester_id=uuids.port1, request_id=uuids.req1
+                )
+            ]
+        )
         with mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                          '_get_resource_provider') as (mock_get_rp):
             mock_get_rp.return_value = {
@@ -8584,8 +8600,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     requester_id=uuids.port1,
                     provider_uuids=[uuids.rp1, uuids.rp2])])
 
-        self.instance.pci_requests = objects.InstancePCIRequests(requests=[
-            objects.InstancePCIRequest(requester_id=uuids.port1)])
+        self.instance.pci_requests = objects.InstancePCIRequests(
+            requests=[
+                objects.InstancePCIRequest(
+                    requester_id=uuids.port1, request_id=uuids.req1
+                )
+            ]
+        )
 
         self.assertRaises(
             exception.BuildAbortException,
@@ -11040,7 +11061,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.resize_claim')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.compute.utils.'
-                'update_pci_request_spec_with_allocated_interface_name')
+                'update_pci_request_with_placement_allocations')
     @mock.patch('nova.compute.utils.notify_usage_exists')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
@@ -11074,7 +11095,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.resize_claim')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.compute.utils.'
-                'update_pci_request_spec_with_allocated_interface_name')
+                'update_pci_request_with_placement_allocations')
     @mock.patch('nova.compute.utils.notify_usage_exists')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')

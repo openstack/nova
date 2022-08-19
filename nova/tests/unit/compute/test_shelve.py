@@ -281,7 +281,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         return instance
 
     @mock.patch('nova.compute.utils.'
-                'update_pci_request_spec_with_allocated_interface_name',
+                'update_pci_request_with_placement_allocations',
                 new=mock.NonCallableMock())
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
@@ -631,7 +631,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
     @mock.patch('nova.network.neutron.API.setup_instance_network_on_host')
     @mock.patch('nova.compute.utils.'
-                'update_pci_request_spec_with_allocated_interface_name')
+                'update_pci_request_with_placement_allocations')
     def test_unshelve_with_resource_request(
             self, mock_update_pci, mock_setup_network):
         requested_res = [objects.RequestGroup(
@@ -655,7 +655,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     @mock.patch('nova.network.neutron.API.setup_instance_network_on_host',
                 new=mock.NonCallableMock())
     @mock.patch('nova.compute.utils.'
-                'update_pci_request_spec_with_allocated_interface_name')
+                'update_pci_request_with_placement_allocations')
     def test_unshelve_with_resource_request_update_raises(
             self, mock_update_pci):
         requested_res = [objects.RequestGroup(

@@ -10843,7 +10843,7 @@ class ComputeAPITestCase(BaseTestCase):
                 'add_resources_to_instance_allocation'),
             mock.patch(
                 'nova.compute.utils.'
-                'update_pci_request_spec_with_allocated_interface_name'),
+                'update_pci_request_with_placement_allocations'),
         ) as (
             mock_get_nodename, mock_get_alloc_candidates, mock_add_res,
             mock_update_pci
@@ -10913,7 +10913,7 @@ class ComputeAPITestCase(BaseTestCase):
                 new=mock.NonCallableMock()),
             mock.patch(
                 'nova.compute.utils.'
-                'update_pci_request_spec_with_allocated_interface_name',
+                'update_pci_request_with_placement_allocations',
                 new=mock.NonCallableMock()),
         ) as (
             mock_get_nodename, mock_get_alloc_candidates, mock_add_res,
@@ -10958,7 +10958,7 @@ class ComputeAPITestCase(BaseTestCase):
                 'add_resources_to_instance_allocation'),
             mock.patch(
                 'nova.compute.utils.'
-                'update_pci_request_spec_with_allocated_interface_name',
+                'update_pci_request_with_placement_allocations',
                 new=mock.NonCallableMock()),
         ) as (
             mock_get_nodename, mock_get_alloc_candidates, mock_add_res,
@@ -11025,7 +11025,7 @@ class ComputeAPITestCase(BaseTestCase):
                 'add_resources_to_instance_allocation'),
             mock.patch(
                 'nova.compute.utils.'
-                'update_pci_request_spec_with_allocated_interface_name'),
+                'update_pci_request_with_placement_allocations'),
             mock.patch(
                 'nova.scheduler.client.report.SchedulerReportClient.'
                 'remove_resources_from_instance_allocation'),
@@ -13520,7 +13520,7 @@ class EvacuateHostTestCase(BaseTestCase):
             return_value=mock.sentinel.mapping)
         @mock.patch(
             'nova.compute.utils.'
-            'update_pci_request_spec_with_allocated_interface_name')
+            'update_pci_request_with_placement_allocations')
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch('nova.compute.utils.notify_about_instance_rebuild')
         @mock.patch.object(network_api, 'setup_networks_on_host')

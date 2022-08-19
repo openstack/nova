@@ -542,7 +542,7 @@ class LiveMigrationTask(base.TaskBase):
                 # will be persisted when post_live_migration_at_destination
                 # runs.
                 compute_utils.\
-                    update_pci_request_spec_with_allocated_interface_name(
+                    update_pci_request_with_placement_allocations(
                         self.context, self.report_client,
                         self.instance.pci_requests.requests, provider_mapping)
             try:
