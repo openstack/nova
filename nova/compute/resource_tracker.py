@@ -103,7 +103,7 @@ class ResourceTracker(object):
         monitor_handler = monitors.MonitorHandler(self)
         self.monitors = monitor_handler.monitors
         self.old_resources = collections.defaultdict(objects.ComputeNode)
-        self.reportclient = reportclient or report.SchedulerReportClient()
+        self.reportclient = reportclient or report.report_client_singleton()
         self.ram_allocation_ratio = CONF.ram_allocation_ratio
         self.cpu_allocation_ratio = CONF.cpu_allocation_ratio
         self.disk_allocation_ratio = CONF.disk_allocation_ratio

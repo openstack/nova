@@ -48,13 +48,10 @@ class ServiceController(wsgi.Controller):
         self.actions = {"enable": self._enable,
                         "disable": self._disable,
                         "disable-log-reason": self._disable_log_reason}
-        self._placementclient = None  # Lazy-load on first access.
 
     @property
     def placementclient(self):
-        if self._placementclient is None:
-            self._placementclient = report.SchedulerReportClient()
-        return self._placementclient
+        return report.report_client_singleton()
 
     def _get_services(self, req):
         # The API services are filtered out since they are not RPC services
@@ -328,7 +325,7 @@ class ServiceController(wsgi.Controller):
                             "Failed to delete compute node resource provider "
                             "for compute node %s: %s",
                             compute_node.uuid, str(e))
-                # remove the host_mapping of this host.
+                # Remove the host_mapping of this host.
                 try:
                     hm = objects.HostMapping.get_by_host(context, service.host)
                     hm.destroy()

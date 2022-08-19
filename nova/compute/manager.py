@@ -622,6 +622,11 @@ class ComputeManager(manager.Manager):
         # We want the ComputeManager, ResourceTracker and ComputeVirtAPI all
         # using the same instance of SchedulerReportClient which has the
         # ProviderTree cache for this compute service.
+        # NOTE(danms): We do not use the global placement client
+        # singleton here, because the above-mentioned stack of objects
+        # maintain local state in the client. Thus, keeping our own
+        # private object for that stack avoids any potential conflict
+        # with other users in our process outside of the above.
         self.reportclient = report.SchedulerReportClient()
         self.virtapi = ComputeVirtAPI(self)
         self.network_api = neutron.API()

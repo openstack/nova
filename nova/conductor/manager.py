@@ -243,7 +243,7 @@ class ComputeTaskManager:
         self.network_api = neutron.API()
         self.servicegroup_api = servicegroup.API()
         self.query_client = query.SchedulerQueryClient()
-        self.report_client = report.SchedulerReportClient()
+        self.report_client = report.report_client_singleton()
         self.notifier = rpc.get_notifier('compute')
         # Help us to record host in EventReporter
         self.host = CONF.host

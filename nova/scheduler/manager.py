@@ -66,7 +66,7 @@ class SchedulerManager(manager.Manager):
         self.host_manager = host_manager.HostManager()
         self.servicegroup_api = servicegroup.API()
         self.notifier = rpc.get_notifier('scheduler')
-        self.placement_client = report.SchedulerReportClient()
+        self.placement_client = report.report_client_singleton()
 
         super().__init__(service_name='scheduler', *args, **kwargs)
 

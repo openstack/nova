@@ -386,7 +386,6 @@ class API:
         self.image_api = image_api or glance.API()
         self.network_api = network_api or neutron.API()
         self.volume_api = volume_api or cinder.API()
-        self._placementclient = None  # Lazy-load on first access.
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.compute_task_api = conductor.ComputeTaskAPI()
         self.servicegroup_api = servicegroup.API()
@@ -2618,9 +2617,7 @@ class API:
 
     @property
     def placementclient(self):
-        if self._placementclient is None:
-            self._placementclient = report.SchedulerReportClient()
-        return self._placementclient
+        return report.report_client_singleton()
 
     def _local_delete(self, context, instance, bdms, delete_type, cb):
         if instance.vm_state == vm_states.SHELVED_OFFLOADED:
@@ -6448,13 +6445,10 @@ class AggregateAPI:
     def __init__(self):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.query_client = query.SchedulerQueryClient()
-        self._placement_client = None  # Lazy-load on first access.
 
     @property
     def placement_client(self):
-        if self._placement_client is None:
-            self._placement_client = report.SchedulerReportClient()
-        return self._placement_client
+        return report.report_client_singleton()
 
     @wrap_exception()
     def create_aggregate(self, context, aggregate_name, availability_zone):
