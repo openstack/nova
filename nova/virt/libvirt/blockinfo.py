@@ -414,13 +414,7 @@ def get_device_name(bdm):
 def get_root_info(instance, virt_type, image_meta, root_bdm,
                   disk_bus, cdrom_bus, root_device_name=None):
 
-    # NOTE (ndipanov): This is a hack to avoid considering an image
-    #                  BDM with local target, as we don't support them
-    #                  yet. Only applies when passed non-driver format
-    no_root_bdm = (not root_bdm or (
-        root_bdm.get('source_type') == 'image' and
-        root_bdm.get('destination_type') == 'local'))
-    if no_root_bdm:
+    if root_bdm is None:
         # NOTE(mriedem): In case the image_meta object was constructed from
         # an empty dict, like in the case of evacuate, we have to first check
         # if disk_format is set on the ImageMeta object.
@@ -452,10 +446,13 @@ def default_device_names(virt_type, context, instance, block_device_info,
                          image_meta):
     get_disk_info(virt_type, instance, image_meta, block_device_info)
 
-    for driver_bdm in itertools.chain(block_device_info['ephemerals'],
-                               [block_device_info['swap']] if
-                               block_device_info['swap'] else [],
-                               block_device_info['block_device_mapping']):
+    for driver_bdm in itertools.chain(
+        block_device_info['image'],
+        block_device_info['ephemerals'],
+        [block_device_info['swap']] if
+        block_device_info['swap'] else [],
+        block_device_info['block_device_mapping']
+    ):
         driver_bdm.save()
 
 
@@ -563,40 +560,47 @@ def _get_disk_mapping(virt_type, instance, disk_bus, cdrom_bus, image_meta,
     :returns: Disk mapping for the given instance.
     """
     mapping = {}
-    pre_assigned_device_names = \
-    [block_device.strip_dev(get_device_name(bdm)) for bdm in itertools.chain(
+
+    driver_bdms = itertools.chain(
+        driver.block_device_info_get_image(block_device_info),
         driver.block_device_info_get_ephemerals(block_device_info),
         [driver.block_device_info_get_swap(block_device_info)],
-        driver.block_device_info_get_mapping(block_device_info))
-     if get_device_name(bdm)]
+        driver.block_device_info_get_mapping(block_device_info)
+    )
 
-    # NOTE (ndipanov): root_bdm can be None when we boot from image
-    # as there is no driver representation of local targeted images
-    # and they will not be in block_device_info list.
-    root_bdm = block_device.get_root_bdm(
-        driver.block_device_info_get_mapping(block_device_info))
+    pre_assigned_device_names = [
+        block_device.strip_dev(get_device_name(bdm))
+            for bdm in driver_bdms if get_device_name(bdm)
+    ]
 
+    # Try to find the root driver bdm, either an image based disk or volume
+    root_bdm = None
+    if any(driver.block_device_info_get_image(block_device_info)):
+        root_bdm = driver.block_device_info_get_image(block_device_info)[0]
+    elif driver.block_device_info_get_mapping(block_device_info):
+        root_bdm = block_device.get_root_bdm(
+            driver.block_device_info_get_mapping(block_device_info))
     root_device_name = block_device.strip_dev(
         driver.block_device_info_get_root_device(block_device_info))
     root_info = get_root_info(
         instance, virt_type, image_meta, root_bdm,
         disk_bus, cdrom_bus, root_device_name)
-
     mapping['root'] = root_info
-    # NOTE (ndipanov): This implicitly relies on image->local BDMs not
-    #                  being considered in the driver layer - so missing
-    #                  bdm with boot_index 0 means - use image, unless it was
-    #                  overridden. This can happen when using legacy syntax and
-    #                  no root_device_name is set on the instance.
-    if not root_bdm and not block_device.volume_in_mapping(root_info['dev'],
-                                                           block_device_info):
-        mapping['disk'] = root_info
-    elif root_bdm:
-        # NOTE (ft): If device name is not set in root bdm, root_info has a
-        # generated one. We have to copy device name to root bdm to prevent its
-        # second generation in loop through bdms. If device name is already
-        # set, nothing is changed.
+
+    # NOTE (ft): If device name is not set in root bdm, root_info has a
+    # generated one. We have to copy device name to root bdm to prevent its
+    # second generation in loop through bdms. If device name is already
+    # set, nothing is changed.
+    # NOTE(melwitt): root_bdm can be None in the case of a ISO root device, for
+    # example.
+    if root_bdm:
         update_bdm(root_bdm, root_info)
+
+    if (
+        driver.block_device_info_get_image(block_device_info) or
+        root_bdm is None
+    ):
+        mapping['disk'] = root_info
 
     default_eph = get_default_ephemeral_info(instance, disk_bus,
                                              block_device_info, mapping)

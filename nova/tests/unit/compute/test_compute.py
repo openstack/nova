@@ -1389,13 +1389,14 @@ class ComputeVolumeTestCase(BaseTestCase):
     @mock.patch.object(nova.virt.block_device, 'convert_snapshots')
     @mock.patch.object(nova.virt.block_device, 'convert_volumes')
     @mock.patch.object(nova.virt.block_device, 'convert_ephemerals')
+    @mock.patch.object(nova.virt.block_device, 'convert_local_images')
     @mock.patch.object(nova.virt.block_device, 'convert_swap')
     @mock.patch.object(nova.virt.block_device, 'attach_block_devices')
     def test_prep_block_device_with_blanks(self, attach_block_devices,
-                                           convert_swap, convert_ephemerals,
-                                           convert_volumes, convert_snapshots,
-                                           convert_images, convert_blanks,
-                                           get_swap):
+                                           convert_swap, convert_local_images,
+                                           convert_ephemerals, convert_volumes,
+                                           convert_snapshots, convert_images,
+                                           convert_blanks, get_swap):
         instance = self._create_fake_instance_obj()
         instance['root_device_name'] = '/dev/vda'
         root_volume = objects.BlockDeviceMapping(
@@ -1426,6 +1427,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             return bdm
 
         convert_swap.return_value = []
+        convert_local_images.return_value = []
         convert_ephemerals.return_value = []
         convert_volumes.return_value = [blank_volume1, blank_volume2]
         convert_snapshots.return_value = []
@@ -1438,6 +1440,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             'root_device_name': '/dev/vda',
             'swap': [],
             'ephemerals': [],
+            'image': [],
             'block_device_mapping': bdms
         }
 
@@ -1452,6 +1455,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 self.assertIsNotNone(bdm.device_name)
 
         convert_swap.assert_called_once_with(bdms)
+        convert_local_images.assert_called_once_with(bdms)
         convert_ephemerals.assert_called_once_with(bdms)
         bdm_args = tuple(bdms)
         convert_volumes.assert_called_once_with(bdm_args)
@@ -3212,6 +3216,7 @@ class ComputeTestCase(BaseTestCase,
             expected = {
                 'swap': None,
                 'ephemerals': [],
+                'image': [],
                 'root_device_name': None,
                 'block_device_mapping': driver_bdms
             }
@@ -3240,6 +3245,7 @@ class ComputeTestCase(BaseTestCase,
             expected = {
                 'swap': None,
                 'ephemerals': [],
+                'image': [],
                 'root_device_name': None,
                 'block_device_mapping': driver_bdms
             }
@@ -3318,6 +3324,7 @@ class ComputeTestCase(BaseTestCase,
                         'size': 2
                     }
                 ],
+                'image': [],
                 'block_device_mapping': [],
                 'root_device_name': None
             }
@@ -6108,7 +6115,7 @@ class ComputeTestCase(BaseTestCase,
         mock_pre.assert_called_once_with(
             test.MatchType(nova.context.RequestContext),
             test.MatchType(objects.Instance),
-            {'swap': None, 'ephemerals': [],
+            {'swap': None, 'ephemerals': [], 'image': [],
              'root_device_name': None,
              'block_device_mapping': []},
             mock.ANY, mock.ANY, mock.ANY)
@@ -6474,7 +6481,7 @@ class ComputeTestCase(BaseTestCase,
             self.assertEqual(2, mock_notify.call_count)
             post_live_migration.assert_has_calls([
                 mock.call(c, instance, {'swap': None, 'ephemerals': [],
-                                        'root_device_name': None,
+                                        'image': [], 'root_device_name': None,
                                         'block_device_mapping': []},
                                         migrate_data)])
             migrate_instance_start.assert_has_calls([
@@ -6705,7 +6712,7 @@ class ComputeTestCase(BaseTestCase,
         mock_setup.assert_called_once_with(c, instance, self.compute.host,
                                            teardown=True)
         mock_rollback.assert_called_once_with(c, instance, [],
-                        {'swap': None, 'ephemerals': [],
+                        {'swap': None, 'ephemerals': [], 'image': [],
                          'root_device_name': None,
                          'block_device_mapping': []},
                         destroy_disks=True, migrate_data=None)
@@ -8134,7 +8141,7 @@ class ComputeTestCase(BaseTestCase,
         self.compute._default_block_device_names(instance, {}, bdms)
 
         self.assertEqual('/dev/vda', instance.root_device_name)
-        mock_def.assert_called_once_with(instance, '/dev/vda', [], [],
+        mock_def.assert_called_once_with(instance, '/dev/vda', [], [], [],
                                          [bdm for bdm in bdms])
 
     @mock.patch.object(objects.BlockDeviceMapping, 'save')
@@ -8148,7 +8155,7 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute._default_block_device_names(instance, {}, bdms)
 
-        mock_def.assert_called_once_with(instance, '/dev/vda', [], [],
+        mock_def.assert_called_once_with(instance, '/dev/vda', [], [], [],
                                          [bdm for bdm in bdms])
 
     @mock.patch.object(objects.Instance, 'save')
@@ -8170,7 +8177,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual('/dev/vda', instance.root_device_name)
         mock_default_dev.assert_called_once_with(instance, mock.ANY, bdms[0])
         mock_default_name.assert_called_once_with(instance, '/dev/vda', [], [],
-                                                  [bdm for bdm in bdms])
+                                                  [], [bdm for bdm in bdms])
 
     def test_default_block_device_names_with_blank_volumes(self):
         instance = self._create_fake_instance_obj()
@@ -8230,7 +8237,7 @@ class ComputeTestCase(BaseTestCase,
             self.assertEqual('/dev/vda', instance.root_device_name)
             self.assertTrue(object_save.called)
             default_device_names.assert_called_once_with(instance,
-                '/dev/vda', [bdms[-2]], [bdms[-1]],
+                '/dev/vda', [], [bdms[-2]], [bdms[-1]],
                 [bdm for bdm in bdms[:-2]])
 
     def test_reserve_block_device_name(self):

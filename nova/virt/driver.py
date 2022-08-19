@@ -44,6 +44,7 @@ def get_block_device_info(instance, block_device_mapping):
     of a dict containing the following keys:
 
     - root_device_name: device name of the root disk
+    - image: An instance of DriverImageBlockDevice or None
     - ephemerals: a (potentially empty) list of DriverEphemeralBlockDevice
                   instances
     - swap: An instance of DriverSwapBlockDevice or None
@@ -54,6 +55,8 @@ def get_block_device_info(instance, block_device_mapping):
     from nova.virt import block_device as virt_block_device
     return {
         'root_device_name': instance.root_device_name,
+        'image': virt_block_device.convert_local_images(
+            block_device_mapping),
         'ephemerals': virt_block_device.convert_ephemerals(
             block_device_mapping),
         'block_device_mapping':
@@ -77,6 +80,14 @@ def block_device_info_get_swap(block_device_info):
 
 def swap_is_usable(swap):
     return swap and swap['device_name'] and swap['swap_size'] > 0
+
+
+def block_device_info_get_image(block_device_info):
+    block_device_info = block_device_info or {}
+    # get_disk_mapping() supports block_device_info=None and thus requires that
+    # we return a list here.
+    image = block_device_info.get('image') or []
+    return image
 
 
 def block_device_info_get_ephemerals(block_device_info):

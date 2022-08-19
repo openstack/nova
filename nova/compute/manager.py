@@ -2030,6 +2030,7 @@ class ComputeManager(manager.Manager):
         ephemerals = []
         swap = []
         block_device_mapping = []
+        image = []
 
         for device in block_devices:
             if block_device.new_format_is_ephemeral(device):
@@ -2041,8 +2042,12 @@ class ComputeManager(manager.Manager):
             if driver_block_device.is_block_device_mapping(device):
                 block_device_mapping.append(device)
 
+            if driver_block_device.is_local_image(device):
+                image.append(device)
+
         self._default_device_names_for_instance(instance,
                                                 root_device_name,
+                                                image,
                                                 ephemerals,
                                                 swap,
                                                 block_device_mapping)
