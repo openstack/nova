@@ -24,7 +24,7 @@ from nova.network import neutron
 from nova import objects
 from nova.scheduler.client import report
 from nova.scheduler import utils
-
+from nova.virt import hardware
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -394,6 +394,41 @@ def remote_managed_ports_filter(
     return True
 
 
+@trace_request_filter
+def ephemeral_encryption_filter(
+    ctxt: nova_context.RequestContext,
+    request_spec: 'objects.RequestSpec'
+) -> bool:
+    """Pre-filter resource provides by ephemeral encryption support
+
+    This filter will only retain compute node resource providers that support
+    ephemeral storage encryption when the associated image properties or flavor
+    extra specs are present within the request spec.
+    """
+    # Skip if ephemeral encryption isn't requested in the flavor or image
+    if not hardware.get_ephemeral_encryption_constraint(
+            request_spec.flavor, request_spec.image):
+        LOG.debug("ephemeral_encryption_filter skipped")
+        return False
+
+    # Always add the feature trait regardless of the format being provided
+    request_spec.root_required.add(os_traits.COMPUTE_EPHEMERAL_ENCRYPTION)
+    LOG.debug("ephemeral_encryption_filter added trait "
+              "COMPUTE_EPHEMERAL_ENCRYPTION")
+
+    # Try to find the format in the flavor or image and add as a trait
+    eph_format = hardware.get_ephemeral_encryption_format(
+        request_spec.flavor, request_spec.image)
+    if eph_format:
+        # We don't need to validate the trait here because the earlier call to
+        # get_ephemeral_encryption_format will raise if it is not valid
+        trait_name = f"COMPUTE_EPHEMERAL_ENCRYPTION_{eph_format.upper()}"
+        request_spec.root_required.add(trait_name)
+        LOG.debug(f"ephemeral_encryption_filter added trait {trait_name}")
+
+    return True
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
     map_az_to_placement_aggregate,
@@ -404,6 +439,7 @@ ALL_REQUEST_FILTERS = [
     accelerators_filter,
     routed_networks_filter,
     remote_managed_ports_filter,
+    ephemeral_encryption_filter,
 ]
 
 

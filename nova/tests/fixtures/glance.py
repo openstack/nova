@@ -15,6 +15,7 @@ import datetime
 
 import fixtures
 from oslo_log import log as logging
+from oslo_utils.fixture import uuidsentinel
 from oslo_utils import uuidutils
 
 from nova import exception
@@ -198,6 +199,32 @@ class GlanceFixture(fixtures.Fixture):
         },
     }
 
+    eph_encryption = copy.deepcopy(image1)
+    eph_encryption['id'] = uuidsentinel.eph_encryption
+    eph_encryption['properties'] = {
+        'hw_ephemeral_encryption': 'True'
+    }
+
+    eph_encryption_disabled = copy.deepcopy(image1)
+    eph_encryption_disabled['id'] = uuidsentinel.eph_encryption_disabled
+    eph_encryption_disabled['properties'] = {
+        'hw_ephemeral_encryption': 'False'
+    }
+
+    eph_encryption_luks = copy.deepcopy(image1)
+    eph_encryption_luks['id'] = uuidsentinel.eph_encryption_luks
+    eph_encryption_luks['properties'] = {
+        'hw_ephemeral_encryption': 'True',
+        'hw_ephemeral_encryption_format': 'luks'
+    }
+
+    eph_encryption_plain = copy.deepcopy(image1)
+    eph_encryption_plain['id'] = uuidsentinel.eph_encryption_plain
+    eph_encryption_plain['properties'] = {
+        'hw_ephemeral_encryption': 'True',
+        'hw_ephemeral_encryption_format': 'plain'
+    }
+
     def __init__(self, test):
         super().__init__()
         self.test = test
@@ -222,6 +249,10 @@ class GlanceFixture(fixtures.Fixture):
         self.create(None, self.image5)
         self.create(None, self.auto_disk_config_disabled_image)
         self.create(None, self.auto_disk_config_enabled_image)
+        self.create(None, self.eph_encryption)
+        self.create(None, self.eph_encryption_disabled)
+        self.create(None, self.eph_encryption_luks)
+        self.create(None, self.eph_encryption_plain)
 
         self._imagedata = {}
 

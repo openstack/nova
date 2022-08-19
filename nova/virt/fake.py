@@ -1099,3 +1099,23 @@ class FakeDriverWithCaching(FakeDriver):
         else:
             self.cached_images.add(image_id)
             return True
+
+
+class EphEncryptionDriver(MediumFakeDriver):
+    capabilities = dict(
+        FakeDriver.capabilities,
+        supports_ephemeral_encryption=True)
+
+
+class EphEncryptionDriverLUKS(MediumFakeDriver):
+    capabilities = dict(
+        FakeDriver.capabilities,
+        supports_ephemeral_encryption=True,
+        supports_ephemeral_encryption_luks=True)
+
+
+class EphEncryptionDriverPLAIN(MediumFakeDriver):
+    capabilities = dict(
+        FakeDriver.capabilities,
+        supports_ephemeral_encryption=True,
+        supports_ephemeral_encryption_plain=True)

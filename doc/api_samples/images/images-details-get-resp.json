@@ -1,6 +1,191 @@
 {
     "images": [
         {
+            "OS-EXT-IMG-SIZE:size": "25165824",
+            "created": "2011-01-01T01:02:03Z",
+            "id": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "metadata": {
+                "architecture": "x86_64",
+                "kernel_id": "nokernel",
+                "ramdisk_id": "nokernel"
+            },
+            "minDisk": 0,
+            "minRam": 0,
+            "name": "fakeimage123456",
+            "progress": 100,
+            "status": "ACTIVE",
+            "updated": "2011-01-01T01:02:03Z"
+        },
+        {
+            "OS-EXT-IMG-SIZE:size": "58145823",
+            "created": "2011-01-01T01:02:03Z",
+            "id": "a2459075-d96c-40d5-893e-577ff92e721c",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/a2459075-d96c-40d5-893e-577ff92e721c",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/a2459075-d96c-40d5-893e-577ff92e721c",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/a2459075-d96c-40d5-893e-577ff92e721c",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "metadata": {
+                "kernel_id": "nokernel",
+                "ramdisk_id": "nokernel"
+            },
+            "minDisk": 0,
+            "minRam": 0,
+            "name": "fakeimage123456",
+            "progress": 100,
+            "status": "ACTIVE",
+            "updated": "2011-01-01T01:02:03Z"
+        },
+        {
+            "OS-EXT-IMG-SIZE:size": "83594576",
+            "created": "2011-01-01T01:02:03Z",
+            "id": "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "metadata": {
+                "architecture": "x86_64",
+                "kernel_id": "nokernel",
+                "ramdisk_id": "nokernel"
+            },
+            "minDisk": 0,
+            "minRam": 0,
+            "name": "fakeimage123456",
+            "progress": 100,
+            "status": "ACTIVE",
+            "updated": "2011-01-01T01:02:03Z"
+        },
+        {
+            "OS-EXT-IMG-SIZE:size": "84035174",
+            "created": "2011-01-01T01:02:03Z",
+            "id": "cedef40a-ed67-4d10-800e-17455edce175",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/cedef40a-ed67-4d10-800e-17455edce175",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/cedef40a-ed67-4d10-800e-17455edce175",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/cedef40a-ed67-4d10-800e-17455edce175",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "metadata": {
+                "kernel_id": "nokernel",
+                "ramdisk_id": "nokernel"
+            },
+            "minDisk": 0,
+            "minRam": 0,
+            "name": "fakeimage123456",
+            "progress": 100,
+            "status": "ACTIVE",
+            "updated": "2011-01-01T01:02:03Z"
+        },
+        {
+            "OS-EXT-IMG-SIZE:size": "26360814",
+            "created": "2011-01-01T01:02:03Z",
+            "id": "c905cedb-7281-47e4-8a62-f26bc5fc4c77",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "metadata": {
+                "kernel_id": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                "ramdisk_id": null
+            },
+            "minDisk": 0,
+            "minRam": 0,
+            "name": "fakeimage123456",
+            "progress": 100,
+            "status": "ACTIVE",
+            "updated": "2011-01-01T01:02:03Z"
+        },
+        {
+            "OS-DCF:diskConfig": "MANUAL",
+            "OS-EXT-IMG-SIZE:size": "49163826",
+            "created": "2011-01-01T01:02:03Z",
+            "id": "a440c04b-79fa-479c-bed1-0b816eaec379",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/a440c04b-79fa-479c-bed1-0b816eaec379",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/a440c04b-79fa-479c-bed1-0b816eaec379",
+                    "rel": "bookmark"
+                },
+                {
+                    "href": "http://glance.openstack.example.com/images/a440c04b-79fa-479c-bed1-0b816eaec379",
+                    "rel": "alternate",
+                    "type": "application/vnd.openstack.image"
+                }
+            ],
+            "metadata": {
+                "architecture": "x86_64",
+                "auto_disk_config": "False",
+                "kernel_id": "nokernel",
+                "ramdisk_id": "nokernel"
+            },
+            "minDisk": 0,
+            "minRam": 0,
+            "name": "fakeimage6",
+            "progress": 100,
+            "status": "ACTIVE",
+            "updated": "2011-01-01T01:02:03Z"
+        },
+        {
             "OS-DCF:diskConfig": "AUTO",
             "OS-EXT-IMG-SIZE:size": "74185822",
             "created": "2011-01-01T01:02:03Z",
@@ -34,28 +219,26 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "74185822",
+            "OS-EXT-IMG-SIZE:size": "25165824",
             "created": "2011-01-01T01:02:03Z",
-            "id": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+            "id": "95fad737-9325-4855-b37e-20a62268ec88",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/95fad737-9325-4855-b37e-20a62268ec88",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/95fad737-9325-4855-b37e-20a62268ec88",
                     "rel": "bookmark"
                 },
                 {
-                    "href": "http://glance.openstack.example.com/images/155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                    "href": "http://glance.openstack.example.com/images/95fad737-9325-4855-b37e-20a62268ec88",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
             ],
             "metadata": {
-                "architecture": "x86_64",
-                "kernel_id": "nokernel",
-                "ramdisk_id": "nokernel"
+                "hw_ephemeral_encryption": "True"
             },
             "minDisk": 0,
             "minRam": 0,
@@ -65,27 +248,26 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "74185822",
+            "OS-EXT-IMG-SIZE:size": "25165824",
             "created": "2011-01-01T01:02:03Z",
-            "id": "a2459075-d96c-40d5-893e-577ff92e721c",
+            "id": "535426d4-5d75-44f4-9591-a2123d23c33f",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/a2459075-d96c-40d5-893e-577ff92e721c",
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/535426d4-5d75-44f4-9591-a2123d23c33f",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/a2459075-d96c-40d5-893e-577ff92e721c",
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/535426d4-5d75-44f4-9591-a2123d23c33f",
                     "rel": "bookmark"
                 },
                 {
-                    "href": "http://glance.openstack.example.com/images/a2459075-d96c-40d5-893e-577ff92e721c",
+                    "href": "http://glance.openstack.example.com/images/535426d4-5d75-44f4-9591-a2123d23c33f",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
             ],
             "metadata": {
-                "kernel_id": "nokernel",
-                "ramdisk_id": "nokernel"
+                "hw_ephemeral_encryption": "False"
             },
             "minDisk": 0,
             "minRam": 0,
@@ -95,60 +277,27 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-DCF:diskConfig": "MANUAL",
-            "OS-EXT-IMG-SIZE:size": "74185822",
+            "OS-EXT-IMG-SIZE:size": "25165824",
             "created": "2011-01-01T01:02:03Z",
-            "id": "a440c04b-79fa-479c-bed1-0b816eaec379",
+            "id": "5f7d4f5b-3781-4a4e-9046-a2a800e807e5",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/a440c04b-79fa-479c-bed1-0b816eaec379",
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/5f7d4f5b-3781-4a4e-9046-a2a800e807e5",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/a440c04b-79fa-479c-bed1-0b816eaec379",
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/5f7d4f5b-3781-4a4e-9046-a2a800e807e5",
                     "rel": "bookmark"
                 },
                 {
-                    "href": "http://glance.openstack.example.com/images/a440c04b-79fa-479c-bed1-0b816eaec379",
+                    "href": "http://glance.openstack.example.com/images/5f7d4f5b-3781-4a4e-9046-a2a800e807e5",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
             ],
             "metadata": {
-                "architecture": "x86_64",
-                "auto_disk_config": "False",
-                "kernel_id": "nokernel",
-                "ramdisk_id": "nokernel"
-            },
-            "minDisk": 0,
-            "minRam": 0,
-            "name": "fakeimage6",
-            "progress": 100,
-            "status": "ACTIVE",
-            "updated": "2011-01-01T01:02:03Z"
-        },
-        {
-            "OS-EXT-IMG-SIZE:size": "74185822",
-            "created": "2011-01-01T01:02:03Z",
-            "id": "c905cedb-7281-47e4-8a62-f26bc5fc4c77",
-            "links": [
-                {
-                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
-                    "rel": "self"
-                },
-                {
-                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
-                    "rel": "bookmark"
-                },
-                {
-                    "href": "http://glance.openstack.example.com/images/c905cedb-7281-47e4-8a62-f26bc5fc4c77",
-                    "rel": "alternate",
-                    "type": "application/vnd.openstack.image"
-                }
-            ],
-            "metadata": {
-                "kernel_id": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
-                "ramdisk_id": null
+                "hw_ephemeral_encryption": "True",
+                "hw_ephemeral_encryption_format": "luks"
             },
             "minDisk": 0,
             "minRam": 0,
@@ -158,58 +307,27 @@
             "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "OS-EXT-IMG-SIZE:size": "74185822",
+            "OS-EXT-IMG-SIZE:size": "25165824",
             "created": "2011-01-01T01:02:03Z",
-            "id": "cedef40a-ed67-4d10-800e-17455edce175",
+            "id": "261b52ed-f693-4147-8f3b-d25df5efd968",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/cedef40a-ed67-4d10-800e-17455edce175",
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/261b52ed-f693-4147-8f3b-d25df5efd968",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/cedef40a-ed67-4d10-800e-17455edce175",
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/261b52ed-f693-4147-8f3b-d25df5efd968",
                     "rel": "bookmark"
                 },
                 {
-                    "href": "http://glance.openstack.example.com/images/cedef40a-ed67-4d10-800e-17455edce175",
+                    "href": "http://glance.openstack.example.com/images/261b52ed-f693-4147-8f3b-d25df5efd968",
                     "rel": "alternate",
                     "type": "application/vnd.openstack.image"
                 }
             ],
             "metadata": {
-                "kernel_id": "nokernel",
-                "ramdisk_id": "nokernel"
-            },
-            "minDisk": 0,
-            "minRam": 0,
-            "name": "fakeimage123456",
-            "progress": 100,
-            "status": "ACTIVE",
-            "updated": "2011-01-01T01:02:03Z"
-        },
-        {
-            "OS-EXT-IMG-SIZE:size": "74185822",
-            "created": "2011-01-01T01:02:03Z",
-            "id": "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
-            "links": [
-                {
-                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
-                    "rel": "self"
-                },
-                {
-                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
-                    "rel": "bookmark"
-                },
-                {
-                    "href": "http://glance.openstack.example.com/images/76fa36fc-c930-4bf3-8c8a-ea2a2420deb6",
-                    "rel": "alternate",
-                    "type": "application/vnd.openstack.image"
-                }
-            ],
-            "metadata": {
-                "architecture": "x86_64",
-                "kernel_id": "nokernel",
-                "ramdisk_id": "nokernel"
+                "hw_ephemeral_encryption": "True",
+                "hw_ephemeral_encryption_format": "plain"
             },
             "minDisk": 0,
             "minRam": 0,
