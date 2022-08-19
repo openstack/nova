@@ -97,12 +97,34 @@ class NUMATopologyFilter(filters.BaseHostFilter):
             if network_metadata:
                 limits.network_metadata = network_metadata
 
-            instance_topology = (hardware.numa_fit_instance_to_host(
-                        host_topology, requested_topology,
-                        limits=limits,
-                        pci_requests=pci_requests,
-                        pci_stats=host_state.pci_stats))
-            if not instance_topology:
+            good_candidates = []
+            for candidate in host_state.allocation_candidates:
+                LOG.debug(
+                    'NUMATopologyFilter tries allocation candidate: %s, %s',
+                    candidate, requested_topology
+                )
+                instance_topology = (hardware.numa_fit_instance_to_host(
+                    host_topology, requested_topology,
+                    limits=limits,
+                    pci_requests=pci_requests,
+                    pci_stats=host_state.pci_stats,
+                    provider_mapping=candidate['mappings'],
+                ))
+                if instance_topology:
+                    LOG.debug(
+                        'NUMATopologyFilter accepted allocation candidate: %s',
+                        candidate
+                    )
+                    good_candidates.append(candidate)
+                else:
+                    LOG.debug(
+                        'NUMATopologyFilter rejected allocation candidate: %s',
+                        candidate
+                    )
+
+            host_state.allocation_candidates = good_candidates
+
+            if not host_state.allocation_candidates:
                 LOG.debug("%(host)s, %(node)s fails NUMA topology "
                           "requirements. The instance does not fit on this "
                           "host.", {'host': host_state.host,

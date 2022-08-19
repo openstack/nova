@@ -47,10 +47,40 @@ class PciPassthroughFilter(filters.BaseHostFilter):
         pci_requests = spec_obj.pci_requests
         if not pci_requests or not pci_requests.requests:
             return True
-        if (not host_state.pci_stats or
-            not host_state.pci_stats.support_requests(pci_requests.requests)):
+
+        if not host_state.pci_stats:
             LOG.debug("%(host_state)s doesn't have the required PCI devices"
                       " (%(requests)s)",
                       {'host_state': host_state, 'requests': pci_requests})
             return False
+
+        good_candidates = []
+        for candidate in host_state.allocation_candidates:
+            LOG.debug(
+                'PciPassthroughFilter tries allocation candidate: %s',
+                candidate
+            )
+            if host_state.pci_stats.support_requests(
+                pci_requests.requests,
+                provider_mapping=candidate['mappings']
+            ):
+                LOG.debug(
+                    'PciPassthroughFilter accepted allocation candidate: %s',
+                    candidate
+                )
+                good_candidates.append(candidate)
+            else:
+                LOG.debug(
+                    'PciPassthroughFilter rejected allocation candidate: %s',
+                    candidate
+                )
+
+        host_state.allocation_candidates = good_candidates
+
+        if not good_candidates:
+            LOG.debug("%(host_state)s doesn't have the required PCI devices"
+                      " (%(requests)s)",
+                      {'host_state': host_state, 'requests': pci_requests})
+            return False
+
         return True

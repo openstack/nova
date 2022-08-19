@@ -156,24 +156,27 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     def test_apply_requests(self):
         self.assertEqual(len(self.pci_stats.pools), 4)
-        self.pci_stats.apply_requests(pci_requests)
+        self.pci_stats.apply_requests(pci_requests, {})
         self.assertEqual(len(self.pci_stats.pools), 2)
         self.assertEqual(self.pci_stats.pools[0]['vendor_id'], 'v1')
         self.assertEqual(self.pci_stats.pools[0]['count'], 1)
 
     def test_apply_requests_failed(self):
-        self.assertRaises(exception.PciDeviceRequestFailed,
+        self.assertRaises(
+            exception.PciDeviceRequestFailed,
             self.pci_stats.apply_requests,
-            pci_requests_multiple)
+            pci_requests_multiple,
+            {},
+        )
 
     def test_support_requests(self):
-        self.assertTrue(self.pci_stats.support_requests(pci_requests))
+        self.assertTrue(self.pci_stats.support_requests(pci_requests, {}))
         self.assertEqual(len(self.pci_stats.pools), 4)
         self.assertEqual([d['count'] for d in self.pci_stats], [1, 1, 1, 1])
 
     def test_support_requests_failed(self):
         self.assertFalse(
-            self.pci_stats.support_requests(pci_requests_multiple))
+            self.pci_stats.support_requests(pci_requests_multiple, {}))
         self.assertEqual(len(self.pci_stats.pools), 4)
         self.assertEqual([d['count'] for d in self.pci_stats], [1, 1, 1, 1])
 
@@ -184,14 +187,18 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
             objects.InstanceNUMACell(
                 id=1, cpuset=set(), pcpuset=set(), memory=0),
         ]
-        self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
+        self.assertTrue(
+            self.pci_stats.support_requests(pci_requests, {}, cells)
+        )
 
     def test_support_requests_numa_failed(self):
         cells = [
             objects.InstanceNUMACell(
                 id=0, cpuset=set(), pcpuset=set(), memory=0),
         ]
-        self.assertFalse(self.pci_stats.support_requests(pci_requests, cells))
+        self.assertFalse(
+            self.pci_stats.support_requests(pci_requests, {}, cells)
+        )
 
     def test_support_requests_no_numa_info(self):
         cells = [
@@ -199,12 +206,16 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
                 id=0, cpuset=set(), pcpuset=set(), memory=0),
         ]
         pci_requests = self._get_fake_requests(vendor_ids=['v3'])
-        self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
+        self.assertTrue(
+            self.pci_stats.support_requests(pci_requests, {}, cells)
+        )
 
         # 'legacy' is the default numa_policy so the result must be same
         pci_requests = self._get_fake_requests(vendor_ids=['v3'],
             numa_policy = fields.PCINUMAAffinityPolicy.LEGACY)
-        self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
+        self.assertTrue(
+            self.pci_stats.support_requests(pci_requests, {}, cells)
+        )
 
     def test_support_requests_numa_pci_numa_policy_preferred(self):
         # numa node 0 has 2 devices with vendor_id 'v1'
@@ -218,7 +229,9 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         pci_requests = self._get_fake_requests(
             numa_policy=fields.PCINUMAAffinityPolicy.PREFERRED)
 
-        self.assertTrue(self.pci_stats.support_requests(pci_requests, cells))
+        self.assertTrue(
+            self.pci_stats.support_requests(pci_requests, {}, cells)
+        )
 
     def test_support_requests_no_numa_info_pci_numa_policy_required(self):
         # pci device with vendor_id 'v3' has numa_node=None.
@@ -230,7 +243,9 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         pci_requests = self._get_fake_requests(vendor_ids=['v3'],
             numa_policy=fields.PCINUMAAffinityPolicy.REQUIRED)
 
-        self.assertFalse(self.pci_stats.support_requests(pci_requests, cells))
+        self.assertFalse(
+            self.pci_stats.support_requests(pci_requests, {}, cells)
+        )
 
     def test_filter_pools_for_socket_affinity_no_socket(self):
         self.pci_stats.numa_topology = objects.NUMATopology(
@@ -1009,6 +1024,329 @@ class PciDeviceStatsPlacementSupportTestCase(test.NoDBTestCase):
         self.assertRaises(
             ValueError,
             pci_stats.populate_pools_metadata_from_assigned_devices,
+        )
+
+
+class PciDeviceStatsProviderMappingTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super().setUp()
+        # for simplicity accept any devices
+        device_spec = [
+            jsonutils.dumps(
+                {
+                    "address": "*:*:*.*",
+                }
+            ),
+        ]
+        self.flags(device_spec=device_spec, group="pci")
+        dev_filter = whitelist.Whitelist(device_spec)
+        self.pci_stats = stats.PciDeviceStats(
+            objects.NUMATopology(), dev_filter=dev_filter
+        )
+        # add devices represented by different RPs in placement
+        # two VFs on the same PF
+        self.vf1 = objects.PciDevice(
+            compute_node_id=1,
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:00.1",
+            parent_addr="0000:81:00.0",
+            numa_node=0,
+            dev_type="type-VF",
+        )
+        self.vf2 = objects.PciDevice(
+            compute_node_id=1,
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:00.2",
+            parent_addr="0000:81:00.0",
+            numa_node=0,
+            dev_type="type-VF",
+        )
+        self.pci_stats.add_device(self.vf1)
+        self.vf1.extra_info = {'rp_uuid': uuids.pf1}
+        self.pci_stats.add_device(self.vf2)
+        self.vf2.extra_info = {'rp_uuid': uuids.pf1}
+        # two PFs pf2 and pf3 (pf1 is used for the paren of the above VFs)
+        self.pf2 = objects.PciDevice(
+            compute_node_id=1,
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:82:00.0",
+            parent_addr=None,
+            numa_node=0,
+            dev_type="type-PF",
+        )
+        self.pci_stats.add_device(self.pf2)
+        self.pf2.extra_info = {'rp_uuid': uuids.pf2}
+
+        self.pf3 = objects.PciDevice(
+            compute_node_id=1,
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:83:00.0",
+            parent_addr=None,
+            numa_node=0,
+            dev_type="type-PF",
+        )
+        self.pci_stats.add_device(self.pf3)
+        self.pf3.extra_info = {'rp_uuid': uuids.pf3}
+        # a PCI
+        self.pci1 = objects.PciDevice(
+            compute_node_id=1,
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:84:00.0",
+            parent_addr=None,
+            numa_node=0,
+            dev_type="type-PCI",
+        )
+        self.pci_stats.add_device(self.pci1)
+        self.pci1.extra_info = {'rp_uuid': uuids.pci1}
+
+        # populate the RP -> pool mapping from the devices to its pools
+        self.pci_stats.populate_pools_metadata_from_assigned_devices()
+
+        # we have 1 pool for the two VFs then the rest has it own pool one by
+        # one
+        self.num_pools = 4
+        self.assertEqual(self.num_pools, len(self.pci_stats.pools))
+        self.num_devs = 5
+        self.assertEqual(
+            self.num_devs, sum(pool["count"] for pool in self.pci_stats.pools)
+        )
+
+    def test_support_request_unrestricted(self):
+        reqs = []
+        for dev_type in ["type-VF", "type-PF", "type-PCI"]:
+            req = objects.InstancePCIRequest(
+                count=1,
+                alias_name='a-dev',
+                spec=[
+                    {
+                        "vendor_id": "dead",
+                        "product_id": "beef",
+                        "dev_type": dev_type,
+                    }
+                ],
+            )
+            reqs.append(req)
+
+        # an empty mapping means unrestricted by any provider
+        # we have devs for all type so each request should fit
+        self.assertTrue(self.pci_stats.support_requests(reqs, {}))
+
+        # the support_requests call is expected not to consume any device
+        self.assertEqual(self.num_pools, len(self.pci_stats.pools))
+        self.assertEqual(
+            self.num_devs, sum(pool["count"] for pool in self.pci_stats.pools)
+        )
+
+        # now apply the same request to consume the pools
+        self.pci_stats.apply_requests(reqs, {})
+        # we have consumed a 3 devs (a VF, a PF, and a PCI)
+        self.assertEqual(
+            self.num_devs - 3,
+            sum(pool["count"] for pool in self.pci_stats.pools),
+        )
+        # the empty pools are purged. We have one pool for the remaining VF
+        # and the remaining PF
+        self.assertEqual(2, len(self.pci_stats.pools))
+
+    def test_support_request_restricted_by_provider_mapping(self):
+        pf_req = objects.InstancePCIRequest(
+            count=1,
+            alias_name='a-dev',
+            request_id=uuids.req1,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-PF",
+                }
+            ],
+        )
+
+        # simulate the placement restricted the possible RPs to pf3
+        self.assertTrue(
+            self.pci_stats.support_requests(
+                [pf_req], {f"{uuids.req1}-0": [uuids.pf3]}
+            )
+        )
+
+        # the support_requests call is expected not to consume any device
+        self.assertEqual(self.num_pools, len(self.pci_stats.pools))
+        self.assertEqual(
+            self.num_devs, sum(pool["count"] for pool in self.pci_stats.pools)
+        )
+
+        # now apply the request and see if the right device is consumed
+        self.pci_stats.apply_requests(
+            [pf_req], {f"{uuids.req1}-0": [uuids.pf3]}
+        )
+
+        self.assertEqual(self.num_pools - 1, len(self.pci_stats.pools))
+        self.assertEqual(
+            self.num_devs - 1,
+            sum(pool["count"] for pool in self.pci_stats.pools),
+        )
+        # pf3 is not available in the pools any more
+        self.assertEqual(
+            {uuids.pf1, uuids.pf2, uuids.pci1},
+            {pool['rp_uuid'] for pool in self.pci_stats.pools},
+        )
+
+    def test_support_request_restricted_by_provider_mapping_does_not_fit(self):
+        pf_req = objects.InstancePCIRequest(
+            count=1,
+            alias_name='a-dev',
+            request_id=uuids.req1,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-PF",
+                }
+            ],
+        )
+
+        # Simulate that placement returned an allocation candidate with a PF
+        # that is not in the pools anymore, e.g. filtered out by numa cell.
+        # We expect the request to fail
+        self.assertFalse(
+            self.pci_stats.support_requests(
+                [pf_req], {f"{uuids.req1}-0": [uuids.pf4]}
+            )
+        )
+        self.assertRaises(
+            exception.PciDeviceRequestFailed,
+            self.pci_stats.apply_requests,
+            [pf_req],
+            {f"{uuids.req1}-0": [uuids.pf4]},
+        )
+        # and the pools are not changed
+        self.assertEqual(self.num_pools, len(self.pci_stats.pools))
+        self.assertEqual(
+            self.num_devs, sum(pool["count"] for pool in self.pci_stats.pools)
+        )
+
+    def test_support_request_neutron_port_based_request_ignore_mapping(self):
+        # by not having the alias_name set this becomes a neutron port based
+        # PCI request
+        pf_req = objects.InstancePCIRequest(
+            count=1,
+            request_id=uuids.req1,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-PF",
+                }
+            ],
+        )
+
+        # Simulate that placement returned an allocation candidate with a PF
+        # that is not in the pools anymore, e.g. filtered out by numa cell.
+        # We expect that the placement selection is ignored for neutron port
+        # based requests so this request should fit as we have PFs in the pools
+        self.assertTrue(
+            self.pci_stats.support_requests(
+                [pf_req], {f"{uuids.req1}-0": [uuids.pf4]}
+            )
+        )
+        self.pci_stats.apply_requests(
+            [pf_req],
+            {f"{uuids.req1}-0": [uuids.pf4]},
+        )
+        # and a PF is consumed
+        self.assertEqual(self.num_pools - 1, len(self.pci_stats.pools))
+        self.assertEqual(
+            self.num_devs - 1,
+            sum(pool["count"] for pool in self.pci_stats.pools),
+        )
+
+    def test_support_request_req_with_count_2(self):
+        # now ask for two PFs in a single request
+        pf_req = objects.InstancePCIRequest(
+            count=2,
+            alias_name='a-dev',
+            request_id=uuids.req1,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-PF",
+                }
+            ],
+        )
+
+        # Simulate that placement returned one candidate RP for both PF reqs
+        mapping = {
+            f"{uuids.req1}-0": [uuids.pf2],
+            f"{uuids.req1}-1": [uuids.pf3],
+        }
+        # so the request fits
+        self.assertTrue(self.pci_stats.support_requests([pf_req], mapping))
+        self.pci_stats.apply_requests([pf_req], mapping)
+        # and both PFs are consumed
+        self.assertEqual(self.num_pools - 2, len(self.pci_stats.pools))
+        self.assertEqual(
+            self.num_devs - 2,
+            sum(pool["count"] for pool in self.pci_stats.pools),
+        )
+        self.assertEqual(
+            {uuids.pf1, uuids.pci1},
+            {pool['rp_uuid'] for pool in self.pci_stats.pools},
+        )
+
+    def test_support_requests_multiple_reqs(self):
+        # request both a VF and a PF
+        vf_req = objects.InstancePCIRequest(
+            count=1,
+            alias_name='a-dev',
+            request_id=uuids.vf_req,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-VF",
+                }
+            ],
+        )
+        pf_req = objects.InstancePCIRequest(
+            count=1,
+            alias_name='a-dev',
+            request_id=uuids.pf_req,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-PF",
+                }
+            ],
+        )
+
+        # Simulate that placement returned one candidate RP for both reqs
+        mapping = {
+            # the VF is represented by the parent PF RP
+            f"{uuids.vf_req}-0": [uuids.pf1],
+            f"{uuids.pf_req}-0": [uuids.pf3],
+        }
+        # so the request fits
+        self.assertTrue(
+            self.pci_stats.support_requests([vf_req, pf_req], mapping)
+        )
+        self.pci_stats.apply_requests([vf_req, pf_req], mapping)
+        # and the proper devices are consumed
+        # Note that the VF pool still has a device so it remains
+        self.assertEqual(self.num_pools - 1, len(self.pci_stats.pools))
+        self.assertEqual(
+            self.num_devs - 2,
+            sum(pool["count"] for pool in self.pci_stats.pools),
+        )
+        self.assertEqual(
+            {uuids.pf1, uuids.pf2, uuids.pci1},
+            {pool['rp_uuid'] for pool in self.pci_stats.pools},
         )
 
 

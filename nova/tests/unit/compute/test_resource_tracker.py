@@ -2430,7 +2430,8 @@ class TestInstanceClaim(BaseTestCase):
                                        self.allocations, None)
             cn = self.rt.compute_nodes[_NODENAME]
             update_mock.assert_called_once_with(self.elevated, cn)
-            pci_stats_mock.assert_called_once_with([request])
+            pci_stats_mock.assert_called_once_with(
+                [request], provider_mapping=None)
             self.assertTrue(obj_base.obj_equal_prims(expected, cn))
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
