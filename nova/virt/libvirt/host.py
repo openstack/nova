@@ -490,7 +490,7 @@ class Host(object):
         LOG.debug("Starting native event thread")
         self._event_thread = native_threading.Thread(
             target=self._native_thread)
-        self._event_thread.setDaemon(True)
+        self._event_thread.daemon = True
         self._event_thread.start()
 
         LOG.debug("Starting green dispatch thread")

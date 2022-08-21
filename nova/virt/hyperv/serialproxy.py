@@ -46,7 +46,7 @@ class SerialProxy(threading.Thread):
     def __init__(self, instance_name, addr, port, input_queue,
                  output_queue, client_connected):
         super(SerialProxy, self).__init__()
-        self.setDaemon(True)
+        self.daemon = True
 
         self._instance_name = instance_name
         self._addr = addr
@@ -99,7 +99,7 @@ class SerialProxy(threading.Thread):
         workers = []
         for job in [self._get_data, self._send_data]:
             worker = threading.Thread(target=job)
-            worker.setDaemon(True)
+            worker.daemon = True
             worker.start()
             workers.append(worker)
 
