@@ -1078,6 +1078,9 @@ class API(object):
         except cinder_exception.ClientException:
             # assume a big volume for computing the default timeout
             migration_timeout = int(2 * 1024 * 1024 // assumed_speed_mib)
+        # we add some overhead of processing the request in Cinder, too
+        migration_timeout += CONF.cinder.migration_overhead
+
         # an external dictionary so the looping function can keep state between
         # runs
         loop_state = {}
