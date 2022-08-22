@@ -50,6 +50,7 @@ from nova.cmd import common as cmd_common
 from nova.compute import api
 from nova.compute import instance_actions
 from nova.compute import rpcapi
+from nova.compute import vm_states
 import nova.conf
 from nova import config
 from nova import context
@@ -3563,6 +3564,184 @@ class LimitsCommands():
             return 1
 
 
+class SAPCommands(object):
+
+    @action_description(
+        _("Detects changes on the flavors extra_specs and syncs the flavor of "
+          "instances and request_spec with the last extra_specs. It skips "
+          "instances that are resizing."))
+    @args('--max-count', metavar='<max_count>', dest='max_count',
+          help='Maximum number of instances to process. If not specified, all '
+               'instances in each cell will be mapped in batches of 50. '
+               'If you have a large number of instances, consider specifying '
+               'a custom value and run the command until it exits with '
+               '0 or 4.')
+    @args('--verbose', action='store_true', dest='verbose', default=False,
+          help='Provide verbose output during execution.')
+    @args('--dry-run', action='store_true', dest='dry_run', default=False,
+          help='Runs the command and prints output but does not commit any '
+               'changes. The return code should be 4.')
+    @args('--instance', metavar='<instance_uuid>', dest='instance_uuid',
+          help='UUID of a specific instance to process. If specified '
+               '--max-count has no effect.')
+    def sync_instances_flavor(self, max_count=None, verbose=False,
+                              dry_run=False, instance_uuid=None):
+        output = lambda msg: None
+        if verbose:
+            output = lambda msg: print(msg)
+
+        ctxt = context.get_admin_context()
+        flavors = objects.FlavorList.get_all(ctxt)
+
+        if instance_uuid:
+            max_count = 1
+            unlimited = False
+        elif max_count is not None:
+            try:
+                max_count = int(max_count)
+            except ValueError:
+                max_count = -1
+            unlimited = False
+            if max_count < 1:
+                print(_('Must supply a positive integer for --max-count.'))
+                return 127
+        else:
+            max_count = 50
+            unlimited = True
+            output(_('Running batches of %i until complete') % max_count)
+
+        def _find_flavor(instance):
+            for flavor in flavors:
+                if instance.flavor and instance.flavor.name == flavor.name:
+                    return flavor
+            return None
+
+        def _should_update(instance, flavor):
+            if (instance.task_state is not None or
+                    instance.vm_state == vm_states.RESIZED):
+                output(_('Instance %(instance)s is undergoing a state '
+                         'transition: task_state=%(task_state)s '
+                         'vm_state=%(vm_state)s') %
+                       {'instance': instance.uuid,
+                        'task_state': instance.task_state,
+                        'vm_state': instance.vm_state})
+                return False
+
+            return instance.flavor.extra_specs != flavor.extra_specs
+
+        def _update_request_spec_flavor(instance, flavor):
+            request_spec = objects.RequestSpec.get_by_instance_uuid(
+                ctxt, instance.uuid)
+            request_spec.flavor.extra_specs = flavor.extra_specs
+            request_spec.save()
+
+        def _update_instance_flavor(cctxt, instance, dry_run=False):
+            flavor = _find_flavor(instance)
+            if not flavor or not _should_update(instance, flavor):
+                return False
+
+            if dry_run:
+                output("Instance %s has outdated flavor extra_specs."
+                       % instance.uuid)
+                return True
+
+            instance.flavor.extra_specs = flavor.extra_specs
+            instance.save()
+            _update_request_spec_flavor(instance, flavor)
+
+            output("Updated flavor extra_specs for instance %s. "
+                   % instance.uuid)
+            return True
+
+        return self._run_across_cells(_update_instance_flavor,
+                                      instance_uuid=instance_uuid,
+                                      expected_attrs=['flavor'],
+                                      unlimited=unlimited,
+                                      max_count=max_count,
+                                      dry_run=dry_run,
+                                      output=output)
+
+    def _run_across_cells(self, cb, instance_uuid=None,
+                          expected_attrs=None, unlimited=False,
+                          filters=None, max_count=50, dry_run=False,
+                          output=print):
+
+        ctxt = context.get_admin_context()
+
+        if instance_uuid:
+            try:
+                im = objects.InstanceMapping.get_by_instance_uuid(
+                    ctxt, instance_uuid)
+                cells = objects.CellMappingList(objects=[im.cell_mapping])
+            except exception.InstanceMappingNotFound:
+                print('Unable to find cell for instance %s, is it mapped? Try '
+                      'running "nova-manage cell_v2 verify_instance" or '
+                      '"nova-manage cell_v2 map_instances".' %
+                      instance_uuid)
+                return 127
+        else:
+            cells = objects.CellMappingList.get_all(ctxt)
+            if not cells:
+                output(_('No cells to process.'))
+                return 4
+
+        num_processed = 0
+        for cell in cells:
+            if cell.uuid == objects.CellMapping.CELL0_UUID:
+                continue
+            output(_('Looking for instances in cell: %s') % cell.identity)
+
+            limit_per_cell = max_count
+            if not unlimited:
+                # Adjust the limit for the next cell. For example, if the user
+                # only wants to process a total of 100 instances and we did
+                # 75 in cell1, then we only need 25 more from cell2 and so on.
+                limit_per_cell = max_count - num_processed
+
+            with context.target_cell(ctxt, cell) as cctxt:
+                num_processed += self._run_on_cell(
+                    cctxt, cb, unlimited, limit_per_cell,
+                    instance_uuid=instance_uuid, expected_attrs=expected_attrs,
+                    filters=filters, dry_run=dry_run, output=output)
+
+    def _run_on_cell(self, ctxt, cb, unlimited, max_count,
+                     instance_uuid=None, expected_attrs=None,
+                     filters=None, dry_run=False, output=print):
+
+        instance_filters = {'deleted': False}
+        if instance_uuid:
+            instance_filters['uuid'] = instance_uuid
+        if filters:
+            instance_filters.update(filters)
+
+        instances = objects.InstanceList.get_by_filters(
+            ctxt, filters=instance_filters, sort_key='created_at',
+            sort_dir='asc', limit=max_count, expected_attrs=expected_attrs)
+
+        num_processed = 0
+
+        while instances:
+            output(_('Found %s candidate instances.') % len(instances))
+
+            for instance in instances:
+                if cb(ctxt, instance, dry_run=dry_run):
+                    num_processed += 1
+
+                # Make sure we don't go over the max count.
+                if (not unlimited and num_processed == max_count) \
+                        or instance_uuid:
+                    return num_processed
+
+            # Use a marker to get the next page of instances in this cell.
+            marker = instances[-1].uuid
+            instances = objects.InstanceList.get_by_filters(
+                ctxt, filters=instance_filters, sort_key='created_at',
+                sort_dir='asc', limit=max_count, marker=marker,
+                expected_attrs=expected_attrs)
+
+        return num_processed
+
+
 CATEGORIES = {
     'api_db': ApiDbCommands,
     'cell_v2': CellV2Commands,
@@ -3572,6 +3751,7 @@ CATEGORIES = {
     'volume_attachment': VolumeAttachmentCommands,
     'image_property': ImagePropertyCommands,
     'limits': LimitsCommands,
+    'sap': SAPCommands,
 }
 
 
