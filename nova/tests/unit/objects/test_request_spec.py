@@ -1146,7 +1146,7 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
             ),
         )
 
-        spec._generate_request_groups_from_pci_requests()
+        spec.generate_request_groups_from_pci_requests()
 
         self.assertEqual(0, len(spec.requested_resources))
 
@@ -1164,7 +1164,7 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
             objects.InstancePCIRequest.NEUTRON_PORT, pci_req.source
         )
 
-        spec._generate_request_groups_from_pci_requests()
+        spec.generate_request_groups_from_pci_requests()
 
         self.assertEqual(0, len(spec.requested_resources))
 
@@ -1189,7 +1189,7 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
             ),
         )
 
-        spec._generate_request_groups_from_pci_requests()
+        spec.generate_request_groups_from_pci_requests()
 
         self.assertEqual(2, len(spec.requested_resources))
         self.assertEqual(
@@ -1224,7 +1224,7 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
             ),
         )
 
-        spec._generate_request_groups_from_pci_requests()
+        spec.generate_request_groups_from_pci_requests()
 
         self.assertEqual(2, len(spec.requested_resources))
         self.assertEqual(
@@ -1277,7 +1277,7 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
             ),
         )
 
-        spec._generate_request_groups_from_pci_requests()
+        spec.generate_request_groups_from_pci_requests()
 
         self.assertEqual(2, len(spec.requested_resources))
         self.assertEqual(

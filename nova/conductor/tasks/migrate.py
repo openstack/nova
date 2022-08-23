@@ -258,6 +258,11 @@ class MigrationTask(base.TaskBase):
         # resource requests in a single list and add them to the RequestSpec.
         self.request_spec.requested_resources = port_res_req
         self.request_spec.request_level_params = req_lvl_params
+        # NOTE(gibi): as PCI devices is tracked in placement we need to
+        # generate request groups from InstancePCIRequests. This will append
+        # new RequestGroup objects to the request_spec.requested_resources list
+        # if needed
+        self.request_spec.generate_request_groups_from_pci_requests()
 
         self._set_requested_destination_cell(legacy_props)
 

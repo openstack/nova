@@ -246,6 +246,18 @@ class _PCIServersTestBase(base.ServersTestBase):
     def _to_device_spec_conf(spec_list):
         return [jsonutils.dumps(x) for x in spec_list]
 
+    @staticmethod
+    def _move_allocation(allocations, from_uuid, to_uuid):
+        allocations[to_uuid] = allocations[from_uuid]
+        del allocations[from_uuid]
+
+    def _move_server_allocation(self, allocations, server_uuid, revert=False):
+        migration_uuid = self.get_migration_uuid_for_instance(server_uuid)
+        if revert:
+            self._move_allocation(allocations, migration_uuid, server_uuid)
+        else:
+            self._move_allocation(allocations, server_uuid, migration_uuid)
+
 
 class _PCIServersWithMigrationTestBase(_PCIServersTestBase):
 
@@ -2102,6 +2114,207 @@ class PCIServersTest(_PCIServersTestBase):
         self.assert_no_pci_healing("test_compute0")
         self.assert_no_pci_healing("test_compute1")
 
+    def test_resize_vanilla_to_pci(self):
+        """Resize an instance from a non PCI flavor to a PCI flavor"""
+        # Start two computes, one with PCI and one without.
+        self.start_compute(
+            hostname='test_compute0',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=1))
+        test_compute0_placement_pci_view = {
+            "inventories": {"0000:81:00.0": {self.PCI_RC: 1}},
+            "traits": {"0000:81:00.0": []},
+            "usages": {"0000:81:00.0": {self.PCI_RC: 0}},
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        self.start_compute(hostname='test_compute1')
+        test_compute1_placement_pci_view = {
+            "inventories": {},
+            "traits": {},
+            "usages": {},
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+
+        # Boot a server without PCI device and make sure it lands on the
+        # compute that has no device, so we can resize it later to the other
+        # host having PCI device.
+        extra_spec = {}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(
+            flavor_id=flavor_id, networks='none', host="test_compute1")
+
+        self.assertPCIDeviceCounts('test_compute0', total=1, free=1)
+        self.assertPCIDeviceCounts('test_compute1', total=0, free=0)
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+
+        # Resize it to a flavor with a PCI devices. We expect this to work, as
+        # test_compute0 is available and having PCI devices.
+        extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:1'}
+        pci_flavor_id = self._create_flavor(extra_spec=extra_spec)
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off',
+            return_value='{}',
+        ):
+            self._resize_server(server, pci_flavor_id)
+        self._confirm_resize(server)
+        self.assertPCIDeviceCounts('test_compute0', total=1, free=0)
+        self.assertPCIDeviceCounts('test_compute1', total=0, free=0)
+        test_compute0_placement_pci_view[
+            "usages"]["0000:81:00.0"][self.PCI_RC] = 1
+        test_compute0_placement_pci_view[
+            "allocations"][server['id']] = {"0000:81:00.0": {self.PCI_RC: 1}}
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+        self.assert_no_pci_healing("test_compute0")
+        self.assert_no_pci_healing("test_compute1")
+
+    def test_resize_from_one_dev_to_two(self):
+        self.start_compute(
+            hostname='test_compute0',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=1))
+        self.assertPCIDeviceCounts('test_compute0', total=1, free=1)
+        test_compute0_placement_pci_view = {
+            "inventories": {"0000:81:00.0": {self.PCI_RC: 1}},
+            "traits": {"0000:81:00.0": []},
+            "usages": {"0000:81:00.0": {self.PCI_RC: 0}},
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        self.start_compute(
+            hostname='test_compute1',
+            pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=2),
+        )
+        self.assertPCIDeviceCounts('test_compute1', total=2, free=2)
+        test_compute1_placement_pci_view = {
+            "inventories": {
+                "0000:81:00.0": {self.PCI_RC: 1},
+                "0000:81:01.0": {self.PCI_RC: 1},
+            },
+            "traits": {
+                "0000:81:00.0": [],
+                "0000:81:01.0": [],
+            },
+            "usages": {
+                "0000:81:00.0": {self.PCI_RC: 0},
+                "0000:81:01.0": {self.PCI_RC: 0},
+            },
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+
+        # boot a VM on test_compute0 with a single PCI dev
+        extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:1'}
+        pci_flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(
+            flavor_id=pci_flavor_id, networks='none', host="test_compute0")
+
+        self.assertPCIDeviceCounts('test_compute0', total=1, free=0)
+        test_compute0_placement_pci_view["usages"][
+            "0000:81:00.0"][self.PCI_RC] = 1
+        test_compute0_placement_pci_view["allocations"][
+            server['id']] = {"0000:81:00.0": {self.PCI_RC: 1}}
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        # resize the server to a flavor requesting two devices
+        extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:2'}
+        pci_flavor_id = self._create_flavor(extra_spec=extra_spec)
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off',
+            return_value='{}',
+        ):
+            self._resize_server(server, pci_flavor_id)
+
+        self.assertPCIDeviceCounts('test_compute0', total=1, free=0)
+        # one the source host the PCI allocation is now held by the migration
+        self._move_server_allocation(
+            test_compute0_placement_pci_view['allocations'], server['id'])
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+        # on the dest we have now two device allocated
+        self.assertPCIDeviceCounts('test_compute1', total=2, free=0)
+        test_compute1_placement_pci_view["usages"] = {
+            "0000:81:00.0": {self.PCI_RC: 1},
+            "0000:81:01.0": {self.PCI_RC: 1},
+        }
+        test_compute1_placement_pci_view["allocations"][
+            server['id']] = {
+            "0000:81:00.0": {self.PCI_RC: 1},
+            "0000:81:01.0": {self.PCI_RC: 1},
+        }
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+
+        # now revert the resize
+        self._revert_resize(server)
+
+        self.assertPCIDeviceCounts('test_compute0', total=1, free=0)
+        # on the host the allocation should move back to the instance UUID
+        self._move_server_allocation(
+            test_compute0_placement_pci_view["allocations"],
+            server["id"],
+            revert=True,
+        )
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+        # so the dest should be freed
+        self.assertPCIDeviceCounts('test_compute1', total=2, free=2)
+        test_compute1_placement_pci_view["usages"] = {
+            "0000:81:00.0": {self.PCI_RC: 0},
+            "0000:81:01.0": {self.PCI_RC: 0},
+        }
+        del test_compute1_placement_pci_view["allocations"][server['id']]
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+
+        # now resize again and confirm it
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver'
+            '.migrate_disk_and_power_off',
+            return_value='{}',
+        ):
+            self._resize_server(server, pci_flavor_id)
+        self._confirm_resize(server)
+
+        # the source host now need to be freed up
+        self.assertPCIDeviceCounts('test_compute0', total=1, free=1)
+        test_compute0_placement_pci_view["usages"] = {
+            "0000:81:00.0": {self.PCI_RC: 0},
+        }
+        test_compute0_placement_pci_view["allocations"] = {}
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+        # and dest allocated
+        self.assertPCIDeviceCounts('test_compute1', total=2, free=0)
+        test_compute1_placement_pci_view["usages"] = {
+            "0000:81:00.0": {self.PCI_RC: 1},
+            "0000:81:01.0": {self.PCI_RC: 1},
+        }
+        test_compute1_placement_pci_view["allocations"][
+            server['id']] = {
+            "0000:81:00.0": {self.PCI_RC: 1},
+            "0000:81:01.0": {self.PCI_RC: 1},
+        }
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+
+        self.assert_no_pci_healing("test_compute0")
+        self.assert_no_pci_healing("test_compute1")
+
     def _confirm_resize(self, server, host='host1'):
         # NOTE(sbauza): Unfortunately, _cleanup_resize() in libvirt checks the
         # host option to know the source hostname but given we have a global
@@ -2115,11 +2328,6 @@ class PCIServersTest(_PCIServersTestBase):
         self.flags(host=orig_host)
 
     def test_cold_migrate_server_with_pci(self):
-        # FIXME(gibi): enable this once the allocation candidate filtering
-        # in hardware.py and the allocation correlation in the PCI claim is
-        # implemented
-        self.mock_pci_in_placement_enabled.return_value = False
-
         host_devices = {}
         orig_create = nova.virt.libvirt.guest.Guest.create
 
@@ -2190,8 +2398,16 @@ class PCIServersTest(_PCIServersTestBase):
         }
         flavor_id = self._create_flavor(extra_spec=extra_spec)
 
+        # force the allocation on test_compute0 to 81:00 to make it easy
+        # to assert the placement allocation
+        self._reserve_placement_resource(
+            "test_compute0_0000:81:01.0", self.PCI_RC, 1)
         server_a = self._create_server(
             flavor_id=flavor_id, networks='none', host='test_compute0')
+        # force the allocation on test_compute1 to 81:00 to make it easy
+        # to assert the placement allocation
+        self._reserve_placement_resource(
+            "test_compute1_0000:81:01.0", self.PCI_RC, 1)
         server_b = self._create_server(
             flavor_id=flavor_id, networks='none', host='test_compute1')
 
@@ -2203,22 +2419,24 @@ class PCIServersTest(_PCIServersTestBase):
         for hostname in ('test_compute0', 'test_compute1'):
             self.assertPCIDeviceCounts(hostname, total=2, free=1)
 
-        # FIXME(gibi): This fails as the scheduler allocates different PCI dev
-        #  in placement than what the pci claim allocates on the host.
-        # test_compute0_placement_pci_view[
-        #     "usages"]["0000:81:00.0"][self.PCI_RC] = 1
-        # test_compute0_placement_pci_view[
-        #     "allocations"][server_a['id']] =
-        #         {"0000:81:00.0": {self.PCI_RC: 1}}
-        # self.assert_placement_pci_view(
-        #     "test_compute0", **test_compute0_placement_pci_view)
-        # test_compute1_placement_pci_view[
-        #     "usages"]["0000:81:00.0"][self.PCI_RC] = 1
-        # test_compute1_placement_pci_view[
-        #     "allocations"][server_b['id']] =
-        #         {"0000:81:00.0": {self.PCI_RC: 1}}
-        # self.assert_placement_pci_view(
-        #     "test_compute1", **test_compute1_placement_pci_view)
+        test_compute0_placement_pci_view["usages"][
+            "0000:81:00.0"][self.PCI_RC] = 1
+        test_compute0_placement_pci_view["allocations"][
+            server_a['id']] = {"0000:81:00.0": {self.PCI_RC: 1}}
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        test_compute1_placement_pci_view[
+            "usages"]["0000:81:00.0"][self.PCI_RC] = 1
+        test_compute1_placement_pci_view["allocations"][
+            server_b['id']] = {"0000:81:00.0": {self.PCI_RC: 1}}
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+
+        # remove the resource reservation from test_compute1 to be able to
+        # migrate server_a there
+        self._reserve_placement_resource(
+            "test_compute1_0000:81:01.0", self.PCI_RC, 0)
 
         # TODO(stephenfin): The mock of 'migrate_disk_and_power_off' should
         # probably be less...dumb
@@ -2237,40 +2455,41 @@ class PCIServersTest(_PCIServersTestBase):
             server_a['OS-EXT-SRV-ATTR:host'], server_b['OS-EXT-SRV-ATTR:host'],
         )
         self.assertPCIDeviceCounts('test_compute0', total=2, free=1)
-        # migration_uuid = self.get_migration_uuid_for_instance(server_a['id'])
-        # test_compute0_placement_pci_view["allocations"][migration_uuid] = (
-        #     test_compute0_placement_pci_view["allocations"][server_a['id']])
-        # del test_compute0_placement_pci_view["allocations"][server_a['id']]
-        # self.assert_placement_pci_view(
-        #     "test_compute0", **test_compute0_placement_pci_view)
+        # on the source host the allocation is now held by the migration UUID
+        self._move_server_allocation(
+            test_compute0_placement_pci_view["allocations"], server_a['id'])
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
 
         self.assertPCIDeviceCounts('test_compute1', total=2, free=0)
-        # test_compute1_placement_pci_view[
-        #     "usages"]["0000:81:01.0"][self.PCI_RC] = 1
-        # test_compute1_placement_pci_view[
-        #     "allocations"][server_a['id']] =
-        #         {"0000:81:01.0": {self.PCI_RC: 1}}
-        # self.assert_placement_pci_view(
-        #     "test_compute1", **test_compute1_placement_pci_view)
+        # sever_a now have allocation on test_compute1 on 81:01
+        test_compute1_placement_pci_view["usages"][
+            "0000:81:01.0"][self.PCI_RC] = 1
+        test_compute1_placement_pci_view["allocations"][
+            server_a['id']] = {"0000:81:01.0": {self.PCI_RC: 1}}
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
 
         # now, confirm the migration and check our counts once again
         self._confirm_resize(server_a)
 
         self.assertPCIDeviceCounts('test_compute0', total=2, free=2)
-        # test_compute0_placement_pci_view["usages"] = {
-        #     "0000:81:00.0": {self.PCI_RC: 0},
-        #     "0000:81:01.0": {self.PCI_RC: 0},
-        # }
-        # del test_compute0_placement_pci_view["allocations"][migration_uuid]
-        # self.assert_placement_pci_view(
-        #     "test_compute0", **test_compute0_placement_pci_view)
+        # the source host now has no allocations as the migration allocation
+        # is removed by confirm resize
+        test_compute0_placement_pci_view["usages"] = {
+            "0000:81:00.0": {self.PCI_RC: 0},
+            "0000:81:01.0": {self.PCI_RC: 0},
+        }
+        test_compute0_placement_pci_view["allocations"] = {}
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
 
         self.assertPCIDeviceCounts('test_compute1', total=2, free=0)
-        # self.assert_placement_pci_view(
-        #     "test_compute1", **test_compute1_placement_pci_view)
-        #
-        # self.assert_no_pci_healing("test_compute0")
-        # self.assert_no_pci_healing("test_compute1")
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+
+        self.assert_no_pci_healing("test_compute0")
+        self.assert_no_pci_healing("test_compute1")
 
     def test_request_two_pci_but_host_has_one(self):
         # simulate a single type-PCI device on the host

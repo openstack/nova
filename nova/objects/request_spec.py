@@ -495,7 +495,7 @@ class RequestSpec(base.NovaObject):
     def _pci_in_placement_enabled():
         return False
 
-    def _generate_request_groups_from_pci_requests(self):
+    def generate_request_groups_from_pci_requests(self):
         if not self._pci_in_placement_enabled():
             return False
 
@@ -656,7 +656,7 @@ class RequestSpec(base.NovaObject):
         if port_resource_requests:
             spec_obj.requested_resources.extend(port_resource_requests)
 
-        spec_obj._generate_request_groups_from_pci_requests()
+        spec_obj.generate_request_groups_from_pci_requests()
 
         # NOTE(gibi): later the scheduler adds more request level params but
         # never overrides existing ones so we can initialize them here.
