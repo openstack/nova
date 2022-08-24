@@ -619,18 +619,11 @@ class ResourceTracker(object):
         :param prefix: Prefix to use when accessing migration context
             attributes. 'old_' or 'new_', with 'new_' being the default.
         """
-        # Remove usage for an instance that is tracked in migrations, such as
-        # on the dest node during revert resize.
-        if instance['uuid'] in self.tracked_migrations:
-            migration = self.tracked_migrations.pop(instance['uuid'])
+        if instance["uuid"] in self.tracked_migrations:
             if not flavor:
-                flavor = self._get_flavor(instance, prefix, migration)
-        # Remove usage for an instance that is not tracked in migrations (such
-        # as on the source node after a migration).
-        # NOTE(lbeliveau): On resize on the same node, the instance is
-        # included in both tracked_migrations and tracked_instances.
-        elif instance['uuid'] in self.tracked_instances:
-            self.tracked_instances.remove(instance['uuid'])
+                flavor = self._get_flavor(
+                    instance, prefix, self.tracked_migrations[instance["uuid"]]
+                )
 
         if flavor is not None:
             numa_topology = self._get_migration_context_resource(
@@ -645,6 +638,15 @@ class ResourceTracker(object):
 
             ctxt = context.elevated()
             self._update(ctxt, self.compute_nodes[nodename])
+
+        # Remove usage for an instance that is tracked in migrations, such as
+        # on the dest node during revert resize.
+        self.tracked_migrations.pop(instance['uuid'], None)
+        # Remove usage for an instance that is not tracked in migrations (such
+        # as on the source node after a migration).
+        # NOTE(lbeliveau): On resize on the same node, the instance is
+        # included in both tracked_migrations and tracked_instances.
+        self.tracked_instances.discard(instance['uuid'])
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE, fair=True)
     def update_usage(self, context, instance, nodename):

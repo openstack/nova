@@ -1597,8 +1597,17 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         compute1_expected_placement_view["allocations"][server["id"]] = {
             "0000:81:00.0": {self.VF_RC: 2}
         }
-        self.assert_placement_pci_view(
-            "compute1", **compute1_expected_placement_view)
+        # NOTE(gibi): This is unfortunate but during same host resize
+        # confirm when the PCI scheduling is not enabled the healing logic
+        # cannot heal the dest host allocation during the claim. It will only
+        # heal it in the next run of the  ResourceTracker._update(). This due
+        # to the fact that ResourceTracker.drop_move_claim runs both for
+        # revert (on the dest) and confirm (on the source) and in same host
+        # resize this means that it runs on both the source and the dest as
+        # they are the same.
+        # Anyhow the healing will happen just a bit later. And the end goal is
+        # to make the scheduler support enabled by default and delete the
+        # whole healing logic. So I think this is acceptable.
         self._run_periodics()
         self.assert_placement_pci_view(
             "compute1", **compute1_expected_placement_view)
