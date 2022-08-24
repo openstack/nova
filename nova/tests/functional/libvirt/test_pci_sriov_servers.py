@@ -1062,7 +1062,7 @@ class SRIOVAttachDetachTest(_PCIServersTestBase):
             self.neutron.sriov_pf_port2['id'])
 
 
-class VDPAServersTest(_PCIServersTestBase):
+class VDPAServersTest(_PCIServersWithMigrationTestBase):
 
     # this is needed for os_compute_api:os-migrate-server:migrate policy
     ADMIN_API = True
@@ -1094,7 +1094,6 @@ class VDPAServersTest(_PCIServersTestBase):
 
     def setUp(self):
         super().setUp()
-
         # The ultimate base class _IntegratedTestBase uses NeutronFixture but
         # we need a bit more intelligent neutron for these tests. Applying the
         # new fixture here means that we re-stub what the previous neutron
@@ -1180,7 +1179,6 @@ class VDPAServersTest(_PCIServersTestBase):
             expected = """
                 <interface type="vdpa">
                   <mac address="b5:bc:2e:e7:51:ee"/>
-                  <model type="virtio"/>
                   <source dev="/dev/vhost-vdpa-3"/>
                 </interface>"""
             actual = etree.tostring(elem, encoding='unicode')
@@ -1568,8 +1566,62 @@ class VDPAServersTest(_PCIServersTestBase):
             self.assertEqual(
                 dest, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
 
-    def test_suspend(self):
-        self._test_common(self._suspend_server)
+    def test_suspend_and_resume_service_version_62(self):
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=62
+        ):
+            self._test_common(self._suspend_server)
+
+    def test_suspend_and_resume(self):
+        source = self.start_vdpa_compute(hostname='source')
+        vdpa_port, server = self._create_port_and_server()
+        num_pci = self.NUM_PFS + self.NUM_VFS
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        server = self._suspend_server(server)
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        self.assertEqual('SUSPENDED', server['status'])
+        server = self._resume_server(server)
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        self.assertEqual('ACTIVE', server['status'])
+
+    def test_live_migrate_service_version_62(self):
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=62
+        ):
+            self._test_common(self._live_migrate)
+
+    def test_live_migrate(self):
+        source = self.start_vdpa_compute(hostname='source')
+        dest = self.start_vdpa_compute(hostname='dest')
+
+        num_pci = self.NUM_PFS + self.NUM_VFS
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci)
+
+        # ensure we boot the vm on the "source" compute
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'disabled'})
+        vdpa_port, server = self._create_port_and_server()
+        self.assertEqual(
+            source, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
+
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci - 2)
+        # enable the dest we do not need to disable the source since cold
+        # migrate wont happen to the same host in the libvirt driver
+        self.api.put_service(
+            self.computes['dest'].service_ref.uuid, {'status': 'enabled'})
+
+        with mock.patch(
+                'nova.virt.libvirt.LibvirtDriver.'
+                '_detach_direct_passthrough_vifs'
+        ):
+            server = self._live_migrate(server)
+        self.assertPCIDeviceCounts(source, total=num_pci, free=num_pci)
+        self.assertPCIDeviceCounts(dest, total=num_pci, free=num_pci - 2)
+        self.assertEqual(
+            dest, server['OS-EXT-SRV-ATTR:hypervisor_hostname'])
 
 
 class PCIServersTest(_PCIServersTestBase):

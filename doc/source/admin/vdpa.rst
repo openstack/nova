@@ -7,8 +7,8 @@ Using ports vnic_type='vdpa'
 
 .. versionadded:: 26.0.0 (Zed)
 
-   Added support for most instance move operations (except live migration),
-   and the interface attach/detach operations.
+   Added support for all instance move operations,
+   and the interface attach/detach, and suspend/resume operations.
 
 .. important::
    The functionality described below is only supported by the
@@ -76,3 +76,11 @@ in neutron and passed into nova as part of the server create request.
 
    openstack port create --network <my network> --vnic-type vdpa vdpa-port
    openstack server create --flavor <my-flavor> --image <my-image> --port <vdpa-port uuid> vdpa-vm
+
+vDPA live migration
+~~~~~~~~~~~~~~~~~~~
+
+At this time QEMU and the ``vhost-vdpa`` kernel module do not support transparent
+live migration of vm with vdpa ports. To enable live migration of VMs with
+vDPA interfaces the existing SR-IOV hotplug live migration procedure has been
+extended to include ``vnic_type='vdpa'`` interfaces.

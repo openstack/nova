@@ -119,6 +119,8 @@ MIN_COMPUTE_INT_ATTACH_WITH_EXTENDED_RES_REQ = 60
 
 SUPPORT_VNIC_TYPE_REMOTE_MANAGED = 61
 MIN_COMPUTE_VDPA_ATTACH_DETACH = 62
+MIN_COMPUTE_VDPA_HOTPLUG_LIVE_MIGRATION = 63
+
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -4657,11 +4659,10 @@ class API:
         return self.compute_rpcapi.get_instance_diagnostics(context,
                                                             instance=instance)
 
-    # FIXME(sean-k-mooney): Suspend does not work because we do not unplug
-    # the vDPA devices before calling managed save as we do with SR-IOV
-    # devices
     @block_port_accelerators()
-    @reject_vdpa_instances(instance_actions.SUSPEND)
+    @reject_vdpa_instances(
+        instance_actions.SUSPEND, until=MIN_COMPUTE_VDPA_HOTPLUG_LIVE_MIGRATION
+    )
     @block_accelerators()
     @reject_sev_instances(instance_actions.SUSPEND)
     @check_instance_lock
@@ -4674,6 +4675,9 @@ class API:
         self.compute_rpcapi.suspend_instance(context, instance)
 
     @check_instance_lock
+    @reject_vdpa_instances(
+        instance_actions.RESUME, until=MIN_COMPUTE_VDPA_HOTPLUG_LIVE_MIGRATION
+    )
     @check_instance_state(vm_state=[vm_states.SUSPENDED])
     def resume(self, context, instance):
         """Resume the given instance."""
@@ -5410,7 +5414,6 @@ class API:
     )
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""
-
         for vif in instance.get_network_info():
             if vif['id'] == port_id:
                 if vif['vnic_type'] in (
@@ -5462,7 +5465,10 @@ class API:
 
     @block_extended_resource_request
     @block_port_accelerators()
-    @reject_vdpa_instances(instance_actions.LIVE_MIGRATION)
+    @reject_vdpa_instances(
+        instance_actions.LIVE_MIGRATION,
+        until=MIN_COMPUTE_VDPA_HOTPLUG_LIVE_MIGRATION
+    )
     @block_accelerators()
     @reject_vtpm_instances(instance_actions.LIVE_MIGRATION)
     @reject_sev_instances(instance_actions.LIVE_MIGRATION)
