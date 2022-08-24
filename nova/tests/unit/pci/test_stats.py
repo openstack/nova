@@ -107,17 +107,19 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self._create_fake_devs()
 
     def test_add_device(self):
-        self.assertEqual(len(self.pci_stats.pools), 3)
+        self.assertEqual(len(self.pci_stats.pools), 4)
         self.assertEqual(set([d['vendor_id'] for d in self.pci_stats]),
                          set(['v1', 'v2', 'v3']))
-        self.assertEqual(set([d['count'] for d in self.pci_stats]),
-                         set([1, 2]))
+        self.assertEqual([d['count'] for d in self.pci_stats], [1, 1, 1, 1])
 
     def test_remove_device(self):
+        self.assertEqual(len(self.pci_stats.pools), 4)
         self.pci_stats.remove_device(self.fake_dev_2)
-        self.assertEqual(len(self.pci_stats.pools), 2)
-        self.assertEqual(self.pci_stats.pools[0]['count'], 2)
+        self.assertEqual(len(self.pci_stats.pools), 3)
+        self.assertEqual(self.pci_stats.pools[0]['count'], 1)
         self.assertEqual(self.pci_stats.pools[0]['vendor_id'], 'v1')
+        self.assertEqual(self.pci_stats.pools[1]['count'], 1)
+        self.assertEqual(self.pci_stats.pools[1]['vendor_id'], 'v1')
 
     def test_remove_device_exception(self):
         self.pci_stats.remove_device(self.fake_dev_2)
@@ -146,14 +148,13 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         m = self.pci_stats.to_device_pools_obj()
         new_stats = stats.PciDeviceStats(objects.NUMATopology(), m)
 
-        self.assertEqual(len(new_stats.pools), 3)
-        self.assertEqual(set([d['count'] for d in new_stats]),
-                         set([1, 2]))
+        self.assertEqual(len(new_stats.pools), 4)
+        self.assertEqual([d['count'] for d in new_stats], [1, 1, 1, 1])
         self.assertEqual(set([d['vendor_id'] for d in new_stats]),
                          set(['v1', 'v2', 'v3']))
 
     def test_apply_requests(self):
-        self.assertEqual(len(self.pci_stats.pools), 3)
+        self.assertEqual(len(self.pci_stats.pools), 4)
         self.pci_stats.apply_requests(pci_requests)
         self.assertEqual(len(self.pci_stats.pools), 2)
         self.assertEqual(self.pci_stats.pools[0]['vendor_id'], 'v1')
@@ -166,16 +167,14 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     def test_support_requests(self):
         self.assertTrue(self.pci_stats.support_requests(pci_requests))
-        self.assertEqual(len(self.pci_stats.pools), 3)
-        self.assertEqual(set([d['count'] for d in self.pci_stats]),
-                         set((1, 2)))
+        self.assertEqual(len(self.pci_stats.pools), 4)
+        self.assertEqual([d['count'] for d in self.pci_stats], [1, 1, 1, 1])
 
     def test_support_requests_failed(self):
         self.assertFalse(
             self.pci_stats.support_requests(pci_requests_multiple))
-        self.assertEqual(len(self.pci_stats.pools), 3)
-        self.assertEqual(set([d['count'] for d in self.pci_stats]),
-                         set([1, 2]))
+        self.assertEqual(len(self.pci_stats.pools), 4)
+        self.assertEqual([d['count'] for d in self.pci_stats], [1, 1, 1, 1])
 
     def test_support_requests_numa(self):
         cells = [
@@ -571,7 +570,7 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                     'compute_node_id': 1,
                     'address': '0000:0e:00.1',
                     'vendor_id': '15b3',
-                    'product_id': '1018',
+                    'product_id': '101c',
                     'status': 'available',
                     'request_id': None,
                     'dev_type': fields.PciDeviceType.SRIOV_VF,
@@ -599,35 +598,68 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                 self.assertEqual(v, pool[k])
 
     def _assertPools(self):
+        nr_tagged = len(self.pci_tagged_devices)
+        nr_untagged = len(self.pci_untagged_devices)
+        nr_remote = len(self.remote_managed_netdevs)
+        nr_local = len(self.locally_managed_netdevs)
+        self.assertEqual(
+            nr_tagged + nr_untagged + nr_remote + nr_local,
+            len(self.pci_stats.pools),
+        )
         # Pools are ordered based on the number of keys. 'product_id',
         # 'vendor_id' are always part of the keys. When tags are present,
-        # they are also part of the keys. In this test class, we have
-        # 5 pools with the second one having the tag 'physical_network'
-        # and the value 'physnet1' and multiple pools for testing
-        # variations of explicit/implicit remote_managed tagging.
-        self.assertEqual(5, len(self.pci_stats.pools))
-        self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072',
-                                len(self.pci_untagged_devices))
-        self.assertEqual(self.pci_untagged_devices,
-                         self.pci_stats.pools[0]['devices'])
-        self._assertPoolContent(self.pci_stats.pools[1], '1137', '0071',
-                                len(self.pci_tagged_devices),
-                                physical_network='physnet1')
-        self.assertEqual(self.pci_tagged_devices,
-                         self.pci_stats.pools[1]['devices'])
-        self._assertPoolContent(self.pci_stats.pools[2], '15b3', '101e',
-                                len(self.remote_managed_netdevs),
-                                remote_managed='true')
-        self.assertEqual(self.remote_managed_netdevs,
-                         self.pci_stats.pools[2]['devices'])
-        self._assertPoolContent(self.pci_stats.pools[3], '15b3', '101c', 1,
-                                remote_managed='false')
-        self.assertEqual([self.locally_managed_netdevs[0]],
-                         self.pci_stats.pools[3]['devices'])
-        self._assertPoolContent(self.pci_stats.pools[4], '15b3', '1018', 1,
-                                remote_managed='false')
-        self.assertEqual([self.locally_managed_netdevs[1]],
-                         self.pci_stats.pools[4]['devices'])
+        # they are also part of the keys.
+
+        # 3 pools for the pci_untagged_devices
+        devs = []
+        j = 0
+        for i in range(j, j + nr_untagged):
+            self._assertPoolContent(self.pci_stats.pools[i], '1137', '0072', 1)
+            devs += self.pci_stats.pools[i]['devices']
+        self.assertEqual(self.pci_untagged_devices, devs)
+        j += nr_untagged
+
+        # 4 pools for the pci_tagged_devices'
+        devs = []
+        for i in range(j, j + nr_tagged):
+            self._assertPoolContent(
+                self.pci_stats.pools[i],
+                "1137",
+                "0071",
+                1,
+                physical_network="physnet1",
+            )
+            devs += self.pci_stats.pools[i]['devices']
+        self.assertEqual(self.pci_tagged_devices, devs)
+        j += nr_tagged
+
+        # one with remote_managed_netdevs
+        devs = []
+        for i in range(j, j + nr_remote):
+            self._assertPoolContent(
+                self.pci_stats.pools[i],
+                "15b3",
+                "101e",
+                1,
+                remote_managed="true",
+            )
+            devs += self.pci_stats.pools[i]['devices']
+        self.assertEqual(self.remote_managed_netdevs, devs)
+        j += nr_remote
+
+        # two with locally_managed_netdevs
+        devs = []
+        for i in range(j, j + nr_local):
+            self._assertPoolContent(
+                self.pci_stats.pools[i],
+                "15b3",
+                "101c",
+                1,
+                remote_managed="false",
+            )
+            devs += self.pci_stats.pools[i]['devices']
+        self.assertEqual(self.locally_managed_netdevs, devs)
+        j += nr_local
 
     def test_add_devices(self):
         self._create_pci_devices()
@@ -650,20 +682,30 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                                    PCI_REMOTE_MANAGED_TAG: 'False'}]),
                         objects.InstancePCIRequest(count=1,
                             spec=[{'vendor_id': '15b3',
-                                   'product_id': '1018',
+                                   'product_id': '101c',
                                    PCI_REMOTE_MANAGED_TAG: 'False'}])]
         devs = self.pci_stats.consume_requests(pci_requests)
         self.assertEqual(5, len(devs))
-        self.assertEqual(set(['0071', '0072', '1018', '101e', '101c']),
+        self.assertEqual(set(['0071', '0072', '101e', '101c']),
                          set([dev.product_id for dev in devs]))
-        self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072', 2)
-        self._assertPoolContent(self.pci_stats.pools[1], '1137', '0071', 3,
+        self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072', 0)
+        self._assertPoolContent(self.pci_stats.pools[1], '1137', '0072', 1)
+        self._assertPoolContent(self.pci_stats.pools[2], '1137', '0072', 1)
+
+        self._assertPoolContent(self.pci_stats.pools[3], '1137', '0071', 0,
                                 physical_network='physnet1')
-        self._assertPoolContent(self.pci_stats.pools[2], '15b3', '101e', 0,
+        self._assertPoolContent(self.pci_stats.pools[4], '1137', '0071', 1,
+                                physical_network='physnet1')
+        self._assertPoolContent(self.pci_stats.pools[5], '1137', '0071', 1,
+                                physical_network='physnet1')
+        self._assertPoolContent(self.pci_stats.pools[6], '1137', '0071', 1,
+                                physical_network='physnet1')
+
+        self._assertPoolContent(self.pci_stats.pools[7], '15b3', '101e', 0,
                                 remote_managed='true')
-        self._assertPoolContent(self.pci_stats.pools[3], '15b3', '101c', 0,
+        self._assertPoolContent(self.pci_stats.pools[8], '15b3', '101c', 0,
                                 remote_managed='false')
-        self._assertPoolContent(self.pci_stats.pools[4], '15b3', '1018', 0,
+        self._assertPoolContent(self.pci_stats.pools[9], '15b3', '101c', 0,
                                 remote_managed='false')
 
     def test_add_device_no_devspec(self):
@@ -706,30 +748,76 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
         self.pci_stats.remove_device(dev2)
         self._assertPools()
 
-    def test_update_device(self):
-        # Update device type of one of the device from type-PCI to
+    def test_update_device_splits_the_pool(self):
+        # Update device type of one of the device from type-VF to
         # type-PF. Verify if the existing pool is updated and a new
         # pool is created with dev_type type-PF.
-        self._create_pci_devices()
-        dev1 = self.pci_tagged_devices.pop()
-        dev1.dev_type = 'type-PF'
-        self.pci_stats.update_device(dev1)
-        self.assertEqual(6, len(self.pci_stats.pools))
-        self._assertPoolContent(self.pci_stats.pools[0], '1137', '0072',
-                                len(self.pci_untagged_devices))
-        self.assertEqual(self.pci_untagged_devices,
-                         self.pci_stats.pools[0]['devices'])
-        self._assertPoolContent(self.pci_stats.pools[1], '1137', '0071',
-                                len(self.pci_tagged_devices),
-                                physical_network='physnet1')
-        self.assertEqual(self.pci_tagged_devices,
-                         self.pci_stats.pools[1]['devices'])
-        self._assertPoolContent(self.pci_stats.pools[5], '1137', '0071',
-                                1,
-                                physical_network='physnet1',
-                                remote_managed='false')
-        self.assertEqual(dev1,
-                         self.pci_stats.pools[5]['devices'][0])
+        vfs = []
+        for i in range(3):
+            dev = objects.PciDevice(
+                    compute_node_id=1,
+                    address="0000:0a:00.%d" % i,
+                    vendor_id="1137",
+                    product_id="0071",
+                    status="available",
+                    dev_type="type-VF",
+                    parent_addr="0000:0a:01.0",
+                    numa_node=0
+                )
+            vfs.append(dev)
+            self.pci_stats.add_device(dev)
+
+        self.assertEqual(1, len(self.pci_stats.pools))
+        self.assertEqual(3, self.pci_stats.pools[0]["count"])
+        self.assertEqual(vfs, self.pci_stats.pools[0]["devices"])
+
+        dev = vfs.pop()
+        dev.dev_type = 'type-PF'
+        dev.parent_addr = None
+        self.pci_stats.update_device(dev)
+        self.assertEqual(2, len(self.pci_stats.pools))
+        self.assertEqual(2, self.pci_stats.pools[0]["count"])
+        self.assertEqual(vfs, self.pci_stats.pools[0]["devices"])
+        self.assertEqual(1, self.pci_stats.pools[1]["count"])
+        self.assertEqual([dev], self.pci_stats.pools[1]["devices"])
+
+    def test_only_vfs_from_the_same_parent_are_pooled(self):
+        pf1_vfs = []
+        for i in range(2):
+            dev = objects.PciDevice(
+                    compute_node_id=1,
+                    address="0000:0a:00.%d" % i,
+                    vendor_id="15b3",
+                    product_id="1018",
+                    status="available",
+                    dev_type="type-VF",
+                    parent_addr="0000:0a:01.0",
+                    numa_node=0
+                )
+            pf1_vfs.append(dev)
+            self.pci_stats.add_device(dev)
+
+        pf2_vfs = []
+        for i in range(2):
+            dev = objects.PciDevice(
+                    compute_node_id=1,
+                    address="0000:0b:00.%d" % i,
+                    vendor_id="15b3",
+                    product_id="1018",
+                    status="available",
+                    dev_type="type-VF",
+                    parent_addr="0000:0b:01.0",
+                    numa_node=0
+                )
+            pf2_vfs.append(dev)
+            self.pci_stats.add_device(dev)
+
+        self.assertEqual(2, len(self.pci_stats.pools))
+        self.assertEqual(2, self.pci_stats.pools[0]["count"])
+        self.assertEqual(pf1_vfs, self.pci_stats.pools[0]["devices"])
+        self.assertEqual(2, len(self.pci_stats.pools))
+        self.assertEqual(2, self.pci_stats.pools[1]["count"])
+        self.assertEqual(pf2_vfs, self.pci_stats.pools[1]["devices"])
 
 
 class PciDeviceStatsPlacementSupportTestCase(test.NoDBTestCase):
@@ -742,14 +830,14 @@ class PciDeviceStatsPlacementSupportTestCase(test.NoDBTestCase):
             jsonutils.dumps(
                 {
                     "resource_class": "foo",
-                    "address": "*:81:00.*",
+                    "address": "*:81:00.1",
                     "traits": "gold",
                 }
             ),
             jsonutils.dumps(
                 {
                     "resource_class": "baar",
-                    "address": "*:81:01.*",
+                    "address": "*:81:00.2",
                     "traits": "silver",
                 }
             ),
@@ -762,18 +850,18 @@ class PciDeviceStatsPlacementSupportTestCase(test.NoDBTestCase):
         pci_dev1 = objects.PciDevice(
             vendor_id="dead",
             product_id="beef",
-            address="0000:81:00.0",
-            parent_addr=None,
+            address="0000:81:00.1",
+            parent_addr="0000:81:00.0",
             numa_node=0,
-            dev_type="type-PF",
+            dev_type="type-VF",
         )
         pci_dev2 = objects.PciDevice(
             vendor_id="dead",
             product_id="beef",
-            address="0000:81:01.0",
-            parent_addr=None,
+            address="0000:81:00.2",
+            parent_addr="0000:81:00.0",
             numa_node=0,
-            dev_type="type-PF",
+            dev_type="type-VF",
         )
         # the two device matched by different device_specs with different
         # resource_class and traits fields
