@@ -118,6 +118,7 @@ MIN_COMPUTE_MOVE_WITH_EXTENDED_RESOURCE_REQUEST = 59
 MIN_COMPUTE_INT_ATTACH_WITH_EXTENDED_RES_REQ = 60
 
 SUPPORT_VNIC_TYPE_REMOTE_MANAGED = 61
+MIN_COMPUTE_VDPA_ATTACH_DETACH = 62
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -277,7 +278,7 @@ def reject_vtpm_instances(operation):
     return outer
 
 
-def reject_vdpa_instances(operation):
+def reject_vdpa_instances(operation, until=None):
     """Reject requests to decorated function if instance has vDPA interfaces.
 
     Raise OperationNotSupportedForVDPAInterfaces if operations involves one or
@@ -291,8 +292,18 @@ def reject_vdpa_instances(operation):
                 vif['vnic_type'] == network_model.VNIC_TYPE_VDPA
                 for vif in instance.get_network_info()
             ):
-                raise exception.OperationNotSupportedForVDPAInterface(
-                    instance_uuid=instance.uuid, operation=operation)
+                reject = True
+                if until is not None:
+                    min_ver = objects.service.get_minimum_version_all_cells(
+                        nova_context.get_admin_context(), ['nova-compute']
+                    )
+                    if min_ver >= until:
+                        reject = False
+
+                if reject:
+                    raise exception.OperationNotSupportedForVDPAInterface(
+                        instance_uuid=instance.uuid, operation=operation
+                    )
             return f(self, context, instance, *args, **kw)
         return inner
     return outer
@@ -5351,9 +5362,14 @@ class API:
                         instance_uuid=instance.uuid)
 
     @check_instance_lock
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
-                                    vm_states.STOPPED],
-                          task_state=[None])
+    @reject_vdpa_instances(
+        instance_actions.ATTACH_INTERFACE, until=MIN_COMPUTE_VDPA_ATTACH_DETACH
+    )
+    @check_instance_state(
+        vm_state=[
+            vm_states.ACTIVE, vm_states.PAUSED, vm_states.STOPPED
+        ], task_state=[None]
+    )
     def attach_interface(self, context, instance, network_id, port_id,
                          requested_ip, tag=None):
         """Use hotplug to add an network adapter to an instance."""
@@ -5366,12 +5382,6 @@ class API:
             # port.resource_request field which only returned for admins
             port = self.network_api.show_port(
                 context.elevated(), port_id)['port']
-            if port.get('binding:vnic_type', "normal") == "vdpa":
-                # FIXME(sean-k-mooney): Attach works but detach results in a
-                # QEMU error; blocked until this is resolved
-                raise exception.OperationNotSupportedForVDPAInterface(
-                    instance_uuid=instance.uuid,
-                    operation=instance_actions.ATTACH_INTERFACE)
 
             if port.get('binding:vnic_type', 'normal') in (
                 network_model.VNIC_TYPE_ACCELERATOR_DIRECT,
@@ -5390,37 +5400,24 @@ class API:
             requested_ip=requested_ip, tag=tag)
 
     @check_instance_lock
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
-                                    vm_states.STOPPED],
-                          task_state=[None])
+    @reject_vdpa_instances(
+        instance_actions.DETACH_INTERFACE, until=MIN_COMPUTE_VDPA_ATTACH_DETACH
+    )
+    @check_instance_state(
+        vm_state=[
+            vm_states.ACTIVE, vm_states.PAUSED, vm_states.STOPPED
+        ], task_state=[None]
+    )
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""
 
-        # FIXME(sean-k-mooney): Detach currently results in a failure to remove
-        # the interface from the live libvirt domain, so while the networking
-        # is torn down on the host the vDPA device is still attached to the VM.
-        # This is likely a libvirt/qemu bug so block detach until that is
-        # resolved.
         for vif in instance.get_network_info():
             if vif['id'] == port_id:
-                if vif['vnic_type'] == 'vdpa':
-                    raise exception.OperationNotSupportedForVDPAInterface(
-                        instance_uuid=instance.uuid,
-                        operation=instance_actions.DETACH_INTERFACE)
                 if vif['vnic_type'] in (
                     network_model.VNIC_TYPE_ACCELERATOR_DIRECT,
                     network_model.VNIC_TYPE_ACCELERATOR_DIRECT_PHYSICAL):
                     raise exception.ForbiddenPortsWithAccelerator()
                 break
-        else:
-            # NOTE(sean-k-mooney) This should never happen but just in case the
-            # info cache does not have the port we are detaching we can fall
-            # back to neutron.
-            port = self.network_api.show_port(context, port_id)['port']
-            if port.get('binding:vnic_type', 'normal') == 'vdpa':
-                raise exception.OperationNotSupportedForVDPAInterface(
-                    instance_uuid=instance.uuid,
-                    operation=instance_actions.DETACH_INTERFACE)
 
         self._record_action_start(
             context, instance, instance_actions.DETACH_INTERFACE)

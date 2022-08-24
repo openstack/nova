@@ -404,9 +404,21 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertIsNotNone(
             self.guest.get_interface_by_cfg(
                 cfg, from_persistent_config=True))
+        cfg = vconfig.LibvirtConfigGuestInterface()
+        # NOTE(sean-k-mooney): a default constructed object is not valid
+        # to pass to get_interface_by_cfg as so we just modify the xml to
+        # make it not match
+        cfg.parse_str("""
+            <interface type="wont_match">
+              <mac address="fa:16:3e:f9:af:ae"/>
+              <model type="virtio"/>
+              <driver name="qemu"/>
+              <source bridge="qbr84008d03-11"/>
+              <target dev="tap84008d03-11"/>
+              </interface>""")
         self.assertIsNone(
             self.guest.get_interface_by_cfg(
-                vconfig.LibvirtConfigGuestInterface(),
+                cfg,
                 from_persistent_config=True))
         self.domain.XMLDesc.assert_has_calls(
             [

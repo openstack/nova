@@ -1246,22 +1246,53 @@ class VDPAServersTest(_PCIServersTestBase):
             'not supported for instance with vDPA ports',
             ex.response.text)
 
+    def test_attach_interface_service_version_61(self):
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=61
+        ):
+            self._test_common(self._attach_interface, uuids.vdpa_port)
+
     def test_attach_interface(self):
-        self.start_vdpa_compute()
+        hostname = self.start_vdpa_compute()
         # create the port and a server, but don't attach the port to the server
         # yet
-        vdpa_port = self.create_vdpa_port()
         server = self._create_server(networks='none')
+        vdpa_port = self.create_vdpa_port()
         # attempt to attach the port to the server
-        ex = self.assertRaises(
-            client.OpenStackApiException,
-            self._attach_interface, server, vdpa_port['id'])
-        self.assertIn(
-            'not supported for instance with vDPA ports',
-            ex.response.text)
+        self._attach_interface(server, vdpa_port['id'])
+        # ensure the binding details sent to "neutron" were correct
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertIn('binding:profile', port)
+        self.assertEqual(
+            {
+                'pci_vendor_info': '15b3:101e',
+                'pci_slot': '0000:06:00.4',
+                'physical_network': 'physnet4',
+            },
+            port['binding:profile'],
+        )
+        self.assertEqual(hostname, port['binding:host_id'])
+        self.assertEqual(server['id'], port['device_id'])
+
+    def test_detach_interface_service_version_61(self):
+        with mock.patch(
+                "nova.objects.service.get_minimum_version_all_cells",
+                return_value=61
+        ):
+            self._test_common(self._detach_interface, uuids.vdpa_port)
 
     def test_detach_interface(self):
-        self._test_common(self._detach_interface, uuids.vdpa_port)
+        self.start_vdpa_compute()
+        vdpa_port, server = self._create_port_and_server()
+        # ensure the binding details sent to "neutron" were correct
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertEqual(server['id'], port['device_id'])
+        self._detach_interface(server, vdpa_port['id'])
+        # ensure the port is no longer owned by the vm
+        port = self.neutron.show_port(vdpa_port['id'])['port']
+        self.assertEqual('', port['device_id'])
+        self.assertEqual({}, port['binding:profile'])
 
     def test_shelve_offload(self):
         hostname = self.start_vdpa_compute()
