@@ -30,6 +30,7 @@ import retrying
 
 from nova.compute import claims
 from nova.compute import monitors
+from nova.compute import pci_placement_translator
 from nova.compute import provider_config
 from nova.compute import stats as compute_stats
 from nova.compute import task_states
@@ -1216,7 +1217,9 @@ class ResourceTracker(object):
             context, compute_node.uuid, name=compute_node.hypervisor_hostname)
         # Let the virt driver rearrange the provider tree and set/update
         # the inventory, traits, and aggregates throughout.
-        allocs = None
+        allocs = self.reportclient.get_allocations_for_provider_tree(
+            context, nodename)
+        driver_reshaped = False
         try:
             self.driver.update_provider_tree(prov_tree, nodename)
         except exception.ReshapeNeeded:
@@ -1227,10 +1230,9 @@ class ResourceTracker(object):
             LOG.info("Performing resource provider inventory and "
                      "allocation data migration during compute service "
                      "startup or fast-forward upgrade.")
-            allocs = self.reportclient.get_allocations_for_provider_tree(
-                context, nodename)
-            self.driver.update_provider_tree(prov_tree, nodename,
-                                             allocations=allocs)
+            self.driver.update_provider_tree(
+                prov_tree, nodename, allocations=allocs)
+            driver_reshaped = True
 
         # Inject driver capabilities traits into the provider
         # tree.  We need to determine the traits that the virt
@@ -1251,15 +1253,39 @@ class ResourceTracker(object):
             context, nodename, provider_tree=prov_tree)
         prov_tree.update_traits(nodename, traits)
 
+        # NOTE(gibi): Tracking PCI in placement is different from other
+        # resources.
+        #
+        # While driver.update_provider_tree is used to let the virt driver
+        # create any kind of placement model for a resource the PCI data
+        # modelling is done virt driver independently by the PCI tracker.
+        # So the placement reporting needs to be also done here in the resource
+        # tracker independently of the virt driver.
+        #
+        # Additionally, when PCI tracking in placement was introduced there was
+        # already PCI allocations in nova. So both the PCI inventories and
+        # allocations needs to be healed. Moreover, to support rolling upgrade
+        # the placement prefilter for PCI devices was not turned on by default
+        # at the first release of this feature. Therefore, there could be new
+        # PCI allocation without placement being involved until the prefilter
+        # is enabled. So we need to be ready to heal PCI allocations at
+        # every call not just at startup.
+        pci_reshaped = pci_placement_translator.update_provider_tree_for_pci(
+            prov_tree, nodename, self.pci_tracker, allocs)
+
         self.provider_tree = prov_tree
 
         # This merges in changes from the provider config files loaded in init
         self._merge_provider_configs(self.provider_configs, prov_tree)
 
-        # Flush any changes. If we processed ReshapeNeeded above, allocs is not
-        # None, and this will hit placement's POST /reshaper route.
-        self.reportclient.update_from_provider_tree(context, prov_tree,
-                                                    allocations=allocs)
+        # Flush any changes. If we either processed ReshapeNeeded above or
+        # update_provider_tree_for_pci did reshape, then we need to pass allocs
+        # to update_from_provider_tree to hit placement's POST /reshaper route.
+        self.reportclient.update_from_provider_tree(
+            context,
+            prov_tree,
+            allocations=allocs if driver_reshaped or pci_reshaped else None
+        )
 
     def _update(self, context, compute_node, startup=False):
         """Update partial stats locally and populate them to Scheduler."""
