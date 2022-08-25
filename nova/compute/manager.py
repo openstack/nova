@@ -7712,10 +7712,10 @@ class ComputeManager(manager.Manager):
         if not pci_reqs.requests:
             return None
 
-        devices = self.rt.claim_pci_devices(
-            context, pci_reqs, instance.numa_topology)
-
-        if not devices:
+        try:
+            devices = self.rt.claim_pci_devices(
+                context, pci_reqs, instance.numa_topology)
+        except exception.PciDeviceRequestFailed:
             LOG.info('Failed to claim PCI devices during interface attach '
                      'for PCI request %s', pci_reqs, instance=instance)
             raise exception.InterfaceAttachPciClaimFailed(

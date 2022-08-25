@@ -10755,8 +10755,13 @@ class ComputeAPITestCase(BaseTestCase):
                             supports_attach_interface=True),
             mock.patch.object(self.compute.network_api,
                               'create_resource_requests'),
-            mock.patch.object(self.compute.rt, 'claim_pci_devices',
-                              return_value=[]),
+            mock.patch.object(
+                self.compute.rt,
+                'claim_pci_devices',
+                side_effect=exception.PciDeviceRequestFailed(
+                    requests=instance.pci_requests
+                )
+            ),
             mock.patch.object(
                 self.compute, '_allocate_port_resource_for_instance'),
             mock.patch(
