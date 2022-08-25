@@ -24,7 +24,7 @@ POLICY_ROOT = 'os_compute_api:os-server-groups:%s'
 server_groups_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'create',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Create a new server group",
         operations=[
             {
@@ -36,7 +36,7 @@ server_groups_policies = [
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'delete',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Delete a server group",
         operations=[
             {
@@ -48,7 +48,7 @@ server_groups_policies = [
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="List all server groups",
         operations=[
             {
@@ -60,7 +60,7 @@ server_groups_policies = [
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'index:all_projects',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="List all server groups for all projects",
         operations=[
             {
@@ -72,7 +72,7 @@ server_groups_policies = [
     ),
     policy.DocumentedRuleDefault(
         name=POLICY_ROOT % 'show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="Show details of a server group",
         operations=[
             {

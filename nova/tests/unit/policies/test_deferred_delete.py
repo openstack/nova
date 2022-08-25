@@ -105,16 +105,16 @@ class DeferredDeleteNoLegacyNoScopePolicyTest(DeferredDeletePolicyTest):
     without_deprecated_rules = True
     rules_without_deprecation = {
         dd_policies.BASE_POLICY_NAME % 'restore':
-            base_policy.PROJECT_MEMBER,
+            base_policy.PROJECT_MEMBER_OR_ADMIN,
         dd_policies.BASE_POLICY_NAME % 'force':
-            base_policy.PROJECT_MEMBER}
+            base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
         super(DeferredDeleteNoLegacyNoScopePolicyTest, self).setUp()
         # With no legacy rule, only project admin or member is able to force
         # delete or restore server.
-        self.project_member_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
+        self.project_member_authorized_contexts = (
+            self.project_member_or_admin_with_no_scope_no_legacy)
 
 
 class DeferredDeleteScopeTypePolicyTest(DeferredDeletePolicyTest):
@@ -132,10 +132,8 @@ class DeferredDeleteScopeTypePolicyTest(DeferredDeletePolicyTest):
         super(DeferredDeleteScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
         # Scope enable will not allow system admin.
-        self.project_member_authorized_contexts = [
-            self.legacy_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+        self.project_member_authorized_contexts = (
+            self.project_m_r_or_admin_with_scope_and_legacy)
 
 
 class DeferredDeleteScopeTypeNoLegacyPolicyTest(
@@ -146,14 +144,14 @@ class DeferredDeleteScopeTypeNoLegacyPolicyTest(
     without_deprecated_rules = True
     rules_without_deprecation = {
         dd_policies.BASE_POLICY_NAME % 'restore':
-            base_policy.PROJECT_MEMBER,
+            base_policy.PROJECT_MEMBER_OR_ADMIN,
         dd_policies.BASE_POLICY_NAME % 'force':
-            base_policy.PROJECT_MEMBER}
+            base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
         super(DeferredDeleteScopeTypeNoLegacyPolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
         # With scope enable and no legacy rule, only project admin/member is
         # able to force delete or restore server.
-        self.project_member_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
+        self.project_member_authorized_contexts = (
+            self.project_member_or_admin_with_scope_no_legacy)

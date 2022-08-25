@@ -30,7 +30,7 @@ server_external_events_policies = [
         # neutron can call it with user having 'service' role (not having
         # server's project_id). That is for phase-2 of RBAC goal and until
         # then, we keep it open for all admin in any project. We cannot
-        # default it to PROJECT_ADMIN which has the project_id in
+        # default it to ADMIN which has the project_id in
         # check_str and will fail if neutron call it with other project_id.
         check_str=base.ADMIN,
         description="Create one or more external events",

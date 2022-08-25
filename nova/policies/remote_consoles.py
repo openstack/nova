@@ -24,7 +24,7 @@ BASE_POLICY_NAME = 'os_compute_api:os-remote-consoles'
 remote_consoles_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME,
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="""Generate a URL to access remove server console.
 
 This policy is for ``POST /remote-consoles`` API and below Server actions APIs

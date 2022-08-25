@@ -38,7 +38,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 security_groups_policies = [
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'get',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="List security groups. This API is deprecated.",
         operations=[
             {
@@ -50,7 +50,7 @@ security_groups_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="Show security group. This API is deprecated.",
         operations=[
             {
@@ -62,7 +62,7 @@ security_groups_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'create',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Create security group. This API is deprecated.",
         operations=[
             {
@@ -74,7 +74,7 @@ security_groups_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'update',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Update security group. This API is deprecated.",
         operations=[
             {
@@ -86,7 +86,7 @@ security_groups_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'delete',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Delete security group. This API is deprecated.",
         operations=[
             {
@@ -98,7 +98,7 @@ security_groups_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'rule:create',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Create security group Rule. This API is deprecated.",
         operations=[
             {
@@ -110,7 +110,7 @@ security_groups_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'rule:delete',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Delete security group Rule. This API is deprecated.",
         operations=[
             {
@@ -122,7 +122,7 @@ security_groups_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'list',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="List security groups of server.",
         operations=[
             {
@@ -134,7 +134,7 @@ security_groups_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'add',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Add security groups to server.",
         operations=[
             {
@@ -146,7 +146,7 @@ security_groups_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=POLICY_NAME % 'remove',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Remove security groups from server.",
         operations=[
             {

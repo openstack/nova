@@ -37,7 +37,7 @@ DEPRECATED_POLICY = policy.DeprecatedRule(
 server_password_policies = [
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="Show the encrypted administrative "
         "password of a server",
         operations=[
@@ -50,7 +50,7 @@ server_password_policies = [
         deprecated_rule=DEPRECATED_POLICY),
     policy.DocumentedRuleDefault(
         name=BASE_POLICY_NAME % 'clear',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Clear the encrypted administrative "
         "password of a server",
         operations=[

@@ -93,11 +93,6 @@ class ServerMigrationsNoLegacyNoScopeTest(ServerMigrationsPolicyTest):
 
     without_deprecated_rules = True
 
-    def setUp(self):
-        super(ServerMigrationsNoLegacyNoScopeTest, self).setUp()
-        self.project_admin_authorized_contexts = [
-            self.project_admin_context]
-
 
 class ServerMigrationsScopeTypePolicyTest(ServerMigrationsPolicyTest):
     """Test Server Migrations APIs policies with system scope enabled.
@@ -123,12 +118,6 @@ class ServerMigrationsScopeTypeNoLegacyPolicyTest(
     and no more deprecated rules.
     """
     without_deprecated_rules = True
-
-    def setUp(self):
-        super(ServerMigrationsScopeTypeNoLegacyPolicyTest, self).setUp()
-        # Check that admin is able to perform operations
-        # for server migrations.
-        self.project_admin_authorized_contexts = [self.project_admin_context]
 
 
 class ServerMigrationsOverridePolicyTest(

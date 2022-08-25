@@ -98,11 +98,8 @@ class ServerTopologyNoLegacyNoScopePolicyTest(ServerTopologyPolicyTest):
 
     def setUp(self):
         super(ServerTopologyNoLegacyNoScopePolicyTest, self).setUp()
-        # With no legacy rule, legacy admin loose power.
-        self.project_admin_authorized_contexts = [self.project_admin_context]
-        self.project_reader_authorized_contexts = [
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context]
+        self.project_reader_authorized_contexts = (
+            self.project_reader_or_admin_with_no_scope_no_legacy)
 
 
 class ServerTopologyScopeTypePolicyTest(ServerTopologyPolicyTest):
@@ -121,10 +118,8 @@ class ServerTopologyScopeTypePolicyTest(ServerTopologyPolicyTest):
         # With Scope enable, system users no longer allowed.
         self.project_admin_authorized_contexts = [
             self.legacy_admin_context, self.project_admin_context]
-        self.project_reader_authorized_contexts = [
-            self.legacy_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+        self.project_reader_authorized_contexts = (
+            self.project_m_r_or_admin_with_scope_and_legacy)
 
 
 class ServerTopologyScopeTypeNoLegacyPolicyTest(
@@ -138,9 +133,6 @@ class ServerTopologyScopeTypeNoLegacyPolicyTest(
     def setUp(self):
         super(ServerTopologyScopeTypeNoLegacyPolicyTest, self).setUp()
         # With no legacy and scope enable, only project admin, member,
-        # and reader will be able to get server topology and only admin
-        # with host info.
-        self.project_admin_authorized_contexts = [self.project_admin_context]
-        self.project_reader_authorized_contexts = [
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context]
+        # and reader will be able to get server topology.
+        self.project_reader_authorized_contexts = (
+            self.project_reader_or_admin_with_scope_no_legacy)

@@ -80,18 +80,17 @@ class ServerPasswordNoLegacyNoScopePolicyTest(ServerPasswordPolicyTest):
     without_deprecated_rules = True
     rules_without_deprecation = {
         policies.BASE_POLICY_NAME % 'show':
-            base_policy.PROJECT_READER,
+            base_policy.PROJECT_READER_OR_ADMIN,
         policies.BASE_POLICY_NAME % 'clear':
-            base_policy.PROJECT_MEMBER}
+            base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
         super(ServerPasswordNoLegacyNoScopePolicyTest, self).setUp()
         # With no legacy rule, legacy admin loose power.
-        self.project_member_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
-        self.project_reader_authorized_contexts = [
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context]
+        self.project_member_authorized_contexts = (
+            self.project_member_or_admin_with_no_scope_no_legacy)
+        self.project_reader_authorized_contexts = (
+            self.project_reader_or_admin_with_no_scope_no_legacy)
 
 
 class ServerPasswordScopeTypePolicyTest(ServerPasswordPolicyTest):
@@ -108,12 +107,10 @@ class ServerPasswordScopeTypePolicyTest(ServerPasswordPolicyTest):
         super(ServerPasswordScopeTypePolicyTest, self).setUp()
         self.flags(enforce_scope=True, group="oslo_policy")
         # With Scope enable, system users no longer allowed.
-        self.project_member_authorized_contexts = [
-            self.legacy_admin_context,
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context, self.project_foo_context]
+        self.project_member_authorized_contexts = (
+            self.project_m_r_or_admin_with_scope_and_legacy)
         self.project_reader_authorized_contexts = (
-            self.project_member_authorized_contexts)
+            self.project_m_r_or_admin_with_scope_and_legacy)
 
 
 class ServerPasswordScopeTypeNoLegacyPolicyTest(
@@ -124,16 +121,15 @@ class ServerPasswordScopeTypeNoLegacyPolicyTest(
     without_deprecated_rules = True
     rules_without_deprecation = {
         policies.BASE_POLICY_NAME % 'show':
-            base_policy.PROJECT_READER,
+            base_policy.PROJECT_READER_OR_ADMIN,
         policies.BASE_POLICY_NAME % 'clear':
-            base_policy.PROJECT_MEMBER}
+            base_policy.PROJECT_MEMBER_OR_ADMIN}
 
     def setUp(self):
         super(ServerPasswordScopeTypeNoLegacyPolicyTest, self).setUp()
         # With no legacy and scope enable, only project admin, member,
         # and reader will be able to allowed operation on server password.
-        self.project_member_authorized_contexts = [
-            self.project_admin_context, self.project_member_context]
-        self.project_reader_authorized_contexts = [
-            self.project_admin_context, self.project_member_context,
-            self.project_reader_context]
+        self.project_member_authorized_contexts = (
+            self.project_member_or_admin_with_scope_no_legacy)
+        self.project_reader_authorized_contexts = (
+            self.project_reader_or_admin_with_scope_no_legacy)

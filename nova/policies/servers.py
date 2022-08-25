@@ -36,7 +36,7 @@ not for list extra specs and showing it in flavor API response.
 rules = [
     policy.DocumentedRuleDefault(
         name=SERVERS % 'index',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="List all servers",
         operations=[
             {
@@ -47,7 +47,7 @@ rules = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'detail',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="List all servers with detailed information",
         operations=[
             {
@@ -58,7 +58,7 @@ rules = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'index:get_all_tenants',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="List all servers for all projects",
         operations=[
             {
@@ -70,7 +70,7 @@ rules = [
 
     policy.DocumentedRuleDefault(
         name=SERVERS % 'detail:get_all_tenants',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="List all servers with detailed information for "
         " all projects",
         operations=[
@@ -82,7 +82,7 @@ rules = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'allow_all_filters',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="Allow all filters when listing servers",
         operations=[
             {
@@ -97,7 +97,7 @@ rules = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'show',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="Show a server",
         operations=[
             {
@@ -108,7 +108,7 @@ rules = [
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'show:flavor-extra-specs',
-        check_str=base.PROJECT_READER,
+        check_str=base.PROJECT_READER_OR_ADMIN,
         description="Starting with microversion 2.47, the flavor and its "
         "extra specs used for a server is also returned in the response "
         "when showing server details, updating a server or rebuilding a "
@@ -140,7 +140,7 @@ rules = [
     # should do that by default.
     policy.DocumentedRuleDefault(
         name=SERVERS % 'show:host_status',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="""
 Show a server with additional host status information.
 
@@ -174,7 +174,7 @@ API responses which are also controlled by this policy rule, like the
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'show:host_status:unknown-only',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="""
 Show a server with additional host status information, only if host status is
 UNKNOWN.
@@ -207,7 +207,7 @@ allow everyone.
         scope_types=['project'],),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Create a server",
         operations=[
             {
@@ -218,7 +218,7 @@ allow everyone.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create:forced_host',
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="""
 Create a server on the specified host and/or node.
 
@@ -235,7 +235,7 @@ host and/or node by bypassing the scheduler filters unlike the
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=REQUESTED_DESTINATION,
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="""
 Create a server on the requested compute service host and/or
 hypervisor_hostname.
@@ -253,7 +253,7 @@ validated by the scheduler filters unlike the
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create:attach_volume',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Create a server with the requested volume attached to it",
         operations=[
             {
@@ -264,7 +264,7 @@ validated by the scheduler filters unlike the
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create:attach_network',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Create a server with the requested network attached "
         " to it",
         operations=[
@@ -276,7 +276,7 @@ validated by the scheduler filters unlike the
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create:trusted_certs',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Create a server with trusted image certificate IDs",
         operations=[
             {
@@ -287,7 +287,7 @@ validated by the scheduler filters unlike the
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=ZERO_DISK_FLAVOR,
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="""
 This rule controls the compute API validation behavior of creating a server
 with a flavor that has 0 disk, indicating the server should be volume-backed.
@@ -312,7 +312,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=NETWORK_ATTACH_EXTERNAL,
-        check_str=base.PROJECT_ADMIN,
+        check_str=base.ADMIN,
         description="Attach an unshared external network to a server",
         operations=[
             # Create a server with a requested network or port.
@@ -329,7 +329,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'delete',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Delete a server",
         operations=[
             {
@@ -340,7 +340,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'update',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Update a server",
         operations=[
             {
@@ -351,7 +351,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'confirm_resize',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Confirm a server resize",
         operations=[
             {
@@ -362,7 +362,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'revert_resize',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Revert a server resize",
         operations=[
             {
@@ -373,7 +373,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'reboot',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Reboot a server",
         operations=[
             {
@@ -384,7 +384,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'resize',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Resize a server",
         operations=[
             {
@@ -410,7 +410,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'rebuild',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Rebuild a server",
         operations=[
             {
@@ -421,7 +421,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'rebuild:trusted_certs',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Rebuild a server with trusted image certificate IDs",
         operations=[
             {
@@ -432,7 +432,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create_image',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Create an image from a server",
         operations=[
             {
@@ -443,7 +443,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'create_image:allow_volume_backed',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Create an image from a volume backed server",
         operations=[
             {
@@ -454,7 +454,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'start',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Start a server",
         operations=[
             {
@@ -465,7 +465,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'stop',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Stop a server",
         operations=[
             {
@@ -476,7 +476,7 @@ https://bugs.launchpad.net/nova/+bug/1739646 for details.
         scope_types=['project']),
     policy.DocumentedRuleDefault(
         name=SERVERS % 'trigger_crash_dump',
-        check_str=base.PROJECT_MEMBER,
+        check_str=base.PROJECT_MEMBER_OR_ADMIN,
         description="Trigger crash dump in a server",
         operations=[
             {

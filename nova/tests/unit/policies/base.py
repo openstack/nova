@@ -134,6 +134,44 @@ class BasePolicyTest(test.TestCase):
             self.system_admin_context, self.system_foo_context,
             self.system_member_context, self.system_reader_context,
         ])
+        # A few commmon set of contexts to be used in tests
+        #
+        # With scope disable and no legacy rule, any admin,
+        # project members have access. No other role in that project
+        # will have access.
+        self.project_member_or_admin_with_no_scope_no_legacy = set([
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+        ])
+        # With scope enable and legacy rule, only project scoped admin
+        # and any role in that project will have access.
+        self.project_m_r_or_admin_with_scope_and_legacy = set([
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_member_context, self.project_reader_context,
+            self.project_foo_context
+        ])
+        # With scope enable and no legacy rule, only project scoped admin
+        # and project members have access. No other role in that project
+        # or system scoped token will have access.
+        self.project_member_or_admin_with_scope_no_legacy = set([
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_member_context
+        ])
+        # With scope disable and no legacy rule, any admin,
+        # project members, and project reader have access. No other
+        # role in that project will have access.
+        self.project_reader_or_admin_with_no_scope_no_legacy = set([
+            self.legacy_admin_context, self.system_admin_context,
+            self.project_admin_context, self.project_member_context,
+            self.project_reader_context
+        ])
+        # With scope enable and no legacy rule, only project scoped admin,
+        # project members, and project reader have access. No other role
+        # in that project or system scoped token will have access.
+        self.project_reader_or_admin_with_scope_no_legacy = set([
+            self.legacy_admin_context, self.project_admin_context,
+            self.project_member_context, self.project_reader_context
+        ])
 
         if self.without_deprecated_rules:
             # To simulate the new world, remove deprecations by overriding
@@ -149,6 +187,10 @@ class BasePolicyTest(test.TestCase):
                     "role:member and project_id:%(project_id)s",
                 "project_reader_api":
                     "role:reader and project_id:%(project_id)s",
+                "project_member_or_admin":
+                    "rule:project_member_api or rule:context_is_admin",
+                "project_reader_or_admin":
+                    "rule:project_reader_api or rule:context_is_admin",
             })
             self.policy.set_rules(self.rules_without_deprecation,
                                   overwrite=False)

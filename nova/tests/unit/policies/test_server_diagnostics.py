@@ -66,11 +66,6 @@ class ServerDiagnosticsNoLegacyNoScopeTest(ServerDiagnosticsPolicyTest):
 
     without_deprecated_rules = True
 
-    def setUp(self):
-        super(ServerDiagnosticsNoLegacyNoScopeTest, self).setUp()
-        self.project_admin_authorized_contexts = [
-            self.project_admin_context]
-
 
 class ServerDiagnosticsScopeTypePolicyTest(ServerDiagnosticsPolicyTest):
     """Test Server Diagnostics APIs policies with system scope enabled.
@@ -97,12 +92,6 @@ class ServerDiagnosticsScopeTypeNoLegacyPolicyTest(
     and no more deprecated rules.
     """
     without_deprecated_rules = True
-
-    def setUp(self):
-        super(ServerDiagnosticsScopeTypeNoLegacyPolicyTest, self).setUp()
-        # with no legacy rule and scope enable., only project admin is able to
-        # get server diagnostics.
-        self.project_admin_authorized_contexts = [self.project_admin_context]
 
 
 class ServerDiagnosticsOverridePolicyTest(
