@@ -436,10 +436,10 @@ class InstanceHelperMixin:
                       server_expected_state='ACTIVE'):
         self.api.post_server_action(
             server['id'],
-            {'os-migrateLive': {'host': None,
-                                'block_migration': 'auto'}})
-        self._wait_for_state_change(server, server_expected_state)
+            {'os-migrateLive': {'host': None, 'block_migration': 'auto'}})
+        server = self._wait_for_state_change(server, server_expected_state)
         self._wait_for_migration_status(server, [migration_expected_state])
+        return server
 
     def _evacuate_server(
             self, server, extra_post_args=None, expected_host=None,
