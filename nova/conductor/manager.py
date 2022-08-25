@@ -1242,6 +1242,12 @@ class ComputeTaskManager:
                     request_spec.requested_resources = res_req
                     request_spec.request_level_params = req_lvl_params
 
+                    # NOTE(gibi): as PCI devices is tracked in placement we
+                    # need to generate request groups from InstancePCIRequests.
+                    # This will append new RequestGroup objects to the
+                    # request_spec.requested_resources list if needed
+                    request_spec.generate_request_groups_from_pci_requests()
+
                 try:
                     # if this is a rebuild of instance on the same host with
                     # new image.
