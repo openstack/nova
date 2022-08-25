@@ -141,6 +141,8 @@ rwlock_re = re.compile(
     r"(?P<module_part>(oslo_concurrency\.)?(lockutils|fasteners))"
     r"\.ReaderWriterLock\(.*\)")
 six_re = re.compile(r"^(import six(\..*)?|from six(\..*)? import .*)$")
+# Regex for catching the setDaemon method
+set_daemon_re = re.compile(r"\.setDaemon\(")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -1078,3 +1080,22 @@ def import_stock_mock(logical_line):
             "N371: You must explicitly import python's mock: "
             "``from unittest import mock``"
         )
+
+
+@core.flake8ext
+def check_set_daemon(logical_line):
+    """Check for use of the setDaemon method of the threading.Thread class
+
+    The setDaemon method of the threading.Thread class has been deprecated
+    since Python 3.10. Use the daemon attribute instead.
+
+    See
+    https://docs.python.org/3.10/library/threading.html#threading.Thread.setDaemon
+    for details.
+
+    N372
+    """
+    res = set_daemon_re.search(logical_line)
+    if res:
+        yield (0, "N372: Don't use the setDaemon method. "
+                  "Use the daemon attribute instead.")
