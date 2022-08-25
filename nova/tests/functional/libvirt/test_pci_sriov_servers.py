@@ -2688,7 +2688,7 @@ class PCIServersTest(_PCIServersTestBase):
         self.assertIn('fault', server)
         self.assertIn('No valid host', server['fault']['message'])
 
-    def _create_two_computes_and_an_instance_on_the_first(self):
+    def _create_two_computes(self):
         self.start_compute(
             hostname='test_compute0',
             pci_info=fakelibvirt.HostPCIDevicesInfo(num_pci=1))
@@ -2715,6 +2715,17 @@ class PCIServersTest(_PCIServersTestBase):
         }
         self.assert_placement_pci_view(
             "test_compute1", **test_compute1_placement_pci_view)
+
+        return (
+            test_compute0_placement_pci_view,
+            test_compute1_placement_pci_view,
+        )
+
+    def _create_two_computes_and_an_instance_on_the_first(self):
+        (
+            test_compute0_placement_pci_view,
+            test_compute1_placement_pci_view,
+        ) = self._create_two_computes()
 
         # boot a VM on test_compute0 with a single PCI dev
         extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:1'}
@@ -2866,6 +2877,67 @@ class PCIServersTest(_PCIServersTestBase):
         self.assert_placement_pci_view(
             "test_compute1", **test_compute1_placement_pci_view)
 
+        self.assert_no_pci_healing("test_compute0")
+        self.assert_no_pci_healing("test_compute1")
+
+    def test_reschedule(self):
+        (
+            test_compute0_placement_pci_view,
+            test_compute1_placement_pci_view,
+        ) = self._create_two_computes()
+
+        # try to boot a VM with a single device but inject fault on the first
+        # compute so that the VM is re-scheduled to the other
+        extra_spec = {'pci_passthrough:alias': f'{self.ALIAS_NAME}:1'}
+        pci_flavor_id = self._create_flavor(extra_spec=extra_spec)
+
+        calls = []
+        orig_guest_create = (
+            nova.virt.libvirt.driver.LibvirtDriver._create_guest)
+
+        def fake_guest_create(*args, **kwargs):
+            if not calls:
+                calls.append(1)
+                raise fakelibvirt.make_libvirtError(
+                    fakelibvirt.libvirtError,
+                    "internal error",
+                    error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR,
+                )
+            else:
+                return orig_guest_create(*args, **kwargs)
+
+        with mock.patch(
+            'nova.virt.libvirt.driver.LibvirtDriver._create_guest',
+            new=fake_guest_create
+        ):
+            server = self._create_server(
+                flavor_id=pci_flavor_id, networks='none')
+
+        compute_pci_view_map = {
+            'test_compute0': test_compute0_placement_pci_view,
+            'test_compute1': test_compute1_placement_pci_view,
+        }
+        allocated_compute = server['OS-EXT-SRV-ATTR:host']
+        not_allocated_compute = (
+            "test_compute0"
+            if allocated_compute == "test_compute1"
+            else "test_compute1"
+        )
+
+        allocated_pci_view = compute_pci_view_map.pop(
+            server['OS-EXT-SRV-ATTR:host'])
+        not_allocated_pci_view = list(compute_pci_view_map.values())[0]
+
+        self.assertPCIDeviceCounts(allocated_compute, total=1, free=0)
+        allocated_pci_view["usages"][
+            "0000:81:00.0"][self.PCI_RC] = 1
+        allocated_pci_view["allocations"][
+            server['id']] = {"0000:81:00.0": {self.PCI_RC: 1}}
+        self.assert_placement_pci_view(allocated_compute, **allocated_pci_view)
+
+        self.assertPCIDeviceCounts(not_allocated_compute, total=1, free=1)
+        self.assert_placement_pci_view(
+            not_allocated_compute, **not_allocated_pci_view)
         self.assert_no_pci_healing("test_compute0")
         self.assert_no_pci_healing("test_compute1")
 
