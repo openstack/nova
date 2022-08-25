@@ -131,7 +131,7 @@ Possible values:
     have a name.
 
   ``<tag>``
-    Additional ``<tag>`` and ``<tag_value>`` used for matching PCI devices.
+    Additional ``<tag>`` and ``<tag_value>`` used for specifying PCI devices.
     Supported ``<tag>`` values are :
 
     - ``physical_network``
@@ -144,6 +144,27 @@ Possible values:
       VPD capability with a card serial number (either on a VF itself on
       its corresponding PF), otherwise they will be ignored and not
       available for allocation.
+    - ``resource_class`` - optional Placement resource class name to be used
+      to track the matching PCI devices in Placement when [pci]device_spec is
+      True. It can be a standard resource class from the
+      ``os-resource-classes`` lib. Or can be any string. In that case Nova will
+      normalize it to a proper Placement resource class by making it upper
+      case, replacing any consecutive character outside of ``[A-Z0-9_]`` with a
+      single '_', and prefixing the name with ``CUSTOM_`` if not yet prefixed.
+      The maximum allowed length is 255 character including the prefix.
+      If ``resource_class`` is not provided Nova will generate it from the PCI
+      device's ``vendor_id`` and ``product_id`` in the form of
+      ``CUSTOM_PCI_{vendor_id}_{product_id}``.
+      The ``resource_class`` can be requested from a ``[pci]alias``
+    - ``traits`` - optional comma separated list of Placement trait names to
+      report on the resource provider that will represent the matching PCI
+      device. Each trait can be a standard trait from ``os-traits`` lib or can
+      be any string. If it is not a standard trait then Nova will normalize the
+      trait name by making it upper case, replacing any consecutive character
+      outside of  ``[A-Z0-9_]`` with a single '_', and  prefixing the name with
+      ``CUSTOM_`` if not yet prefixed. The maximum allowed length of a trait
+      name is 255 character including the prefix.
+      Any trait from ``traits`` can be requested from a ``[pci]alias``.
 
 
   Valid examples are::
@@ -177,6 +198,11 @@ Possible values:
                    "address": "0000:82:00.0",
                    "physical_network":"physnet1",
                    "remote_managed": "true"}
+    device_spec = {"vendor_id":"1002",
+                   "product_id":"6929",
+                   "address": "0000:82:00.0",
+                   "resource_class": "PGPU",
+                   "traits": "HW_GPU_API_VULKAN,my-awesome-gpu"}
 
   The following are invalid, as they specify mutually exclusive options::
 

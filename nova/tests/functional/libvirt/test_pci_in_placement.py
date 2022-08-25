@@ -14,6 +14,8 @@
 from unittest import mock
 
 import fixtures
+import os_resource_classes
+import os_traits
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -70,6 +72,9 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
                 {
                     "vendor_id": fakelibvirt.PCI_VEND_ID,
                     "product_id": fakelibvirt.PCI_PROD_ID,
+                    "traits": ",".join(
+                        [os_traits.HW_GPU_API_VULKAN, "CUSTOM_GPU", "purple"]
+                    )
                 },
                 # PF_PROD_ID + slot 2 will match one PF but not their children
                 # VFs
@@ -77,6 +82,9 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
                     "vendor_id": fakelibvirt.PCI_VEND_ID,
                     "product_id": fakelibvirt.PF_PROD_ID,
                     "address": "0000:81:02.0",
+                    "traits": ",".join(
+                        [os_traits.HW_NIC_SRIOV, "CUSTOM_PF", "pf-white"]
+                    ),
                 },
                 # VF_PROD_ID + slot 3 will match two VFs but not their parent
                 # PF
@@ -84,6 +92,9 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
                     "vendor_id": fakelibvirt.PCI_VEND_ID,
                     "product_id": fakelibvirt.VF_PROD_ID,
                     "address": "0000:81:03.*",
+                    "traits": ",".join(
+                        [os_traits.HW_NIC_SRIOV_TRUSTED, "CUSTOM_VF", "vf-red"]
+                    ),
                 },
             ]
         )
@@ -102,9 +113,69 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
                 "0000:81:03.0": {self.VF_RC: 2},
             },
             traits={
-                "0000:81:00.0": [],
-                "0000:81:01.0": [],
-                "0000:81:02.0": [],
-                "0000:81:03.0": [],
+                "0000:81:00.0": [
+                    "HW_GPU_API_VULKAN",
+                    "CUSTOM_GPU",
+                    "CUSTOM_PURPLE",
+                ],
+                "0000:81:01.0": [
+                    "HW_GPU_API_VULKAN",
+                    "CUSTOM_GPU",
+                    "CUSTOM_PURPLE",
+                ],
+                "0000:81:02.0": [
+                    "HW_NIC_SRIOV",
+                    "CUSTOM_PF",
+                    "CUSTOM_PF_WHITE",
+                ],
+                "0000:81:03.0": [
+                    "HW_NIC_SRIOV_TRUSTED",
+                    "CUSTOM_VF",
+                    "CUSTOM_VF_RED",
+                ],
+            },
+        )
+
+    def test_new_compute_init_with_pci_dev_custom_rc(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PCI devs slot 0
+        # * one type-PF dev in slot 1 with a single type-VF under it
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, num_pfs=1, num_vfs=1)
+
+        device_spec = self._to_device_spec_conf(
+            [
+                # PCI_PROD_ID will match the type-PCI in slot 0
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PCI_PROD_ID,
+                    "resource_class": os_resource_classes.PGPU,
+                    "traits": os_traits.HW_GPU_API_VULKAN,
+                },
+                # slot 1 func 0 is the type-PF dev. The child VF is ignored
+                {
+                    "address": "0000:81:01.0",
+                    "resource_class": "crypto",
+                    "traits": "to-the-moon,hodl"
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={
+                "0000:81:00.0": {os_resource_classes.PGPU: 1},
+                "0000:81:01.0": {"CUSTOM_CRYPTO": 1},
+            },
+            traits={
+                "0000:81:00.0": [
+                    "HW_GPU_API_VULKAN",
+                ],
+                "0000:81:01.0": [
+                    "CUSTOM_TO_THE_MOON",
+                    "CUSTOM_HODL",
+                ],
             },
         )

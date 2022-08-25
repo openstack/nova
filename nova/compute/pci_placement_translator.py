@@ -13,6 +13,8 @@
 #    under the License.
 import typing as ty
 
+import os_resource_classes
+import os_traits
 from oslo_log import log as logging
 
 from nova.compute import provider_tree
@@ -46,8 +48,65 @@ def _is_placement_tracking_enabled() -> bool:
     return False
 
 
-def _get_rc_for_dev(dev: pci_device.PciDevice) -> str:
-    return f"CUSTOM_PCI_{dev.vendor_id}_{dev.product_id}"
+def _normalize_traits(traits: ty.List[str]) -> ty.List[str]:
+    """Make the trait names acceptable for placement.
+
+    It keeps the already valid standard or custom traits but normalizes trait
+    names that are not already normalized.
+    """
+    standard_traits, rest = os_traits.check_traits(traits)
+    custom_traits = []
+    for name in rest:
+        name = name.upper()
+        if os_traits.is_custom(name):
+            custom_traits.append(name)
+        else:
+            custom_traits.append(os_traits.normalize_name(name))
+
+    return list(standard_traits) + custom_traits
+
+
+def _get_traits_for_dev(
+    dev_spec_tags: ty.Dict[str, str],
+) -> ty.Set[str]:
+    # traits is a comma separated list of placement trait names
+    traits_str = dev_spec_tags.get("traits")
+    if not traits_str:
+        return set()
+
+    traits = traits_str.split(',')
+    return set(_normalize_traits(traits))
+
+
+def _get_rc_for_dev(
+    dev: pci_device.PciDevice,
+    dev_spec_tags: ty.Dict[str, str],
+) -> str:
+    """Return the resource class to represent the device.
+
+    It is either provided by the user in the configuration as the
+    resource_class tag, or we are generating one from vendor_id and product_id.
+
+    The user specified resource class is normalized if it is not already an
+    acceptable standard or custom resource class.
+    """
+    # Either use the resource class from the config or the vendor_id and
+    # product_id of the device to generate the RC
+    rc = dev_spec_tags.get("resource_class")
+    if rc:
+        rc = rc.upper()
+        if (
+            rc not in os_resource_classes.STANDARDS and
+            not os_resource_classes.is_custom(rc)
+        ):
+            rc = os_resource_classes.normalize_name(rc)
+            # mypy: normalize_name will return non None for non None input
+            assert rc
+
+    else:
+        rc = f"CUSTOM_PCI_{dev.vendor_id}_{dev.product_id}".upper()
+
+    return rc
 
 
 class PciResourceProvider:
@@ -64,16 +123,17 @@ class PciResourceProvider:
     def devs(self) -> ty.List[pci_device.PciDevice]:
         return [self.parent_dev] if self.parent_dev else self.children_devs
 
-    def add_child(self, dev: pci_device.PciDevice) -> None:
-        rc = _get_rc_for_dev(dev)
+    def add_child(self, dev, dev_spec_tags: ty.Dict[str, str]) -> None:
+        rc = _get_rc_for_dev(dev, dev_spec_tags)
+        traits = _get_traits_for_dev(dev_spec_tags)
         self.children_devs.append(dev)
         self.resource_class = rc
-        self.traits = set()
+        self.traits = traits
 
-    def add_parent(self, dev: pci_device.PciDevice) -> None:
+    def add_parent(self, dev, dev_spec_tags: ty.Dict[str, str]) -> None:
         self.parent_dev = dev
-        self.resource_class = _get_rc_for_dev(dev)
-        self.traits = set()
+        self.resource_class = _get_rc_for_dev(dev, dev_spec_tags)
+        self.traits = _get_traits_for_dev(dev_spec_tags)
 
     def update_provider_tree(
         self, provider_tree: provider_tree.ProviderTree
@@ -116,7 +176,9 @@ class PlacementView:
     def _ensure_rp(self, rp_name: str) -> PciResourceProvider:
         return self.rps.setdefault(rp_name, PciResourceProvider(rp_name))
 
-    def _add_child(self, dev: pci_device.PciDevice) -> None:
+    def _add_child(
+        self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
+    ) -> None:
         if not dev.parent_addr:
             msg = _(
                 "Missing parent address for PCI device s(dev)% with "
@@ -128,17 +190,21 @@ class PlacementView:
             raise exception.PlacementPciException(error=msg)
 
         rp_name = self._get_rp_name_for_address(dev.parent_addr)
-        self._ensure_rp(rp_name).add_child(dev)
+        self._ensure_rp(rp_name).add_child(dev, dev_spec_tags)
 
-    def _add_parent(self, dev: pci_device.PciDevice) -> None:
+    def _add_parent(
+        self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
+    ) -> None:
         rp_name = self._get_rp_name_for_address(dev.address)
-        self._ensure_rp(rp_name).add_parent(dev)
+        self._ensure_rp(rp_name).add_parent(dev, dev_spec_tags)
 
-    def add_dev(self, dev: pci_device.PciDevice) -> None:
+    def add_dev(
+        self, dev: pci_device.PciDevice, dev_spec_tags: ty.Dict[str, str]
+    ) -> None:
         if dev.dev_type in PARENT_TYPES:
-            self._add_parent(dev)
+            self._add_parent(dev, dev_spec_tags)
         elif dev.dev_type in CHILD_TYPES:
-            self._add_child(dev)
+            self._add_child(dev, dev_spec_tags)
         else:
             msg = _(
                 "Unhandled PCI device type %(type)s for %(dev)s. Please "
@@ -220,7 +286,17 @@ def update_provider_tree_for_pci(
 
     pv = PlacementView(nodename)
     for dev in pci_tracker.pci_devs:
-        pv.add_dev(dev)
+        # match the PCI device with the [pci]dev_spec config to access
+        # the configuration metadata tags
+        dev_spec = pci_tracker.dev_filter.get_devspec(dev)
+        if not dev_spec:
+            LOG.warning(
+                "Device spec is not found for device %s in [pci]device_spec. "
+                "Ignoring device in Placement resource view. "
+                "This should not happen. Please file a bug.", dev.address)
+            continue
+
+        pv.add_dev(dev, dev_spec.get_tags())
 
     LOG.info("Placement PCI resource view: %s", pv)
 

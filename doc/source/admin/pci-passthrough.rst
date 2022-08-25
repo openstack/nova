@@ -361,6 +361,10 @@ modeled as a Placement resource provider (RP) with the name
 represented by its parent PCI device, the PF, as resource provider.
 
 By default nova will use ``CUSTOM_PCI_<vendor_id>_<product_id>`` as the
-resource class in PCI inventories in Placement.
+resource class in PCI inventories in Placement. However the name of the
+resource class can be customized via the ``resource_class`` tag in the
+:oslo.config:option:`pci.device_spec` option. There is also a new ``traits``
+tag in that configuration that allows specifying a list of placement traits to
+be added to the resource provider representing the matching PCI devices.
 
 For deeper technical details please read the `nova specification. <https://specs.openstack.org/openstack/nova-specs/specs/zed/approved/pci-device-tracking-in-placement.html>`_
