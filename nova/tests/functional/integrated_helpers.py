@@ -380,10 +380,11 @@ class InstanceHelperMixin(object):
                       server_expected_state='ACTIVE'):
         self.api.post_server_action(
             server['id'],
-            {'os-migrateLive': {'host': None,
-                                'block_migration': 'auto'}})
-        self._wait_for_state_change(self.api, server, server_expected_state)
+            {'os-migrateLive': {'host': None, 'block_migration': 'auto'}})
+        server = self._wait_for_state_change(
+            self.api, server, server_expected_state)
         self._wait_for_migration_status(server, [migration_expected_state])
+        return server
 
 
 class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
