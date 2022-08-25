@@ -2695,6 +2695,53 @@ class PCIServersTest(_PCIServersTestBase):
         self.assert_no_pci_healing("test_compute0")
         self.assert_no_pci_healing("test_compute1")
 
+    def test_unshelve_after_offload(self):
+        (
+            server,
+            test_compute0_placement_pci_view,
+            test_compute1_placement_pci_view,
+        ) = self._create_two_computes_and_an_instance_on_the_first()
+
+        # shelve offload the server
+        self._shelve_server(server)
+
+        # source allocation should be freed
+        self.assertPCIDeviceCounts('test_compute0', total=1, free=1)
+        test_compute0_placement_pci_view["usages"][
+            "0000:81:00.0"][self.PCI_RC] = 0
+        del test_compute0_placement_pci_view["allocations"][server['id']]
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        # test_compute1 should not be touched
+        self.assertPCIDeviceCounts('test_compute1', total=1, free=1)
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+
+        # disable test_compute0 and unshelve the instance
+        self.api.put_service(
+            self.computes["test_compute0"].service_ref.uuid,
+            {"status": "disabled"},
+        )
+        self._unshelve_server(server)
+
+        # test_compute0 should be unchanged
+        self.assertPCIDeviceCounts('test_compute0', total=1, free=1)
+        self.assert_placement_pci_view(
+            "test_compute0", **test_compute0_placement_pci_view)
+
+        # test_compute1 should be allocated
+        self.assertPCIDeviceCounts('test_compute1', total=1, free=0)
+        test_compute1_placement_pci_view["usages"][
+            "0000:81:00.0"][self.PCI_RC] = 1
+        test_compute1_placement_pci_view["allocations"][
+            server['id']] = {"0000:81:00.0": {self.PCI_RC: 1}}
+        self.assert_placement_pci_view(
+            "test_compute1", **test_compute1_placement_pci_view)
+
+        self.assert_no_pci_healing("test_compute0")
+        self.assert_no_pci_healing("test_compute1")
+
 
 class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
 
