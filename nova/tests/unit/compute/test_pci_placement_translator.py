@@ -87,7 +87,9 @@ class TestTranslator(test.NoDBTestCase):
     )
     def test_trait_normalization(self, trait_names, expected_traits):
         self.assertEqual(
-            expected_traits, ppt._get_traits_for_dev({"traits": trait_names}))
+            expected_traits | {"COMPUTE_MANAGED_PCI_DEVICE"},
+            ppt._get_traits_for_dev({"traits": trait_names})
+        )
 
     @ddt.unpack
     @ddt.data(
@@ -192,9 +194,11 @@ class TestTranslator(test.NoDBTestCase):
         )
         self.assertEqual(
             "VFs from the same PF cannot be configured with different set of "
-            "'traits' in [pci]device_spec. We got CUSTOM_BAR,CUSTOM_FOO for "
-            "0000:81:00.2 and CUSTOM_BAR,CUSTOM_BAZ,CUSTOM_FOO for "
-            "0000:81:00.0,0000:81:00.1.",
+            "'traits' in [pci]device_spec. We got "
+            "COMPUTE_MANAGED_PCI_DEVICE,CUSTOM_BAR,CUSTOM_FOO for "
+            "0000:81:00.2 and "
+            "COMPUTE_MANAGED_PCI_DEVICE,CUSTOM_BAR,CUSTOM_BAZ,CUSTOM_FOO "
+            "for 0000:81:00.0,0000:81:00.1.",
             str(ex),
         )
         # as well as additional trait
@@ -207,8 +211,8 @@ class TestTranslator(test.NoDBTestCase):
         self.assertEqual(
             "VFs from the same PF cannot be configured with different set of "
             "'traits' in [pci]device_spec. We got "
-            "CUSTOM_BAR,CUSTOM_BAZ,CUSTOM_EXTRA,CUSTOM_FOO for 0000:81:00.3 "
-            "and CUSTOM_BAR,CUSTOM_BAZ,CUSTOM_FOO for "
-            "0000:81:00.0,0000:81:00.1.",
+            "COMPUTE_MANAGED_PCI_DEVICE,CUSTOM_BAR,CUSTOM_BAZ,CUSTOM_EXTRA,"
+            "CUSTOM_FOO for 0000:81:00.3 and COMPUTE_MANAGED_PCI_DEVICE,"
+            "CUSTOM_BAR,CUSTOM_BAZ,CUSTOM_FOO for 0000:81:00.0,0000:81:00.1.",
             str(ex),
         )

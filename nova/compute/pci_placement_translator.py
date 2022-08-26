@@ -73,10 +73,12 @@ def _get_traits_for_dev(
     # traits is a comma separated list of placement trait names
     traits_str = dev_spec_tags.get("traits")
     if not traits_str:
-        return set()
+        return {os_traits.COMPUTE_MANAGED_PCI_DEVICE}
 
     traits = traits_str.split(',')
-    return set(_normalize_traits(traits))
+    return set(_normalize_traits(traits)) | {
+        os_traits.COMPUTE_MANAGED_PCI_DEVICE
+    }
 
 
 def _get_rc_for_dev(
@@ -211,7 +213,7 @@ class PciResourceProvider:
         if self.devs:
             return (
                 f"RP({self.name}, {self.resource_class}={len(self.devs)}, "
-                f"traits={','.join(self.traits or set())})"
+                f"traits={','.join(sorted(self.traits or set()))})"
             )
         else:
             return f"RP({self.name}, <EMPTY>)"
@@ -357,6 +359,26 @@ def ensure_no_dev_spec_with_devname(dev_specs: ty.List[devspec.PciDeviceSpec]):
             raise exception.PlacementPciException(error=msg)
 
 
+def ensure_tracking_was_not_enabled_before(
+    provider_tree: provider_tree.ProviderTree
+) -> None:
+    # If placement tracking was enabled before then we do not support
+    # disabling it later. To check for that we can look for RPs with
+    # the COMPUTE_MANAGED_PCI_DEVICE trait. If any then we raise to
+    # kill the service
+    for rp_uuid in provider_tree.get_provider_uuids():
+        if (
+            os_traits.COMPUTE_MANAGED_PCI_DEVICE
+            in provider_tree.data(rp_uuid).traits
+        ):
+            msg = _(
+                "The [pci]report_in_placement is False but it was enabled "
+                "before on this compute. Nova does not support disabling "
+                "it after it is enabled."
+            )
+            raise exception.PlacementPciException(error=msg)
+
+
 def update_provider_tree_for_pci(
     provider_tree: provider_tree.ProviderTree,
     nodename: str,
@@ -393,6 +415,7 @@ def update_provider_tree_for_pci(
               }
     """
     if not _is_placement_tracking_enabled():
+        ensure_tracking_was_not_enabled_before(provider_tree)
         # If tracking is not enabled we just return without touching anything
         return False
 
