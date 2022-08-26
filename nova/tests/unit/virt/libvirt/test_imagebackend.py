@@ -525,7 +525,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_exists.assert_has_calls(exist_calls)
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Image, 'verify_base_size')
     @mock.patch('nova.privsep.path.utime')
@@ -546,14 +546,14 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
         mock_verify.assert_called_once_with(self.TEMPLATE_PATH, self.SIZE)
         mock_create.assert_called_once_with(
-            self.TEMPLATE_PATH, self.PATH, self.SIZE)
+             self.PATH, 'qcow2', self.SIZE, backing_file=self.TEMPLATE_PATH)
         fn.assert_called_once_with(target=self.TEMPLATE_PATH)
         mock_exist.assert_has_calls(exist_calls)
         self.assertTrue(mock_sync.called)
         mock_utime.assert_called()
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Qcow2, 'get_disk_size')
@@ -578,7 +578,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertFalse(mock_extend.called)
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])
@@ -617,7 +617,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         mock_utime.assert_called()
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    @mock.patch('nova.virt.libvirt.utils.create_cow_image')
+    @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch('nova.virt.libvirt.utils.get_disk_backing_file')
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])

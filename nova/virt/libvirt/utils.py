@@ -110,54 +110,48 @@ VTPM_DIR = '/var/lib/libvirt/swtpm/'
 
 
 def create_image(
-    disk_format: str, path: str, size: ty.Union[str, int],
+    path: str,
+    disk_format: str,
+    disk_size: ty.Optional[ty.Union[str, int]],
+    backing_file: ty.Optional[str] = None,
 ) -> None:
-    """Create a disk image
-
-    :param disk_format: Disk image format (as known by qemu-img)
+    """Disk image creation with qemu-img
     :param path: Desired location of the disk image
-    :param size: Desired size of disk image. May be given as an int or
-                 a string. If given as an int, it will be interpreted
-                 as bytes. If it's a string, it should consist of a number
-                 with an optional suffix ('K' for Kibibytes,
-                 M for Mebibytes, 'G' for Gibibytes, 'T' for Tebibytes).
-                 If no suffix is given, it will be interpreted as bytes.
+    :param disk_format: Disk image format (as known by qemu-img)
+    :param disk_size: Desired size of disk image. May be given as an int or
+        a string. If given as an int, it will be interpreted as bytes. If it's
+        a string, it should consist of a number with an optional suffix ('K'
+        for Kibibytes, M for Mebibytes, 'G' for Gibibytes, 'T' for Tebibytes).
+        If no suffix is given, it will be interpreted as bytes.
+        Can be None in the case of a COW image.
+    :param backing_file: (Optional) Backing file to use.
     """
-    processutils.execute('qemu-img', 'create', '-f', disk_format, path, size)
-
-
-def create_cow_image(
-    backing_file: ty.Optional[str], path: str, size: ty.Optional[int] = None,
-) -> None:
-    """Create COW image
-
-    Creates a COW image with the given backing file
-
-    :param backing_file: Existing image on which to base the COW image
-    :param path: Desired location of the COW image
-    """
-    base_cmd = ['qemu-img', 'create', '-f', 'qcow2']
+    base_cmd = [
+        'env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'create', '-f', disk_format
+    ]
     cow_opts = []
+
     if backing_file:
         base_details = images.qemu_img_info(backing_file)
-        cow_opts += ['backing_file=%s' % backing_file]
-        cow_opts += ['backing_fmt=%s' % base_details.file_format]
-    else:
-        base_details = None
-    # Explicitly inherit the value of 'cluster_size' property of a qcow2
-    # overlay image from its backing file. This can be useful in cases
-    # when people create a base image with a non-default 'cluster_size'
-    # value or cases when images were created with very old QEMU
-    # versions which had a different default 'cluster_size'.
-    if base_details and base_details.cluster_size is not None:
-        cow_opts += ['cluster_size=%s' % base_details.cluster_size]
-    if size is not None:
-        cow_opts += ['size=%s' % size]
-    if cow_opts:
+        cow_opts += [
+            f'backing_file={backing_file}',
+            f'backing_fmt={base_details.file_format}'
+        ]
+        # Explicitly inherit the value of 'cluster_size' property of a qcow2
+        # overlay image from its backing file. This can be useful in cases when
+        # people create a base image with a non-default 'cluster_size' value or
+        # cases when images were created with very old QEMU versions which had
+        # a different default 'cluster_size'.
+        if base_details.cluster_size is not None:
+            cow_opts += [f'cluster_size={base_details.cluster_size}']
+
         # Format as a comma separated list
         csv_opts = ",".join(cow_opts)
         cow_opts = ['-o', csv_opts]
+
     cmd = base_cmd + cow_opts + [path]
+    if disk_size is not None:
+        cmd += [str(disk_size)]
     processutils.execute(*cmd)
 
 
