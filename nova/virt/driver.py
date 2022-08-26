@@ -20,7 +20,9 @@ Driver base-classes:
     types that support that contract
 """
 
+import itertools
 import sys
+import typing as ty
 
 import os_resource_classes as orc
 import os_traits
@@ -100,6 +102,19 @@ def block_device_info_get_mapping(block_device_info):
     block_device_info = block_device_info or {}
     block_device_mapping = block_device_info.get('block_device_mapping') or []
     return block_device_mapping
+
+
+def block_device_info_get_encrypted_disks(
+    block_device_info: ty.Mapping[str, ty.Any],
+) -> ty.List['nova.virt.block_device.DriverBlockDevice']:
+    block_device_info = block_device_info or {}
+    return [
+        driver_bdm for driver_bdm in itertools.chain(
+            block_device_info.get('image', []),
+            block_device_info.get('ephemerals', []),
+        )
+        if driver_bdm.get('encrypted')
+    ]
 
 
 # NOTE(aspiers): When adding new capabilities, ensure they are
