@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    If compute service is down in source node and user try to stop
+    instance, instance gets stuck at powering-off, hence evacuation fails with
+    msg: Cannot 'evacuate' instance <instance-id> while it is in
+    task_state powering-off.
+    It is now possible for evacuation to ignore the vm task state.
+    For more details see: `bug 1978983`_
+
+    .. _`bug 1978983`: https://bugs.launchpad.net/nova/+bug/1978983
