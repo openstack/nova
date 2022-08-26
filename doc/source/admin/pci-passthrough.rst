@@ -367,4 +367,11 @@ resource class can be customized via the ``resource_class`` tag in the
 tag in that configuration that allows specifying a list of placement traits to
 be added to the resource provider representing the matching PCI devices.
 
+.. important::
+   While nova supported configuring both the PF and its children VFs for PCI
+   passthrough in the past, it only allowed consuming either the parent PF or
+   its children VFs. Since 26.0.0. (Zed) the nova-compute service will
+   enforce the same rule for the configuration as well and will refuse to
+   start if both the parent PF and its VFs are configured.
+
 For deeper technical details please read the `nova specification. <https://specs.openstack.org/openstack/nova-specs/specs/zed/approved/pci-device-tracking-in-placement.html>`_

@@ -20,6 +20,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
+from nova import exception
 from nova.tests.fixtures import libvirt as fakelibvirt
 from nova.tests.functional.libvirt import test_pci_sriov_servers
 
@@ -154,6 +155,7 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
                 },
                 # slot 1 func 0 is the type-PF dev. The child VF is ignored
                 {
+                    "product_id": fakelibvirt.PF_PROD_ID,
                     "address": "0000:81:01.0",
                     "resource_class": "crypto",
                     "traits": "to-the-moon,hodl"
@@ -178,4 +180,39 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
                     "CUSTOM_HODL",
                 ],
             },
+        )
+
+    def test_dependent_device_config_is_rejected(self):
+        """Configuring both the PF and its children VFs is not supported.
+        Only either of them can be given to nova.
+        """
+        # The fake libvirt will emulate on the host:
+        # * one type-PF dev in slot 0 with a single type-VF under it
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=1)
+        # both device will be matched by our config
+        device_spec = self._to_device_spec_conf(
+            [
+                # PF
+                {
+                    "address": "0000:81:00.0"
+                },
+                # Its child VF
+                {
+                    "address": "0000:81:00.1"
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+
+        ex = self.assertRaises(
+            exception.PlacementPciException,
+            self.start_compute,
+            hostname="compute1",
+            pci_info=pci_info
+        )
+        self.assertIn(
+            "Configuring both 0000:81:00.1 and 0000:81:00.0 in "
+            "[pci]device_spec is not supported",
+            str(ex)
         )

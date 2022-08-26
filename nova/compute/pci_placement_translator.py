@@ -124,6 +124,12 @@ class PciResourceProvider:
         return [self.parent_dev] if self.parent_dev else self.children_devs
 
     def add_child(self, dev, dev_spec_tags: ty.Dict[str, str]) -> None:
+        if self.parent_dev:
+            raise exception.PlacementPciDependentDeviceException(
+                parent_dev=dev.address,
+                children_devs=",".join(dev.address for dev in self.devs)
+            )
+
         rc = _get_rc_for_dev(dev, dev_spec_tags)
         traits = _get_traits_for_dev(dev_spec_tags)
         self.children_devs.append(dev)
@@ -131,6 +137,12 @@ class PciResourceProvider:
         self.traits = traits
 
     def add_parent(self, dev, dev_spec_tags: ty.Dict[str, str]) -> None:
+        if self.parent_dev or self.children_devs:
+            raise exception.PlacementPciDependentDeviceException(
+                parent_dev=dev.address,
+                children_devs=",".join(dev.address for dev in self.devs)
+            )
+
         self.parent_dev = dev
         self.resource_class = _get_rc_for_dev(dev, dev_spec_tags)
         self.traits = _get_traits_for_dev(dev_spec_tags)

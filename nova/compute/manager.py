@@ -10153,6 +10153,19 @@ class ComputeManager(manager.Manager):
             # (e.g. disable the service).
             with excutils.save_and_reraise_exception():
                 LOG.exception("ReshapeNeeded exception is unexpected here!")
+        except exception.PlacementPciException:
+            # If we are at startup and the Placement PCI inventory handling
+            # failed then probably there is a configuration error. Propagate
+            # the error up to kill the service.
+            if startup:
+                raise
+            # If we are not at startup then we can assume that the
+            # configuration was correct at startup so the error is probably
+            # transient. Anyhow we cannot kill the service any more so just
+            # log the error and continue.
+            LOG.exception(
+                "Error updating PCI resources for node %(node)s.",
+                {'node': nodename})
         except Exception:
             LOG.exception("Error updating resources for node %(node)s.",
                           {'node': nodename})
