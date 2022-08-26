@@ -1346,3 +1346,113 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
         del compute1_expected_placement_view["allocations"][server["id"]]
         self.assert_placement_pci_view(
             "compute1", **compute1_expected_placement_view)
+
+    def test_heal_allocation_during_same_host_resize(self):
+        self.flags(allow_resize_to_same_host=True)
+        # The fake libvirt will emulate on the host:
+        # * one type-PFs (slot 0) with 3 type-VFs
+        compute1_pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=3)
+        # the config matches just the VFs
+        compute1_device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                    "address": "0000:81:00.*",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=compute1_device_spec)
+        # Start a compute with PCI tracking in placement
+        self.mock_pci_report_in_placement.return_value = True
+        self.start_compute(hostname="compute1", pci_info=compute1_pci_info)
+        self.assertPCIDeviceCounts("compute1", total=3, free=3)
+        compute1_expected_placement_view = {
+            "inventories": {
+                "0000:81:00.0": {self.VF_RC: 3},
+            },
+            "traits": {
+                "0000:81:00.0": [],
+            },
+            "usages": {
+                "0000:81:00.0": {self.VF_RC: 0},
+            },
+            "allocations": {},
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        # Create an instance consuming one VFs
+        extra_spec = {"pci_passthrough:alias": "a-vf:1"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(flavor_id=flavor_id, networks=[])
+        self.assertPCIDeviceCounts("compute1", total=3, free=2)
+        # As scheduling does not support PCI in placement yet no allocation
+        # is created for the PCI consumption by the scheduler. BUT the resource
+        # tracker in the compute will heal the missing PCI allocation
+        compute1_expected_placement_view[
+            "usages"]["0000:81:00.0"][self.VF_RC] = 1
+        compute1_expected_placement_view["allocations"][server["id"]] = {
+            "0000:81:00.0": {self.VF_RC: 1}
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self._run_periodics()
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+
+        # resize the server to consume 2 VFs on the same host
+        extra_spec = {"pci_passthrough:alias": "a-vf:2"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._resize_server(server, flavor_id)
+        # during resize both the source and the dest allocation is kept
+        # and in same host resize that means both consumed from the same host
+        self.assertPCIDeviceCounts("compute1", total=3, free=0)
+        # the source side of the allocation held by the migration
+        self._move_server_allocation(
+            compute1_expected_placement_view["allocations"], server['id'])
+        # NOTE(gibi): we intentionally don't heal allocation for the instance
+        # while it is being resized. See the comment in the
+        # pci_placement_translator about the reasoning.
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self._run_periodics()
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+
+        # revert the resize
+        self._revert_resize(server)
+        self.assertPCIDeviceCounts("compute1", total=3, free=2)
+        # the original allocations are restored
+        self._move_server_allocation(
+            compute1_expected_placement_view["allocations"],
+            server["id"],
+            revert=True,
+        )
+        compute1_expected_placement_view[
+            "usages"]["0000:81:00.0"][self.VF_RC] = 1
+        compute1_expected_placement_view["allocations"][server["id"]] = {
+            "0000:81:00.0": {self.VF_RC: 1}
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self._run_periodics()
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+
+        # now resize and then confirm it
+        self._resize_server(server, flavor_id)
+        self._confirm_resize(server)
+
+        # we expect that the consumption is according to the new flavor
+        self.assertPCIDeviceCounts("compute1", total=3, free=1)
+        compute1_expected_placement_view[
+            "usages"]["0000:81:00.0"][self.VF_RC] = 2
+        compute1_expected_placement_view["allocations"][server["id"]] = {
+            "0000:81:00.0": {self.VF_RC: 2}
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self._run_periodics()
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
