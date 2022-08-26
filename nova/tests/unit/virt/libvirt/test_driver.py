@@ -3131,6 +3131,41 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(membacking.locked)
         self.assertFalse(membacking.sharedpages)
 
+    def test_get_guest_memory_backing_config_locked_flavor(self):
+        extra_specs = {
+            "hw:locked_memory": "True",
+            "hw:mem_page_size": 1000,
+        }
+        flavor = objects.Flavor(
+            name='m1.small', memory_mb=6, vcpus=28, root_gb=496,
+            ephemeral_gb=8128, swap=33550336, extra_specs=extra_specs)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        membacking = drvr._get_guest_memory_backing_config(
+            None, None, flavor, image_meta)
+        self.assertTrue(membacking.locked)
+
+    def test_get_guest_memory_backing_config_locked_image_meta(self):
+        extra_specs = {}
+        flavor = objects.Flavor(
+            name='m1.small',
+            memory_mb=6,
+            vcpus=28,
+            root_gb=496,
+            ephemeral_gb=8128,
+            swap=33550336,
+            extra_specs=extra_specs)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {
+                "hw_locked_memory": "True",
+                "hw_mem_page_size": 1000,
+            }})
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        membacking = drvr._get_guest_memory_backing_config(
+            None, None, flavor, image_meta)
+        self.assertTrue(membacking.locked)
+
     def test_get_guest_memory_backing_config_realtime_invalid_share(self):
         """Test behavior when there is no pool of shared CPUS on which to place
         the emulator threads, isolating them from the instance CPU processes.

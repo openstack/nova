@@ -163,6 +163,18 @@ hugepage_validators = [
             'pattern': r'(large|small|any|\d+([kKMGT]i?)?(b|bit|B)?)',
         },
     ),
+    base.ExtraSpecValidator(
+        name='hw:locked_memory',
+        description=(
+            'Determine if **guest** (instance) memory should be locked '
+            'preventing swaping. This is required in rare cases for device '
+            'DMA transfers. Only supported by the libvirt virt driver.'
+        ),
+        value={
+            'type': bool,
+            'description': 'Whether to lock **guest** (instance) memory.',
+        },
+    ),
 ]
 
 numa_validators = [

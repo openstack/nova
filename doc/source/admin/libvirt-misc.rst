@@ -138,3 +138,33 @@ For example, to hide your signature from the guest OS, run:
 .. code:: console
 
    $ openstack flavor set $FLAVOR --property hw:hide_hypervisor_id=true
+
+
+.. _extra-spec-locked_memory:
+
+Locked memory allocation
+------------------------
+
+.. versionadded:: 26.0.0 (Zed)
+
+Locking memory marks the guest memory allocations as unmovable and
+unswappable. It is implicitly enabled in a number of cases such as SEV or
+realtime guests but can also be enabled explictly using the
+``hw:locked_memory`` extra spec (or use ``hw_locked_memory`` image property).
+``hw:locked_memory`` (also ``hw_locked_memory`` image property) accept
+boolean values in string format like 'true' or 'false' value.
+It will raise `FlavorImageLockedMemoryConflict` exception if both flavor and
+image property are specified but with different boolean values.
+This will only be allowed if you have also set ``hw:mem_page_size``,
+so we can ensure that the scheduler can actually account for this correctly
+and prevent out of memory events. Otherwise, will raise `LockMemoryForbidden`
+exception.
+
+.. code:: console
+
+   $ openstack flavor set FLAVOR-NAME \
+       --property hw:locked_memory=BOOLEAN_VALUE
+
+.. note::
+
+   This is currently only supported by the libvirt driver.

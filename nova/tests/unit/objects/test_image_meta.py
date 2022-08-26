@@ -108,6 +108,7 @@ class TestImageMetaProps(test.NoDBTestCase):
                  'hw_video_model': 'vga',
                  'hw_video_ram': '512',
                  'hw_qemu_guest_agent': 'yes',
+                 'hw_locked_memory': 'true',
                  'trait:CUSTOM_TRUSTED': 'required',
                  # Fill sane values for the rest here
                  }
@@ -116,6 +117,7 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertEqual('vga', virtprops.hw_video_model)
         self.assertEqual(512, virtprops.hw_video_ram)
         self.assertTrue(virtprops.hw_qemu_guest_agent)
+        self.assertTrue(virtprops.hw_locked_memory)
         self.assertIsNotNone(virtprops.traits_required)
         self.assertIn('CUSTOM_TRUSTED', virtprops.traits_required)
 
@@ -284,6 +286,28 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertIsNone(virtprops.get("hw_numa_nodes"))
         self.assertEqual([set([0, 1, 2, 3])],
                          virtprops.hw_numa_cpus)
+
+    def test_locked_memory_prop(self):
+        props = {'hw_locked_memory': 'true'}
+        virtprops = objects.ImageMetaProps.from_dict(props)
+        self.assertTrue(virtprops.hw_locked_memory)
+
+    def test_obj_make_compatible_hw_locked_memory(self):
+        """Check 'hw_locked_memory' compatibility."""
+        # assert that 'hw_locked_memory' is supported
+        # on a suitably new version
+        obj = objects.ImageMetaProps(
+            hw_locked_memory='true',
+        )
+        primitive = obj.obj_to_primitive('1.33')
+        self.assertIn('hw_locked_memory',
+            primitive['nova_object.data'])
+        self.assertTrue(primitive['nova_object.data']['hw_locked_memory'])
+
+        # and is absent on older versions
+        primitive = obj.obj_to_primitive('1.32')
+        self.assertNotIn('hw_locked_memory',
+                         primitive['nova_object.data'])
 
     def test_get_unnumbered_trait_fields(self):
         """Tests that only valid un-numbered required traits are parsed from
