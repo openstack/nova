@@ -178,7 +178,9 @@ class PciResourceProvider:
         pass
 
     def update_provider_tree(
-        self, provider_tree: provider_tree.ProviderTree
+        self,
+        provider_tree: provider_tree.ProviderTree,
+        parent_rp_name: str,
     ) -> None:
 
         if not self.parent_dev and not self.children_devs:
@@ -190,6 +192,9 @@ class PciResourceProvider:
                 provider_tree.remove(self.name)
 
             return
+
+        if not provider_tree.exists(self.name):
+            provider_tree.new_child(self.name, parent_rp_name)
 
         provider_tree.update_inventory(
             self.name,
@@ -341,10 +346,7 @@ class PlacementView:
         self, provider_tree: provider_tree.ProviderTree
     ) -> None:
         for rp_name, rp in self.rps.items():
-            if not provider_tree.exists(rp_name):
-                provider_tree.new_child(rp_name, self.root_rp_name)
-
-            rp.update_provider_tree(provider_tree)
+            rp.update_provider_tree(provider_tree, self.root_rp_name)
 
 
 def ensure_no_dev_spec_with_devname(dev_specs: ty.List[devspec.PciDeviceSpec]):
