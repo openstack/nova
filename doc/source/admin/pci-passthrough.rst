@@ -368,6 +368,13 @@ tag in that configuration that allows specifying a list of placement traits to
 be added to the resource provider representing the matching PCI devices.
 
 .. note::
+   In nova 26.0.0 (Zed) the Placement resource tracking of PCI devices does not
+   support SR-IOV devices intended to be consumed via Neutron ports and
+   therefore having ``physical_network`` tag in
+   :oslo.config:option:`pci.device_spec`. Such devices are supported via the
+   legacy PCI tracker code path in Nova.
+
+.. note::
    Having different resource class or traits configuration for VFs under the
    same parent PF is not supported and the nova-compute service will refuse to
    start with such configuration.

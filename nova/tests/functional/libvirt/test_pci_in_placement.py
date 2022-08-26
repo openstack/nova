@@ -284,3 +284,28 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
             "and CUSTOM_FOO for 0000:81:00.1.",
             str(ex)
         )
+
+    def test_neutron_sriov_devs_ignored(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PF dev in slot 0 with one type-VF under it
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=1)
+        # then the config assigns physnet to the dev
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PF_PROD_ID,
+                    "physical_network": "physnet0",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+
+        # As every matching dev has physnet configured they are ignored
+        self.assert_placement_pci_view(
+            "compute1",
+            inventories={},
+            traits={},
+        )
