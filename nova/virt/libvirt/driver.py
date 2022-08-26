@@ -3998,7 +3998,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None,
-               accel_info=None):
+               accel_info=None, share_info=None):
         """Reboot a virtual machine, given an instance reference."""
         if reboot_type == 'SOFT':
             # NOTE(vish): This will attempt to do a graceful shutdown/restart.
@@ -4019,7 +4019,7 @@ class LibvirtDriver(driver.ComputeDriver):
                             "Trying hard reboot.",
                             instance=instance)
         return self._hard_reboot(context, instance, network_info,
-           objects.ShareMappingList(), block_device_info, accel_info
+           share_info, block_device_info, accel_info
         )
 
     def _soft_reboot(self, instance):
