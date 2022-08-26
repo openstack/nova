@@ -4638,12 +4638,16 @@ class LibvirtDriver(driver.ComputeDriver):
                       ignore_bdi_for_swap=False):
         booted_from_volume = self._is_booted_from_volume(block_device_info)
 
-        def image(fname, image_type=CONF.libvirt.images_type):
-            return self.image_backend.by_name(instance,
-                                              fname + suffix, image_type)
+        def image(
+            fname, image_type=CONF.libvirt.images_type, disk_info_mapping=None
+        ):
+            return self.image_backend.by_name(
+                instance, fname + suffix, image_type,
+                disk_info_mapping=disk_info_mapping)
 
-        def raw(fname):
-            return image(fname, image_type='raw')
+        def raw(fname, disk_info_mapping=None):
+            return image(
+                fname, image_type='raw', disk_info_mapping=disk_info_mapping)
 
         created_instance_dir = True
 
@@ -4662,8 +4666,6 @@ class LibvirtDriver(driver.ComputeDriver):
         flavor = instance.get_flavor()
         swap_mb = 0
         if 'disk.swap' in disk_mapping:
-            mapping = disk_mapping['disk.swap']
-
             if ignore_bdi_for_swap:
                 # This is a workaround to support legacy swap resizing,
                 # which does not touch swap size specified in bdm,
@@ -4677,12 +4679,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 # leaving the work with bdm only.
                 swap_mb = flavor['swap']
             else:
+                disk_info_mapping = disk_mapping['disk.swap']
+                disk_device = disk_info_mapping['dev']
                 swap = driver.block_device_info_get_swap(block_device_info)
                 if driver.swap_is_usable(swap):
                     swap_mb = swap['swap_size']
-                elif (flavor['swap'] > 0 and
-                      not block_device.volume_in_mapping(
-                        mapping['dev'], block_device_info)):
+                elif (
+                    flavor['swap'] > 0 and
+                    not block_device.volume_in_mapping(
+                        disk_device, block_device_info,
+                    )
+                ):
                     swap_mb = flavor['swap']
 
             if swap_mb > 0:
@@ -4715,8 +4722,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                      image_id=disk_images['ramdisk_id'])
 
         created_disks = self._create_and_inject_local_root(
-            context, instance, booted_from_volume, suffix, disk_images,
-            injection_info, fallback_from_host)
+            context, instance, disk_mapping, booted_from_volume, suffix,
+            disk_images, injection_info, fallback_from_host)
 
         # Lookup the filesystem type if required
         os_type_with_default = nova.privsep.fs.get_fs_type_for_os_type(
@@ -4729,7 +4736,9 @@ class LibvirtDriver(driver.ComputeDriver):
         vm_mode = fields.VMMode.get_from_instance(instance)
         ephemeral_gb = instance.flavor.ephemeral_gb
         if 'disk.local' in disk_mapping:
-            disk_image = image('disk.local')
+            disk_info_mapping = disk_mapping['disk.local']
+            disk_image = image(
+                'disk.local', disk_info_mapping=disk_info_mapping)
             # Short circuit the exists() tests if we already created a disk
             created_disks = created_disks or not disk_image.exists()
 
@@ -4748,7 +4757,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for idx, eph in enumerate(driver.block_device_info_get_ephemerals(
                 block_device_info)):
-            disk_image = image(blockinfo.get_eph_disk(idx))
+            disk_name = blockinfo.get_eph_disk(idx)
+            disk_info_mapping = disk_mapping[disk_name]
+            disk_image = image(disk_name, disk_info_mapping=disk_info_mapping)
             # Short circuit the exists() tests if we already created a disk
             created_disks = created_disks or not disk_image.exists()
 
@@ -4787,7 +4798,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return (created_instance_dir, created_disks)
 
-    def _create_and_inject_local_root(self, context, instance,
+    def _create_and_inject_local_root(self, context, instance, disk_mapping,
                                       booted_from_volume, suffix, disk_images,
                                       injection_info, fallback_from_host):
         created_disks = False
@@ -4804,7 +4815,10 @@ class LibvirtDriver(driver.ComputeDriver):
             if size == 0 or suffix == '.rescue':
                 size = None
 
-            backend = self.image_backend.by_name(instance, 'disk' + suffix)
+            disk_name = 'disk' + suffix
+            disk_info_mapping = disk_mapping[disk_name]
+            backend = self.image_backend.by_name(
+                instance, disk_name, disk_info_mapping=disk_info_mapping)
             created_disks = not backend.exists()
 
             if instance.task_state == task_states.RESIZE_FINISH:
@@ -5407,7 +5421,9 @@ class LibvirtDriver(driver.ComputeDriver):
         if image_type is None:
             image_type = CONF.libvirt.images_type
         disk_unit = None
-        disk = self.image_backend.by_name(instance, name, image_type)
+        disk_info_mapping = disk_mapping[name]
+        disk = self.image_backend.by_name(
+            instance, name, image_type, disk_info_mapping=disk_info_mapping)
         if (name == 'disk.config' and image_type == 'rbd' and
                 not disk.exists()):
             # This is likely an older config drive that has not been migrated
@@ -5416,18 +5432,21 @@ class LibvirtDriver(driver.ComputeDriver):
             # remove this fall back once we know all config drives are in rbd.
             # NOTE(vladikr): make sure that the flat image exist, otherwise
             # the image will be created after the domain definition.
-            flat_disk = self.image_backend.by_name(instance, name, 'flat')
+            flat_disk = self.image_backend.by_name(
+                instance, name, 'flat', disk_info_mapping=disk_info_mapping)
             if flat_disk.exists():
                 disk = flat_disk
                 LOG.debug('Config drive not found in RBD, falling back to the '
                           'instance directory', instance=instance)
-        disk_info = disk_mapping[name]
-        if 'unit' in disk_mapping and disk_info['bus'] == 'scsi':
+        # The 'unit' key is global to the disk_mapping (rather than for an
+        # individual disk) because it is used solely to track the incrementing
+        # unit number.
+        if 'unit' in disk_mapping and disk_info_mapping['bus'] == 'scsi':
             disk_unit = disk_mapping['unit']
-            disk_mapping['unit'] += 1  # Increments for the next disk added
+            disk_mapping['unit'] += 1  # Increments for the next disk
         conf = disk.libvirt_info(
-            disk_info, self.disk_cachemode, flavor['extra_specs'],
-            disk_unit=disk_unit, boot_order=boot_order)
+            self.disk_cachemode, flavor['extra_specs'], disk_unit=disk_unit,
+            boot_order=boot_order)
         return conf
 
     def _get_guest_fs_config(

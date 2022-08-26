@@ -154,7 +154,9 @@ class LibvirtImageBackendFixture(fixtures.Fixture):
         #   their construction. Tests can use this to assert that disks were
         #   created of the expected type.
 
-        def image_init(instance=None, disk_name=None, path=None):
+        def image_init(
+            instance=None, disk_name=None, path=None, disk_info_mapping=None
+        ):
             # There's nothing special about this path except that it's
             # predictable and unique for (instance, disk).
             if path is None:
@@ -169,6 +171,7 @@ class LibvirtImageBackendFixture(fixtures.Fixture):
             # the real constructor.
             setattr(disk, 'path', path)
             setattr(disk, 'is_block_dev', mock.sentinel.is_block_dev)
+            setattr(disk, 'disk_info_mapping', disk_info_mapping)
 
             # Used by tests. Note that image_init is a closure over image_type.
             setattr(disk, 'image_type', image_type)
@@ -217,16 +220,16 @@ class LibvirtImageBackendFixture(fixtures.Fixture):
             self.imported_files.append((local_filename, remote_filename))
 
     def _fake_libvirt_info(
-        self, mock_disk, disk_info, cache_mode, extra_specs, disk_unit=None,
+        self, mock_disk, cache_mode, extra_specs, disk_unit=None,
         boot_order=None,
     ):
         # For tests in test_virt_drivers which expect libvirt_info to be
         # functional
         info = config.LibvirtConfigGuestDisk()
         info.source_type = 'file'
-        info.source_device = disk_info['type']
-        info.target_bus = disk_info['bus']
-        info.target_dev = disk_info['dev']
+        info.source_device = mock_disk.disk_info_mapping['type']
+        info.target_bus = mock_disk.disk_info_mapping['bus']
+        info.target_dev = mock_disk.disk_info_mapping['dev']
         info.driver_cache = cache_mode
         info.driver_format = 'raw'
         info.source_path = mock_disk.path

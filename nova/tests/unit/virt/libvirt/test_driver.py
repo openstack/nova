@@ -15659,10 +15659,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance = objects.Instance(**instance_ref)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         image_meta = objects.ImageMeta.from_dict({'disk_format': 'raw'})
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance,
-                                            image_meta)
-        disk_info['mapping'].pop('disk.local')
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance, image_meta,
+            block_device_info=block_device_info)
 
         with test.nested(
             mock.patch('oslo_concurrency.processutils.execute'),
@@ -20542,8 +20541,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             drvr._get_disk_config_image_type())
 
         self.assertEqual(2, drvr.image_backend.by_name.call_count)
-        call1 = mock.call(instance, 'disk.config', 'rbd')
-        call2 = mock.call(instance, 'disk.config', 'flat')
+        call1 = mock.call(instance, 'disk.config', 'rbd',
+                disk_info_mapping=disk_mapping['disk.config'])
+        call2 = mock.call(instance, 'disk.config', 'flat',
+                disk_info_mapping=disk_mapping['disk.config'])
         drvr.image_backend.by_name.assert_has_calls([call1, call2])
         self.assertEqual(mock.sentinel.diskconfig, diskconfig)
 
@@ -23160,6 +23161,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             }
 
         instance = self._create_instance(params=inst_params)
+        image_meta = objects.ImageMeta.from_dict({})
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance, image_meta)
         disk_images = {'image_id': instance.image_ref}
         instance_dir = libvirt_utils.get_instance_path(instance)
         disk_path = os.path.join(instance_dir, 'disk')
@@ -23179,7 +23183,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             ]
 
         drvr._create_and_inject_local_root(
-            self.context, instance, False, '', disk_images, None, None)
+            self.context, instance, disk_info['mapping'], False, '',
+            disk_images, None, None)
 
         mock_fetch_calls = [
             mock.call(test.MatchType(nova.virt.libvirt.imagebackend.Qcow2),
@@ -23262,9 +23267,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # config_drive is True by default, configdrive.required_by()
         # returns True
         instance_ref = self._create_instance()
+        image_meta = objects.ImageMeta.from_dict({})
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance_ref, image_meta)
         disk_images = {'image_id': None}
 
-        drvr._create_and_inject_local_root(self.context, instance_ref, False,
+        drvr._create_and_inject_local_root(self.context, instance_ref,
+                disk_info['mapping'], False,
                                     '', disk_images, get_injection_info(),
                                     None)
         self.assertFalse(mock_inject.called)
@@ -23284,6 +23293,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         mock_image.get.return_value = {'locations': [], 'disk_format': 'raw'}
 
         instance = self._create_instance()
+        image_meta = objects.ImageMeta.from_dict({})
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type, instance, image_meta)
         disk_images = {'image_id': 'foo'}
         self.flags(images_type='rbd', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -23294,6 +23306,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
             mock_fetch.reset_mock()
             drvr._create_and_inject_local_root(self.context,
                                                instance,
+                                               disk_info['mapping'],
                                                False,
                                                '',
                                                disk_images,
