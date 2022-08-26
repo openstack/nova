@@ -1277,6 +1277,11 @@ class SchedulerReportClient(object):
         resp = self.post('/reshaper', payload, version=RESHAPER_VERSION,
                          global_request_id=context.global_id)
         if not resp:
+            if resp.status_code == 409:
+                err = resp.json()['errors'][0]
+                if err['code'] == 'placement.concurrent_update':
+                    raise exception.PlacementReshapeConflict(error=resp.text)
+
             raise exception.ReshapeFailed(error=resp.text)
 
         return resp
@@ -1310,7 +1315,7 @@ class SchedulerReportClient(object):
         # failure here to be fatal to the caller.
         try:
             self._reshape(context, inventories, allocations)
-        except exception.ReshapeFailed:
+        except (exception.ReshapeFailed, exception.PlacementReshapeConflict):
             raise
         except Exception as e:
             # Make sure the original stack trace gets logged.
@@ -1429,8 +1434,16 @@ class SchedulerReportClient(object):
         if allocations is not None:
             # NOTE(efried): We do not catch_all here, because ReshapeFailed
             # needs to bubble up right away and be handled specially.
-            self._set_up_and_do_reshape(context, old_tree, new_tree,
-                                        allocations)
+            try:
+                self._set_up_and_do_reshape(
+                    context, old_tree, new_tree, allocations)
+            except exception.PlacementReshapeConflict:
+                # The conflict means we need to invalidate the local caches and
+                # let the retry mechanism in _update_to_placement to re-drive
+                # the reshape top of the fresh data
+                with excutils.save_and_reraise_exception():
+                    self.clear_provider_cache()
+
             # The reshape updated provider generations, so the ones we have in
             # the cache are now stale. The inventory update below will short
             # out, but we would still bounce with a provider generation

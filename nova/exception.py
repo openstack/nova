@@ -2088,6 +2088,16 @@ class ResourceProviderUpdateConflict(PlacementAPIConflict):
                 "provider %(uuid)s (generation %(generation)d): %(error)s")
 
 
+class PlacementReshapeConflict(PlacementAPIConflict):
+    """A 409 caused by generation mismatch from attempting to reshape a
+    provider tree.
+    """
+    msg_fmt = _(
+        "A conflict was encountered attempting to reshape a provider tree: "
+        "$(error)s"
+    )
+
+
 class InvalidResourceClass(Invalid):
     msg_fmt = _("Resource class '%(resource_class)s' invalid.")
 

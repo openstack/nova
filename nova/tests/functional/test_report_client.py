@@ -1363,6 +1363,17 @@ class SchedulerReportClientTests(test.TestCase):
         resp = self.client._reshape(self.context, inventories, allocs)
         self.assertEqual(204, resp.status_code)
 
+        # Trigger generation conflict
+        # We can do this is by simply sending back the same reshape as that
+        # will not work because the previous reshape updated generations
+        self.assertRaises(
+            exception.PlacementReshapeConflict,
+            self.client._reshape,
+            self.context,
+            inventories,
+            allocs,
+        )
+
     def test_update_from_provider_tree_reshape(self):
         """Run update_from_provider_tree with reshaping."""
         exp_ptree = self._set_up_provider_tree()
@@ -1519,3 +1530,44 @@ class SchedulerReportClientTests(test.TestCase):
             self.context, self.compute_name)
         self.assertProviderTree(orig_exp_ptree, ptree)
         self.assertAllocations(orig_exp_allocs, allocs)
+
+    def test_update_from_provider_tree_reshape_conflict_retry(self):
+        exp_ptree = self._set_up_provider_tree()
+
+        ptree = self.client.get_provider_tree_and_ensure_root(
+            self.context, self.compute_uuid)
+        allocs = self.client.get_allocations_for_provider_tree(
+            self.context, self.compute_name)
+        self.assertProviderTree(exp_ptree, ptree)
+        self.assertAllocations({}, allocs)
+
+        exp_allocs = self._set_up_provider_tree_allocs()
+
+        # we prepare inventory and allocation changes to trigger a reshape
+        for rp_uuid in ptree.get_provider_uuids():
+            # Add a new resource class to the inventories
+            ptree.update_inventory(
+                rp_uuid, dict(ptree.data(rp_uuid).inventory,
+                              CUSTOM_FOO={'total': 10}))
+            exp_ptree[rp_uuid]['inventory']['CUSTOM_FOO'] = {'total': 10}
+        for c_uuid, alloc in allocs.items():
+            for rp_uuid, res in alloc['allocations'].items():
+                res['resources']['CUSTOM_FOO'] = 1
+                exp_allocs[c_uuid]['allocations'][rp_uuid][
+                    'resources']['CUSTOM_FOO'] = 1
+
+        # As the inventory update happens is the same request as the allocation
+        # update the allocation update will have a generation conflict.
+        # So we expect that it is signalled with an exception so that the
+        # upper layer can re-drive the reshape process with a fresh tree that
+        # now has the inventories
+        self.assertRaises(
+            exception.PlacementReshapeConflict,
+            self.client.update_from_provider_tree,
+            self.context,
+            ptree,
+            allocations=allocs,
+        )
+        # also we except that the internal caches is cleared so that the
+        # re-drive will have a chance to load fresh data from placement
+        self.assertEqual(0, len(self.client._provider_tree.roots))

@@ -1195,9 +1195,16 @@ class ResourceTracker(object):
 
         return list(traits)
 
-    @retrying.retry(stop_max_attempt_number=4,
-                    retry_on_exception=lambda e: isinstance(
-                        e, exception.ResourceProviderUpdateConflict))
+    @retrying.retry(
+        stop_max_attempt_number=4,
+        retry_on_exception=lambda e: isinstance(
+            e,
+            (
+                exception.ResourceProviderUpdateConflict,
+                exception.PlacementReshapeConflict,
+            ),
+        ),
+    )
     def _update_to_placement(self, context, compute_node, startup):
         """Send resource and inventory changes to placement."""
         # NOTE(jianghuaw): Some resources(e.g. VGPU) are not saved in the
