@@ -46,7 +46,12 @@ class TestTranslator(test.NoDBTestCase):
         """
         pci_tracker = mock.Mock()
         pci_tracker.pci_devs = pci_device.PciDeviceList(
-            objects=[pci_device.PciDevice(address="0000:81:00.0")]
+            objects=[
+                pci_device.PciDevice(
+                    address="0000:81:00.0",
+                    status=fields.PciDeviceStatus.AVAILABLE,
+                )
+            ]
         )
         # So we have a device but there is no spec for it
         pci_tracker.dev_filter.get_devspec = mock.Mock(return_value=None)
@@ -117,10 +122,10 @@ class TestTranslator(test.NoDBTestCase):
             dev_type=fields.PciDeviceType.SRIOV_VF
         )
 
-        pv.add_dev(pf, {"resource_class": "foo"})
+        pv._add_dev(pf, {"resource_class": "foo"})
         ex = self.assertRaises(
             exception.PlacementPciDependentDeviceException,
-            pv.add_dev,
+            pv._add_dev,
             vf,
             {"resource_class": "bar"}
         )
@@ -149,11 +154,11 @@ class TestTranslator(test.NoDBTestCase):
             dev_type=fields.PciDeviceType.SRIOV_VF
         )
 
-        pv.add_dev(vf, {"resource_class": "foo"})
-        pv.add_dev(vf2, {"resource_class": "foo"})
+        pv._add_dev(vf, {"resource_class": "foo"})
+        pv._add_dev(vf2, {"resource_class": "foo"})
         ex = self.assertRaises(
             exception.PlacementPciDependentDeviceException,
-            pv.add_dev,
+            pv._add_dev,
             pf,
             {"resource_class": "bar"}
         )
@@ -175,13 +180,13 @@ class TestTranslator(test.NoDBTestCase):
             for f in range(0, 4)
         ]
 
-        pv.add_dev(vf1, {"resource_class": "a", "traits": "foo,bar,baz"})
+        pv._add_dev(vf1, {"resource_class": "a", "traits": "foo,bar,baz"})
         # order is irrelevant
-        pv.add_dev(vf2, {"resource_class": "a", "traits": "foo,baz,bar"})
+        pv._add_dev(vf2, {"resource_class": "a", "traits": "foo,baz,bar"})
         # but missing trait is rejected
         ex = self.assertRaises(
             exception.PlacementPciMixedTraitsException,
-            pv.add_dev,
+            pv._add_dev,
             vf3,
             {"resource_class": "a", "traits": "foo,bar"},
         )
@@ -195,7 +200,7 @@ class TestTranslator(test.NoDBTestCase):
         # as well as additional trait
         ex = self.assertRaises(
             exception.PlacementPciMixedTraitsException,
-            pv.add_dev,
+            pv._add_dev,
             vf4,
             {"resource_class": "a", "traits": "foo,bar,baz,extra"}
         )
