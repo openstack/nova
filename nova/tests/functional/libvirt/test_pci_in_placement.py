@@ -216,3 +216,71 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
             "[pci]device_spec is not supported",
             str(ex)
         )
+
+    def test_sibling_vfs_with_contradicting_resource_classes_rejected(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PF dev in slot 0 with two type-VF under it
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=2)
+        # the config matches the two VFs separately and tries to configure
+        # them with different resource class
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "address": "0000:81:00.1",
+                    "resource_class": "vf1"
+                },
+                {
+                    "address": "0000:81:00.2",
+                    "resource_class": "vf2"
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+
+        ex = self.assertRaises(
+            exception.PlacementPciMixedResourceClassException,
+            self.start_compute,
+            hostname="compute1",
+            pci_info=pci_info
+        )
+        self.assertIn(
+            "VFs from the same PF cannot be configured with different "
+            "'resource_class' values in [pci]device_spec. We got "
+            "CUSTOM_VF2 for 0000:81:00.2 and CUSTOM_VF1 for 0000:81:00.1.",
+            str(ex)
+        )
+
+    def test_sibling_vfs_with_contradicting_traits_rejected(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PF dev in slot 0 with two type-VF under it
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=0, num_pfs=1, num_vfs=2)
+        # the config matches the two VFs separately and tries to configure
+        # them with different trait list
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "address": "0000:81:00.1",
+                    "traits": "foo",
+                },
+                {
+                    "address": "0000:81:00.2",
+                    "traits": "bar",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+
+        ex = self.assertRaises(
+            exception.PlacementPciMixedTraitsException,
+            self.start_compute,
+            hostname="compute1",
+            pci_info=pci_info
+        )
+        self.assertIn(
+            "VFs from the same PF cannot be configured with different set of "
+            "'traits' in [pci]device_spec. We got CUSTOM_BAR for 0000:81:00.2 "
+            "and CUSTOM_FOO for 0000:81:00.1.",
+            str(ex)
+        )

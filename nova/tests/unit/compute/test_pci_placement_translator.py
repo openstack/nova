@@ -163,3 +163,46 @@ class TestTranslator(test.NoDBTestCase):
             "children VFs can be configured.",
             str(ex),
         )
+
+    def test_mixed_rc_for_sibling_vfs(self):
+        pv = ppt.PlacementView("fake-node")
+        vf1, vf2, vf3, vf4 = [
+            pci_device.PciDevice(
+                address="0000:81:00.%d" % f,
+                parent_addr="0000:71:00.0",
+                dev_type=fields.PciDeviceType.SRIOV_VF)
+            for f in range(0, 4)
+        ]
+
+        pv.add_dev(vf1, {"resource_class": "a", "traits": "foo,bar,baz"})
+        # order is irrelevant
+        pv.add_dev(vf2, {"resource_class": "a", "traits": "foo,baz,bar"})
+        # but missing trait is rejected
+        ex = self.assertRaises(
+            exception.PlacementPciMixedTraitsException,
+            pv.add_dev,
+            vf3,
+            {"resource_class": "a", "traits": "foo,bar"},
+        )
+        self.assertEqual(
+            "VFs from the same PF cannot be configured with different set of "
+            "'traits' in [pci]device_spec. We got CUSTOM_BAR,CUSTOM_FOO for "
+            "0000:81:00.2 and CUSTOM_BAR,CUSTOM_BAZ,CUSTOM_FOO for "
+            "0000:81:00.0,0000:81:00.1.",
+            str(ex),
+        )
+        # as well as additional trait
+        ex = self.assertRaises(
+            exception.PlacementPciMixedTraitsException,
+            pv.add_dev,
+            vf4,
+            {"resource_class": "a", "traits": "foo,bar,baz,extra"}
+        )
+        self.assertEqual(
+            "VFs from the same PF cannot be configured with different set of "
+            "'traits' in [pci]device_spec. We got "
+            "CUSTOM_BAR,CUSTOM_BAZ,CUSTOM_EXTRA,CUSTOM_FOO for 0000:81:00.3 "
+            "and CUSTOM_BAR,CUSTOM_BAZ,CUSTOM_FOO for "
+            "0000:81:00.0,0000:81:00.1.",
+            str(ex),
+        )
