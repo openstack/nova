@@ -51,6 +51,12 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
         # These tests should not depend on the host's sysfs
         self.useFixture(
             fixtures.MockPatch('nova.pci.utils.is_physical_function'))
+        self.useFixture(
+            fixtures.MockPatch(
+                'nova.pci.utils.get_function_by_ifname',
+                return_value=(None, False)
+            )
+        )
 
     @staticmethod
     def _to_device_spec_conf(spec_list):
@@ -308,4 +314,27 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
             "compute1",
             inventories={},
             traits={},
+        )
+
+    def test_devname_based_dev_spec_rejected(self):
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "devname": "eth0",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+
+        ex = self.assertRaises(
+            exception.PlacementPciException,
+            self.start_compute,
+            hostname="compute1",
+        )
+        self.assertIn(
+            " Invalid [pci]device_spec configuration. PCI Placement reporting "
+            "does not support 'devname' based device specification but we got "
+            "{'devname': 'eth0'}. Please use PCI address in the configuration "
+            "instead.",
+            str(ex)
         )
