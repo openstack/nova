@@ -1,0 +1,36 @@
+---
+features:
+  - |
+    The Nova policies have been modified to drop the system scope. Every
+    API policy is scoped to project. This means that system scoped users
+    will get 403 permission denied error.
+
+    Also, the project reader role is ready to use. Users with reader role
+    can only perform the read-only operations within their project. This
+    role can be used for the audit purposes.
+
+    Currently, nova supports the following roles:
+
+    * ``admin`` (Legacy admin)
+    * ``project member``
+    * ``project reader``
+
+    For the details on what changed from the existing policy, please refer
+    to the `RBAC new guidelines`_. We have implemented only phase-1 of the
+    `RBAC new guidelines`_.
+    Currently, scope checks and new defaults are disabled by default. You can
+    enable them by switching the below config option in ``nova.conf`` file::
+
+      [oslo_policy]
+      enforce_new_defaults=True
+      enforce_scope=True
+
+    We recommend to enable the both scope as well new defaults together
+    otherwise you may experience some late failures with unclear error
+    messages.
+
+    Please refer `Policy New Defaults`_ for detail about policy new defaults
+    and migration plan.
+
+    .. _`RBAC new guidelines`: https://governance.openstack.org/tc/goals/selected/consistent-and-secure-rbac.html#phase-1
+    .. _`Policy New Defaults`: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html

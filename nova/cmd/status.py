@@ -41,7 +41,6 @@ from nova.objects import cell_mapping as cell_mapping_obj
 # to be registered under nova.objects when called via _check_machine_type_set
 from nova.objects import image_meta as image_meta_obj  # noqa: F401
 from nova.objects import instance as instance_obj  # noqa: F401
-from nova import policy
 from nova import utils
 from nova import version
 from nova.virt.libvirt import machine_type_utils
@@ -249,70 +248,6 @@ class UpgradeCommands(upgradecheck.UpgradeCommands):
                 str(ex))
         return upgradecheck.Result(upgradecheck.Code.SUCCESS)
 
-    def _check_policy(self):
-        """Checks to see if policy file is overwritten with the new
-        defaults.
-        """
-        msg = _("Your policy file contains rules which examine token scope, "
-                "which may be due to generation with the new defaults. "
-                "If that is done intentionally to migrate to the new rule "
-                "format, then you are required to enable the flag "
-                "'oslo_policy.enforce_scope=True' and educate end users on "
-                "how to request scoped tokens from Keystone. Another easy "
-                "and recommended way for you to achieve the same is via two "
-                "flags, 'oslo_policy.enforce_scope=True' and "
-                "'oslo_policy.enforce_new_defaults=True' and avoid "
-                "overwriting the file. Please refer to this document to "
-                "know the complete migration steps: "
-                "https://docs.openstack.org/nova/latest/configuration"
-                "/policy-concepts.html. If you did not intend to migrate "
-                "to new defaults in this upgrade, then with your current "
-                "policy file the scope checking rule will fail. A possible "
-                "reason for such a policy file is that you generated it with "
-                "'oslopolicy-sample-generator' in json format. "
-                "Three ways to fix this until you are ready to migrate to "
-                "scoped policies: 1. Generate the policy file with "
-                "'oslopolicy-sample-generator' in yaml format, keep "
-                "the generated content commented out, and update "
-                "the generated policy.yaml location in "
-                "``oslo_policy.policy_file``. "
-                "2. Use a pre-existing sample config file from the Train "
-                "release. 3. Use an empty or non-existent file to take all "
-                "the defaults.")
-        rule = "context_is_admin"
-        rule_new_default = "role:admin and system_scope:all"
-        status = upgradecheck.Result(upgradecheck.Code.SUCCESS)
-        # NOTE(gmann): Initialise the policy if it not initialized.
-        # We need policy enforcer with all the rules loaded to check
-        # their value with defaults.
-        try:
-            if policy._ENFORCER is None:
-                policy.init(suppress_deprecation_warnings=True)
-
-            # For safer side, recheck that the enforcer is available before
-            # upgrade checks. If something is wrong on oslo side and enforcer
-            # is still not available the return warning to avoid any false
-            # result.
-            if policy._ENFORCER is not None:
-                current_rule = str(policy._ENFORCER.rules[rule]).strip("()")
-                if (current_rule == rule_new_default and
-                    not CONF.oslo_policy.enforce_scope):
-                    status = upgradecheck.Result(upgradecheck.Code.WARNING,
-                                                 msg)
-            else:
-                status = upgradecheck.Result(
-                    upgradecheck.Code.WARNING,
-                    _('Policy is not initialized to check the policy rules'))
-        except Exception as ex:
-            status = upgradecheck.Result(
-                upgradecheck.Code.WARNING,
-                _('Unable to perform policy checks due to error: %s') %
-                str(ex))
-        # reset the policy state so that it can be initialized from fresh if
-        # operator changes policy file after running this upgrade checks.
-        policy.reset()
-        return status
-
     def _check_old_computes(self):
         # warn if there are computes in the system older than the previous
         # major release
@@ -350,8 +285,6 @@ https://docs.openstack.org/latest/nova/admin/hw_machine_type.html"""))
         (_('Placement API'), _check_placement),
         # Added in Train
         (_('Cinder API'), _check_cinder),
-        # Added in Ussuri
-        (_('Policy Scope-based Defaults'), _check_policy),
         # Added in Victoria
         (
             _('Policy File JSON to YAML Migration'),
