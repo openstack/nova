@@ -745,7 +745,26 @@ Possible values:
 Related options:
 
 * ``[filter_scheduler] aggregate_image_properties_isolation_namespace``
-""")]
+"""),
+    cfg.BoolOpt(
+        "pci_in_placement",
+        default=False,
+        help="""
+Enable scheduling and claiming PCI devices in Placement.
+
+This can be enabled after ``[pci]report_in_placement`` is enabled on all
+compute hosts.
+
+When enabled the scheduler queries Placement about the PCI device
+availability to select destination for a server with PCI request. The scheduler
+also allocates the selected PCI devices in Placement. Note that this logic
+does not replace the PCIPassthroughFilter but extends it.
+
+* ``[pci] report_in_placement``
+* ``[pci] alias``
+* ``[pci] device_spec``
+"""),
+]
 
 metrics_group = cfg.OptGroup(
     name="metrics",

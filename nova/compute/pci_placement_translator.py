@@ -614,7 +614,7 @@ def update_provider_tree_for_pci(
     if updated:
         LOG.debug(
             "Placement PCI view needs allocation healing. This should only "
-            "happen if [scheduler]pci_in_placement is still disabled. "
+            "happen if [filter_scheduler]pci_in_placement is still disabled. "
             "Original allocations: %s New allocations: %s",
             old_alloc,
             allocations,

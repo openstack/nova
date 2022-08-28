@@ -14,7 +14,6 @@
 import collections
 from unittest import mock
 
-import fixtures
 from oslo_serialization import jsonutils
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import uuidutils
@@ -431,13 +430,8 @@ class _TestRequestSpecObject(object):
         self.assertListEqual([rg], spec.requested_resources)
         self.assertEqual(req_lvl_params, spec.request_level_params)
 
-    # TODO(gibi): replace this with setting the config
-    # [scheduler]pci_in_placement=True once that flag is available
-    @mock.patch(
-        'nova.objects.request_spec.RequestSpec._pci_in_placement_enabled',
-        new=mock.Mock(return_value=True),
-    )
     def test_from_components_flavor_based_pci_requests(self):
+        self.flags(group='filter_scheduler', pci_in_placement=True)
         ctxt = context.RequestContext(
             fakes.FAKE_USER_ID, fakes.FAKE_PROJECT_ID
         )
@@ -1119,18 +1113,10 @@ class TestRemoteRequestSpecObject(test_objects._RemoteTest,
 class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
     def setUp(self):
         super().setUp()
-        # TODO(gibi): replace this with setting the config
-        # [scheduler]pci_in_placement=True once that flag is available
-        self.mock_pci_in_placement_enabled = self.useFixture(
-            fixtures.MockPatch(
-                "nova.objects.request_spec.RequestSpec."
-                "_pci_in_placement_enabled",
-                return_value=True,
-            )
-        ).mock
+        self.flags(group='filter_scheduler', pci_in_placement=True)
 
     def test_pci_reqs_ignored_if_disabled(self):
-        self.mock_pci_in_placement_enabled.return_value = False
+        self.flags(group='filter_scheduler', pci_in_placement=False)
 
         spec = request_spec.RequestSpec(
             requested_resources=[],

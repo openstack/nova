@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Since 26.0.0 (Zed) Nova supports tracking PCI devices in Placement. Now
+    Nova also supports scheduling flavor based PCI device requests via
+    Placement. This support is disable by default. Please read
+    `documentation <https://docs.openstack.org/nova/latest/admin/pci-passthrough.html#pci-tracking-in-placement>`_
+    for more details on what is supported how this feature can be enabled.

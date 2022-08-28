@@ -1952,15 +1952,7 @@ class PCIServersTest(_PCIServersTestBase):
     def setUp(self):
         super().setUp()
         self.flags(group="pci", report_in_placement=True)
-        # TODO(gibi): replace this with setting the [scheduler]pci_prefilter
-        # confing to True once that config is added
-        self.mock_pci_in_placement_enabled = self.useFixture(
-            fixtures.MockPatch(
-                'nova.objects.request_spec.RequestSpec.'
-                '_pci_in_placement_enabled',
-                return_value=True
-            )
-        ).mock
+        self.flags(group='filter_scheduler', pci_in_placement=True)
 
     def test_create_server_with_pci_dev_and_numa(self):
         """Verifies that an instance can be booted with cpu pinning and with an
@@ -3026,15 +3018,7 @@ class PCIServersWithPreferredNUMATest(_PCIServersTestBase):
     def setUp(self):
         super().setUp()
         self.flags(group="pci", report_in_placement=True)
-        # TODO(gibi): replace this with setting the [scheduler]pci_in_placement
-        # confing to True once that config is added
-        self.mock_pci_in_placement_enabled = self.useFixture(
-            fixtures.MockPatch(
-                'nova.objects.request_spec.RequestSpec.'
-                '_pci_in_placement_enabled',
-                return_value=True
-            )
-        ).mock
+        self.flags(group='filter_scheduler', pci_in_placement=True)
 
     def test_create_server_with_pci_dev_and_numa(self):
         """Validate behavior of 'preferred' PCI NUMA policy.
