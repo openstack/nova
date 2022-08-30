@@ -51,6 +51,20 @@ capabilities.
    Nova will ignore PCI devices reported by the hypervisor if the address is
    outside of these ranges.
 
+.. versionchanged:: 26.0.0 (Zed):
+  PCI passthrough device inventories now can be tracked in Placement.
+  For more information, refer to :ref:`pci-tracking-in-placement`.
+
+.. versionchanged:: 26.0.0 (Zed):
+  The nova-compute service will refuse to start if both the parent PF and its
+  children VFs are configured in :oslo.config:option:`pci.device_spec`.
+  For more information, refer to :ref:`pci-tracking-in-placement`.
+
+.. versionchanged:: 26.0.0 (Zed):
+  The nova-compute service will refuse to start with
+  :oslo.config:option:`pci.device_spec` configuration that uses the
+  ``devname`` field.
+
 Enabling PCI passthrough
 ------------------------
 
@@ -348,6 +362,7 @@ You can also configure this for PCI passthrough devices by specifying the
 policy in the alias configuration via :oslo.config:option:`pci.alias`. For more
 information, refer to :oslo.config:option:`the documentation <pci.alias>`.
 
+.. _pci-tracking-in-placement:
 
 PCI tracking in Placement
 -------------------------
@@ -402,13 +417,13 @@ be added to the resource provider representing the matching PCI devices.
    (Zed) the nova-compute service will refuse to start with such configuration.
    It is suggested to use the PCI address of the device instead.
 
-The nova-compute service makes sure that already existing instances with PCI
+The nova-compute service makes sure that existing instances with PCI
 allocations in the nova DB will have a corresponding PCI allocation in
 placement. This allocation healing also acts on any new instances regardless of
 the status of the scheduling part of this feature to make sure that the nova
 DB and placement are in sync. There is one limitation of the healing logic.
 It assumes that there is no in-progress migration when the nova-compute service
-is upgraded. If there is an in-progress migration, then the PCI allocation on
+is upgraded. If there is an in-progress migration then the PCI allocation on
 the source host of the migration will not be healed. The placement view will be
 consistent after such migration is completed or reverted.
 
@@ -417,7 +432,7 @@ Reconfiguring the PCI devices on the hypervisor or changing the
 nova-compute service is supported in the following cases:
 
 * new devices are added
-* devices without allocation is removed
+* devices without allocation are removed
 
 Removing a device that has allocations is not supported. If a device having any
 allocation is removed then the nova-compute service will keep the device and
