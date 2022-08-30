@@ -1391,8 +1391,8 @@ class SchedulerReportClient(object):
                 # the conflict exception. This signals the resource tracker to
                 # redrive the update right away rather than waiting until the
                 # next periodic.
-                with excutils.save_and_reraise_exception():
-                    self._clear_provider_cache_for_tree(rp_uuid)
+                self._clear_provider_cache_for_tree(rp_uuid)
+                raise
             except helper_exceptions:
                 # Invalidate the relevant part of the cache. It gets rebuilt on
                 # the next pass.

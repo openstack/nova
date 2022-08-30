@@ -1973,7 +1973,7 @@ class TestUpdateComputeNode(BaseTestCase):
         """Assert that if the pci placement reporting code tries to remove
         inventory with allocation from placement due to invalid hypervisor
         or [pci]device_spec reconfiguration then the InventoryInUse error from
-        placement is propagated and makes the compute startup to fail.
+        placement is propagated and makes the compute startup fail.
         """
         compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self._setup_rt()
