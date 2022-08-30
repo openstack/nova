@@ -100,8 +100,6 @@ class PciDeviceStats(object):
             pool_keys = pool.copy()
             del pool_keys['count']
             del pool_keys['devices']
-            # FIXME(gibi): do we need this?
-            pool_keys.pop('rp_uuid', None)
             if (len(pool_keys.keys()) == len(dev_pool.keys()) and
                 self._equal_properties(dev_pool, pool_keys, list(dev_pool))):
                 return pool
