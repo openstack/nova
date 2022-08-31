@@ -119,10 +119,6 @@ Verify operation of the Compute service.
       | Result: Success                                                    |
       | Details: None                                                      |
       +--------------------------------------------------------------------+
-      | Check: Policy Scope-based Defaults                                 |
-      | Result: Success                                                    |
-      | Details: None                                                      |
-      +--------------------------------------------------------------------+
       | Check: Policy File JSON to YAML Migration                          |
       | Result: Success                                                    |
       | Details: None                                                      |

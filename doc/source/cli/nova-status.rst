@@ -137,7 +137,7 @@ Upgrade
 
   * Checks for the Placement API are modified to require version 1.35.
   * Checks for the policy files are not automatically overwritten with
-    new defaults.
+    new defaults. This check has been dropped in 26.0.0 (Zed) release.
 
   **22.0.0 (Victoria)**
 

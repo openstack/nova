@@ -65,36 +65,13 @@ represent the layer of authorization required to access an API.
 
 .. note::
 
-     The ``scope_type`` of each policy is hardcoded and is not
-     overridable via the policy file.
+     The ``scope_type`` of each policy is hardcoded  to ``project`` scoped
+     and is not overridable via the policy file.
 
 Nova policies have implemented the scope concept by defining the ``scope_type``
-in policies. To know each policy's ``scope_type``, please refer to the
-:doc:`Policy Reference </configuration/policy>` and look for ``Scope Types`` or
-``Intended scope(s)`` in :doc:`Policy Sample File </configuration/sample-policy>`
-as shown in below examples.
-
-.. rubric:: ``system`` scope
-
-Policies with a ``scope_type`` of ``system`` means a user with a
-``system-scoped`` token has permission to access the resource. This can be
-seen as a global role. All the system-level operation's policies
-have defaulted to ``scope_type`` of ``['system']``.
-
-For example, consider the ``GET /os-hypervisors`` API.
-
-.. code::
-
-    # List all hypervisors.
-    # GET  /os-hypervisors
-    # Intended scope(s): system
-    #"os_compute_api:os-hypervisors:list": "rule:system_reader_api"
-
-.. rubric:: ``project`` scope
-
-Policies with a ``scope_type`` of ``project`` means a user with a
-``project-scoped`` token has permission to access the resource. Project-level
-only operation's policies are defaulted to ``scope_type`` of ``['project']``.
+for all the policies to ``project`` scoped. It means if user tries to access
+nova APIs with ``system`` scoped token they will get 403 permission denied
+error.
 
 For example, consider the ``POST /os-server-groups`` API.
 
@@ -104,28 +81,6 @@ For example, consider the ``POST /os-server-groups`` API.
     # POST  /os-server-groups
     # Intended scope(s): project
     #"os_compute_api:os-server-groups:create": "rule:project_member_api"
-
-.. rubric:: ``system and project`` scope
-
-Policies with a ``scope_type`` of ``system and project`` means a user with a
-``system-scoped`` or ``project-scoped`` token has permission to access the
-resource. All the system and project level operation's policies have defaulted
-to ``scope_type`` of ``['system', 'project']``.
-
-For example, consider the ``GET /flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}``
-API.
-
-.. code::
-
-    # Show an extra spec for a flavor
-    # GET /flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
-    # Intended scope(s): system, project
-    #"os_compute_api:os-flavor-extra-specs:show": "rule:project_reader_or_admin"
-
-These scope types provide a way to differentiate between system-level and
-project-level access roles. You can control the information with scope of the
-users. This means you can control that none of the project level role can get
-the hypervisor information.
 
 Policy scope is disabled by default to allow operators to migrate from
 the old policy enforcement system in a graceful way. This can be
@@ -149,52 +104,129 @@ defaults for each policy.
 
 .. rubric:: ``reader``
 
-This provides read-only access to the resources within the ``system`` or
-``project``. Nova policies are defaulted to below rules:
+This provides read-only access to the resources. Nova policies are defaulted
+to below rules:
 
-.. code::
+.. code-block:: python
 
-   system_reader_api
-      Default
-         role:reader and system_scope:all
+    policy.RuleDefault(
+        name="project_reader",
+        check_str="role:reader and project_id:%(project_id)s",
+        description="Default rule for Project level read only APIs."
+    )
 
-   system_or_project_reader
-      Default
-         (rule:system_reader_api) or (role:reader and project_id:%(project_id)s)
+Using it in policy rule (with admin + reader access): (because we want to keep legacy admin behavior the same we need to give access of reader APIs to admin role too.)
+
+.. code-block:: python
+
+    policy.DocumentedRuleDefault(
+        name='os_compute_api:servers:show',
+        check_str='role:admin or (' + 'role:reader and project_id:%(project_id)s)',
+        description="Show a server",
+        operations=[
+            {
+                'method': 'GET',
+                'path': '/servers/{server_id}'
+            }
+        ],
+        scope_types=['project'],
+    )
+
+OR
+
+.. code-block:: python
+
+    policy.RuleDefault(
+        name="admin_api",
+        check_str="role:admin",
+        description="Default rule for administrative APIs."
+    )
+
+    policy.DocumentedRuleDefault(
+        name='os_compute_api:servers:show',
+        check_str='rule: admin or rule:project_reader',
+        description='Show a server',
+        operations=[
+            {
+                'method': 'GET',
+                'path': '/servers/{server_id}'
+            }
+        ],
+        scope_types=['project'],
+    )
 
 .. rubric:: ``member``
 
-This role is to perform the project level write operation with combination
-to the system admin. Nova policies are defaulted to below rules:
+project-member is denoted by someone with the member role on a project. It is
+intended to be used by end users who consume resources within a project
+which requires higher permission than reader role but less than admin role.
+It inherits all the permissions of a project-reader.
 
-.. code::
+project-member persona in the policy check string:
 
-   project_member_api
-      Default
-         role:member and project_id:%(project_id)s
+.. code-block:: python
 
-   system_admin_or_owner
-      Default
-         (role:admin and system_scope:all) or (role:member and project_id:%(project_id)s)
+    policy.RuleDefault(
+        name="project_member",
+        check_str="role:member and project_id:%(project_id)s",
+        description="Default rule for Project level non admin APIs."
+    )
+
+Using it in policy rule (with admin + member access): (because we want to keep legacy admin behavior, admin role gets access to the project level member APIs.)
+
+.. code-block:: python
+
+    policy.DocumentedRuleDefault(
+        name='os_compute_api:servers:create',
+        check_str='role:admin or (' + 'role:member and project_id:%(project_id)s)',
+        description='Create a server',
+        operations=[
+            {
+                'method': 'POST',
+                'path': '/servers'
+            }
+        ],
+        scope_types=['project'],
+    )
+
+OR
+
+.. code-block:: python
+
+    policy.RuleDefault(
+        name="admin_api",
+        check_str="role:admin",
+        description="Default rule for administrative APIs."
+    )
+
+    policy.DocumentedRuleDefault(
+        name='os_compute_api:servers:create',
+        check_str='rule_admin or rule:project_member',
+        description='Create a server',
+        operations=[
+            {
+                'method': 'POST',
+                'path': '/servers'
+            }
+        ],
+        scope_types=['project'],
+    )
+
+'project_id:%(project_id)s' in the check_str is important to restrict the
+access within the requested project.
 
 .. rubric:: ``admin``
 
-This role is to perform the admin level write operation at system as well
-as at project-level operations. Nova policies are defaulted to below rules:
+This role is to perform the admin level write operations. Nova policies are
+defaulted to below rules:
 
-.. code::
+.. code-block:: python
 
-   system_admin_api
-      Default
-         role:admin and system_scope:all
-
-   project_admin_api
-      Default
-         role:admin and project_id:%(project_id)s
-
-   system_admin_or_owner
-      Default
-         (role:admin and system_scope:all) or (role:member and project_id:%(project_id)s)
+   policy.DocumentedRuleDefault(
+       name='os_compute_api:os-hypervisors:list',
+       check_str='role:admin',
+       scope_types=['project']
+   )
 
 With these new defaults, you can solve the problem of:
 
@@ -203,8 +235,8 @@ With these new defaults, you can solve the problem of:
    your deployment for security purposes.
 
 #. Customize the policy in better way. For example, you will be able
-   to provide access to project level user to perform live migration for their
-   server or any other project with their token.
+   to provide access to project level user to perform operations within
+   their project only.
 
 Nova supported scope & Roles
 -----------------------------
@@ -212,40 +244,21 @@ Nova supported scope & Roles
 Nova supports the below combination of scopes and roles where roles can be
 overridden in the policy.yaml file but scope is not override-able.
 
-#. ADMIN: ``admin`` role on ``system`` scope. This is System Administrator to
-   perform the system level resource operations. Example: enable/disable compute
-   services.
-
-#. PROJECT_ADMIN: ``admin`` role on ``project`` scope. This is used to perform
-   admin level operation within project. For example: Live migrate server.
-
-   .. note::
-
-      PROJECT_ADMIN has the limitation for the below policies
-
-      * ``os_compute_api:servers:create:forced_host``
-      * ``os_compute_api:servers:compute:servers:create:requested_destination``
-
-      To create a server on specific host via force host or requested
-      destination, you need to pass the hostname in ``POST /servers``
-      API request but there is no way for PROJECT_ADMIN to get the hostname
-      via API. This limitation will be addressed in a future release.
-
+#. ADMIN: ``admin`` role on ``project`` scope. This is an administrator to
+   perform the admin level operations. Example: enable/disable compute
+   service, Live migrate server etc.
 
 #. PROJECT_MEMBER: ``member`` role on ``project`` scope. This is used to perform
    resource owner level operation within project. For example: Pause a server.
 
-
 #. PROJECT_READER: ``reader`` role on ``project`` scope. This is used to perform
    read-only operation within project. For example: Get server.
 
+#. PROJECT_MEMBER_OR_ADMIN: ``admin`` or ``member`` role on ``project`` scope.    Such policy rules are default to most of the owner level APIs and aling
+   with `member` role legacy admin can continue to access those APIs.
 
-#. PROJECT_READER_OR_ADMIN: ``admin`` role on ``system`` scope
-   or ``reader`` role on ``project`` scope. Such policy rules are scoped
-   as both ``system`` as well as ``project``. Example: to allow system
-   admin and project reader to list flavor extra specs.
-
-   .. note:: As of now, only ``system`` and ``project`` scopes are supported in Nova.
+#. PROJECT_READER_OR_ADMIN: ``admin`` or ``reader`` role on ``project`` scope.    Such policy rules are default to most of the read only APIs so that legacy
+   admin can continue to access those APIs.
 
 Backward Compatibility
 ----------------------
@@ -253,10 +266,10 @@ Backward Compatibility
 Backward compatibility with versions prior to 21.0.0 (Ussuri) is maintained by
 supporting the old defaults and disabling the ``scope_type`` feature by default.
 This means the old defaults and deployments that use them will keep working
-as-is. However, we encourage every deployment to switch to new policy.
-Scope checks are disabled by default and will be enabled by default starting
-Nova 26.0.0 (OpenStack Zed release) and the old defaults will be removed
-starting in the Nova 27.0.0 release.
+as-is. However, we encourage every deployment to switch to the new policy. The
+new defaults will be enabled by default in OpenStack 2023.1 (Nova 27.0.0)
+release and old defaults will be removed starting in the OpenStack 2023.2
+(Nova 28.0.0) release.
 
 To implement the new default reader roles, some policies needed to become
 granular. They have been renamed, with the old names still supported for
@@ -275,7 +288,6 @@ Here is step wise guide for migration:
 
    You need to create the new token with scope knowledge via below CLI:
 
-   - :keystone-doc:`Create System Scoped Token </admin/tokens-overview.html#operation_create_system_token>`.
    - :keystone-doc:`Create Project Scoped Token </admin/tokens-overview.html#operation_create_project_scoped_token>`.
 
 #. Create new default roles in keystone if not done:
@@ -295,10 +307,6 @@ Here is step wise guide for migration:
    (assuming the rest of the policy passes). The default value of this flag
    is False.
 
-   .. note:: Before you enable this flag, you need to audit your users and make
-             sure everyone who needs system-level access has a system role
-             assignment in keystone.
-
 #. Enable new defaults
 
    The :oslo.config:option:`oslo_policy.enforce_new_defaults` flag switches
@@ -311,7 +319,6 @@ Here is step wise guide for migration:
    .. note:: Before you enable this flag, you need to educate users about the
              different roles they need to use to continue using Nova APIs.
 
-
 #. Check for deprecated policies
 
    A few policies were made more granular to implement the reader roles. New
@@ -319,28 +326,31 @@ Here is step wise guide for migration:
    are overwritten in policy file, then warning will be logged. Please migrate
    those policies to new policy names.
 
+NOTE::
+
+  We recommend to enable the both scope as well new defaults together
+  otherwise you may experience some late failures with unclear error
+  messages. For example, if you enable new defaults and disable scope
+  check then it will allow system users to access the APIs but fail
+  later due to the project check which can be difficult to debug.
+
 Below table show how legacy rules are mapped to new rules:
 
-+--------------------+----------------------------------+-----------------+-------------------+
-| Legacy Rules       |    New Rules                     |                 |                   |
-+====================+==================================+=================+===================+
-|                    |                                  | *Roles*         | *Scope*           |
-|                    +----------------------------------+-----------------+-------------------+
-|                    | ADMIN                            | admin           | system            |
-| Project Admin      +----------------------------------+-----------------+                   |
-| Role               | PROJECT_ADMIN                    | admin           | project           |
-|                    |                                  |                 |                   |
-+--------------------+----------------------------------+-----------------+-------------------+
-|                    | PROJECT_ADMIN                    | admin           | project           |
-|                    +----------------------------------+-----------------+                   |
-|                    | PROJECT_MEMBER                   | member          |                   |
-|                    +----------------------------------+-----------------+                   |
-| Project admin or   | PROJECT_READER                   | reader          |                   |
-| owner role         +----------------------------------+-----------------+-------------------+
-|                    | PROJECT_READER_OR_ADMIN          | admin on system | system            |
-|                    |                                  | or reader on    | OR                |
-|                    |                                  | project         | project           |
-+--------------------+----------------------------------+-----------------+-------------------+
++--------------------+---------------------------+----------------+-----------+
+| Legacy Rule        |    New Rules              |Operation       |scope_type |
++====================+===========================+================+===========+
+| RULE_ADMIN_API     |-> ADMIN                   |Global resource | [project] |
+|                    |                           |Write & Read    |           |
++--------------------+---------------------------+----------------+-----------+
+|                    |-> ADMIN                   |Project admin   | [project] |
+|                    |                           |level operation |           |
+|                    +---------------------------+----------------+-----------+
+| RULE_ADMIN_OR_OWNER|-> PROJECT_MEMBER_OR_ADMIN |Project resource| [project] |
+|                    |                           |Write           |           |
+|                    +---------------------------+----------------+-----------+
+|                    |-> PROJECT_READER_OR_ADMIN |Project resource| [project] |
+|                    |                           |Read            |           |
++--------------------+---------------------------+----------------+-----------+
 
-We expect all deployments to migrate to new policy by 27.0.0 release so that
-we can remove the support of old policies.
+We expect all deployments to migrate to the new policy by OpenStack 2023.1
+(Nova 27.0.0) release so that we can remove the support of old policies.
