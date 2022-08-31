@@ -10,3 +10,7 @@
 # https://bugs.launchpad.net/nova/+bug/1907511 for details
 test_migrate_with_qos_min_bw_allocation
 test_resize_with_qos_min_bw_allocation
+
+# Also exclude unshelve to specific host test cases as unshelve cannot move VMs across cells
+# See https://bugs.launchpad.net/nova/+bug/1988316
+tempest.api.compute.admin.test_servers_on_multinodes.UnshelveToHostMultiNodesTest
