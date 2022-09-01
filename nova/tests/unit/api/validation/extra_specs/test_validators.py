@@ -74,6 +74,10 @@ class TestValidators(test.NoDBTestCase):
             ('hw:pci_numa_affinity_policy', 'preferred'),
             ('hw:pci_numa_affinity_policy', 'socket'),
             ('hw:cpu_policy', 'mixed'),
+            ('hw:viommu_model', 'auto'),
+            ('hw:viommu_model', 'intel'),
+            ('hw:viommu_model', 'smmuv3'),
+            ('hw:viommu_model', 'virtio'),
         )
         for key, value in valid_specs:
             validators.validate(key, value)
@@ -92,6 +96,7 @@ class TestValidators(test.NoDBTestCase):
             ('hw:pci_numa_affinity_policy', 'requird'),
             ('hw:pci_numa_affinity_policy', 'prefrred'),
             ('hw:pci_numa_affinity_policy', 'socet'),
+            ('hw:viommu_model', 'autt'),
         )
         for key, value in invalid_specs:
             with testtools.ExpectedException(exception.ValidationError):

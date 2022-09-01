@@ -16,6 +16,7 @@ from lxml import etree
 from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import units
 
+from nova import exception
 from nova.objects import fields as obj_fields
 from nova import test
 from nova.tests.fixtures import libvirt_data as fake_libvirt_data
@@ -69,6 +70,23 @@ class LibvirtConfigTest(LibvirtConfigBaseTest):
         inxml = "<demo><foo/></demo>"
         obj = config.LibvirtConfigObject(root_name="demo")
         obj.parse_str(inxml)
+
+    def test_parse_on_off_str(self):
+        obj = config.LibvirtConfigObject(root_name="demo")
+        self.assertTrue(obj.parse_on_off_str('on'))
+        self.assertFalse(obj.parse_on_off_str('off'))
+        self.assertFalse(obj.parse_on_off_str(None))
+        self.assertRaises(exception.InvalidInput, obj.parse_on_off_str, 'foo')
+
+    def test_get_yes_no_str(self):
+        obj = config.LibvirtConfigObject(root_name="demo")
+        self.assertEqual('yes', obj.get_yes_no_str(True))
+        self.assertEqual('no', obj.get_yes_no_str(False))
+
+    def test_get_on_off_str(self):
+        obj = config.LibvirtConfigObject(root_name="demo")
+        self.assertEqual('on', obj.get_on_off_str(True))
+        self.assertEqual('off', obj.get_on_off_str(False))
 
 
 class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
@@ -2365,6 +2383,13 @@ class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
             xml = obj.to_xml()
             self.assertXmlEqual(xml, "<pmu state='off'/>")
 
+    def test_feature_ioapic(self):
+        obj = config.LibvirtConfigGuestFeatureIOAPIC()
+        obj.driver = "libvirt"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, "<ioapic driver='libvirt'/>")
+
 
 class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
 
@@ -3991,6 +4016,28 @@ class LibvirtConfigGuestVPMEMTest(LibvirtConfigBaseTest):
                 </label>
             </target>
           </memory>""")
+
+
+class LibvirtConfigGuestIOMMUTest(LibvirtConfigBaseTest):
+
+    def test_config_iommu(self):
+        obj = config.LibvirtConfigGuestIOMMU()
+        obj.model = "intel"
+        obj.interrupt_remapping = True
+        obj.caching_mode = True
+        obj.aw_bits = 48
+        obj.eim = True
+        obj.iotlb = True
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(
+            xml,
+            """
+<iommu model='intel'>
+  <driver intremap='on' caching_mode='on' aw_bits='48' eim='on' iotlb='on'/>
+</iommu>
+            """,
+        )
 
 
 class LibvirtConfigDomainCapsVideoModelsTests(LibvirtConfigBaseTest):

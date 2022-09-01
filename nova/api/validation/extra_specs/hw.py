@@ -511,6 +511,22 @@ feature_flag_validators = [
             ],
         },
     ),
+    base.ExtraSpecValidator(
+        name='hw:viommu_model',
+        description=(
+            'This can be used to set model for virtual IOMMU device.'
+        ),
+        value={
+            'type': str,
+            'enum': [
+                'intel',
+                'smmuv3',
+                'virtio',
+                'auto'
+            ],
+            'description': 'model for vIOMMU',
+        },
+    ),
 ]
 
 ephemeral_encryption_validators = [

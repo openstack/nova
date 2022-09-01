@@ -24,6 +24,7 @@ helpers for populating up config object instances.
 """
 
 import time
+import typing as ty
 
 from collections import OrderedDict
 from lxml import etree
@@ -32,6 +33,7 @@ from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _
+from nova.objects import fields
 from nova.pci import utils as pci_utils
 from nova.virt import hardware
 
@@ -66,9 +68,6 @@ class LibvirtConfigObject(object):
             child.text = str(value)
         return child
 
-    def get_yes_no_str(self, value):
-        return 'yes' if value else 'no'
-
     def format_dom(self):
         return self._new_node(self.root_name)
 
@@ -86,6 +85,25 @@ class LibvirtConfigObject(object):
         xml_str = etree.tostring(root, encoding='unicode',
                                  pretty_print=pretty_print)
         return xml_str
+
+    @classmethod
+    def parse_on_off_str(self, value: ty.Optional[str]) -> bool:
+        if value is not None and value not in ('on', 'off'):
+            msg = _(
+                "Element should contain either 'on' or 'off'; "
+                "found: '%(value)s'"
+            )
+            raise exception.InvalidInput(msg % {'value': value})
+
+        return value == 'on'
+
+    @classmethod
+    def get_yes_no_str(self, value: bool) -> str:
+        return 'yes' if value else 'no'
+
+    @classmethod
+    def get_on_off_str(self, value: bool) -> str:
+        return 'on' if value else 'off'
 
     def __repr__(self):
         return self.to_xml(pretty_print=False)
@@ -2735,6 +2753,18 @@ class LibvirtConfigGuestFeaturePMU(LibvirtConfigGuestFeature):
         return root
 
 
+class LibvirtConfigGuestFeatureIOAPIC(LibvirtConfigGuestFeature):
+
+    def __init__(self, **kwargs):
+        super().__init__("ioapic", **kwargs)
+        self.driver = "qemu"
+
+    def format_dom(self):
+        root = super().format_dom()
+        root.set('driver', self.driver)
+        return root
+
+
 class LibvirtConfigGuestFeatureHyperV(LibvirtConfigGuestFeature):
 
     # QEMU requires at least this value to be set
@@ -3090,6 +3120,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         #                            LibvirtConfigGuestGidMap
         #                            LibvirtConfigGuestCPU
         #                            LibvirtConfigGuestVPMEM
+        #                            LibvirtConfigGuestIOMMU
         for c in xmldoc:
             if c.tag == 'devices':
                 for d in c:
@@ -3117,6 +3148,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                         obj = LibvirtConfigGuestVPMEM()
                         obj.parse_dom(d)
                         self.devices.append(obj)
+                    elif d.tag == 'iommu':
+                        obj = LibvirtConfigGuestIOMMU()
+                        obj.parse_dom(d)
+                        self.devices.append(obj)
             if c.tag == 'idmap':
                 for idmap in c:
                     obj = None
@@ -3141,7 +3176,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
             else:
                 self._parse_basic_props(c)
 
-    def add_device(self, dev):
+    def add_feature(self, dev: LibvirtConfigGuestFeature) -> None:
+        self.features.append(dev)
+
+    def add_device(self, dev: LibvirtConfigGuestDevice) -> None:
         self.devices.append(dev)
 
     def add_perf_event(self, event):
@@ -3678,6 +3716,53 @@ class LibvirtConfigGuestVPMEM(LibvirtConfigGuestDevice):
                 for sub in list(c):
                     if sub.tag == "size":
                         self.target_size = sub.text
+
+
+class LibvirtConfigGuestIOMMU(LibvirtConfigGuestDevice):
+    """https://libvirt.org/formatdomain.html#iommu-devices"""
+
+    def __init__(self, **kwargs):
+        super().__init__(root_name="iommu", **kwargs)
+
+        self.model: str = fields.VIOMMUModel.AUTO
+        self.interrupt_remapping: bool = False
+        self.caching_mode: bool = False
+        self.eim: bool = False
+        self.iotlb: bool = False
+
+    def format_dom(self):
+        iommu = super().format_dom()
+        iommu.set("model", self.model)
+
+        driver = etree.Element("driver")
+        driver.set("intremap", self.get_on_off_str(self.interrupt_remapping))
+        driver.set("caching_mode", self.get_on_off_str(self.caching_mode))
+
+        # Set aw_bits to None when the Libvirt version not satisfy
+        # MIN_LIBVIRT_VIOMMU_AW_BITS in driver. When it's None, means it's not
+        # supported to have aw_bits.
+        if hasattr(self, "aw_bits"):
+            driver.set("aw_bits", str(self.aw_bits))
+        driver.set("eim", self.get_on_off_str(self.eim))
+        driver.set("iotlb", self.get_on_off_str(self.iotlb))
+        iommu.append(driver)
+
+        return iommu
+
+    def parse_dom(self, xmldoc):
+        super().parse_dom(xmldoc)
+        self.model = xmldoc.get("model")
+
+        driver = xmldoc.find("./driver")
+        if driver:
+            self.interrupt_remapping = self.parse_on_off_str(
+                driver.get("intremap"))
+            self.caching_mode = self.parse_on_off_str(
+                driver.get("caching_mode"))
+            if driver.get("aw_bits") is not None:
+                self.aw_bits = int(driver.get("aw_bits"))
+            self.iotlb = self.parse_on_off_str(driver.get("iotlb"))
+            self.eim = self.parse_on_off_str(driver.get("eim"))
 
 
 class LibvirtConfigGuestMetaNovaPorts(LibvirtConfigObject):

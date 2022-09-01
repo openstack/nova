@@ -2566,6 +2566,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(time, "time")
     def test_get_guest_config(self, time_mock):
+        """Generate a "standard" guest with minimal configuration.
+
+        This uses i440fx by default since that's our default machine type and
+        x86 is our default architecture (in our test env, anyway).
+        """
         time_mock.return_value = 1234567.89
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2574,178 +2579,249 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         test_instance["display_name"] = "purple tomatoes"
         test_instance['system_metadata']['owner_project_name'] = 'sweetshop'
         test_instance['system_metadata']['owner_user_name'] = 'cupcake'
-
-        ctxt = context.RequestContext(project_id=123,
-                                      project_name="aubergine",
-                                      user_id=456,
-                                      user_name="pie")
-
-        flavor = objects.Flavor(name='m1.small',
-                                memory_mb=6,
-                                vcpus=28,
-                                root_gb=496,
-                                ephemeral_gb=8128,
-                                swap=33550336,
-                                extra_specs={})
+        ctxt = context.RequestContext(
+            project_id=123,
+            project_name="aubergine",
+            user_id=456,
+            user_name="pie",
+        )
+        flavor = objects.Flavor(
+            name='m1.small',
+            memory_mb=6,
+            vcpus=28,
+            root_gb=496,
+            ephemeral_gb=8128,
+            swap=33550336,
+            extra_specs={},
+        )
         instance_ref = objects.Instance(**test_instance)
         instance_ref.flavor = flavor
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type,
+            instance_ref,
+            image_meta,
+        )
 
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-
-        cfg = drvr._get_guest_config(instance_ref,
-                                     _fake_network_info(self),
-                                     image_meta, disk_info,
-                                     context=ctxt)
+        cfg = drvr._get_guest_config(
+            instance_ref,
+            _fake_network_info(self),
+            image_meta, disk_info,
+            context=ctxt,
+        )
 
         self.assertEqual(cfg.uuid, instance_ref["uuid"])
-        self.assertEqual(3, len(cfg.features))
-        self.assertIsInstance(cfg.features[0],
-                              vconfig.LibvirtConfigGuestFeatureACPI)
-        self.assertIsInstance(cfg.features[1],
-                              vconfig.LibvirtConfigGuestFeatureAPIC)
-        self.assertIsInstance(
-            cfg.features[2], vconfig.LibvirtConfigGuestFeatureVMCoreInfo)
         self.assertEqual(cfg.memory, 6 * units.Ki)
         self.assertEqual(cfg.vcpus, 28)
         self.assertEqual(cfg.os_type, fields.VMMode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
         self.assertIsNone(cfg.os_root)
+
+        self.assertEqual(3, len(cfg.features))
+        for idx, device_type in enumerate([
+            vconfig.LibvirtConfigGuestFeatureACPI,
+            vconfig.LibvirtConfigGuestFeatureAPIC,
+            vconfig.LibvirtConfigGuestFeatureVMCoreInfo,
+        ]):
+            self.assertIsInstance(cfg.features[idx], device_type)
+
         self.assertEqual(len(cfg.devices), 11)
-        self.assertIsInstance(cfg.devices[0],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[1],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[2],
-                              vconfig.LibvirtConfigGuestDisk)
-        self.assertIsInstance(cfg.devices[3],
-                              vconfig.LibvirtConfigGuestInterface)
-        self.assertIsInstance(cfg.devices[4],
-                              vconfig.LibvirtConfigGuestSerial)
-        self.assertIsInstance(cfg.devices[5],
-                              vconfig.LibvirtConfigGuestGraphics)
-        self.assertIsInstance(cfg.devices[6],
-                              vconfig.LibvirtConfigGuestVideo)
-        self.assertIsInstance(cfg.devices[7],
-                              vconfig.LibvirtConfigGuestInput)
-        self.assertIsInstance(cfg.devices[8],
-                              vconfig.LibvirtConfigGuestRng)
-        self.assertIsInstance(cfg.devices[9],
-                              vconfig.LibvirtConfigGuestUSBHostController)
-        self.assertIsInstance(cfg.devices[10],
-                              vconfig.LibvirtConfigMemoryBalloon)
+        for idx, device_type in enumerate([
+            vconfig.LibvirtConfigGuestDisk,
+            vconfig.LibvirtConfigGuestDisk,
+            vconfig.LibvirtConfigGuestDisk,
+            vconfig.LibvirtConfigGuestInterface,
+            vconfig.LibvirtConfigGuestSerial,
+            vconfig.LibvirtConfigGuestGraphics,
+            vconfig.LibvirtConfigGuestVideo,
+            vconfig.LibvirtConfigGuestInput,
+            vconfig.LibvirtConfigGuestRng,
+            vconfig.LibvirtConfigGuestUSBHostController,
+            vconfig.LibvirtConfigMemoryBalloon,
+        ]):
+            self.assertIsInstance(cfg.devices[idx], device_type)
+
         self.assertEqual(len(cfg.metadata), 1)
-        self.assertIsInstance(cfg.metadata[0],
-                              vconfig.LibvirtConfigGuestMetaNovaInstance)
-        self.assertEqual(version.version_string_with_package(),
-                         cfg.metadata[0].package)
-        self.assertEqual("purple tomatoes",
-                         cfg.metadata[0].name)
-        self.assertEqual(1234567.89,
-                         cfg.metadata[0].creationTime)
-        self.assertEqual("image",
-                         cfg.metadata[0].roottype)
-        self.assertEqual(str(instance_ref["image_ref"]),
-                         cfg.metadata[0].rootid)
+        self.assertIsInstance(
+            cfg.metadata[0], vconfig.LibvirtConfigGuestMetaNovaInstance)
+        self.assertEqual(
+            version.version_string_with_package(), cfg.metadata[0].package)
+        self.assertEqual("purple tomatoes", cfg.metadata[0].name)
+        self.assertEqual(1234567.89, cfg.metadata[0].creationTime)
+        self.assertEqual("image", cfg.metadata[0].roottype)
+        self.assertEqual(
+            str(instance_ref["image_ref"]), cfg.metadata[0].rootid)
 
-        self.assertIsInstance(cfg.metadata[0].owner,
-                              vconfig.LibvirtConfigGuestMetaNovaOwner)
-        self.assertEqual("838a72b0-0d54-4827-8fd6-fb1227633ceb",
-                         cfg.metadata[0].owner.userid)
-        self.assertEqual("cupcake",
-                         cfg.metadata[0].owner.username)
-        self.assertEqual("fake",
-                         cfg.metadata[0].owner.projectid)
-        self.assertEqual("sweetshop",
-                         cfg.metadata[0].owner.projectname)
-
-        self.assertIsInstance(cfg.metadata[0].flavor,
-                              vconfig.LibvirtConfigGuestMetaNovaFlavor)
-        self.assertEqual("m1.small",
-                         cfg.metadata[0].flavor.name)
-        self.assertEqual(6,
-                         cfg.metadata[0].flavor.memory)
-        self.assertEqual(28,
-                         cfg.metadata[0].flavor.vcpus)
-        self.assertEqual(496,
-                         cfg.metadata[0].flavor.disk)
-        self.assertEqual(8128,
-                         cfg.metadata[0].flavor.ephemeral)
-        self.assertEqual(33550336,
-                         cfg.metadata[0].flavor.swap)
-
-    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
-    def test_get_guest_config_q35(self):
-        self.flags(virt_type="kvm",
-                   group='libvirt')
-
-        TEST_AMOUNT_OF_PCIE_SLOTS = 8
-        CONF.set_override("num_pcie_ports", TEST_AMOUNT_OF_PCIE_SLOTS,
-                group='libvirt')
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict({
-            "disk_format": "raw",
-            "properties": {"hw_machine_type":
-                           "pc-q35-test"}})
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-
-        cfg = drvr._get_guest_config(instance_ref,
-                                     _fake_network_info(self),
-                                     image_meta, disk_info)
+        self.assertIsInstance(
+            cfg.metadata[0].owner, vconfig.LibvirtConfigGuestMetaNovaOwner)
+        self.assertEqual(
+            "838a72b0-0d54-4827-8fd6-fb1227633ceb",
+            cfg.metadata[0].owner.userid)
+        self.assertEqual("cupcake", cfg.metadata[0].owner.username)
+        self.assertEqual("fake", cfg.metadata[0].owner.projectid)
+        self.assertEqual("sweetshop", cfg.metadata[0].owner.projectname)
+        self.assertIsInstance(
+            cfg.metadata[0].flavor, vconfig.LibvirtConfigGuestMetaNovaFlavor)
+        self.assertEqual("m1.small", cfg.metadata[0].flavor.name)
+        self.assertEqual(6, cfg.metadata[0].flavor.memory)
+        self.assertEqual(28, cfg.metadata[0].flavor.vcpus)
+        self.assertEqual(496, cfg.metadata[0].flavor.disk)
+        self.assertEqual(8128, cfg.metadata[0].flavor.ephemeral)
+        self.assertEqual(33550336, cfg.metadata[0].flavor.swap)
 
         num_ports = 0
         for device in cfg.devices:
             try:
-                if (device.root_name == 'controller' and
-                        device.model == 'pcie-root-port'):
-                    num_ports += 1
-            except AttributeError:
-                pass
-
-        self.assertEqual(TEST_AMOUNT_OF_PCIE_SLOTS, num_ports)
-
-    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
-    def test_get_guest_config_pcie_i440fx(self):
-        self.flags(virt_type="kvm",
-                   group='libvirt')
-
-        TEST_AMOUNT_OF_PCIE_SLOTS = 8
-        CONF.set_override("num_pcie_ports", TEST_AMOUNT_OF_PCIE_SLOTS,
-                group='libvirt')
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict({
-            "disk_format": "raw",
-            "properties": {"hw_machine_type":
-                           "pc-i440fx-test"}})
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-
-        cfg = drvr._get_guest_config(instance_ref,
-                                     _fake_network_info(self),
-                                     image_meta, disk_info)
-
-        num_ports = 0
-        for device in cfg.devices:
-            try:
-                if (device.root_name == 'controller' and
-                        device.model == 'pcie-root-port'):
+                if (
+                    device.root_name == 'controller' and
+                    device.model == 'pcie-root-port'
+                ):
                     num_ports += 1
             except AttributeError:
                 pass
 
         # i440fx is not pcie machine so there should be no pcie ports
         self.assertEqual(0, num_ports)
+
+    @mock.patch.object(time, "time")
+    def test_get_guest_config_no_pcie_ports(self, time_mock):
+        """Generate a "standard" guest with minimal configuration.
+
+        This uses i440fx by default since that's our default machine type and
+        x86 is our default architecture (in our test env, anyway).
+        """
+        time_mock.return_value = 1234567.89
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        test_instance = copy.deepcopy(self.test_instance)
+        test_instance["display_name"] = "purple tomatoes"
+        test_instance['system_metadata']['owner_project_name'] = 'sweetshop'
+        test_instance['system_metadata']['owner_user_name'] = 'cupcake'
+        ctxt = context.RequestContext(
+            project_id=123,
+            project_name="aubergine",
+            user_id=456,
+            user_name="pie",
+        )
+        flavor = objects.Flavor(
+            name='m1.small',
+            memory_mb=6,
+            vcpus=28,
+            root_gb=496,
+            ephemeral_gb=8128,
+            swap=33550336,
+            extra_specs={},
+        )
+        instance_ref = objects.Instance(**test_instance)
+        instance_ref.flavor = flavor
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type,
+            instance_ref,
+            image_meta,
+        )
+
+        cfg = drvr._get_guest_config(
+            instance_ref,
+            _fake_network_info(self),
+            image_meta, disk_info,
+            context=ctxt,
+        )
+
+        num_ports = 0
+        for device in cfg.devices:
+            try:
+                if (
+                    device.root_name == 'controller' and
+                    device.model == 'pcie-root-port'
+                ):
+                    num_ports += 1
+            except AttributeError:
+                pass
+
+        # i440fx is not pcie machine so there should be no pcie ports
+        self.assertEqual(0, num_ports)
+
+    @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
+    def test_get_guest_config_q35(self):
+        """Generate a "q35" guest with minimal configuration.
+
+        This configures an explicit machine type (q35) but defaults to x86
+        since this is our default architecture (in our test env, anyway).
+        """
+        self.flags(virt_type="kvm", group='libvirt')
+
+        TEST_AMOUNT_OF_PCIE_SLOTS = 8
+        CONF.set_override(
+            "num_pcie_ports", TEST_AMOUNT_OF_PCIE_SLOTS,
+            group='libvirt',
+        )
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_machine_type": "q35"},
+        })
+
+        disk_info = blockinfo.get_disk_info(
+            CONF.libvirt.virt_type,
+            instance_ref,
+            image_meta,
+        )
+
+        cfg = drvr._get_guest_config(
+            instance_ref,
+            _fake_network_info(self),
+            image_meta,
+            disk_info,
+        )
+
+        self.assertEqual(3, len(cfg.features))
+        for idx, device_type in enumerate([
+            vconfig.LibvirtConfigGuestFeatureACPI,
+            vconfig.LibvirtConfigGuestFeatureAPIC,
+            vconfig.LibvirtConfigGuestFeatureVMCoreInfo,
+        ]):
+            self.assertIsInstance(cfg.features[idx], device_type)
+
+        self.assertEqual(len(cfg.devices), 19)
+        for idx, device_type in enumerate([
+            vconfig.LibvirtConfigGuestDisk,
+            vconfig.LibvirtConfigGuestDisk,
+            vconfig.LibvirtConfigGuestInterface,
+            vconfig.LibvirtConfigGuestSerial,
+            vconfig.LibvirtConfigGuestGraphics,
+            vconfig.LibvirtConfigGuestVideo,
+            vconfig.LibvirtConfigGuestInput,
+            vconfig.LibvirtConfigGuestRng,
+            vconfig.LibvirtConfigGuestPCIeRootController,
+            vconfig.LibvirtConfigGuestPCIeRootPortController,
+            vconfig.LibvirtConfigGuestPCIeRootPortController,
+            vconfig.LibvirtConfigGuestPCIeRootPortController,
+            vconfig.LibvirtConfigGuestPCIeRootPortController,
+            vconfig.LibvirtConfigGuestPCIeRootPortController,
+            vconfig.LibvirtConfigGuestPCIeRootPortController,
+            vconfig.LibvirtConfigGuestPCIeRootPortController,
+            vconfig.LibvirtConfigGuestPCIeRootPortController,
+            vconfig.LibvirtConfigGuestUSBHostController,
+            vconfig.LibvirtConfigMemoryBalloon,
+        ]):
+            self.assertIsInstance(cfg.devices[idx], device_type)
+
+        num_ports = 0
+        for device in cfg.devices:
+            try:
+                if (
+                    device.root_name == 'controller' and
+                    device.model == 'pcie-root-port'
+                ):
+                    num_ports += 1
+            except AttributeError:
+                pass
+
+        self.assertEqual(TEST_AMOUNT_OF_PCIE_SLOTS, num_ports)
 
     @mock.patch.object(host.Host, "_check_machine_type", new=mock.Mock())
     @mock.patch('nova.virt.libvirt.utils.get_default_machine_type',
@@ -8435,6 +8511,206 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(conf.cpu.sockets, 4)
         self.assertEqual(conf.cpu.cores, 2)
         self.assertEqual(conf.cpu.threads, 1)
+
+    def test_get_guest_iommu_not_enabled(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        test_instance = _create_test_instance()
+        instance_ref = objects.Instance(**test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref, [],
+                                     image_meta, disk_info)
+        for device in cfg.devices:
+            self.assertNotEqual('iommu', device.root_name)
+
+    def test_get_guest_iommu_config_model(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_machine_type": "q35"},
+        })
+
+        extra_specs = {
+            "hw:viommu_model": 'intel',
+        }
+        test_instance = _create_test_instance()
+        test_instance["flavor"]["extra_specs"] = extra_specs
+        instance_ref = objects.Instance(**test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref, [],
+                                     image_meta, disk_info)
+        count = 0
+        for device in cfg.devices:
+            if device.root_name == 'iommu':
+                count += 1
+                self.assertIsInstance(device,
+                                      vconfig.LibvirtConfigGuestIOMMU)
+                self.assertEqual('intel', device.model)
+                self.assertFalse(hasattr(device, "aw_bits"))
+                self.assertTrue(device.interrupt_remapping)
+                self.assertTrue(device.caching_mode)
+                self.assertTrue(device.eim)
+                self.assertTrue(device.iotlb)
+
+        self.assertEqual(1, count)
+        self.assertEqual('q35', cfg.os_mach_type)
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    def test_get_guest_iommu_config_model_auto(self, has_min_version):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_machine_type": "q35"},
+        })
+
+        extra_specs = {
+            "hw:viommu_model": 'auto',
+        }
+        test_instance = _create_test_instance()
+        test_instance["flavor"]["extra_specs"] = extra_specs
+        instance_ref = objects.Instance(**test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref, [],
+                                     image_meta, disk_info)
+        count = 0
+        for device in cfg.devices:
+            if device.root_name == 'iommu':
+                count += 1
+                self.assertIsInstance(device,
+                                      vconfig.LibvirtConfigGuestIOMMU)
+                self.assertEqual('virtio', device.model)
+                self.assertEqual(48, device.aw_bits)
+                self.assertTrue(device.interrupt_remapping)
+                self.assertTrue(device.caching_mode)
+                self.assertTrue(device.eim)
+                self.assertTrue(device.iotlb)
+
+        self.assertEqual(1, count)
+        self.assertEqual('q35', cfg.os_mach_type)
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=False)
+    def test_get_guest_iommu_config_model_auto_intel(self, has_min_version):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_machine_type": "q35"},
+        })
+
+        extra_specs = {
+            "hw:viommu_model": 'auto',
+        }
+        test_instance = _create_test_instance()
+        test_instance["flavor"]["extra_specs"] = extra_specs
+        instance_ref = objects.Instance(**test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref, [],
+                                     image_meta, disk_info)
+        count = 0
+        for device in cfg.devices:
+            if device.root_name == 'iommu':
+                count += 1
+                self.assertIsInstance(device,
+                                      vconfig.LibvirtConfigGuestIOMMU)
+                self.assertEqual('intel', device.model)
+                self.assertTrue(device.interrupt_remapping)
+                self.assertTrue(device.caching_mode)
+                self.assertTrue(device.eim)
+                self.assertTrue(device.iotlb)
+
+        self.assertEqual(1, count)
+        self.assertEqual('q35', cfg.os_mach_type)
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=False)
+    def test_get_guest_iommu_config_model_auto_aarch64(self, has_min_version):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_viommu_model": 'auto',
+                           "hw_architecture": fields.Architecture.AARCH64,
+                           "hw_machine_type": "virt"},
+        })
+        extra_specs = {
+            "hw:viommu_model": 'auto',
+        }
+        test_instance = _create_test_instance()
+        test_instance["flavor"]["extra_specs"] = extra_specs
+        instance_ref = objects.Instance(**test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref, [],
+                                     image_meta, disk_info)
+        count = 0
+        for device in cfg.devices:
+            if device.root_name == 'iommu':
+                count += 1
+                self.assertIsInstance(device,
+                                      vconfig.LibvirtConfigGuestIOMMU)
+                self.assertEqual('smmuv3', device.model)
+                self.assertFalse(hasattr(device, "aw_bits"))
+                self.assertTrue(device.interrupt_remapping)
+                self.assertTrue(device.caching_mode)
+                self.assertFalse(device.eim)
+                self.assertTrue(device.iotlb)
+        self.assertEqual(1, count)
+
+    def test_get_guest_iommu_config_not_support_machine_type(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_machine_type": "pc-i440fx-2.11"},
+        })
+        extra_specs = {
+            "hw:viommu_model": 'auto',
+        }
+        test_instance = _create_test_instance()
+        test_instance["flavor"]["extra_specs"] = extra_specs
+        instance_ref = objects.Instance(**test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        self.assertRaises(
+            exception.InvalidVIOMMUMachineType, drvr._get_guest_config,
+            instance_ref, [], image_meta, disk_info
+        )
+
+    def test_get_guest_iommu_config_not_support_architecture(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_architecture": fields.Architecture.PPC64LE,
+                           "hw_machine_type": "pc-i440fx-2.11"},
+        })
+        extra_specs = {
+            "hw:viommu_model": 'auto',
+        }
+        test_instance = _create_test_instance()
+        test_instance["flavor"]["extra_specs"] = extra_specs
+        instance_ref = objects.Instance(**test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        self.assertRaises(
+            exception.InvalidVIOMMUArchitecture, drvr._get_guest_config,
+            instance_ref, [], image_meta, disk_info
+        )
 
     def test_get_guest_memory_balloon_config_by_default(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
