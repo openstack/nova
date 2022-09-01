@@ -12,6 +12,7 @@
 
 import copy
 
+from oslo_context.context import generate_request_id
 from oslo_log import log as logging
 from oslo_utils.fixture import uuidsentinel as uuids
 
@@ -78,49 +79,60 @@ class BasePolicyTest(test.TestCase):
         # all context are with implied roles.
         self.legacy_admin_context = nova_context.RequestContext(
                 user_id="legacy_admin", project_id=self.admin_project_id,
-                roles=['admin', 'member', 'reader'])
+                roles=['admin', 'member', 'reader'],
+                request_id=generate_request_id())
 
         # system scoped users
         self.system_admin_context = nova_context.RequestContext(
                 user_id="admin",
-                roles=['admin', 'member', 'reader'], system_scope='all')
+                roles=['admin', 'member', 'reader'], system_scope='all',
+                request_id=generate_request_id())
 
         self.system_member_context = nova_context.RequestContext(
                 user_id="member",
-                roles=['member', 'reader'], system_scope='all')
+                roles=['member', 'reader'], system_scope='all',
+                request_id=generate_request_id())
 
         self.system_reader_context = nova_context.RequestContext(
-                user_id="reader", roles=['reader'], system_scope='all')
+                user_id="reader", roles=['reader'], system_scope='all',
+                request_id=generate_request_id())
 
         self.system_foo_context = nova_context.RequestContext(
-                user_id="foo", roles=['foo'], system_scope='all')
+                user_id="foo", roles=['foo'], system_scope='all',
+                request_id=generate_request_id())
 
         # project scoped users
         self.project_admin_context = nova_context.RequestContext(
                 user_id="project_admin", project_id=self.project_id,
-                roles=['admin', 'member', 'reader'])
+                roles=['admin', 'member', 'reader'],
+                request_id=generate_request_id())
 
         self.project_member_context = nova_context.RequestContext(
                 user_id="project_member", project_id=self.project_id,
-                roles=['member', 'reader'])
+                roles=['member', 'reader'],
+                request_id=generate_request_id())
 
         self.project_reader_context = nova_context.RequestContext(
                 user_id="project_reader", project_id=self.project_id,
-                roles=['reader'])
+                roles=['reader'],
+                request_id=generate_request_id())
 
         self.project_foo_context = nova_context.RequestContext(
                 user_id="project_foo", project_id=self.project_id,
-                roles=['foo'])
+                roles=['foo'],
+                request_id=generate_request_id())
 
         self.other_project_member_context = nova_context.RequestContext(
                 user_id="other_project_member",
                 project_id=self.project_id_other,
-                roles=['member', 'reader'])
+                roles=['member', 'reader'],
+                request_id=generate_request_id())
 
         self.other_project_reader_context = nova_context.RequestContext(
                 user_id="other_project_member",
                 project_id=self.project_id_other,
-                roles=['reader'])
+                roles=['reader'],
+                request_id=generate_request_id())
 
         self.all_contexts = set([
             self.legacy_admin_context, self.system_admin_context,
