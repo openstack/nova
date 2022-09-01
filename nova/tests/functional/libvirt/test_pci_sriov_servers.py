@@ -284,8 +284,8 @@ class _PCIServersTestBase(base.ServersTestBase):
         self.assert_placement_pci_allocations_on_host(hostname, allocations)
 
     @staticmethod
-    def _to_device_spec_conf(spec_list):
-        return [jsonutils.dumps(x) for x in spec_list]
+    def _to_list_of_json_str(list):
+        return [jsonutils.dumps(x) for x in list]
 
     @staticmethod
     def _move_allocation(allocations, from_uuid, to_uuid):
@@ -3104,7 +3104,7 @@ class PCIServersWithRequiredNUMATest(PCIServersWithPreferredNUMATest):
         pci_info = fakelibvirt.HostPCIDevicesInfo(num_pci=2)
         # the device_spec will assign different traits to 81.00 than 81.01
         # so the two devices become different from placement perspective
-        device_spec = self._to_device_spec_conf(
+        device_spec = self._to_list_of_json_str(
             [
                 {
                     'vendor_id': fakelibvirt.PCI_VEND_ID,
@@ -3161,9 +3161,7 @@ class PCIServersWithRequiredNUMATest(PCIServersWithPreferredNUMATest):
         }
         self.flags(
             group="pci",
-            # FIXME(gibi): make _to_device_spec_conf a general util for both
-            # device spec and pci alias
-            alias=self._to_device_spec_conf([pci_alias]),
+            alias=self._to_list_of_json_str([pci_alias]),
         )
 
         # Ask for dedicated CPUs, that can only be fulfilled on numa 1.
