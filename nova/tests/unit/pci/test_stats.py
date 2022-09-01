@@ -12,7 +12,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
+import collections
 from unittest import mock
 
 from oslo_config import cfg
@@ -1039,9 +1039,9 @@ class PciDeviceStatsProviderMappingTestCase(test.NoDBTestCase):
             ),
         ]
         self.flags(device_spec=device_spec, group="pci")
-        dev_filter = whitelist.Whitelist(device_spec)
+        self.dev_filter = whitelist.Whitelist(device_spec)
         self.pci_stats = stats.PciDeviceStats(
-            objects.NUMATopology(), dev_filter=dev_filter
+            objects.NUMATopology(), dev_filter=self.dev_filter
         )
         # add devices represented by different RPs in placement
         # two VFs on the same PF
@@ -1382,6 +1382,101 @@ class PciDeviceStatsProviderMappingTestCase(test.NoDBTestCase):
         self.assertEqual(
             {uuids.pf1, uuids.pf2, uuids.pci1},
             {pool['rp_uuid'] for pool in self.pci_stats.pools},
+        )
+
+    def _create_two_pools_with_two_vfs(self):
+        # create two pools (PFs) with two VFs each
+        self.pci_stats = stats.PciDeviceStats(
+            objects.NUMATopology(), dev_filter=self.dev_filter
+        )
+        for pf_index in [1, 2]:
+            for vf_index in [1, 2]:
+                dev = objects.PciDevice(
+                    compute_node_id=1,
+                    vendor_id="dead",
+                    product_id="beef",
+                    address=f"0000:81:0{pf_index}.{vf_index}",
+                    parent_addr=f"0000:81:0{pf_index}.0",
+                    numa_node=0,
+                    dev_type="type-VF",
+                )
+                self.pci_stats.add_device(dev)
+                dev.extra_info = {'rp_uuid': getattr(uuids, f"pf{pf_index}")}
+
+        # populate the RP -> pool mapping from the devices to its pools
+        self.pci_stats.populate_pools_metadata_from_assigned_devices()
+
+        # we have 2 pool and 4 devs in total
+        self.num_pools = 2
+        self.assertEqual(self.num_pools, len(self.pci_stats.pools))
+        self.num_devs = 4
+        self.assertEqual(
+            self.num_devs, sum(pool["count"] for pool in self.pci_stats.pools)
+        )
+
+    def test_apply_asymmetric_allocation(self):
+        self._create_two_pools_with_two_vfs()
+        # ask for 3 VFs
+        vf_req = objects.InstancePCIRequest(
+            count=3,
+            alias_name='a-vf',
+            request_id=uuids.vf_req,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-VF",
+                }
+            ],
+        )
+
+        # Simulate that placement returned an allocation candidate where 1 VF
+        # is consumed from PF1 and two from PF2
+        mapping = {
+            # the VF is represented by the parent PF RP
+            f"{uuids.vf_req}-0": [uuids.pf1],
+            f"{uuids.vf_req}-1": [uuids.pf2],
+            f"{uuids.vf_req}-2": [uuids.pf2],
+        }
+        # This should fit
+        self.assertTrue(
+            self.pci_stats.support_requests([vf_req], mapping)
+        )
+        # and when consumed the consumption from the pools should be in sync
+        # with the placement allocation. So the PF2 pool is expected to
+        # disappear as it is fully consumed and the PF1 pool should have
+        # one free device.
+        self.pci_stats.apply_requests([vf_req], mapping)
+        self.assertEqual(1, len(self.pci_stats.pools))
+        self.assertEqual(uuids.pf1, self.pci_stats.pools[0]['rp_uuid'])
+        self.assertEqual(1, self.pci_stats.pools[0]['count'])
+
+    def test_consume_asymmetric_allocation(self):
+        self._create_two_pools_with_two_vfs()
+        # ask for 3 VFs
+        vf_req = objects.InstancePCIRequest(
+            count=3,
+            alias_name='a-vf',
+            request_id=uuids.vf_req,
+            spec=[
+                {
+                    "vendor_id": "dead",
+                    "product_id": "beef",
+                    "dev_type": "type-VF",
+                    # Simulate that the scheduler already allocate a candidate
+                    # and the mapping is stored in the request.
+                    # In placement 1 VF is allocated from PF1 and two from PF2
+                    "rp_uuids": ",".join([uuids.pf1, uuids.pf2, uuids.pf2])
+                }
+            ],
+        )
+
+        # So when the PCI claim consumes devices based on this request we
+        # expect that nova follows what is allocated in placement.
+        devs = self.pci_stats.consume_requests([vf_req])
+        self.assertEqual(
+            {"0000:81:01.0": 1, "0000:81:02.0": 2},
+            collections.Counter(dev.parent_addr for dev in devs),
         )
 
     def test_consume_restricted_by_allocation(self):

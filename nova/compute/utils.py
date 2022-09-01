@@ -1536,7 +1536,7 @@ def update_pci_request_with_placement_allocations(
             for spec in pci_request.spec:
                 # FIXME(gibi): this is baaad but spec is a dict of strings so
                 #  we need to serialize
-                spec['rp_uuids'] = ','.join(set(mapping.values()))
+                spec['rp_uuids'] = ','.join(mapping.values())
 
         elif needs_update_due_to_qos(pci_request, provider_mapping):
 

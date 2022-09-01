@@ -1597,7 +1597,7 @@ class PciRequestUpdateTestCase(test.NoDBTestCase):
             provider_mapping)
 
         self.assertEqual(
-            ",".join({uuids.rp1, uuids.rp2}), req.spec[0]["rp_uuids"]
+            {uuids.rp1, uuids.rp2}, set(req.spec[0]["rp_uuids"].split(','))
         )
 
     def test_pci_request_has_no_mapping(self):

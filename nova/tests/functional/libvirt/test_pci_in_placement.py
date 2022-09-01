@@ -1978,27 +1978,18 @@ class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
             "compute1_0000:81:00.0", "CUSTOM_MY_VF", 1)
         extra_spec = {"pci_passthrough:alias": "a-vf:3"}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-        # We expect this to fit, but it does not. The pool filtering logic
-        # only considers which pools can be used based on the allocation
-        # candidate, but does not consider how much device needs to be used
-        # from which pool. So the PCI claim logic sees both PF pools as usable
-        # but allocates 2 dev from 81:00 in nova. Then the PCI allocation
-        # healing logic sees the difference between the placement allocation
-        # and the nova allocation and fails when trys to correct it.
-        self._create_server(
-            flavor_id=flavor_id, networks=[], expected_state="ERROR"
-        )
-        # server_3vf = self._create_server(flavor_id=flavor_id, networks=[])
-        #
-        # self.assertPCIDeviceCounts('compute1', total=4, free=1)
-        # compute1_expected_placement_view["usages"] = {
-        #     "0000:81:00.0": {"CUSTOM_MY_VF": 1},
-        #     "0000:81:01.0": {"CUSTOM_MY_VF": 2},
-        # }
-        # compute1_expected_placement_view["allocations"][server_3vf["id"]] = {
-        #     "0000:81:00.0": {"CUSTOM_MY_VF": 1},
-        #     "0000:81:01.0": {"CUSTOM_MY_VF": 2},
-        # }
-        # self.assert_placement_pci_view(
-        #     "compute1", **compute1_expected_placement_view)
-        # self.assert_no_pci_healing("compute1")
+        # We expect this to fit.
+        server_3vf = self._create_server(flavor_id=flavor_id, networks=[])
+
+        self.assertPCIDeviceCounts('compute1', total=4, free=1)
+        compute1_expected_placement_view["usages"] = {
+            "0000:81:00.0": {"CUSTOM_MY_VF": 1},
+            "0000:81:01.0": {"CUSTOM_MY_VF": 2},
+        }
+        compute1_expected_placement_view["allocations"][server_3vf["id"]] = {
+            "0000:81:00.0": {"CUSTOM_MY_VF": 1},
+            "0000:81:01.0": {"CUSTOM_MY_VF": 2},
+        }
+        self.assert_placement_pci_view(
+            "compute1", **compute1_expected_placement_view)
+        self.assert_no_pci_healing("compute1")
