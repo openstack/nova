@@ -4004,6 +4004,155 @@ class _ComputeAPIUnitTestMixIn(object):
             _checks_for_create_and_rebuild.assert_called_once_with(
                 self.context, None, image, flavor, {}, [], None)
 
+    @ddt.data(True, False)
+    @mock.patch.object(objects.RequestSpec, 'save')
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.Instance, 'get_flavor')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(compute_api.API, '_get_image')
+    @mock.patch.object(compute_api.API, '_check_image_arch')
+    @mock.patch.object(compute_api.API, '_check_auto_disk_config')
+    @mock.patch.object(compute_api.API, '_checks_for_create_and_rebuild')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    def test_rebuild_volume_backed(self, reimage_boot_vol,
+            _record_action_start, _checks_for_create_and_rebuild,
+            _check_auto_disk_config,
+            _check_image_arch, mock_get_image,
+            mock_get_bdms, get_flavor,
+            instance_save, req_spec_get_by_inst_uuid, request_save):
+        """Test a scenario where the instance is volume backed and we rebuild
+        with following cases:
+
+            1) reimage_boot_volume=True
+            2) reimage_boot_volume=False
+
+        """
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+            launched_at=timeutils.utcnow(),
+            system_metadata={}, image_ref=uuids.image_ref,
+            expected_attrs=['system_metadata'], node='fake')
+        bdms = objects.BlockDeviceMappingList(objects=[
+                objects.BlockDeviceMapping(
+                    boot_index=None, image_id=None,
+                    source_type='volume', destination_type='volume',
+                    volume_type=None, snapshot_id=None,
+                    volume_id=uuids.volume_id, volume_size=None)])
+        mock_get_bdms.return_value = bdms
+        get_flavor.return_value = test_flavor.fake_flavor
+        flavor = instance.get_flavor()
+        image = {
+            "id": uuids.image_ref,
+            "min_ram": 10, "min_disk": 1,
+            "properties": {
+                'architecture': fields_obj.Architecture.X86_64}}
+        mock_get_image.return_value = (None, image)
+        fake_spec = objects.RequestSpec(id=1, force_nodes=None)
+        req_spec_get_by_inst_uuid.return_value = fake_spec
+        fake_volume = {'id': uuids.volume_id, 'status': 'in-use'}
+        fake_conn_info = '{}'
+        fake_device = 'fake_vda'
+        root_bdm = mock.MagicMock(
+            volume_id=uuids.volume_id, connection_info=fake_conn_info,
+            device_name=fake_device, attachment_id=uuids.old_attachment_id,
+            save=mock.MagicMock())
+        admin_pass = "new password"
+        with mock.patch.object(self.compute_api.volume_api, 'get',
+                               return_value=fake_volume), \
+            mock.patch.object(compute_utils, 'get_root_bdm',
+                              return_value=root_bdm), \
+            mock.patch.object(self.compute_api.compute_task_api,
+                'rebuild_instance') as rebuild_instance:
+            if reimage_boot_vol:
+                self.compute_api.rebuild(self.context,
+                                         instance,
+                                         uuids.image_ref,
+                                         admin_pass,
+                                         reimage_boot_volume=True)
+                rebuild_instance.assert_called_once_with(self.context,
+                    instance=instance, new_pass=admin_pass,
+                    image_ref=uuids.image_ref,
+                    orig_image_ref=None, orig_sys_metadata={},
+                    injected_files=[], bdms=bdms,
+                    preserve_ephemeral=False, host=None,
+                    request_spec=fake_spec,
+                    reimage_boot_volume=True)
+                _check_auto_disk_config.assert_called_once_with(
+                    image=image, auto_disk_config=None)
+                _checks_for_create_and_rebuild.assert_called_once_with(
+                    self.context, None, image, flavor, {}, [], root_bdm)
+                mock_get_bdms.assert_called_once_with(
+                    self.context, instance.uuid)
+            else:
+                self.assertRaises(
+                    exception.NovaException,
+                    self.compute_api.rebuild,
+                    self.context,
+                    instance,
+                    uuids.image_ref,
+                    admin_pass,
+                    reimage_boot_volume=False)
+
+    @mock.patch.object(objects.RequestSpec, 'save')
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.Instance, 'get_flavor')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(compute_api.API, '_get_image')
+    @mock.patch.object(compute_api.API, '_check_image_arch')
+    @mock.patch.object(compute_api.API, '_check_auto_disk_config')
+    @mock.patch.object(compute_api.API, '_checks_for_create_and_rebuild')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    def test_rebuild_volume_backed_fails(self, _record_action_start,
+            _checks_for_create_and_rebuild, _check_auto_disk_config,
+            _check_image_arch, mock_get_image,
+            mock_get_bdms, get_flavor,
+            instance_save, req_spec_get_by_inst_uuid, request_save):
+        """Test a scenario where we don't pass parameters to rebuild
+        boot volume
+        """
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+            launched_at=timeutils.utcnow(),
+            system_metadata={}, image_ref=uuids.image_ref,
+            expected_attrs=['system_metadata'], node='fake')
+        bdms = objects.BlockDeviceMappingList(objects=[
+                objects.BlockDeviceMapping(
+                    boot_index=None, image_id=None,
+                    source_type='volume', destination_type='volume',
+                    volume_type=None, snapshot_id=None,
+                    volume_id=uuids.volume_id, volume_size=None)])
+        mock_get_bdms.return_value = bdms
+        get_flavor.return_value = test_flavor.fake_flavor
+        image = {
+            "id": uuids.image_ref,
+            "min_ram": 10, "min_disk": 1,
+            "properties": {
+                'architecture': fields_obj.Architecture.X86_64}}
+        mock_get_image.return_value = (None, image)
+        fake_spec = objects.RequestSpec(id=1, force_nodes=None)
+        req_spec_get_by_inst_uuid.return_value = fake_spec
+        fake_volume = {'id': uuids.volume_id, 'status': 'in-use'}
+        fake_conn_info = '{}'
+        fake_device = 'fake_vda'
+        root_bdm = mock.MagicMock(
+            volume_id=uuids.volume_id, connection_info=fake_conn_info,
+            device_name=fake_device, attachment_id=uuids.old_attachment_id,
+            save=mock.MagicMock())
+        admin_pass = "new password"
+        with mock.patch.object(self.compute_api.volume_api, 'get',
+                               return_value=fake_volume), \
+            mock.patch.object(compute_utils, 'get_root_bdm',
+                              return_value=root_bdm):
+            self.assertRaises(exception.NovaException,
+                              self.compute_api.rebuild,
+                              self.context,
+                              instance,
+                              uuids.image_ref,
+                              admin_pass,
+                              reimage_boot_volume=False)
+
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.Instance, 'get_flavor')
@@ -4052,7 +4201,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     orig_image_ref=uuids.image_ref,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=instance.host,
-                    request_spec=fake_spec)
+                    request_spec=fake_spec, reimage_boot_volume=False)
 
         _check_auto_disk_config.assert_called_once_with(
             image=image, auto_disk_config=None)
@@ -4125,7 +4274,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     orig_image_ref=uuids.image_ref,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=None,
-                    request_spec=fake_spec)
+                    request_spec=fake_spec, reimage_boot_volume=False)
             # assert the request spec was modified so the scheduler picks
             # the existing instance host/node
             req_spec_save.assert_called_once_with()
@@ -4193,7 +4342,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     orig_image_ref=uuids.image_ref,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=instance.host,
-                    request_spec=fake_spec)
+                    request_spec=fake_spec, reimage_boot_volume=False)
 
         _check_auto_disk_config.assert_called_once_with(
             image=image, auto_disk_config=None)
@@ -4252,7 +4401,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 orig_image_ref=uuids.image_ref,
                 orig_sys_metadata=orig_system_metadata, bdms=bdms,
                 preserve_ephemeral=False, host=instance.host,
-                request_spec=fake_spec)
+                request_spec=fake_spec, reimage_boot_volume=False)
 
         _check_auto_disk_config.assert_called_once_with(
             image=image, auto_disk_config=None)
@@ -4316,7 +4465,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 orig_image_ref=uuids.image_ref,
                 orig_sys_metadata=orig_system_metadata, bdms=bdms,
                 preserve_ephemeral=False, host=instance.host,
-                request_spec=fake_spec)
+                request_spec=fake_spec, reimage_boot_volume=False)
 
         _check_auto_disk_config.assert_called_once_with(
             image=image, auto_disk_config=None)

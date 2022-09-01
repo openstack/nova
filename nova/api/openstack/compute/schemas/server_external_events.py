@@ -63,3 +63,7 @@ name['enum'].append('power-update')
 create_v282 = copy.deepcopy(create_v276)
 name = create_v282['properties']['events']['items']['properties']['name']
 name['enum'].append('accelerator-request-bound')
+
+create_v293 = copy.deepcopy(create_v282)
+name = create_v293['properties']['events']['items']['properties']['name']
+name['enum'].append('volume-reimaged')

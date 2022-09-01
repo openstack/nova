@@ -20,6 +20,7 @@ import time
 from unittest import mock
 import zlib
 
+from cinderclient import exceptions as cinder_exception
 from keystoneauth1 import adapter
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -1512,6 +1513,90 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase):
         # else.
         self.assertIn('Unable to rebuild with a different image for a '
                       'volume-backed server', str(resp))
+
+
+class ServerRebuildTestCaseV293(integrated_helpers._IntegratedTestBase):
+    api_major_version = 'v2.1'
+
+    def setUp(self):
+        super(ServerRebuildTestCaseV293, self).setUp()
+        self.cinder = nova_fixtures.CinderFixture(self)
+        self.useFixture(self.cinder)
+
+    def _bfv_server(self):
+        server_req_body = {
+            # There is no imageRef because this is boot from volume.
+            'server': {
+                'flavorRef': '1',  # m1.tiny from DefaultFlavorsFixture,
+                'name': 'test_volume_backed_rebuild_different_image',
+                'networks': [],
+                'block_device_mapping_v2': [{
+                    'boot_index': 0,
+                    'uuid':
+                    nova_fixtures.CinderFixture.IMAGE_BACKED_VOL,
+                    'source_type': 'volume',
+                    'destination_type': 'volume'
+                }]
+            }
+        }
+        server = self.api.post_server(server_req_body)
+        return self._wait_for_state_change(server, 'ACTIVE')
+
+    def _test_rebuild(self, server):
+        self.api.microversion = '2.93'
+        # Now rebuild the server with a different image than was used to create
+        # our fake volume.
+        rebuild_image_ref = self.glance.auto_disk_config_enabled_image['id']
+        rebuild_req_body = {'rebuild': {'imageRef': rebuild_image_ref}}
+
+        with mock.patch.object(self.compute.manager.virtapi,
+                               'wait_for_instance_event'):
+            self.api.api_post('/servers/%s/action' % server['id'],
+                              rebuild_req_body,
+                              check_response_status=[202])
+
+    def test_volume_backed_rebuild_root_v293(self):
+        server = self._bfv_server()
+        self._test_rebuild(server)
+
+    def test_volume_backed_rebuild_root_create_failed(self):
+        server = self._bfv_server()
+        error = cinder_exception.ClientException(code=500)
+        with mock.patch.object(volume.cinder.API, 'attachment_create',
+                               side_effect=error):
+            # We expect this to fail because we are doing cast-as-call
+            self.assertRaises(client.OpenStackApiException,
+                              self._test_rebuild, server)
+            server = self.api.get_server(server['id'])
+            self.assertIn('Failed to rebuild volume backed instance',
+                          server['fault']['message'])
+            self.assertEqual('ERROR', server['status'])
+
+    def test_volume_backed_rebuild_root_instance_deleted(self):
+        server = self._bfv_server()
+        error = exception.InstanceNotFound(instance_id=server['id'])
+        with mock.patch.object(self.compute.manager, '_detach_root_volume',
+                               side_effect=error):
+            # We expect this to fail because we are doing cast-as-call
+            self.assertRaises(client.OpenStackApiException,
+                              self._test_rebuild, server)
+            server = self.api.get_server(server['id'])
+            self.assertIn('Failed to rebuild volume backed instance',
+                          server['fault']['message'])
+            self.assertEqual('ERROR', server['status'])
+
+    def test_volume_backed_rebuild_root_delete_old_failed(self):
+        server = self._bfv_server()
+        error = cinder_exception.ClientException(code=500)
+        with mock.patch.object(volume.cinder.API, 'attachment_delete',
+                               side_effect=error):
+            # We expect this to fail because we are doing cast-as-call
+            self.assertRaises(client.OpenStackApiException,
+                              self._test_rebuild, server)
+            server = self.api.get_server(server['id'])
+            self.assertIn('Failed to rebuild volume backed instance',
+                          server['fault']['message'])
+            self.assertEqual('ERROR', server['status'])
 
 
 class ServersTestV280(integrated_helpers._IntegratedTestBase):

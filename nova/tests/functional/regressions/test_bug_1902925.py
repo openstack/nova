@@ -28,6 +28,11 @@ class ComputeVersion5xPinnedRpcTests(integrated_helpers._IntegratedTestBase):
         self.compute1 = self._start_compute(host='host1')
 
     def _test_rebuild_instance_with_compute_rpc_pin(self, version_cap):
+        # Since passing the latest microversion (>= 2.93) passes
+        # the 'reimage_boot_volume' parameter as True and it is
+        # not acceptable with compute RPC version (required 6.1)
+        # These tests fail, so assigning microversion to 2.92
+        self.api.microversion = '2.92'
         self.flags(compute=version_cap, group='upgrade_levels')
 
         server_req = self._build_server(networks='none')

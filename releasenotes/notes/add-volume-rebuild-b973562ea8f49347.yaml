@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Added support for rebuilding a volume-backed instance with a different
+    image. This is achieved by reimaging the boot volume i.e. writing new
+    image on the boot volume at cinder side.
+    Previously rebuilding volume-backed instances with same image was
+    possible but this feature allows rebuilding volume-backed instances
+    with a different image than the existing one in the boot volume.
+    This is supported starting from API microversion 2.93.

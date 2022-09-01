@@ -540,7 +540,13 @@ Rebuilds a server.
 Specify the ``rebuild`` action in the request body.
 
 This operation recreates the root disk of the server.
-For a volume-backed server, this operation keeps the contents of the volume.
+
+With microversion 2.93, we support rebuilding volume backed
+instances which will reimage the volume with the provided
+image. For microversion < 2.93, this operation keeps the
+contents of the volume given the image provided is same as
+the image with which the volume was created else the opearation
+will error out.
 
 **Preconditions**
 
@@ -552,8 +558,10 @@ If the server was in status ``SHUTOFF`` before the rebuild, it will be stopped
 and in status ``SHUTOFF`` after the rebuild, otherwise it will be ``ACTIVE``
 if the rebuild was successful or ``ERROR`` if the rebuild failed.
 
-.. note:: There is a `known limitation`_ where the root disk is not
-   replaced for volume-backed instances during a rebuild.
+.. note:: With microversion 2.93, we support rebuilding volume backed
+   instances. If any microversion < 2.93 is specified, there is a
+   `known limitation`_ where the root disk is not replaced for
+   volume-backed instances during a rebuild.
 
 .. _known limitation: https://bugs.launchpad.net/nova/+bug/1482040
 
