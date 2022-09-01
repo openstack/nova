@@ -5305,7 +5305,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         self.compute.rebuild_instance(
             self.context, instance, None, None, None, None, None, None,
-            recreate, False, False, None, scheduled_node, {}, None, [])
+            recreate, False, False, None, scheduled_node, {}, None, [], False)
         mock_set.assert_called_once_with(None, 'failed')
         mock_notify_about_instance_usage.assert_called_once_with(
             mock.ANY, instance, 'rebuild.error', fault=mock_rebuild.side_effect
@@ -5416,7 +5416,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 None, recreate=True, on_shared_storage=None,
                 preserve_ephemeral=False, migration=None,
                 scheduled_node='fake-node',
-                limits={}, request_spec=request_spec, accel_uuids=[])
+                limits={}, request_spec=request_spec, accel_uuids=[],
+                reimage_boot_volume=False)
 
         mock_validate_policy.assert_called_once_with(
             elevated_context, instance, {'group': [uuids.group]})
@@ -5455,7 +5456,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.context, instance, None, None, None, None, None, None,
             recreate=True, on_shared_storage=None, preserve_ephemeral=False,
             migration=None, scheduled_node='fake-node', limits={},
-            request_spec=request_spec, accel_uuids=[])
+            request_spec=request_spec, accel_uuids=[],
+            reimage_boot_volume=False)
 
         mock_validate_policy.assert_called_once_with(
             elevated_context, instance, {'group': [uuids.group]})
@@ -5481,7 +5483,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.compute.rebuild_instance(
                 self.context, instance, None, None,
                 None, None, None, None, False,
-                False, False, migration, None, {}, None, [])
+                False, False, migration, None, {}, None, [], False)
             self.assertFalse(mock_get.called)
             self.assertEqual(node, instance.node)
             self.assertEqual('done', migration.status)
@@ -5503,7 +5505,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.compute.rebuild_instance(
                 self.context, instance, None, None, None, None, None,
                 None, True, False, False, mock.sentinel.migration, None, {},
-                None, [])
+                None, [], False)
             mock_get.assert_called_once_with(mock.ANY, self.compute.host)
             mock_rt.finish_evacuation.assert_called_once_with(
                 instance, 'new-node', mock.sentinel.migration)
@@ -5585,7 +5587,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                               recreate, on_shared_storage,
                                               preserve_ephemeral, {}, {},
                                               self.allocations,
-                                              mock.sentinel.mapping, [])
+                                              mock.sentinel.mapping, [],
+                                              False)
 
             mock_notify_usage.assert_has_calls(
                 [mock.call(self.context, instance, "rebuild.start",
@@ -5603,8 +5606,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 provider_mappings=mock.sentinel.mapping)
             mock_get_nw_info.assert_called_once_with(self.context, instance)
 
-    def test_rebuild_default_impl(self):
-        def _detach(context, bdms):
+    @ddt.data((False, False), (False, True), (True, False), (True, True))
+    @ddt.unpack
+    def test_rebuild_default_impl(self, is_vol_backed, reimage_boot_vol):
+        fake_image_meta = mock.MagicMock(id='fake_id')
+
+        def _detach(context, bdms, detach_root_bdm=True):
             # NOTE(rpodolyaka): check that instance has been powered off by
             # the time we detach block devices, exact calls arguments will be
             # checked below
@@ -5630,13 +5637,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(self.compute, '_power_off_instance',
                               return_value=None),
             mock.patch.object(self.compute, '_get_accel_info',
-                              return_value=[])
+                              return_value=[]),
+            mock.patch.object(compute_utils, 'is_volume_backed_instance',
+                              return_value=is_vol_backed),
+            mock.patch.object(self.compute, '_rebuild_volume_backed_instance'),
+            mock.patch.object(compute_utils, 'get_root_bdm')
         ) as(
              mock_destroy,
              mock_spawn,
              mock_save,
              mock_power_off,
-             mock_accel_info
+             mock_accel_info,
+             mock_is_volume_backed,
+             mock_rebuild_vol_backed_inst,
+             mock_get_root,
         ):
             instance = fake_instance.fake_instance_obj(self.context)
             instance.migration_context = None
@@ -5646,9 +5660,19 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             instance.device_metadata = None
             instance.task_state = task_states.REBUILDING
             instance.save(expected_task_state=[task_states.REBUILDING])
+            fake_block_device_info = {
+                'block_device_mapping': [
+                    {'attachment_id': '341a8917-f74d-4473-8ee7-4ca05e5e0ab3',
+                    'volume_id': 'b7c93bb9-dfe4-41af-aa56-e6b28342fd8f',
+                    'connection_info': {'driver_volume_type': 'iscsi',
+                    'data': {'target_discovered': False,
+                             'target_portal': '127.0.0.1:3260',
+                             'target_iqn': 'iqn.2010-10.org.openstack:volume-'
+                             'b7c93bb9-dfe4-41af-aa56-e6b28342fd8f',
+                             'target_lun': 0}}}]}
             self.compute._rebuild_default_impl(self.context,
                                                instance,
-                                               None,
+                                               fake_image_meta,
                                                [],
                                                admin_password='new_pass',
                                                bdms=[],
@@ -5657,16 +5681,151 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                                                attach_block_devices=_attach,
                                                network_info=None,
                                                evacuate=False,
-                                               block_device_info=None,
-                                               preserve_ephemeral=False)
+                                               block_device_info=
+                                               fake_block_device_info,
+                                               preserve_ephemeral=False,
+                                               reimage_boot_volume=
+                                               reimage_boot_vol)
 
             self.assertTrue(mock_save.called)
             self.assertTrue(mock_spawn.called)
             mock_destroy.assert_called_once_with(
                 self.context, instance,
-                network_info=None, block_device_info=None)
+                network_info=None, block_device_info=fake_block_device_info)
             mock_power_off.assert_called_once_with(
                 instance, clean_shutdown=True)
+            if is_vol_backed and reimage_boot_vol:
+                mock_rebuild_vol_backed_inst.assert_called_once_with(
+                    self.context, instance, [], fake_image_meta.id)
+            else:
+                mock_rebuild_vol_backed_inst.assert_not_called()
+
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.attachment_create',
+                return_value={'id': uuids.new_attachment_id})
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'wait_for_instance_event')
+    def test__rebuild_volume_backed_instance(
+        self, wait_inst_event, attach_create, attach_delete):
+        fake_conn_info = '{}'
+        fake_device = 'fake_vda'
+        root_bdm = mock.MagicMock(
+            volume_id=uuids.volume_id, connection_info=fake_conn_info,
+            device_name=fake_device, attachment_id=uuids.old_attachment_id,
+            save=mock.MagicMock())
+        bdms = [root_bdm]
+        events = [('volume-reimaged', root_bdm.volume_id)]
+        image_size_gb = 1
+        deadline = CONF.reimage_timeout_per_gb * image_size_gb
+
+        with test.nested(
+            mock.patch.object(objects.Instance, 'save',
+                              return_value=None),
+            mock.patch.object(compute_utils, 'get_root_bdm',
+                  return_value=root_bdm),
+            mock.patch.object(self.compute, 'volume_api'),
+            mock.patch.object(self.compute.image_api, 'get'),
+        ) as (
+            mock_save,
+            mock_get_root_bdm,
+            mock_vol_api,
+            mock_get_img
+        ):
+            instance = fake_instance.fake_instance_obj(self.context)
+            instance.task_state = task_states.REBUILDING
+            # 1024 ** 3 = 1073741824
+            mock_get_img.return_value = {'size': 1073741824}
+            self.compute._rebuild_volume_backed_instance(
+                self.context, instance, bdms, uuids.image_id)
+            mock_vol_api.attachment_create.assert_called_once_with(
+                self.context, uuids.volume_id, instance.uuid)
+            mock_vol_api.attachment_delete.assert_called_once_with(
+                self.context, uuids.old_attachment_id)
+            mock_vol_api.reimage_volume.assert_called_once_with(
+                self.context, uuids.volume_id, uuids.image_id,
+                reimage_reserved=True)
+            mock_get_img.assert_called_once_with(
+                self.context, uuids.image_id)
+            mock_get_root_bdm.assert_called_once_with(
+                self.context, instance, bdms)
+            wait_inst_event.assert_called_once_with(
+                instance, events, deadline=deadline,
+                error_callback=self.compute._reimage_failed_callback)
+
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.attachment_create',
+                return_value={'id': uuids.new_attachment_id})
+    @mock.patch.object(nova.compute.manager.ComputeVirtAPI,
+                       'wait_for_instance_event')
+    def test__rebuild_volume_backed_instance_image_not_found(
+        self, wait_inst_event, attach_create, attach_delete):
+        fake_conn_info = '{}'
+        fake_device = 'fake_vda'
+        root_bdm = mock.MagicMock(
+            volume_id=uuids.volume_id, connection_info=fake_conn_info,
+            device_name=fake_device, attachment_id=uuids.old_attachment_id,
+            save=mock.MagicMock())
+        bdms = [root_bdm]
+
+        with test.nested(
+            mock.patch.object(objects.Instance, 'save',
+                              return_value=None),
+            mock.patch.object(compute_utils, 'get_root_bdm',
+                  return_value=root_bdm),
+            mock.patch.object(self.compute, 'volume_api'),
+            mock.patch.object(self.compute.image_api, 'get'),
+        ) as(
+            mock_save,
+            mock_get_root_bdm,
+            mock_vol_api,
+            mock_get_img
+        ):
+            mock_get_img.side_effect = exception.ImageNotFound(
+                image_id=uuids.image_id)
+            instance = fake_instance.fake_instance_obj(self.context)
+            instance.task_state = task_states.REBUILDING
+            instance.save(expected_task_state=[task_states.REBUILDING])
+            mock_get_img.return_value = {'size': 1}
+            self.assertRaises(
+                exception.BuildAbortException,
+                self.compute._rebuild_volume_backed_instance,
+                self.context, instance, bdms, uuids.image_id)
+            mock_vol_api.attachment_create.assert_called_once_with(
+                self.context, uuids.volume_id, instance.uuid)
+            mock_vol_api.attachment_delete.assert_called_once_with(
+                self.context, uuids.old_attachment_id)
+            mock_get_img.assert_called_once_with(
+                self.context, uuids.image_id)
+
+    @mock.patch.object(objects.Instance, 'save', return_value=None)
+    @mock.patch.object(fake_driver.SmallFakeDriver, 'detach_volume')
+    @mock.patch.object(cinder.API, 'roll_detaching')
+    def test__detach_root_volume(self, mock_roll_detach, mock_detach,
+                                 mock_save):
+        exception_list = [
+            '',
+            exception.DiskNotFound(location="not\\here"),
+            exception.DeviceDetachFailed(device="fake_dev", reason="unknown"),
+            ]
+        mock_detach.side_effect = exception_list
+        fake_conn_info = '{}'
+        fake_device = 'fake_vda'
+        root_bdm = mock.MagicMock(
+            volume_id=uuids.volume_id, connection_info=fake_conn_info,
+            device_name=fake_device, attachment_id=uuids.old_attachment_id,
+            save=mock.MagicMock())
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.task_state = task_states.REBUILDING
+        instance.save(expected_task_state=[task_states.REBUILDING])
+        self.compute._detach_root_volume(self.context, instance, root_bdm)
+        self.compute._detach_root_volume(self.context, instance, root_bdm)
+        self.assertRaises(exception.DeviceDetachFailed,
+                          self.compute._detach_root_volume,
+                          self.context, instance, root_bdm)
+        mock_roll_detach.assert_called_with(self.context, uuids.volume_id)
+        self.assertRaises(Exception, self.compute._detach_root_volume,  # noqa
+                          self.context, instance, root_bdm)
+        mock_roll_detach.assert_called_with(self.context, uuids.volume_id)
 
     def test_do_rebuild_instance_check_trusted_certs(self):
         """Tests the scenario that we're rebuilding an instance with
@@ -5688,7 +5847,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 request_spec=objects.RequestSpec(),
                 allocations=self.allocations,
                 request_group_resource_providers_mapping=mock.sentinel.mapping,
-                accel_uuids=[])
+                accel_uuids=[], reimage_boot_volume=False)
         self.assertIn('Trusted image certificates provided on host', str(ex))
 
     def test_reverts_task_state_instance_not_found(self):

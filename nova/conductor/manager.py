@@ -1146,7 +1146,7 @@ class ComputeTaskManager:
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate, on_shared_storage,
                          preserve_ephemeral=False, host=None,
-                         request_spec=None):
+                         request_spec=None, reimage_boot_volume=False):
         # recreate=True means the instance is being evacuated from a failed
         # host to a new destination host. The 'recreate' variable name is
         # confusing, so rename it to evacuate here at the top, which is simpler
@@ -1343,7 +1343,8 @@ class ComputeTaskManager:
                 node=node,
                 limits=limits,
                 request_spec=request_spec,
-                accel_uuids=accel_uuids)
+                accel_uuids=accel_uuids,
+                reimage_boot_volume=False)
 
     def _validate_image_traits_for_rebuild(self, context, instance, image_ref):
         """Validates that the traits specified in the image can be satisfied

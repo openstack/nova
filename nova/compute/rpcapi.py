@@ -402,6 +402,7 @@ class ComputeAPI(object):
         * ...  - Rename the instance_type argument of prep_resize() to flavor
         * ...  - Rename the instance_type argument of resize_instance() to
                  flavor
+        * 6.1 - Add reimage_boot_volume parameter to rebuild_instance()
     '''
 
     VERSION_ALIASES = {
@@ -1080,7 +1081,8 @@ class ComputeAPI(object):
             self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
             recreate, on_shared_storage, host, node,
-            preserve_ephemeral, migration, limits, request_spec, accel_uuids):
+            preserve_ephemeral, migration, limits, request_spec, accel_uuids,
+            reimage_boot_volume):
 
         # NOTE(edleafe): compute nodes can only use the dict form of limits.
         if isinstance(limits, objects.SchedulerLimits):
@@ -1092,10 +1094,20 @@ class ComputeAPI(object):
             'scheduled_node': node,
             'limits': limits,
             'request_spec': request_spec,
-            'accel_uuids': accel_uuids
+            'accel_uuids': accel_uuids,
+            'reimage_boot_volume': reimage_boot_volume
         }
-        version = self._ver(ctxt, '5.12')
+
+        version = '6.1'
         client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            if msg_args['reimage_boot_volume']:
+                raise exception.NovaException(
+                    'Compute RPC version does not support '
+                    'reimage_boot_volume parameter.')
+            else:
+                del msg_args['reimage_boot_volume']
+            version = self._ver(ctxt, '5.12')
         if not client.can_send_version(version):
             del msg_args['accel_uuids']
             version = '5.0'

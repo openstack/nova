@@ -1630,7 +1630,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                 admin_password, allocations, bdms, detach_block_devices,
                 attach_block_devices, network_info=None,
                 evacuate=False, block_device_info=None,
-                preserve_ephemeral=False, accel_uuids=None):
+                preserve_ephemeral=False, accel_uuids=None,
+                reimage_boot_volume=False):
         """Rebuild/redeploy an instance.
 
         This version of rebuild() allows for supporting the option to
@@ -1671,7 +1672,13 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param preserve_ephemeral: Boolean value; if True the ephemeral
             must be preserved on rebuild.
         :param accel_uuids: Accelerator UUIDs. Ignored by this driver.
+        :param reimage_boot_volume: Re-image the volume backed instance.
         """
+        if reimage_boot_volume:
+            raise exception.NovaException(
+                _("Ironic doesn't support rebuilding volume backed "
+                  "instances."))
+
         LOG.debug('Rebuild called for instance', instance=instance)
 
         instance.task_state = task_states.REBUILD_SPAWNING

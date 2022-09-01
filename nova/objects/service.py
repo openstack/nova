@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 63
+SERVICE_VERSION = 64
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -222,6 +222,9 @@ SERVICE_VERSION_HISTORY = (
     # Version 63: Compute RPC v6.0:
     # Add support for VDPA hotplug live migration and suspend/resume
     {'compute_rpc': '6.0'},
+    # Version 64: Compute RPC v6.1:
+    # Add reimage_boot_volume parameter to rebuild_instance()
+    {'compute_rpc': '6.1'},
 )
 
 # This is used to raise an error at service startup if older than N-1 computes

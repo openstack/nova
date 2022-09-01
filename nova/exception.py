@@ -2477,3 +2477,7 @@ class PlacementPciMixedTraitsException(PlacementPciException):
         "of 'traits' in [pci]device_spec. We got %(new_traits)s for "
         "%(new_dev)s and %(current_traits)s for %(current_devs)s."
     )
+
+
+class ReimageException(NovaException):
+    msg_fmt = _("Reimaging volume failed.")
