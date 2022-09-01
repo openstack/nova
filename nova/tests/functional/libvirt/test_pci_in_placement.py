@@ -62,6 +62,9 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
     def _to_device_spec_conf(spec_list):
         return [jsonutils.dumps(x) for x in spec_list]
 
+
+class PlacementPCIInventoryReportingTests(PlacementPCIReportingTests):
+
     def test_new_compute_init_with_pci_devs(self):
         """A brand new compute is started with multiple pci devices configured
         for nova.
@@ -748,3 +751,188 @@ class PlacementPCIReportingTests(test_pci_sriov_servers._PCIServersTestBase):
             "enabled.",
             str(ex)
         )
+
+
+class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
+    def setUp(self):
+        super().setUp()
+        # Pre-configure a PCI alias to consume our devs
+        alias_pci = {
+            "vendor_id": fakelibvirt.PCI_VEND_ID,
+            "product_id": fakelibvirt.PCI_PROD_ID,
+            "name": "a-pci-dev",
+        }
+        alias_pf = {
+            "vendor_id": fakelibvirt.PCI_VEND_ID,
+            "product_id": fakelibvirt.PF_PROD_ID,
+            "device_type": "type-PF",
+            "name": "a-pf",
+        }
+        alias_vf = {
+            "vendor_id": fakelibvirt.PCI_VEND_ID,
+            "product_id": fakelibvirt.VF_PROD_ID,
+            "device_type": "type-VF",
+            "name": "a-vf",
+        }
+        self.flags(
+            group='pci',
+            alias=self._to_pci_alias_conf([alias_pci, alias_pf, alias_vf]))
+
+    @staticmethod
+    def _to_pci_alias_conf(alias_list):
+        return [jsonutils.dumps(x) for x in alias_list]
+
+    def test_heal_single_pci_allocation(self):
+        # The fake libvirt will emulate on the host:
+        # * one type-PCI in slot 0
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=1, num_pfs=0, num_vfs=0)
+        # the config matches the PCI dev
+        device_spec = self._to_device_spec_conf(
+            [
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PCI_PROD_ID,
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+
+        # Start a compute *without* PCI tracking in placement
+        self.mock_pci_report_in_placement.return_value = False
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+        self.assertPCIDeviceCounts("compute1", total=1, free=1)
+
+        # Create an instance that consume our PCI dev
+        extra_spec = {"pci_passthrough:alias": "a-pci-dev:1"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(flavor_id=flavor_id, networks=[])
+        self.assertPCIDeviceCounts("compute1", total=1, free=0)
+
+        # Restart the compute but now with PCI tracking enabled
+        self.mock_pci_report_in_placement.return_value = True
+        self.restart_compute_service("compute1")
+        # Assert that the PCI allocation is healed in placement
+        self.assertPCIDeviceCounts("compute1", total=1, free=0)
+        expected_placement_view = {
+            "inventories": {
+                "0000:81:00.0": {self.PCI_RC: 1},
+            },
+            "traits": {
+                "0000:81:00.0": [],
+            },
+            "usages": {
+                "0000:81:00.0": {self.PCI_RC: 1}
+            },
+            "allocations": {
+                server['id']: {
+                    "0000:81:00.0": {self.PCI_RC: 1}
+                }
+            }
+        }
+        self.assert_placement_pci_view("compute1", **expected_placement_view)
+
+        # run an update_available_resources periodic and assert that the usage
+        # and allocation stays
+        self._run_periodics()
+        self.assert_placement_pci_view("compute1", **expected_placement_view)
+
+    def test_heal_multiple_allocations(self):
+        # The fake libvirt will emulate on the host:
+        # * two type-PCI devs (slot 0 and 1)
+        # * two type-PFs (slot 2 and 3) with 4 type-VFs each
+        pci_info = fakelibvirt.HostPCIDevicesInfo(
+            num_pci=2, num_pfs=2, num_vfs=8)
+        # the config matches:
+        device_spec = self._to_device_spec_conf(
+            [
+                # both type-PCI
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PCI_PROD_ID,
+                },
+                # the PF in slot 2
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.PF_PROD_ID,
+                    "address": "0000:81:02.0",
+                },
+                # the VFs in slot 3
+                {
+                    "vendor_id": fakelibvirt.PCI_VEND_ID,
+                    "product_id": fakelibvirt.VF_PROD_ID,
+                    "address": "0000:81:03.*",
+                },
+            ]
+        )
+        self.flags(group='pci', device_spec=device_spec)
+
+        # Start a compute *without* PCI tracking in placement
+        self.mock_pci_report_in_placement.return_value = False
+        self.start_compute(hostname="compute1", pci_info=pci_info)
+        # 2 PCI + 1 PF + 4 VFs
+        self.assertPCIDeviceCounts("compute1", total=7, free=7)
+
+        # Create three instances consuming devices:
+        # * server_2pci: two type-PCI
+        # * server_pf_vf: one PF and one VF
+        # * server_2vf: two VFs
+        extra_spec = {"pci_passthrough:alias": "a-pci-dev:2"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server_2pci = self._create_server(flavor_id=flavor_id, networks=[])
+        self.assertPCIDeviceCounts("compute1", total=7, free=5)
+
+        extra_spec = {"pci_passthrough:alias": "a-pf:1,a-vf:1"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server_pf_vf = self._create_server(flavor_id=flavor_id, networks=[])
+        self.assertPCIDeviceCounts("compute1", total=7, free=3)
+
+        extra_spec = {"pci_passthrough:alias": "a-vf:2"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server_2vf = self._create_server(flavor_id=flavor_id, networks=[])
+        self.assertPCIDeviceCounts("compute1", total=7, free=1)
+
+        # Restart the compute but now with PCI tracking enabled
+        self.mock_pci_report_in_placement.return_value = True
+        self.restart_compute_service("compute1")
+        # Assert that the PCI allocation is healed in placement
+        self.assertPCIDeviceCounts("compute1", total=7, free=1)
+        expected_placement_view = {
+            "inventories": {
+                "0000:81:00.0": {self.PCI_RC: 1},
+                "0000:81:01.0": {self.PCI_RC: 1},
+                "0000:81:02.0": {self.PF_RC: 1},
+                "0000:81:03.0": {self.VF_RC: 4},
+            },
+            "traits": {
+                "0000:81:00.0": [],
+                "0000:81:01.0": [],
+                "0000:81:02.0": [],
+                "0000:81:03.0": [],
+            },
+            "usages": {
+                "0000:81:00.0": {self.PCI_RC: 1},
+                "0000:81:01.0": {self.PCI_RC: 1},
+                "0000:81:02.0": {self.PF_RC: 1},
+                "0000:81:03.0": {self.VF_RC: 3},
+            },
+            "allocations": {
+                server_2pci['id']: {
+                    "0000:81:00.0": {self.PCI_RC: 1},
+                    "0000:81:01.0": {self.PCI_RC: 1},
+                },
+                server_pf_vf['id']: {
+                    "0000:81:02.0": {self.PF_RC: 1},
+                    "0000:81:03.0": {self.VF_RC: 1},
+                },
+                server_2vf['id']: {
+                    "0000:81:03.0": {self.VF_RC: 2}
+                },
+            },
+        }
+        self.assert_placement_pci_view("compute1", **expected_placement_view)
+
+        # run an update_available_resources periodic and assert that the usage
+        # and allocation stays
+        self._run_periodics()
+        self.assert_placement_pci_view("compute1", **expected_placement_view)

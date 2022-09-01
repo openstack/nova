@@ -11,11 +11,14 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import collections
+import copy
 import typing as ty
 
 import os_resource_classes
 import os_traits
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 
 from nova.compute import provider_tree
 from nova import exception
@@ -126,6 +129,10 @@ class PciResourceProvider:
     def devs(self) -> ty.List[pci_device.PciDevice]:
         return [self.parent_dev] if self.parent_dev else self.children_devs
 
+    @property
+    def to_be_deleted(self):
+        return not bool(self.devs)
+
     def add_child(self, dev, dev_spec_tags: ty.Dict[str, str]) -> None:
         if self.parent_dev:
             raise exception.PlacementPciDependentDeviceException(
@@ -177,13 +184,34 @@ class PciResourceProvider:
         # Nothing to do here. The update_provider_tree we handle full RP
         pass
 
+    def _get_allocations(self) -> ty.Mapping[str, int]:
+        """Return a dict of used resources keyed by consumer UUID.
+
+        Note that:
+        1) a single consumer can consume more than one resource from a single
+           RP. I.e. A VM with two VFs from the same parent PF
+        2) multiple consumers can consume resources from a single RP. I.e. two
+           VMs consuming one VF from the same PF each
+        3) regardless of how many consumers we have on a single PCI RP, they
+           are always consuming resources from the same resource class as
+           we are not supporting dependent devices modelled by the same RP but
+           different resource classes.
+        """
+        return collections.Counter(
+            [
+                dev.instance_uuid
+                for dev in self.devs
+                if "instance_uuid" in dev and dev.instance_uuid
+            ]
+        )
+
     def update_provider_tree(
         self,
         provider_tree: provider_tree.ProviderTree,
         parent_rp_name: str,
     ) -> None:
 
-        if not self.parent_dev and not self.children_devs:
+        if self.to_be_deleted:
             # This means we need to delete the RP from placement if exists
             if provider_tree.exists(self.name):
                 # NOTE(gibi): If there are allocations on this RP then
@@ -194,7 +222,16 @@ class PciResourceProvider:
             return
 
         if not provider_tree.exists(self.name):
-            provider_tree.new_child(self.name, parent_rp_name)
+            # NOTE(gibi): We need to generate UUID for the new provider in Nova
+            # instead of letting Placement assign one. We are potentially
+            # healing a missing RP along with missing allocations on that RP.
+            # The allocation healing happens with POST /reshape, and that API
+            # only takes RP UUIDs.
+            provider_tree.new_child(
+                self.name,
+                parent_rp_name,
+                uuid=uuidutils.generate_uuid(dashed=True)
+            )
 
         provider_tree.update_inventory(
             self.name,
@@ -213,6 +250,43 @@ class PciResourceProvider:
             },
         )
         provider_tree.update_traits(self.name, self.traits)
+
+    def update_allocations(
+        self,
+        allocations: dict,
+        provider_tree: provider_tree.ProviderTree
+    ) -> bool:
+        updated = False
+
+        if self.to_be_deleted:
+            # the RP is going away because either removed from the hypervisor
+            # or the compute's config is changed to ignore the device.
+            return updated
+
+        # we assume here that if this RP has been created in the current round
+        # of healing then it already has a UUID assigned.
+        rp_uuid = provider_tree.data(self.name).uuid
+
+        for consumer, amount in self._get_allocations().items():
+            current_allocs = allocations[consumer]['allocations']
+            current_rp_allocs = current_allocs.get(rp_uuid)
+
+            if current_rp_allocs:
+                # update an existing allocation if the current one differs
+                current_rc_allocs = current_rp_allocs["resources"].get(
+                    self.resource_class, 0)
+                if current_rc_allocs != amount:
+                    current_rp_allocs[
+                        "resources"][self.resource_class] = amount
+                    updated = True
+            else:
+                # insert a new allocation as it is missing
+                current_allocs[rp_uuid] = {
+                    "resources": {self.resource_class: amount}
+                }
+                updated = True
+
+        return updated
 
     def __str__(self) -> str:
         if self.devs:
@@ -348,6 +422,21 @@ class PlacementView:
         for rp_name, rp in self.rps.items():
             rp.update_provider_tree(provider_tree, self.root_rp_name)
 
+    def update_allocations(
+        self,
+        allocations: dict,
+        provider_tree: provider_tree.ProviderTree
+    ) -> bool:
+        """Updates the passed in allocations dict inplace with any PCI
+        allocations that is inferred from the PciDevice objects already added
+        to the view. It returns True if the allocations dict has been changed,
+        False otherwise.
+        """
+        updated = False
+        for rp in self.rps.values():
+            updated |= rp.update_allocations(allocations, provider_tree)
+        return updated
+
 
 def ensure_no_dev_spec_with_devname(dev_specs: ty.List[devspec.PciDeviceSpec]):
     for dev_spec in dev_specs:
@@ -437,7 +526,16 @@ def update_provider_tree_for_pci(
     LOG.info("Placement PCI resource view: %s", pv)
 
     pv.update_provider_tree(provider_tree)
-    # FIXME(gibi): Check allocations too based on pci_dev.instance_uuid and
-    #  if here was any update then we have to return True to trigger a reshape.
+    old_alloc = copy.deepcopy(allocations)
+    updated = pv.update_allocations(allocations, provider_tree)
 
-    return False
+    if updated:
+        LOG.debug(
+            "Placement PCI view needs allocation healing. This should only "
+            "happen if [scheduler]pci_in_placement is still disabled. "
+            "Original allocations: %s New allocations: %s",
+            old_alloc,
+            allocations,
+        )
+
+    return updated
