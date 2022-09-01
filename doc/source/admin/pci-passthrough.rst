@@ -404,4 +404,20 @@ is upgraded. If there is an in-progress migration, then the PCI allocation on
 the source host of the migration will not be healed. The placement view will be
 consistent after such migration is completed or reverted.
 
+Reconfiguring the PCI devices on the hypervisor or changing the
+:oslo.config:option:`pci.device_spec` configuration option and restarting the
+nova-compute service is supported in the following cases:
+
+* new devices are added
+* devices without allocation is removed
+
+Removing a device that has allocations is not supported. If a device having any
+allocation is removed then the nova-compute service will keep the device and
+the allocation exists in the nova DB and in placement and logs a warning. If
+a device with any allocation is reconfigured in a way that an allocated PF is
+removed and VFs from the same PF is configured (or vice versa) then
+nova-compute will refuse to start as it would create a situation where both
+the PF and its VFs are made available for consumption.
+
+
 For deeper technical details please read the `nova specification. <https://specs.openstack.org/openstack/nova-specs/specs/zed/approved/pci-device-tracking-in-placement.html>`_

@@ -50,6 +50,7 @@ class TestTranslator(test.NoDBTestCase):
                 pci_device.PciDevice(
                     address="0000:81:00.0",
                     status=fields.PciDeviceStatus.AVAILABLE,
+                    instance_uuid=None,
                 )
             ]
         )
