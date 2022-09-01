@@ -268,6 +268,31 @@ class PciResourceProvider:
         rp_uuid = provider_tree.data(self.name).uuid
 
         for consumer, amount in self._get_allocations().items():
+            if consumer not in allocations:
+                # We have PCI device(s) allocated to an instance, but we don't
+                # see any instance allocation in placement. This
+                # happens for two reasons:
+                # 1) The instance is being migrated and therefore the
+                #    allocation is held by the migration UUID in placement. In
+                #    this case the PciDevice is still allocated to the instance
+                #    UUID in the nova DB hence our lookup for the instance
+                #    allocation here. We can ignore this case as: i) We healed
+                #    the PCI allocation for the instance before the migration
+                #    was started. ii) Nova simply moves the allocation from the
+                #    instance UUID to the migration UUID in placement. So we
+                #    assume the migration allocation is correct without
+                #    healing. One limitation of this is that if there is in
+                #    progress migration when nova is upgraded, then the PCI
+                #    allocation of that migration will be missing from
+                #    placement on the source host. But it is temporary and the
+                #    allocation will be fixed as soon as the migration is
+                #    completed or reverted.
+                # 2) We have a bug in the scheduler or placement and the whole
+                #    instance allocation is lost. We cannot handle that here.
+                #    It is expected to be healed via nova-manage placement
+                #    heal_allocation CLI instead.
+                continue
+
             current_allocs = allocations[consumer]['allocations']
             current_rp_allocs = current_allocs.get(rp_uuid)
 

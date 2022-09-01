@@ -394,4 +394,14 @@ be added to the resource provider representing the matching PCI devices.
    (Zed) the nova-compute service will refuse to start with such configuration.
    It is suggested to use the PCI address of the device instead.
 
+The nova-compute service makes sure that already existing instances with PCI
+allocations in the nova DB will have a corresponding PCI allocation in
+placement. This allocation healing also acts on any new instances regardless of
+the status of the scheduling part of this feature to make sure that the nova
+DB and placement are in sync. There is one limitation of the healing logic.
+It assumes that there is no in-progress migration when the nova-compute service
+is upgraded. If there is an in-progress migration, then the PCI allocation on
+the source host of the migration will not be healed. The placement view will be
+consistent after such migration is completed or reverted.
+
 For deeper technical details please read the `nova specification. <https://specs.openstack.org/openstack/nova-specs/specs/zed/approved/pci-device-tracking-in-placement.html>`_
