@@ -21,6 +21,7 @@ from oslo_log import log as logging
 from oslo_utils import uuidutils
 
 from nova.compute import provider_tree
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.objects import fields
@@ -29,6 +30,7 @@ from nova.pci import devspec
 from nova.pci import manager as pci_manager
 
 
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -42,14 +44,7 @@ CHILD_TYPES = (
 
 
 def _is_placement_tracking_enabled() -> bool:
-    # This is false to act as a feature flag while we develop the feature
-    # step by step. It will be replaced with a config check when the feature is
-    # ready for production.
-    #
-    # return CONF.pci.report_in_placement
-
-    # Test code will mock this function to enable the feature in the test env
-    return False
+    return CONF.pci.report_in_placement
 
 
 def _normalize_traits(traits: ty.List[str]) -> ty.List[str]:

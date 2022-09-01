@@ -225,7 +225,21 @@ Possible values:
 
     device_spec = [{"product_id":"0001", "vendor_id":"8086"},
                    {"product_id":"0002", "vendor_id":"8086"}]
-""")
+"""),
+    cfg.BoolOpt('report_in_placement',
+                default=False,
+                help="""
+Enable PCI resource inventory reporting to Placement. If it is enabled then the
+nova-compute service will report PCI resource inventories to Placement
+according to the [pci]device_spec configuration and the PCI devices reported
+by the hypervisor. Once it is enabled it cannot be disabled any more. In a
+future release the default of this config will be change to True.
+
+Related options:
+
+* [pci]device_spec: to define which PCI devices nova are allowed to track and
+  assign to guests.
+"""),
 ]
 
 
