@@ -61,7 +61,7 @@ class TestTranslator(test.NoDBTestCase):
         provider_tree = mock.NonCallableMock()
 
         ppt.update_provider_tree_for_pci(
-            provider_tree, "fake-node", pci_tracker, {})
+            provider_tree, "fake-node", pci_tracker, {}, [])
 
         self.assertIn(
             "Device spec is not found for device 0000:81:00.0 in "
@@ -113,7 +113,8 @@ class TestTranslator(test.NoDBTestCase):
         )
 
     def test_dependent_device_pf_then_vf(self):
-        pv = ppt.PlacementView("fake-node")
+        pv = ppt.PlacementView(
+            "fake-node", instances_under_same_host_resize=[])
         pf = pci_device.PciDevice(
             address="0000:81:00.0",
             dev_type=fields.PciDeviceType.SRIOV_PF
@@ -140,7 +141,8 @@ class TestTranslator(test.NoDBTestCase):
         )
 
     def test_dependent_device_vf_then_pf(self):
-        pv = ppt.PlacementView("fake-node")
+        pv = ppt.PlacementView(
+            "fake-node", instances_under_same_host_resize=[])
         pf = pci_device.PciDevice(
             address="0000:81:00.0",
             dev_type=fields.PciDeviceType.SRIOV_PF
@@ -173,7 +175,8 @@ class TestTranslator(test.NoDBTestCase):
         )
 
     def test_mixed_rc_for_sibling_vfs(self):
-        pv = ppt.PlacementView("fake-node")
+        pv = ppt.PlacementView(
+            "fake-node", instances_under_same_host_resize=[])
         vf1, vf2, vf3, vf4 = [
             pci_device.PciDevice(
                 address="0000:81:00.%d" % f,

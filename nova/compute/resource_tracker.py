@@ -1260,6 +1260,11 @@ class ResourceTracker(object):
             context, nodename, provider_tree=prov_tree)
         prov_tree.update_traits(nodename, traits)
 
+        instances_under_same_host_resize = [
+            migration.instance_uuid
+            for migration in self.tracked_migrations.values()
+            if migration.is_same_host_resize
+        ]
         # NOTE(gibi): Tracking PCI in placement is different from other
         # resources.
         #
@@ -1278,7 +1283,12 @@ class ResourceTracker(object):
         # is enabled. So we need to be ready to heal PCI allocations at
         # every call not just at startup.
         pci_reshaped = pci_placement_translator.update_provider_tree_for_pci(
-            prov_tree, nodename, self.pci_tracker, allocs)
+            prov_tree,
+            nodename,
+            self.pci_tracker,
+            allocs,
+            instances_under_same_host_resize,
+        )
 
         self.provider_tree = prov_tree
 

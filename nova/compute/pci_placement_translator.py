@@ -254,7 +254,8 @@ class PciResourceProvider:
     def update_allocations(
         self,
         allocations: dict,
-        provider_tree: provider_tree.ProviderTree
+        provider_tree: provider_tree.ProviderTree,
+        same_host_instances: ty.List[str],
     ) -> bool:
         updated = False
 
@@ -293,6 +294,21 @@ class PciResourceProvider:
                 #    heal_allocation CLI instead.
                 continue
 
+            if consumer in same_host_instances:
+                # This is a nasty special case. This instance is undergoing
+                # a same host resize. So in Placement the source host
+                # allocation is held by the migration UUID *but* the
+                # PciDevice.instance_uuid is set for the instance UUID both
+                # on the source and on the destination host. As the source and
+                # dest are the same for migration we will see PciDevice
+                # objects assigned to this instance that should not be
+                # allocated to the instance UUID in placement.
+                # As noted above we don't want to take care in progress
+                # migration during healing. So we simply ignore this instance.
+                # If the instance needs healing then it will be healed when
+                # after the migration is confirmed or reverted.
+                continue
+
             current_allocs = allocations[consumer]['allocations']
             current_rp_allocs = current_allocs.get(rp_uuid)
 
@@ -326,9 +342,14 @@ class PciResourceProvider:
 class PlacementView:
     """The PCI Placement view"""
 
-    def __init__(self, hypervisor_hostname: str) -> None:
+    def __init__(
+        self,
+        hypervisor_hostname: str,
+        instances_under_same_host_resize: ty.List[str],
+    ) -> None:
         self.rps: ty.Dict[str, PciResourceProvider] = {}
         self.root_rp_name = hypervisor_hostname
+        self.same_host_instances = instances_under_same_host_resize
 
     def _get_rp_name_for_address(self, addr: str) -> str:
         return f"{self.root_rp_name}_{addr.upper()}"
@@ -459,7 +480,11 @@ class PlacementView:
         """
         updated = False
         for rp in self.rps.values():
-            updated |= rp.update_allocations(allocations, provider_tree)
+            updated |= rp.update_allocations(
+                allocations,
+                provider_tree,
+                self.same_host_instances,
+            )
         return updated
 
 
@@ -500,6 +525,7 @@ def update_provider_tree_for_pci(
     nodename: str,
     pci_tracker: pci_manager.PciDevTracker,
     allocations: dict,
+    instances_under_same_host_resize: ty.List[str],
 ) -> bool:
     """Based on the PciDevice objects in the pci_tracker it calculates what
     inventories and allocations needs to exist in placement and create the
@@ -529,6 +555,8 @@ def update_provider_tree_for_pci(
                 },
                 ...
               }
+    :param instances_under_same_host_resize: A list of instance UUIDs that
+        are undergoing same host resize on this host.
     """
     if not _is_placement_tracking_enabled():
         ensure_tracking_was_not_enabled_before(provider_tree)
@@ -541,7 +569,7 @@ def update_provider_tree_for_pci(
         'Collecting PCI inventories and allocations to track them in Placement'
     )
 
-    pv = PlacementView(nodename)
+    pv = PlacementView(nodename, instances_under_same_host_resize)
     for dev in pci_tracker.pci_devs:
         # match the PCI device with the [pci]dev_spec config to access
         # the configuration metadata tags

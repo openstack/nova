@@ -215,6 +215,10 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
     def is_resize(self):
         return self.migration_type == fields.MigrationType.RESIZE
 
+    @property
+    def is_same_host_resize(self):
+        return self.is_resize and self.source_node == self.dest_node
+
 
 @base.NovaObjectRegistry.register
 class MigrationList(base.ObjectListBase, base.NovaObject):

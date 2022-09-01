@@ -1808,6 +1808,7 @@ class TestUpdateComputeNode(BaseTestCase):
             compute_obj.hypervisor_hostname,
             self.rt.pci_tracker,
             mock_get_allocs.return_value,
+            [],
         )
         upt = self.rt.reportclient.update_from_provider_tree
         upt.assert_called_once_with(mock.sentinel.ctx, ptree, allocations=None)
@@ -1847,6 +1848,7 @@ class TestUpdateComputeNode(BaseTestCase):
             compute_obj.hypervisor_hostname,
             self.rt.pci_tracker,
             mock_get_allocs.return_value,
+            [],
         )
         upt = self.rt.reportclient.update_from_provider_tree
         upt.assert_called_once_with(
@@ -1892,10 +1894,71 @@ class TestUpdateComputeNode(BaseTestCase):
             compute_obj.hypervisor_hostname,
             self.rt.pci_tracker,
             mock_get_allocs.return_value,
+            [],
         )
         upt = self.rt.reportclient.update_from_provider_tree
         upt.assert_called_once_with(
             mock.sentinel.ctx, ptree, allocations=mock_get_allocs.return_value)
+
+    @mock.patch(
+        'nova.compute.resource_tracker.ResourceTracker.'
+        '_sync_compute_service_disabled_trait',
+        new=mock.Mock()
+    )
+    @mock.patch(
+        'nova.compute.resource_tracker.ResourceTracker._resource_change',
+        new=mock.Mock(return_value=False)
+    )
+    @mock.patch(
+        'nova.compute.pci_placement_translator.update_provider_tree_for_pci')
+    def test_update_pci_reporting_same_host_resize(
+        self, mock_update_provider_tree_for_pci
+    ):
+        """Assert that resource tracker calls update_provider_tree_for_pci
+        and with the list of instances that are being resized to the same
+        host.
+        """
+        compute_obj = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self._setup_rt()
+        ptree = self._setup_ptree(compute_obj)
+        # simulate that pci reporting did not touch allocations
+        mock_update_provider_tree_for_pci.return_value = False
+        self.rt.tracked_migrations = {
+            uuids.inst1: objects.Migration(
+                migration_type="resize",
+                source_node="fake-node",
+                dest_node="fake-node",
+                instance_uuid=uuids.inst1,
+            ),
+            uuids.inst2: objects.Migration(
+                migration_type="evacuation",
+                source_node="fake-node",
+                dest_node="fake-node",
+                instance_uuid=uuids.inst2,
+            ),
+            uuids.inst3: objects.Migration(
+                migration_type="resize",
+                source_node="fake-node1",
+                dest_node="fake-node2",
+                instance_uuid=uuids.inst3,
+            ),
+        }
+
+        self.rt._update(mock.sentinel.ctx, compute_obj)
+
+        mock_get_allocs = (
+            self.report_client_mock.get_allocations_for_provider_tree)
+        mock_get_allocs.assert_called_once_with(
+            mock.sentinel.ctx, compute_obj.hypervisor_hostname)
+        mock_update_provider_tree_for_pci.assert_called_once_with(
+            ptree,
+            compute_obj.hypervisor_hostname,
+            self.rt.pci_tracker,
+            mock_get_allocs.return_value,
+            [uuids.inst1],
+        )
+        upt = self.rt.reportclient.update_from_provider_tree
+        upt.assert_called_once_with(mock.sentinel.ctx, ptree, allocations=None)
 
     @mock.patch('nova.objects.Service.get_by_compute_host',
                 return_value=objects.Service(disabled=True))
