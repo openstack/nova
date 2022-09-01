@@ -1928,8 +1928,6 @@ class _BaseTaskTestCase(object):
                                       migration_type='evacuation')
         migration.create()
 
-        # TODO(whoami-rajat): Remove this compatibility code
-        del rebuild_args['reimage_boot_volume']
         self.assertRaises(exc.UnsupportedPolicyException,
                           self.conductor.rebuild_instance,
                           self.context,
@@ -4752,6 +4750,42 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
                               self.context, mock.sentinel.instance,
                               mock.sentinel.migration)
         can_send_version.assert_called_once_with('1.23')
+
+    def test_rebuild_instance_volume_backed(self):
+        inst_obj = self._create_fake_instance_obj()
+        version = '1.24'
+        cctxt_mock = mock.MagicMock()
+        rebuild_args, compute_args = self._prepare_rebuild_args(
+            {'host': inst_obj.host})
+        rebuild_args['reimage_boot_volume'] = True
+
+        @mock.patch.object(self.conductor.client, 'prepare',
+                          return_value=cctxt_mock)
+        @mock.patch.object(self.conductor.client, 'can_send_version',
+                   return_value=True)
+        def _test(mock_can_send_ver, prepare_mock):
+            self.conductor.rebuild_instance(
+                self.context, inst_obj, **rebuild_args)
+            prepare_mock.assert_called_once_with(version=version)
+            kw = {'instance': inst_obj, **rebuild_args}
+            cctxt_mock.cast.assert_called_once_with(
+                self.context, 'rebuild_instance', **kw)
+        _test()
+
+    def test_rebuild_instance_volume_backed_old_service(self):
+        """Tests rebuild_instance_volume_backed when the service is too old"""
+        inst_obj = mock.MagicMock()
+        rebuild_args, compute_args = self._prepare_rebuild_args(
+            {'host': inst_obj.host})
+        rebuild_args['reimage_boot_volume'] = True
+        with mock.patch.object(
+                self.conductor.client, 'can_send_version',
+                return_value=False) as can_send_version:
+            self.assertRaises(exc.NovaException,
+                              self.conductor.rebuild_instance,
+                              self.context, inst_obj,
+                              **rebuild_args)
+        can_send_version.assert_called_once_with('1.24')
 
 
 class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):

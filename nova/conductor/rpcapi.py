@@ -286,6 +286,7 @@ class ComputeTaskAPI(object):
     1.21 - Added cache_images()
     1.22 - Added confirm_snapshot_based_resize()
     1.23 - Added revert_snapshot_based_resize()
+    1.24 - Add reimage_boot_volume parameter to rebuild_instance()
     """
 
     def __init__(self):
@@ -426,8 +427,9 @@ class ComputeTaskAPI(object):
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
             recreate=False, on_shared_storage=False, host=None,
-            preserve_ephemeral=False, request_spec=None):
-        version = '1.12'
+            preserve_ephemeral=False, request_spec=None,
+            reimage_boot_volume=False):
+        version = '1.24'
         kw = {'instance': instance,
               'new_pass': new_pass,
               'injected_files': injected_files,
@@ -440,7 +442,16 @@ class ComputeTaskAPI(object):
               'preserve_ephemeral': preserve_ephemeral,
               'host': host,
               'request_spec': request_spec,
+              'reimage_boot_volume': reimage_boot_volume
               }
+        if not self.client.can_send_version(version):
+            if kw['reimage_boot_volume']:
+                raise exception.NovaException(
+                    'Conductor RPC version does not support '
+                    'reimage_boot_volume parameter.')
+            else:
+                del kw['reimage_boot_volume']
+            version = '1.12'
         if not self.client.can_send_version(version):
             version = '1.8'
             del kw['request_spec']
