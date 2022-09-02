@@ -263,10 +263,17 @@ def _get_eth_link(vif, ifc_num):
         'id': link_id,
         'vif_id': vif['id'],
         'type': nic_type,
-        'mtu': vif['network']['meta'].get('mtu'),
+        'mtu': _get_link_mtu(vif),
         'ethernet_mac_address': vif.get('address'),
     }
     return link
+
+
+def _get_link_mtu(vif):
+    for subnet in vif['network']['subnets']:
+        if subnet['meta'].get('dhcp_server'):
+            return None
+    return vif['network']['meta'].get('mtu')
 
 
 def _get_nets(vif, subnet, version, net_num, link_id):
