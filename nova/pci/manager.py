@@ -480,24 +480,3 @@ class PciDevTracker(object):
                 devs = self.allocations.pop(uuid, [])
                 for dev in devs:
                     self._free_device(dev)
-
-
-def get_instance_pci_devs(
-    inst: 'objects.Instance', request_id: str = None,
-) -> ty.List['objects.PciDevice']:
-    """Get the devices allocated to one or all requests for an instance.
-
-    - For generic PCI request, the request id is None.
-    - For sr-iov networking, the request id is a valid uuid
-    - There are a couple of cases where all the PCI devices allocated to an
-      instance need to be returned. Refer to libvirt driver that handles
-      soft_reboot and hard_boot of 'xen' instances.
-    """
-    pci_devices = inst.pci_devices
-    if pci_devices is None:
-        return []
-
-    return [
-        device for device in pci_devices if
-        device.request_id == request_id or request_id == 'all'
-    ]

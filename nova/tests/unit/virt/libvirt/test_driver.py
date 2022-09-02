@@ -76,7 +76,6 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import fields
 from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import virtual_interface as obj_vif
-from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 import nova.privsep.fs
 import nova.privsep.libvirt
@@ -3547,10 +3546,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                status=fields.PciDeviceStatus.AVAILABLE,
                                address='0000:00:00.1',
                                instance_uuid=None,
-                               request_id=None,
+                               request_id=uuids.pci_req1,
                                extra_info={},
                                numa_node=None)
         pci_device = objects.PciDevice(**pci_device_info)
+        instance_ref.pci_devices = objects.PciDeviceList(objects=[pci_device])
+        pci_req = objects.InstancePCIRequest(
+            request_id=uuids.pci_req1, alias_name='pci-alias-1')
+        instance_ref.pci_requests = objects.InstancePCIRequests(
+            requests=[pci_req])
 
         with test.nested(
                 mock.patch.object(host.Host, 'has_min_version',
@@ -3558,9 +3562,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.patch.object(host.Host, "get_capabilities",
                                   return_value=caps),
                 mock.patch.object(host.Host, 'get_online_cpus',
-                                  return_value=set([3])),
-                mock.patch.object(pci_manager, "get_instance_pci_devs",
-                                  return_value=[pci_device])):
+                                  return_value=set([3]))
+        ):
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             self.assertEqual(set([3]), cfg.cpuset)
@@ -3599,23 +3602,31 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                status=fields.PciDeviceStatus.AVAILABLE,
                                address='0000:00:00.1',
                                instance_uuid=None,
-                               request_id=None,
+                               request_id=uuids.pci_req1,
                                extra_info={},
                                numa_node=1)
         pci_device = objects.PciDevice(**pci_device_info)
         pci_device_info.update(numa_node=0, address='0000:00:00.2')
         pci_device2 = objects.PciDevice(**pci_device_info)
+        instance_ref.pci_devices = objects.PciDeviceList(
+            objects=[pci_device, pci_device2]
+        )
+        instance_ref.pci_requests = objects.InstancePCIRequests(
+            requests=[
+                objects.InstancePCIRequest(
+                    request_id=uuids.pci_req1, alias_name="pci-alias-1"
+                )
+            ]
+        )
         with test.nested(
                 mock.patch.object(
                     host.Host, "get_capabilities", return_value=caps),
                 mock.patch.object(host.Host, 'get_online_cpus',
                                   return_value=set([3])),
                 mock.patch.object(random, 'choice'),
-                mock.patch.object(pci_manager, "get_instance_pci_devs",
-                                  return_value=[pci_device, pci_device2]),
                 mock.patch.object(conn, '_has_numa_support',
                                   return_value=False)
-            ) as (_, _, choice_mock, pci_mock, _):
+            ) as (_, _, choice_mock, _):
             cfg = conn._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
             self.assertFalse(choice_mock.called)
@@ -7600,12 +7611,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                address='0000:00:00.1',
                                compute_id=compute_ref.id,
                                instance_uuid=instance.uuid,
-                               request_id=None,
+                               request_id=uuids.pci_req1,
                                extra_info={})
         pci_device = objects.PciDevice(**pci_device_info)
         pci_list = objects.PciDeviceList()
         pci_list.objects.append(pci_device)
         instance.pci_devices = pci_list
+        instance.pci_requests = objects.InstancePCIRequests(
+            requests=[
+                objects.InstancePCIRequest(
+                    request_id=uuids.pci_req1, alias_name="pci-alias"
+                )
+            ]
+        )
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -16641,7 +16659,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get.return_value = fake_guest
         self.stub_out('oslo_service.loopingcall.FixedIntervalLoopingCall',
                       lambda *a, **k: FakeLoopingCall())
-        self.stub_out('nova.pci.manager.get_instance_pci_devs', lambda *a: [])
 
         drvr.reboot(None, instance, [], 'SOFT')
 
@@ -16653,14 +16670,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get.assert_has_calls([mock.call(instance)] * 2, any_order=True)
         self.assertEqual(2, mock_get.call_count)
 
-    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
     @mock.patch.object(greenthread, 'sleep')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_hard_reboot')
     @mock.patch.object(host.Host, '_get_domain')
     def test_reboot_same_ids(self, mock_get_domain, mock_hard_reboot,
-                             mock_sleep, mock_loopingcall,
-                             mock_get_instance_pci_devs):
+                             mock_sleep, mock_loopingcall):
         class FakeLoopingCall(object):
             def start(self, *a, **k):
                 return self
@@ -16688,7 +16703,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_domain.return_value = mock_domain
         mock_hard_reboot.side_effect = fake_hard_reboot
         mock_loopingcall.return_value = FakeLoopingCall()
-        mock_get_instance_pci_devs.return_value = []
         drvr.reboot(None, instance, [], 'SOFT')
         self.assertTrue(self.reboot_hard_reboot_called)
 
@@ -16886,7 +16900,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
-    @mock.patch('nova.pci.manager.get_instance_pci_devs')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_guest_with_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_images_and_backing')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.'
@@ -16903,7 +16916,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_get_guest_config, mock_get_instance_path,
             mock_get_instance_disk_info, mock_create_images_and_backing,
             mock_create_domand_and_network,
-            mock_get_instance_pci_devs, mock_looping_call, mock_ensure_tree):
+            mock_looping_call, mock_ensure_tree):
         """For a hard reboot, we shouldn't need an additional call to glance
         to get the image metadata.
 
@@ -16949,10 +16962,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         @mock.patch.object(conn, '_detach_mediated_devices')
         @mock.patch.object(conn, '_detach_direct_passthrough_ports')
         @mock.patch.object(conn, '_detach_pci_devices')
-        @mock.patch.object(pci_manager, 'get_instance_pci_devs',
-                           return_value='pci devs')
         @mock.patch.object(conn._host, 'get_guest', return_value=guest)
-        def suspend(mock_get_guest, mock_get_instance_pci_devs,
+        def suspend(mock_get_guest,
                     mock_detach_pci_devices,
                     mock_detach_direct_passthrough_ports,
                     mock_detach_mediated_devices,
@@ -17118,7 +17129,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance.info_cache = objects.InstanceInfoCache(
             network_info=network_info)
         # fill the pci_devices of the instance so that
-        # pci_manager.get_instance_pci_devs will not return an empty list
+        # instance.get_instance_pci_devs will not return an empty list
         # which will eventually fail the assertion for detachDeviceFlags
         expected_pci_device_obj = (
             objects.PciDevice(
@@ -17189,7 +17200,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance.info_cache = objects.InstanceInfoCache(
             network_info=network_info)
         # fill the pci_devices of the instance so that
-        # pci_manager.get_instance_pci_devs will not return an empty list
+        # instance.get_instance_pci_devs will not return an empty list
         # which will eventually fail the assertion for detachDeviceFlags
         instance.pci_devices = objects.PciDeviceList()
         instance.pci_devices.objects = [
@@ -17244,8 +17255,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch.object(drvr, '_create_guest_with_network',
                               return_value=guest),
             mock.patch.object(drvr, '_attach_pci_devices'),
-            mock.patch.object(pci_manager, 'get_instance_pci_devs',
-                              return_value='fake_pci_devs'),
+            mock.patch('nova.objects.Instance.get_pci_devices',
+                return_value='fake_pci_devs'),
             mock.patch.object(utils, 'get_image_from_system_metadata'),
             mock.patch.object(guest, 'sync_guest_time'),
             mock.patch.object(drvr, '_wait_for_running',
@@ -20920,7 +20931,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         guest = mock.Mock()
 
         with test.nested(
-            mock.patch.object(pci_manager, 'get_instance_pci_devs'),
             mock.patch.object(drvr, '_attach_pci_devices'),
             mock.patch.object(drvr, '_attach_direct_passthrough_ports'),
         ):

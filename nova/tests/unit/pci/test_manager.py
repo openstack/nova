@@ -810,7 +810,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         free_pci_device_ids = (
             [dev.id for dev in self.tracker.pci_stats.get_free_devs()])
         self.assertEqual(2, len(free_pci_device_ids))
-        allocated_devs = manager.get_instance_pci_devs(self.inst)
+        allocated_devs = self.inst.get_pci_devices()
         pci_device = allocated_devs[0]
         self.assertNotIn(pci_device.id, free_pci_device_ids)
         instance_uuid = self.inst['uuid']
@@ -873,24 +873,3 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertIsNone(self.tracker.allocations.get(instance_uuid))
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(fake_db_devs), len(free_devs))
-
-
-class PciGetInstanceDevs(test.NoDBTestCase):
-
-    def test_get_devs_object(self):
-        def _fake_obj_load_attr(foo, attrname):
-            if attrname == 'pci_devices':
-                self.load_attr_called = True
-                foo.pci_devices = objects.PciDeviceList()
-
-        self.stub_out(
-                'nova.objects.Instance.obj_load_attr',
-                _fake_obj_load_attr)
-
-        self.load_attr_called = False
-        manager.get_instance_pci_devs(objects.Instance())
-        self.assertTrue(self.load_attr_called)
-
-    def test_get_devs_no_pci_devices(self):
-        inst = objects.Instance(pci_devices=None)
-        self.assertEqual([], manager.get_instance_pci_devs(inst))
