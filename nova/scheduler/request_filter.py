@@ -214,6 +214,7 @@ def transform_image_metadata(ctxt, request_spec):
         'hw_vif_model': 'COMPUTE_NET_VIF_MODEL',
         'hw_architecture': 'HW_ARCH',
         'hw_emulation_architecture': 'COMPUTE_ARCH',
+        'hw_viommu_model': 'COMPUTE_VIOMMU',
     }
 
     trait_names = []

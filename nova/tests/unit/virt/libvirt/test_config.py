@@ -4156,7 +4156,8 @@ class LibvirtConfigDomainCapsDevicesTests(LibvirtConfigBaseTest):
         obj.parse_str(xml)
         # we only use the video and disk devices today.
         device_types = [config.LibvirtConfigDomainCapsDiskBuses,
-                        config.LibvirtConfigDomainCapsVideoModels]
+                        config.LibvirtConfigDomainCapsVideoModels,
+                        ]
         # so we assert there are only two device types parsed
         self.assertEqual(2, len(obj.devices))
         # we then assert that the parsed devices are of the correct type
