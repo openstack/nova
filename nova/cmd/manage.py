@@ -122,6 +122,10 @@ def format_dict(dct, dict_property="Property", dict_value='Value',
     """
     pt = prettytable.PrettyTable([dict_property, dict_value])
     pt.align = 'l'
+    # starting in PrettyTable 3.4.0 we need to also set the header
+    # as align now only applies to the data.
+    if hasattr(pt, 'header_align'):
+        pt.header_align = 'l'
     for k, v in sorted(dct.items(), key=sort_key):
         # convert dict to str to check length
         if isinstance(v, dict):
