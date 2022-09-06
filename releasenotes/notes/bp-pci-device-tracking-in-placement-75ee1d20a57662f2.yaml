@@ -2,7 +2,7 @@
 features:
   - |
     Nova started tracking PCI devices in Placement. This is an optional feature
-    disable by default while we are implementing inventory tracking and
+    disabled by default while we are implementing inventory tracking and
     scheduling support for both PCI passthrough devices and SR-IOV devices
     consumed via Neutron ports. Please read our
     `documentation <https://docs.openstack.org/nova/latest/admin/pci-passthrough.html#pci-tracking-in-placement>`_
