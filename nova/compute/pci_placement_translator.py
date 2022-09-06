@@ -401,16 +401,6 @@ class PlacementView:
             }
             raise exception.PlacementPciException(error=msg)
 
-        if 'instance_uuid' in dev and dev.instance_uuid:
-            # The device is allocated to an instance, so we need to make sure
-            # the device will be allocated to the instance in placement too
-            # FIXME(gibi): During migration the source host allocation should
-            # be tight to the migration_uuid as consumer in placement. But
-            # the PciDevice.instance_uuid is still pointing to the
-            # instance_uuid both on the source and the dest. So we need to
-            # check for running migrations.
-            pass
-
     def _remove_child(self, dev: pci_device.PciDevice) -> None:
         rp_name = self._get_rp_name_for_child(dev)
         self._ensure_rp(rp_name).remove_child(dev)

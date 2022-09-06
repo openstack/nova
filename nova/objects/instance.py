@@ -1245,8 +1245,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             # return early to avoid an extra lazy load on self.pci_requests
             # if there are no devices allocated to be filtered
             return []
-        else:
-            devs = self.pci_devices.objects
+
+        devs = self.pci_devices.objects
 
         if request_id is not None:
             devs = [dev for dev in devs if dev.request_id == request_id]
