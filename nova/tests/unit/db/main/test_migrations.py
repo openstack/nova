@@ -314,6 +314,15 @@ class NovaMigrationsWalk(
             self.assertIsInstance(
                 table.c.encryption_options.type, sa.types.String)
 
+    def _check_960aac0e09ea(self, connection):
+        self.assertIndexNotExists(
+            connection, 'console_auth_tokens',
+            'console_auth_tokens_token_hash_idx',
+        )
+        self.assertIndexNotExists(
+            connection, 'instances', 'uuid',
+        )
+
     def test_single_base_revision(self):
         """Ensure we only have a single base revision.
 
