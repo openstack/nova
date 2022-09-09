@@ -1220,8 +1220,10 @@ Add support to pin a server to an availability zone or unpin a server from any a
 The ``POST /os-keypairs`` API now forbids to generate a keypair and allows new
 safe characters, specifically '@' and '.' (dot character).
 
-2.93
-----
+.. _microversion 2.93:
+
+2.93 (Maximum in Zed)
+---------------------
 
 Add support for volume backed server rebuild. The end user will provide the
 image with the rebuild command and it will rebuild the volume with the new
