@@ -3356,6 +3356,25 @@ class API:
             delegate_create=True,
         )
 
+    def _log_error_if_vnic_type_changed(
+        self, port_id, old_vnic_type, new_vnic_type, instance
+    ):
+        if old_vnic_type and old_vnic_type != new_vnic_type:
+            LOG.error(
+                'The vnic_type of the bound port %s has '
+                'been changed in neutron from "%s" to '
+                '"%s". Changing vnic_type of a bound port '
+                'is not supported by Nova. To avoid '
+                'breaking the connectivity of the instance '
+                'please change the port vnic_type back to '
+                '"%s".',
+                port_id,
+                old_vnic_type,
+                new_vnic_type,
+                old_vnic_type,
+                instance=instance
+            )
+
     def _build_network_info_model(self, context, instance, networks=None,
                                   port_ids=None, admin_client=None,
                                   preexisting_port_ids=None,
@@ -3429,6 +3448,12 @@ class API:
                         preexisting_port_ids)
                     for index, vif in enumerate(nw_info):
                         if vif['id'] == refresh_vif_id:
+                            self._log_error_if_vnic_type_changed(
+                                vif['id'],
+                                vif['vnic_type'],
+                                refreshed_vif['vnic_type'],
+                                instance,
+                            )
                             # Update the existing entry.
                             nw_info[index] = refreshed_vif
                             LOG.debug('Updated VIF entry in instance network '
@@ -3478,6 +3503,7 @@ class API:
             networks, port_ids = self._gather_port_ids_and_networks(
                     context, instance, networks, port_ids, client)
 
+        old_nw_info = instance.get_network_info()
         nw_info = network_model.NetworkInfo()
         for port_id in port_ids:
             current_neutron_port = current_neutron_port_map.get(port_id)
@@ -3485,6 +3511,14 @@ class API:
                 vif = self._build_vif_model(
                     context, client, current_neutron_port, networks,
                     preexisting_port_ids)
+                for old_vif in old_nw_info:
+                    if old_vif['id'] == port_id:
+                        self._log_error_if_vnic_type_changed(
+                            port_id,
+                            old_vif['vnic_type'],
+                            vif['vnic_type'],
+                            instance,
+                        )
                 nw_info.append(vif)
             elif nw_info_refresh:
                 LOG.info('Port %s from network info_cache is no '

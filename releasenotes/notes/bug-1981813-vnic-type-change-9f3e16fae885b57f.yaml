@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    `Bug #1981813 <https://bugs.launchpad.net/nova/+bug/1981813>`_: Now nova
+    detects if the ``vnic_type`` of a bound port has been changed in neutron
+    and leaves an ERROR message in the compute service log as such change on a
+    bound port is not supported. Also the restart of the nova-compute service
+    will not crash any more after such port change. Nova will log an ERROR and
+    skip the  initialization of the instance with such port during the startup.
