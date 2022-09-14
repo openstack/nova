@@ -746,8 +746,7 @@
         # Runs emulation feature functionality test less frequently due
         # to being the initial release and experimental in nature.
         - nova-emulation
-        - tempest-integrated-compute-centos-9-stream:
-            irrelevant-files: *nova-base-irrelevant-files
+        - tempest-centos9-stream-fips
     experimental:
       jobs:
         - ironic-tempest-bfv:
@@ -777,7 +776,7 @@
             irrelevant-files: *nova-base-irrelevant-files
         - devstack-tobiko-nova:
             irrelevant-files: *nova-base-irrelevant-files
-        - tempest-centos8-stream-fips:
+        - tempest-centos9-stream-fips:
             irrelevant-files: *nova-base-irrelevant-files
         - nova-emulation
         - tempest-integrated-compute-centos-9-stream:

@@ -27,13 +27,19 @@ function is_rhel8 {
         cat /etc/*release | grep -q 'release 8'
 }
 
+function is_rhel9 {
+    [ -f /usr/bin/dnf ] && \
+        cat /etc/*release | grep -q -e "Red Hat" -e "CentOS" -e "CloudLinux" && \
+        cat /etc/*release | grep -q 'release 9'
+}
+
 function set_conf_line { # file regex value
     sudo sh -c "grep -q -e '$2' $1 && \
             sed -i 's|$2|$3|g' $1 || \
             echo '$3' >> $1"
 }
 
-if is_rhel7 || is_rhel8; then
+if is_rhel7 || is_rhel8 || is_rhel9; then
     # mysql needs to be started on centos/rhel
     sudo systemctl restart mariadb.service
 
