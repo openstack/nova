@@ -1,0 +1,46 @@
+---
+prelude: |
+    The 26.0.0 release includes many new features and bug fixes. Please be
+    sure to read the upgrade section which describes the required actions to
+    upgrade your cloud from 25.0.0 (Yoga) to 26.0.0 (Zed).
+
+    There are a few major changes worth mentioning. This is not an exhaustive
+    list:
+
+    - The latest Compute API microversion supported for Zed is `v2.93`__.
+
+      .. __: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-zed
+
+    - `Virtual IOMMU devices`__  can now be created and attached to an instance
+      when running on a x86 host
+      and using the libvirt driver.
+
+      .. __: https://docs.openstack.org/nova/latest/admin/pci-passthrough.html#virtual-iommu-support
+
+    - Improved behavior for Windows guest by adding by default following
+      `Hyper-V enlightments`__ on all libvirt guests : `vpindex`, `runtime`,
+      `synic`, `reset`, `frequencies`, `reenlightenment`, `tlbflush`, `ipi` and
+      `evmc`.
+
+      .. __: https://libvirt.org/formatdomain.html#hypervisor-features
+
+    - All lifecycle actions are now fully supported for
+      `instances with vDPA ports`__, including vDPA hot-plug live migration,
+      suspend and attach/detach.
+
+      .. __: https://docs.openstack.org/nova/latest/admin/vdpa.html
+
+    - Volume-backed instances (instances with root disk attached as a volume)
+      can now be rebuilt by specifying a 2.93 microversion instead of returning
+      a HTTP400 exception.
+
+    - The `unshelve` instance API action now provides a new `host` parameter
+      with 2.91 microversion (for only admins).
+
+    - With microversion 2.92, you can only import a public key and not generate
+      a keypair. You can also use an extended name pattern.
+
+    - The default system scope is removed from all APIs hence finishing to
+      implement `phase #1 of new RBAC guidelines`__ that are opt-in.
+
+      .. __: https://governance.openstack.org/tc/goals/selected/consistent-and-secure-rbac.html#phase-1
