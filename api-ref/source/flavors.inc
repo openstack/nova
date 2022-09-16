@@ -60,6 +60,15 @@ Creates a flavor.
 Creating a flavor is typically only available to administrators of a
 cloud because this has implications for scheduling efficiently in the cloud.
 
+.. note::
+   Flavors with special characters in the flavor ID, except the hyphen '-',
+   underscore '_', spaces and dots '.', are not permitted.
+
+   Flavor IDs are meant to be UUIDs. Serialized strings separated/grouped by "-"
+   represent the default flavor ID or UUID. eg: 01cc74d8-4816-4bef-835b-e36ff188c406.
+
+   Only for backward compatibility, an integer as a flavor ID is permitted.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
