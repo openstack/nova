@@ -197,7 +197,7 @@ Using fake computes for tests
 The number of instances supported by fake computes is not limited by physical
 constraints. It allows you to perform stress tests on a deployment with few
 resources (typically a laptop). Take care to avoid using scheduler filters
-that will limit the number of instances per compute, such as ``AggregateCoreFilter``.
+that will limit the number of instances per compute, such as ``NumInstancesFilter``.
 
 Fake computes can also be used in multi hypervisor-type deployments in order to
 take advantage of fake and "real" computes during tests:
