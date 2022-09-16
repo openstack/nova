@@ -426,9 +426,7 @@ allocation_ratio_opts = [
 Virtual CPU to physical CPU allocation ratio.
 
 This option is used to influence the hosts selected by the Placement API by
-configuring the allocation ratio for ``VCPU`` inventory. In addition, the
-``AggregateCoreFilter`` (deprecated) will fall back to this configuration value
-if no per-aggregate setting is found.
+configuring the allocation ratio for ``VCPU`` inventory.
 
 .. note::
 
@@ -459,9 +457,7 @@ Related options:
 Virtual RAM to physical RAM allocation ratio.
 
 This option is used to influence the hosts selected by the Placement API by
-configuring the allocation ratio for ``MEMORY_MB`` inventory. In addition, the
-``AggregateRamFilter`` (deprecated) will fall back to this configuration value
-if no per-aggregate setting is found.
+configuring the allocation ratio for ``MEMORY_MB`` inventory.
 
 .. note::
 
@@ -487,9 +483,7 @@ Related options:
 Virtual disk to physical disk allocation ratio.
 
 This option is used to influence the hosts selected by the Placement API by
-configuring the allocation ratio for ``DISK_GB`` inventory. In addition, the
-``AggregateDiskFilter`` (deprecated) will fall back to this configuration value
-if no per-aggregate setting is found.
+configuring the allocation ratio for ``DISK_GB`` inventory.
 
 When configured, a ratio greater than 1.0 will result in over-subscription of
 the available physical disk, which can be useful for more efficiently packing
