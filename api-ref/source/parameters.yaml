@@ -3129,8 +3129,9 @@ flavor_id_body_2_46:
   max_version: 2.46
 flavor_id_body_create:
   description: |
-    The ID of the flavor. While people often make this look like an int, this
-    is really a string. If not provided, this defaults to a uuid.
+    Only alphanumeric characters with hyphen '-', underscore '_', spaces
+    and dots '.' are permitted. If an ID is not provided, then a default UUID
+    will be assigned.
   in: body
   required: false
   type: string
