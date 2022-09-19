@@ -76,3 +76,6 @@ ALLOW_TRIGGER_CRASH_DUMP = [ACTIVE, PAUSED, RESCUED, RESIZED, ERROR]
 
 # states we allow resources to be freed in
 ALLOW_RESOURCE_REMOVAL = [DELETED, SHELVED_OFFLOADED]
+
+# states we allow for evacuate instance
+ALLOW_TARGET_STATES = [STOPPED]

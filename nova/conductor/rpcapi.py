@@ -287,6 +287,7 @@ class ComputeTaskAPI(object):
     1.22 - Added confirm_snapshot_based_resize()
     1.23 - Added revert_snapshot_based_resize()
     1.24 - Add reimage_boot_volume parameter to rebuild_instance()
+    1.25 - Add target_state parameter to rebuild_instance()
     """
 
     def __init__(self):
@@ -428,8 +429,8 @@ class ComputeTaskAPI(object):
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
             recreate=False, on_shared_storage=False, host=None,
             preserve_ephemeral=False, request_spec=None,
-            reimage_boot_volume=False):
-        version = '1.24'
+            reimage_boot_volume=False, target_state=None):
+        version = '1.25'
         kw = {'instance': instance,
               'new_pass': new_pass,
               'injected_files': injected_files,
@@ -442,8 +443,16 @@ class ComputeTaskAPI(object):
               'preserve_ephemeral': preserve_ephemeral,
               'host': host,
               'request_spec': request_spec,
-              'reimage_boot_volume': reimage_boot_volume
+              'reimage_boot_volume': reimage_boot_volume,
+              'target_state': target_state,
               }
+        if not self.client.can_send_version(version):
+            if kw['target_state']:
+                raise exception.UnsupportedRPCVersion(
+                    api="rebuild_instance", required="1.25")
+            else:
+                del kw['target_state']
+            version = '1.24'
         if not self.client.can_send_version(version):
             if kw['reimage_boot_volume']:
                 raise exception.NovaException(

@@ -4081,7 +4081,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     injected_files=[], bdms=bdms,
                     preserve_ephemeral=False, host=None,
                     request_spec=fake_spec,
-                    reimage_boot_volume=True)
+                    reimage_boot_volume=True,
+                    target_state=None)
                 _check_auto_disk_config.assert_called_once_with(
                     image=image, auto_disk_config=None)
                 _checks_for_create_and_rebuild.assert_called_once_with(
@@ -4096,7 +4097,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     instance,
                     uuids.image_ref,
                     admin_pass,
-                    reimage_boot_volume=False)
+                    reimage_boot_volume=False,
+                    target_state=None)
 
     @mock.patch.object(objects.RequestSpec, 'save')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
@@ -4155,7 +4157,8 @@ class _ComputeAPIUnitTestMixIn(object):
                               instance,
                               uuids.image_ref,
                               admin_pass,
-                              reimage_boot_volume=False)
+                              reimage_boot_volume=False,
+                              target_state=None)
 
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
@@ -4205,7 +4208,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     orig_image_ref=uuids.image_ref,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=instance.host,
-                    request_spec=fake_spec, reimage_boot_volume=False)
+                    request_spec=fake_spec, reimage_boot_volume=False,
+                    target_state=None)
 
         _check_auto_disk_config.assert_called_once_with(
             image=image, auto_disk_config=None)
@@ -4278,7 +4282,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     orig_image_ref=uuids.image_ref,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=None,
-                    request_spec=fake_spec, reimage_boot_volume=False)
+                    request_spec=fake_spec, reimage_boot_volume=False,
+                    target_state=None)
             # assert the request spec was modified so the scheduler picks
             # the existing instance host/node
             req_spec_save.assert_called_once_with()
@@ -4346,7 +4351,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     orig_image_ref=uuids.image_ref,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
                     preserve_ephemeral=False, host=instance.host,
-                    request_spec=fake_spec, reimage_boot_volume=False)
+                    request_spec=fake_spec, reimage_boot_volume=False,
+                    target_state=None)
 
         _check_auto_disk_config.assert_called_once_with(
             image=image, auto_disk_config=None)
@@ -4405,7 +4411,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 orig_image_ref=uuids.image_ref,
                 orig_sys_metadata=orig_system_metadata, bdms=bdms,
                 preserve_ephemeral=False, host=instance.host,
-                request_spec=fake_spec, reimage_boot_volume=False)
+                request_spec=fake_spec, reimage_boot_volume=False,
+                target_state=None)
 
         _check_auto_disk_config.assert_called_once_with(
             image=image, auto_disk_config=None)
@@ -4469,7 +4476,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 orig_image_ref=uuids.image_ref,
                 orig_sys_metadata=orig_system_metadata, bdms=bdms,
                 preserve_ephemeral=False, host=instance.host,
-                request_spec=fake_spec, reimage_boot_volume=False)
+                request_spec=fake_spec, reimage_boot_volume=False,
+                target_state=None)
 
         _check_auto_disk_config.assert_called_once_with(
             image=image, auto_disk_config=None)

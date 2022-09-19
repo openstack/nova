@@ -389,7 +389,8 @@ class _BaseTaskTestCase(object):
                         'preserve_ephemeral': False,
                         'host': 'compute-host',
                         'request_spec': None,
-                        'reimage_boot_volume': False}
+                        'reimage_boot_volume': False,
+                        'target_state': None}
         if update_args:
             rebuild_args.update(update_args)
         compute_rebuild_args = copy.deepcopy(rebuild_args)
@@ -4751,9 +4752,34 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
                               mock.sentinel.migration)
         can_send_version.assert_called_once_with('1.23')
 
+    def test_evacuate_old_rpc_with_target_state(self):
+        inst_obj = self._create_fake_instance_obj()
+        rebuild_args, compute_args = self._prepare_rebuild_args(
+            {'host': inst_obj.host,
+             'target_state': 'stopped'})
+        with mock.patch.object(
+                self.conductor.client, 'can_send_version', return_value=False):
+            self.assertRaises(exc.UnsupportedRPCVersion,
+                              self.conductor.rebuild_instance,
+                              self.context, inst_obj, **rebuild_args)
+
+    def test_evacuate_old_rpc_without_target_state(self):
+        inst_obj = self._create_fake_instance_obj()
+        rebuild_args, compute_args = self._prepare_rebuild_args(
+            {'host': inst_obj.host,
+             'target_state': None})
+        with mock.patch.object(
+                self.conductor.client, 'can_send_version',
+            return_value=False) as can_send_version:
+            self.conductor.rebuild_instance(
+                self.context, inst_obj, **rebuild_args)
+            can_send_version.assert_has_calls([
+                mock.call('1.25'), mock.call('1.24'),
+                mock.call('1.12')])
+
     def test_rebuild_instance_volume_backed(self):
         inst_obj = self._create_fake_instance_obj()
-        version = '1.24'
+        version = '1.25'
         cctxt_mock = mock.MagicMock()
         rebuild_args, compute_args = self._prepare_rebuild_args(
             {'host': inst_obj.host})
@@ -4785,7 +4811,8 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
                               self.conductor.rebuild_instance,
                               self.context, inst_obj,
                               **rebuild_args)
-        can_send_version.assert_called_once_with('1.24')
+        can_send_version.assert_has_calls([mock.call('1.25'),
+                                           mock.call('1.24')])
 
 
 class ConductorTaskAPITestCase(_BaseTaskTestCase, test_compute.BaseTestCase):

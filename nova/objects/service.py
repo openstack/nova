@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 65
+SERVICE_VERSION = 66
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -228,6 +228,9 @@ SERVICE_VERSION_HISTORY = (
     # Version 65: Compute RPC v6.1:
     # Added stable local node identity
     {'compute_rpc': '6.1'},
+    # Version 66: Compute RPC v6.2:
+    # Add target_state parameter to rebuild_instance()
+    {'compute_rpc': '6.2'},
 )
 
 # This is the version after which we can rely on having a persistent

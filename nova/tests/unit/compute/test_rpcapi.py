@@ -836,7 +836,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             orig_sys_metadata=None, recreate=True, on_shared_storage=True,
             preserve_ephemeral=True, migration=None, node=None,
             limits=None, request_spec=None, accel_uuids=[],
-            reimage_boot_volume=False, version='6.1')
+            reimage_boot_volume=False, target_state=None,
+            version='6.2')
 
     def test_rebuild_instance_old_rpcapi(self):
         # With rpcapi < 5.12, accel_uuids must be dropped in the client call.
@@ -868,9 +869,11 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             ctxt, instance=self.fake_instance_obj,
             accel_uuids=['938af7f9-f136-4e5a-bdbe-3b6feab54311'],
             node=None, host=None, reimage_boot_volume=False,
-            **rebuild_args)
+            target_state=None, **rebuild_args)
 
-        mock_client.can_send_version.assert_has_calls([mock.call('6.0'),
+        mock_client.can_send_version.assert_has_calls([mock.call('6.2'),
+                                                       mock.call('6.1'),
+                                                       mock.call('6.0'),
                                                        mock.call('5.12')])
         mock_client.prepare.assert_called_with(
                 server=self.fake_instance_obj.host, version='5.0')
@@ -890,7 +893,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         compute_api.router.client.return_value = mock_client
         # Force can_send_version to [False, True, True], so that 6.0
         # version is used.
-        mock_client.can_send_version.side_effect = [False, True, True]
+        mock_client.can_send_version.side_effect = [False, False, True, True]
         mock_cctx = mock.MagicMock()
         mock_client.prepare.return_value = mock_cctx
         rebuild_args = {
@@ -908,12 +911,47 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             'limits': None,
             'accel_uuids': [],
             'reimage_boot_volume': True,
+            'target_state': None,
         }
         self.assertRaises(
             exception.NovaException, compute_api.rebuild_instance,
             ctxt, instance=self.fake_instance_obj,
             node=None, host=None, **rebuild_args)
-        mock_client.can_send_version.assert_has_calls([mock.call('6.1')])
+        mock_client.can_send_version.assert_has_calls([mock.call('6.2')])
+
+    def test_rebuild_instance_evacuate_old_rpcapi(self):
+        # With rpcapi < 6.2, if evacuate we should raise error.
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        compute_api = compute_rpcapi.ComputeAPI()
+        compute_api.router.client = mock.Mock()
+        mock_client = mock.MagicMock()
+        compute_api.router.client.return_value = mock_client
+        # Force can_send_version to return False.
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        rebuild_args = {
+            'new_pass': 'admin_password',
+            'injected_files': 'files_to_inject',
+            'image_ref': uuids.image_ref,
+            'orig_image_ref': uuids.orig_image_ref,
+            'orig_sys_metadata': 'orig_sys_meta',
+            'bdms': {},
+            'recreate': False,
+            'on_shared_storage': False,
+            'preserve_ephemeral': False,
+            'request_spec': None,
+            'migration': None,
+            'limits': None,
+            'accel_uuids': [],
+            'reimage_boot_volume': True,
+            'target_state': 'stopped',
+        }
+        self.assertRaises(
+            exception.UnsupportedRPCVersion,
+            compute_api.rebuild_instance,
+            ctxt, instance=self.fake_instance_obj,
+            node=None, host=None, **rebuild_args)
 
     def test_reserve_block_device_name(self):
         self.flags(long_rpc_timeout=1234)
