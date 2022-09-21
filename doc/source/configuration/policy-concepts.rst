@@ -231,7 +231,7 @@ defaulted to below rules:
 With these new defaults, you can solve the problem of:
 
 #. Providing the read-only access to the user. Polices are made more granular
-   and defaulted to reader rules. For exmaple: If you need to let someone audit
+   and defaulted to reader rules. For example: If you need to let someone audit
    your deployment for security purposes.
 
 #. Customize the policy in better way. For example, you will be able

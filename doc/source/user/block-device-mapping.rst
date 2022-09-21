@@ -49,7 +49,7 @@ When we talk about block device mapping, we usually refer to one of two things
    on.
 
    For more details on this please refer to the :doc:`Driver BDM Data
-   Structures <../reference/block-device-structs>` refernce document.
+   Structures <../reference/block-device-structs>` reference document.
 
 .. note::
 

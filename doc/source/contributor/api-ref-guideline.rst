@@ -351,7 +351,7 @@ In the parameter file, define the ``required`` field in each parameter.
       but does not appear when non-admin users call.
 
 If a parameter must be specified in the request or always appears
-in the response in the micoversion added or later,
+in the response in the microversion added or later,
 the parameter must be defined as required (``true``).
 
 Microversion

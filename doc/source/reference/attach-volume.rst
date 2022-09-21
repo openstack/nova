@@ -22,7 +22,7 @@ the optional interactions with the ``os-brick`` library on the compute hosts
 during the request.
 
 .. note:: ``os-brick`` is not always used to connect volumes to the host, most
-           notibly when connecting an instance natively to ceph ``rbd`` volumes
+           notably when connecting an instance natively to ceph ``rbd`` volumes
 
 The diagram also outlines the various locks taken on the compute during the
 attach volume flow. In this example these include locks against the

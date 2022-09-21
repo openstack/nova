@@ -9,7 +9,7 @@ Synopsis
 
 ::
 
-  nova-rootwrap CONFIG_FILE COMMMAND
+  nova-rootwrap CONFIG_FILE COMMAND
 
 Description
 ===========

@@ -600,7 +600,7 @@ of ``rabbit://bob:s3kret@otherhost/nova`` when used with the above example.
    The :oslo.config:option:`transport_url` option can contain an
    extended syntax for the "netloc" part of the URL
    (i.e. ``userA:passwordA@hostA:portA,userB:passwordB:hostB:portB``). In this
-   case, substitions of the form ``username1``, ``username2``, etc will be
+   case, substitutions of the form ``username1``, ``username2``, etc will be
    honored and can be used in the template URL.
 
 The templating of these URLs may be helpful in order to provide each service host

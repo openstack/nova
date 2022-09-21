@@ -26,7 +26,7 @@ Glossary
     Cell
         A cell is a shard or horizontal partition in a nova deployment.
         A cell mostly consists of a database, queue, and set of compute nodes.
-        All deployments willl have at least one cell (and one "fake" cell).
+        All deployments will have at least one cell (and one "fake" cell).
         Larger deployments can have many.
 
         For more information, refer to :doc:`/admin/cells`.

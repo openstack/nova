@@ -103,7 +103,7 @@ def _format_validator_help(
     validator: base.ExtraSpecValidator,
     summary: bool,
 ):
-    """Generate reStucturedText snippets for the provided validator.
+    """Generate reStructuredText snippets for the provided validator.
 
     :param validator: A validator to document.
     :type validator: nova.api.validation.extra_specs.base.ExtraSpecValidator
