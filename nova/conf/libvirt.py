@@ -987,6 +987,7 @@ slowly to be useful. Actual errors will be reported by Glance and noticed
 according to the poll interval.
 
 Related options:
+
 * images_type - must be set to ``rbd``
 * images_rbd_glance_store_name - must be set to a store name
 * images_rbd_glance_copy_poll_interval - controls the failure time-to-notice
