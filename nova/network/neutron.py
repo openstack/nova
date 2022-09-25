@@ -621,6 +621,7 @@ class API:
             # in case the caller forgot to filter the list.
             if port_id is None:
                 continue
+
             port_req_body: ty.Dict[str, ty.Any] = {
                 'port': {
                     'device_id': '',
@@ -635,7 +636,7 @@ class API:
             except exception.PortNotFound:
                 LOG.debug('Unable to show port %s as it no longer '
                           'exists.', port_id)
-                return
+                continue
             except Exception:
                 # NOTE: In case we can't retrieve the binding:profile or
                 # network info assume that they are empty
