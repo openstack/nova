@@ -13688,6 +13688,85 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_live_migration_main_monitoring_failed(self):
         self._test_live_migration_main(mon_side_effect=Exception)
 
+    @mock.patch.object(host.Host, "get_connection", new=mock.Mock())
+    @mock.patch.object(utils, "spawn", new=mock.Mock())
+    @mock.patch.object(host.Host, "get_guest")
+    @mock.patch.object(
+        libvirt_driver.LibvirtDriver, "_live_migration_copy_disk_paths")
+    def _test_live_migration_monitor_job_stats_exception(
+        self, exc, mock_copy_disk_paths, mock_get_guest, expect_success=True
+    ):
+        # Verify behavior when various exceptions are raised inside of
+        # Guest.get_job_info() during live migration monitoring.
+        mock_domain = mock.Mock(fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(mock_domain)
+        mock_get_guest.return_value = guest
+
+        # First, raise the exception from jobStats(), then return "completed"
+        # to make sure we exit the monitoring loop.
+        guest._domain.jobStats.side_effect = [
+            exc,
+            {'type': fakelibvirt.VIR_DOMAIN_JOB_COMPLETED},
+        ]
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        post_method = mock.Mock()
+        migrate_data = mock.Mock()
+        disks_to_copy = (['/some/path/one', '/test/path/two'],
+                         ['vda', 'vdb'])
+        mock_copy_disk_paths.return_value = disks_to_copy
+
+        func = drvr._live_migration
+        args = (self.context, instance, mock.sentinel.dest, post_method,
+                mock.sentinel.recover_method, mock.sentinel.block_migration,
+                migrate_data)
+
+        if expect_success:
+            func(*args)
+            post_method.assert_called_once_with(
+                self.context, instance, mock.sentinel.dest,
+                mock.sentinel.block_migration, migrate_data
+            )
+        else:
+            actual_exc = self.assertRaises(
+                fakelibvirt.libvirtError, func, *args)
+            self.assertEqual(exc, actual_exc)
+
+    def test_live_migration_monitor_job_stats_no_domain(self):
+        exp = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, 'no domain',
+            error_code=fakelibvirt.VIR_ERR_NO_DOMAIN
+        )
+        self._test_live_migration_monitor_job_stats_exception(
+            exp, expect_success=True)
+
+    def test_live_migration_monitor_job_stats_op_invalid(self):
+        exp = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, 'operation invalid',
+            error_code=fakelibvirt.VIR_ERR_OPERATION_INVALID
+        )
+        self._test_live_migration_monitor_job_stats_exception(
+            exp, expect_success=True)
+
+    def test_live_migration_monitor_job_stats_no_ram_info_set(self):
+        exp = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, 'internal error',
+            error_message='migration was active, but no RAM info was set',
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR
+        )
+        self._test_live_migration_monitor_job_stats_exception(
+            exp, expect_success=True)
+
+    def test_live_migration_monitor_job_stats_internal_error(self):
+        exp = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            'some other internal error',
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR
+        )
+        self._test_live_migration_monitor_job_stats_exception(
+            exp, expect_success=False)
+
     @mock.patch('os.path.exists', return_value=False)
     @mock.patch('nova.virt.libvirt.utils.create_image')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
