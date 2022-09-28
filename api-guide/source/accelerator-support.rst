@@ -12,7 +12,7 @@ appropriate privileges) must do the following:
 * Create a device profile in Cyborg, which specifies what accelerator
   resources need to be provisioned. (See `Cyborg device profiles API`_.)
 
-  .. _`Cyborg device profiles API`: https://docs.openstack.org/api-ref/accelerator/v2/index.html#device-profiles
+  .. _`Cyborg device profiles API`: https://docs.openstack.org/api-ref/accelerator/#device-profiles
 
 * Set the device profile name as an extra spec in a chosen flavor,
   with this syntax:
@@ -102,7 +102,7 @@ appropriate privileges) must do the following:
   resources need to be provisioned. (See `Cyborg device profiles API`_,
   `Cyborg SRIOV Test Report`_.)
 
-  .. _`Cyborg device profiles API`: https://docs.openstack.org/api-ref/accelerator/v2/index.html#device-profiles
+  .. _`Cyborg device profiles API`: https://docs.openstack.org/api-ref/accelerator/#device-profiles
   .. _`Cyborg SRIOV Test Report`: https://wiki.openstack.org/wiki/Cyborg/TestReport/IntelNic
 
 * create a 'accelerator-direct' vnic type port with the device-profile name
