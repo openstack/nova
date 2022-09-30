@@ -565,6 +565,12 @@ class InstanceHelperMixin:
         self.notifier.wait_for_versioned_notifications(
             'instance.share_attach.end')
 
+    def _attach_share_with_error(self, server, share_id):
+        self.api.post_server_share(
+            server['id'], {"share": {"share_id": share_id}})
+        self.notifier.wait_for_versioned_notifications(
+            'instance.share_attach.error')
+
     def _detach_share(self, server, share_id):
         self.api.delete_server_share(server['id'], share_id)
         self.notifier.wait_for_versioned_notifications(

@@ -2493,7 +2493,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_ATTACH,
                 phase=fields.NotificationPhase.START,
-                share_id=share_mapping.share_id
+                share_id=share_mapping.share_id,
             ),
             mock.call(
                 mock.ANY,
@@ -2501,7 +2501,73 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_ATTACH,
                 phase=fields.NotificationPhase.END,
-                share_id=share_mapping.share_id
+                share_id=share_mapping.share_id,
+            ),
+        ])
+
+    @mock.patch(
+        'nova.compute.utils.notify_about_share_attach_detach',
+        return_value=None
+    )
+    @mock.patch('nova.share.manila.API.allow')
+    @mock.patch('nova.share.manila.API.get_access')
+    @mock.patch('nova.objects.share_mapping.ShareMapping.save')
+    def test_allow_share_fails_share_grant_failure(
+        self, mock_db, mock_get_access, mock_allow, mock_notifications
+    ):
+        self.flags(shutdown_retry_interval=20, group='compute')
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.instance,
+                vm_state=vm_states.ACTIVE,
+                task_state=task_states.POWERING_OFF)
+        mock_get_access.side_effect = [None, self.get_fake_share_access()]
+        # Ensure CONF.my_shared_fs_storage_ip default is my_ip
+        self.flags(my_ip="10.0.0.2")
+        self.assertEqual(CONF.my_shared_fs_storage_ip, '10.0.0.2')
+        # Set CONF.my_shared_fs_storage_ip to ensure it is used by the code
+        self.flags(my_shared_fs_storage_ip="192.168.0.1")
+        compute_ip = CONF.my_shared_fs_storage_ip
+        self.assertEqual(compute_ip, '192.168.0.1')
+        share_mapping = self.get_fake_share_mapping()
+
+        exc = exception.ShareAccessGrantError(
+            share_id=share_mapping.share_id,
+            reason="fake_reason"
+        )
+        mock_allow.side_effect = exc
+
+        self.assertRaises(
+            exception.ShareAccessGrantError,
+            self.compute.allow_share,
+            self.context,
+            instance,
+            share_mapping,
+        )
+
+        self.assertEqual(share_mapping.status, 'error')
+
+        mock_get_access.assert_called_with(
+            self.context, share_mapping.share_id, 'ip', compute_ip)
+        mock_allow.assert_called_once_with(
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip, 'rw')
+        mock_notifications.assert_has_calls([
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_ATTACH,
+                phase=fields.NotificationPhase.START,
+                share_id=share_mapping.share_id,
+            ),
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_ATTACH,
+                phase=fields.NotificationPhase.ERROR,
+                share_id=share_mapping.share_id,
+                exception=exc
             ),
         ])
 
