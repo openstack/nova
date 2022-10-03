@@ -2441,7 +2441,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._disconnect_volume(context, old_connection_info, instance)
 
     def _get_existing_domain_xml(self, instance, network_info,
-                                 block_device_info=None):
+                                 block_device_info=None, share_info=None):
         try:
             guest = self._host.get_guest(instance)
             xml = guest.get_xml_desc()
@@ -2453,7 +2453,8 @@ class LibvirtDriver(driver.ComputeDriver):
             xml = self._get_guest_xml(nova_context.get_admin_context(),
                                       instance, network_info, disk_info,
                                       instance.image_meta,
-                                      block_device_info=block_device_info)
+                                      block_device_info=block_device_info,
+                                      share_info=share_info)
         return xml
 
     def emit_event(self, event: virtevent.InstanceEvent) -> None:
@@ -4400,10 +4401,20 @@ class LibvirtDriver(driver.ComputeDriver):
         self._detach_mediated_devices(guest)
         guest.save_memory_state()
 
-    def resume(self, context, instance, network_info, block_device_info=None):
+    def resume(
+        self,
+        context,
+        instance,
+        network_info,
+        block_device_info=None,
+        share_info=None
+    ):
         """resume the specified instance."""
+        if share_info is None:
+            share_info = objects.ShareMappingList()
+
         xml = self._get_existing_domain_xml(instance, network_info,
-                                            block_device_info)
+                                            block_device_info, share_info)
         # NOTE(gsantos): The mediated devices that were removed on suspension
         # are still present in the xml. Let's take their references from it
         # and re-attach them.

@@ -972,7 +972,14 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def resume(self, context, instance, network_info, block_device_info=None):
+    def resume(
+        self,
+        context,
+        instance,
+        network_info,
+        block_device_info=None,
+        share_info=None
+    ):
         """resume the specified suspended instance.
 
         The suspended instance gets resumed and will use CPU cycles and memory
@@ -988,6 +995,8 @@ class ComputeDriver(object):
             Necessary network information for the resume.
         :param dict block_device_info:
             Instance volume block device info.
+        :param nova.objects.share_mapping.ShareMapingList share_info
+            optional list of share_mapping
 
         :return: None
         """
