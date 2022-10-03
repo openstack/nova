@@ -56,17 +56,27 @@ class PreferSameHostOnResizeWeigherTestCase(test.NoDBTestCase):
         ]
         self.request_specs = {
             'to-big': objects.RequestSpec(instance_uuid=old_instance.uuid,
-                                          flavor=flavor_big),
-            'to-small': objects.RequestSpec(instance_uuid=old_instance.uuid,
-                                            flavor=flavor_small),
+                                          flavor=flavor_big,
+                                          scheduler_hints={
+                                            '_nova_check_type': ['resize'],
+                                            'source_host': ['same_host'],
+                                          }),
+            'unchanged': objects.RequestSpec(instance_uuid=old_instance.uuid,
+                                            flavor=flavor_small,
+                                           ),
             'rebuild': objects.RequestSpec(instance_uuid=old_instance.uuid,
                                            flavor=flavor_big,
                                            scheduler_hints={
-                                               '_nova_check_type': ['rebuild']
+                                            '_nova_check_type': ['rebuild'],
+                                            'source_host': ['same_host'],
                                            }),
             'new': objects.RequestSpec(instance_uuid=new_instance.uuid),
             'resize-bm': objects.RequestSpec(instance_uuid=bm_instance.uuid,
-                                             flavor=flavor_bm_big)
+                                             flavor=flavor_bm_big,
+                                             scheduler_hints={
+                                                '_nova_check_type': ['resize'],
+                                                'source_host': ['same_host'],
+                                             }),
         }
 
     def test_prefer_resize_to_same_host(self):
@@ -91,7 +101,7 @@ class PreferSameHostOnResizeWeigherTestCase(test.NoDBTestCase):
         self.flags(prefer_same_host_resize_weight_multiplier=1.0,
                    group='filter_scheduler')
         weighed_hosts = self.weight_handler.get_weighed_objects(
-            self.weighers, self.hosts, self.request_specs['to-small'])
+            self.weighers, self.hosts, self.request_specs['unchanged'])
         self.assertEqual(0.0, weighed_hosts[0].weight)
         self.assertEqual(0.0, weighed_hosts[1].weight)
 

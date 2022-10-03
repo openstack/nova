@@ -22,11 +22,9 @@ This weigher ignores any instances which are:
  * baremetal
 """
 import nova.conf
-from nova.exception import ObjectActionError
 from nova.scheduler import utils
 from nova.scheduler import weights
-from nova.utils import is_baremetal_flavor
-import six
+from nova import utils as nova_utils
 
 CONF = nova.conf.CONF
 
@@ -40,33 +38,19 @@ class PreferSameHostOnResizeWeigher(weights.BaseHostWeigher):
             host_state, 'prefer_same_host_resize_weight_multiplier',
             CONF.filter_scheduler.prefer_same_host_resize_weight_multiplier)
 
-    def _is_resize(self, cur_flavor, dest_flavor):
-        """Return True if `cur_flavor` is different from `dest_flavor`.
-        Return False otherwise.
-        """
-        try:
-            return cur_flavor.id != dest_flavor.id
-        except ObjectActionError as e:
-            if 'obj_load_attr' in six.text_type(e):
-                # Note(jakob): If for some weird reason, id cannot be found,
-                # assume it's a resize. There is not much to break by
-                # preferring the same host.
-                return True
-            raise e
-
     def _weigh_object(self, host_state, request_spec):
         """Return 1 for about-to-be-resized instances where the host is the
         instance's current host. Return 0 otherwise.
         """
-        if ((request_spec.instance_uuid not in host_state.instances) or
-                utils.request_is_rebuild(request_spec)):
+        if not utils.request_is_resize(request_spec):
             return 0.0
 
-        instance = host_state.instances[request_spec.instance_uuid]
-        if (is_baremetal_flavor(instance.flavor) or
-                is_baremetal_flavor(request_spec.flavor)):
+        if nova_utils.is_baremetal_flavor(request_spec.flavor):
             return 0.0
 
-        if self._is_resize(instance.flavor, request_spec.flavor):
-            return 1.0
-        return 0.0
+        instance_host = request_spec.get_scheduler_hint('source_host')
+
+        if instance_host != host_state.host:
+            return 0.0
+
+        return 1.0
