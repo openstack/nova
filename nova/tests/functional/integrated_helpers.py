@@ -576,6 +576,11 @@ class InstanceHelperMixin:
         self.notifier.wait_for_versioned_notifications(
             'instance.share_detach.end')
 
+    def _detach_share_with_error(self, server, share_id):
+        self.api.delete_server_share(server['id'], share_id)
+        self.notifier.wait_for_versioned_notifications(
+            'instance.share_detach.error')
+
     def _rebuild_server(self, server, image_uuid, expected_state='ACTIVE'):
         """Rebuild a server."""
         self.api.post_server_action(

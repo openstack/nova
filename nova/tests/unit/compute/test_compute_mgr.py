@@ -2813,7 +2813,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_DETACH,
                 phase=fields.NotificationPhase.START,
-                share_id=share_mapping.share_id
+                share_id=share_mapping.share_id,
             ),
             mock.call(
                 mock.ANY,
@@ -2821,7 +2821,77 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_DETACH,
                 phase=fields.NotificationPhase.END,
-                share_id=share_mapping.share_id
+                share_id=share_mapping.share_id,
+            ),
+        ])
+
+    @mock.patch(
+        'nova.compute.utils.notify_about_share_attach_detach',
+        return_value=None
+    )
+    @mock.patch('nova.objects.share_mapping.ShareMapping.delete')
+    @mock.patch('nova.share.manila.API.deny')
+    @mock.patch('nova.share.manila.API.get_access')
+    @mock.patch('nova.objects.share_mapping.ShareMappingList.get_by_share_id')
+    @mock.patch('nova.objects.share_mapping.ShareMapping.save')
+    def test_deny_share_fails_access_removal(
+        self, mock_db, mock_db_get_share, mock_get_access, mock_deny,
+        mock_db_delete, mock_notifications
+    ):
+        """Make sure we can remove a share even if we have an error with
+        the access or the access is not existing anymore for any reason.
+        """
+        self.flags(shutdown_retry_interval=20, group='compute')
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.instance,
+                vm_state=vm_states.ACTIVE,
+                task_state=task_states.POWERING_OFF)
+        mock_db_get_share.return_value = (
+            objects.share_mapping.ShareMappingList()
+        )
+        share_mapping = self.get_fake_share_mapping()
+        mock_db_get_share.return_value.objects.append(share_mapping)
+        # Ensure CONF.my_shared_fs_storage_ip default is my_ip
+        self.flags(my_ip="10.0.0.2")
+        self.assertEqual(CONF.my_shared_fs_storage_ip, '10.0.0.2')
+        # Set CONF.my_shared_fs_storage_ip to ensure it is used by the code
+        self.flags(my_shared_fs_storage_ip="192.168.0.1")
+        compute_ip = CONF.my_shared_fs_storage_ip
+        self.assertEqual(compute_ip, '192.168.0.1')
+
+        exc = exception.ShareAccessRemovalError(
+            share_id=share_mapping.share_id,
+            reason="fake_reason"
+        )
+        mock_deny.side_effect = exc
+
+        self.assertRaises(
+            exception.ShareAccessRemovalError,
+            self.compute.deny_share,
+            self.context,
+            instance,
+            share_mapping,
+        )
+        mock_deny.assert_called_once_with(
+            mock.ANY, share_mapping.share_id, 'ip', compute_ip)
+        mock_notifications.assert_has_calls([
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.START,
+                share_id=share_mapping.share_id,
+            ),
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.ERROR,
+                share_id=share_mapping.share_id,
+                exception=exc
             ),
         ])
 
@@ -2861,7 +2931,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_DETACH,
                 phase=fields.NotificationPhase.START,
-                share_id=share_mapping.share_id
+                share_id=share_mapping.share_id,
             ),
             mock.call(
                 mock.ANY,
@@ -2869,7 +2939,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_DETACH,
                 phase=fields.NotificationPhase.END,
-                share_id=share_mapping.share_id
+                share_id=share_mapping.share_id,
             ),
         ])
 
@@ -2918,7 +2988,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_DETACH,
                 phase=fields.NotificationPhase.START,
-                share_id=share_mapping.share_id
+                share_id=share_mapping.share_id,
             ),
             mock.call(
                 mock.ANY,
@@ -2926,7 +2996,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_DETACH,
                 phase=fields.NotificationPhase.END,
-                share_id=share_mapping.share_id
+                share_id=share_mapping.share_id,
             ),
         ])
 
@@ -2964,6 +3034,24 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_deny.assert_called_once_with(
             mock.ANY, share_mapping.share_id, 'ip', compute_ip)
         mock_db_delete.assert_called_once()
+        mock_notifications.assert_has_calls([
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.START,
+                share_id=share_mapping.share_id,
+            ),
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.END,
+                share_id=share_mapping.share_id,
+            ),
+        ])
 
     @mock.patch(
         'nova.compute.utils.notify_about_share_attach_detach',
@@ -2999,6 +3087,24 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_deny.assert_called_once_with(
             mock.ANY, share_mapping.share_id, 'ip', compute_ip)
         mock_db_delete.assert_called_once()
+        mock_notifications.assert_has_calls([
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.START,
+                share_id=share_mapping.share_id,
+            ),
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.END,
+                share_id=share_mapping.share_id,
+            ),
+        ])
 
     @mock.patch(
         'nova.compute.utils.notify_about_share_attach_detach',
@@ -3032,15 +3138,34 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             share_id=share_mapping.share_id,
             reason="fake_reason"
         )
-        self.assertRaises(
+        exc = self.assertRaises(
             exception.ShareAccessRemovalError,
             self.compute.deny_share,
             self.context,
             instance,
-            share_mapping
+            share_mapping,
         )
         mock_db_delete.assert_not_called()
         self.assertEqual(share_mapping.status, 'error')
+        mock_notifications.assert_has_calls([
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.START,
+                share_id=share_mapping.share_id,
+            ),
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.ERROR,
+                share_id=share_mapping.share_id,
+                exception=exc,
+            ),
+        ])
 
     @mock.patch(
         'nova.compute.utils.notify_about_share_attach_detach',
@@ -3073,7 +3198,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_deny.side_effect = keystone_exception.http.Unauthorized(
             message="Unauthorized"
         )
-        self.assertRaises(
+        exc = self.assertRaises(
             keystone_exception.http.Unauthorized,
             self.compute.deny_share,
             self.context,
@@ -3082,6 +3207,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         )
         mock_db_delete.assert_not_called()
         self.assertEqual(share_mapping.status, 'error')
+        mock_notifications.assert_has_calls([
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.START,
+                share_id=share_mapping.share_id,
+            ),
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.ERROR,
+                share_id=share_mapping.share_id,
+                exception=exc,
+            ),
+        ])
 
     @mock.patch(
         'nova.compute.utils.notify_about_share_attach_detach',
@@ -3114,7 +3258,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_deny.side_effect = exception.ShareProtocolNotSupported(
             share_proto=share_mapping.share_proto
         )
-        self.assertRaises(
+        exc = self.assertRaises(
             exception.ShareProtocolNotSupported,
             self.compute.deny_share,
             self.context,
@@ -3123,6 +3267,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         )
         mock_db_delete.assert_not_called()
         self.assertEqual(share_mapping.status, 'error')
+        mock_notifications.assert_has_calls([
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.START,
+                share_id=share_mapping.share_id,
+            ),
+            mock.call(
+                mock.ANY,
+                instance,
+                "fake-host",
+                action=fields.NotificationAction.SHARE_DETACH,
+                phase=fields.NotificationPhase.ERROR,
+                share_id=share_mapping.share_id,
+                exception=exc,
+            ),
+        ])
 
     @mock.patch(
         'nova.compute.utils.notify_about_share_attach_detach',
@@ -3162,7 +3325,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_DETACH,
                 phase=fields.NotificationPhase.START,
-                share_id=share_mapping1.share_id
+                share_id=share_mapping1.share_id,
             ),
             mock.call(
                 mock.ANY,
@@ -3170,7 +3333,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_DETACH,
                 phase=fields.NotificationPhase.END,
-                share_id=share_mapping1.share_id
+                share_id=share_mapping1.share_id,
             ),
         ])
 
@@ -3214,7 +3377,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_DETACH,
                 phase=fields.NotificationPhase.START,
-                share_id=share_mapping1.share_id
+                share_id=share_mapping1.share_id,
             ),
             mock.call(
                 mock.ANY,
@@ -3222,7 +3385,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 "fake-host",
                 action=fields.NotificationAction.SHARE_DETACH,
                 phase=fields.NotificationPhase.END,
-                share_id=share_mapping1.share_id
+                share_id=share_mapping1.share_id,
             ),
         ])
 
