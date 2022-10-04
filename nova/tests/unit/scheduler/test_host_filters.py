@@ -14,6 +14,8 @@
 """
 Tests For Scheduler Host Filters.
 """
+from unittest import mock
+
 from nova.scheduler import filters
 from nova.scheduler.filters import all_hosts_filter
 from nova.scheduler.filters import compute_filter
@@ -30,6 +32,20 @@ class HostFiltersTestCase(test.NoDBTestCase):
                 ['nova.scheduler.filters.all_filters'])
         self.assertIn(all_hosts_filter.AllHostsFilter, classes)
         self.assertIn(compute_filter.ComputeFilter, classes)
+
+    def test_host_info_requiring_instance_ids(self):
+        filter_handler = filters.HostFilterHandler()
+        filter_a = mock.Mock()
+        filter_b = mock.Mock()
+
+        filter_a.host_info_requiring_instance_ids.return_value = {'a'}
+        filter_b.host_info_requiring_instance_ids.return_value = {'b'}
+
+        mock_filter = [filter_a, filter_b]
+        spec_obj = mock.sentinel.spec_obj
+        result = filter_handler.host_info_requiring_instance_ids(mock_filter,
+                                                                 spec_obj)
+        self.assertEqual({'a', 'b'}, result)
 
     def test_all_host_filter(self):
         filt_cls = all_hosts_filter.AllHostsFilter()

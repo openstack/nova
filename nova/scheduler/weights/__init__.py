@@ -35,12 +35,23 @@ class BaseHostWeigher(weights.BaseWeigher):
     """Base class for host weights."""
     pass
 
+    def host_info_requiring_instance_ids(self, request_spec):
+        return set()
+
 
 class HostWeightHandler(weights.BaseWeightHandler):
     object_class = WeighedHost
 
     def __init__(self):
         super(HostWeightHandler, self).__init__(BaseHostWeigher)
+
+    @staticmethod
+    def host_info_requiring_instance_ids(weights, request_spec):
+        instance_ids = set()
+        for weight in weights:
+            instance_ids.update(
+                weight.host_info_requiring_instance_ids(request_spec))
+        return instance_ids
 
 
 def all_weighers():

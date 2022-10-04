@@ -32,12 +32,22 @@ class DifferentHostFilter(filters.BaseHostFilter):
     RUN_ON_REBUILD = False
 
     def host_passes(self, host_state, spec_obj):
-        affinity_uuids = spec_obj.get_scheduler_hint('different_host')
+        affinity_uuids = self.host_info_requiring_instance_ids(spec_obj)
         if affinity_uuids:
             overlap = utils.instance_uuids_overlap(host_state, affinity_uuids)
             return not overlap
         # With no different_host key
         return True
+
+    def host_info_requiring_instance_ids(self, spec_obj):
+        different_host = spec_obj.get_scheduler_hint('different_host')
+        if not different_host:
+            return different_host
+
+        if isinstance(different_host, str):
+            return set([different_host])
+
+        return set(different_host)
 
 
 class SameHostFilter(filters.BaseHostFilter):
@@ -50,12 +60,22 @@ class SameHostFilter(filters.BaseHostFilter):
     RUN_ON_REBUILD = False
 
     def host_passes(self, host_state, spec_obj):
-        affinity_uuids = spec_obj.get_scheduler_hint('same_host')
+        affinity_uuids = self.host_info_requiring_instance_ids(spec_obj)
         if affinity_uuids:
             overlap = utils.instance_uuids_overlap(host_state, affinity_uuids)
             return overlap
         # With no same_host key
         return True
+
+    def host_info_requiring_instance_ids(self, spec_obj):
+        same_host = spec_obj.get_scheduler_hint('same_host')
+        if not same_host:
+            return same_host
+
+        if isinstance(same_host, str):
+            return set([same_host])
+
+        return set(same_host)
 
 
 class SimpleCIDRAffinityFilter(filters.BaseHostFilter):
@@ -87,22 +107,23 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
     RUN_ON_REBUILD = False
 
     def host_passes(self, host_state, spec_obj):
-        # Only invoke the filter if 'anti-affinity' is configured
-        instance_group = spec_obj.instance_group
-        policy = instance_group.policy if instance_group else None
-        if self.policy_name != policy:
+        members = self.host_info_requiring_instance_ids(spec_obj)
+        # Only invoke the filter if 'anti-affinity' is configured,
+        # and there are any instances to consider
+        if not members:
             return True
         # NOTE(hanrong): Move operations like resize can check the same source
         # compute node where the instance is. That case, AntiAffinityFilter
         # must not return the source as a non-possible destination.
         if spec_obj.instance_uuid in host_state.instances.keys():
             return True
+
         # The list of instances UUIDs on the given host
         instances = set(host_state.instances.keys())
-        # The list of instances UUIDs which are members of this group
-        members = set(spec_obj.instance_group.members)
         # The set of instances on the host that are also members of this group
         servers_on_host = instances.intersection(members)
+
+        instance_group = spec_obj.instance_group
 
         rules = instance_group.rules
         if rules and 'max_server_per_host' in rules:
@@ -126,6 +147,16 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
         # will accept the given host if there are 0 servers from the group
         # already on this host.
         return len(servers_on_host) < max_server_per_host
+
+    def host_info_requiring_instance_ids(self, spec_obj):
+        instance_group = spec_obj.instance_group
+        policy = instance_group.policy if instance_group else None
+
+        if self.policy_name != policy:
+            return set()
+
+        # The list of instances UUIDs which are members of this group
+        return set(spec_obj.instance_group.members)
 
 
 class ServerGroupAntiAffinityFilter(_GroupAntiAffinityFilter):

@@ -56,6 +56,9 @@ class BaseHostFilter(filters.BaseFilter):
         """
         raise NotImplementedError()
 
+    def host_info_requiring_instance_ids(self, spec_obj):
+        return set()
+
 
 class CandidateFilterMixin:
     """Mixing that helps to implement a Filter that needs to filter host by
@@ -97,6 +100,14 @@ class CandidateFilterMixin:
 class HostFilterHandler(filters.BaseFilterHandler):
     def __init__(self):
         super(HostFilterHandler, self).__init__(BaseHostFilter)
+
+    @staticmethod
+    def host_info_requiring_instance_ids(filters, spec_obj):
+        instance_ids = set()
+        for filter_ in filters:
+            instance_ids.update(filter_.host_info_requiring_instance_ids(
+                spec_obj))
+        return instance_ids
 
 
 def all_filters():
