@@ -1360,20 +1360,25 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
     def test_get_host_states_by_uuids(self, mock_get_by_host, mock_get_all,
                                       mock_get_by_binary):
-        mock_get_by_host.return_value = []
         mock_get_all.side_effect = [fakes.COMPUTE_NODES, []]
         mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
 
         # Request 1: all nodes can satisfy the request
         hosts1 = self.host_manager.get_host_states_by_uuids(
-            mock.sentinel.ctxt1, mock.sentinel.uuids1, objects.RequestSpec())
+            mock.sentinel.ctxt1, mock.sentinel.uuids1, objects.RequestSpec(
+                instance_group=None
+            ))
+        mock_get_by_host.assert_not_called()
         # get_host_states_by_uuids returns a generator so convert the values
         # into an iterator
         host_states1 = iter(hosts1)
 
         # Request 2: no nodes can satisfy the request
         hosts2 = self.host_manager.get_host_states_by_uuids(
-            mock.sentinel.ctxt2, mock.sentinel.uuids2, objects.RequestSpec())
+            mock.sentinel.ctxt2, mock.sentinel.uuids2, objects.RequestSpec(
+                instance_group=None
+            ))
+        mock_get_by_host.assert_not_called()
         host_states2 = iter(hosts2)
 
         # Fake a concurrent request that is still processing the first result
@@ -1384,6 +1389,29 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         # Verify that no nodes are available to Request 2.
         num_hosts2 = len(list(host_states2))
         self.assertEqual(0, num_hosts2)
+
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
+    def test_get_host_states_by_uuids_with_instances(self, mock_get_by_host,
+                                                     mock_get_all,
+                                                     mock_get_by_binary):
+        mock_get_by_host.return_value = []
+        mock_get_all.side_effect = [fakes.COMPUTE_NODES, []]
+        mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
+
+        with mock.patch.object(self.host_manager,
+                '_get_required_instance_uuids_for_spec') as (
+                    mock_instance_uuids):
+            mock_instance_uuids.return_value = mock.sentinel.uuids2
+
+            spec_obj = objects.RequestSpec()
+            self.host_manager.get_host_states_by_uuids(mock.sentinel.ctxt1,
+                mock.sentinel.uuids1, spec_obj)
+
+            mock_instance_uuids.assert_called_with(spec_obj)
+
+        mock_get_by_host.assert_called()
 
     @mock.patch('nova.scheduler.host_manager.HostManager.'
                 '_get_computes_for_cells',
@@ -1398,6 +1426,7 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         ctxt = nova_context.get_admin_context()
         compute_uuids = [uuids.compute_node_uuid]
         spec_obj = objects.RequestSpec(
+            instance_group=None,
             requested_destination=objects.Destination(
                 cell=objects.CellMapping(uuid=uuids.cell1),
                 allow_cross_cell_move=True))
@@ -1406,7 +1435,8 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         mock_get_computes.assert_called_once_with(
             ctxt, self.host_manager.enabled_cells, compute_uuids=compute_uuids)
         mock_get_host_states.assert_called_once_with(
-            ctxt, mock.sentinel.compute_nodes, mock.sentinel.services)
+            ctxt, mock.sentinel.compute_nodes, mock.sentinel.services,
+            instance_uuids=set())
 
 
 class HostStateTestCase(test.NoDBTestCase):

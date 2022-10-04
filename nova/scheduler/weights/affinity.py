@@ -52,6 +52,17 @@ class _SoftAffinityWeigherBase(weights.BaseHostWeigher):
 
         return len(member_on_host)
 
+    def host_info_requiring_instance_ids(self, request_spec):
+        if not request_spec.instance_group:
+            return set()
+
+        policy = request_spec.instance_group.policy
+
+        if self.policy_name != policy:
+            return set()
+
+        return set(request_spec.instance_group.members)
+
 
 class ServerGroupSoftAffinityWeigher(_SoftAffinityWeigherBase):
     policy_name = 'soft-affinity'

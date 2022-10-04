@@ -39,6 +39,9 @@ class DifferentHostFilter(filters.BaseHostFilter):
         # With no different_host key
         return True
 
+    def host_info_for_instance_ids(self, spec_obj):
+        return set(spec_obj.get_scheduler_hint('different_host'))
+
 
 class SameHostFilter(filters.BaseHostFilter):
     """Schedule the instance on the same host as another instance in a set of
@@ -56,6 +59,9 @@ class SameHostFilter(filters.BaseHostFilter):
             return overlap
         # With no same_host key
         return True
+
+    def host_info_for_instance_ids(self, spec_obj):
+        return set(spec_obj.get_scheduler_hint('same_host'))
 
 
 class SimpleCIDRAffinityFilter(filters.BaseHostFilter):
@@ -127,6 +133,14 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
         # will accept the given host if there are 0 servers from the group
         # already on this host.
         return len(servers_on_host) < max_server_per_host
+
+    def host_info_for_instance_ids(self, spec_obj):
+        instance_group = spec_obj.instance_group
+        policy = instance_group.policy if instance_group else None
+        if self.policy_name != policy:
+            return set()
+
+        return set(spec_obj.instance_group.members)
 
 
 class ServerGroupAntiAffinityFilter(_GroupAntiAffinityFilter):
