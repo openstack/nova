@@ -745,6 +745,15 @@ class InstanceHelperMixin:
         server = self.api.post_server({'server': server})
         return self._wait_for_state_change(server, 'ACTIVE')
 
+    def _rescue_server(self, server):
+        self.api.post_server_action(
+            server['id'], {'rescue': {"adminPass": "MySecretPass"}})
+        return self._wait_for_state_change(server, 'RESCUE')
+
+    def _unrescue_server(self, server):
+        self.api.post_server_action(server['id'], {'unrescue': None})
+        return self._wait_for_state_change(server, 'ACTIVE')
+
 
 class PlacementHelperMixin:
     """A helper mixin for interacting with placement."""
