@@ -2417,7 +2417,7 @@ class ComputeTestCase(BaseTestCase,
                   'unrescued': False}
 
         def fake_rescue(self, context, instance_ref, network_info, image_meta,
-                        rescue_password, block_device_info):
+                        rescue_password, block_device_info, share_info):
             called['rescued'] = True
 
         self.stub_out('nova.virt.fake.FakeDriver.rescue', fake_rescue)
@@ -2448,7 +2448,7 @@ class ComputeTestCase(BaseTestCase,
     def test_rescue_notifications(self, mock_context, mock_notify):
         # Ensure notifications on instance rescue.
         def fake_rescue(self, context, instance_ref, network_info, image_meta,
-                        rescue_password, block_device_info):
+                        rescue_password, block_device_info, share_info):
             pass
         self.stub_out('nova.virt.fake.FakeDriver.rescue', fake_rescue)
 
@@ -2545,13 +2545,14 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.terminate_instance(self.context, instance, [])
 
+    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_instance_block_device_info')
     @mock.patch.object(fake.FakeDriver, 'power_off')
     @mock.patch.object(fake.FakeDriver, 'rescue')
     @mock.patch.object(compute_manager.ComputeManager, '_get_rescue_image')
     def test_rescue_handle_err(self, mock_get, mock_rescue, mock_power_off,
-                               mock_get_block_info):
+                               mock_get_block_info, mock_get_share_info):
         # If the driver fails to rescue, instance state should got to ERROR
         # and the exception should be converted to InstanceNotRescuable
         inst_obj = self._create_fake_instance_obj()
@@ -2561,6 +2562,9 @@ class ComputeTestCase(BaseTestCase,
 
         expected_message = ('Instance %s cannot be rescued: '
                             'Driver Error: Try again later' % inst_obj.uuid)
+
+        share_info = objects.ShareMappingList()
+        mock_get_share_info.return_value = share_info
 
         with testtools.ExpectedException(
                 exception.InstanceNotRescuable, expected_message):
@@ -2573,18 +2577,25 @@ class ComputeTestCase(BaseTestCase,
         mock_get.assert_called_once_with(mock.ANY, inst_obj, mock.ANY)
         mock_rescue.assert_called_once_with(mock.ANY, inst_obj, [],
                                             mock.ANY, 'password',
-                                            mock.sentinel.block_device_info)
+                                            mock.sentinel.block_device_info,
+                                            share_info)
 
+    @mock.patch.object(nova.virt.fake.FakeDriver, "mount_share")
+    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_instance_block_device_info')
     @mock.patch.object(image_api.API, "get")
     @mock.patch.object(fake.FakeDriver, 'power_off')
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
     def test_rescue_with_image_specified(self, mock_rescue, mock_power_off,
-                                         mock_image_get, mock_get_block_info):
+            mock_image_get, mock_get_block_info, mock_get_share_info,
+            mock_drv_mount):
         image_ref = uuids.image_instance
         rescue_image_meta = {}
         params = {"task_state": task_states.RESCUING}
+        share_info = objects.ShareMappingList()
+        mock_get_share_info.return_value = share_info
+
         instance = self._create_fake_instance_obj(params=params)
 
         ctxt = context.get_admin_context()
@@ -2599,24 +2610,30 @@ class ComputeTestCase(BaseTestCase,
                     clean_shutdown=True)
 
         mock_image_get.assert_called_with(ctxt, image_ref)
+        mock_drv_mount.assert_not_called()
         mock_rescue.assert_called_with(ctxt, instance, [],
                                        test.MatchType(objects.ImageMeta),
                                        'password',
-                                       mock.sentinel.block_device_info)
+                                       mock.sentinel.block_device_info,
+                                       share_info)
         self.compute.terminate_instance(ctxt, instance, [])
 
+    @mock.patch.object(nova.virt.fake.FakeDriver, "mount_share")
+    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_instance_block_device_info')
     @mock.patch.object(image_api.API, "get")
     @mock.patch.object(fake.FakeDriver, 'power_off')
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
-    def test_rescue_with_base_image_when_image_not_specified(self,
-            mock_rescue, mock_power_off, mock_image_get, mock_get_block_info):
-        image_ref = FAKE_IMAGE_REF
-        system_meta = {"image_base_image_ref": image_ref}
+    def test_rescue_with_image_specified_and_share(
+        self, mock_rescue, mock_power_off, mock_image_get, mock_get_block_info,
+            mock_get_share_info, mock_drv_mount):
+        image_ref = uuids.image_instance
         rescue_image_meta = {}
-        params = {"task_state": task_states.RESCUING,
-                  "system_metadata": system_meta}
+        params = {"task_state": task_states.RESCUING}
+        share_info = self.fake_share_info()
+        mock_get_share_info.return_value = share_info
+
         instance = self._create_fake_instance_obj(params=params)
 
         ctxt = context.get_admin_context()
@@ -2625,6 +2642,99 @@ class ComputeTestCase(BaseTestCase,
 
         mock_get_block_info.return_value = mock.sentinel.block_device_info
         mock_image_get.return_value = rescue_image_meta
+
+        mock_get_share_info.return_value = share_info
+
+        self.compute.rescue_instance(mock_context, instance=instance,
+            rescue_password="password", rescue_image_ref=image_ref,
+            clean_shutdown=True)
+
+        mock_image_get.assert_called_with(ctxt, image_ref)
+        mock_drv_mount.assert_called_with(ctxt, instance, share_info[0])
+        mock_rescue.assert_called_with(
+            ctxt,
+            instance,
+            [],
+            test.MatchType(objects.ImageMeta),
+            "password",
+            mock.sentinel.block_device_info,
+            share_info,
+        )
+        self.compute.terminate_instance(ctxt, instance, [])
+
+    @mock.patch('nova.objects.instance_fault.InstanceFault.create')
+    @mock.patch.object(nova.virt.fake.FakeDriver, "mount_share")
+    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    @mock.patch.object(image_api.API, "get")
+    @mock.patch.object(fake.FakeDriver, 'power_off')
+    @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
+    def test_rescue_with_image_specified_and_mount_error(
+        self, mock_rescue, mock_power_off, mock_image_get, mock_get_block_info,
+            mock_get_share_info, mock_drv_mount, mock_db_fault):
+        image_ref = uuids.image_instance
+        rescue_image_meta = {}
+        params = {"task_state": task_states.RESCUING}
+        share_info = self.fake_share_info()
+        mock_get_share_info.return_value = share_info
+
+        instance = self._create_fake_instance_obj(params=params)
+
+        ctxt = context.get_admin_context()
+        mock_context = mock.Mock()
+        mock_context.elevated.return_value = ctxt
+
+        mock_get_block_info.return_value = mock.sentinel.block_device_info
+        mock_image_get.return_value = rescue_image_meta
+
+        mock_drv_mount.side_effect = exception.ShareMountError(
+            share_id=share_info[0].share_id,
+            server_id=instance.uuid,
+            reason="fake_reason",
+        )
+
+        self.assertRaises(
+            exception.InstanceNotRescuable,
+            self.compute.rescue_instance,
+            mock_context,
+            instance=instance,
+            rescue_password="password",
+            rescue_image_ref=image_ref,
+            clean_shutdown=True,
+        )
+
+        self.assertEqual(instance.vm_state, 'error')
+        self.compute.terminate_instance(ctxt, instance, [])
+
+    @mock.patch('nova.compute.manager.ComputeManager._get_share_info')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    @mock.patch.object(image_api.API, "get")
+    @mock.patch.object(fake.FakeDriver, 'power_off')
+    @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
+    def test_rescue_with_base_image_when_image_not_specified(self,
+            mock_rescue, mock_power_off, mock_image_get, mock_get_block_info,
+            mock_get_share_info):
+        image_ref = FAKE_IMAGE_REF
+        system_meta = {"image_base_image_ref": image_ref}
+        rescue_image_meta = {}
+        params = {"task_state": task_states.RESCUING,
+                  "system_metadata": system_meta}
+        share_info = objects.ShareMappingList()
+        mock_get_share_info.return_value = share_info
+
+        instance = self._create_fake_instance_obj(params=params)
+
+        ctxt = context.get_admin_context()
+        mock_context = mock.Mock()
+        mock_context.elevated.return_value = ctxt
+
+        mock_get_block_info.return_value = mock.sentinel.block_device_info
+        mock_image_get.return_value = rescue_image_meta
+
+        share_info = objects.ShareMappingList()
+        mock_get_share_info.return_value = share_info
 
         self.compute.rescue_instance(mock_context, instance=instance,
                                      rescue_password="password",
@@ -2636,7 +2746,8 @@ class ComputeTestCase(BaseTestCase,
         mock_rescue.assert_called_with(ctxt, instance, [],
                                        test.MatchType(objects.ImageMeta),
                                        'password',
-                                       mock.sentinel.block_device_info)
+                                       mock.sentinel.block_device_info,
+                                       share_info)
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_power_on(self):

@@ -1016,7 +1016,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password, block_device_info):
+               rescue_password, block_device_info, share_info):
         """Rescue the specified instance.
 
         :param nova.context.RequestContext context:
@@ -1030,6 +1030,8 @@ class ComputeDriver(object):
         :param rescue_password: new root password to set for rescue.
         :param dict block_device_info:
             The block device mapping of the instance.
+        :param nova.objects.share_mapping.ShareMapingList share_info
+            list of share_mapping
         """
         raise NotImplementedError()
 

@@ -2645,9 +2645,11 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
 
         fake_looping_call = FakeLoopingCall()
         mock_looping.return_value = fake_looping_call
+        share_info = objects.ShareMappingList()
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.id)
 
-        self.driver.rescue(self.ctx, instance, None, None, 'xyz', None)
+        self.driver.rescue(self.ctx, instance, None, None, 'xyz', None,
+                           share_info)
         self.mock_conn.set_node_provision_state.assert_called_once_with(
             node.id, 'rescue', rescue_password='xyz',
         )
@@ -2660,12 +2662,13 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         mock_looping.return_value = fake_looping_call
         self.mock_conn.set_node_provision_state.side_effect = \
             sdk_exc.BadRequestException()
+        share_info = objects.ShareMappingList()
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.id)
 
         self.assertRaises(
             exception.InstanceRescueFailure,
             self.driver.rescue,
-            self.ctx, instance, None, None, 'xyz', None,
+            self.ctx, instance, None, None, 'xyz', None, share_info
         )
         self.mock_conn.set_node_provision_state.assert_called_once_with(
             node.id, 'rescue', rescue_password='xyz',
@@ -2680,11 +2683,12 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
         fake_validate.side_effect = exception.InstanceNotFound(
             instance_id='fake',
         )
+        share_info = objects.ShareMappingList()
 
         self.assertRaises(
             exception.InstanceRescueFailure,
             self.driver.rescue,
-            self.ctx, instance, None, None, 'xyz', None,
+            self.ctx, instance, None, None, 'xyz', None, share_info
         )
 
     @mock.patch.object(ironic_driver.IronicDriver,
@@ -2695,12 +2699,13 @@ class IronicDriverSyncTestCase(IronicDriverTestCase):
                    last_error='rescue failed')
 
         fake_validate.return_value = node
+        share_info = objects.ShareMappingList()
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.id)
 
         self.assertRaises(
             exception.InstanceRescueFailure,
             self.driver.rescue,
-            self.ctx, instance, None, None, 'xyz', None,
+            self.ctx, instance, None, None, 'xyz', None, share_info
         )
 
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')

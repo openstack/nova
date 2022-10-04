@@ -5706,6 +5706,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         fake_nw_info = network_model.NetworkInfo()
         rescue_image_meta = objects.ImageMeta.from_dict(
             {'id': uuids.image_id, 'name': uuids.image_name})
+
         with test.nested(
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
@@ -5724,13 +5725,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             mock.patch.object(compute_utils, 'notify_usage_exists'),
             mock.patch.object(self.compute, '_get_power_state',
                               return_value=power_state.RUNNING),
-            mock.patch.object(instance, 'save')
+            mock.patch.object(instance, 'save'),
+            mock.patch('nova.compute.manager.ComputeManager._get_share_info')
         ) as (
             elevated_context, get_nw_info, get_rescue_image,
             get_bdm_list, get_block_info, notify_instance_usage,
             power_off_instance, driver_rescue, notify_usage_exists,
-            get_power_state, instance_save
+            get_power_state, instance_save, mock_get_share_info
         ):
+
+            share_info = objects.ShareMappingList()
+            mock_get_share_info.return_value = share_info
+
             self.compute.rescue_instance(
                 self.context, instance, rescue_password='verybadpass',
                 rescue_image_ref=None, clean_shutdown=clean_shutdown)
@@ -5765,7 +5771,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
             driver_rescue.assert_called_once_with(
                 self.context, instance, fake_nw_info, rescue_image_meta,
-                'verybadpass', mock.sentinel.block_device_info)
+                'verybadpass', mock.sentinel.block_device_info, share_info)
 
             notify_usage_exists.assert_called_once_with(self.compute.notifier,
                 self.context, instance, 'fake-mini', current_period=True)
