@@ -781,7 +781,3 @@
         - nova-emulation
         - tempest-integrated-compute-centos-9-stream:
             irrelevant-files: *nova-base-irrelevant-files
-    periodic:
-      jobs:
-        - tempest-centos8-stream-fips:
-            branches: master
