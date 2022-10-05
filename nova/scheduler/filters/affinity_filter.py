@@ -39,7 +39,7 @@ class DifferentHostFilter(filters.BaseHostFilter):
         # With no different_host key
         return True
 
-    def host_info_for_instance_ids(self, spec_obj):
+    def host_info_requiring_instance_ids(self, spec_obj):
         return set(spec_obj.get_scheduler_hint('different_host'))
 
 
@@ -60,7 +60,7 @@ class SameHostFilter(filters.BaseHostFilter):
         # With no same_host key
         return True
 
-    def host_info_for_instance_ids(self, spec_obj):
+    def host_info_requiring_instance_ids(self, spec_obj):
         return set(spec_obj.get_scheduler_hint('same_host'))
 
 
@@ -134,7 +134,7 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
         # already on this host.
         return len(servers_on_host) < max_server_per_host
 
-    def host_info_for_instance_ids(self, spec_obj):
+    def host_info_requiring_instance_ids(self, spec_obj):
         instance_group = spec_obj.instance_group
         policy = instance_group.policy if instance_group else None
         if self.policy_name != policy:
