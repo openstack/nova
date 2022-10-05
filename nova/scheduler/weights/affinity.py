@@ -38,16 +38,11 @@ class _SoftAffinityWeigherBase(weights.BaseHostWeigher):
 
     def _weigh_object(self, host_state, request_spec):
         """Higher weights win."""
-        if not request_spec.instance_group:
-            return 0
-
-        policy = request_spec.instance_group.policy
-
-        if self.policy_name != policy:
+        members = self.host_info_requiring_instance_ids(request_spec)
+        if not members:
             return 0
 
         instances = set(host_state.instances.keys())
-        members = set(request_spec.instance_group.members)
         member_on_host = instances.intersection(members)
 
         return len(member_on_host)
