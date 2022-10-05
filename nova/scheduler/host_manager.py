@@ -817,7 +817,7 @@ class HostManager(object):
                 # aggregates could have been happening after setting
                 # this field for the first time
 
-                if not instance_uuids:
+                if instance_uuids is not None and not instance_uuids:
                     # If no filter requires any instance information
                     # on the host, we can skip the db query
                     instances = {}
