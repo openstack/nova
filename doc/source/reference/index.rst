@@ -44,7 +44,7 @@ The following is a dive into some of the internals in nova.
 * :doc:`/reference/libvirt-distro-support-matrix`: Libvirt virt driver OS
   distribution support matrix
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -73,7 +73,7 @@ Debugging
 * :doc:`/reference/gmr`: Inspired by Amiga, a way to trigger a very
   comprehensive dump of a running service for deep debugging.
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -97,7 +97,7 @@ these are a great place to start reading up on the current plans.
 * :doc:`/reference/scheduler-evolution`: Motivation behind the scheduler /
   placement evolution
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -112,7 +112,7 @@ Additional Information
 * :doc:`/reference/glossary`: A quick reference guide to some of the terms you
   might encounter working on or using nova.
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:

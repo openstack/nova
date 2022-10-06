@@ -158,7 +158,7 @@ Schema Example
           items:
             patternProperties:
               # Allows any key name matching the resource class pattern,
-              # check to prevent conflicts with virt driver owned resouces classes
+              # check to prevent conflicts with virt driver owned resources classes
               # will be done after schema validation.
               ^[A-Z0-9_]{1,255}$:
                 type: object

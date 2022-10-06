@@ -29,7 +29,7 @@ Background
 Nova used to include two distinct frameworks for exposing REST API
 functionality. Older code is called the "v2 API" and existed in the
 /nova/api/openstack/compute/legacy_v2/ directory. This code tree was totally
-removed during Netwon release time frame (14.0.0 and later).
+removed during Newton release time frame (14.0.0 and later).
 Newer code is called the "v2.1 API" and exists in the
 /nova/api/openstack/compute directory.
 

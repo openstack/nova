@@ -188,9 +188,9 @@ fetched using the `volume_attachment get_connector` subcommand:
 
 .. note::
 
-    Future work will remove this requirement and incorperate the gathering of
-    the host connector into the main refresh command. Unfortunatley until then
-    it must remain a seperate manual step.
+    Future work will remove this requirement and incorporate the gathering of
+    the host connector into the main refresh command. Unfortunately until then
+    it must remain a separate manual step.
 
 We can then provide this connector to the `volume_attachment refresh`
 subcommand. This command will connect to the compute, disconnect any host

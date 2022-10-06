@@ -129,9 +129,9 @@ Sorts are performed on host's NUMA nodes list in the following order:
 
 Top sorting priority is for host's NUMA nodes with PCI devices attached. If VM
 requested PCI device(s) logic **always** puts host's NUMA nodes with more PCI
-devices at the beginnig of the host's NUMA nodes list. If PCI devices isn't
+devices at the beginning of the host's NUMA nodes list. If PCI devices isn't
 requested by VM than NUMA nodes with no (or less) PCI device available will be
-placed at the beginnig of the list.
+placed at the beginning of the list.
 
 .. caution::
 

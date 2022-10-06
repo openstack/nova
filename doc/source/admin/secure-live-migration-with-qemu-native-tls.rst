@@ -186,8 +186,8 @@ Related information
   any other ``*_tls*`` parameters, _unless_ you need different
   certificates for some services.  The rationale for that is that some
   services (e.g.  migration / NBD)  are only exposed to internal
-  infrastructure; while some sevices (VNC, Spice) might be exposed
-  publically, so might need different certificates.  For OpenStack this
+  infrastructure; while some services (VNC, Spice) might be exposed
+  publicly, so might need different certificates.  For OpenStack this
   does not matter, though, we will stick with the defaults.
 
 - If they are not already open, ensure you open up these TCP ports on

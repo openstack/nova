@@ -49,7 +49,7 @@ For End Users
 As an end user of nova, you'll use nova to create and manage servers with
 either tools or the API directly.
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -110,7 +110,7 @@ Architecture Overview
 * :doc:`Nova architecture </admin/architecture>`: An overview of how all the parts in
   nova fit together.
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -128,7 +128,7 @@ having installed :keystone-doc:`keystone <install/>`, :glance-doc:`glance
 :placement-doc:`placement <install/>`. Ensure that you follow their install
 guides first.
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :maxdepth: 2
@@ -192,7 +192,7 @@ Once you are running nova, the following information is extremely useful.
   instances (either via metadata server or config drive) for your specific
   purposes.
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -211,7 +211,7 @@ Reference Material
 * :doc:`Configuration Guide <configuration/index>`: Information on configuring
   the system, including role-based access control policy rules.
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -230,7 +230,7 @@ For Contributors
   both current and future looking parts of our architecture.
   These are collected here.
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:

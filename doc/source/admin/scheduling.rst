@@ -1162,7 +1162,7 @@ here.
     :oslo.config:option:`DEFAULT.cpu_allocation_ratio`,
     :oslo.config:option:`DEFAULT.ram_allocation_ratio` or
     :oslo.config:option:`DEFAULT.disk_allocation_ratio` to a non-null value
-    would ensure the user-configured value was always overriden.
+    would ensure the user-configured value was always overridden.
 
 .. _osc-placement: https://docs.openstack.org/osc-placement/latest/index.html
 

@@ -22,7 +22,7 @@ Getting Started
 * :doc:`/contributor/development-environment`: Get your computer setup to
   contribute
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -60,7 +60,7 @@ while keeping users happy and keeping developers productive.
 
 * :doc:`/contributor/ptl-guide`: A chronological PTL reference guide
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -86,7 +86,7 @@ Reviewing
 * :doc:`/contributor/documentation`: Guidelines for handling documentation
   contributions
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -120,7 +120,7 @@ be Python code. All new code needs to be validated somehow.
 
   * :doc:`/contributor/testing/eventlet-profiling`
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -152,7 +152,7 @@ extend.
 
 * :doc:`/contributor/notifications`: How to add your own notifications
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:
@@ -176,7 +176,7 @@ diving in.
   * :doc:`/contributor/resize-and-cold-migrate`: Describes the differences and
     similarities between resize and cold migrate operations.
 
-.. # NOTE(amotoki): toctree needs to be placed at the end of the secion to
+.. # NOTE(amotoki): toctree needs to be placed at the end of the section to
    # keep the document structure in the PDF doc.
 .. toctree::
    :hidden:

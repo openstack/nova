@@ -70,7 +70,7 @@ A full guide on configuring and using SR-IOV is provided in the
      (see, for example, `this bug <https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1957753>`_
      which discusses a case relevant to one driver). As of Libvirt v8.1.0,
      EPERM errors encountered while programming VLAN 0 are ignored if
-     VLAN clearning is not explicitly requested in the device XML (i.e.
+     VLAN clearing is not explicitly requested in the device XML (i.e.
      VLAN 0 is not specified explicitly).
 
 NUMA Affinity

@@ -219,7 +219,7 @@ have special meaning:
      result in an error depending on your driver and kernel version (see, for
      example, `this bug <https://bugs.launchpad.net/ubuntu/+source/linux/+bug/1957753>`_
      which discusses a case relevant to one driver). As of Libvirt v8.1.0, EPERM
-     errors encountered while programming a VLAN are ignored if VLAN clearning is
+     errors encountered while programming a VLAN are ignored if VLAN clearing is
      not explicitly requested in the device XML.
 
 ``trusted``
@@ -456,7 +456,7 @@ and OS allows, we can enable vIOMMU in libvirt driver.
 .. note::
 
     Enable vIOMMU might introduce significant performance overhead.
-    You can see performance comparision table from
+    You can see performance comparison table from
     `AMD vIOMMU session on KVM Forum 2021`_.
     For the above reason, vIOMMU should only be enabled for workflow that
     require it.

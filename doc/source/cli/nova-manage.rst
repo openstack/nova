@@ -1607,7 +1607,7 @@ instance changing when moving between machine types.
 
 .. option:: --force
 
-    Skip machine type compatability checks and force machine type update.
+    Skip machine type compatibility checks and force machine type update.
 
 .. rubric:: Return codes
 

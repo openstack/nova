@@ -69,10 +69,10 @@ class MatrixImplementation(object):
     STATUS_COMPLETE = "complete"
     STATUS_PARTIAL = "partial"
     STATUS_MISSING = "missing"
-    STATUS_UKNOWN = "unknown"
+    STATUS_UNKNOWN = "unknown"
 
     STATUS_ALL = [STATUS_COMPLETE, STATUS_PARTIAL, STATUS_MISSING,
-                  STATUS_UKNOWN]
+                  STATUS_UNKNOWN]
 
     def __init__(self, status=STATUS_MISSING, notes=None, release=None):
         """MatrixImplementation models a cell in the matrix
@@ -394,7 +394,7 @@ class FeatureMatrixDirective(rst.Directive):
                     impl_status = u"\u2716"
                 elif impl.status == MatrixImplementation.STATUS_PARTIAL:
                     impl_status = u"\u2714"
-                elif impl.status == MatrixImplementation.STATUS_UKNOWN:
+                elif impl.status == MatrixImplementation.STATUS_UNKNOWN:
                     impl_status = u"?"
 
                 implref.append(nodes.literal(

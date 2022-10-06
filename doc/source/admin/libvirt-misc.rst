@@ -149,7 +149,7 @@ Locked memory allocation
 
 Locking memory marks the guest memory allocations as unmovable and
 unswappable. It is implicitly enabled in a number of cases such as SEV or
-realtime guests but can also be enabled explictly using the
+realtime guests but can also be enabled explicitly using the
 ``hw:locked_memory`` extra spec (or use ``hw_locked_memory`` image property).
 ``hw:locked_memory`` (also ``hw_locked_memory`` image property) accept
 boolean values in string format like 'true' or 'false' value.

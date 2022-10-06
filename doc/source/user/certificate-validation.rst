@@ -309,7 +309,7 @@ Create the first intermediate certificate
 """""""""""""""""""""""""""""""""""""""""
 Create a certificate request for the first intermediate certificate. For these
 instructions, we will save the certificate request as
-``cert_intermeidate_a.csr`` and the private key as ``key_intermediate_a.pem``.
+``cert_intermediate_a.csr`` and the private key as ``key_intermediate_a.pem``.
 
 .. code-block:: console
 
@@ -357,7 +357,7 @@ Create the second intermediate certificate
 """"""""""""""""""""""""""""""""""""""""""
 Create a certificate request for the second intermediate certificate. For these
 instructions, we will save the certificate request as
-``cert_intermeidate_b.csr`` and the private key as ``key_intermediate_b.pem``.
+``cert_intermediate_b.csr`` and the private key as ``key_intermediate_b.pem``.
 
 .. code-block:: console
 

@@ -244,7 +244,7 @@ The following packages must be installed with pip:
 * ``pywin32``
 * ``pymysql``
 * ``greenlet``
-* ``pycryto``
+* ``pycrypto``
 * ``ecdsa``
 * ``amqp``
 * ``wmi``

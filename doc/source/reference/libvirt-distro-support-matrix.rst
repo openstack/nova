@@ -180,7 +180,7 @@ OS distribution versions
 ------------------------
 
 This table provides information on a representative sample of OS distros and
-the version of libirt/QEMU/libguestfs that they ship. This is **NOT** intended
+the version of libvirt/QEMU/libguestfs that they ship. This is **NOT** intended
 to be an exhaustive list of distros where OpenStack Nova can run - it is
 intended to run on any Linux distro that can satisfy the minimum required
 software versions. This table merely aims to help identify when minimum
