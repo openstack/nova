@@ -151,6 +151,7 @@ log management and live migration of instances.
    live-migration-usage
    secure-live-migration-with-qemu-native-tls
    manage-volumes
+   manage-shares
    flavors
    admin-password-injection
    remote-console-access
