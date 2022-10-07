@@ -529,7 +529,7 @@ Related options:
 * ``initial_disk_allocation_ratio``
 """),
     cfg.FloatOpt('initial_cpu_allocation_ratio',
-                 default=16.0,
+                 default=4.0,
                  min=0.0,
                  help="""
 Initial virtual CPU to physical CPU allocation ratio.
@@ -545,7 +545,7 @@ Related options:
 * ``cpu_allocation_ratio``
 """),
     cfg.FloatOpt('initial_ram_allocation_ratio',
-                 default=1.5,
+                 default=1.0,
                  min=0.0,
                  help="""
 Initial virtual RAM to physical RAM allocation ratio.

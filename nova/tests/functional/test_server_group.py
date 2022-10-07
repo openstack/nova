@@ -103,7 +103,10 @@ class ServerGroupFakeDriver(fake.SmallFakeDriver):
     """
 
     vcpus = 1000
-    memory_mb = 8192
+    # the testcases were built with a default ram allocation ratio
+    # of 1.5 and 8192 mb of ram so to maintain the same capacity with
+    # the new default allocation ratio of 1.0 we use 8192+4096=12288
+    memory_mb = 12288
     local_gb = 100000
 
 
