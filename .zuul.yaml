@@ -594,8 +594,11 @@
     required-projects:
       - openstack/nova
     pre-run:
-      - playbooks/ceph/glance-copy-policy.yaml
+      - playbooks/ceph/glance-setup.yaml
     vars:
+      # NOTE(danms): Increase our swap size since we're dealing with
+      # larger images and trigger OOMs.
+      configure_swap_size: 4096
       # NOTE(danms): These tests create an empty non-raw image, which nova
       # will refuse because we set never_download_image_if_on_rbd in this job.
       # Just skip these tests for this case.
@@ -603,6 +606,7 @@
         GLANCE_STANDALONE: True
         GLANCE_USE_IMPORT_WORKFLOW: True
         DEVSTACK_PARALLEL: True
+        GLANCE_LIMIT_IMAGE_SIZE_TOTAL: 2048
       # NOTE(danms): This job is pretty heavy as it is, so we disable some
       # services that are not relevant to the nova-glance-ceph scenario
       # that this job is intended to validate.
@@ -617,6 +621,8 @@
           $TEMPEST_CONFIG:
             image-feature-enabled:
               manage_locations: true
+            volume:
+              volume_size: 1
         post-config:
           $NOVA_CONF:
             libvirt:
