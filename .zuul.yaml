@@ -613,6 +613,10 @@
         s-object: false
         s-proxy: false
       devstack_local_conf:
+        test-config:
+          $TEMPEST_CONFIG:
+            image-feature-enabled:
+              manage_locations: true
         post-config:
           $NOVA_CONF:
             libvirt:
@@ -621,7 +625,7 @@
               never_download_image_if_on_rbd: True
           $GLANCE_API_CONF:
             DEFAULT:
-              enabled_backends: "cheap:file, robust:rbd"
+              enabled_backends: "cheap:file, robust:rbd, web:http"
               default_log_levels: "amqp=WARN, amqplib=WARN, boto=WARN, qpid=WARN, sqlalchemy=WARN, suds=INFO, oslo.messaging=INFO, oslo_messaging=INFO, iso8601=WARN, requests.packages.urllib3.connectionpool=WARN, urllib3.connectionpool=WARN, websocket=WARN, requests.packages.urllib3.util.retry=WARN, urllib3.util.retry=WARN, keystonemiddleware=WARN, routes.middleware=WARN, stevedore=WARN, taskflow=WARN, keystoneauth=WARN, oslo.cache=INFO, dogpile.core.dogpile=INFO, oslo_policy=DEBUG"
             glance_store:
               default_backend: cheap
@@ -633,6 +637,8 @@
               rbd_store_ceph_conf: /etc/ceph/ceph.conf
             cheap:
               filesystem_store_datadir: /opt/stack/data/glance/images/
+            web:
+              https_insecure: false
             os_glance_staging_store:
               filesystem_store_datadir: /opt/stack/data/glance/os_glance_staging_store/
             os_glance_tasks_store:
