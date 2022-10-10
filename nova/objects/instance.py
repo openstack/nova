@@ -429,7 +429,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         if 'security_groups' in expected_attrs:
             sec_groups = base.obj_make_list(
                     context, objects.SecurityGroupList(context),
-                    objects.SecurityGroup, db_inst.get('security_groups', []))
+                    objects.SecurityGroup, [])
             instance['security_groups'] = sec_groups
 
         if 'tags' in expected_attrs:
@@ -525,7 +525,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     @base.remotable_classmethod
     def get_by_uuid(cls, context, uuid, expected_attrs=None, use_slave=False):
         if expected_attrs is None:
-            expected_attrs = ['info_cache', 'security_groups']
+            expected_attrs = ['info_cache']
         columns_to_join = _expected_cols(expected_attrs)
         db_inst = cls._db_instance_get_by_uuid(context, uuid, columns_to_join,
                                                use_slave=use_slave)
@@ -535,7 +535,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     @base.remotable_classmethod
     def get_by_id(cls, context, inst_id, expected_attrs=None):
         if expected_attrs is None:
-            expected_attrs = ['info_cache', 'security_groups']
+            expected_attrs = ['info_cache']
         columns_to_join = _expected_cols(expected_attrs)
         db_inst = db.instance_get(context, inst_id,
                                   columns_to_join=columns_to_join)
@@ -576,10 +576,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         expected_attrs = [attr for attr in INSTANCE_DEFAULT_FIELDS
                           if attr in updates]
 
-        # TODO(stephenfin): Remove this as it's related to nova-network
-        if 'security_groups' in updates:
-            updates['security_groups'] = [x.name for x in
-                                          updates['security_groups']]
         if 'info_cache' in updates:
             updates['info_cache'] = {
                 'network_info': updates['info_cache'].network_info.json()
@@ -699,11 +695,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
     # TODO(stephenfin): Remove this as it's related to nova-network
     def _save_security_groups(self, context):
-        security_groups = self.security_groups or []
-        for secgroup in security_groups:
-            with secgroup.obj_alternate_context(context):
-                secgroup.save()
-        self.security_groups.obj_reset_changes()
+        # NOTE(stephenfin): We no longer bother saving these since they
+        # shouldn't be created in the first place
+        pass
 
     def _save_fault(self, context):
         # NOTE(danms): I don't think we need to worry about this, do we?
@@ -1007,11 +1001,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def _load_ec2_ids(self):
         self.ec2_ids = objects.EC2Ids.get_by_instance(self._context, self)
 
-    # TODO(stephenfin): Remove this as it's related to nova-network
-    def _load_security_groups(self):
-        self.security_groups = objects.SecurityGroupList.get_by_instance(
-            self._context, self)
-
     def _load_pci_devices(self):
         self.pci_devices = objects.PciDeviceList.get_by_instance_uuid(
             self._context, self.uuid)
@@ -1198,7 +1187,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         elif attrname == 'resources':
             return self._load_resources()
         elif attrname == 'security_groups':
-            self._load_security_groups()
+            self.security_groups = objects.SecurityGroupList()
         elif attrname == 'pci_devices':
             self._load_pci_devices()
         elif 'flavor' in attrname:
@@ -1560,17 +1549,12 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # TODO(stephenfin): Remove this as it's related to nova-network
     @base.remotable_classmethod
     def get_by_security_group_id(cls, context, security_group_id):
-        db_secgroup = db.security_group_get(
-            context, security_group_id,
-            columns_to_join=['instances.info_cache',
-                             'instances.system_metadata'])
-        return _make_instance_list(context, cls(), db_secgroup['instances'],
-                                   ['info_cache', 'system_metadata'])
+        raise NotImplementedError()
 
     # TODO(stephenfin): Remove this as it's related to nova-network
     @classmethod
     def get_by_security_group(cls, context, security_group):
-        return cls.get_by_security_group_id(context, security_group.id)
+        raise NotImplementedError()
 
     # TODO(stephenfin): Remove this as it's related to nova-network
     @base.remotable_classmethod
