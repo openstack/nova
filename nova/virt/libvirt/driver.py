@@ -7815,6 +7815,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param requested_types: Filter out the result for only mediated devices
                                 having those types.
         """
+        LOG.debug('Searching for available mdevs...')
         allocated_mdevs = self._get_all_assigned_mediated_devices()
         mdevs = self._get_mediated_devices(requested_types)
         available_mdevs = set()
@@ -7830,6 +7831,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 available_mdevs.add(mdev["uuid"])
 
         available_mdevs -= set(allocated_mdevs)
+        LOG.info('Available mdevs at: %s.', available_mdevs)
         return available_mdevs
 
     def _create_new_mediated_device(self, parent, uuid=None):
@@ -7841,6 +7843,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         :returns: the newly created mdev UUID or None if not possible
         """
+        LOG.debug('Attempting to create new mdev...')
         supported_types = self.supported_vgpu_types
         # Try to see if we can still create a new mediated device
         devices = self._get_mdev_capable_devices(supported_types)
@@ -7852,6 +7855,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # The device is not the one that was called, not creating
                 # the mdev
                 continue
+            LOG.debug('Trying on: %s.', dev_name)
             dev_supported_type = self._get_vgpu_type_per_pgpu(dev_name)
             if dev_supported_type and device['types'][
                     dev_supported_type]['availableInstances'] > 0:
@@ -7861,7 +7865,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 pci_addr = "{}:{}:{}.{}".format(*dev_name[4:].split('_'))
                 chosen_mdev = nova.privsep.libvirt.create_mdev(
                     pci_addr, dev_supported_type, uuid=uuid)
+                LOG.info('Created mdev: %s on pGPU: %s.',
+                         chosen_mdev, pci_addr)
                 return chosen_mdev
+            LOG.debug('Failed: No available instances on device.')
+        LOG.info('Failed to create mdev. '
+                 'No free space found among the following devices: %s.',
+                 [dev['dev_id'] for dev in devices])
 
     @utils.synchronized(VGPU_RESOURCE_SEMAPHORE)
     def _allocate_mdevs(self, allocations):
@@ -7943,6 +7953,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Take the first available mdev
                 chosen_mdev = mdevs_available.pop()
             else:
+                LOG.debug('No available mdevs where found. '
+                          'Creating an new one...')
                 chosen_mdev = self._create_new_mediated_device(parent_device)
             if not chosen_mdev:
                 # If we can't find devices having available VGPUs, just raise
@@ -7950,6 +7962,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     reason='vGPU resource is not available')
             else:
                 chosen_mdevs.append(chosen_mdev)
+                LOG.info('Allocated mdev: %s.', chosen_mdev)
         return chosen_mdevs
 
     def _detach_mediated_devices(self, guest):
