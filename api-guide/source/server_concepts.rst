@@ -1048,7 +1048,7 @@ Nova is able to write metadata to a special configuration drive that attaches
 to the server when it boots. The server can mount this drive and read files
 from it to get information that is normally available through the metadata
 service. For more details, refer to the :nova-doc:`user guide
-<user/metadata.html>`.
+<user/metadata.html#config-drives>`.
 
 User data
 ---------

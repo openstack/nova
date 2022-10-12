@@ -67,7 +67,7 @@ follows:
 
 For more information on production architectures, see the `Architecture Design
 Guide <https://docs.openstack.org/arch-design/>`_, `OpenStack Operations Guide
-<https://wiki.openstack.org/wiki/OpsGuide>`_, and `OpenStack Networking Guide
+<https://docs.openstack.org/operations-guide/>`_, and `OpenStack Networking Guide
 <https://docs.openstack.org/ocata/networking-guide/>`_.
 
 .. _figure-hwreqs:
