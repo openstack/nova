@@ -59,6 +59,15 @@ class InstanceActionsTestV221(InstanceActionsTestV21):
         self.assertEqual('delete', actions[0]['action'])
         self.assertEqual('create', actions[1]['action'])
 
+    def test_get_instance_actions_shelve_deleted(self):
+        server = self._create_server()
+        self._shelve_server(server)
+        self._delete_server(server)
+        actions = self.api.get_instance_actions(server['id'])
+        self.assertEqual('delete', actions[0]['action'])
+        self.assertEqual('shelve', actions[1]['action'])
+        self.assertEqual('create', actions[2]['action'])
+
 
 class HypervisorError(Exception):
     """This is just used to make sure the exception type is in the events."""

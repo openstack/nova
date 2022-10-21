@@ -1254,10 +1254,12 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.objects.Service.get_by_compute_host')
+    @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch('nova.compute.api.API._local_delete')
     def test_delete_error_state_with_no_host(
-            self, mock_local_delete, mock_service_get, _mock_notify,
-            _mock_save, mock_bdm_get, mock_lookup, _mock_del_booting):
+            self, mock_local_delete, mock_record, mock_service_get,
+            _mock_notify, _mock_save, mock_bdm_get, mock_lookup,
+            _mock_del_booting):
         # Instance in error state with no host should be a local delete
         # for non API cells
         inst = self._create_instance_obj(params=dict(vm_state=vm_states.ERROR,
@@ -1269,6 +1271,8 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_local_delete.assert_called_once_with(
                     self.context, inst, mock_bdm_get.return_value,
                     'delete', self.compute_api._do_delete)
+            mock_record.assert_called_once_with(self.context, inst,
+                                                instance_actions.DELETE)
             mock_terminate.assert_not_called()
         mock_service_get.assert_not_called()
 
@@ -7905,8 +7909,9 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     @mock.patch.object(compute_utils, 'notify_about_instance_usage')
     @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
     @mock.patch.object(objects.Instance, 'destroy')
+    @mock.patch('nova.compute.api.API._record_action_start')
     def _test_delete_volume_backed_instance(
-            self, vm_state, mock_instance_destroy, bdm_destroy,
+            self, vm_state, mock_record, mock_instance_destroy, bdm_destroy,
             notify_about_instance_usage, mock_save, mock_elevated,
             bdm_get_by_instance_uuid, mock_lookup, _mock_del_booting,
             notify_about_instance_action):
@@ -7935,6 +7940,8 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
                      'detach') as mock_detach:
             self.compute_api.delete(self.context, inst)
 
+        mock_record.assert_called_once_with(self.context, inst,
+                                            instance_actions.DELETE)
         mock_deallocate.assert_called_once_with(self.context, inst)
         mock_detach.assert_called_once_with(self.context, volume_id,
                                             inst.uuid)

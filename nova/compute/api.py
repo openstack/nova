@@ -2547,6 +2547,8 @@ class API:
                           instance=instance)
                 with nova_context.target_cell(context, cell) as cctxt:
                     self._local_delete(cctxt, instance, bdms, delete_type, cb)
+                    self._record_action_start(context, instance,
+                                              instance_actions.DELETE)
 
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
