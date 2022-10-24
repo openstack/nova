@@ -52,7 +52,8 @@ def _get_ds_capacity_and_freespace(session, cluster=None,
     except exception.DatastoreNotFound:
         pass
 
-    return capacity, freespace, max_freespace
+    # Avoid ValueError("Capacity is smaller than free space")
+    return capacity, min(freespace, capacity), min(max_freespace, capacity)
 
 
 class VCState(object):

@@ -73,11 +73,13 @@ def _select_datastore(session, datastores, best_match, datastore_regex=None,
 
         propdict = vm_util.propset_dict(obj_content.propSet)
         if _is_datastore_valid(propdict, datastore_regex, allowed_ds_types):
+            capacity = propdict['summary.capacity']
+            freespace = propdict['summary.freeSpace']
             new_ds = ds_obj.Datastore(
                     ref=obj_content.obj,
                     name=propdict['summary.name'],
-                    capacity=propdict['summary.capacity'],
-                    freespace=propdict['summary.freeSpace'])
+                    capacity=capacity,
+                    freespace=min(freespace, capacity))
             # favor datastores with more free space
             if (best_match is None or
                     new_ds.freespace > best_match.freespace):
