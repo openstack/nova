@@ -346,6 +346,80 @@ class NUMAServersTest(NUMAServersTestBase):
         # There shouldn't be any hosts available to satisfy this request
         self._run_build_test(flavor_id, end_status='ERROR')
 
+    def test_create_server_with_mixed_policy_asymmetric_multi_numa(self):
+        """Boot an instance stretched to two NUMA nodes requesting only
+        shared CPUs in one NUMA and only dedicated in the other NUMA node.
+        """
+        #            shared  dedicated
+        # NUMA0 pCPU | 0   | 2 3
+        # NUMA1 pCPU |     | 6 7
+        self.flags(
+            cpu_shared_set='0',
+            cpu_dedicated_set='2,3,6,7',
+            group='compute',
+        )
+        self.flags(vcpu_pin_set=None)
+
+        host_info = fakelibvirt.HostInfo(
+            cpu_nodes=2, cpu_sockets=1, cpu_cores=4, cpu_threads=1)
+        self.start_compute(host_info=host_info, hostname='compute1')
+
+        # sanity check the created host topology object; this is really just a
+        # test of the fakelibvirt module
+        host_numa = objects.NUMATopology.obj_from_db_obj(
+            objects.ComputeNode.get_by_nodename(
+                self.ctxt, 'compute1',
+            ).numa_topology
+        )
+        self.assertEqual(2, len(host_numa.cells))
+        self.assertEqual({0}, host_numa.cells[0].cpuset)
+        self.assertEqual({2, 3}, host_numa.cells[0].pcpuset)
+
+        self.assertEqual(set(), host_numa.cells[1].cpuset)
+        self.assertEqual({6, 7}, host_numa.cells[1].pcpuset)
+
+        # create a flavor with 1 shared and 2 dedicated CPUs stretched to
+        # different NUMA nodes
+        extra_spec = {
+            'hw:cpu_policy': 'mixed',
+            'hw:cpu_dedicated_mask': '^0',
+            'hw:numa_nodes': '2',
+            'hw:numa_cpus.0': '0',
+            'hw:numa_cpus.1': '1,2',
+            'hw:numa_mem.0': '256',
+            'hw:numa_mem.1': '768',
+        }
+        flavor_id = self._create_flavor(
+            vcpu=3, memory_mb=1024, extra_spec=extra_spec)
+        # The only possible solution (ignoring the order of vCPU1,2):
+        # vCPU 0 => pCPU 0, NUMA0, shared
+        # vCPU 1 => pCPU 6, NUMA1, dedicated
+        # vCPU 2 => pCPU 7, NUMA1, dedicated
+        # This is bug 1994526 as the scheduling fails
+        self._run_build_test(flavor_id, end_status='ERROR')
+
+        # # After bug 1994526 is fixed, this should pass
+        # expected_usage = {
+        #     'DISK_GB': 20, 'MEMORY_MB': 1024, 'PCPU': 2, 'VCPU': 1,
+        # }
+        # server = self._run_build_test(
+        #     flavor_id, expected_usage=expected_usage)
+        #
+        # # sanity check the instance topology
+        # inst = objects.Instance.get_by_uuid(self.ctxt, server['id'])
+        # self.assertEqual(2, len(inst.numa_topology.cells))
+        #
+        # self.assertEqual({0}, inst.numa_topology.cells[0].cpuset)
+        # self.assertEqual(set(), inst.numa_topology.cells[0].pcpuset)
+        # self.assertEqual(None, inst.numa_topology.cells[0].cpu_pinning)
+        #
+        # self.assertEqual(set(), inst.numa_topology.cells[1].cpuset)
+        # self.assertEqual({1, 2}, inst.numa_topology.cells[1].pcpuset)
+        # self.assertEqual(
+        #     {6, 7},
+        #     set(inst.numa_topology.cells[1].cpu_pinning.values())
+        # )
+
     def test_create_server_with_dedicated_policy_old_configuration(self):
         """Create a server using the legacy extra spec and configuration.
 
