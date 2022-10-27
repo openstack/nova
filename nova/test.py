@@ -288,6 +288,10 @@ class TestCase(base.BaseTestCase):
         self.useFixture(nova_fixtures.GenericPoisonFixture())
         self.useFixture(nova_fixtures.SysFsPoisonFixture())
 
+        # Additional module names can be added to this set if needed
+        self.useFixture(nova_fixtures.ImportModulePoisonFixture(
+            set(['guestfs', 'libvirt'])))
+
         # make sure that the wsgi app is fully initialized for all testcase
         # instead of only once initialized for test worker
         wsgi_app.init_global_data.reset()
