@@ -46,3 +46,7 @@ evacuate_v2_29['properties']['evacuate']['properties'][
 # v2.68 removes the 'force' parameter added in v2.29, meaning it is identical
 # to v2.14
 evacuate_v2_68 = copy.deepcopy(evacuate_v214)
+
+# v2.95 keeps the same schema, evacuating an instance will now result its state
+# to be stopped at destination.
+evacuate_v2_95 = copy.deepcopy(evacuate_v2_68)

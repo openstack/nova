@@ -444,7 +444,8 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
         evacuated_server = self._evacuate_server(
             servers[1], {'onSharedStorage': 'False'},
-            expected_migration_status='done')
+            expected_migration_status='done',
+            expected_state='ACTIVE')
 
         # check that the server is evacuated to another host
         self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
@@ -621,7 +622,8 @@ class ServerGroupTestV215(ServerGroupTestV21):
         compute3 = self.start_service('compute', host='host3')
 
         evacuated_server = self._evacuate_server(
-            servers[1], expected_migration_status='done')
+            servers[1], expected_migration_status='done',
+            expected_state='ACTIVE')
 
         # check that the server is evacuated
         self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
@@ -800,7 +802,8 @@ class ServerGroupTestV215(ServerGroupTestV21):
         self._set_forced_down(host, True)
 
         evacuated_server = self._evacuate_server(
-            servers[1], expected_migration_status='done')
+            servers[1], expected_migration_status='done',
+            expected_state='ACTIVE')
 
         # Note(gibi): need to get the server again as the state of the instance
         # goes to ACTIVE first then the host of the instance changes to the
@@ -868,6 +871,54 @@ class ServerGroupTestV264(ServerGroupTestV215):
         # each host has 2 servers
         for host in set(hosts):
             self.assertEqual(2, hosts.count(host))
+
+
+class ServerGroupTestV295(ServerGroupTestV264):
+    microversion = '2.95'
+
+    def _evacuate_with_soft_anti_affinity_policies(self, group):
+        created_group = self.api.post_server_groups(group)
+        servers = self._boot_servers_to_group(created_group)
+
+        host = self._get_compute_service_by_host_name(
+            servers[1]['OS-EXT-SRV-ATTR:host'])
+        # Set forced_down on the host to ensure nova considers the host down.
+        self._set_forced_down(host, True)
+
+        evacuated_server = self._evacuate_server(
+            servers[1], expected_migration_status='done')
+
+        # Note(gibi): need to get the server again as the state of the instance
+        # goes to ACTIVE first then the host of the instance changes to the
+        # new host later
+        evacuated_server = self.admin_api.get_server(evacuated_server['id'])
+
+        return [evacuated_server['OS-EXT-SRV-ATTR:host'],
+                servers[0]['OS-EXT-SRV-ATTR:host']]
+
+    def test_evacuate_with_anti_affinity(self):
+        created_group = self.api.post_server_groups(self.anti_affinity)
+        servers = self._boot_servers_to_group(created_group)
+
+        host = self._get_compute_service_by_host_name(
+            servers[1]['OS-EXT-SRV-ATTR:host'])
+        # Set forced_down on the host to ensure nova considers the host down.
+        self._set_forced_down(host, True)
+
+        # Start additional host to test evacuation
+        compute3 = self.start_service('compute', host='host3')
+
+        evacuated_server = self._evacuate_server(
+            servers[1], expected_migration_status='done')
+
+        # check that the server is evacuated
+        self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
+                            servers[1]['OS-EXT-SRV-ATTR:host'])
+        # check that policy is kept
+        self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
+                            servers[0]['OS-EXT-SRV-ATTR:host'])
+
+        compute3.kill()
 
 
 class ServerGroupTestMultiCell(ServerGroupTestBase):

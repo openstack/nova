@@ -2510,3 +2510,10 @@ class ReimageException(NovaException):
 
 class InvalidNodeConfiguration(NovaException):
     msg_fmt = _('Invalid node identity configuration: %(reason)s')
+
+
+class NotSupportedComputeForEvacuateV295(NotSupported):
+    msg_fmt = _("Starting to microversion 2.95, evacuate API will stop "
+                "instance on destination. To evacuate before upgrades are "
+                "complete please use an older microversion. Required version "
+                "for compute %(expected), current version %(currently)s")

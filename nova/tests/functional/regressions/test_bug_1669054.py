@@ -59,7 +59,8 @@ class ResizeEvacuateTestCase(integrated_helpers._IntegratedTestBase):
         # Now try to evacuate the server back to the original source compute.
         server = self._evacuate_server(
             server, {'onSharedStorage': 'False'},
-            expected_host=self.compute.host, expected_migration_status='done')
+            expected_host=self.compute.host, expected_migration_status='done',
+            expected_state='ACTIVE')
 
         # Assert the RequestSpec.ignore_hosts field is not populated.
         reqspec = objects.RequestSpec.get_by_instance_uuid(

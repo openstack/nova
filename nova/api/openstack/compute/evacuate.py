@@ -23,15 +23,19 @@ from nova.api.openstack.compute.schemas import evacuate
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute
+from nova.compute import vm_states
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova.policies import evacuate as evac_policies
 from nova import utils
 
 CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
+
+MIN_VER_NOVA_COMPUTE_EVACUATE_STOPPED = 62
 
 
 class EvacuateController(wsgi.Controller):
@@ -77,7 +81,8 @@ class EvacuateController(wsgi.Controller):
     @validation.schema(evacuate.evacuate, "2.0", "2.13")
     @validation.schema(evacuate.evacuate_v214, "2.14", "2.28")
     @validation.schema(evacuate.evacuate_v2_29, "2.29", "2.67")
-    @validation.schema(evacuate.evacuate_v2_68, "2.68")
+    @validation.schema(evacuate.evacuate_v2_68, "2.68", "2.94")
+    @validation.schema(evacuate.evacuate_v2_95, "2.95")
     def _evacuate(self, req, id, body):
         """Permit admins to evacuate a server from a failed host
         to a new one.
@@ -91,6 +96,19 @@ class EvacuateController(wsgi.Controller):
         evacuate_body = body["evacuate"]
         host = evacuate_body.get("host")
         force = None
+
+        target_state = None
+        if api_version_request.is_supported(req, min_version='2.95'):
+            min_ver = objects.service.get_minimum_version_all_cells(
+                context, ['nova-compute'])
+            if min_ver < MIN_VER_NOVA_COMPUTE_EVACUATE_STOPPED:
+                raise exception.NotSupportedComputeForEvacuateV295(
+                    {'currently': min_ver,
+                     'expected': MIN_VER_NOVA_COMPUTE_EVACUATE_STOPPED})
+            # Starts to 2.95 any evacuated instances will be stopped at
+            # destination. Previously an active or stopped instance would have
+            # kept its state.
+            target_state = vm_states.STOPPED
 
         on_shared_storage = self._get_on_shared_storage(req, evacuate_body)
 
@@ -120,7 +138,8 @@ class EvacuateController(wsgi.Controller):
 
         try:
             self.compute_api.evacuate(context, instance, host,
-                                      on_shared_storage, password, force)
+                                      on_shared_storage, password, force,
+                                      target_state)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'evacuate', id)
@@ -130,6 +149,8 @@ class EvacuateController(wsgi.Controller):
             exception.ExtendedResourceRequestOldCompute,
         ) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.UnsupportedRPCVersion as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
 
         if (not api_version_request.is_supported(req, min_version='2.14') and
                 CONF.api.enable_instance_password):

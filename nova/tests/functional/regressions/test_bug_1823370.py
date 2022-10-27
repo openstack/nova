@@ -66,4 +66,5 @@ class MultiCellEvacuateTestCase(integrated_helpers._IntegratedTestBase):
         # higher than host3.
         self._evacuate_server(
             server, {'onSharedStorage': 'False'}, expected_host='host3',
-            expected_migration_status='done')
+            expected_migration_status='done',
+            expected_state='ACTIVE')

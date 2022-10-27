@@ -95,7 +95,8 @@ class TestEvacuationWithSourceReturningDuringRebuild(
 
         # Evacuate the instance from the source_host
         server = self._evacuate_server(
-            server, expected_migration_status='done')
+            server, expected_migration_status='done',
+            expected_state='ACTIVE')
         host = server['OS-EXT-SRV-ATTR:host']
         migrations = self.api.get_migrations()
 

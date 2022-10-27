@@ -1237,3 +1237,11 @@ The ``hostname`` parameter to the ``POST /servers`` (create server), ``PUT
 /servers/{id}`` (update server) and ``POST /servers/{server_id}/action
 (rebuild)`` (rebuild server) APIs is now allowed to be a Fully Qualified Domain
 Name (FQDN).
+
+
+2.95
+---------------------
+
+Any evacuated instances will be now stopped at destination. This
+requires minimun compute version 27.0.0 (antelope 2023.1).  Operators
+can still use previous microversion for older behavior.

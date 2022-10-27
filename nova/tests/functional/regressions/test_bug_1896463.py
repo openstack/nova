@@ -216,7 +216,7 @@ class TestEvacuateResourceTrackerRace(
         self._run_periodics()
 
         self._wait_for_server_parameter(
-            server, {'OS-EXT-SRV-ATTR:host': 'host2', 'status': 'ACTIVE'})
+            server, {'OS-EXT-SRV-ATTR:host': 'host2', 'status': 'SHUTOFF'})
 
         self._assert_pci_device_allocated(server['id'], self.compute1_id)
         self._assert_pci_device_allocated(server['id'], self.compute2_id)

@@ -598,7 +598,7 @@ class InstanceHelperMixin:
 
     def _evacuate_server(
             self, server, extra_post_args=None, expected_host=None,
-            expected_state='ACTIVE', expected_task_state=NOT_SPECIFIED,
+            expected_state='SHUTOFF', expected_task_state=NOT_SPECIFIED,
             expected_migration_status='done'):
         """Evacuate a server."""
         api = getattr(self, 'admin_api', self.api)
