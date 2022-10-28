@@ -153,8 +153,7 @@ class PciDeviceStats(object):
         # to split the pools by PCI or PF address. We can still keep
         # the VFs from the same parent PF in a single pool though as they
         # are equivalent from placement perspective.
-        address = dev.parent_addr or dev.address
-        pool['address'] = address
+        pool['address'] = dev.parent_addr or dev.address
 
         # NOTE(gibi): parent_ifname acts like a tag during pci claim but
         # not provided as part of the whitelist spec as it is auto detected
@@ -579,18 +578,13 @@ class PciDeviceStats(object):
         for pool in pools:
             rp_uuid = pool.get('rp_uuid')
             if rp_uuid is None:
-                # NOTE(gibi): There can be pools without rp_uuid field if the
-                # [pci]report_in_placement is not enabled for a compute with
-                # viable PCI devices. We have a non-empty rp_uuids, so we know
-                # that the [filter_scheduler]pci_in_placement is enabled. This
-                # is a configuration error.
-                LOG.warning(
-                    "The PCI pool %s isn't mapped to an RP UUID but the "
-                    "scheduler is configured to create PCI allocations in "
-                    "placement. This should not happen. Please enable "
-                    "[pci]report_in_placement on all compute hosts before "
-                    "enabling [filter_scheduler]pci_in_placement in the "
-                    "scheduler. This pool is ignored now.", pool)
+                # NOTE(gibi): As rp_uuids is not empty the scheduler allocated
+                # PCI resources on this host, so we know that
+                # [pci]report_in_placement is enabled on this host. But this
+                # pool has no RP mapping which can only happen if the pool
+                # contains PCI devices with physical_network tag, as those
+                # devices not yet reported in placement. But if they are not
+                # reported then we can ignore them here too.
                 continue
 
             if (

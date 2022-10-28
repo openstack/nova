@@ -2047,6 +2047,8 @@ class SchedulerManagerAllocationCandidateTestCase(test.NoDBTestCase):
         alloc_reqs_by_rp_uuid[uuids.host1] = [
             {
                 "mappings": {
+                    # This is odd but the un-name request group uses "" as the
+                    # name of the group.
                     "": [uuids.host1],
                     uuids.group_req1: [getattr(uuids, f"host1_child{i}")],
                 }
@@ -2071,7 +2073,8 @@ class SchedulerManagerAllocationCandidateTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(selections))
         selection = selections[0]
         self.assertEqual(uuids.host1, selection.compute_node_uuid)
-        # we expect that host1_child2 candidate is selected
+        # we expect that host1_child2 candidate is selected as the
+        # DropFirstFilter will drop host1_child1
         expected_a_c = {
             "mappings": {
                 "": [uuids.host1],

@@ -13,6 +13,7 @@
 #    under the License.
 from unittest import mock
 
+import ddt
 import fixtures
 import os_resource_classes
 import os_traits
@@ -1613,12 +1614,12 @@ class PlacementPCIAllocationHealingTests(PlacementPCIReportingTests):
             "compute1", **compute1_expected_placement_view)
 
 
-class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
+@ddt.ddt
+class SimpleRCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
     def setUp(self):
         super().setUp()
         self.flags(group='filter_scheduler', pci_in_placement=True)
 
-    def test_boot_with_custom_rc_and_traits(self):
         # The fake libvirt will emulate on the host:
         # * one type-PCI in slot 0
         pci_info = fakelibvirt.HostPCIDevicesInfo(
@@ -1642,7 +1643,7 @@ class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
         self.start_compute(hostname="compute1", pci_info=pci_info)
 
         self.assertPCIDeviceCounts("compute1", total=1, free=1)
-        compute1_expected_placement_view = {
+        self.compute1_expected_placement_view = {
             "inventories": {
                 "0000:81:00.0": {"CUSTOM_GPU": 1},
             },
@@ -1659,72 +1660,73 @@ class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
             "allocations": {},
         }
         self.assert_placement_pci_view(
-            "compute1", **compute1_expected_placement_view)
+            "compute1", **self.compute1_expected_placement_view)
 
-        pci_alias_wrong_rc = {
+    @ddt.data(
+        {
             "vendor_id": fakelibvirt.PCI_VEND_ID,
             "product_id": fakelibvirt.PCI_PROD_ID,
             "name": "a-gpu-wrong-rc",
-        }
-        pci_alias_wrong_rc_2 = {
+        },
+        {
             "resource_class": os_resource_classes.PGPU,
             "name": "a-gpu-wrong-rc-2",
-        }
-        pci_alias_asking_for_missing_trait = {
+        },
+        {
             "resource_class": "GPU",
             # NOTE(gibi): "big" is missing from device spec
             "traits": "purple,big",
             "name": "a-gpu-missing-trait",
-        }
+        },
+    )
+    def test_boot_with_custom_rc_and_traits_no_matching_device(
+        self, pci_alias
+    ):
+        self.flags(group="pci", alias=self._to_list_of_json_str([pci_alias]))
+        extra_spec = {"pci_passthrough:alias": f"{pci_alias['name']}:1"}
+        flavor_id = self._create_flavor(extra_spec=extra_spec)
+        server = self._create_server(
+            flavor_id=flavor_id, networks=[], expected_state="ERROR"
+        )
+        self.assertIn("fault", server)
+        self.assertIn("No valid host", server["fault"]["message"])
+
+        self.assertPCIDeviceCounts("compute1", total=1, free=1)
+        self.assert_placement_pci_view(
+            "compute1", **self.compute1_expected_placement_view
+        )
+
+    def test_boot_with_custom_rc_and_traits_succeeds(self):
         pci_alias_gpu = {
             "resource_class": "GPU",
             "traits": "HW_GPU_API_VULKAN,PURPLE",
             "name": "a-gpu",
         }
         self.flags(
-            group="pci",
-            alias=self._to_list_of_json_str(
-                [
-                    pci_alias_wrong_rc,
-                    pci_alias_wrong_rc_2,
-                    pci_alias_asking_for_missing_trait,
-                    pci_alias_gpu,
-                ]
-            ),
+            group="pci", alias=self._to_list_of_json_str([pci_alias_gpu])
         )
 
-        # try to boot with each alias that does not match
-        for alias in [
-            "a-gpu-wrong-rc",
-            "a-gpu-wrong-rc-2",
-            "a-gpu-missing-trait",
-        ]:
-            extra_spec = {"pci_passthrough:alias": f"{alias}:1"}
-            flavor_id = self._create_flavor(extra_spec=extra_spec)
-            server = self._create_server(
-                flavor_id=flavor_id, networks=[], expected_state='ERROR')
-            self.assertIn('fault', server)
-            self.assertIn('No valid host', server['fault']['message'])
-
-            self.assertPCIDeviceCounts("compute1", total=1, free=1)
-            self.assert_placement_pci_view(
-                "compute1", **compute1_expected_placement_view)
-
-        # then boot with the matching alias
         extra_spec = {"pci_passthrough:alias": "a-gpu:1"}
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-        server = self._create_server(
-            flavor_id=flavor_id, networks=[])
+        server = self._create_server(flavor_id=flavor_id, networks=[])
 
         self.assertPCIDeviceCounts("compute1", total=1, free=0)
-        compute1_expected_placement_view[
-            "usages"]["0000:81:00.0"]["CUSTOM_GPU"] = 1
-        compute1_expected_placement_view["allocations"][server["id"]] = {
+        self.compute1_expected_placement_view["usages"]["0000:81:00.0"][
+            "CUSTOM_GPU"
+        ] = 1
+        self.compute1_expected_placement_view["allocations"][server["id"]] = {
             "0000:81:00.0": {"CUSTOM_GPU": 1}
         }
         self.assert_placement_pci_view(
-            "compute1", **compute1_expected_placement_view)
+            "compute1", **self.compute1_expected_placement_view
+        )
         self.assert_no_pci_healing("compute1")
+
+
+class RCAndTraitBasedPCIAliasTests(PlacementPCIReportingTests):
+    def setUp(self):
+        super().setUp()
+        self.flags(group='filter_scheduler', pci_in_placement=True)
 
     def test_device_claim_consistent_with_placement_allocation(self):
         """As soon as [filter_scheduler]pci_in_placement is enabled the
