@@ -68,16 +68,17 @@ class Bug1995153RegressionTest(
             side_effect=host_pass_mock)).mock
 
     def test_socket_policy_bug_1995153(self):
-        """The numa_usage_from_instance_numa() method in hardware.py saves the
-        host NUMAToplogy object with NUMACells that have no `socket` set. This
-        was an omission in the original implementation of the `socket` PCI NUMA
-        affinity policy. The consequence is that any code path that calls into
-        numa_usage_from_instance_numa() will clobber the host NUMA topology in
-        the database with a socket-less version. Booting an instance with NUMA
-        toplogy will do that, for example. If then a second instance is booted
-        with the `socket` PCI NUMA affinity policy, it will read the
-        socket-less host NUMATopology from the database, and error out with a
-        NotImplementedError. This is bug 1995153.
+        """Previously, the numa_usage_from_instance_numa() method in
+        hardware.py saved the host NUMAToplogy object with NUMACells that have
+        no `socket` set. This was an omission in the original implementation of
+        the `socket` PCI NUMA affinity policy. The consequence was that any
+        code path that called into numa_usage_from_instance_numa() would
+        clobber the host NUMA topology in the database with a socket-less
+        version. Booting an instance with NUMA toplogy would do that, for
+        example. If then a second instance was booted with the `socket` PCI
+        NUMA affinity policy, it would read the socket-less host NUMATopology
+        from the database, and error out with a NotImplementedError. This was
+        bug 1995153. Demonstrate that this is fixed.
         """
         host_info = fakelibvirt.HostInfo(
             cpu_nodes=2, cpu_sockets=1, cpu_cores=2, cpu_threads=2,
@@ -92,18 +93,15 @@ class Bug1995153RegressionTest(
             'pci_passthrough:alias': '%s:1' % self.ALIAS_NAME,
             'hw:pci_numa_affinity_policy': 'socket'
         }
-        # Boot a first instance with a guest NUMA topology to run the buggy
-        # code in numa_usage_from_instance_numa() and save the socket-less host
-        # NUMATopology to the database.
+        # Boot a first instance with a guest NUMA topology to run the
+        # numa_usage_from_instance_numa() and update the host NUMATopology in
+        # the database.
         self._create_server(
             flavor_id=self._create_flavor(
                 extra_spec={'hw:cpu_policy': 'dedicated'}))
 
-        # FIXME(artom) Attempt to boot an instance with the `socket` PCI NUMA
-        # affinity policy and observe the fireworks.
+        # Boot an instance with the `socket` PCI NUMA affinity policy and
+        # assert that it boots correctly now.
         flavor_id = self._create_flavor(extra_spec=extra_spec)
-        server = self._create_server(flavor_id=flavor_id,
-                                     expected_state='ERROR')
-        self.assertIn('fault', server)
-        self.assertIn('NotImplementedError', server['fault']['message'])
+        self._create_server(flavor_id=flavor_id)
         self.assertTrue(self.mock_filter.called)

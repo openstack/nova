@@ -5672,6 +5672,7 @@ class ComputeTestCase(BaseTestCase,
             pagesize=2048,
             cpu_usage=2,
             memory_usage=0,
+            socket=0,
             pinned_cpus=set([1, 2]),
             siblings=[set([1]), set([2])],
             mempages=[objects.NUMAPagesTopology(
@@ -5687,6 +5688,7 @@ class ComputeTestCase(BaseTestCase,
             pagesize=2048,
             memory_usage=0,
             cpu_usage=0,
+            socket=0,
             siblings=[set([3]), set([4])],
             mempages=[objects.NUMAPagesTopology(
                 size_kb=2048, total=256, used=0)])

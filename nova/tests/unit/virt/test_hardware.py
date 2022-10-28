@@ -2023,6 +2023,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=256,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[
                     objects.NUMAPagesTopology(size_kb=4, total=32768, used=0),
@@ -2036,6 +2037,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=256,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=1,
                 pinned_cpus=set(),
                 mempages=[
                     objects.NUMAPagesTopology(size_kb=4, total=32768, used=64),
@@ -2049,6 +2051,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=2,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=2,
                 pinned_cpus=set(),
                 mempages=[
                     objects.NUMAPagesTopology(size_kb=4, total=512, used=16)],
@@ -2130,6 +2133,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=160,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[
                     objects.NUMAPagesTopology(size_kb=4, total=32768, used=32),
@@ -2170,6 +2174,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=1024,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[
                     objects.NUMAPagesTopology(size_kb=4, total=512, used=0)],
@@ -2181,6 +2186,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=512,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[
                     objects.NUMAPagesTopology(size_kb=4, total=512, used=0)],
@@ -2192,6 +2198,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=512,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[
                     objects.NUMAPagesTopology(size_kb=4, total=512, used=0)],
@@ -2258,6 +2265,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=1024,
                 cpu_usage=2,
                 memory_usage=512,
+                socket=0,
                 mempages=[
                     objects.NUMAPagesTopology(size_kb=4, total=512, used=0)],
                 siblings=[set([0]), set([1]), set([2]), set([3])],
@@ -2269,6 +2277,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=512,
                 cpu_usage=1,
                 memory_usage=512,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[
                     objects.NUMAPagesTopology(size_kb=4, total=512, used=0)],
@@ -2280,6 +2289,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=256,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[
                     objects.NUMAPagesTopology(size_kb=4, total=512, used=0)],
@@ -2330,6 +2340,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=512,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[objects.NUMAPagesTopology(
                     size_kb=2048, total=512, used=128,
@@ -2342,6 +2353,7 @@ class NUMATopologyTest(test.NoDBTestCase):
                 memory=512,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[objects.NUMAPagesTopology(
                     size_kb=1048576, total=5, used=2,
@@ -2606,6 +2618,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                 memory=2048,
                 cpu_usage=2,
                 memory_usage=2048,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[objects.NUMAPagesTopology(
                     size_kb=4, total=524288, used=0)],
@@ -2616,6 +2629,7 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                 memory=2048,
                 cpu_usage=2,
                 memory_usage=2048,
+                socket=0,
                 pinned_cpus=set(),
                 mempages=[objects.NUMAPagesTopology(
                     size_kb=4, total=524288, used=0)],
@@ -4162,6 +4176,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 siblings=[set([0]), set([1]), set([2]), set([3])],
                 mempages=[objects.NUMAPagesTopology(
@@ -4191,6 +4206,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set([0, 1, 3]),
                 mempages=[objects.NUMAPagesTopology(
                     size_kb=4, total=524288, used=0)],
@@ -4220,6 +4236,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 siblings=[set([0]), set([1]), set([2]), set([3])],
                 mempages=[objects.NUMAPagesTopology(
@@ -4248,6 +4265,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 siblings=[set([0, 2]), set([1, 3])],
                 mempages=[objects.NUMAPagesTopology(
@@ -4274,6 +4292,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set([0, 1, 2, 3]),
                 siblings=[set([0, 2]), set([1, 3])],
                 mempages=[objects.NUMAPagesTopology(
@@ -4300,6 +4319,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 siblings=[set([0]), set([1]), set([2]), set([3])],
                 mempages=[objects.NUMAPagesTopology(
@@ -4326,6 +4346,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set([0, 1, 2, 3]),
                 siblings=[set([0]), set([1]), set([2]), set([3])],
                 mempages=[objects.NUMAPagesTopology(
@@ -4355,6 +4376,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set([2]),
                 siblings=[set([0, 4]), set([1, 5]), set([2, 6]), set([3, 7])],
                 mempages=[objects.NUMAPagesTopology(
@@ -4385,6 +4407,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=2,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set([2, 6, 7]),
                 siblings=[set([0, 4]), set([1, 5]), set([2, 6]), set([3, 7])],
                 mempages=[objects.NUMAPagesTopology(
@@ -4417,6 +4440,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 cpu_usage=2,
                 memory_usage=0,
                 pinned_cpus=set(),
+                socket=0,
                 siblings=[{cpu} for cpu in range(8)],
                 mempages=[objects.NUMAPagesTopology(
                     size_kb=4, total=524288, used=0)]
@@ -4450,6 +4474,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=2,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set([0, 1, 2, 3]),
                 siblings=[{cpu} for cpu in range(8)],
                 mempages=[objects.NUMAPagesTopology(
@@ -4492,6 +4517,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=2,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 siblings=[set([0, 5]), set([1, 6]), set([2, 7]), set([3, 8]),
                           set([4, 9])],
@@ -4531,6 +4557,7 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 memory=4096,
                 cpu_usage=2,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set([0, 1, 2, 5, 6, 7]),
                 siblings=[set([0, 5]), set([1, 6]), set([2, 7]), set([3, 8]),
                           set([4, 9])],
@@ -4766,6 +4793,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 memory=2048,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 siblings=[set([0]), set([1])],
                 mempages=[objects.NUMAPagesTopology(
@@ -4777,6 +4805,7 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 memory=2048,
                 cpu_usage=0,
                 memory_usage=0,
+                socket=0,
                 pinned_cpus=set(),
                 siblings=[set([2]), set([3])],
                 mempages=[objects.NUMAPagesTopology(
