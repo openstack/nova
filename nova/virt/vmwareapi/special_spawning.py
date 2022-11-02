@@ -186,14 +186,6 @@ class _SpecialVmSpawningServer(object):
         cluster_config = self._session._call_method(
             vutil, "get_object_property", self._cluster, "configurationEx")
 
-        # check if DRS is enabled, so freeing up can work
-        if cluster_config.drsConfig.defaultVmBehavior != \
-                constants.DRS_BEHAVIOR_FULLY_AUTOMATED:
-            LOG.error('DRS set to %(actual)s, expected %(expected)s.',
-                      {'actual': cluster_config.drsConfig.defaultVmBehavior,
-                       'expected': constants.DRS_BEHAVIOR_FULLY_AUTOMATED})
-            return FREE_HOST_STATE_ERROR
-
         # get the group
         group = self._get_group(cluster_config)
 
@@ -351,6 +343,14 @@ class _SpecialVmSpawningServer(object):
         vms_on_host = [u for u, state in vms_on_host
                        if state != 'poweredOff']
         if vms_on_host:
+            # check if DRS is enabled, so freeing up can work
+            if cluster_config.drsConfig.defaultVmBehavior != \
+                    constants.DRS_BEHAVIOR_FULLY_AUTOMATED:
+                LOG.error('DRS set to %(actual)s, expected %(expected)s.',
+                    {'actual': cluster_config.drsConfig.defaultVmBehavior,
+                     'expected': constants.DRS_BEHAVIOR_FULLY_AUTOMATED})
+                return FREE_HOST_STATE_ERROR
+
             LOG.debug('Freeing up %(host)s for spawning in progress.',
                       {'host': vutil.get_moref_value(host_ref)})
             return FREE_HOST_STATE_STARTED
