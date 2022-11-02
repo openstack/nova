@@ -1160,26 +1160,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             self.context, {active_instance.uuid, evacuating_instance.uuid},
             mock_get_nodes.return_value.keys())
 
-    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_uuids')
     @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
-    def test_get_nodes(self, mock_driver_get_nodes, mock_get_by_host_and_node):
+    def test_get_nodes(self, mock_driver_get_nodes, mock_get_by_uuid):
         mock_driver_get_nodes.return_value = ['fake_node1', 'fake_node2']
         # NOTE(danms): The fake driver, by default, uses
         # uuidsentinel.$node_name, so we can predict the uuids it will
         # return here.
         cn1 = objects.ComputeNode(uuid=uuids.fake_node1)
         cn2 = objects.ComputeNode(uuid=uuids.fake_node2)
-        mock_get_by_host_and_node.side_effect = [cn1, cn2]
+        mock_get_by_uuid.return_value = [cn1, cn2]
 
         nodes = self.compute._get_nodes(self.context)
 
         self.assertEqual({uuids.fake_node1: cn1, uuids.fake_node2: cn2}, nodes)
 
         mock_driver_get_nodes.assert_called_once_with()
-        mock_get_by_host_and_node.assert_has_calls([
-            mock.call(self.context, self.compute.host, 'fake_node1'),
-            mock.call(self.context, self.compute.host, 'fake_node2')
-        ])
+        mock_get_by_uuid.assert_called_once_with(self.context,
+                                                 [uuids.fake_node1,
+                                                  uuids.fake_node2])
 
     @mock.patch.object(manager.LOG, 'warning')
     @mock.patch.object(
@@ -1201,29 +1200,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             "is starting on this host, then you can ignore this warning.")
 
     @mock.patch.object(manager.LOG, 'warning')
-    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename')
-    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_uuids')
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_node_uuids')
     def test_get_nodes_node_not_found(
-            self, mock_driver_get_nodes, mock_get_by_host_and_node,
+            self, mock_driver_get_nodes, mock_get_all_by_uuids,
             mock_log_warning):
-        mock_driver_get_nodes.return_value = ['fake-node1', 'fake-node2']
-        cn2 = objects.ComputeNode(uuid=uuids.cn2)
-        mock_get_by_host_and_node.side_effect = [
-            exception.ComputeHostNotFound(host='fake-node1'), cn2]
+        mock_driver_get_nodes.return_value = ['fake-node1']
+        mock_get_all_by_uuids.return_value = []
 
         nodes = self.compute._get_nodes(self.context)
 
-        self.assertEqual({uuids.cn2: cn2}, nodes)
+        self.assertEqual({}, nodes)
 
         mock_driver_get_nodes.assert_called_once_with()
-        mock_get_by_host_and_node.assert_has_calls([
-            mock.call(self.context, self.compute.host, 'fake-node1'),
-            mock.call(self.context, self.compute.host, 'fake-node2')
-        ])
+        mock_get_all_by_uuids.assert_called_once_with(self.context,
+                                                      ['fake-node1'])
         mock_log_warning.assert_called_once_with(
-            "Compute node %s not found in the database. If this is the first "
-            "time this service is starting on this host, then you can ignore "
-            "this warning.", 'fake-node1')
+            "Compute nodes %s for host %s were not found in the database. "
+            "If this is the first time this service is starting on this host, "
+            "then you can ignore this warning.", ['fake-node1'], 'fake-mini')
 
     def test_init_host_disk_devices_configuration_failure(self):
         self.flags(max_disk_devices_to_attach=0, group='compute')

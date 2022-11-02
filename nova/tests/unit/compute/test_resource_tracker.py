@@ -64,11 +64,13 @@ _VIRT_DRIVER_AVAIL_RESOURCES = {
     'hypervisor_hostname': _NODENAME,
     'cpu_info': '',
     'numa_topology': None,
+    'uuid': uuids.cn1,
 }
 
 _COMPUTE_NODE_FIXTURES = [
     objects.ComputeNode(
         id=1,
+        deleted=False,
         uuid=uuids.cn1,
         host=_HOSTNAME,
         vcpus=_VIRT_DRIVER_AVAIL_RESOURCES['vcpus'],
@@ -586,7 +588,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_disabled(self, get_mock, migr_mock, get_cn_mock, pci_mock,
@@ -619,7 +621,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_no_migrations_no_reserved(self, get_mock, migr_mock,
@@ -643,8 +645,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                                              'flavor',
                                              'migration_context',
                                              'resources'])
-        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME,
-                                            _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, uuids.cn1)
         migr_mock.assert_called_once_with(mock.ANY, _HOSTNAME,
                                           _NODENAME)
 
@@ -671,7 +672,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
@@ -730,7 +731,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_no_migrations_reserved_disk_ram_and_cpu(
@@ -747,7 +748,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, uuids.cn1)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 5,  # 6GB avail - 1 GB reserved
@@ -772,7 +773,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_some_instances_no_migrations(self, get_mock, migr_mock,
@@ -797,7 +798,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, uuids.cn1)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 5,  # 6 - 1 used
@@ -823,7 +824,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
@@ -863,7 +864,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, uuids.cn1)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 5,
@@ -889,7 +890,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
@@ -926,7 +927,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, uuids.cn1)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 1,
@@ -952,7 +953,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
@@ -987,7 +988,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, uuids.cn1)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 1,
@@ -1013,7 +1014,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.MigrationContext.get_by_instance_uuid',
                 return_value=None)
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
@@ -1056,7 +1057,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, uuids.cn1)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             # 6 total - 1G existing - 5G new flav - 1G old flav
@@ -1084,7 +1085,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
@@ -1121,7 +1122,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, uuids.cn1)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 1,
@@ -1147,7 +1148,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 new=mock.Mock(return_value=objects.PciDeviceList()))
     @mock.patch('nova.objects.MigrationContext.get_by_instance_uuid',
                 new=mock.Mock(return_value=None))
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
@@ -1199,7 +1200,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 new=mock.Mock(return_value=objects.PciDeviceList()))
     @mock.patch('nova.objects.MigrationContext.get_by_instance_uuid',
                 new=mock.Mock(return_value=None))
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
@@ -1240,7 +1241,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                 new=mock.Mock(return_value=False))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 new=mock.Mock(return_value=objects.PciDeviceList()))
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_check_resources_startup_fail(self, mock_get_instances,
@@ -1273,7 +1274,7 @@ class TestInitComputeNode(BaseTestCase):
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.create')
     @mock.patch('nova.objects.Service.get_by_compute_host')
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_no_op_init_compute_node(self, update_mock, get_mock, service_mock,
@@ -1296,14 +1297,14 @@ class TestInitComputeNode(BaseTestCase):
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.create')
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_compute_node_loaded(self, update_mock, get_mock, create_mock,
                                  pci_mock):
         self._setup_rt()
 
-        def fake_get_node(_ctx, host, node):
+        def fake_get_node(_ctx, uuid):
             res = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
             return res
 
@@ -1313,85 +1314,67 @@ class TestInitComputeNode(BaseTestCase):
         self.assertFalse(
             self.rt._init_compute_node(mock.sentinel.ctx, resources))
 
-        get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
-                                         _NODENAME)
+        get_mock.assert_called_once_with(mock.sentinel.ctx,
+                                         uuids.cn1)
         self.assertFalse(create_mock.called)
         self.assertFalse(update_mock.called)
 
-    @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
     @mock.patch('nova.objects.ComputeNode.create')
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_compute_node_rebalanced(self, update_mock, get_mock, create_mock,
-                                     pci_mock, get_by_hypervisor_mock):
+                                     pci_mock):
         self._setup_rt()
         self.driver_mock.rebalances_nodes = True
         cn = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         cn.host = "old-host"
 
-        def fake_get_all(_ctx, nodename):
-            return [cn]
+        def fake_get_node(_ctx, uuid):
+            return cn
 
-        get_mock.side_effect = exc.NotFound
-        get_by_hypervisor_mock.side_effect = fake_get_all
+        get_mock.side_effect = fake_get_node
         resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
 
         self.assertFalse(
             self.rt._init_compute_node(mock.sentinel.ctx, resources))
 
-        get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
-                                         _NODENAME)
-        get_by_hypervisor_mock.assert_called_once_with(mock.sentinel.ctx,
-                                                       _NODENAME)
+        get_mock.assert_called_once_with(mock.sentinel.ctx, uuids.cn1)
         create_mock.assert_not_called()
         update_mock.assert_called_once_with(mock.sentinel.ctx, cn)
 
         self.assertEqual(_HOSTNAME, self.rt.compute_nodes[_NODENAME].host)
 
-    @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
     @mock.patch('nova.objects.ComputeNode.create')
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_compute_node_created_on_empty(self, update_mock, get_mock,
-                                           create_mock,
-                                           get_by_hypervisor_mock):
-        get_by_hypervisor_mock.return_value = []
-        self._test_compute_node_created(update_mock, get_mock, create_mock,
-                                        get_by_hypervisor_mock)
+                                           create_mock):
+        self._test_compute_node_created(update_mock, get_mock, create_mock)
 
-    @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
     @mock.patch('nova.objects.ComputeNode.create')
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_compute_node_created_on_empty_rebalance(self, update_mock,
                                                      get_mock,
-                                                     create_mock,
-                                                     get_by_hypervisor_mock):
-        get_by_hypervisor_mock.return_value = []
+                                                     create_mock):
         self._test_compute_node_created(update_mock, get_mock, create_mock,
-                                        get_by_hypervisor_mock,
                                         rebalances_nodes=True)
 
-    @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
     @mock.patch('nova.objects.ComputeNode.create')
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_compute_node_created_too_many(self, update_mock, get_mock,
-                                           create_mock,
-                                           get_by_hypervisor_mock):
-        get_by_hypervisor_mock.return_value = ["fake_node_1", "fake_node_2"]
+                                           create_mock):
         self._test_compute_node_created(update_mock, get_mock, create_mock,
-                                        get_by_hypervisor_mock,
                                         rebalances_nodes=True)
 
     def _test_compute_node_created(self, update_mock, get_mock, create_mock,
-                                   get_by_hypervisor_mock,
                                    rebalances_nodes=False):
         self.flags(cpu_allocation_ratio=1.0, ram_allocation_ratio=1.0,
                    disk_allocation_ratio=1.0)
@@ -1452,13 +1435,9 @@ class TestInitComputeNode(BaseTestCase):
                 self.rt._init_compute_node(mock.sentinel.ctx, resources))
 
         cn = self.rt.compute_nodes[_NODENAME]
-        get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
-                                         _NODENAME)
-        if rebalances_nodes:
-            get_by_hypervisor_mock.assert_called_once_with(
-                mock.sentinel.ctx, _NODENAME)
-        else:
-            get_by_hypervisor_mock.assert_not_called()
+        get_mock.assert_called_once_with(mock.sentinel.ctx,
+                                         uuids.compute_node_uuid)
+
         create_mock.assert_called_once_with()
         self.assertTrue(obj_base.obj_equal_prims(expected_compute, cn))
         setup_pci.assert_called_once_with(mock.sentinel.ctx, cn, resources)
@@ -1466,7 +1445,7 @@ class TestInitComputeNode(BaseTestCase):
 
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_setup_pci_tracker')
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid',
                 side_effect=exc.ComputeHostNotFound(host=_HOSTNAME))
     @mock.patch('nova.objects.ComputeNode.create',
                 side_effect=(test.TestingException, None))
@@ -1489,14 +1468,14 @@ class TestInitComputeNode(BaseTestCase):
         self.assertTrue(self.rt._init_compute_node(ctxt, resources))
         self.assertIn(_NODENAME, self.rt.compute_nodes)
         mock_get.assert_has_calls([mock.call(
-            ctxt, _HOSTNAME, _NODENAME)] * 2)
+            ctxt, uuids.cn_uuid)] * 2)
         self.assertEqual(2, mock_create.call_count)
         mock_setup_pci.assert_called_once_with(
             ctxt, test.MatchType(objects.ComputeNode), resources)
 
     @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
     @mock.patch('nova.objects.ComputeNode.create')
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_node_removed(self, update_mock, get_mock,
@@ -1511,6 +1490,67 @@ class TestInitComputeNode(BaseTestCase):
         self.assertNotIn(_NODENAME, self.rt.compute_nodes)
         self.assertNotIn(_NODENAME, self.rt.stats)
         self.assertNotIn(_NODENAME, self.rt.old_resources)
+
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_update')
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_setup_pci_tracker')
+    def test_undelete_node(self, mock_pci, mock_update):
+        self._setup_rt()
+        node = mock.MagicMock()
+        node.deleted = True
+        node.uuid = str(uuids.host1)
+        node.host = 'fake-host'
+        context_mock = mock.MagicMock()
+        resources = {'hypervisor_hostname': 'fake-host',
+                     'uuid': str(uuids.host1)}
+        with mock.patch.object(self.rt, '_get_compute_node') as getcn:
+            getcn.return_value = node
+
+            # _init_compute_node() should return False to indicate that
+            # it found an existing node
+            self.assertFalse(
+                self.rt._init_compute_node(context_mock, resources))
+
+            # Node should be undeleted and saved
+            self.assertFalse(node.deleted)
+            self.assertIsNone(node.deleted_at)
+            node.save.assert_called_once_with()
+
+            # Host is the same, no _update()
+            self.assertEqual('fake-host', node.host)
+            mock_update.assert_not_called()
+
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_update')
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_setup_pci_tracker')
+    def test_undelete_node_move_host(self, mock_pci, mock_update):
+        self._setup_rt()
+        node = mock.MagicMock()
+        node.deleted = True
+        node.uuid = str(uuids.host1)
+        node.host = 'old-host'
+        context_mock = mock.MagicMock()
+        resources = {'hypervisor_hostname': 'fake-host',
+                     'uuid': str(uuids.host1)}
+        with mock.patch.object(self.rt, '_get_compute_node') as getcn:
+            getcn.return_value = node
+
+            # _init_compute_node() should return False to indicate that
+            # it found an existing node
+            self.assertFalse(
+                self.rt._init_compute_node(context_mock, resources))
+
+        # Node should be undeleted and saved
+        self.assertFalse(node.deleted)
+        self.assertIsNone(node.deleted_at)
+        node.save.assert_called_once_with()
+
+        # Our host changed, so we should have the updated value and have
+        # called _update()
+        self.assertEqual('fake-host', node.host)
+        mock_update.assert_called()
 
 
 @ddt.ddt
@@ -2635,7 +2675,7 @@ class TestResize(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
@@ -2739,7 +2779,7 @@ class TestResize(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename',
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid',
                 return_value=_COMPUTE_NODE_FIXTURES[0])
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error',
                 return_value=[])
@@ -2911,7 +2951,7 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.pci.manager.PciDevTracker.claim_instance')
     @mock.patch('nova.pci.request.get_pci_requests_from_flavor')
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node')
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
@@ -3081,7 +3121,7 @@ class TestResize(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
@@ -3213,7 +3253,7 @@ class TestRebuild(BaseTestCase):
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
-    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.ComputeNode.get_by_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_and_error')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')

@@ -181,6 +181,9 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
         with mock.patch('nova.virt.node.get_local_node_uuid') as m:
             m.return_value = str(getattr(uuids, 'node_%s' % hostname))
             self.computes[hostname] = _start_compute(hostname, host_info)
+            # We need to trigger libvirt.Host() to capture the node-local
+            # uuid while we have it mocked out.
+            self.computes[hostname].driver._host.get_node_uuid()
 
         self.compute_rp_uuids[hostname] = self.placement.get(
             '/resource_providers?name=%s' % hostname).body[

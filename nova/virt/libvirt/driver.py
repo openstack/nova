@@ -9515,6 +9515,7 @@ class LibvirtDriver(driver.ComputeDriver):
         data["hypervisor_type"] = self._host.get_driver_type()
         data["hypervisor_version"] = self._host.get_version()
         data["hypervisor_hostname"] = self._host.get_hostname()
+        data["uuid"] = self._host.get_node_uuid()
         # TODO(berrange): why do we bother converting the
         # libvirt capabilities XML into a special JSON format ?
         # The data format is different across all the drivers

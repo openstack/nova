@@ -97,6 +97,7 @@ from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt import event as virtevent
 from nova.virt import hardware
+import nova.virt.node
 from nova.virt import storage_users
 from nova.virt import virtapi
 from nova.volume import cinder
@@ -1471,27 +1472,27 @@ class ComputeManager(manager.Manager):
         :return: a dict of ComputeNode objects keyed by the UUID of the given
             node.
         """
-        nodes_by_uuid = {}
         try:
-            node_names = self.driver.get_available_nodes()
+            node_uuids = self.driver.get_available_node_uuids()
         except exception.VirtDriverNotReady:
             LOG.warning(
                 "Virt driver is not ready. If this is the first time this "
-                "service is starting on this host, then you can ignore this "
-                "warning.")
+                "service is starting on this host, then you can ignore "
+                "this warning.")
             return {}
 
-        for node_name in node_names:
-            try:
-                node = objects.ComputeNode.get_by_host_and_nodename(
-                    context, self.host, node_name)
-                nodes_by_uuid[node.uuid] = node
-            except exception.ComputeHostNotFound:
-                LOG.warning(
-                    "Compute node %s not found in the database. If this is "
-                    "the first time this service is starting on this host, "
-                    "then you can ignore this warning.", node_name)
-        return nodes_by_uuid
+        nodes = objects.ComputeNodeList.get_all_by_uuids(context, node_uuids)
+        if not nodes:
+            # NOTE(danms): This should only happen if the compute_id is
+            # pre-provisioned on a host that has never started.
+            LOG.warning('Compute nodes %s for host %s were not found in the '
+                        'database. If this is the first time this service is '
+                        'starting on this host, then you can ignore this '
+                        'warning.',
+                        node_uuids, self.host)
+            return {}
+
+        return {n.uuid: n for n in nodes}
 
     def _ensure_existing_node_identity(self, service_ref):
         """If we are upgrading from an older service version, we need

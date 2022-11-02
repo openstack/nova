@@ -388,8 +388,11 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                 # The uuid field is read-only so it should only be set when
                 # creating the compute node record for the first time. Ignore
                 # it otherwise.
-                if key == 'uuid' and 'uuid' in self:
-                    continue
+                if (key == 'uuid' and 'uuid' in self and
+                        resources[key] != self.uuid):
+                    raise exception.InvalidNodeConfiguration(
+                        reason='Attempt to overwrite node %s with %s!' % (
+                            self.uuid, resources[key]))
                 setattr(self, key, resources[key])
 
         # supported_instances has a different name in compute_node

@@ -505,6 +505,12 @@ class FakeDriver(driver.ComputeDriver):
         host_status['host_hostname'] = nodename
         host_status['host_name_label'] = nodename
         host_status['cpu_info'] = jsonutils.dumps(cpu_info)
+        # NOTE(danms): Because the fake driver runs on the same host
+        # in tests, potentially with multiple nodes, we need to
+        # control our node uuids. Make sure we return a unique and
+        # consistent uuid for each node we are responsible for to
+        # avoid the persistent local node identity from taking over.
+        host_status['uuid'] = str(getattr(uuids, nodename))
         return host_status
 
     def update_provider_tree(self, provider_tree, nodename, allocations=None):
