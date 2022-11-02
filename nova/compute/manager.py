@@ -84,6 +84,7 @@ from nova.objects import external_event as external_event_obj
 from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova.objects import migrate_data as migrate_data_obj
+from nova.objects import service as service_obj
 from nova.pci import request as pci_req_module
 from nova.pci import whitelist
 from nova import safe_utils
@@ -1492,8 +1493,56 @@ class ComputeManager(manager.Manager):
                     "then you can ignore this warning.", node_name)
         return nodes_by_uuid
 
+    def _ensure_existing_node_identity(self, service_ref):
+        """If we are upgrading from an older service version, we need
+        to write our node identity uuid (if not already done) based on
+        nodes assigned to us in the database.
+        """
+        if service_ref.version >= service_obj.NODE_IDENTITY_VERSION:
+            # Already new enough, nothing to do here
+            return
+
+        if 'ironic' in CONF.compute_driver.lower():
+            # We do not persist a single local node identity for
+            # ironic
+            return
+
+        if nova.virt.node.read_local_node_uuid():
+            # We already have a local node identity, no migration needed
+            return
+
+        context = nova.context.get_admin_context()
+        db_nodes = objects.ComputeNodeList.get_all_by_host(context, self.host)
+        if not db_nodes:
+            # This means we have no nodes in the database (that we
+            # know of) and thus have no need to record an existing
+            # UUID. That is probably strange, so log a warning.
+            raise exception.InvalidConfiguration(
+                ('Upgrading from service version %i but found no '
+                 'nodes in the database for host %s to persist '
+                 'locally; Possible rename detected, '
+                 'refusing to start!') % (
+                        service_ref.version, self.host))
+
+        if len(db_nodes) > 1:
+            # If this happens we can't do the right thing, so raise an
+            # exception to abort host startup
+            LOG.warning('Multiple nodes found in the database for host %s; '
+                        'unable to persist local node identity automatically')
+            raise exception.InvalidConfiguration(
+                'Multiple nodes found in database, manual node uuid '
+                'configuration required')
+
+        nova.virt.node.write_local_node_uuid(db_nodes[0].uuid)
+
     def init_host(self, service_ref):
         """Initialization for a standalone compute service."""
+
+        if service_ref:
+            # If we are an existing service, check to see if we need
+            # to record a locally-persistent node identity because
+            # we have upgraded from a previous version.
+            self._ensure_existing_node_identity(service_ref)
 
         if CONF.pci.device_spec:
             # Simply loading the PCI passthrough spec will do a bunch of

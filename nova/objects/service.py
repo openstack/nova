@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 64
+SERVICE_VERSION = 65
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -225,7 +225,14 @@ SERVICE_VERSION_HISTORY = (
     # Version 64: Compute RPC v6.1:
     # Add reimage_boot_volume parameter to rebuild_instance()
     {'compute_rpc': '6.1'},
+    # Version 65: Compute RPC v6.1:
+    # Added stable local node identity
+    {'compute_rpc': '6.1'},
 )
+
+# This is the version after which we can rely on having a persistent
+# local node identity for single-node systems.
+NODE_IDENTITY_VERSION = 65
 
 # This is used to raise an error at service startup if older than N-1 computes
 # are detected. Update this at the beginning of every release cycle to point to
