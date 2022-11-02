@@ -128,7 +128,7 @@ class ServiceTestCase(test.NoDBTestCase):
         serv.manager.additional_endpoints = []
         serv.start()
         # init_host is called before any service record is created
-        serv.manager.init_host.assert_called_once_with()
+        serv.manager.init_host.assert_called_once_with(None)
         mock_get_by_host_and_binary.assert_called_once_with(mock.ANY,
                                                        self.host, self.binary)
         mock_create.assert_called_once_with()
@@ -186,7 +186,7 @@ class ServiceTestCase(test.NoDBTestCase):
         mock_create.side_effect = ex
         serv.manager = mock_manager
         self.assertRaises(test.TestingException, serv.start)
-        serv.manager.init_host.assert_called_with()
+        serv.manager.init_host.assert_called_with(None)
         mock_get_by_host_and_binary.assert_has_calls([
                 mock.call(mock.ANY, self.host, self.binary),
                 mock.call(mock.ANY, self.host, self.binary)])
@@ -216,7 +216,7 @@ class ServiceTestCase(test.NoDBTestCase):
         serv.manager.service_name = self.topic
         serv.manager.additional_endpoints = []
         serv.start()
-        serv.manager.init_host.assert_called_once_with()
+        serv.manager.init_host.assert_called_once_with(None)
         mock_get_by_host_and_binary.assert_called_once_with(mock.ANY,
                                                             self.host,
                                                             self.binary)
@@ -241,7 +241,8 @@ class ServiceTestCase(test.NoDBTestCase):
         serv.manager.additional_endpoints = []
 
         serv.start()
-        serv.manager.init_host.assert_called_with()
+        serv.manager.init_host.assert_called_with(
+            mock_svc_get_by_host_and_binary.return_value)
 
         serv.stop()
         serv.manager.cleanup_host.assert_called_with()

@@ -156,11 +156,11 @@ class Service(service.Service):
         LOG.info('Starting %(topic)s node (version %(version)s)',
                   {'topic': self.topic, 'version': verstr})
         self.basic_config_check()
-        self.manager.init_host()
-        self.model_disconnected = False
         ctxt = context.get_admin_context()
         self.service_ref = objects.Service.get_by_host_and_binary(
             ctxt, self.host, self.binary)
+        self.manager.init_host(self.service_ref)
+        self.model_disconnected = False
         if self.service_ref:
             _update_service_ref(self.service_ref)
 

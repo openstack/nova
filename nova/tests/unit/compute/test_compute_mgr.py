@@ -933,7 +933,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 hypervisor_hostname='fake-node')
             mock_get_nodes.return_value = {uuids.our_node_uuid: our_node}
 
-            self.compute.init_host()
+            self.compute.init_host(None)
 
             mock_validate_pinning.assert_called_once_with(inst_list)
             mock_validate_vtpm.assert_called_once_with(inst_list)
@@ -978,7 +978,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_get_nodes.return_value = {
             uuids.cn_uuid1: objects.ComputeNode(
                 uuid=uuids.cn_uuid1, hypervisor_hostname='node1')}
-        self.compute.init_host()
+        self.compute.init_host(None)
 
         mock_error_interrupted.assert_called_once_with(
             test.MatchType(nova.context.RequestContext), set(),
@@ -997,7 +997,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_instance_list.get_by_host.return_value = []
 
         with mock.patch.object(self.compute, 'driver') as mock_driver:
-            self.compute.init_host()
+            self.compute.init_host(None)
             mock_driver.init_host.assert_called_once_with(host='fake-mini')
 
             self.compute.cleanup_host()
@@ -1086,7 +1086,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
                 'remove_provider_tree_from_instance_allocation')
         ) as (mock_get_net, mock_remove_allocation):
 
-            self.compute.init_host()
+            self.compute.init_host(None)
 
             mock_remove_allocation.assert_called_once_with(
                 self.context, deleted_instance.uuid, uuids.our_node_uuid)
@@ -1143,7 +1143,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             hypervisor_hostname='fake-node')
         mock_get_nodes.return_value = {uuids.our_node_uuid: our_node}
 
-        self.compute.init_host()
+        self.compute.init_host(None)
 
         mock_init_instance.assert_called_once_with(
             self.context, active_instance)
@@ -1216,7 +1216,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
     def test_init_host_disk_devices_configuration_failure(self):
         self.flags(max_disk_devices_to_attach=0, group='compute')
         self.assertRaises(exception.InvalidConfiguration,
-                          self.compute.init_host)
+                          self.compute.init_host, None)
 
     @mock.patch.object(objects.InstanceList, 'get_by_host',
                        new=mock.Mock())
@@ -1230,7 +1230,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_validate_pinning.side_effect = exception.InvalidConfiguration
 
         self.assertRaises(exception.InvalidConfiguration,
-                          self.compute.init_host)
+                          self.compute.init_host, None)
 
     @mock.patch.object(objects.InstanceList, 'get_by_host',
                        new=mock.Mock())
@@ -1247,7 +1247,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
         mock_validate_vtpm.side_effect = exception.InvalidConfiguration
 
         self.assertRaises(exception.InvalidConfiguration,
-                          self.compute.init_host)
+                          self.compute.init_host, None)
 
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceList, 'get_by_filters')
@@ -5145,7 +5145,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
             group='pci'
         )
         self.assertRaises(exception.PciDeviceInvalidDeviceName,
-                          self.compute.init_host)
+                          self.compute.init_host, None)
 
     @mock.patch('nova.compute.manager.ComputeManager._instance_update')
     def test_error_out_instance_on_exception_not_implemented_err(self,
