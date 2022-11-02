@@ -28,7 +28,7 @@ The Compute API uses these roles, along with oslo.policy, to decide
 what the user is authorized to do.
 
 Refer to the to
-:nova-doc:`compute admin guide </admin/arch#projects-users-and-roles>`
+:nova-doc:`compute admin guide </admin/architecture#projects-users-and-roles>`
 for details.
 
 Personas used in this guide
