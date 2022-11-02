@@ -1536,6 +1536,22 @@ class ComputeManager(manager.Manager):
 
         nova.virt.node.write_local_node_uuid(db_nodes[0].uuid)
 
+    def _check_for_host_rename(self, nodes_by_uuid):
+        if 'ironic' in CONF.compute_driver.lower():
+            # Ironic (currently) rebalances nodes at various times, and as
+            # such, nodes being discovered as assigned to this host with a
+            # different hostname is not surprising. Skip this check for
+            # ironic.
+            return
+        for node in nodes_by_uuid.values():
+            if node.host != self.host:
+                raise exception.InvalidConfiguration(
+                    'My node %s has host %r but my host is %r; '
+                    'Possible rename detected, refusing to start!' % (
+                        node.uuid, node.host, self.host))
+            LOG.debug('Verified node %s matches my host %s',
+                      node.uuid, self.host)
+
     def init_host(self, service_ref):
         """Initialization for a standalone compute service."""
 
@@ -1574,15 +1590,6 @@ class ComputeManager(manager.Manager):
             raise exception.InvalidConfiguration(msg)
 
         self.driver.init_host(host=self.host)
-        context = nova.context.get_admin_context()
-        instances = objects.InstanceList.get_by_host(
-            context, self.host,
-            expected_attrs=['info_cache', 'metadata', 'numa_topology'])
-
-        self.init_virt_events()
-
-        self._validate_pinning_configuration(instances)
-        self._validate_vtpm_configuration(instances)
 
         # NOTE(gibi): At this point the compute_nodes of the resource tracker
         # has not been populated yet so we cannot rely on the resource tracker
@@ -1593,7 +1600,22 @@ class ComputeManager(manager.Manager):
         # _destroy_evacuated_instances and
         # _error_out_instances_whose_build_was_interrupted out in the
         # background on startup
+        context = nova.context.get_admin_context()
         nodes_by_uuid = self._get_nodes(context)
+
+        # NOTE(danms): Check for a possible host rename and abort
+        # startup before we start mucking with instances we think are
+        # ours.
+        self._check_for_host_rename(nodes_by_uuid)
+
+        instances = objects.InstanceList.get_by_host(
+            context, self.host,
+            expected_attrs=['info_cache', 'metadata', 'numa_topology'])
+
+        self.init_virt_events()
+
+        self._validate_pinning_configuration(instances)
+        self._validate_vtpm_configuration(instances)
 
         try:
             # checking that instance was not already evacuated to other host

@@ -1,0 +1,19 @@
+---
+features:
+  - |
+    The compute manager now uses a local file to provide node uuid persistence
+    to guard against problems with renamed services, among other things.
+    Deployers wishing to ensure that *new* compute services get a predicatble
+    uuid before initial startup may provision that file and nova will use it,
+    otherwise nova will generate and write one to a `compute_id` file in
+    `CONF.state_path` the first time it starts up. Accidental renames of a
+    compute node's hostname will be detected and the manager will exit to avoid
+    database corruption. Note that none of this applies to Ironic computes, as
+    they manage nodes and uuids differently.
+upgrade:
+  - |
+    Existing compute nodes will, upon upgrade, perist the uuid of the compute
+    node assigned to their hostname at first startup. Since this must match
+    what is currently in the database, it is important to let nova provision
+    this file from its database. Nova will only persist to a `compute_id` file
+    in the `CONF.state_path` directory, which should already be writable.
