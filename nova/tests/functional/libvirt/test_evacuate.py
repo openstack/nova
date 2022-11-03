@@ -415,7 +415,9 @@ class _LibvirtEvacuateTest(integrated_helpers.InstanceHelperMixin):
 
         with mock.patch.object(fakelibvirt.Connection, 'getHostname',
                                return_value=name):
-            compute = self.start_service('compute', host=name)
+            with mock.patch('nova.virt.node.get_local_node_uuid') as m:
+                m.return_value = str(getattr(uuids, 'node_%s' % name))
+                compute = self.start_service('compute', host=name)
 
         compute.driver._host.get_connection().getHostname = lambda: name
         return compute

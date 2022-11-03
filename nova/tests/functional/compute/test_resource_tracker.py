@@ -248,6 +248,7 @@ class IronicResourceTrackerTest(test.TestCase):
                 'numa_topology': None,
                 'resource_class': None,  # Act like admin hasn't set yet...
                 'stats': stats,
+                'uuid': str(getattr(uuids, nodename)),
             }
             self.rt.update_available_resource(self.ctx, nodename)
 

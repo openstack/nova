@@ -693,6 +693,7 @@ class SubclassSignatureTestCase(testtools.TestCase, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     def setUp(self):
+        self.useFixture(nova_fixtures.ConfFixture(CONF))
         self.base = self._get_base_class()
 
         super(SubclassSignatureTestCase, self).setUp()

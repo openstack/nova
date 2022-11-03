@@ -32,6 +32,7 @@ import fixtures
 import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils.fixture import uuidsentinel as uuids
 from oslo_utils import versionutils
 
 from nova.compute import power_state
@@ -160,8 +161,8 @@ class FakeDriver(driver.ComputeDriver):
         self._host = host
         # NOTE(gibi): this is unnecessary complex and fragile but this is
         # how many current functional sample tests expect the node name.
-        self._nodes = (['fake-mini'] if self._host == 'compute'
-                       else [self._host])
+        self._set_nodes(['fake-mini'] if self._host == 'compute'
+                        else [self._host])
 
     def _set_nodes(self, nodes):
         # NOTE(gibi): this is not part of the driver interface but used
@@ -646,6 +647,9 @@ class FakeDriver(driver.ComputeDriver):
     def get_available_nodes(self, refresh=False):
         return self._nodes
 
+    def get_available_node_uuids(self, refresh=False):
+        return [str(getattr(uuids, n)) for n in self.get_available_nodes()]
+
     def instance_on_disk(self, instance):
         return False
 
@@ -764,7 +768,7 @@ class PredictableNodeUUIDDriver(SmallFakeDriver):
             PredictableNodeUUIDDriver, self).get_available_resource(nodename)
         # This is used in ComputeNode.update_from_virt_driver which is called
         # from the ResourceTracker when creating a ComputeNode.
-        resources['uuid'] = uuid.uuid5(uuid.NAMESPACE_DNS, nodename)
+        resources['uuid'] = str(uuid.uuid5(uuid.NAMESPACE_DNS, nodename))
         return resources
 
 
