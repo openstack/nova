@@ -104,3 +104,18 @@ document_root = /tmp
             'disable_compute_service_check_for_ffu', True,
             group='workarounds')
         wsgi_app._setup_service('myhost', 'api')
+
+    def test__get_config_files_empty_env(self):
+        env = {}
+        result = wsgi_app._get_config_files(env)
+        expected = ['/etc/nova/api-paste.ini', '/etc/nova/nova.conf']
+        self.assertEqual(result, expected)
+
+    def test__get_config_files_with_env(self):
+        env = {
+            "OS_NOVA_CONFIG_DIR": "/nova",
+            "OS_NOVA_CONFIG_FILES": "api.conf",
+        }
+        result = wsgi_app._get_config_files(env)
+        expected = ['/nova/api.conf']
+        self.assertEqual(result, expected)

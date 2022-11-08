@@ -42,8 +42,11 @@ def _get_config_files(env=None):
     if env is None:
         env = os.environ
     dirname = env.get('OS_NOVA_CONFIG_DIR', '/etc/nova').strip()
+    files = env.get('OS_NOVA_CONFIG_FILES', '').split(';')
+    if files == ['']:
+        files = CONFIG_FILES
     return [os.path.join(dirname, config_file)
-            for config_file in CONFIG_FILES]
+            for config_file in files]
 
 
 def _setup_service(host, name):
