@@ -58,93 +58,10 @@ Possible values:
 Services which consume this:
 
 * ``nova-compute``
-
-Interdependencies to other options:
-
-* The IP address must be identical to the address to which the
-  ``nova-shellinaboxproxy`` service is listening (see option
-  ``shellinaboxproxy_host``
-  in this section).
-* The port must be the same as in the option ``shellinaboxproxy_port`` of this
-  section.
-* If you choose to use a secured websocket connection, then start this option
-  with ``wss://`` instead of the unsecured ``ws://``. The options ``cert``
-  and ``key`` in the ``[DEFAULT]`` section have to be set for that.
 """)
-
-proxyclient_url_opt = cfg.StrOpt('proxyclient_url',
-                                 default='http://127.0.0.1',
-                                 help="""
-The url to which proxy clients (like ``nova-shellinaboxproxy``) should
-connect to get the serial console of an instance.
-
-Possible values:
-
-* An http address
-
-Services which consume this:
-
-* ``nova-compute``
-
-Interdependencies to other options:
-
-* None
-""")
-
-shellinaboxproxy_host_opt = cfg.StrOpt('host',
-                                       default='0.0.0.0',
-                                       help="""
-The IP address which is used by the ``nova-shellinaboxproxy`` service to listen
-for incoming requests.
-
-The ``nova-shellinaboxproxy`` service listens on this IP address for incoming
-connection requests to instances which expose serial console.
-
-Possible values:
-
-* An IP address
-
-Services which consume this:
-
-* ``nova-shellinaboxproxy``
-
-Interdependencies to other options:
-
-* Ensure that this is the same IP address which is defined in the option
-  ``base_url`` of this section or use ``0.0.0.0`` to listen on all addresses.
-""")
-
-shellinaboxproxy_port_opt = cfg.IntOpt('port',
-                                       default=6084,
-                                       min=1,
-                                       max=65535,
-                                       help="""
-The port number which is used by the ``nova-shellinaboxproxy`` service to
-listen for incoming requests.
-
-The ``nova-shellinaboxproxy`` service listens on this port number for incoming
-connection requests to instances which expose serial console.
-
-Possible values:
-
-* A port number
-
-Services which consume this:
-
-* ``nova-shellinaboxproxy``
-
-Interdependencies to other options:
-
-* Ensure that this is the same port number which is defined in the option
-  ``base_url`` of this section.
-""")
-
 
 ALL_OPTS = [enabled_opt,
-            base_url_opt,
-            proxyclient_url_opt,
-            shellinaboxproxy_host_opt,
-            shellinaboxproxy_port_opt]
+            base_url_opt]
 
 
 def register_opts(conf):
@@ -154,10 +71,7 @@ def register_opts(conf):
 
 def register_cli_opts(conf):
     conf.register_group(shellinabox_opt_group)
-    conf.register_cli_opts([proxyclient_url_opt,
-                            base_url_opt,
-                            shellinaboxproxy_host_opt,
-                            shellinaboxproxy_port_opt],
+    conf.register_cli_opts([base_url_opt],
                            shellinabox_opt_group)
 
 
