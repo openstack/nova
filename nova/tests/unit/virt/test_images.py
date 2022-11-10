@@ -16,6 +16,8 @@ import os
 
 import mock
 from oslo_concurrency import processutils
+from oslo_serialization import jsonutils
+from oslo_utils import imageutils
 
 from nova.compute import utils as compute_utils
 from nova import exception
@@ -135,3 +137,47 @@ class QemuTestCase(test.NoDBTestCase):
                     '-O', 'out_format', '-f', 'in_format', 'source', 'dest')
         mock_disk_op_sema.__enter__.assert_called_once()
         self.assertTupleEqual(expected, mock_execute.call_args[0])
+
+    def test_convert_image_vmdk_allowed_list_checking(self):
+        info = {'format': 'vmdk',
+                'format-specific': {
+                    'type': 'vmdk',
+                    'data': {
+                        'create-type': 'monolithicFlat',
+                }}}
+
+        # If the format is not in the allowed list, we should get an error
+        self.assertRaises(exception.ImageUnacceptable,
+                          images.check_vmdk_image, 'foo',
+                          imageutils.QemuImgInfo(jsonutils.dumps(info),
+                                                 format='json'))
+
+        # With the format in the allowed list, no error
+        self.flags(vmdk_allowed_types=['streamOptimized', 'monolithicFlat',
+                                       'monolithicSparse'],
+                   group='compute')
+        images.check_vmdk_image('foo',
+                                imageutils.QemuImgInfo(jsonutils.dumps(info),
+                                                       format='json'))
+
+        # With an empty list, allow nothing
+        self.flags(vmdk_allowed_types=[], group='compute')
+        self.assertRaises(exception.ImageUnacceptable,
+                          images.check_vmdk_image, 'foo',
+                          imageutils.QemuImgInfo(jsonutils.dumps(info),
+                                                 format='json'))
+
+    @mock.patch.object(images, 'fetch')
+    @mock.patch('nova.privsep.qemu.unprivileged_qemu_img_info')
+    def test_fetch_checks_vmdk_rules(self, mock_info, mock_fetch):
+        info = {'format': 'vmdk',
+                'format-specific': {
+                    'type': 'vmdk',
+                    'data': {
+                        'create-type': 'monolithicFlat',
+                }}}
+        mock_info.return_value = jsonutils.dumps(info)
+        with mock.patch('os.path.exists', return_value=True):
+            e = self.assertRaises(exception.ImageUnacceptable,
+                                  images.fetch_to_raw, None, 'foo', 'anypath')
+            self.assertIn('Invalid VMDK create-type specified', str(e))
