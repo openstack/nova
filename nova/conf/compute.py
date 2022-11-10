@@ -960,6 +960,15 @@ Possible values:
   ``nova-compute`` service to fail to start, as 0 disk devices is an invalid
   configuration that would prevent instances from being able to boot.
 """),
+    cfg.ListOpt('vmdk_allowed_types',
+                default=['streamOptimized', 'monolithicSparse'],
+                help="""
+A list of strings describing allowed VMDK "create-type" subformats
+that will be allowed. This is recommended to only include
+single-file-with-sparse-header variants to avoid potential host file
+exposure due to processing named extents. If this list is empty, then no
+form of VMDK image will be allowed.
+"""),
 ]
 
 interval_opts = [
