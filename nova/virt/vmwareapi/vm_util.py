@@ -1546,7 +1546,7 @@ def _get_host_reservations_map(groups=None):
     if not CONF.vmware.hostgroup_reservations_json_file:
         return {}
 
-    with open(CONF.vmware.hostgroup_reservations_json_file) as f:
+    with open(CONF.vmware.hostgroup_reservations_json_file, 'rb') as f:
         reservations = jsonutils.load(f)
 
     hrm = {}
