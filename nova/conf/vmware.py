@@ -76,7 +76,9 @@ Possible values:
 * Any valid URI (The scheme is 'telnet' or 'telnets'.)
 
 Related options:
+
 This option is ignored if serial_port_service_uri is not specified.
+
 * serial_port_service_uri
 """),
     cfg.StrOpt('serial_log_dir',
@@ -112,6 +114,7 @@ If true, the vCenter server certificate is not verified. If false,
 then the default CA truststore is used for verification.
 
 Related options:
+
 * ca_file: This option is ignored if "ca_file" is set.
 """),
     cfg.StrOpt('cluster_name',
@@ -158,7 +161,9 @@ Possible values:
 * Any valid port number within 5900 -(5900 + vnc_port_total)
 
 Related options:
+
 Below options should be set to enable VNC client.
+
 * vnc.enabled = True
 * vnc_port_total
 """),
