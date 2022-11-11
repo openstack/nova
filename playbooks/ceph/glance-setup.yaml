@@ -1,0 +1,39 @@
+- hosts: controller
+  tasks:
+    - name: create local.sh
+      become: yes
+      blockinfile:
+        path: /opt/stack/devstack/local.sh
+        create: True
+        mode: 0777
+        block: |
+          # Delete all existing images
+          source /opt/stack/devstack/openrc admin
+          for img in $(openstack image list -f value -c ID); do
+              openstack image show $img
+              echo Deleting $img
+              openstack image delete $img
+          done
+
+          # Inflate our cirros image to 1G raw
+          arch=$(uname -m)
+          image=$(ls /opt/stack/devstack/files/cirros*${arch}-disk.img | tail -n1)
+          rawimage="/opt/stack/devstack/files/cirros-raw.img"
+          qemu-img convert -O raw "$image" "$rawimage"
+          truncate --size $((950 << 20)) "$rawimage"
+
+          # Upload it to glance as the sole image available so tempest
+          # config will find it. Wait ten seconds after doing this
+          # before the restart below.
+          openstack image create --container-format bare --disk-format raw --public "cirros-raw" < "$rawimage"
+          sleep 10
+          openstack image list
+          openstack image show cirros-raw
+
+          # This policy is default to admin only in glance. Override
+          # here to allow everyone and every type of image (private
+          # or public) to copy. This way we will be able to test copy
+          # image via non-admin as well as on private images.
+          echo $'"copy_image": ""' >> /etc/glance/policy.yaml
+          sudo systemctl restart 'devstack@g-*'
+
