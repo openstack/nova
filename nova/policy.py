@@ -239,6 +239,19 @@ class IsAdminCheck(policy.Check):
         return creds['is_admin'] == self.expected
 
 
+@policy.register('ccloud_no_project_id_in_target')
+class CcloudNoProjectIdInTarget(policy.Check):
+
+    def __init__(self, kind, match):
+        self.expected = (match.lower() == 'true')
+        super(CcloudNoProjectIdInTarget, self).__init__(kind,
+                                                        str(self.expected))
+
+    def __call__(self, target, creds, enforcer):
+        """Check if project_id key is available"""
+        return ("project_id" not in target) == self.expected
+
+
 def get_rules():
     if _ENFORCER:
         return _ENFORCER.rules
