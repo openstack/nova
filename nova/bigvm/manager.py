@@ -17,6 +17,7 @@ BigVM service
 """
 import itertools
 
+import os_resource_classes as orc
 from oslo_log import log as logging
 from oslo_messaging import exceptions as oslo_exceptions
 from oslo_service import periodic_task
@@ -29,10 +30,9 @@ from nova.objects.aggregate import AggregateList
 from nova.objects.cell_mapping import CellMappingList
 from nova.objects.compute_node import ComputeNodeList
 from nova.objects.host_mapping import HostMappingList
-from nova import rc_fields
-from nova.scheduler import client as scheduler_client
 from nova.scheduler.client.report import get_placement_request_id
 from nova.scheduler.client.report import NESTED_PROVIDER_API_VERSION
+from nova.scheduler.client.report import SchedulerReportClient
 from nova.scheduler.utils import ResourceRequest
 from nova import utils
 from nova.virt.vmwareapi import special_spawning
@@ -41,7 +41,7 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
-MEMORY_MB = rc_fields.ResourceClass.MEMORY_MB
+MEMORY_MB = orc.MEMORY_MB
 BIGVM_RESOURCE = special_spawning.BIGVM_RESOURCE
 BIGVM_DISABLED_TRAIT = 'CUSTOM_BIGVM_DISABLED'
 BIGVM_EXCLUSIVE_TRAIT = 'CUSTOM_HANA_EXCLUSIVE_HOST'
@@ -55,8 +55,7 @@ class BigVmManager(manager.Manager):
     """Takes care of the needs of big VMs"""
 
     def __init__(self, *args, **kwargs):
-        client = scheduler_client.SchedulerClient()
-        self.placement_client = client.reportclient
+        self.placement_client = SchedulerReportClient()
         self.special_spawn_rpc = special_spawning.SpecialVmSpawningInterface()
 
         super(BigVmManager, self).__init__(service_name='bigvm',
@@ -703,7 +702,7 @@ class BigVmManager(manager.Manager):
 
         # Auto-create custom resource classes coming from a virt driver
         for rc_name in inv_data:
-            if rc_name not in rc_fields.ResourceClass.STANDARD:
+            if rc_name not in orc.STANDARDS:
                 client._ensure_resource_classes(context, [rc_name])
 
         if client._update_inventory(context, rp_uuid, inv_data):
