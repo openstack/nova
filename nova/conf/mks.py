@@ -23,7 +23,9 @@ Nova compute node uses WebMKS, a desktop sharing protocol to provide
 instance console access to VM's created by VMware hypervisors.
 
 Related options:
+
 Following options must be set to provide console access.
+
 * mksproxy_base_url
 * enabled
 """)

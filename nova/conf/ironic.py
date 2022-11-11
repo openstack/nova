@@ -27,6 +27,7 @@ ironic_group = cfg.OptGroup(
     help="""
 Configuration options for Ironic driver (Bare Metal).
 If using the Ironic driver following options must be set:
+
 * auth_type
 * auth_url
 * project_name
