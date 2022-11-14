@@ -1,6 +1,7 @@
 nova/compute/manager.py
 nova/compute/pci_placement_translator.py
 nova/crypto.py
+nova/filesystem.py
 nova/limit/local.py
 nova/limit/placement.py
 nova/network/neutron.py
@@ -13,6 +14,9 @@ nova/virt/driver.py
 nova/virt/hardware.py
 nova/virt/libvirt/machine_type_utils.py
 nova/virt/libvirt/__init__.py
+nova/virt/libvirt/cpu/__init__.py
+nova/virt/libvirt/cpu/api.py
+nova/virt/libvirt/cpu/core.py
 nova/virt/libvirt/driver.py
 nova/virt/libvirt/event.py
 nova/virt/libvirt/guest.py
