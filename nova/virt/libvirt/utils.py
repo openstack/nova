@@ -578,7 +578,7 @@ def mdev_name2uuid(mdev_name: str) -> str:
     """Convert an mdev name (of the form mdev_<uuid_with_underscores>) to a
     uuid (of the form 8-4-4-4-12).
     """
-    return str(uuid.UUID(mdev_name[5:].replace('_', '-')))
+    return str(uuid.UUID(mdev_name[5:41].replace('_', '-')))
 
 
 def mdev_uuid2name(mdev_uuid: str) -> str:
