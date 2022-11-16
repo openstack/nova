@@ -440,12 +440,19 @@ class VMwareVMOpsTestCase(test.TestCase):
                                 'fake-disk',
                                 'fake-capacity',
                                 device)
+        vmx_path = ds_obj.DatastorePath.parse(
+            '[vmx-ds] test (uuid)/test (uuid).vmdk')
 
         with test.nested(
             mock.patch.object(self._vmops, 'get_datacenter_ref_and_name'),
             mock.patch.object(vm_util, 'get_vmdk_info',
-                              return_value=vmdk)
-        ) as (_get_dc_ref_and_name, fake_vmdk_info):
+                              return_value=vmdk),
+            mock.patch.object(vm_util, 'get_datastore_ref_by_name',
+                              return_value=ds_ref),
+            mock.patch.object(vm_util, 'get_vmx_path',
+                              return_value=vmx_path)
+        ) as (_get_dc_ref_and_name, fake_vmdk_info, fake_ds_ref_by_name,
+                fake_get_vmx_path):
             dc_info = mock.Mock()
             _get_dc_ref_and_name.return_value = dc_info
             self._vmops.rescue(
@@ -454,9 +461,11 @@ class VMwareVMOpsTestCase(test.TestCase):
                                                    self._instance,
                                                    vm_ref)
 
+            fake_get_vmx_path.assert_called_once_with(self._session, vm_ref)
+
             uuid = self._instance.image_ref
             cache_path = ds.build_path('vmware_base', uuid, uuid + '.vmdk')
-            vm_folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
+            vm_folder = vmx_path.dirname
             rescue_path = ds.build_path(vm_folder, uuid + '-rescue.vmdk')
 
             mock_disk_copy.assert_called_once_with(self._session, dc_info.ref,

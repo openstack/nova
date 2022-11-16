@@ -1891,9 +1891,15 @@ class VMwareVMOps(object):
         """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
-        # Get the root disk vmdk object
+        # Get the root disk vmdk object for the adapter and disk type
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref)
-        ds_ref = vmdk.device.backing.datastore
+
+        # Get the config path to store the rescue disk next to it - for BfV
+        # instances, we cannot use the vmdk's path as we would end up using
+        # resources on datastores managed by Cinder
+        vmx_ds_path = vm_util.get_vmx_path(self._session, vm_ref)
+        ds_ref = vm_util.get_datastore_ref_by_name(self._session,
+                                                   vmx_ds_path.datastore)
         datastore = ds_obj.get_datastore_by_ref(self._session, ds_ref)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
@@ -1912,7 +1918,7 @@ class VMwareVMOps(object):
         self._fetch_image_if_missing(context, vi)
 
         # Get the rescue disk path
-        vm_folder = ds_obj.DatastorePath.parse(vmdk.path).dirname
+        vm_folder = vmx_ds_path.dirname
         rescue_disk_path = datastore.build_path(vm_folder,
                 "%s-rescue.%s" % (image_info.image_id, image_info.file_type))
 
