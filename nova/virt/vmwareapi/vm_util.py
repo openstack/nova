@@ -1341,6 +1341,27 @@ def get_cluster_ref_by_name(session, cluster_name):
             return cluster.obj
 
 
+def get_datastore_ref_by_name(session, datastore_name):
+    """Return the ManagedObjectReference to the datastore with the given name
+
+    Returns None if no datastore with that name can be found.
+    """
+    try:
+        results = session._call_method(vim_util, "get_objects",
+                                       "Datastore", ["name"])
+        with vutil.WithRetrieval(session.vim, results) as objects:
+            for datastore in objects:
+                if not getattr(datastore, 'propSet', None):
+                    continue
+
+                if datastore.propSet[0].val != datastore_name:
+                    continue
+
+                return datastore.obj
+    except Exception as exc:
+        LOG.warning("Failed to get datastore references %s", exc)
+
+
 def get_vmdk_adapter_type(adapter_type):
     """Return the adapter type to be used in vmdk descriptor.
 
