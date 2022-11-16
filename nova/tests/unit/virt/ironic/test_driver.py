@@ -935,6 +935,48 @@ class IronicDriverTestCase(test.NoDBTestCase):
         expected = {
             'CUSTOM_IRON_NFV': {
                 'total': 1,
+                'reserved': 1,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
+        mock_nfc.assert_called_once_with(mock.sentinel.nodename)
+        mock_nr.assert_called_once_with(mock_nfc.return_value)
+        mock_res_used.assert_called_once_with(mock_nfc.return_value)
+        mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
+        result = self.ptree.data(mock.sentinel.nodename).inventory
+        self.assertEqual(expected, result)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_node_resources_used', return_value=True)
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_node_resources_unavailable', return_value=False)
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
+    def test_update_provider_tree_with_rc_occupied_workaround(self,
+                mock_nfc, mock_nr, mock_res_unavail, mock_res_used):
+        """Ensure that when a node is used, we report the inventory matching
+        the consumed resources.
+        """
+        self.flags(skip_reserve_in_use_ironic_nodes=True,
+                   group="workarounds")
+        mock_nr.return_value = {
+            'vcpus': 24,
+            'vcpus_used': 24,
+            'memory_mb': 1024,
+            'memory_mb_used': 1024,
+            'local_gb': 100,
+            'local_gb_used': 100,
+            'resource_class': 'iron-nfv',
+        }
+
+        self.driver.update_provider_tree(self.ptree, mock.sentinel.nodename)
+
+        expected = {
+            'CUSTOM_IRON_NFV': {
+                'total': 1,
                 'reserved': 0,
                 'min_unit': 1,
                 'max_unit': 1,
@@ -945,7 +987,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_nfc.assert_called_once_with(mock.sentinel.nodename)
         mock_nr.assert_called_once_with(mock_nfc.return_value)
         mock_res_used.assert_called_once_with(mock_nfc.return_value)
-        self.assertFalse(mock_res_unavail.called)
+        mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
         result = self.ptree.data(mock.sentinel.nodename).inventory
         self.assertEqual(expected, result)
 
@@ -1016,7 +1058,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_nfc.assert_called_once_with(mock.sentinel.nodename)
         mock_nr.assert_called_once_with(mock_nfc.return_value)
         mock_res_used.assert_called_once_with(mock_nfc.return_value)
-        self.assertFalse(mock_res_unavail.called)
+        mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
         result = self.ptree.data(mock.sentinel.nodename).traits
         self.assertEqual(set(), result)
 
@@ -1048,7 +1090,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_nfc.assert_called_once_with(mock.sentinel.nodename)
         mock_nr.assert_called_once_with(mock_nfc.return_value)
         mock_res_used.assert_called_once_with(mock_nfc.return_value)
-        self.assertFalse(mock_res_unavail.called)
+        mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
         result = self.ptree.data(mock.sentinel.nodename).traits
         self.assertEqual(set(traits), result)
 

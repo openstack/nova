@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    Fixed when placement returns ironic nodes that have just started automatic
+    cleaning as possible valid candidates. This is done by marking all ironic
+    nodes with an instance on them as reserved, such that nova only makes them
+    available once we have double checked Ironic reports the node as available.
+    If you don't have automatic cleaning on, this might mean it takes longer
+    than normal for Ironic nodes to become available for new instances.
+    If you want the old behaviour use the following workaround config:
+    `[workarounds]skip_reserve_in_use_ironic_nodes=true`

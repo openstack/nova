@@ -874,15 +874,25 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         # nodename is the ironic node's UUID.
         node = self._node_from_cache(nodename)
+
         reserved = False
-        if (not self._node_resources_used(node) and
-                self._node_resources_unavailable(node)):
-            LOG.debug('Node %(node)s is not ready for a deployment, '
-                      'reporting resources as reserved for it. Node\'s '
-                      'provision state is %(prov)s, power state is '
-                      '%(power)s and maintenance is %(maint)s.',
-                      {'node': node.uuid, 'prov': node.provision_state,
-                       'power': node.power_state, 'maint': node.maintenance})
+        if self._node_resources_unavailable(node):
+            # Operators might mark a node as in maintainance,
+            # even when an instance is on the node,
+            # either way lets mark this as reserved
+            reserved = True
+
+        if (self._node_resources_used(node) and
+            not CONF.workarounds.skip_reserve_in_use_ironic_nodes):
+            # Make resources as reserved once we have
+            # and instance here.
+            # When the allocation is deleted, most likely
+            # automatic clean will start, so we keep the node
+            # reserved until it becomes available again.
+            # In the case without automatic clean, once
+            # the allocation is removed in placement it
+            # also stays as reserved until we notice on
+            # the next periodic its actually available.
             reserved = True
 
         info = self._node_resource(node)
