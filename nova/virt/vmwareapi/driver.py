@@ -86,6 +86,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         "supports_trusted_certs": False,
         "supports_pcpus": False,
         "supports_accelerators": False,
+        "supports_bfv_rescue": True,
 
         # Image type support flags
         "supports_image_type_aki": False,
