@@ -417,6 +417,21 @@ compatibility on the destination host during live migration.
 When this is enabled, it will skip version-checking of hypervisors
 during live migration.
 """),
+    cfg.BoolOpt(
+        'skip_reserve_in_use_ironic_nodes',
+        default=False,
+        help="""
+This may be useful if you use the Ironic driver, but don't have
+automatic cleaning enabled in Ironic. Nova, by default, will mark
+Ironic nodes as reserved as soon as they are in use. When you free
+the Ironic node (by deleting the nova instance) it takes a while
+for Nova to un-reserve that Ironic node in placement. Usually this
+is a good idea, because it avoids placement providing an Ironic
+as a valid candidate when it is still being cleaned.
+Howerver, if you don't use automatic cleaning, it can cause an
+extra delay before and Ironic node is available for building a
+new Nova instance.
+"""),
 ]
 
 
