@@ -1591,7 +1591,7 @@ class LibvirtConfigGuestHostdevPCI(LibvirtConfigBaseTest):
             </hostdev>
             """
 
-    def test_config_guest_hosdev_pci(self):
+    def test_config_guest_hostdev_pci(self):
         hostdev = config.LibvirtConfigGuestHostdevPCI()
         hostdev.domain = "1234"
         hostdev.bus = "11"
@@ -1600,7 +1600,7 @@ class LibvirtConfigGuestHostdevPCI(LibvirtConfigBaseTest):
         xml = hostdev.to_xml()
         self.assertXmlEqual(self.expected, xml)
 
-    def test_parse_guest_hosdev_pci(self):
+    def test_parse_guest_hostdev_pci(self):
         xmldoc = self.expected
         obj = config.LibvirtConfigGuestHostdevPCI()
         obj.parse_str(xmldoc)
@@ -1612,7 +1612,7 @@ class LibvirtConfigGuestHostdevPCI(LibvirtConfigBaseTest):
         self.assertEqual(obj.slot, '0x22')
         self.assertEqual(obj.function, '0x3')
 
-    def test_parse_guest_hosdev_usb(self):
+    def test_parse_guest_hostdev_usb(self):
         xmldoc = """<hostdev mode='subsystem' type='usb'>
                       <source startupPolicy='optional'>
                           <vendor id='0x1234'/>
