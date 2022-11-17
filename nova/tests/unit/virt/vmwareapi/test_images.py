@@ -244,7 +244,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         ):
             img_props = images.VMwareImage.from_image(None, uuids.image, mdata)
 
-        image_size_in_kb = raw_disk_size_in_bytes / units.Ki
+        image_size_in_kb = raw_disk_size_in_bytes // units.Ki
 
         # assert that defaults are set and no value returned is left empty
         self.assertEqual(constants.DEFAULT_OS_TYPE, img_props.os_type)

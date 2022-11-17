@@ -106,9 +106,9 @@ class VCState(object):
             self._set_host_enabled(False)
             return data
 
-        local_gb = capacity / units.Gi
-        local_gb_used = (capacity - free) / units.Gi
-        local_gb_max_free = max_free / units.Gi
+        local_gb = capacity // units.Gi
+        local_gb_used = (capacity - free) // units.Gi
+        local_gb_max_free = max_free // units.Gi
 
         defaults = {
             "local_gb": local_gb,

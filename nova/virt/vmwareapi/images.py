@@ -107,7 +107,9 @@ class VMwareImage(object):
 
     @property
     def file_size_in_kb(self):
-        return self.file_size / units.Ki
+        # TODO(jkulik): What if this isn't divisable by 1024 i.e. there are
+        # some more bytes?
+        return self.file_size // units.Ki
 
     @property
     def is_sparse(self):

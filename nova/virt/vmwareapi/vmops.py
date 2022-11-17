@@ -451,7 +451,7 @@ class VMwareVMOps(object):
             raise exception.RequestedVRamTooHigh(req_vram=video_ram,
                                                  max_vram=max_vram)
         if video_ram and max_vram:
-            extra_specs.hw_video_ram = video_ram * units.Mi / units.Ki
+            extra_specs.hw_video_ram = video_ram * units.Mi // units.Ki
 
         storage_policy = self._get_storage_policy(flavor)
         if storage_policy:
