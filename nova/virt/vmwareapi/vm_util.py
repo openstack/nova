@@ -2307,3 +2307,10 @@ def reconfigure_vm_device_change(session, vm_ref, device_change):
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.deviceChange = device_change
     reconfigure_vm(session, vm_ref, config_spec)
+
+
+def get_vmx_path(session, vm_ref):
+    """Return DatastorePath object of the vmx file of the VM"""
+    vmx_path = session._call_method(vutil, 'get_object_property',
+                                    vm_ref, 'config.files.vmPathName')
+    return ds_obj.DatastorePath.parse(vmx_path)
