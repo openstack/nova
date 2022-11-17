@@ -2401,10 +2401,10 @@ class VMwareAPIVMTestCase(test.TestCase,
                 'step_size': 1,
             },
             orc.DISK_GB: {   # Fix this
-                'total': 1024.0,
+                'total': 1024,
                 'reserved': 0,
                 'min_unit': 1,
-                'max_unit': 500.0,
+                'max_unit': 500,
                 'step_size': 1,
             },
             nova.utils.MEMORY_RESERVABLE_MB_RESOURCE: {
@@ -2417,6 +2417,8 @@ class VMwareAPIVMTestCase(test.TestCase,
         }
         inventory = self.pt.data(self.node_name).inventory
         self.assertEqual(expected, inventory)
+        self.assertIsInstance(inventory[orc.DISK_GB]['total'], int)
+        self.assertIsInstance(inventory[orc.DISK_GB]['max_unit'], int)
 
     def test_invalid_datastore_regex(self):
 
