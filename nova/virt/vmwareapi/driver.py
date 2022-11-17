@@ -544,10 +544,10 @@ class VMwareVCDriver(driver.ComputeDriver):
             reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
                 CONF.reserved_host_disk_mb)
             result[orc.DISK_GB] = {
-                'total': int(local_gb),
+                'total': local_gb,
                 'reserved': reserved_disk_gb,
                 'min_unit': 1,
-                'max_unit': int(local_gb_max_free),
+                'max_unit': local_gb_max_free,
                 'step_size': 1,
             }
 
