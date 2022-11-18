@@ -114,7 +114,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._instance.flavor = self._flavor
 
         self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None,
-                                        cluster=cluster.obj)
+                                        mock.Mock, cluster=cluster.obj)
         self._cluster = cluster
         self._image_meta = objects.ImageMeta.from_dict({'id': self._image_id})
         subnet_4 = network_model.Subnet(cidr='192.168.0.1/24',
@@ -192,7 +192,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertEqual('DE:AD:BE:EF:00:00;;;;;#', result)
 
     def _setup_create_folder_mocks(self):
-        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
+        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock(),
+                                mock.Mock())
         base_name = 'folder'
         ds_name = "datastore"
         ds_ref = vmwareapi_fake.ManagedObjectReference(value=1)
@@ -218,7 +219,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_mkdir.assert_called_with(ops._session, path, dc)
 
     def test_get_valid_vms_from_retrieve_result(self):
-        ops = vmops.VMwareVMOps(self._session, mock.Mock(), mock.Mock())
+        ops = vmops.VMwareVMOps(self._session, mock.Mock(), mock.Mock(),
+                                mock.Mock())
         fake_objects = vmwareapi_fake.FakeRetrieveResult()
         for x in range(0, 3):
             vm = vmwareapi_fake.VirtualMachine()
@@ -230,7 +232,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertEqual(3, len(vms))
 
     def test_get_valid_vms_from_retrieve_result_with_invalid(self):
-        ops = vmops.VMwareVMOps(self._session, mock.Mock(), mock.Mock())
+        ops = vmops.VMwareVMOps(self._session, mock.Mock(), mock.Mock(),
+                                mock.Mock())
         fake_objects = vmwareapi_fake.FakeRetrieveResult()
         valid_vm = vmwareapi_fake.VirtualMachine()
         valid_vm.set('config.extraConfig["nvp.vm-uuid"]',
@@ -360,7 +363,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def _test_get_datacenter_ref_and_name(self, ds_ref_exists=False):
         instance_ds_ref = vmwareapi_fake.ManagedObjectReference(value='ds-1')
-        _vcvmops = vmops.VMwareVMOps(self._session, None, None)
+        _vcvmops = vmops.VMwareVMOps(self._session, None, None, None)
         result = vmwareapi_fake.FakeRetrieveResult()
         if ds_ref_exists:
             ds_ref = vmwareapi_fake.ManagedObjectReference(value='ds-1')

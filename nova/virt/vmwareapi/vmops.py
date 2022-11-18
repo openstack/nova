@@ -131,13 +131,14 @@ def retry_if_task_in_progress(f, *args, **kwargs):
 class VMwareVMOps(object):
     """Management class for VM-related tasks."""
 
-    def __init__(self, session, virtapi, volumeops, cluster=None,
+    def __init__(self, session, virtapi, volumeops, vc_state, cluster=None,
                  datastore_regex=None):
         """Initializer."""
         self.compute_api = compute.API()
         self._session = session
         self._virtapi = virtapi
         self._volumeops = volumeops
+        self._vc_state = vc_state
         self._cluster = cluster
         self._root_resource_pool = vm_util.get_res_pool_ref(self._session,
                                                             self._cluster)

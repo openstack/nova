@@ -145,15 +145,16 @@ class VMwareVCDriver(driver.ComputeDriver):
             self._create_nodename(vim_util.get_moref_value(self._cluster_ref))
         self._volumeops = volumeops.VMwareVolumeOps(self._session,
                                                     self._cluster_ref)
-        self._vmops = vmops.VMwareVMOps(self._session,
-                                        virtapi,
-                                        self._volumeops,
-                                        self._cluster_ref,
-                                        datastore_regex=self._datastore_regex)
         self._vc_state = host.VCState(self._session,
                                       self._nodename,
                                       self._cluster_ref,
                                       self._datastore_regex)
+        self._vmops = vmops.VMwareVMOps(self._session,
+                                        virtapi,
+                                        self._volumeops,
+                                        self._vc_state,
+                                        self._cluster_ref,
+                                        datastore_regex=self._datastore_regex)
         self.capabilities['resource_scheduling'] = \
             cluster_util.is_drs_enabled(self._session, self._cluster_ref)
         # Register the OpenStack extension
