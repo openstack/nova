@@ -2392,13 +2392,59 @@ class VMwareVMOps(object):
                     continue
                 expected_members[instance.uuid] = moref
 
-            rule_name = '{}-{}'.format(rule_prefix, sg.policy)
+            rule_members_by_name = {}
+            if sg.policy == 'soft-anti-affinity':
+                # we chunk by available hosts - 1, because we can spawn only as
+                # many VMs as there are hosts as VMWare doesn't provide any
+                # "soft" anti-affinity except for VM-Host relations, while we
+                # still allow 1 host to go into maintenance mode.
+                # Only hosts have an 'available' field - the cluster doesn't.
+                # Therefore, we don't have to filter out the aggregated cluster
+                # stats explicitly.
+                member_chunk_size = len(
+                    [stat for stat in self._vc_state.get_host_stats().values()
+                     if stat.get('available', False)])
+                member_chunk_size = max(member_chunk_size - 1, 1)
+
+                # to generate stable chunks we have to sort the expected
+                # members. we also need a list to be able to access parts of
+                # them.
+                expected_members = sorted(expected_members.items())
+
+                # generate chunks of the expected members with rules having a
+                # postfix counting up for the soft-anti-affinity policy
+                for i, j in enumerate(range(0, len(expected_members),
+                                            member_chunk_size)):
+                    rule_name = '{}-{}-{}'.format(rule_prefix, sg.policy, i)
+                    rule_members = expected_members[j:j + member_chunk_size]
+                    rule_members_by_name[rule_name] = rule_members
+
+                # we need to add in the existing rules with the same prefix,
+                # because there might be 1) old rules from before the chunking
+                # and 2) rules we don't reach anymore because the number of
+                # members of the sg is much lower now
+                existing_rule_names = [
+                    rule['name'] for rule in cluster_util.get_rules_by_prefix(
+                        self._session, self._cluster, rule_prefix)]
+
+                rule_names = \
+                    set(existing_rule_names) | set(rule_members_by_name)
+                for rule_name in rule_names:
+                    rule_members = rule_members_by_name.get(rule_name, [])
+                    _update_rule(rule_name, dict(rule_members), sg)
+            else:
+                # no chunking necessary - just update the rule
+                rule_name = '{}-{}'.format(rule_prefix, sg.policy)
+                _update_rule(rule_name, expected_members, sg)
+
+            LOG.debug('Sync for server-group %s done', sg_uuid)
+
+        def _update_rule(rule_name, expected_members, sg):
             rule = cluster_util.get_rule(
                 self._session, self._cluster, rule_name)
 
             if not rule:
                 if len(expected_members) < 2 or sg.policy == 'soft-affinity':
-                    LOG.debug('Sync for server-group %s done', sg_uuid)
                     return
                 # we have to create a new rule
                 LOG.debug('Creating missing DRS rule %s with members %s',
@@ -2411,7 +2457,6 @@ class VMwareVMOps(object):
                     self._session, self._cluster, rule)
                 LOG.info('Created missing DRS rule %s with members %s',
                          rule_name, ', '.join(expected_members))
-                LOG.debug('Sync for server-group %s done', sg_uuid)
                 return
 
             if sg.policy == 'soft-affinity':
@@ -2421,7 +2466,6 @@ class VMwareVMOps(object):
                     self._session, self._cluster, rule)
                 LOG.info('Deleted DRS rule %s with policy soft-affinity.',
                           rule_name)
-                LOG.debug('Sync for server-group %s done', sg_uuid)
                 return
 
             if len(expected_members) < 2:
@@ -2430,7 +2474,6 @@ class VMwareVMOps(object):
                 cluster_util.delete_rule(
                     self._session, self._cluster, rule)
                 LOG.info('Deleted DRS rule %s with < 2 members.', rule_name)
-                LOG.debug('Sync for server-group %s done', sg_uuid)
                 return
 
             if not rule.enabled:
@@ -2445,7 +2488,6 @@ class VMwareVMOps(object):
             existing_moref_values = set(vutil.get_moref_value(m)
                                         for m in rule.vm)
             if expected_moref_values == existing_moref_values:
-                LOG.debug('Sync for server-group %s done', sg_uuid)
                 return
 
             # we have to update the DRS rule to contain the right members
@@ -2455,6 +2497,5 @@ class VMwareVMOps(object):
             cluster_util.update_rule(self._session, self._cluster, rule)
             LOG.info('Updated DRS rule %s with members %s',
                      rule_name, ', '.join(expected_members))
-            LOG.debug('Sync for server-group %s done', sg_uuid)
 
         _sync_sync_server_group(context, sg_uuid)
