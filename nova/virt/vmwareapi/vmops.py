@@ -168,7 +168,7 @@ class VMwareVMOps(object):
     """
     MIGRATION_VERSION = "1.0"
 
-    def __init__(self, session, virtapi, volumeops, cluster=None,
+    def __init__(self, session, virtapi, volumeops, vc_state, cluster=None,
                  vcenter_uuid=None, datastore_regex=None,
                  datastore_hagroup_regex=None):
         """Initializer."""
@@ -176,6 +176,7 @@ class VMwareVMOps(object):
         self._session = session
         self._virtapi = virtapi
         self._volumeops = volumeops
+        self._vc_state = vc_state
         self._cluster = cluster
         self._vcenter_uuid = vcenter_uuid
         self._property_collector = None

@@ -117,7 +117,7 @@ class VMwareVMOpsTestCase(test.TestCase):
         self._instance.flavor = self._flavor
         self._volumeops = volumeops.VMwareVolumeOps(self._session)
         self._vmops = vmops.VMwareVMOps(self._session, self._virtapi,
-                                        self._volumeops,
+                                        self._volumeops, mock.Mock(),
                                         cluster=cluster.obj,
                                         vcenter_uuid=uuids.vcenter)
         self._cluster = cluster
@@ -203,7 +203,8 @@ class VMwareVMOpsTestCase(test.TestCase):
         self.assertEqual('DE:AD:BE:EF:00:00;;;;;#', result)
 
     def _setup_create_folder_mocks(self):
-        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
+        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock(),
+                                mock.Mock())
         base_name = 'folder'
         ds_name = "datastore"
         ds_ref = vmwareapi_fake.ManagedObjectReference(value=1)
@@ -232,7 +233,7 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def test_get_valid_vms_from_retrieve_result(self):
         ops = vmops.VMwareVMOps(self._session, mock.Mock(), mock.Mock(),
-                                cluster=self._cluster.obj)
+                                mock.Mock(), cluster=self._cluster.obj)
         fake_objects = vmwareapi_fake.FakeRetrieveResult()
         for x in range(0, 3):
             vm = vmwareapi_fake.VirtualMachine()
@@ -245,7 +246,7 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def test_get_valid_vms_from_retrieve_result_with_invalid(self):
         ops = vmops.VMwareVMOps(self._session, mock.Mock(), mock.Mock(),
-                                cluster=self._cluster.obj)
+                                mock.Mock(), cluster=self._cluster.obj)
         fake_objects = vmwareapi_fake.FakeRetrieveResult()
         valid_vm = vmwareapi_fake.VirtualMachine()
         valid_vm.set('config.extraConfig["nvp.vm-uuid"]',
@@ -386,7 +387,7 @@ class VMwareVMOpsTestCase(test.TestCase):
 
     def _test_get_datacenter_ref_and_name(self, ds_ref_exists=False):
         instance_ds_ref = vmwareapi_fake.ManagedObjectReference(value='ds-1')
-        _vcvmops = vmops.VMwareVMOps(self._session, None, None,
+        _vcvmops = vmops.VMwareVMOps(self._session, None, None, None,
                                      cluster=self._cluster.obj)
         result = vmwareapi_fake.FakeRetrieveResult()
         if ds_ref_exists:
