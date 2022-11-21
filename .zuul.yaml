@@ -405,6 +405,7 @@
     irrelevant-files: *dsvm-irrelevant-files
     required-projects:
       - openstack/nova
+      - openstack/os-brick
     pre-run:
       - playbooks/ceph/glance-copy-policy.yaml
     vars:
