@@ -516,6 +516,10 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         if set(updates.keys()).intersection(
                 {'disabled', 'disabled_reason', 'forced_down'}):
             self._send_notification(fields.NotificationAction.UPDATE)
+            LOG.info("ServiceStatusNotification for service on host %s: "
+                     "disabled: %s, forced_down: %s, reason: %s",
+                     self.host, self.disabled, self.forced_down,
+                     self.disabled_reason)
 
     def _send_notification(self, action):
         payload = service_notification.ServiceStatusPayload(self)
