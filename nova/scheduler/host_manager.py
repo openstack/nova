@@ -754,8 +754,8 @@ class HostManager(object):
 
     def _get_required_instance_uuids_for_spec(self, spec_obj):
         return (self.filter_handler.host_info_requiring_instance_ids(
-                    self.enabled_filters, spec_obj)
-                | self.weight_handler.host_info_requiring_instance_ids(
+                    self.enabled_filters, spec_obj) |
+                self.weight_handler.host_info_requiring_instance_ids(
                     self.weighers, spec_obj))
 
     def get_host_states_by_uuids(self, context, compute_uuids, spec_obj):
