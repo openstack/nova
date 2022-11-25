@@ -17,12 +17,51 @@
 
 from oslo_config import cfg
 
+_DEFAULT_PASSWORD_SYMBOLS = ['23456789',  # Removed: 0,1
+                             'ABCDEFGHJKLMNPQRSTUVWXYZ',   # Removed: I, O
+                             'abcdefghijkmnopqrstuvwxyz',  # Removed: l
+                            ]
+
 base_options = [
     cfg.IntOpt(
         'password_length',
         default=12,
         min=0,
         help='Length of generated instance admin passwords.'),
+    cfg.IntOpt(
+        'password_all_group_samples',
+        default=1,
+        min=0,
+        help='''
+How often should the symbols be sampled from all groups
+to ensure the presence of all of them
+* Zero: Purely random, so least predictable, but possibly not confirming to
+  some password policies
+* Any positive number: At least that many symbols will be from each of the
+  classes. By default: lower-case, upper-case and numbers.
+
+Interdependencies to other options:
+
+* If ``password_length`` is smaller than ``password_all_group_samples`` times
+  three (or more in case more groups are added to ``password_symbol_groups``),
+  then the password will be cut off after ``password_length``, thereby possibly
+  reducing the number of symbol classes in the generated password.
+'''),
+    cfg.MultiStrOpt(
+        'password_symbol_groups',
+        default=_DEFAULT_PASSWORD_SYMBOLS,
+        help='''
+List of symbols to use for passwords.
+Default avoids visually confusing characters. (~6 bits per symbol)
+
+The items in the list represents symbol groups, and from each of those groups
+at least ``password_all_group_samples`` symbols are taken randomly.
+
+Interdependencies to other options:
+See ``password_additional_symbols`` for the interaction of the three values
+``password_length``,  ``password_additional_symbols`` and
+``password_symbol_groups``
+'''),
     cfg.StrOpt(
         'instance_usage_audit_period',
         default='month',
