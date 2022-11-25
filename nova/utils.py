@@ -136,13 +136,6 @@ def generate_random_string(size=8):
     return ''.join([random.choice(characters) for _x in range(size)])
 
 
-# Default symbols to use for passwords. Avoids visually confusing characters.
-# ~6 bits per symbol
-DEFAULT_PASSWORD_SYMBOLS = ('23456789',  # Removed: 0,1
-                            'ABCDEFGHJKLMNPQRSTUVWXYZ',   # Removed: I, O
-                            'abcdefghijkmnopqrstuvwxyz')  # Removed: l
-
-
 def last_completed_audit_period(unit=None, before=None):
     """This method gives you the most recently *completed* audit period.
 
@@ -233,7 +226,7 @@ def last_completed_audit_period(unit=None, before=None):
     return (begin, end)
 
 
-def generate_password(length=None, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
+def generate_password(length=None, symbolgroups=None):
     """Generate a random password from the supplied symbol groups.
 
     At least one symbol from each group will be included. Unpredictable
@@ -245,12 +238,19 @@ def generate_password(length=None, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
     if length is None:
         length = CONF.password_length
 
+    if symbolgroups is None:
+        symbolgroups = CONF.password_symbol_groups
+
     r = random.SystemRandom()
 
     # NOTE(jerdfelt): Some password policies require at least one character
     # from each group of symbols, so start off with one random character
     # from each symbol group
-    password = [r.choice(s) for s in symbolgroups]
+    # NOTE(fwiesel): And some policies require even more of them, so
+    # do it as often as configured in DEFAULT.password_all_group_samples
+    password = [r.choice(s)
+                for s in symbolgroups * CONF.password_all_group_samples
+                if s]
     # If length < len(symbolgroups), the leading characters will only
     # be from the first length groups. Try our best to not be predictable
     # by shuffling and then truncating.

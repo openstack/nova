@@ -15,6 +15,7 @@
 import datetime
 import os
 import os.path
+import string
 import tempfile
 from unittest import mock
 
@@ -31,6 +32,7 @@ from oslo_utils import encodeutils
 from oslo_utils import fixture as utils_fixture
 from oslo_utils.secretutils import md5
 
+from nova.conf import base as conf_base
 from nova import context
 from nova import exception
 from nova.objects import base as obj_base
@@ -140,11 +142,40 @@ class GenericUtilsTestCase(test.NoDBTestCase):
 
     def test_generate_password(self):
         password = utils.generate_password()
-        self.assertTrue([c for c in password if c in '0123456789'])
-        self.assertTrue([c for c in password
-                         if c in 'abcdefghijklmnopqrstuvwxyz'])
-        self.assertTrue([c for c in password
-                         if c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'])
+        for group in conf_base._DEFAULT_PASSWORD_SYMBOLS:
+            if group:
+                self.assertTrue([c for c in password if c in group])
+
+    @mock.patch.object(CONF, "password_all_group_samples", 0)
+    def test_generate_password_zero_groups(self):
+        password = utils.generate_password()
+        self.assertEqual(len(password), CONF.password_length)
+
+    @mock.patch.object(CONF, "password_all_group_samples", 2)
+    def test_generate_password_two_groups(self):
+        password = utils.generate_password()
+        self.assertEqual(len(password), CONF.password_length)
+        for group in conf_base._DEFAULT_PASSWORD_SYMBOLS:
+            if group:
+                self.assertGreaterEqual(
+                    len([c for c in password if c in group]),
+                    CONF.password_all_group_samples)
+
+    @mock.patch.object(CONF, "password_all_group_samples", 7)
+    @mock.patch.object(CONF, "password_length", 13)
+    def test_generate_password_too_many_groups(self):
+        password = utils.generate_password()
+        self.assertEqual(len(password), CONF.password_length)
+
+    @mock.patch.object(CONF, "password_symbol_groups", [string.ascii_lowercase,
+            string.ascii_uppercase, string.punctuation])
+    def test_generate_password_custom_groups(self):
+        password = utils.generate_password()
+        self.assertEqual(len(password), CONF.password_length)
+        self.assertGreaterEqual(
+            len([c for c in password if c in string.punctuation]),
+            CONF.password_all_group_samples)
+        self.assertFalse([c for c in password if c in string.digits])
 
     @mock.patch('nova.privsep.path.chown')
     def test_temporary_chown(self, mock_chown):
