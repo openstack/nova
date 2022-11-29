@@ -79,7 +79,6 @@ class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         """Extend the volume."""
         LOG.debug("calling os-brick to extend FC Volume", instance=instance)
         new_size = self.connector.extend_volume(connection_info['data'])
-        LOG.debug("Extend FC Volume %s; new_size=%s",
-                  connection_info['data']['device_path'],
+        LOG.debug("Extend FC Volume: new_size=%s",
                   new_size, instance=instance)
         return new_size
