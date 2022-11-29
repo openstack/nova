@@ -248,8 +248,9 @@
       tox_envlist: all
       # Only run compute API tests.
       tempest_test_regex: ^tempest\.api\.compute
-      # Skip slow tests.
-      tempest_exclude_regex: .*\[.*\bslow\b.*\]
+      # Skip slow tests. Also, skip some volume detach tests until bug#1998148
+      # is fixed.
+      tempest_exclude_regex: (^tempest\.(api\.compute\.(volumes\.test_attach_volume\.AttachVolumeTestJSON\.test_attach_detach_volume|servers\.(test_server_rescue\.ServerStableDeviceRescueTest\.test_stable_device_rescue_disk_virtio_with_volume_attached|test_server_rescue_negative\.ServerRescueNegativeTestJSON\.test_rescued_vm_detach_volume)))|.*\[.*\bslow\b.*\])
       devstack_local_conf:
         test-config:
           $TEMPEST_CONFIG:
