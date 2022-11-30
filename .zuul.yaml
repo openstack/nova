@@ -665,6 +665,36 @@
     parent: tempest-integrated-compute
     nodeset: openstack-single-node-focal
 
+# TODO(gmann): Remove this jobs once all the required services for intergrate
+# compute gate (Cinder, Glance, Neutron) by default enable scope and new
+# defaults which means all the nova jobs will be tested with new RBAC in
+# integrated way and we do not need this separate job.
+- job:
+    name: tempest-integrated-compute-enforce-scope-new-defaults
+    parent: tempest-integrated-compute
+    description: |
+      This job runs the Tempest tests with scope and new defaults enabled
+      for Nova, Neutron, Glance, and Cinder services.
+    # TODO (gmann): There were few fixes in neutron and neutron-lib for the
+    # RBAC but they are not yet released so we need to add both projcts as
+    # the required-projects. Those can be removed once new version of neutron
+    # and neutron-lib is released.
+    required-projects:
+      - openstack/neutron
+      - openstack/neutron-lib
+    vars:
+      devstack_localrc:
+        # Enabeling the scope and new defaults for services implemented it.
+        # NOTE (gmann): We need to keep keystone scope check disable as
+        # services (except ironic) does not support the system scope and
+        # they need keystone to continue working with project scope. Until
+        # Keystone policies are changed to work for project scoped also, we
+        # need to keep scope check disable for keystone.
+        NOVA_ENFORCE_SCOPE: true
+        CINDER_ENFORCE_SCOPE: true
+        GLANCE_ENFORCE_SCOPE: true
+        NEUTRON_ENFORCE_SCOPE: true
+
 - project:
     # Please try to keep the list of job names sorted alphabetically.
     templates:
@@ -723,6 +753,8 @@
              - ^tox.ini$
         - tempest-integrated-compute-ubuntu-focal:
             irrelevant-files: *policies-irrelevant-files
+        - tempest-integrated-compute-enforce-scope-new-defaults:
+            irrelevant-files: *policies-irrelevant-files
         - grenade-skip-level:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
@@ -757,6 +789,8 @@
         - tempest-integrated-compute:
            irrelevant-files: *policies-irrelevant-files
         - tempest-integrated-compute-ubuntu-focal:
+            irrelevant-files: *policies-irrelevant-files
+        - tempest-integrated-compute-enforce-scope-new-defaults:
             irrelevant-files: *policies-irrelevant-files
         - nova-grenade-multinode:
            irrelevant-files: *policies-irrelevant-files

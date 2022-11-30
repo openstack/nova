@@ -58,6 +58,16 @@ class BasePolicyTest(test.TestCase):
 
     def setUp(self):
         super(BasePolicyTest, self).setUp()
+        # TODO(gmann): enforce_scope and enforce_new_defaults are enabled
+        # by default in the code so disable them in base test class until
+        # we have deprecated rules and their tests. We have enforce_scope
+        # and no-legacy tests which are explicitly enabling scope and new
+        # defaults to test the new defaults and scope. In future, once
+        # we remove the deprecated rules, along with refactoring the unit
+        # tests we can remove overriding the oslo policy flags.
+        self.flags(enforce_scope=False, group="oslo_policy")
+        if not self.without_deprecated_rules:
+            self.flags(enforce_new_defaults=False, group="oslo_policy")
         self.useFixture(fixtures.NeutronFixture(self))
         self.policy = self.useFixture(fixtures.RealPolicyFixture())
 

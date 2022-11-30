@@ -1,0 +1,23 @@
+---
+upgrade:
+  - |
+    The Nova service enable the API policies (RBAC) new defaults and scope by
+    default. The Default value of config options ``[oslo_policy] enforce_scope``
+    and ``[oslo_policy] oslo_policy.enforce_new_defaults`` have been changed
+    to ``True``.
+
+    This means if you are using system scope token to access Nova API then
+    the request will be failed with 403 error code. Also, new defaults will be
+    enforced by default. To know about the new defaults of each policy
+    rule, refer to the `Policy New Defaults`_. For more detail about the Nova
+    API policies changes, refer to `Policy Concepts`_.
+
+    If you want to disable them then modify the below config options value in
+    ``nova.conf`` file::
+
+      [oslo_policy]
+      enforce_new_defaults=False
+      enforce_scope=False
+
+    .. _`Policy New Defaults`: https://docs.openstack.org/nova/latest/configuration/policy.html
+    .. _`Policy Concepts`: https://docs.openstack.org/nova/latest/configuration/policy-concepts.html
