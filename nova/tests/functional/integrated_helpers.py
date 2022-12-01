@@ -633,6 +633,13 @@ class InstanceHelperMixin:
             return self._wait_for_state_change(server, 'SHUTOFF')
         return server
 
+    def _snapshot_server(self, server, snapshot_name):
+        """Create server snapshot."""
+        self.api.post_server_action(
+            server['id'],
+            {'createImage': {'name': snapshot_name}}
+        )
+
 
 class PlacementHelperMixin:
     """A helper mixin for interacting with placement."""

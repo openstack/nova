@@ -47,6 +47,13 @@ class CinderFixture(fixtures.Fixture):
     # This represents a bootable image-backed volume to test
     # boot-from-volume scenarios.
     IMAGE_BACKED_VOL = '6ca404f3-d844-4169-bb96-bc792f37de98'
+
+    # This represents a bootable image-backed volume to test
+    # boot-from-volume scenarios with
+    # os_require_quiesce
+    # hw_qemu_guest_agent
+    IMAGE_BACKED_VOL_QUIESCE = '6ca404f3-d844-4169-bb96-bc792f37de26'
+
     # This represents a bootable image-backed volume with required traits
     # as part of volume image metadata
     IMAGE_WITH_TRAITS_BACKED_VOL = '6194fc02-c60e-4a01-a8e5-600798208b5f'
@@ -156,6 +163,13 @@ class CinderFixture(fixtures.Fixture):
                 volume['volume_image_metadata'] = {
                     'image_id': '155d900f-4e14-4e4c-a73d-069cbf4541e6'
                 }
+
+            if volume_id == self.IMAGE_BACKED_VOL_QUIESCE:
+                volume['bootable'] = True
+                volume['volume_image_metadata'] = {
+                    "os_require_quiesce": "True",
+                    "hw_qemu_guest_agent": "True"
+            }
 
             if volume_id == self.IMAGE_WITH_TRAITS_BACKED_VOL:
                 volume['bootable'] = True
@@ -333,6 +347,10 @@ class CinderFixture(fixtures.Fixture):
             if 'reimage_reserved' not in kwargs:
                 raise exception.InvalidInput('reimage_reserved not specified')
 
+        def fake_get_absolute_limits(_self, context):
+            limits = {'totalSnapshotsUsed': 0, 'maxTotalSnapshots': -1}
+            return limits
+
         self.test.stub_out(
             'nova.volume.cinder.API.attachment_create', fake_attachment_create)
         self.test.stub_out(
@@ -375,6 +393,9 @@ class CinderFixture(fixtures.Fixture):
         self.test.stub_out(
             'nova.volume.cinder.API.reimage_volume',
             fake_reimage_volume)
+        self.test.stub_out(
+            'nova.volume.cinder.API.get_absolute_limits',
+            fake_get_absolute_limits)
 
     def volume_ids_for_instance(self, instance_uuid):
         for volume_id, attachments in self.volume_to_attachment.items():
