@@ -1421,8 +1421,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
             'block_device_mapping': [driver_bdm]
         }
 
-    @mock.patch.object(FAKE_CLIENT.volume_target, 'create')
-    def test__add_volume_target_info(self, mock_create):
+    def test__add_volume_target_info(self):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
 
@@ -1434,98 +1433,107 @@ class IronicDriverTestCase(test.NoDBTestCase):
         expected_properties = 'fake_data'
         expected_boot_index = 0
 
-        mock_create.assert_called_once_with(node_uuid=instance.node,
-                                            volume_type=expected_volume_type,
-                                            properties=expected_properties,
-                                            boot_index=expected_boot_index,
-                                            volume_id='fake-volume-id-1')
+        self.mock_conn.create_volume_target.assert_called_once_with(
+            node_id=instance.node,
+            volume_type=expected_volume_type,
+            properties=expected_properties,
+            boot_index=expected_boot_index,
+            volume_id='fake-volume-id-1',
+        )
 
-    @mock.patch.object(FAKE_CLIENT.volume_target, 'create')
-    def test__add_volume_target_info_empty_bdms(self, mock_create):
+    def test__add_volume_target_info_empty_bdms(self):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
 
         self.driver._add_volume_target_info(self.ctx, instance, None)
 
-        self.assertFalse(mock_create.called)
+        self.mock_conn.create_volume_target.assert_not_called()
 
-    @mock.patch.object(FAKE_CLIENT.volume_target, 'create')
-    def test__add_volume_target_info_failures(self, mock_create):
+    def test__add_volume_target_info_failures(self):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
 
         block_device_info = self._create_fake_block_device_info()
 
         exceptions = [
-            ironic_exception.BadRequest(),
-            ironic_exception.Conflict(),
+            sdk_exc.BadRequestException(),
+            sdk_exc.ConflictException(),
         ]
         for e in exceptions:
-            mock_create.side_effect = e
-            self.assertRaises(exception.InstanceDeployFailure,
-                              self.driver._add_volume_target_info,
-                              self.ctx, instance, block_device_info)
+            self.mock_conn.create_volume_target.side_effect = e
+            self.assertRaises(
+                exception.InstanceDeployFailure,
+                self.driver._add_volume_target_info,
+                self.ctx,
+                instance,
+                block_device_info,
+            )
 
-    @mock.patch.object(FAKE_CLIENT.volume_target, 'delete')
-    @mock.patch.object(FAKE_CLIENT.node, 'list_volume_targets')
-    def test__cleanup_volume_target_info(self, mock_lvt, mock_delete):
+    def test__cleanup_volume_target_info(self):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
-        mock_lvt.return_value = [ironic_utils.get_test_volume_target(
-            uuid='fake_uuid')]
+        self.mock_conn.volume_targets.return_value = [
+            ironic_utils.get_test_volume_target(uuid='fake_uuid'),
+        ]
 
         self.driver._cleanup_volume_target_info(instance)
         expected_volume_target_id = 'fake_uuid'
 
-        mock_delete.assert_called_once_with(expected_volume_target_id)
+        self.mock_conn.delete_volume_target.assert_called_once_with(
+            expected_volume_target_id,
+            ignore_missing=False,
+        )
 
-    @mock.patch.object(FAKE_CLIENT.volume_target, 'delete')
-    @mock.patch.object(FAKE_CLIENT.node, 'list_volume_targets')
-    def test__cleanup_volume_target_info_empty_targets(self, mock_lvt,
-                                                       mock_delete):
+    def test__cleanup_volume_target_info_empty_targets(self):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
-        mock_lvt.return_value = []
+        self.mock_conn.volume_targets.return_value = []
 
         self.driver._cleanup_volume_target_info(instance)
 
-        self.assertFalse(mock_delete.called)
+        self.mock_conn.delete_volume_target.assert_not_called()
 
-    @mock.patch.object(FAKE_CLIENT.volume_target, 'delete')
-    @mock.patch.object(FAKE_CLIENT.node, 'list_volume_targets')
-    def test__cleanup_volume_target_info_not_found(self, mock_lvt,
-                                                   mock_delete):
+    def test__cleanup_volume_target_info_not_found(self):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
-        mock_lvt.return_value = [
+        self.mock_conn.volume_targets.return_value = [
             ironic_utils.get_test_volume_target(uuid='fake_uuid1'),
             ironic_utils.get_test_volume_target(uuid='fake_uuid2'),
         ]
-        mock_delete.side_effect = [ironic_exception.NotFound('not found'),
-                                   None]
+        self.mock_conn.delete_volume_target.side_effect = [
+            sdk_exc.NotFoundException('not found'),
+            None,
+        ]
 
         self.driver._cleanup_volume_target_info(instance)
 
-        self.assertEqual([mock.call('fake_uuid1'), mock.call('fake_uuid2')],
-                         mock_delete.call_args_list)
+        self.mock_conn.delete_volume_target.assert_has_calls(
+            [
+                mock.call('fake_uuid1', ignore_missing=False),
+                mock.call('fake_uuid2', ignore_missing=False),
+            ]
+        )
 
-    @mock.patch.object(FAKE_CLIENT.volume_target, 'delete')
-    @mock.patch.object(FAKE_CLIENT.node, 'list_volume_targets')
-    def test__cleanup_volume_target_info_bad_request(self, mock_lvt,
-                                                     mock_delete):
+    def test__cleanup_volume_target_info_bad_request(self):
         node = ironic_utils.get_test_node(driver='fake')
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
-        mock_lvt.return_value = [
+        self.mock_conn.volume_targets.return_value = [
             ironic_utils.get_test_volume_target(uuid='fake_uuid1'),
             ironic_utils.get_test_volume_target(uuid='fake_uuid2'),
         ]
-        mock_delete.side_effect = [ironic_exception.BadRequest('error'),
-                                   None]
+        self.mock_conn.delete_volume_target.side_effect = [
+            sdk_exc.BadRequestException('error'),
+            None,
+        ]
 
         self.driver._cleanup_volume_target_info(instance)
 
-        self.assertEqual([mock.call('fake_uuid1'), mock.call('fake_uuid2')],
-                         mock_delete.call_args_list)
+        self.mock_conn.delete_volume_target.assert_has_calls(
+            [
+                mock.call('fake_uuid1', ignore_missing=False),
+                mock.call('fake_uuid2', ignore_missing=False),
+            ]
+        )
 
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT, 'node')

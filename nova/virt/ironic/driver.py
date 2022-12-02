@@ -464,37 +464,47 @@ class IronicDriver(virt_driver.ComputeDriver):
             driver_volume_type = connection_info['driver_volume_type']
 
             try:
-                self.ironicclient.call('volume_target.create',
-                                       node_uuid=instance.node,
-                                       volume_type=driver_volume_type,
-                                       properties=target_properties,
-                                       boot_index=bdm._bdm_obj.boot_index,
-                                       volume_id=bdm._bdm_obj.volume_id)
-            except (ironic.exc.BadRequest, ironic.exc.Conflict):
-                msg = (_("Failed to add volume target information of "
-                         "volume %(volume)s on node %(node)s when "
-                         "provisioning the instance")
-                       % {'volume': bdm._bdm_obj.volume_id,
-                          'node': instance.node})
-                LOG.error(msg, instance=instance)
+                self.ironic_connection.create_volume_target(
+                    node_id=instance.node,
+                    volume_type=driver_volume_type,
+                    properties=target_properties,
+                    boot_index=bdm._bdm_obj.boot_index,
+                    volume_id=bdm._bdm_obj.volume_id,
+                )
+            except (sdk_exc.BadRequestException, sdk_exc.ConflictException):
+                msg = _(
+                    "Failed to add volume target information of "
+                    "volume %(volume)s on node %(node)s when "
+                    "provisioning the instance"
+                )
+                LOG.error(
+                    msg,
+                    volume=bdm._bdm_obj.volume_id,
+                    node=instance.node,
+                    instance=instance,
+                )
                 raise exception.InstanceDeployFailure(msg)
 
     def _cleanup_volume_target_info(self, instance):
-        targets = self.ironicclient.call('node.list_volume_targets',
-                                         instance.node, detail=True)
-        for target in targets:
-            volume_target_id = target.uuid
+        for target in self.ironic_connection.volume_targets(
+            details=True,
+            node=instance.node,
+        ):
+            volume_target_id = target.id
             try:
-                self.ironicclient.call('volume_target.delete',
-                                       volume_target_id)
-            except ironic.exc.NotFound:
+                # we don't pass ignore_missing=True since we want to log
+                self.ironic_connection.delete_volume_target(
+                    volume_target_id,
+                    ignore_missing=False,
+                )
+            except sdk_exc.ResourceNotFound:
                 LOG.debug("Volume target information %(target)s of volume "
                           "%(volume)s is already removed from node %(node)s",
                           {'target': volume_target_id,
                            'volume': target.volume_id,
                            'node': instance.node},
                           instance=instance)
-            except ironic.exc.ClientException as e:
+            except sdk_exc.SDKException as e:
                 LOG.warning("Failed to remove volume target information "
                             "%(target)s of volume %(volume)s from node "
                             "%(node)s when unprovisioning the instance: "
