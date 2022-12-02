@@ -1535,31 +1535,19 @@ class IronicDriver(virt_driver.ComputeDriver):
         last_attempt = 5
         for attempt in range(0, last_attempt + 1):
             try:
-                self.ironicclient.call("node.vif_attach", node.uuid,
-                                       port_id, retry_on_conflict=False)
-            except ironic.exc.BadRequest as e:
-                # NOTE(danms): If we race with ironic startup, there
-                # will be no ironic-conductor running, which will
-                # give us a failure to do this plug operation. So,
-                # be graceful in that case and wait/retry.
-                # NOTE(mdbooth): This will be fixed in ironic by
-                # change I2c21baae. This will ensure ironic returns a 503 here,
-                # which will cause ironicclient to automatically retry for us.
-                # We can remove this workaround once we are confident that we
-                # are only running against ironic containing this fix.
-                if 'No conductor' in str(e) and attempt < last_attempt:
-                    LOG.warning('No ironic conductor is running; '
-                                'waiting...')
-                    time.sleep(10)
-                    continue
-
+                self.ironic_connection.attach_vif_to_node(
+                    node.uuid,
+                    port_id,
+                    retry_on_conflict=False,
+                )
+            except sdk_exc.BadRequestException as e:
                 msg = (_("Cannot attach VIF %(vif)s to the node %(node)s "
                          "due to error: %(err)s") % {
                              'vif': port_id,
                              'node': node.uuid, 'err': e})
                 LOG.error(msg)
                 raise exception.VirtualInterfacePlugException(msg)
-            except ironic.exc.Conflict:
+            except sdk_exc.ConflictException:
                 # NOTE (vsaienko) Return since the VIF is already attached.
                 return
 
@@ -1591,9 +1579,8 @@ class IronicDriver(virt_driver.ComputeDriver):
         for vif in network_info:
             port_id = str(vif['id'])
             try:
-                self.ironicclient.call("node.vif_detach", node.uuid,
-                                       port_id)
-            except ironic.exc.BadRequest:
+                self.ironic_connection.detach_vif_from_node(node.uuid, port_id)
+            except sdk_exc.BadRequestException:
                 LOG.debug("VIF %(vif)s isn't attached to Ironic node %(node)s",
                           {'vif': port_id, 'node': node.uuid})
 
