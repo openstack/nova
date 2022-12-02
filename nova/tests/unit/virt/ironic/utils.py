@@ -13,18 +13,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from openstack.baremetal.v1 import node as _node
+
 from nova import objects
 from nova.virt.ironic import client_wrapper
 from nova.virt.ironic import ironic_states
 
 
 def get_test_validation(**kw):
-    return type('interfaces', (object,),
-               {'power': kw.get('power', {'result': True}),
-                'deploy': kw.get('deploy', {'result': True}),
-                'console': kw.get('console', True),
-                'rescue': kw.get('rescue', True),
-                'storage': kw.get('storage', {'result': True})})()
+    result = {
+        'power': _node.ValidationResult(result=True, reason=None),
+        'deploy': _node.ValidationResult(result=True, reason=None),
+        'console': _node.ValidationResult(result=True, reason=None),
+        'rescue': _node.ValidationResult(result=True, reason=None),
+        'storage': _node.ValidationResult(result=True, reason=None),
+    }
+    result.update(kw)
+    return result
 
 
 def get_test_node(fields=None, **kw):
