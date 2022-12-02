@@ -540,8 +540,7 @@
         - nova-lvm
         - nova-multi-cell
         - nova-next
-        - nova-ovs-hybrid-plug:
-            voting: false
+        - nova-ovs-hybrid-plug
         - nova-tox-validate-backport:
             voting: false
         - nova-tox-functional-py38
