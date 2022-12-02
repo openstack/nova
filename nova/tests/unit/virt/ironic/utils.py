@@ -32,17 +32,13 @@ def get_test_validation(**kw):
 
 
 def get_test_node(fields=None, **kw):
-    # TODO(dustinc): Once the usages of id/uuid, maintenance/is_maintenance,
-    #  and portgroup/port_group are normalized, the duplicates can be removed
-    _id = kw.get('id') or kw.get('uuid',
-                                 'eeeeeeee-dddd-cccc-bbbb-aaaaaaaaaaaa')
-    _instance_id = kw.get('instance_id') or kw.get('instance_uuid')
-    _is_maintenance = kw.get('is_maintenance') or kw.get('maintenance', False)
-    node = {'uuid': _id,
-            'id': _id,
+    # NOTE(stephenfin): Prevent invalid properties making their way through
+    if 'uuid' in kw or 'instance_uuid' in kw or 'maintenance' in kw:
+        raise Exception('Invalid property provided')
+
+    node = {'id': kw.get('id', 'eeeeeeee-dddd-cccc-bbbb-aaaaaaaaaaaa'),
             'chassis_uuid': kw.get('chassis_uuid'),
-            'power_state': kw.get('power_state',
-                                  ironic_states.NOSTATE),
+            'power_state': kw.get('power_state', ironic_states.NOSTATE),
             'target_power_state': kw.get('target_power_state',
                                          ironic_states.NOSTATE),
             'provision_state': kw.get('provision_state',
@@ -50,58 +46,50 @@ def get_test_node(fields=None, **kw):
             'target_provision_state': kw.get('target_provision_state',
                                              ironic_states.NOSTATE),
             'last_error': kw.get('last_error'),
-            'instance_uuid': _instance_id,
-            'instance_id': _instance_id,
+            'instance_id': kw.get('instance_id'),
             'instance_info': kw.get('instance_info'),
             'driver': kw.get('driver', 'fake'),
             'driver_info': kw.get('driver_info', {}),
             'properties': kw.get('properties', {}),
             'reservation': kw.get('reservation'),
-            'maintenance': _is_maintenance,
-            'is_maintenance': _is_maintenance,
+            'is_maintenance': kw.get('is_maintenance'),
             'network_interface': kw.get('network_interface'),
             'resource_class': kw.get('resource_class'),
             'traits': kw.get('traits', []),
             'extra': kw.get('extra', {}),
             'updated_at': kw.get('created_at'),
             'created_at': kw.get('updated_at')}
+
     if fields is not None:
         node = {key: value for key, value in node.items() if key in fields}
+
     return type('node', (object,), node)()
 
 
 def get_test_port(**kw):
-    # TODO(dustinc): Once the usages of id/uuid, maintenance/is_maintenance,
-    #  and portgroup/port_group are normalized, the duplicates can be removed
-    _id = kw.get('id') or kw.get('uuid',
-                                 'gggggggg-uuuu-qqqq-ffff-llllllllllll')
-    _node_id = kw.get('node_uuid') or kw.get('node_id', get_test_node().id)
-    _port_group_id = kw.get('port_group_id') or kw.get('portgroup_uuid')
+    # NOTE(stephenfin): Prevent invalid properties making their way through
+    if 'uuid' in kw or 'node_uuid' in kw or 'portgroup_uuid' in kw:
+        raise Exception('Invalid property provided')
+
     return type('port', (object,),
-               {'uuid': _id,
-                'id': _id,
-                'node_uuid': _node_id,
-                'node_id': _node_id,
+               {'id': kw.get('id', 'gggggggg-uuuu-qqqq-ffff-llllllllllll'),
+                'node_id': kw.get('node_id', get_test_node().id),
                 'address': kw.get('address', 'FF:FF:FF:FF:FF:FF'),
                 'extra': kw.get('extra', {}),
                 'internal_info': kw.get('internal_info', {}),
-                'portgroup_uuid': _port_group_id,
-                'port_group_id': _port_group_id,
+                'port_group_id': kw.get('port_group_id'),
                 'created_at': kw.get('created_at'),
                 'updated_at': kw.get('updated_at')})()
 
 
 def get_test_portgroup(**kw):
-    # TODO(dustinc): Once the usages of id/uuid, maintenance/is_maintenance,
-    #  and portgroup/port_group are normalized, the duplicates can be removed
-    _id = kw.get('id') or kw.get('uuid',
-                                 'deaffeed-1234-5678-9012-fedcbafedcba')
-    _node_id = kw.get('node_id') or kw.get('node_uuid', get_test_node().id)
+    # NOTE(stephenfin): Prevent invalid properties making their way through
+    if 'uuid' in kw or 'node_uuid' in kw:
+        raise Exception('Invalid property provided')
+
     return type('portgroup', (object,),
-               {'uuid': _id,
-                'id': _id,
-                'node_uuid': _node_id,
-                'node_id': _node_id,
+               {'id': kw.get('id', 'deaffeed-1234-5678-9012-fedcbafedcba'),
+                'node_id': kw.get('node_id', get_test_node().id),
                 'address': kw.get('address', 'EE:EE:EE:EE:EE:EE'),
                 'extra': kw.get('extra', {}),
                 'internal_info': kw.get('internal_info', {}),
@@ -109,7 +97,8 @@ def get_test_portgroup(**kw):
                 'mode': kw.get('mode', 'active-backup'),
                 'name': kw.get('name'),
                 'standalone_ports_supported': kw.get(
-                    'standalone_ports_supported', True),
+                    'standalone_ports_supported', True,
+                ),
                 'created_at': kw.get('created_at'),
                 'updated_at': kw.get('updated_at')})()
 
@@ -133,16 +122,13 @@ def get_test_vif(**kw):
 
 
 def get_test_volume_connector(**kw):
-    # TODO(dustinc): Once the usages of id/uuid, maintenance/is_maintenance,
-    #  and portgroup/port_group are normalized, the duplicates can be removed
-    _id = kw.get('id') or kw.get('uuid',
-                                 'hhhhhhhh-qqqq-uuuu-mmmm-bbbbbbbbbbbb')
-    _node_id = kw.get('node_id') or kw.get('node_uuid', get_test_node().id)
+    # NOTE(stephenfin): Prevent invalid properties making their way through
+    if 'uuid' in kw or 'node_uuid' in kw:
+        raise Exception('Invalid property provided')
+
     return type('volume_connector', (object,),
-               {'uuid': _id,
-                'id': _id,
-                'node_uuid': _node_id,
-                'node_id': _node_id,
+               {'id': kw.get('id', 'hhhhhhhh-qqqq-uuuu-mmmm-bbbbbbbbbbbb'),
+                'node_id': kw.get('node_id', get_test_node().id),
                 'type': kw.get('type', 'iqn'),
                 'connector_id': kw.get('connector_id', 'iqn.test'),
                 'extra': kw.get('extra', {}),
@@ -151,16 +137,13 @@ def get_test_volume_connector(**kw):
 
 
 def get_test_volume_target(**kw):
-    # TODO(dustinc): Once the usages of id/uuid, maintenance/is_maintenance,
-    #  and portgroup/port_group are normalized, the duplicates can be removed
-    _id = kw.get('id') or kw.get('uuid',
-                                 'aaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee')
-    _node_id = kw.get('node_id') or kw.get('node_uuid', get_test_node().id)
+    # NOTE(stephenfin): Prevent invalid properties making their way through
+    if 'uuid' in kw or 'node_uuid' in kw:
+        raise Exception('Invalid property provided')
+
     return type('volume_target', (object,),
-                {'uuid': _id,
-                 'id': _id,
-                 'node_uuid': _node_id,
-                 'node_id': _node_id,
+                {'id': kw.get('id', 'aaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'),
+                 'node_id': kw.get('node_id', get_test_node().id),
                  'volume_type': kw.get('volume_type', 'iscsi'),
                  'properties': kw.get('properties', {}),
                  'boot_index': kw.get('boot_index', 0),
