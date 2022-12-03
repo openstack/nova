@@ -3250,7 +3250,13 @@ class LibvirtDriver(driver.ComputeDriver):
                      '[Error Code %(error_code)s] %(ex)s')
                    % {'instance_name': instance.name,
                       'error_code': error_code, 'ex': err_msg})
-            raise exception.InternalError(msg)
+
+            if error_code == libvirt.VIR_ERR_AGENT_UNRESPONSIVE:
+                msg += (", libvirt cannot connect to the qemu-guest-agent"
+                    " inside the instance.")
+                raise exception.InstanceQuiesceFailed(reason=msg)
+            else:
+                raise exception.InternalError(msg)
 
     def quiesce(self, context, instance, image_meta):
         """Freeze the guest filesystems to prepare for snapshot.

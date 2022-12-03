@@ -58,10 +58,11 @@ class LibvirtDriverTests(
             nova_fixtures.libvirt.Domain, 'fsFreeze'
         ) as mock_obj:
             ex = nova_fixtures.libvirt.libvirtError("Error")
+            ex.err = (nova_fixtures.libvirt.VIR_ERR_AGENT_UNRESPONSIVE,)
 
             mock_obj.side_effect = ex
             excep = self.assertRaises(
                     client.OpenStackApiException,
                     self._snapshot_server, server, "snapshot-1"
                 )
-            self.assertEqual(500, excep.response.status_code)
+            self.assertEqual(409, excep.response.status_code)

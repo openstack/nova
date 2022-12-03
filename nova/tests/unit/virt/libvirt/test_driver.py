@@ -9244,6 +9244,26 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                              image_meta))
             mock_fsthaw.assert_called_once_with()
 
+    def test_set_quiesced_agent_connection_fails(self):
+        # This is require to mock guest host
+        self.create_fake_libvirt_mock(lookupByUUIDString=self.fake_lookup)
+
+        with mock.patch.object(FakeVirtDomain, "fsFreeze") as mock_fsfreeze:
+            error = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                "QEMU guest agent is not connected",
+                error_code=fakelibvirt.VIR_ERR_AGENT_UNRESPONSIVE)
+
+            mock_fsfreeze.side_effect = error
+            mock_fsfreeze.error_code = error.get_error_code()
+
+            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+            instance = objects.Instance(**self.test_instance)
+            image_meta = objects.ImageMeta.from_dict(
+                {"properties": {"hw_qemu_guest_agent": "yes", }})
+            self.assertRaises(exception.InstanceQuiesceFailed,
+                drvr._set_quiesced, self.context, instance, image_meta, True)
+
     def test_create_snapshot_metadata(self):
         base = objects.ImageMeta.from_dict(
             {'disk_format': 'raw'})

@@ -217,6 +217,11 @@ class InvalidVIOMMUArchitecture(Invalid):
                 "but given architecture %(arch)s.")
 
 
+class InstanceQuiesceFailed(Invalid):
+    msg_fmt = _("Failed to quiesce instance: %(reason)s")
+    code = 409
+
+
 class InvalidConfiguration(Invalid):
     msg_fmt = _("Configuration is Invalid.")
 
