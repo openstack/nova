@@ -12,7 +12,6 @@
 
 from oslo_utils.fixture import uuidsentinel as uuids
 
-from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 
@@ -70,10 +69,9 @@ class ImagesTest(integrated_helpers._IntegratedTestBase):
         server = self.api.post_server({"server": server})
         server = self._wait_for_state_change(server, 'ACTIVE')
 
-        # Create an admin API fixture with a unique project ID.
-        admin_api = self.useFixture(
-            nova_fixtures.OSAPIFixture(
-                project_id=uuids.admin_project)).admin_api
+        # use an admin API with a unique project ID.
+        admin_api = self.api_fixture.alternative_admin_api
+        admin_api.project_id = uuids.admin_project
 
         # Create a snapshot of the server using the admin project.
         name = 'admin-created-snapshot'

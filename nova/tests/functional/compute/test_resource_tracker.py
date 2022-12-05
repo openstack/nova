@@ -29,7 +29,6 @@ from nova import conf
 from nova import context
 from nova import objects
 from nova import test
-from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import fixtures as func_fixtures
 from nova.tests.functional import integrated_helpers
 from nova.virt import driver as virt_driver
@@ -694,15 +693,6 @@ class TestProviderConfig(integrated_helpers.ProviderUsageBaseTestCase):
         feature a vm cannot be spawning using a custom trait and then start a
         compute service that provides that trait.
         """
-
-        self.useFixture(nova_fixtures.NeutronFixture(self))
-        self.useFixture(nova_fixtures.GlanceFixture(self))
-
-        # Start nova services.
-        self.api = self.useFixture(nova_fixtures.OSAPIFixture(
-            api_version='v2.1')).admin_api
-        self.api.microversion = 'latest'
-        self.start_service('conductor')
         # start nova-compute that will not have the additional trait.
         self._start_compute("fake-host-1")
 

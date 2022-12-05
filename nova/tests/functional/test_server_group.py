@@ -64,12 +64,12 @@ class ServerGroupTestBase(test.TestCase,
         self.useFixture(nova_fixtures.NeutronFixture(self))
 
         self.useFixture(func_fixtures.PlacementFixture())
-        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+        self.api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
 
-        self.api = api_fixture.api
+        self.api = self.api_fixture.api
         self.api.microversion = self.microversion
-        self.admin_api = api_fixture.admin_api
+        self.admin_api = self.api_fixture.admin_api
         self.admin_api.microversion = self.microversion
 
         self.start_service('conductor')
@@ -174,13 +174,8 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
         # Create an API using project 'openstack1'.
         # This is a non-admin API.
-        #
-        # NOTE(sdague): this is actually very much *not* how this
-        # fixture should be used. This actually spawns a whole
-        # additional API server. Should be addressed in the future.
-        api_openstack1 = self.useFixture(nova_fixtures.OSAPIFixture(
-            api_version=self.api_major_version,
-            project_id=PROJECT_ID_ALT)).api
+        api_openstack1 = self.api_fixture.alternative_api
+        api_openstack1.project_id = PROJECT_ID_ALT
         api_openstack1.microversion = self.microversion
 
         # Create a server group in project 'openstack'
