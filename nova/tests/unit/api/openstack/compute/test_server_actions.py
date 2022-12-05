@@ -66,11 +66,11 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         self.controller = self._get_controller()
         self.compute_api = self.controller.compute_api
-        # We don't care about anything getting as far as hitting the compute
-        # RPC API so we just mock it out here.
-        mock_rpcapi = mock.patch.object(self.compute_api, 'compute_rpcapi')
-        mock_rpcapi.start()
-        self.addCleanup(mock_rpcapi.stop)
+        # In most of the cases we don't care about anything getting as far as
+        # hitting the compute RPC API so we just mock it out here.
+        patcher_rpcapi = mock.patch.object(self.compute_api, 'compute_rpcapi')
+        self.mock_rpcapi = patcher_rpcapi.start()
+        self.addCleanup(patcher_rpcapi.stop)
         # The project_id here matches what is used by default in
         # fake_compute_get which need to match for policy checks.
         self.req = fakes.HTTPRequest.blank('',
@@ -1079,21 +1079,23 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         snapshot = dict(id=_fake_id('d'))
 
+        self.mock_rpcapi.quiesce_instance.side_effect = (
+            exception.InstanceQuiesceNotSupported(
+                instance_id="fake", reason="test"
+            )
+        )
+
         with test.nested(
             mock.patch.object(
                 self.controller.compute_api.volume_api, 'get_absolute_limits',
                 return_value={'totalSnapshotsUsed': 0,
                               'maxTotalSnapshots': 10}),
-            mock.patch.object(self.controller.compute_api.compute_rpcapi,
-                'quiesce_instance',
-                side_effect=exception.InstanceQuiesceNotSupported(
-                    instance_id='fake', reason='test')),
             mock.patch.object(self.controller.compute_api.volume_api, 'get',
                               return_value=volume),
             mock.patch.object(self.controller.compute_api.volume_api,
                               'create_snapshot_force',
                               return_value=snapshot),
-        ) as (mock_get_limits, mock_quiesce, mock_vol_get, mock_vol_create):
+        ) as (mock_get_limits, mock_vol_get, mock_vol_create):
 
             if mock_vol_create_side_effect:
                 mock_vol_create.side_effect = mock_vol_create_side_effect
@@ -1125,7 +1127,7 @@ class ServerActionsControllerTestV21(test.TestCase):
             for k in extra_properties.keys():
                 self.assertEqual(properties[k], extra_properties[k])
 
-            mock_quiesce.assert_called_once_with(mock.ANY, mock.ANY)
+            self.mock_rpcapi.quiesce_instance.assert_called_once()
             mock_vol_get.assert_called_once_with(mock.ANY, volume['id'])
             mock_vol_create.assert_called_once_with(mock.ANY, volume['id'],
                                                     mock.ANY, mock.ANY)
@@ -1189,21 +1191,23 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         snapshot = dict(id=_fake_id('d'))
 
+        self.mock_rpcapi.quiesce_instance.side_effect = (
+            exception.InstanceQuiesceNotSupported(
+                instance_id="fake", reason="test"
+            )
+        )
+
         with test.nested(
             mock.patch.object(
                 self.controller.compute_api.volume_api, 'get_absolute_limits',
                 return_value={'totalSnapshotsUsed': 0,
                               'maxTotalSnapshots': 10}),
-            mock.patch.object(self.controller.compute_api.compute_rpcapi,
-                'quiesce_instance',
-                side_effect=exception.InstanceQuiesceNotSupported(
-                    instance_id='fake', reason='test')),
             mock.patch.object(self.controller.compute_api.volume_api, 'get',
                               return_value=volume),
             mock.patch.object(self.controller.compute_api.volume_api,
                               'create_snapshot_force',
                               return_value=snapshot),
-        ) as (mock_get_limits, mock_quiesce, mock_vol_get, mock_vol_create):
+        ) as (mock_get_limits, mock_vol_get, mock_vol_create):
 
             response = self.controller._action_create_image(self.req,
                 FAKE_UUID, body=body)
@@ -1218,7 +1222,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                 for key, val in extra_metadata.items():
                     self.assertEqual(properties[key], val)
 
-            mock_quiesce.assert_called_once_with(mock.ANY, mock.ANY)
+            self.mock_rpcapi.quiesce_instance.assert_called_once()
             mock_vol_get.assert_called_once_with(mock.ANY, volume['id'])
             mock_vol_create.assert_called_once_with(mock.ANY, volume['id'],
                                                     mock.ANY, mock.ANY)

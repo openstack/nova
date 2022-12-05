@@ -142,15 +142,15 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
                     pci_info.get_pci_address_mac_mapping())
             # This is fun. Firstly we need to do a global'ish mock so we can
             # actually start the service.
-            with mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                            return_value=fake_connection):
-                compute = self.start_service('compute', host=hostname)
-                # Once that's done, we need to tweak the compute "service" to
-                # make sure it returns unique objects. We do this inside the
-                # mock context to avoid a small window between the end of the
-                # context and the tweaking where get_connection would revert to
-                # being an autospec mock.
-                compute.driver._host.get_connection = lambda: fake_connection
+            orig_con = self.mock_conn.return_value
+            self.mock_conn.return_value = fake_connection
+            compute = self.start_service('compute', host=hostname)
+            # Once that's done, we need to tweak the compute "service" to
+            # make sure it returns unique objects.
+            compute.driver._host.get_connection = lambda: fake_connection
+            # Then we revert the local mock tweaking so the next compute can
+            # get its own
+            self.mock_conn.return_value = orig_con
             return compute
 
         # ensure we haven't already registered services with these hostnames

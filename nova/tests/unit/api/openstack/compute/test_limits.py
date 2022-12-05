@@ -30,7 +30,6 @@ from nova.api.openstack import wsgi
 import nova.context
 from nova import exception
 from nova.policies import limits as l_policies
-from nova import quota
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
@@ -48,12 +47,12 @@ class BaseLimitTestSuite(test.NoDBTestCase):
             return {k: dict(limit=v, in_use=v // 2)
                     for k, v in self.absolute_limits.items()}
 
-        mock_get_project_quotas = mock.patch.object(
+        patcher_get_project_quotas = mock.patch.object(
             nova.quota.QUOTAS,
             "get_project_quotas",
-            side_effect = stub_get_project_quotas)
-        mock_get_project_quotas.start()
-        self.addCleanup(mock_get_project_quotas.stop)
+            side_effect=stub_get_project_quotas)
+        self.mock_get_project_quotas = patcher_get_project_quotas.start()
+        self.addCleanup(patcher_get_project_quotas.stop)
         patcher = self.mock_can = mock.patch('nova.context.RequestContext.can')
         self.mock_can = patcher.start()
         self.addCleanup(patcher.stop)
@@ -150,16 +149,14 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
             return {k: dict(limit=v, in_use=v // 2)
                     for k, v in self.absolute_limits.items()}
 
-        with mock.patch('nova.quota.QUOTAS.get_project_quotas') as \
-                get_project_quotas:
-            get_project_quotas.side_effect = _get_project_quotas
+        self.mock_get_project_quotas.side_effect = _get_project_quotas
 
-            response = request.get_response(self.controller)
+        response = request.get_response(self.controller)
 
-            body = jsonutils.loads(response.body)
-            self.assertEqual(expected, body)
-            get_project_quotas.assert_called_once_with(context, tenant_id,
-                                                       usages=True)
+        body = jsonutils.loads(response.body)
+        self.assertEqual(expected, body)
+        self.mock_get_project_quotas.assert_called_once_with(
+            context, tenant_id, usages=True)
 
     def _do_test_used_limits(self, reserved):
         request = self._get_index_request(tenant_id=None)
@@ -182,8 +179,7 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
         def stub_get_project_quotas(context, project_id, usages=True):
             return limits
 
-        self.stub_out('nova.quota.QUOTAS.get_project_quotas',
-                      stub_get_project_quotas)
+        self.mock_get_project_quotas.side_effect = stub_get_project_quotas
 
         res = request.get_response(self.controller)
         body = jsonutils.loads(res.body)
@@ -207,15 +203,17 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
                                            user_id=user_id,
                                            project_id=project_id)
         context = fake_req.environ["nova.context"]
-        with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
-                              return_value={}) as mock_get_quotas:
-            fake_req.get_response(self.controller)
-            self.assertEqual(2, self.mock_can.call_count)
-            self.mock_can.assert_called_with(
-                l_policies.OTHER_PROJECT_LIMIT_POLICY_NAME,
-                target={"project_id": tenant_id})
-            mock_get_quotas.assert_called_once_with(context,
-                tenant_id, usages=True)
+        self.mock_get_project_quotas.side_effect = None
+        self.mock_get_project_quotas.return_value = {}
+
+        fake_req.get_response(self.controller)
+        self.assertEqual(2, self.mock_can.call_count)
+        self.mock_can.assert_called_with(
+            l_policies.OTHER_PROJECT_LIMIT_POLICY_NAME,
+            target={'project_id': 'abcd'}
+        )
+        self.mock_get_project_quotas.assert_called_once_with(context,
+            tenant_id, usages=True)
 
     def _test_admin_can_fetch_used_limits_for_own_project(self, req_get):
         project_id = "123456"
@@ -227,11 +225,12 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
                                            project_id=project_id)
         context = fake_req.environ["nova.context"]
 
-        with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
-                               return_value={}) as mock_get_quotas:
-            fake_req.get_response(self.controller)
-            mock_get_quotas.assert_called_once_with(context,
-                project_id, usages=True)
+        self.mock_get_project_quotas.side_effect = None
+        self.mock_get_project_quotas.return_value = {}
+
+        fake_req.get_response(self.controller)
+        self.mock_get_project_quotas.assert_called_once_with(
+            context, project_id, usages=True)
 
     def test_admin_can_fetch_used_limits_for_own_project(self):
         req_get = {}
@@ -259,12 +258,13 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
         project_id = "123456"
         fake_req = self._get_index_request(project_id=project_id)
         context = fake_req.environ["nova.context"]
-        with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
-                               return_value={}) as mock_get_quotas:
-            fake_req.get_response(self.controller)
+        self.mock_get_project_quotas.side_effect = None
+        self.mock_get_project_quotas.return_value = {}
 
-            mock_get_quotas.assert_called_once_with(context,
-                project_id, usages=True)
+        fake_req.get_response(self.controller)
+
+        self.mock_get_project_quotas.assert_called_once_with(
+            context, project_id, usages=True)
 
     def test_used_ram_added(self):
         fake_req = self._get_index_request()
@@ -272,28 +272,26 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
         def stub_get_project_quotas(context, project_id, usages=True):
             return {'ram': {'limit': 512, 'in_use': 256}}
 
-        with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
-                               side_effect=stub_get_project_quotas
-                               ) as mock_get_quotas:
+        self.mock_get_project_quotas.side_effect = stub_get_project_quotas
 
-            res = fake_req.get_response(self.controller)
-            body = jsonutils.loads(res.body)
-            abs_limits = body['limits']['absolute']
-            self.assertIn('totalRAMUsed', abs_limits)
-            self.assertEqual(256, abs_limits['totalRAMUsed'])
-            self.assertEqual(1, mock_get_quotas.call_count)
+        res = fake_req.get_response(self.controller)
+        body = jsonutils.loads(res.body)
+        abs_limits = body['limits']['absolute']
+        self.assertIn('totalRAMUsed', abs_limits)
+        self.assertEqual(256, abs_limits['totalRAMUsed'])
+        self.assertEqual(1, self.mock_get_project_quotas.call_count)
 
     def test_no_ram_quota(self):
         fake_req = self._get_index_request()
 
-        with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
-                               return_value={}) as mock_get_quotas:
+        self.mock_get_project_quotas.side_effect = None
+        self.mock_get_project_quotas.return_value = {}
 
-            res = fake_req.get_response(self.controller)
-            body = jsonutils.loads(res.body)
-            abs_limits = body['limits']['absolute']
-            self.assertNotIn('totalRAMUsed', abs_limits)
-            self.assertEqual(1, mock_get_quotas.call_count)
+        res = fake_req.get_response(self.controller)
+        body = jsonutils.loads(res.body)
+        abs_limits = body['limits']['absolute']
+        self.assertNotIn('totalRAMUsed', abs_limits)
+        self.assertEqual(1, self.mock_get_project_quotas.call_count)
 
 
 class FakeHttplibSocket(object):
@@ -395,25 +393,24 @@ class LimitsControllerTestV236(BaseLimitTestSuite):
             return {k: dict(limit=v, in_use=v // 2)
                     for k, v in absolute_limits.items()}
 
-        with mock.patch('nova.quota.QUOTAS.get_project_quotas') as \
-                get_project_quotas:
-            get_project_quotas.side_effect = _get_project_quotas
-            response = self.controller.index(self.req)
-            expected_response = {
-                "limits": {
-                    "rate": [],
-                    "absolute": {
-                        "maxTotalRAMSize": 512,
-                        "maxTotalInstances": 5,
-                        "maxTotalCores": 21,
-                        "maxTotalKeypairs": 10,
-                        "totalRAMUsed": 256,
-                        "totalCoresUsed": 10,
-                        "totalInstancesUsed": 2,
-                    },
+        self.mock_get_project_quotas.side_effect = _get_project_quotas
+
+        response = self.controller.index(self.req)
+        expected_response = {
+            "limits": {
+                "rate": [],
+                "absolute": {
+                    "maxTotalRAMSize": 512,
+                    "maxTotalInstances": 5,
+                    "maxTotalCores": 21,
+                    "maxTotalKeypairs": 10,
+                    "totalRAMUsed": 256,
+                    "totalCoresUsed": 10,
+                    "totalInstancesUsed": 2,
                 },
-            }
-            self.assertEqual(expected_response, response)
+            },
+        }
+        self.assertEqual(expected_response, response)
 
 
 class LimitsControllerTestV239(BaseLimitTestSuite):
@@ -433,21 +430,20 @@ class LimitsControllerTestV239(BaseLimitTestSuite):
             return {k: dict(limit=v, in_use=v // 2)
                     for k, v in absolute_limits.items()}
 
-        with mock.patch('nova.quota.QUOTAS.get_project_quotas') as \
-                get_project_quotas:
-            get_project_quotas.side_effect = _get_project_quotas
-            response = self.controller.index(self.req)
-            # staring from version 2.39 there is no 'maxImageMeta' field
-            # in response after removing 'image-metadata' proxy API
-            expected_response = {
-                "limits": {
-                    "rate": [],
-                    "absolute": {
-                        "maxServerMeta": 1,
-                    },
+        self.mock_get_project_quotas.side_effect = _get_project_quotas
+
+        response = self.controller.index(self.req)
+        # starting from version 2.39 there is no 'maxImageMeta' field
+        # in response after removing 'image-metadata' proxy API
+        expected_response = {
+            "limits": {
+                "rate": [],
+                "absolute": {
+                    "maxServerMeta": 1,
                 },
-            }
-            self.assertEqual(expected_response, response)
+            },
+        }
+        self.assertEqual(expected_response, response)
 
 
 class LimitsControllerTestV275(BaseLimitTestSuite):
@@ -466,10 +462,9 @@ class LimitsControllerTestV275(BaseLimitTestSuite):
             return {k: dict(limit=v, in_use=v // 2)
                     for k, v in absolute_limits.items()}
 
-        with mock.patch('nova.quota.QUOTAS.get_project_quotas') as \
-                get_project_quotas:
-            get_project_quotas.side_effect = _get_project_quotas
-            self.controller.index(req)
+        self.mock_get_project_quotas.side_effect = _get_project_quotas
+        self.controller.index(req)
+        self.controller.index(req)
 
     def test_index_additional_query_param(self):
         req = fakes.HTTPRequest.blank("/?unkown=fake",

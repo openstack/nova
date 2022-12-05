@@ -6931,14 +6931,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[5].rate_bytes, 1024)
         self.assertEqual(cfg.devices[5].rate_period, 2)
 
-    @mock.patch('nova.virt.libvirt.driver.os.path.exists')
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, False)
-    def test_get_guest_config_with_rng_backend(self, mock_path):
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, result=False, other=True)
+    def test_get_guest_config_with_rng_backend(self):
         self.flags(virt_type='kvm',
                    rng_dev_path='/dev/hw_rng',
                    group='libvirt')
         self.flags(pointer_model='ps2mouse')
-        mock_path.return_value = True
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
@@ -7548,11 +7546,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
-    @mock.patch('os.path.exists', return_value=True)
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, False)
-    def test_get_guest_config_aarch64(
-        self, mock_path_exists, mock_numa, mock_storage,
-    ):
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, result=False, other=True)
+    def test_get_guest_config_aarch64(self, mock_numa, mock_storage):
         TEST_AMOUNT_OF_PCIE_SLOTS = 8
         CONF.set_override("num_pcie_ports", TEST_AMOUNT_OF_PCIE_SLOTS,
                 group='libvirt')
@@ -7572,7 +7567,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         cfg = drvr._get_guest_config(instance_ref,
                                      _fake_network_info(self),
                                      image_meta, disk_info)
-        self.assertTrue(mock_path_exists.called)
         self.assertEqual(cfg.os_mach_type, "virt")
 
         num_ports = 0
@@ -7589,10 +7583,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
-    @mock.patch('os.path.exists', return_value=True)
-    @test.patch_exists(SEV_KERNEL_PARAM_FILE, False)
+    @test.patch_exists(SEV_KERNEL_PARAM_FILE, result=False, other=True)
     def test_get_guest_config_aarch64_with_graphics(
-        self, mock_path_exists, mock_numa, mock_storage,
+        self, mock_numa, mock_storage,
     ):
         self.mock_uname.return_value = fakelibvirt.os_uname(
             'Linux', '', '5.4.0-0-generic', '', fields.Architecture.AARCH64)
@@ -7602,7 +7595,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         cfg = self._get_guest_config_with_graphics()
 
-        self.assertTrue(mock_path_exists.called)
         self.assertEqual(cfg.os_mach_type, "virt")
 
         usbhost_exists = False
@@ -11321,13 +11313,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_assert_dest_node_has_enough_disk')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                '_assert_dest_node_has_enough_disk')
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_is_shared_block_storage')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
                 '_check_shared_storage_test_file')
     def test_check_can_live_migration_source_disk_over_commit_none(self,
-            mock_check, mock_shared_block, mock_enough, mock_disk_check):
+            mock_check, mock_shared_block, mock_disk_check):
 
         mock_check.return_value = False
         mock_shared_block.return_value = False
@@ -15363,8 +15353,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             filename=filename, size=100 * units.Gi, ephemeral_size=mock.ANY,
             specified_fs=None)
 
-    @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache')
-    def test_create_image_resize_snap_backend(self, mock_cache):
+    def test_create_image_resize_snap_backend(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         instance.task_state = task_states.RESIZE_FINISH
@@ -21852,11 +21841,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
                           self.drvr.migrate_disk_and_power_off,
                           'ctx', instance, '10.0.0.1', flavor_obj, None)
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '._get_instance_disk_info')
     @mock.patch('nova.virt.driver.block_device_info_get_ephemerals')
-    def test_migrate_disk_and_power_off_resize_error_eph(self, mock_get,
-                                                         mock_get_disk_info):
+    def test_migrate_disk_and_power_off_resize_error_eph(self, mock_get):
         mappings = [
             {
                  'device_name': '/dev/sdb4',
@@ -21903,7 +21889,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         # Old flavor, eph is 20, real disk is 3, target is 2, fail
         flavor = {'root_gb': 10, 'ephemeral_gb': 2}
         flavor_obj = objects.Flavor(**flavor)
-        mock_get_disk_info.return_value = fake_disk_info_json(instance)
 
         self.assertRaises(
             exception.InstanceFaultRollback,
@@ -25353,9 +25338,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase, TraitsComparisonMixin):
         }
         self._test_get_gpu_inventories(drvr, expected, ['nvidia-11'])
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '._get_mdev_capable_devices')
-    def test_get_gpu_inventories_with_two_types(self, get_mdev_capable_devs):
+    def test_get_gpu_inventories_with_two_types(self):
         self.flags(enabled_mdev_types=['nvidia-11', 'nvidia-12'],
                    group='devices')
         # we need to call the below again to ensure the updated
@@ -28147,13 +28130,11 @@ class LVMSnapshotTests(_BaseSnapshotTests):
                 new=mock.Mock(return_value=None))
     @mock.patch('nova.virt.libvirt.utils.get_disk_type_from_path',
                 new=mock.Mock(return_value='lvm'))
-    @mock.patch('nova.virt.libvirt.utils.file_open',
-                side_effect=[io.BytesIO(b''), io.BytesIO(b'')])
     @mock.patch.object(libvirt_driver.imagebackend.images,
                        'convert_image')
     @mock.patch.object(libvirt_driver.imagebackend.lvm, 'volume_info')
     def _test_lvm_snapshot(self, disk_format, mock_volume_info,
-                           mock_convert_image, mock_file_open):
+                           mock_convert_image):
         self.flags(images_type='lvm',
                    images_volume_group='nova-vg', group='libvirt')
 
