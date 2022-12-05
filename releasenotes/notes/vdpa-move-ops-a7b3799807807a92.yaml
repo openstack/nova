@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    When vDPA was first introduced move operations were implemented in the code
+    but untested either in a real environment or in functional tests. Due to
+    this gap nova elected to block move operations for instance with vDPA
+    devices. All move operations except for live migration have now been tested
+    and found to indeed work so the API blocks have now been removed and
+    functional tests introduced. Other operations such as suspend and
+    live migration require code changes to support and will be enabled as new
+    features in the future.
