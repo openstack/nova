@@ -3512,15 +3512,15 @@ class API:
                   migration.get('status') == 'reverted')
         return instance.migration_context.get_pci_mapping_for_migration(revert)
 
-    def _get_port_pci_slot(self, context, instance, port):
-        """Find the PCI address of the device corresponding to the port.
+    def _get_port_pci_dev(self, context, instance, port):
+        """Find the PCI device corresponding to the port.
         Assumes the port is an SRIOV one.
 
         :param context: The request context.
         :param instance: The instance to which the port is attached.
         :param port: The Neutron port, as obtained from the Neutron API
             JSON form.
-        :return: The PCI address as a string, or None if unable to find.
+        :return: The PciDevice object, or None if unable to find.
         """
         # Find the port's PCIRequest, or return None
         for r in instance.pci_requests.requests:
@@ -3540,8 +3540,7 @@ class API:
             LOG.debug('No PCI device found for request %s',
                       request.request_id, instance=instance)
             return None
-        # Return the device's PCI address
-        return device.address
+        return device
 
     def _update_port_binding_for_instance(
             self, context, instance, host, migration=None,
@@ -3609,9 +3608,11 @@ class API:
                 # need to figure out the pci_slot from the InstancePCIRequest
                 # and PciDevice objects.
                 else:
-                    pci_slot = self._get_port_pci_slot(context, instance, p)
-                    if pci_slot:
-                        binding_profile.update({'pci_slot': pci_slot})
+                    pci_dev = self._get_port_pci_dev(context, instance, p)
+                    if pci_dev:
+                        binding_profile.update(
+                            self._get_pci_device_profile(pci_dev)
+                        )
                         updates[constants.BINDING_PROFILE] = binding_profile
 
             # NOTE(gibi): during live migration the conductor already sets the

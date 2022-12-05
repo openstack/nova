@@ -7085,7 +7085,7 @@ class TestAPI(TestAPIBase):
                               self.context, uuids.subnet_id)
 
     @mock.patch.object(neutronapi.LOG, 'debug')
-    def test_get_port_pci_slot(self, mock_debug):
+    def test_get_port_pci_dev(self, mock_debug):
         fake_port = {'id': uuids.fake_port_id}
         request = objects.InstancePCIRequest(requester_id=uuids.fake_port_id,
                                              request_id=uuids.pci_request_id)
@@ -7100,13 +7100,14 @@ class TestAPI(TestAPIBase):
             pci_devices=objects.PciDeviceList(objects=[device]))
         self.assertEqual(
             'fake-pci-address',
-            self.api._get_port_pci_slot(self.context, instance, fake_port))
+            self.api._get_port_pci_dev(
+                self.context, instance, fake_port).address)
         # Test not finding the request
         instance = objects.Instance(
             pci_requests=objects.InstancePCIRequests(
                 requests=[objects.InstancePCIRequest(bad_request)]))
         self.assertIsNone(
-            self.api._get_port_pci_slot(self.context, instance, fake_port))
+            self.api._get_port_pci_dev(self.context, instance, fake_port))
         mock_debug.assert_called_with('No PCI request found for port %s',
                                       uuids.fake_port_id, instance=instance)
         mock_debug.reset_mock()
@@ -7115,7 +7116,7 @@ class TestAPI(TestAPIBase):
             pci_requests=objects.InstancePCIRequests(requests=[request]),
             pci_devices=objects.PciDeviceList(objects=[bad_device]))
         self.assertIsNone(
-            self.api._get_port_pci_slot(self.context, instance, fake_port))
+            self.api._get_port_pci_dev(self.context, instance, fake_port))
         mock_debug.assert_called_with('No PCI device found for request %s',
                                       uuids.pci_request_id, instance=instance)
 
