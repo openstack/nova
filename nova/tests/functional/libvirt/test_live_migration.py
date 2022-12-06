@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import copy
 import threading
 
 from lxml import etree
@@ -19,15 +20,18 @@ from nova.tests.functional import integrated_helpers
 from nova.tests.functional.libvirt import base as libvirt_base
 
 
-class LiveMigrationQueuedAbortTest(
+class LiveMigrationWithLockBase(
     libvirt_base.LibvirtMigrationMixin,
     libvirt_base.ServersTestBase,
     integrated_helpers.InstanceHelperMixin
 ):
-    """Functional test for bug 1949808.
+    """Base for live migration tests which require live migration to be
+    locked for certain period of time and then unlocked afterwards.
 
-    This test is used to confirm that VM's state is reverted properly
-    when queued Live migration is aborted.
+    Separate base class is needed because locking mechanism could work
+    in an unpredicted way if two tests for the same class would try to
+    use it simultaneously. Every test using this mechanism should use
+    separate class instance.
     """
 
     api_major_version = 'v2.1'
@@ -69,7 +73,15 @@ class LiveMigrationQueuedAbortTest(
             dom = conn.lookupByUUIDString(server)
             dom.complete_job()
 
-    def test_queued_live_migration_abort(self):
+
+class LiveMigrationQueuedAbortTestVmStatus(LiveMigrationWithLockBase):
+    """Functional test for bug #1949808.
+
+    This test is used to confirm that VM's state is reverted properly
+    when queued Live migration is aborted.
+    """
+
+    def test_queued_live_migration_abort_vm_status(self):
         # Lock live migrations
         self.lock_live_migration.acquire()
 
@@ -115,3 +127,97 @@ class LiveMigrationQueuedAbortTest(
             AssertionError,
             self._wait_for_state_change, self.server_b, 'ACTIVE')
         self._wait_for_state_change(self.server_b, 'MIGRATING')
+
+
+class LiveMigrationQueuedAbortTestLeftoversRemoved(LiveMigrationWithLockBase):
+    """Functional test for bug #1960412.
+
+    Placement allocations for live migration and inactive Neutron port
+    bindings on destination host created by Nova control plane when live
+    migration is initiated should be removed when queued live migration
+    is aborted using Nova API.
+    """
+
+    def test_queued_live_migration_abort_leftovers_removed(self):
+        # Lock live migrations
+        self.lock_live_migration.acquire()
+
+        # Start instances: first one would be used to occupy
+        # executor's live migration queue, second one would be used
+        # to actually confirm that queued live migrations are
+        # aborted properly.
+        # port_1 is created automatically when neutron fixture is
+        # initialized, port_2 is created manually
+        self.server_a = self._create_server(
+            host=self.src_hostname,
+            networks=[{'port': self.neutron.port_1['id']}])
+        self.neutron.create_port({'port': self.neutron.port_2})
+        self.server_b = self._create_server(
+            host=self.src_hostname,
+            networks=[{'port': self.neutron.port_2['id']}])
+        # Issue live migration requests for both servers. We expect that
+        # server_a live migration would be running, but locked by
+        # self.lock_live_migration and server_b live migration would be
+        # queued.
+        self._live_migrate(
+            self.server_a,
+            migration_expected_state='running',
+            server_expected_state='MIGRATING'
+        )
+        self._live_migrate(
+            self.server_b,
+            migration_expected_state='queued',
+            server_expected_state='MIGRATING'
+        )
+
+        # Abort live migration for server_b
+        migration_server_a = self.api.api_get(
+            '/os-migrations?instance_uuid=%s' % self.server_a['id']
+        ).body['migrations'].pop()
+        migration_server_b = self.api.api_get(
+            '/os-migrations?instance_uuid=%s' % self.server_b['id']
+        ).body['migrations'].pop()
+
+        self.api.api_delete(
+            '/servers/%s/migrations/%s' % (self.server_b['id'],
+                                           migration_server_b['id']))
+        self._wait_for_migration_status(self.server_b, ['cancelled'])
+        # Unlock live migrations and confirm that server_a becomes
+        # active again after successful live migration
+        self.lock_live_migration.release()
+        self._wait_for_state_change(self.server_a, 'ACTIVE')
+        self._wait_for_migration_status(self.server_a, ['completed'])
+        # FIXME(astupnikov) Assert the server_b never comes out of 'MIGRATING'
+        # This should be fixed after bug #1949808 is addressed
+        self._wait_for_state_change(self.server_b, 'MIGRATING')
+
+        # FIXME(astupnikov) Because of bug #1960412 allocations for aborted
+        # queued live migration (server_b) would not be removed. Allocations
+        # for completed live migration  (server_a) should be empty.
+        allocations_server_a_migration = self.placement.get(
+            '/allocations/%s' % migration_server_a['uuid']
+        ).body['allocations']
+        self.assertEqual({}, allocations_server_a_migration)
+        allocations_server_b_migration = self.placement.get(
+            '/allocations/%s' % migration_server_b['uuid']
+        ).body['allocations']
+        src_uuid = self.api.api_get(
+            'os-hypervisors?hypervisor_hostname_pattern=%s' %
+            self.src_hostname).body['hypervisors'][0]['id']
+        self.assertIn(src_uuid, allocations_server_b_migration)
+
+        # FIXME(astupnikov) Because of bug #1960412 INACTIVE port binding
+        # on destination host would not be removed when queued live migration
+        # is aborted, so 2 port bindings would exist for server_b port from
+        # Neutron's perspective.
+        # server_a should be migrated to dest compute, server_b should still
+        # be hosted by src compute.
+        port_binding_server_a = copy.deepcopy(
+            self.neutron._port_bindings[self.neutron.port_1['id']]
+        )
+        self.assertEqual(1, len(port_binding_server_a))
+        self.assertNotIn('src', port_binding_server_a)
+        port_binding_server_b = copy.deepcopy(
+            self.neutron._port_bindings[self.neutron.port_2['id']]
+        )
+        self.assertEqual(2, len(port_binding_server_b))
