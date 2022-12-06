@@ -8564,15 +8564,41 @@ class ComputeManager(manager.Manager):
             migration, future = (
                 self._waiting_live_migrations.pop(instance.uuid))
             if future and future.cancel():
-                # If we got here, we've successfully aborted the queued
-                # migration and _do_live_migration won't run so we need
-                # to set the migration status to cancelled and send the
-                # notification. If Future.cancel() fails, it means
-                # _do_live_migration is running and the migration status
-                # is preparing, and _do_live_migration() itself will attempt
-                # to pop the queued migration, hit a KeyError, and rollback,
-                # set the migration to cancelled and send the
-                # live.migration.abort.end notification.
+                # If we got here, we've successfully dropped a queued
+                # migration from the queue, so _do_live_migration won't run
+                # and we only need to revert minor changes introduced by Nova
+                # control plane (port bindings, resource allocations and
+                # instance's PCI devices), restore VM's state, set the
+                # migration's status to cancelled and send the notification.
+                # If Future.cancel() fails, it means _do_live_migration is
+                # running and the migration status is preparing, and
+                # _do_live_migration() itself will attempt to pop the queued
+                # migration, hit a KeyError, and rollback, set the migration
+                # to cancelled and send the live.migration.abort.end
+                # notification.
+                self._revert_allocation(context, instance, migration)
+                try:
+                    # This call will delete any inactive destination host
+                    # port bindings.
+                    self.network_api.setup_networks_on_host(
+                        context, instance, host=migration.dest_compute,
+                        teardown=True)
+                except exception.PortBindingDeletionFailed as e:
+                    # Removing the inactive port bindings from the destination
+                    # host is not critical so just log an error but don't fail.
+                    LOG.error(
+                        'Network cleanup failed for destination host %s '
+                        'during live migration rollback. You may need to '
+                        'manually clean up resources in the network service. '
+                        'Error: %s', migration.dest_compute, str(e))
+                except Exception:
+                    with excutils.save_and_reraise_exception():
+                        LOG.exception(
+                            'An error occurred while cleaning up networking '
+                            'during live migration rollback.',
+                            instance=instance)
+                instance.task_state = None
+                instance.save(expected_task_state=[task_states.MIGRATING])
                 self._set_migration_status(migration, 'cancelled')
         except KeyError:
             migration = objects.Migration.get_by_id(context, migration_id)

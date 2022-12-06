@@ -10352,19 +10352,34 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase,
                     action='live_migration_abort', phase='end')]
         )
 
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(manager.ComputeManager, '_revert_allocation')
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     @mock.patch.object(objects.Migration, 'get_by_id')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_live_migration_abort_queued(self, mock_notify_action,
-                                         mock_get_migration, mock_notify):
+                                         mock_get_migration, mock_notify,
+                                         mock_revert_allocations,
+                                         mock_instance_save):
         instance = objects.Instance(id=123, uuid=uuids.instance)
         migration = self._get_migration(10, 'queued', 'live-migration')
+        migration.dest_compute = uuids.dest
+        migration.dest_node = uuids.dest
         migration.save = mock.MagicMock()
         mock_get_migration.return_value = migration
         fake_future = mock.MagicMock()
         self.compute._waiting_live_migrations[instance.uuid] = (
             migration, fake_future)
-        self.compute.live_migration_abort(self.context, instance, migration.id)
+        with mock.patch.object(
+                self.compute.network_api,
+                'setup_networks_on_host') as mock_setup_net:
+            self.compute.live_migration_abort(
+                self.context, instance, migration.id)
+        mock_setup_net.assert_called_once_with(
+            self.context, instance, host=migration.dest_compute,
+            teardown=True)
+        mock_revert_allocations.assert_called_once_with(
+            self.context, instance, migration)
         mock_notify.assert_has_calls(
             [mock.call(self.context, instance,
                        'live.migration.abort.start'),
