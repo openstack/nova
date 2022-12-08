@@ -230,3 +230,4 @@ Once you are running nova, the following information is extremely useful.
    node-down
    hw-machine-type
    hw-emulation-architecture
+   soft-delete-shadow-tables
