@@ -1658,7 +1658,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if instance.host != CONF.host:
             self._undefine_domain(instance)
-            self.unplug_vifs(instance, network_info)
+            # TODO(sean-k-mooney): remove this call to unplug_vifs after
+            # Wallaby is released. VIFs are now unplugged in resize_instance.
+            try:
+                self.unplug_vifs(instance, network_info)
+            except exception.InternalError as e:
+                LOG.debug(e, instance=instance)
 
     def _get_volume_driver(self, connection_info):
         driver_type = connection_info.get('driver_volume_type')
@@ -10411,7 +10416,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     exception.ResizeError(reason=reason))
 
         self.power_off(instance, timeout, retry_interval)
-
+        self.unplug_vifs(instance, network_info)
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
         for vol in block_device_mapping:
