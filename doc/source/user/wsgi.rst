@@ -8,10 +8,16 @@ as Apache_ or nginx_).
 
 The nova project provides two automatically generated entry points that
 support this: ``nova-api-wsgi`` and ``nova-metadata-wsgi``. These read
-``nova.conf`` and ``api-paste.ini`` and generate the required module-level
-``application`` that most WSGI servers require. If nova is installed using pip,
-these two scripts will be installed into whatever the expected ``bin``
-directory is for the environment.
+``nova.conf`` and ``api-paste.ini`` by default and generate the required
+module-level ``application`` that most WSGI servers require.
+If nova is installed using pip, these two scripts will be installed into
+whatever the expected ``bin`` directory is for the environment.
+
+The config files and config directory can be overridden via the
+``OS_NOVA_CONFIG_FILES`` and ``OS_NOVA_CONFIG_DIR`` environment variables.
+File paths listed in ``OS_NOVA_CONFIG_FILES`` are relative to
+``OS_NOVA_CONFIG_DIR`` and delimited by ``;``.
+
 
 The new scripts replace older experimental scripts that could be found in the
 ``nova/wsgi`` directory of the code repository. The new scripts are *not*

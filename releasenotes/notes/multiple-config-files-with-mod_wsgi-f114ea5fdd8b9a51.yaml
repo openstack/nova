@@ -1,0 +1,14 @@
+---
+fixes:
+  - |
+    apache mod_wsgi does not support passing commandline arguments to the wsgi
+    application that it hosts. As a result when the nova api or metadata api
+    where run under mod_wsgi it was not posible to use multiple config files
+    or non-default file names i.e. nova-api.conf
+    This has been adressed by the intoduction of a new, optional, envionment
+    varible ``OS_NOVA_CONFIG_FILES``. ``OS_NOVA_CONFIG_FILES`` is a ``;``
+    seperated list fo file path relitive to ``OS_NOVA_CONFIG_DIR``.
+    When unset the default ``api-paste.ini`` and ``nova.conf`` will be used
+    form ``/etc/nova``. This is supported for the nova api and nova metadata
+    wsgi applications.
+
