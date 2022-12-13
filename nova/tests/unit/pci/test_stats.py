@@ -732,6 +732,83 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
                          self.pci_stats.pools[5]['devices'][0])
 
 
+class PciDeviceStatsPlacementSupportTestCase(test.NoDBTestCase):
+
+    def test_device_spec_rc_and_traits_ignored_during_pooling(self):
+        """Assert that resource_class and traits from the device spec are not
+        used as discriminator for pool creation.
+        """
+        device_spec = [
+            jsonutils.dumps(
+                {
+                    "resource_class": "foo",
+                    "address": "*:81:00.*",
+                    "traits": "gold",
+                }
+            ),
+            jsonutils.dumps(
+                {
+                    "resource_class": "baar",
+                    "address": "*:81:01.*",
+                    "traits": "silver",
+                }
+            ),
+        ]
+        self.flags(device_spec=device_spec, group="pci")
+        dev_filter = whitelist.Whitelist(device_spec)
+        pci_stats = stats.PciDeviceStats(
+            objects.NUMATopology(),
+            dev_filter=dev_filter)
+        pci_dev1 = objects.PciDevice(
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:00.0",
+            parent_addr=None,
+            numa_node=0,
+            dev_type="type-PF",
+        )
+        pci_dev2 = objects.PciDevice(
+            vendor_id="dead",
+            product_id="beef",
+            address="0000:81:01.0",
+            parent_addr=None,
+            numa_node=0,
+            dev_type="type-PF",
+        )
+        # the two device matched by different device_specs with different
+        # resource_class and traits fields
+        pci_stats.add_device(pci_dev1)
+        pci_stats.add_device(pci_dev2)
+
+        # but they are put in the same pool as all the other fields are
+        # matching
+        self.assertEqual(1, len(pci_stats.pools))
+        self.assertEqual(2, pci_stats.pools[0]["count"])
+
+    def test_filter_pools_for_spec_ignores_rc_and_traits_in_spec(self):
+        """Assert that resource_class and traits are ignored in the pci
+        request spec during matching the request to pools.
+        """
+        pci_stats = stats.PciDeviceStats(objects.NUMATopology())
+        pools = [{"vendor_id": "dead", "product_id": "beef"}]
+
+        matching_pools = pci_stats._filter_pools_for_spec(
+            pools=pools,
+            request=objects.InstancePCIRequest(
+                spec=[
+                    {
+                        "vendor_id": "dead",
+                        "product_id": "beef",
+                        "resource_class": "foo",
+                        "traits": "blue",
+                    }
+                ]
+            ),
+        )
+
+        self.assertEqual(pools, matching_pools)
+
+
 class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
 
     def setUp(self):

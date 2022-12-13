@@ -65,18 +65,48 @@ def _normalize_traits(traits: ty.List[str]) -> ty.List[str]:
     return list(standard_traits) + custom_traits
 
 
+def get_traits(traits_str: str) -> ty.Set[str]:
+    """Return a normalized set of placement standard and custom traits from
+    a string of comma separated trait names.
+    """
+    # traits is a comma separated list of placement trait names
+    if not traits_str:
+        return set()
+    return set(_normalize_traits(traits_str.split(',')))
+
+
 def _get_traits_for_dev(
     dev_spec_tags: ty.Dict[str, str],
 ) -> ty.Set[str]:
-    # traits is a comma separated list of placement trait names
-    traits_str = dev_spec_tags.get("traits")
-    if not traits_str:
-        return {os_traits.COMPUTE_MANAGED_PCI_DEVICE}
-
-    traits = traits_str.split(',')
-    return set(_normalize_traits(traits)) | {
+    return get_traits(dev_spec_tags.get("traits", "")) | {
         os_traits.COMPUTE_MANAGED_PCI_DEVICE
     }
+
+
+def _normalize_resource_class(rc: str) -> str:
+    rc = rc.upper()
+    if (
+            rc not in os_resource_classes.STANDARDS and
+            not os_resource_classes.is_custom(rc)
+    ):
+        rc = os_resource_classes.normalize_name(rc)
+        # mypy: normalize_name will return non None for non None input
+        assert rc
+
+    return rc
+
+
+def get_resource_class(
+    requested_name: ty.Optional[str], vendor_id: str, product_id: str
+) -> str:
+    """Return the normalized resource class name based on what is requested
+    or if nothing is requested then generated from the vendor_id and product_id
+    """
+    if requested_name:
+        rc = _normalize_resource_class(requested_name)
+    else:
+        rc = f"CUSTOM_PCI_{vendor_id}_{product_id}".upper()
+    return rc
 
 
 def _get_rc_for_dev(
@@ -91,23 +121,8 @@ def _get_rc_for_dev(
     The user specified resource class is normalized if it is not already an
     acceptable standard or custom resource class.
     """
-    # Either use the resource class from the config or the vendor_id and
-    # product_id of the device to generate the RC
     rc = dev_spec_tags.get("resource_class")
-    if rc:
-        rc = rc.upper()
-        if (
-            rc not in os_resource_classes.STANDARDS and
-            not os_resource_classes.is_custom(rc)
-        ):
-            rc = os_resource_classes.normalize_name(rc)
-            # mypy: normalize_name will return non None for non None input
-            assert rc
-
-    else:
-        rc = f"CUSTOM_PCI_{dev.vendor_id}_{dev.product_id}".upper()
-
-    return rc
+    return get_resource_class(rc, dev.vendor_id, dev.product_id)
 
 
 class PciResourceProvider:

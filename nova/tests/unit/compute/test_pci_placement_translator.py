@@ -88,8 +88,8 @@ class TestTranslator(test.NoDBTestCase):
     )
     def test_trait_normalization(self, trait_names, expected_traits):
         self.assertEqual(
-            expected_traits | {"COMPUTE_MANAGED_PCI_DEVICE"},
-            ppt._get_traits_for_dev({"traits": trait_names})
+            expected_traits,
+            ppt.get_traits(trait_names)
         )
 
     @ddt.unpack
@@ -110,7 +110,9 @@ class TestTranslator(test.NoDBTestCase):
     def test_resource_class_normalization(self, pci_dev, rc_name, expected_rc):
         self.assertEqual(
             expected_rc,
-            ppt._get_rc_for_dev(pci_dev, {"resource_class": rc_name})
+            ppt.get_resource_class(
+                rc_name, pci_dev.vendor_id, pci_dev.product_id
+            ),
         )
 
     def test_dependent_device_pf_then_vf(self):
@@ -118,12 +120,16 @@ class TestTranslator(test.NoDBTestCase):
             "fake-node", instances_under_same_host_resize=[])
         pf = pci_device.PciDevice(
             address="0000:81:00.0",
-            dev_type=fields.PciDeviceType.SRIOV_PF
+            dev_type=fields.PciDeviceType.SRIOV_PF,
+            vendor_id="dead",
+            product_id="beef",
         )
         vf = pci_device.PciDevice(
             address="0000:81:00.1",
             parent_addr=pf.address,
-            dev_type=fields.PciDeviceType.SRIOV_VF
+            dev_type=fields.PciDeviceType.SRIOV_VF,
+            vendor_id="dead",
+            product_id="beef",
         )
 
         pv._add_dev(pf, {"resource_class": "foo"})
@@ -146,17 +152,23 @@ class TestTranslator(test.NoDBTestCase):
             "fake-node", instances_under_same_host_resize=[])
         pf = pci_device.PciDevice(
             address="0000:81:00.0",
-            dev_type=fields.PciDeviceType.SRIOV_PF
+            dev_type=fields.PciDeviceType.SRIOV_PF,
+            vendor_id="dead",
+            product_id="beef",
         )
         vf = pci_device.PciDevice(
             address="0000:81:00.1",
             parent_addr=pf.address,
-            dev_type=fields.PciDeviceType.SRIOV_VF
+            dev_type=fields.PciDeviceType.SRIOV_VF,
+            vendor_id="dead",
+            product_id="beef",
         )
         vf2 = pci_device.PciDevice(
             address="0000:81:00.2",
             parent_addr=pf.address,
-            dev_type=fields.PciDeviceType.SRIOV_VF
+            dev_type=fields.PciDeviceType.SRIOV_VF,
+            vendor_id="dead",
+            product_id="beef",
         )
 
         pv._add_dev(vf, {"resource_class": "foo"})
@@ -182,7 +194,10 @@ class TestTranslator(test.NoDBTestCase):
             pci_device.PciDevice(
                 address="0000:81:00.%d" % f,
                 parent_addr="0000:71:00.0",
-                dev_type=fields.PciDeviceType.SRIOV_VF)
+                dev_type=fields.PciDeviceType.SRIOV_VF,
+                vendor_id="dead",
+                product_id="beef",
+            )
             for f in range(0, 4)
         ]
 

@@ -106,6 +106,12 @@ _ALIAS_SCHEMA = {
             "type": "string",
             "enum": list(obj_fields.PCINUMAAffinityPolicy.ALL),
         },
+        "resource_class": {
+            "type": "string",
+        },
+        "traits": {
+            "type": "string",
+        },
     },
     "required": ["name"],
 }
@@ -114,7 +120,7 @@ _ALIAS_SCHEMA = {
 def _get_alias_from_config() -> Alias:
     """Parse and validate PCI aliases from the nova config.
 
-    :returns: A dictionary where the keys are device names and the values are
+    :returns: A dictionary where the keys are alias names and the values are
         tuples of form ``(numa_policy, specs)``. ``numa_policy`` describes the
         required NUMA affinity of the device(s), while ``specs`` is a list of
         PCI device specs.

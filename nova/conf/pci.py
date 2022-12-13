@@ -67,6 +67,32 @@ Possible Values:
     Required NUMA affinity of device. Valid values are: ``legacy``,
     ``preferred`` and ``required``.
 
+  ``resource_class``
+    The optional Placement resource class name that is used
+    to track the requested PCI devices in Placement. It can be a standard
+    resource class from the ``os-resource-classes`` lib. Or can be any string.
+    In that case Nova will normalize it to a proper Placement resource class by
+    making it upper case, replacing any consecutive character outside of
+    ``[A-Z0-9_]`` with a single '_', and prefixing the name with ``CUSTOM_`` if
+    not yet prefixed. The maximum allowed length is 255 character including the
+    prefix. If ``resource_class`` is not provided Nova will generate it from
+    ``vendor_id`` and ``product_id`` values of the alias in the form of
+    ``CUSTOM_PCI_{vendor_id}_{product_id}``. The ``resource_class`` requested
+    in the alias is matched against the ``resource_class`` defined in the
+    ``[pci]device_spec``.
+
+  ``traits``
+    An optional comma separated list of Placement trait names requested to be
+    present on the resource provider that fulfills this alias. Each trait can
+    be a standard trait from ``os-traits`` lib or can be any string. If it is
+    not a standard trait then Nova will normalize the trait name by making it
+    upper case, replacing any consecutive character outside of  ``[A-Z0-9_]``
+    with a single '_', and  prefixing the name with ``CUSTOM_`` if not yet
+    prefixed. The maximum allowed length of a trait name is 255 character
+    including the prefix. Every trait in ``traits`` requested in the alias
+    ensured to be in the list of traits provided in the ``traits`` field of
+    the ``[pci]device_spec`` when scheduling the request.
+
 * Supports multiple aliases by repeating the option (not by specifying
   a list value)::
 

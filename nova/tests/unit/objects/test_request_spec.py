@@ -1244,6 +1244,62 @@ class TestInstancePCIRequestToRequestGroups(test.NoDBTestCase):
             spec.requested_resources[1].obj_to_primitive(),
         )
 
+    def test_with_rc_and_traits_from_the_pci_req_spec(self):
+        spec = request_spec.RequestSpec(
+            requested_resources=[],
+            pci_requests=objects.InstancePCIRequests(
+                requests=[
+                    objects.InstancePCIRequest(
+                        count=1,
+                        request_id=uuids.req1,
+                        spec=[
+                            {
+                                "vendor_id": "de12",
+                                "product_id": "1234",
+                                "resource_class": "gpu",
+                            }
+                        ],
+                        alias_name="a-dev",
+                    ),
+                    objects.InstancePCIRequest(
+                        count=1,
+                        request_id=uuids.req2,
+                        spec=[
+                            {
+                                "vendor_id": "fff",
+                                "product_id": "dead",
+                                "traits": "foo,bar,CUSTOM_BLUE",
+                            }
+                        ],
+                        alias_name="a-dev",
+                    ),
+                ]
+            ),
+        )
+
+        spec._generate_request_groups_from_pci_requests()
+
+        self.assertEqual(2, len(spec.requested_resources))
+        self.assertEqual(
+            request_spec.RequestGroup(
+                requester_id=f"{uuids.req1}-0",
+                resources={"CUSTOM_GPU": 1},
+                use_same_provider=True,
+            ).obj_to_primitive(),
+            spec.requested_resources[0].obj_to_primitive(),
+        )
+        # Note that sets would be serialized to tuples by obj_to_primitive in
+        # random order, so we need to match this spec field by field
+        expected = request_spec.RequestGroup(
+            requester_id=f"{uuids.req2}-0",
+            resources={"CUSTOM_PCI_FFF_DEAD": 1},
+            required_traits={"CUSTOM_FOO", "CUSTOM_BAR", "CUSTOM_BLUE"},
+            use_same_provider=True,
+        )
+        actual = spec.requested_resources[1]
+        for field in request_spec.RequestGroup.fields.keys():
+            self.assertEqual(getattr(expected, field), getattr(actual, field))
+
 
 class TestRequestGroupObject(test.NoDBTestCase):
     def setUp(self):
